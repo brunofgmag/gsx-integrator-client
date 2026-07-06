@@ -99,7 +99,7 @@ jobs:
     name: Build + package (Windows)
     needs: version
     if: needs.version.outputs.release_exists == 'false'
-    runs-on: windows-latest
+    runs-on: windows-2022
     timeout-minutes: 60
     environment: release
     steps:
