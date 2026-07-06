@@ -1,0 +1,12 @@
+#ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_AIRCRAFTIDENTITY_H
+#define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_AIRCRAFTIDENTITY_H
+
+#include <string>
+
+struct AircraftIdentity
+{
+    std::string title;
+    std::string atcModel;
+};
+
+#endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_AIRCRAFTIDENTITY_H

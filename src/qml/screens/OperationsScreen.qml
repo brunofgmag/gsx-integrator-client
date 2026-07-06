@@ -1,0 +1,268 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Layouts
+
+ColumnLayout {
+    id: root
+
+    required property var integratorVm
+    required property var settingsVm
+    required property bool compact
+
+    readonly property int deboardingPhaseStart: 16
+    readonly property bool deboarding: integratorVm.phase >= root.deboardingPhaseStart
+
+    spacing: 10
+
+    property var phaseLabels: root.buildPhaseLabels()
+
+    function buildPhaseLabels() {
+        const names = [];
+        for (let i = 0; i < root.integratorVm.phaseCount; i++) {
+            names.push(root.integratorVm.phaseLabelAt(i));
+        }
+        return names;
+    }
+
+    function formatKg(value) {
+        return Number(Math.round(value)).toLocaleString(Qt.locale(), 'f', 0) + " " + qsTr("kg");
+    }
+
+    readonly property string nextPhaseLabel: integratorVm.phase + 1 < integratorVm.phaseCount
+        ? (phaseLabels[integratorVm.phase + 1] ?? "")
+        : qsTr("New session")
+
+    Component.onCompleted: root.integratorVm.SnapshotChanged.connect(() => root.phaseLabels = root.buildPhaseLabels())
+
+    ColumnLayout {
+        Layout.fillWidth: true
+        visible: root.integratorVm.connected
+        spacing: 10
+
+        // LINK / GSX / ACFT / OFP / AUTO status strip.
+        GridLayout {
+            Layout.fillWidth: true
+            columns: 5
+            columnSpacing: 8
+            rowSpacing: 8
+
+            StatusChip {
+                Layout.fillWidth: true
+                label: qsTr("Link")
+                value: root.integratorVm.connected ? qsTr("Sim OK") : qsTr("No link")
+                valueColor: root.integratorVm.connected ? Theme.ok : Theme.amber
+            }
+
+            StatusChip {
+                Layout.fillWidth: true
+                label: qsTr("GSX")
+                value: root.integratorVm.gsxAvailable ? qsTr("Couatl OK") : qsTr("Standby")
+                valueColor: root.integratorVm.gsxAvailable ? Theme.ok : Theme.amber
+            }
+
+            StatusChip {
+                Layout.fillWidth: true
+                label: qsTr("Acft")
+                value: root.integratorVm.aircraftSupported ? root.integratorVm.aircraftName : qsTr("Standby")
+                valueColor: root.integratorVm.aircraftSupported ? Theme.text : Theme.muted
+            }
+
+            StatusChip {
+                Layout.fillWidth: true
+                label: qsTr("OFP")
+                value: root.integratorVm.simbriefStatusText
+                valueColor: root.integratorVm.simbriefReady
+                    ? Theme.ok
+                    : (root.integratorVm.simbriefError ? Theme.red : Theme.muted)
+            }
+
+            StatusChip {
+                Layout.fillWidth: true
+                label: qsTr("Auto")
+                value: root.integratorVm.enabled ? qsTr("Active") : qsTr("Off")
+                valueColor: root.integratorVm.enabled ? Theme.accent : Theme.muted
+            }
+        }
+
+        // Big turnaround state readout.
+        DataCard {
+            Layout.fillWidth: true
+            title: qsTr("Turnaround state")
+            helpText: ""
+            metric: (root.integratorVm.phase + 1) + "/" + root.integratorVm.phaseCount
+            metricColor: Theme.muted
+
+            Text {
+                width: parent.width
+                text: root.integratorVm.stateText
+                color: Theme.text
+                font.pixelSize: root.compact ? 19 : 24
+                font.bold: true
+                font.letterSpacing: 1.5
+                font.capitalization: Font.AllUppercase
+                wrapMode: Text.WordWrap
+            }
+
+            Item { width: 1; height: 4 }
+
+            Text {
+                width: parent.width
+                text: qsTr("Next") + " ▸ " + root.nextPhaseLabel
+                color: Theme.muted
+                font.pixelSize: 11
+                font.letterSpacing: 0.8
+                font.capitalization: Font.AllUppercase
+                elide: Text.ElideRight
+            }
+        }
+
+        Advisory {
+            Layout.fillWidth: true
+            hideable: true
+            text: root.integratorVm.phaseTip
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            visible: root.integratorVm.commandError.length > 0
+            implicitHeight: Math.max(errorRow.implicitHeight + 18, 38)
+            radius: Theme.radius
+            color: "transparent"
+            border.color: Theme.red
+            border.width: 1
+
+            Row {
+                id: errorRow
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                spacing: 10
+
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: errorBadge.implicitWidth + 14
+                    height: errorBadge.implicitHeight + 6
+                    radius: Theme.radiusSmall
+                    color: Theme.red
+
+                    Text {
+                        id: errorBadge
+                        anchors.centerIn: parent
+                        text: qsTr("Error")
+                        color: Theme.bg
+                        font.pixelSize: 9
+                        font.bold: true
+                        font.letterSpacing: 1.2
+                        font.capitalization: Font.AllUppercase
+                    }
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - errorBadge.implicitWidth - 24
+                    text: root.integratorVm.commandError
+                    color: Theme.red
+                    font.pixelSize: 11
+                    lineHeight: 1.3
+                    wrapMode: Text.WordWrap
+                }
+            }
+        }
+
+        // FUEL / BOARDING / SIMBRIEF OFP data grid.
+        GridLayout {
+            Layout.fillWidth: true
+            columns: root.compact ? 1 : 3
+            columnSpacing: 10
+            rowSpacing: 10
+
+            DataCard {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                title: qsTr("Fuel")
+                metric: Math.round(root.integratorVm.fuelProgress) + "%"
+                progress: root.integratorVm.fuelProgress
+
+                KeyValueRow {
+                    label: qsTr("Loaded")
+                    value: root.formatKg(root.integratorVm.loadedFuelKg)
+                }
+                KeyValueRow {
+                    label: qsTr("Planned")
+                    value: root.formatKg(root.integratorVm.plannedFuelKg)
+                }
+                KeyValueRow {
+                    label: qsTr("Rate")
+                    value: root.settingsVm.fuelRateText + " " + qsTr("kg/s")
+                }
+            }
+
+            DataCard {
+                id: paxCard
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                readonly property double paxProgress: root.deboarding
+                    ? root.integratorVm.deboardingProgress
+                    : root.integratorVm.boardingProgress
+                title: root.deboarding ? qsTr("Deboarding") : qsTr("Boarding")
+                metric: Math.round(paxCard.paxProgress) + "%"
+                progress: paxCard.paxProgress
+
+                KeyValueRow {
+                    label: qsTr("Pax")
+                    value: Math.round(paxCard.paxProgress / 100 * root.integratorVm.plannedPax)
+                           + " / " + root.integratorVm.plannedPax
+                }
+                KeyValueRow {
+                    label: qsTr("ZFW")
+                    value: root.formatKg(root.integratorVm.plannedZfwKg)
+                }
+            }
+
+            DataCard {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                title: qsTr("SimBrief OFP")
+                helpText: ""
+                metric: root.integratorVm.simbriefStatusText
+                metricColor: root.integratorVm.simbriefReady
+                    ? Theme.ok
+                    : (root.integratorVm.simbriefError ? Theme.red : Theme.muted)
+
+                KeyValueRow {
+                    label: qsTr("Fuel")
+                    value: root.formatKg(root.integratorVm.plannedFuelKg)
+                }
+                KeyValueRow {
+                    label: qsTr("ZFW")
+                    value: root.formatKg(root.integratorVm.plannedZfwKg)
+                }
+                KeyValueRow {
+                    label: qsTr("Pax")
+                    value: String(root.integratorVm.plannedPax)
+                }
+
+                Item { width: 1; height: 6 }
+
+                ActionButton {
+                    width: parent.width
+                    small: true
+                    text: qsTr("Reload SimBrief")
+                    enabled: root.integratorVm.canReloadSimbrief
+                    onClicked: root.integratorVm.reloadSimbrief()
+                }
+            }
+        }
+
+        ActionButton {
+            Layout.alignment: Qt.AlignLeft
+            small: true
+            text: qsTr("Start Flow")
+            enabled: root.integratorVm.canToggleAutomation && !root.integratorVm.enabled && !root.settingsVm.autoStartFlow
+            onClicked: root.integratorVm.startFlow()
+        }
+    }
+}

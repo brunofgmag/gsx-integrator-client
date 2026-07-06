@@ -1,0 +1,42 @@
+name: Setup build environment
+description: Install Qt (MSVC 2022 x64) and optionally provision the MSFS SDK
+
+inputs:
+  qt-version:
+    description: Qt version to install
+    required: false
+    default: '6.8.3'
+  sdk-url:
+    description: MSFS SDK download URL (empty skips SDK provisioning)
+    required: false
+    default: ''
+  sdk-sha256:
+    description: Expected SHA256 of the SDK download
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Install Qt (MSVC 2022 x64)
+      uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
+      with:
+        version: ${{ inputs.qt-version }}
+        host: windows
+        target: desktop
+        arch: win64_msvc2022_64
+        modules: qtwebsockets
+        cache: true
+
+    - name: Provision MSFS SDK (SimConnect)
+      if: inputs.sdk-url != ''
+      shell: pwsh
+      env:
+        MSFS_SDK_URL: ${{ inputs.sdk-url }}
+        MSFS_SDK_SHA256: ${{ inputs.sdk-sha256 }}
+      run: |
+        if ($env:MSFS_SDK_SHA256) {
+          ./tools/setup-msfs-sdk.ps1 -Url $env:MSFS_SDK_URL -Sha256 $env:MSFS_SDK_SHA256
+        } else {
+          ./tools/setup-msfs-sdk.ps1 -Url $env:MSFS_SDK_URL
+        }
