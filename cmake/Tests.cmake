@@ -136,7 +136,7 @@ gsxi_add_qt_test(gsxi-remote-state-tests remote-state
         src/infrastructure/gsx/GsxRemoteStateReducer.cpp
         src/infrastructure/gsx/GsxRemoteStateReducer.h)
 target_compile_definitions(gsxi-remote-state-tests PRIVATE
-        GSX_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/docs/captures\")
+        GSX_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures\")
 
 gsxi_add_qt_test(gsxi-gsx-menu-navigator-tests gsx-menu-navigator
         tests/doubles/FakeDomainLogger.h
