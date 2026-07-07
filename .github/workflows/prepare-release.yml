@@ -38,5 +38,5 @@ jobs:
       - name: Auto-merge release PR
         if: steps.release.outputs.prs_created == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_MERGE_TOKEN || github.token }}
         run: gh pr merge ${{ fromJSON(steps.release.outputs.pr).number }} --squash
