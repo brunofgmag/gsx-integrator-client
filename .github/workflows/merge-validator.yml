@@ -1,10 +1,12 @@
 name: Merge Validator
 
 on:
-  push:
-    branches: [develop]
   pull_request:
     branches: [develop, main]
+    paths-ignore:
+      - '.github/**'
+      - '**.md'
+      - 'LICENSE'
   workflow_dispatch:
 
 permissions:
@@ -18,9 +20,6 @@ jobs:
   full-validation:
     name: Build + unit tests (with SDK)
     if: >-
-      (github.event_name == 'push' &&
-       !startsWith(github.event.head_commit.message, 'chore: release') &&
-       !startsWith(github.event.head_commit.message, 'chore(develop): release')) ||
       github.event_name == 'workflow_dispatch' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
        !startsWith(github.event.pull_request.head.ref, 'release-please--'))

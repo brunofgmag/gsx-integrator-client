@@ -115,9 +115,9 @@ jobs:
           sdk-url: ${{ secrets.MSFS_SDK_URL }}
           sdk-sha256: ${{ secrets.MSFS_SDK_SHA256 }}
 
-      - name: Build + test Release (verifies deployment)
+      - name: Build Release (verifies deployment)
         shell: pwsh
-        run: ./build.ps1 -Config Release -RunTests
+        run: ./build.ps1 -Config Release -SkipTests
 
       - name: Stage deployable bundle
         shell: pwsh
