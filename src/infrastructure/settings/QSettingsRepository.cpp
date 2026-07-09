@@ -9,6 +9,7 @@ namespace
     constexpr auto kKeyThemeMode = "ui/themeMode";
     constexpr auto kKeyDarkThemeLegacy = "ui/darkTheme";
     constexpr auto kKeyLanguage = "ui/language";
+    constexpr auto kKeyUpdateMode = "updates/mode";
 }
 
 AppSettings QSettingsRepository::Load() const
@@ -29,6 +30,7 @@ AppSettings QSettingsRepository::Load() const
     result.themeMode = themeMode;
 
     result.language = settings.value(kKeyLanguage, "system").toString().toStdString();
+    result.updateMode = settings.value(kKeyUpdateMode, 1).toInt();
 
     return result;
 }
@@ -42,6 +44,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyAutoStartFlow, values.autoStartFlow);
     settings.setValue(kKeyThemeMode, values.themeMode);
     settings.setValue(kKeyLanguage, QString::fromStdString(values.language));
+    settings.setValue(kKeyUpdateMode, values.updateMode);
     settings.sync();
 
     return settings.status() == QSettings::NoError;

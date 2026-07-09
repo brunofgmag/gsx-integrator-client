@@ -23,6 +23,7 @@ class SettingsViewModel final : public QObject
     Q_PROPERTY(int themeMode READ GetThemeMode WRITE SetThemeMode NOTIFY ThemeModeChanged)
     Q_PROPERTY(bool effectiveDark READ GetEffectiveDark NOTIFY EffectiveDarkChanged)
     Q_PROPERTY(QString language READ GetLanguage WRITE SetLanguage NOTIFY LanguageChanged)
+    Q_PROPERTY(int updateMode READ GetUpdateMode WRITE SetUpdateMode NOTIFY UpdateModeChanged)
     Q_PROPERTY(bool canSave READ CanSave NOTIFY ValidationChanged)
     Q_PROPERTY(QString validationMessage READ GetValidationMessage NOTIFY ValidationChanged)
     Q_PROPERTY(QString saveMessage READ GetSaveMessage NOTIFY SaveResultChanged)
@@ -31,6 +32,9 @@ class SettingsViewModel final : public QObject
 public:
     enum ThemeMode { Light = 0, Dark = 1, System = 2 };
     Q_ENUM(ThemeMode)
+
+    enum UpdateMode { Auto = 0, Notify = 1, Manual = 2 };
+    Q_ENUM(UpdateMode)
 
     explicit SettingsViewModel(SettingsRepository* repository,
                                IntegratorService* integratorService,
@@ -52,14 +56,15 @@ public:
     void SetThemeMode(int mode);
     [[nodiscard]] bool GetEffectiveDark() const;
 
-    // Injected by the GUI layer so this view-model stays free of QtGui.
     void SetSystemDarkProvider(std::function<bool()> provider);
     void RefreshEffectiveTheme();
 
     [[nodiscard]] QString GetLanguage() const;
     void SetLanguage(const QString& language);
 
-    // Re-emit so QML re-reads the C++-translated strings after a language change.
+    [[nodiscard]] int GetUpdateMode() const;
+    void SetUpdateMode(int mode);
+
     void RetranslateUi();
 
     [[nodiscard]] bool CanSave() const;
@@ -78,6 +83,7 @@ signals:
     void ThemeModeChanged();
     void EffectiveDarkChanged();
     void LanguageChanged();
+    void UpdateModeChanged();
     void ValidationChanged();
     void SaveResultChanged();
 

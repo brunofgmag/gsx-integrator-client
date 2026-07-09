@@ -17,6 +17,7 @@ ApplicationWindow {
 
     required property var integratorVm
     required property var settingsVm
+    required property var updateVm
 
     readonly property bool compact: width < 620
     readonly property int shellMargin: compact ? 14 : 20
@@ -70,6 +71,23 @@ ApplicationWindow {
 
                 Item {
                     Layout.fillWidth: true
+                }
+
+                UpdatePill {
+                    visible: window.updateVm.updateAvailable || window.updateVm.commbusUpdateAvailable
+                    text: window.updateVm.readyToRestart ? qsTr("Restart to update")
+                        : window.updateVm.updateAvailable ? "↓ v" + window.updateVm.latestVersion
+                        : qsTr("↓ CommBus")
+                    tip: window.updateVm.readyToRestart
+                         ? qsTr("Apply the update and restart now")
+                         : qsTr("Update available")
+                    onClicked: {
+                        if (window.updateVm.readyToRestart) {
+                            window.updateVm.restartNow()
+                        } else {
+                            window.screen = 2
+                        }
+                    }
                 }
 
                 // Forces a manual light/dark, leaving "Windows" mode.
@@ -143,6 +161,7 @@ ApplicationWindow {
                     }
 
                     AboutScreen {
+                        updateVm: window.updateVm
                         viewportHeight: body.height
                     }
                 }

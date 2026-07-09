@@ -1,10 +1,15 @@
 param(
     [ValidateSet('Debug', 'Release', 'RelWithDebInfo')]
     [string]$Config = 'Release',
-    [switch]$RunTests
+    [switch]$RunTests,
+    [switch]$SkipTests
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ($RunTests -and $SkipTests) {
+    throw 'Use either -RunTests or -SkipTests, not both.'
+}
 
 $cmakeCommand = Get-Command cmake -ErrorAction SilentlyContinue
 if ($cmakeCommand) {
@@ -77,7 +82,9 @@ if (Test-Path -LiteralPath $cacheFile) {
     }
 }
 
-& $cmake --preset $preset
+$configureArgs = @('--preset', $preset)
+if ($SkipTests) { $configureArgs += '-DBUILD_TESTING=OFF' }
+& $cmake @configureArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 & $cmake --build --preset $preset --parallel

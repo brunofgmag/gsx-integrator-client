@@ -1,3 +1,5 @@
+#include <windows.h>
+#include <QtCore/QDir>
 #include <QtCore/QLocale>
 #include <QtCore/QSize>
 #include <QtCore/QTranslator>
@@ -11,11 +13,43 @@
 #include "application/RuntimeIntegratorService.h"
 #include "infrastructure/settings/QSettingsRepository.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
+#include "infrastructure/update/GithubUpdateService.h"
 #include "viewmodel/OperationsViewModel.h"
 #include "viewmodel/SettingsViewModel.h"
+#include "viewmodel/UpdateViewModel.h"
+
+namespace
+{
+    bool UpdatesEnabled()
+    {
+        if (qEnvironmentVariableIsSet("GSXI_NO_UPDATES"))
+        {
+            return false;
+        }
+        QDir dir(QCoreApplication::applicationDirPath());
+        for (int level = 0; level < 4; ++level)
+        {
+            if (dir.exists(QStringLiteral("CMakeCache.txt")))
+            {
+                return false;
+            }
+            if (!dir.cdUp())
+            {
+                break;
+            }
+        }
+        return true;
+    }
+}
 
 int main(int argc, char* argv[])
 {
+    CreateMutexW(nullptr, FALSE, L"Local\\gsx-integrator-client.single-instance");
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        return 0;
+    }
+
     const QGuiApplication app(argc, argv);
     QGuiApplication::setOrganizationName(QStringLiteral("brunofgmag"));
     QGuiApplication::setApplicationName(QStringLiteral("gsx-integrator-client"));
@@ -56,6 +90,35 @@ int main(int argc, char* argv[])
     SettingsViewModel settingsViewModel(&settingsRepository, &integratorService);
     OperationsViewModel operationsViewModel(&integratorService);
 
+    GithubUpdateService updateService(
+        qEnvironmentVariable(
+            "GSXI_UPDATE_FEED",
+            QStringLiteral(
+                "https://api.github.com/repos/brunofgmag/gsx-integrator-client/releases/latest")),
+        qEnvironmentVariable(
+            "GSXI_COMMBUS_UPDATE_FEED",
+            QStringLiteral(
+                "https://api.github.com/repos/brunofgmag/gsx-integrator-commbus/releases/latest")),
+        QGuiApplication::applicationVersion());
+    UpdateViewModel updateViewModel(&updateService,
+                                    QGuiApplication::applicationVersion(),
+                                    startupSettings.updateMode,
+                                    UpdatesEnabled());
+
+    QObject::connect(&settingsViewModel, &SettingsViewModel::UpdateModeChanged, &updateViewModel,
+                     [&settingsViewModel, &updateViewModel]
+                     {
+                         updateViewModel.SetMode(settingsViewModel.GetUpdateMode());
+                     });
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, &updateViewModel,
+                     [&updateViewModel, &updateService]
+                     {
+                         if (updateViewModel.ShouldApplyOnExit())
+                         {
+                             updateService.LaunchApplyHelper(false);
+                         }
+                     });
+
     settingsViewModel.SetSystemDarkProvider([]
     {
         return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
@@ -63,12 +126,16 @@ int main(int argc, char* argv[])
     QObject::connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged,
                      &settingsViewModel, [&settingsViewModel] { settingsViewModel.RefreshEffectiveTheme(); });
 
+    QObject::connect(&runtime, &IntegratorRuntime::SimulatorQuit,
+                     &app, &QCoreApplication::quit, Qt::QueuedConnection);
+
     runtime.Setup();
 
     QQmlApplicationEngine engine;
     engine.setInitialProperties({
         {QStringLiteral("integratorVm"), QVariant::fromValue(&operationsViewModel)},
         {QStringLiteral("settingsVm"), QVariant::fromValue(&settingsViewModel)},
+        {QStringLiteral("updateVm"), QVariant::fromValue(&updateViewModel)},
     });
 
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
