@@ -41,11 +41,14 @@ jobs:
           skip-github-release: true
 
       - name: Auto-merge release PR
-        if: steps.release.outputs.prs_created == 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_MERGE_TOKEN || github.token }}
-          PR_JSON: ${{ steps.release.outputs.pr }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          pr="$(jq -r '.number' <<<"$PR_JSON")"
+          pr="$(gh pr list --state open --label 'autorelease: pending' --json number --jq '.[0].number // empty')"
+          if [ -z "$pr" ]; then
+            echo "No open release PR; nothing to merge."
+            exit 0
+          fi
           gh pr merge "$pr" --squash
           gh pr edit "$pr" --remove-label "autorelease: pending"
