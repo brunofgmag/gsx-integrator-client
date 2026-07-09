@@ -2,7 +2,7 @@ name: Merge Validator
 
 on:
   pull_request:
-    branches: [develop, main]
+    branches: [ develop ]
     paths-ignore:
       - '.github/**'
       - '**.md'
@@ -17,54 +17,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  full-validation:
-    name: Build + unit tests (with SDK)
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.pull_request.head.repo.full_name == github.repository &&
-       !startsWith(github.event.pull_request.head.ref, 'release-please--'))
-    runs-on: windows-2022
-    timeout-minutes: 60
-    steps:
-      - name: Checkout
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
-
-      - name: Setup build environment
-        uses: ./.github/actions/setup-build-env
-        with:
-          sdk-url: ${{ secrets.MSFS_SDK_URL }}
-          sdk-sha256: ${{ secrets.MSFS_SDK_SHA256 }}
-
-      - name: Build and run unit tests (Release)
-        shell: pwsh
-        run: ./build.ps1 -Config Release -RunTests
-
-  fork-validation:
-    name: Unit tests (SDK-free)
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name != github.repository
-    runs-on: windows-2022
-    timeout-minutes: 60
-    steps:
-      - name: Checkout
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
-
-      - name: Setup build environment
-        uses: ./.github/actions/setup-build-env
-
-      - name: Configure (tests only, no SimConnect)
-        shell: pwsh
-        run: >
-          cmake -S . -B build/tests-only
-          -G "Visual Studio 17 2022" -A x64
-          -DGSXI_TESTS_ONLY=ON
-          -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR"
-
-      - name: Build tests
-        shell: pwsh
-        run: cmake --build build/tests-only --config Release
-
-      - name: Run tests
-        shell: pwsh
-        run: ctest --test-dir build/tests-only -C Release --output-on-failure
+  validate:
+    uses: brunofgmag/gsx-integrator-ci/.github/workflows/merge-validator.yml@main
+    with:
+      qt-modules: qtwebsockets
+      fork-tests-only: true
+    secrets: inherit
