@@ -102,6 +102,20 @@ ColumnLayout {
 
     SettingRow {
         Layout.fillWidth: true
+        title: qsTr("Updates")
+        caption: qsTr("How new versions are installed")
+        helpText: qsTr("Auto downloads updates and applies them when the app closes. Notify only shows an alert in the header. Manual never checks on its own.")
+
+        SegmentedControl {
+            anchors.verticalCenter: parent.verticalCenter
+            model: [qsTr("Auto"), qsTr("Notify"), qsTr("Manual")]
+            currentIndex: root.settingsVm.updateMode
+            onActivated: index => root.settingsVm.updateMode = index
+        }
+    }
+
+    SettingRow {
+        Layout.fillWidth: true
         title: qsTr("Theme")
         caption: qsTr("\"Windows\" follows the system")
 

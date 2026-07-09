@@ -1,0 +1,20 @@
+{
+  "tag_name": "v1.4.0",
+  "name": "v1.4.0",
+  "html_url": "https://github.com/brunofgmag/gsx-integrator-client/releases/tag/v1.4.0",
+  "prerelease": false,
+  "assets": [
+    {
+      "name": "gsx-integrator-client-1.4.0.zip",
+      "browser_download_url": "https://github.com/brunofgmag/gsx-integrator-client/releases/download/v1.4.0/gsx-integrator-client-1.4.0.zip"
+    },
+    {
+      "name": "gsx-integrator-client-1.4.0.zip.sha256",
+      "browser_download_url": "https://github.com/brunofgmag/gsx-integrator-client/releases/download/v1.4.0/gsx-integrator-client-1.4.0.zip.sha256"
+    },
+    {
+      "name": "source.tar.gz",
+      "browser_download_url": "https://github.com/brunofgmag/gsx-integrator-client/archive/v1.4.0.tar.gz"
+    }
+  ]
+}

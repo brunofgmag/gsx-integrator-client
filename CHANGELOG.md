@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v0.1.1...v0.2.0) (2026-07-09)
+
+
+### Features
+
+* auto-update ([c932266](https://github.com/brunofgmag/gsx-integrator-client/commit/c9322664a109405bfc616c56e90d20f2c9dbe1c9))
+
 ## [0.1.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v0.1.0...v0.1.1) (2026-07-07)
 
 
