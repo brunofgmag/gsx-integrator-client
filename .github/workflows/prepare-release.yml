@@ -43,4 +43,7 @@ jobs:
         if: steps.release.outputs.prs_created == 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_MERGE_TOKEN || github.token }}
-        run: gh pr merge ${{ fromJSON(steps.release.outputs.pr).number }} --squash
+          PR: ${{ fromJSON(steps.release.outputs.pr).number }}
+        run: |
+          gh pr merge "$PR" --squash
+          gh pr edit "$PR" --remove-label "autorelease: pending"
