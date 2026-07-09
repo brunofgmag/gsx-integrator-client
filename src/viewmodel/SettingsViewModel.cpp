@@ -164,6 +164,22 @@ void SettingsViewModel::SetLanguage(const QString& language)
     emit LanguageChanged();
 }
 
+int SettingsViewModel::GetUpdateMode() const
+{
+    return settings_.updateMode;
+}
+
+void SettingsViewModel::SetUpdateMode(const int mode)
+{
+    if (settings_.updateMode == mode)
+    {
+        return;
+    }
+    settings_.updateMode = mode;
+    PersistImmediateSetting();
+    emit UpdateModeChanged();
+}
+
 void SettingsViewModel::RetranslateUi()
 {
     emit ValidationChanged();

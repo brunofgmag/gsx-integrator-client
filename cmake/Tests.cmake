@@ -215,6 +215,27 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/domain/model/AutomationStatus.h
         src/domain/support/Weight.h)
 
+gsxi_add_qt_test(gsxi-github-release-parser-tests github-release-parser
+        tests/tst_github_release_parser.cpp
+        src/application/model/UpdateInfo.h
+        src/infrastructure/update/GithubReleaseParser.cpp
+        src/infrastructure/update/GithubReleaseParser.h)
+target_compile_definitions(gsxi-github-release-parser-tests PRIVATE
+        GSX_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures\")
+
+gsxi_add_qt_test(gsxi-update-viewmodel-tests update-viewmodel
+        tests/doubles/FakeUpdateService.h
+        tests/tst_update_viewmodel.cpp
+        src/application/model/UpdateInfo.h
+        src/application/ports/UpdateService.h
+        src/viewmodel/UpdateViewModel.cpp
+        src/viewmodel/UpdateViewModel.h)
+
+gsxi_add_qt_test(gsxi-commbus-install-probe-tests commbus-install-probe
+        tests/tst_commbus_install_probe.cpp
+        src/infrastructure/update/CommbusInstallProbe.cpp
+        src/infrastructure/update/CommbusInstallProbe.h)
+
 gsxi_add_qt_test(gsxi-automation-settings-tests automation-settings
         tests/tst_automation_settings.cpp
         src/domain/model/AutomationSettings.h)

@@ -156,7 +156,7 @@ void IntegratorRuntime::HandleDisconnected()
 
     emit Updated();
 
-    reconnectTimer_.start();
+    emit SimulatorQuit();
 }
 
 void IntegratorRuntime::OnDispatchTimer()

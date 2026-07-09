@@ -46,8 +46,7 @@ public:
         std::erase(observers, observer);
     }
 
-    void FireCheckFinished(const bool ok, const bool available,
-                           const UpdateInfo& info, const QString& error = {})
+    void FireCheckFinished(const bool ok, const bool available, const UpdateInfo& info, const QString& error = {}) const
     {
         for (auto* observer : observers)
         {
@@ -55,8 +54,8 @@ public:
         }
     }
 
-    void FireCommbusCheckFinished(const bool ok, const QString& installed,
-                                  const QString& latest, const QString& url = {})
+    void FireCommbusCheckFinished(const bool ok, const QString& installed, const QString& latest,
+                                  const QString& url = {}) const
     {
         for (auto* observer : observers)
         {
@@ -64,7 +63,7 @@ public:
         }
     }
 
-    void FireDownloadProgress(const qint64 received, const qint64 total)
+    void FireDownloadProgress(const qint64 received, const qint64 total) const
     {
         for (auto* observer : observers)
         {

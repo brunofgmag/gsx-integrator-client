@@ -50,12 +50,16 @@ void CommbusInstallProbeTest::rejectsInvalidManifest()
 
 void CommbusInstallProbeTest::detectsVersionFromOverrideDir()
 {
-    QTemporaryDir community;
+    const QTemporaryDir community;
+
     QVERIFY(community.isValid());
+
     QDir(community.path()).mkpath(QStringLiteral("gsx-integrator-commbus"));
 
     QFile manifest(community.path() + QStringLiteral("/gsx-integrator-commbus/manifest.json"));
+
     QVERIFY(manifest.open(QIODevice::WriteOnly));
+
     manifest.write("{\"package_version\": \"0.2.1\"}");
     manifest.close();
 
@@ -64,7 +68,8 @@ void CommbusInstallProbeTest::detectsVersionFromOverrideDir()
 
 void CommbusInstallProbeTest::detectionReturnsEmptyWithoutManifest()
 {
-    QTemporaryDir community;
+    const QTemporaryDir community;
+
     QVERIFY(community.isValid());
 
     QVERIFY(DetectInstalledCommbusVersion(community.path()).isEmpty());

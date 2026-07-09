@@ -5,15 +5,16 @@
 
 namespace
 {
-QByteArray ReadFixture(const QString& name)
-{
-    QFile file(QStringLiteral(GSX_FIXTURES_DIR "/") + name);
-    if (!file.open(QIODevice::ReadOnly))
+    QByteArray ReadFixture(const QString& name)
     {
-        return {};
+        QFile file(QStringLiteral(GSX_FIXTURES_DIR "/") + name);
+        if (!file.open(QIODevice::ReadOnly))
+        {
+            return {};
+        }
+
+        return file.readAll();
     }
-    return file.readAll();
-}
 }
 
 class GithubReleaseParserTest final : public QObject

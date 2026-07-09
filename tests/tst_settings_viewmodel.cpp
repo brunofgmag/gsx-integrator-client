@@ -22,6 +22,8 @@ private slots:
     static void settingSameThemeModeIsNoOp();
     static void systemThemeUsesInjectedProvider();
     static void languagePersistsImmediately();
+    static void updateModeDefaultsToNotify();
+    static void updateModePersistsImmediately();
     static void parsesFuelRateWithCommaDecimal();
     static void parsesFuelRateWithDotDecimal();
     static void seededFuelRateRoundTripsThroughParse();
@@ -245,9 +247,35 @@ void SettingsViewModelTest::languagePersistsImmediately()
     QCOMPARE(viewModel.GetLanguage(), QStringLiteral("pt_BR"));
 }
 
+void SettingsViewModelTest::updateModeDefaultsToNotify()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    QCOMPARE(viewModel.GetUpdateMode(), static_cast<int>(SettingsViewModel::Notify));
+}
+
+void SettingsViewModelTest::updateModePersistsImmediately()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    viewModel.SetUpdateMode(SettingsViewModel::Auto);
+
+    QCOMPARE(repository.saveCalls, 1);
+    QCOMPARE(repository.stored.updateMode, 0);
+
+    const int savesBefore = repository.saveCalls;
+    viewModel.SetUpdateMode(SettingsViewModel::Auto);
+
+    QCOMPARE(repository.saveCalls, savesBefore);
+}
+
 void SettingsViewModelTest::parsesFuelRateWithCommaDecimal()
 {
-    const QLocale previous = QLocale();
+    const auto previous = QLocale();
     QLocale::setDefault(QLocale(QLocale::Portuguese, QLocale::Brazil));
 
     FakeSettingsRepository repository;
@@ -264,7 +292,7 @@ void SettingsViewModelTest::parsesFuelRateWithCommaDecimal()
 
 void SettingsViewModelTest::parsesFuelRateWithDotDecimal()
 {
-    const QLocale previous = QLocale();
+    const auto previous = QLocale();
     QLocale::setDefault(QLocale::c());
 
     FakeSettingsRepository repository;
@@ -281,7 +309,7 @@ void SettingsViewModelTest::parsesFuelRateWithDotDecimal()
 
 void SettingsViewModelTest::seededFuelRateRoundTripsThroughParse()
 {
-    const QLocale previous = QLocale();
+    const auto previous = QLocale();
     QLocale::setDefault(QLocale(QLocale::Portuguese, QLocale::Brazil));
 
     FakeSettingsRepository repository;

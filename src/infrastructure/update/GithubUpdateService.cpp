@@ -14,10 +14,11 @@
 
 namespace
 {
-constexpr auto kZipRootDir = "gsx-integrator-client";
-constexpr int kTransferTimeoutMs = 30000;
+    constexpr auto kZipRootDir = "gsx-integrator-client";
+    constexpr int kTransferTimeoutMs = 30000;
 
-constexpr auto kApplyScript = R"PS(param([int]$AppPid, [string]$Source, [string]$Dest, [string]$ExeName, [int]$Relaunch)
+    constexpr auto kApplyScript =
+        R"PS(param([int]$AppPid, [string]$Source, [string]$Dest, [string]$ExeName, [int]$Relaunch)
 $root = Split-Path -Parent $PSCommandPath
 Start-Transcript -Path (Join-Path $root 'apply.log') -Append | Out-Null
 Wait-Process -Id $AppPid -Timeout 60 -ErrorAction SilentlyContinue
@@ -30,16 +31,17 @@ Remove-Item -Recurse -Force (Join-Path $root 'download'), (Join-Path $root 'stag
 Remove-Item -Force $PSCommandPath -ErrorAction SilentlyContinue
 )PS";
 
-QString HttpError(const QNetworkReply* reply)
-{
-    const int status =
-        reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    if (status > 0)
+    QString HttpError(const QNetworkReply* reply)
     {
-        return QStringLiteral("HTTP %1").arg(status);
+        const int status =
+            reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (status > 0)
+        {
+            return QStringLiteral("HTTP %1").arg(status);
+        }
+
+        return reply->errorString();
     }
-    return reply->errorString();
-}
 }
 
 GithubUpdateService::GithubUpdateService(QString clientFeedUrl,
@@ -63,6 +65,7 @@ void GithubUpdateService::CheckForUpdates()
         connect(clientCheckReply_, &QNetworkReply::finished,
                 this, &GithubUpdateService::OnClientCheckHttpFinished);
     }
+
     if (!commbusCheckReply_ && !commbusFeedUrl_.isEmpty())
     {
         commbusCheckReply_ = StartGet(commbusFeedUrl_);
@@ -77,6 +80,7 @@ void GithubUpdateService::DownloadAndStage(const UpdateInfo& info)
     {
         return;
     }
+
     if (info.zipUrl.isEmpty() || info.shaUrl.isEmpty())
     {
         NotifyStageFinished(false, tr("The release has no download assets."));
@@ -87,6 +91,7 @@ void GithubUpdateService::DownloadAndStage(const UpdateInfo& info)
     pendingDownload_ = info;
 
     shaReply_ = StartGet(info.shaUrl);
+
     connect(shaReply_, &QNetworkReply::finished,
             this, &GithubUpdateService::OnShaHttpFinished);
 }
@@ -101,8 +106,10 @@ void GithubUpdateService::DiscardStaged()
     {
         zipReply_->abort();
     }
+
     QDir(UpdatesRootDir() + QStringLiteral("/download")).removeRecursively();
     QDir(UpdatesRootDir() + QStringLiteral("/staged")).removeRecursively();
+
     stagedVersion_.clear();
 }
 
@@ -127,10 +134,12 @@ bool GithubUpdateService::LaunchApplyHelper(const bool relaunch)
 
     const QString scriptPath = UpdatesRootDir() + QStringLiteral("/apply.ps1");
     QFile script(scriptPath);
+
     if (!script.open(QIODevice::WriteOnly | QIODevice::Truncate))
     {
         return false;
     }
+
     script.write(kApplyScript);
     script.close();
 
@@ -149,6 +158,7 @@ bool GithubUpdateService::LaunchApplyHelper(const bool relaunch)
 
     helperLaunched_ =
         QProcess::startDetached(QStringLiteral("powershell.exe"), arguments);
+
     return helperLaunched_;
 }
 
@@ -173,6 +183,7 @@ void GithubUpdateService::OnClientCheckHttpFinished()
         {
             observer->OnCheckFinished(false, false, {}, HttpError(reply));
         }
+
         return;
     }
 
@@ -181,9 +192,9 @@ void GithubUpdateService::OnClientCheckHttpFinished()
     {
         for (auto* observer : observers_)
         {
-            observer->OnCheckFinished(false, false, {},
-                                      tr("Unexpected release feed format."));
+            observer->OnCheckFinished(false, false, {}, tr("Unexpected release feed format."));
         }
+
         return;
     }
 
@@ -210,6 +221,7 @@ void GithubUpdateService::OnCommbusCheckHttpFinished()
         {
             observer->OnCommbusCheckFinished(false, {}, {}, {});
         }
+
         return;
     }
 
@@ -220,15 +232,14 @@ void GithubUpdateService::OnCommbusCheckHttpFinished()
         {
             observer->OnCommbusCheckFinished(false, {}, {}, {});
         }
+
         return;
     }
 
-    const QString installed = DetectInstalledCommbusVersion(
-        qEnvironmentVariable("GSXI_COMMBUS_COMMUNITY_DIR"));
+    const QString installed = DetectInstalledCommbusVersion(qEnvironmentVariable("GSXI_COMMBUS_COMMUNITY_DIR"));
     for (auto* observer : observers_)
     {
-        observer->OnCommbusCheckFinished(true, installed, info->version,
-                                         info->releasePageUrl);
+        observer->OnCommbusCheckFinished(true, installed, info->version, info->releasePageUrl);
     }
 }
 
@@ -276,7 +287,7 @@ void GithubUpdateService::OnZipHttpFinished()
     }
 
     const QString zipPath = UpdatesRootDir() + QStringLiteral("/download/")
-                            + pendingDownload_.zipName;
+        + pendingDownload_.zipName;
     QFile zipFile(zipPath);
     if (!zipFile.open(QIODevice::WriteOnly | QIODevice::Truncate))
     {
@@ -299,7 +310,7 @@ void GithubUpdateService::OnZipHttpFinished()
     }
 
     const QString stagedRoot = UpdatesRootDir() + QStringLiteral("/staged");
-    QDir().mkpath(stagedRoot);
+    (void)QDir().mkpath(stagedRoot);
 
     extractProcess_ = new QProcess(this);
     connect(extractProcess_, &QProcess::finished, this,
@@ -307,15 +318,18 @@ void GithubUpdateService::OnZipHttpFinished()
             {
                 OnExtractFinished(exitCode);
             });
+
     extractProcess_->start(
         QStringLiteral("powershell.exe"),
-        {QStringLiteral("-NoProfile"),
-         QStringLiteral("-ExecutionPolicy"), QStringLiteral("Bypass"),
-         QStringLiteral("-NonInteractive"),
-         QStringLiteral("-Command"),
-         QStringLiteral("Expand-Archive -LiteralPath '%1' -DestinationPath '%2' -Force")
-             .arg(QDir::toNativeSeparators(zipPath),
-                  QDir::toNativeSeparators(stagedRoot))});
+        {
+            QStringLiteral("-NoProfile"),
+            QStringLiteral("-ExecutionPolicy"), QStringLiteral("Bypass"),
+            QStringLiteral("-NonInteractive"),
+            QStringLiteral("-Command"),
+            QStringLiteral("Expand-Archive -LiteralPath '%1' -DestinationPath '%2' -Force")
+            .arg(QDir::toNativeSeparators(zipPath),
+                 QDir::toNativeSeparators(stagedRoot))
+        });
 }
 
 void GithubUpdateService::OnExtractFinished(const int exitCode)
@@ -327,6 +341,7 @@ void GithubUpdateService::OnExtractFinished(const int exitCode)
     if (exitCode != 0 || !QFile::exists(StagedAppDir() + QStringLiteral("/") + exeName))
     {
         NotifyStageFinished(false, tr("Could not extract the update."));
+
         return;
     }
 
@@ -340,14 +355,15 @@ QNetworkReply* GithubUpdateService::StartGet(const QString& url)
     request.setRawHeader("Accept", "application/vnd.github+json");
     request.setRawHeader("User-Agent",
                          QStringLiteral("gsx-integrator-client/%1")
-                             .arg(currentVersion_).toUtf8());
+                         .arg(currentVersion_).toUtf8());
+
     return network_.get(request);
 }
 
 QString GithubUpdateService::UpdatesRootDir()
 {
     return QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
-           + QStringLiteral("/updates");
+        + QStringLiteral("/updates");
 }
 
 QString GithubUpdateService::StagedAppDir() const

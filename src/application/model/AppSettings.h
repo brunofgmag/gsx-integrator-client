@@ -12,6 +12,7 @@ struct AppSettings
     bool autoStartFlow = false;
     int themeMode = 2;
     std::string language = "system";
+    int updateMode = 1;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_APPSETTINGS_H

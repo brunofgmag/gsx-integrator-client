@@ -8,15 +8,16 @@
 
 namespace
 {
-QString StripTagPrefix(const QString& tag)
-{
-    const QString trimmed = tag.trimmed();
-    if (trimmed.startsWith(u'v') || trimmed.startsWith(u'V'))
+    QString StripTagPrefix(const QString& tag)
     {
-        return trimmed.mid(1);
+        QString trimmed = tag.trimmed();
+        if (trimmed.startsWith(u'v') || trimmed.startsWith(u'V'))
+        {
+            return trimmed.mid(1);
+        }
+
+        return trimmed;
     }
-    return trimmed;
-}
 }
 
 std::optional<UpdateInfo> ParseLatestRelease(const QByteArray& json)
@@ -38,16 +39,17 @@ std::optional<UpdateInfo> ParseLatestRelease(const QByteArray& json)
     info.version = StripTagPrefix(tag);
     info.releasePageUrl = release.value(QStringLiteral("html_url")).toString();
 
-    for (const auto assets = release.value(QStringLiteral("assets")).toArray();
-         const QJsonValue& value : assets)
+    for (const auto assets = release.value(QStringLiteral("assets")).toArray(); const QJsonValue value : assets)
     {
         const QJsonObject asset = value.toObject();
         const QString name = asset.value(QStringLiteral("name")).toString();
         const QString url = asset.value(QStringLiteral("browser_download_url")).toString();
+
         if (!name.startsWith(QStringLiteral("gsx-integrator-client-")))
         {
             continue;
         }
+
         if (name.endsWith(QStringLiteral(".zip")))
         {
             info.zipName = name;
@@ -65,13 +67,14 @@ std::optional<UpdateInfo> ParseLatestRelease(const QByteArray& json)
 QString ParseSha256File(const QByteArray& content)
 {
     const QString text = QString::fromUtf8(content).trimmed();
-    const QString hash = text.section(QRegularExpression(QStringLiteral("\\s")), 0, 0).toLower();
+    QString hash = text.section(QRegularExpression(QStringLiteral("\\s")), 0, 0).toLower();
 
     static const QRegularExpression kHexHash(QStringLiteral("^[0-9a-f]{64}$"));
     if (!kHexHash.match(hash).hasMatch())
     {
         return {};
     }
+
     return hash;
 }
 
@@ -79,9 +82,11 @@ bool IsNewerVersion(const QString& tagName, const QString& currentVersion)
 {
     const QVersionNumber latest = QVersionNumber::fromString(StripTagPrefix(tagName));
     const QVersionNumber current = QVersionNumber::fromString(StripTagPrefix(currentVersion));
+
     if (latest.isNull() || current.isNull())
     {
         return false;
     }
+
     return latest > current;
 }

@@ -5,16 +5,16 @@
 
 namespace
 {
-UpdateInfo MakeInfo(const QString& version)
-{
-    UpdateInfo info;
-    info.version = version;
-    info.releasePageUrl = QStringLiteral("https://example.com/releases/v") + version;
-    info.zipUrl = QStringLiteral("https://example.com/client.zip");
-    info.shaUrl = QStringLiteral("https://example.com/client.zip.sha256");
-    info.zipName = QStringLiteral("client.zip");
-    return info;
-}
+    UpdateInfo MakeInfo(const QString& version)
+    {
+        UpdateInfo info;
+        info.version = version;
+        info.releasePageUrl = QStringLiteral("https://example.com/releases/v") + version;
+        info.zipUrl = QStringLiteral("https://example.com/client.zip");
+        info.shaUrl = QStringLiteral("https://example.com/client.zip.sha256");
+        info.zipName = QStringLiteral("client.zip");
+        return info;
+    }
 }
 
 class UpdateViewModelTest final : public QObject
@@ -41,23 +41,28 @@ void UpdateViewModelTest::notifyFlowDownloadsAndRestartsOnDemand()
                               UpdateViewModel::Notify, true);
 
     viewModel.checkForUpdates();
+
     QCOMPARE(service.checkCalls, 1);
     QCOMPARE(viewModel.GetState(), static_cast<int>(UpdateViewModel::Checking));
 
     service.FireCheckFinished(true, true, MakeInfo(QStringLiteral("1.4.0")));
+
     QCOMPARE(viewModel.GetState(), static_cast<int>(UpdateViewModel::UpdateAvailable));
     QVERIFY(viewModel.IsUpdateAvailable());
     QCOMPARE(viewModel.GetLatestVersion(), QStringLiteral("1.4.0"));
     QCOMPARE(service.downloadCalls, 0);
 
     viewModel.downloadAndInstall();
+
     QCOMPARE(service.downloadCalls, 1);
     QCOMPARE(viewModel.GetState(), static_cast<int>(UpdateViewModel::Downloading));
 
     service.FireDownloadProgress(50, 100);
+
     QCOMPARE(viewModel.GetProgress(), 0.5);
 
     service.FireStageFinished(true);
+
     QCOMPARE(service.helperCalls, 1);
     QVERIFY(service.lastRelaunch);
 }
@@ -69,10 +74,12 @@ void UpdateViewModelTest::autoModeDownloadsSilentlyAndAppliesOnExit()
                               UpdateViewModel::Auto, true);
 
     service.FireCheckFinished(true, true, MakeInfo(QStringLiteral("1.4.0")));
+
     QCOMPARE(service.downloadCalls, 1);
     QCOMPARE(viewModel.GetState(), static_cast<int>(UpdateViewModel::Downloading));
 
     service.FireStageFinished(true);
+
     QCOMPARE(viewModel.GetState(), static_cast<int>(UpdateViewModel::ReadyToRestart));
     QVERIFY(viewModel.IsReadyToRestart());
     QCOMPARE(service.helperCalls, 0);
@@ -130,6 +137,7 @@ void UpdateViewModelTest::newerReleaseAfterStagingGoesBackToAvailable()
     service.FireCheckFinished(true, true, MakeInfo(QStringLiteral("1.4.0")));
     viewModel.downloadAndInstall();
     service.FireStageFinished(true);
+
     QCOMPARE(service.helperCalls, 1);
 
     service.staged = false;
@@ -159,6 +167,7 @@ void UpdateViewModelTest::switchingToAutoStartsPendingDownload()
                               UpdateViewModel::Notify, true);
 
     service.FireCheckFinished(true, true, MakeInfo(QStringLiteral("1.4.0")));
+
     QCOMPARE(service.downloadCalls, 0);
 
     viewModel.SetMode(UpdateViewModel::Auto);
@@ -189,11 +198,13 @@ void UpdateViewModelTest::commbusComparesInstalledAndLatest()
     service.FireCommbusCheckFinished(true, QStringLiteral("0.2.1"),
                                      QStringLiteral("0.3.0"),
                                      QStringLiteral("https://example.com"));
+
     QVERIFY(viewModel.IsCommbusUpdateAvailable());
     QCOMPARE(viewModel.GetCommbusInstalledVersion(), QStringLiteral("0.2.1"));
     QCOMPARE(viewModel.GetCommbusLatestVersion(), QStringLiteral("0.3.0"));
 
     service.FireCommbusCheckFinished(true, {}, QStringLiteral("0.3.0"));
+
     QVERIFY(!viewModel.IsCommbusUpdateAvailable());
 
     service.FireCommbusCheckFinished(true, QStringLiteral("0.3.0"),

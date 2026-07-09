@@ -8,9 +8,9 @@ class UpdateServiceObserver
 {
 public:
     virtual ~UpdateServiceObserver() = default;
-    virtual void OnCheckFinished(bool ok, bool updateAvailable,
-                                 const UpdateInfo& info, const QString& error) = 0;
-    virtual void OnCommbusCheckFinished(bool ok, const QString& installedVersion,
+    virtual void OnCheckFinished(bool ok, bool updateAvailable, const UpdateInfo& info, const QString& error) = 0;
+    virtual void OnCommbusCheckFinished(bool ok,
+                                        const QString& installedVersion,
                                         const QString& latestVersion,
                                         const QString& releaseUrl) = 0;
     virtual void OnDownloadProgress(qint64 received, qint64 total) = 0;

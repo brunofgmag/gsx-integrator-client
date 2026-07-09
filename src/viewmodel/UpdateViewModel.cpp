@@ -6,19 +6,19 @@
 
 namespace
 {
-constexpr int kStartupCheckDelayMs = 3000;
-constexpr int kPeriodicCheckIntervalMs = 6 * 60 * 60 * 1000;
+    constexpr int kStartupCheckDelayMs = 3000;
+    constexpr int kPeriodicCheckIntervalMs = 6 * 60 * 60 * 1000;
 
-bool IsVersionNewer(const QString& candidate, const QString& reference)
-{
-    const QVersionNumber lhs = QVersionNumber::fromString(candidate);
-    const QVersionNumber rhs = QVersionNumber::fromString(reference);
-    if (lhs.isNull() || rhs.isNull())
+    bool IsVersionNewer(const QString& candidate, const QString& reference)
     {
-        return false;
+        const QVersionNumber lhs = QVersionNumber::fromString(candidate);
+        const QVersionNumber rhs = QVersionNumber::fromString(reference);
+        if (lhs.isNull() || rhs.isNull())
+        {
+            return false;
+        }
+        return lhs > rhs;
     }
-    return lhs > rhs;
-}
 }
 
 UpdateViewModel::UpdateViewModel(UpdateService* service,
@@ -137,6 +137,7 @@ void UpdateViewModel::downloadAndInstall()
     {
         return;
     }
+
     restartWhenStaged_ = mode_ != Auto;
     progress_ = 0.0;
     emit ProgressChanged();
@@ -151,7 +152,9 @@ void UpdateViewModel::restartNow()
         QCoreApplication::quit();
         return;
     }
+
     errorMessage_ = tr("Could not start the updater.");
+
     SetState(Error);
 }
 
@@ -161,6 +164,7 @@ void UpdateViewModel::SetMode(const int mode)
     {
         return;
     }
+
     mode_ = mode;
     if (updatesEnabled_ && mode_ == Auto && state_ == UpdateAvailable)
     {
@@ -236,13 +240,15 @@ void UpdateViewModel::OnCommbusCheckFinished(const bool ok,
     commbusLatestVersion_ = latestVersion;
     commbusReleaseUrl_ = releaseUrl;
     commbusUpdateAvailable_ = !installedVersion.isEmpty()
-                              && IsVersionNewer(latestVersion, installedVersion);
+        && IsVersionNewer(latestVersion, installedVersion);
+
     emit CommbusChanged();
 }
 
 void UpdateViewModel::OnDownloadProgress(const qint64 received, const qint64 total)
 {
     progress_ = total > 0 ? static_cast<double>(received) / static_cast<double>(total) : 0.0;
+
     emit ProgressChanged();
 }
 
@@ -280,6 +286,8 @@ void UpdateViewModel::SetState(const State state)
         emit StateChanged();
         return;
     }
+
     state_ = state;
+
     emit StateChanged();
 }

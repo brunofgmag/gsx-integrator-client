@@ -27,9 +27,11 @@ class UpdateViewModel final : public QObject, public UpdateServiceObserver
 
 public:
     enum State { Idle = 0, Checking, UpToDate, UpdateAvailable, Downloading, ReadyToRestart, Error };
+
     Q_ENUM(State)
 
     enum Mode { Auto = 0, Notify = 1, Manual = 2 };
+
     Q_ENUM(Mode)
 
     UpdateViewModel(UpdateService* service,

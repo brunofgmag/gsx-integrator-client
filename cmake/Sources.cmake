@@ -97,10 +97,20 @@ set(APP_SOURCES
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
         src/infrastructure/simconnect/SimConnectVariableGateway.h
+        src/application/model/UpdateInfo.h
+        src/application/ports/UpdateService.h
+        src/infrastructure/update/CommbusInstallProbe.cpp
+        src/infrastructure/update/CommbusInstallProbe.h
+        src/infrastructure/update/GithubReleaseParser.cpp
+        src/infrastructure/update/GithubReleaseParser.h
+        src/infrastructure/update/GithubUpdateService.cpp
+        src/infrastructure/update/GithubUpdateService.h
         src/viewmodel/OperationsViewModel.cpp
         src/viewmodel/OperationsViewModel.h
         src/viewmodel/SettingsViewModel.cpp
         src/viewmodel/SettingsViewModel.h
+        src/viewmodel/UpdateViewModel.cpp
+        src/viewmodel/UpdateViewModel.h
         src/domain/ports/GsxMenuGateway.h
         src/infrastructure/gsx/GsxMenuNavigator.cpp
         src/infrastructure/gsx/GsxMenuNavigator.h
@@ -130,6 +140,7 @@ set(APP_QML_FILES
         src/qml/components/SquareSwitch.qml
         src/qml/components/StatusChip.qml
         src/qml/components/SwitchRow.qml
+        src/qml/components/UpdatePill.qml
         src/qml/screens/AboutScreen.qml
         src/qml/screens/ConnectingPanel.qml
         src/qml/screens/OperationsScreen.qml

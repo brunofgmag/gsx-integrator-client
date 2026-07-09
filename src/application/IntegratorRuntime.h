@@ -47,6 +47,7 @@ public:
 
 signals:
     void Updated();
+    void SimulatorQuit();
 
 private:
     bool IsSimOnMenu();
