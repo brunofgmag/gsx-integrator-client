@@ -34,6 +34,7 @@ jobs:
         id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         with:
+          token: ${{ secrets.RELEASE_MERGE_TOKEN || github.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           target-branch: develop
@@ -43,7 +44,8 @@ jobs:
         if: steps.release.outputs.prs_created == 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_MERGE_TOKEN || github.token }}
-          PR: ${{ fromJSON(steps.release.outputs.pr).number }}
+          PR_JSON: ${{ steps.release.outputs.pr }}
         run: |
-          gh pr merge "$PR" --squash
-          gh pr edit "$PR" --remove-label "autorelease: pending"
+          pr="$(jq -r '.number' <<<"$PR_JSON")"
+          gh pr merge "$pr" --squash
+          gh pr edit "$pr" --remove-label "autorelease: pending"
