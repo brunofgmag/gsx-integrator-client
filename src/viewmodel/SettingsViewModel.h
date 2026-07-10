@@ -24,6 +24,9 @@ class SettingsViewModel final : public QObject
     Q_PROPERTY(bool effectiveDark READ GetEffectiveDark NOTIFY EffectiveDarkChanged)
     Q_PROPERTY(QString language READ GetLanguage WRITE SetLanguage NOTIFY LanguageChanged)
     Q_PROPERTY(int updateMode READ GetUpdateMode WRITE SetUpdateMode NOTIFY UpdateModeChanged)
+    Q_PROPERTY(bool closeToTray READ GetCloseToTray WRITE SetCloseToTray NOTIFY CloseToTrayChanged)
+    Q_PROPERTY(bool minimizeToTray READ GetMinimizeToTray WRITE SetMinimizeToTray NOTIFY MinimizeToTrayChanged)
+    Q_PROPERTY(bool trayTipShown READ GetTrayTipShown WRITE SetTrayTipShown NOTIFY TrayTipShownChanged)
     Q_PROPERTY(bool canSave READ CanSave NOTIFY ValidationChanged)
     Q_PROPERTY(QString validationMessage READ GetValidationMessage NOTIFY ValidationChanged)
     Q_PROPERTY(QString saveMessage READ GetSaveMessage NOTIFY SaveResultChanged)
@@ -31,9 +34,11 @@ class SettingsViewModel final : public QObject
 
 public:
     enum ThemeMode { Light = 0, Dark = 1, System = 2 };
+
     Q_ENUM(ThemeMode)
 
     enum UpdateMode { Auto = 0, Notify = 1, Manual = 2 };
+
     Q_ENUM(UpdateMode)
 
     explicit SettingsViewModel(SettingsRepository* repository,
@@ -65,6 +70,15 @@ public:
     [[nodiscard]] int GetUpdateMode() const;
     void SetUpdateMode(int mode);
 
+    [[nodiscard]] bool GetCloseToTray() const;
+    void SetCloseToTray(bool enabled);
+
+    [[nodiscard]] bool GetMinimizeToTray() const;
+    void SetMinimizeToTray(bool enabled);
+
+    [[nodiscard]] bool GetTrayTipShown() const;
+    void SetTrayTipShown(bool shown);
+
     void RetranslateUi();
 
     [[nodiscard]] bool CanSave() const;
@@ -84,6 +98,9 @@ signals:
     void EffectiveDarkChanged();
     void LanguageChanged();
     void UpdateModeChanged();
+    void CloseToTrayChanged();
+    void MinimizeToTrayChanged();
+    void TrayTipShownChanged();
     void ValidationChanged();
     void SaveResultChanged();
 

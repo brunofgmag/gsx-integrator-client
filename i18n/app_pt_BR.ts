@@ -163,32 +163,32 @@
 <context>
     <name>GithubUpdateService</name>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="82"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="86"/>
         <source>The release has no download assets.</source>
         <translation>A release não tem arquivos para download.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="185"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="195"/>
         <source>Unexpected release feed format.</source>
         <translation>Formato inesperado do feed de releases.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="249"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="260"/>
         <source>Invalid checksum file.</source>
         <translation>Arquivo de checksum inválido.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="283"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="294"/>
         <source>Could not write the download.</source>
         <translation>Não foi possível gravar o download.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="297"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="308"/>
         <source>Checksum mismatch. Download discarded.</source>
         <translation>Checksum não confere. Download descartado.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="329"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="343"/>
         <source>Could not extract the update.</source>
         <translation>Não foi possível extrair a atualização.</translation>
     </message>
@@ -233,47 +233,75 @@
 <context>
     <name>Main</name>
     <message>
-        <location filename="../src/qml/Main.qml" line="15"/>
+        <location filename="../src/qml/Main.qml" line="16"/>
+        <location filename="../src/qml/Main.qml" line="47"/>
+        <location filename="../src/qml/Main.qml" line="127"/>
         <source>GSX Integrator</source>
         <translation>GSX Integrator</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="78"/>
+        <location filename="../src/qml/Main.qml" line="48"/>
+        <source>Still running in the tray. Right-click the icon to open or quit.</source>
+        <translation>Ainda em execução na bandeja. Clique com o botão direito no ícone para abrir ou fechar.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/Main.qml" line="131"/>
+        <source>Open</source>
+        <translation>Abrir</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/Main.qml" line="114"/>
+        <location filename="../src/qml/Main.qml" line="135"/>
+        <source>Quit</source>
+        <translation>Fechar</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/Main.qml" line="94"/>
+        <source>Quit GSX Integrator?</source>
+        <translation>Fechar o GSX Integrator?</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/Main.qml" line="107"/>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/Main.qml" line="198"/>
         <source>Restart to update</source>
         <translation>Reiniciar para atualizar</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="80"/>
+        <location filename="../src/qml/Main.qml" line="200"/>
         <source>↓ CommBus</source>
         <translation>↓ CommBus</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="82"/>
+        <location filename="../src/qml/Main.qml" line="202"/>
         <source>Apply the update and restart now</source>
         <translation>Aplicar a atualização e reiniciar agora</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="83"/>
+        <location filename="../src/qml/Main.qml" line="203"/>
         <source>Update available</source>
         <translation>Atualização disponível</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="96"/>
+        <location filename="../src/qml/Main.qml" line="216"/>
         <source>Switch to light theme</source>
         <translation>Mudar para o tema claro</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="96"/>
+        <location filename="../src/qml/Main.qml" line="216"/>
         <source>Switch to dark theme</source>
         <translation>Mudar para o tema escuro</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="110"/>
+        <location filename="../src/qml/Main.qml" line="230"/>
         <source>About</source>
         <translation>Sobre</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="103"/>
+        <location filename="../src/qml/Main.qml" line="223"/>
         <source>Settings</source>
         <translation>Configurações</translation>
     </message>
@@ -484,72 +512,92 @@
     </message>
     <message>
         <location filename="../src/qml/screens/SettingsScreen.qml" line="105"/>
+        <source>Close to tray</source>
+        <translation>Fechar para a bandeja</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="113"/>
+        <source>Minimize to tray</source>
+        <translation>Minimizar para a bandeja</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="106"/>
+        <source>Closing hides the window to the tray</source>
+        <translation>Fechar esconde a janela para a bandeja</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="114"/>
+        <source>Minimizing hides the window to the tray</source>
+        <translation>Minimizar esconde a janela para a bandeja</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="121"/>
         <source>Updates</source>
         <translation>Atualizações</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="106"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="122"/>
         <source>How new versions are installed</source>
         <translation>Como novas versões são instaladas</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="107"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="123"/>
         <source>Auto downloads updates and applies them when the app closes. Notify only shows an alert in the header. Manual never checks on its own.</source>
         <translation>Auto baixa atualizações e aplica ao fechar o app. Avisar só mostra um alerta no cabeçalho. Manual nunca verifica sozinho.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="111"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="127"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="111"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="127"/>
         <source>Notify</source>
         <translation>Avisar</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="111"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="127"/>
         <source>Manual</source>
         <translation>Manual</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="119"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="135"/>
         <source>Theme</source>
         <translation>Tema</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="120"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="136"/>
         <source>&quot;Windows&quot; follows the system</source>
         <translation>&quot;Windows&quot; segue o sistema</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="124"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="140"/>
         <source>Light</source>
         <translation>Claro</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="124"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="140"/>
         <source>Dark</source>
         <translation>Escuro</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="124"/>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="137"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="140"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="153"/>
         <source>Windows</source>
         <translation>Windows</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="132"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="148"/>
         <source>Language</source>
         <translation>Idioma</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="133"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="149"/>
         <source>&quot;Windows&quot; uses the system language</source>
         <translation>&quot;Windows&quot; usa o idioma do sistema</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="185"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="201"/>
         <source>Save settings</source>
         <translation>Salvar ajustes</translation>
     </message>
@@ -557,23 +605,23 @@
 <context>
     <name>SettingsViewModel</name>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="257"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="305"/>
         <source>Enter a valid SimBrief Pilot ID.</source>
         <translation>Informe um SimBrief Pilot ID válido.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="266"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="314"/>
         <source>Enter a valid fuel rate.</source>
         <translation>Informe uma taxa de combustível válida.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="227"/>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="278"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="275"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="326"/>
         <source>Could not save settings.</source>
         <translation>Não foi possível salvar as configurações.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="232"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="280"/>
         <source>Settings saved.</source>
         <translation>Configurações salvas.</translation>
     </message>
@@ -755,7 +803,7 @@
 <context>
     <name>UpdateViewModel</name>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="154"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="156"/>
         <source>Could not start the updater.</source>
         <translation>Não foi possível iniciar o atualizador.</translation>
     </message>

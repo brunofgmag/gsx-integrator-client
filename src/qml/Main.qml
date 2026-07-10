@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import Qt.labs.platform as Platform
 
 ApplicationWindow {
     id: window
@@ -11,19 +12,139 @@ ApplicationWindow {
     height: 680
     minimumWidth: 560
     minimumHeight: 600
-    visible: true
+    visible: !startHidden
     title: qsTr("GSX Integrator")
     color: Theme.bg
 
     required property var integratorVm
     required property var settingsVm
     required property var updateVm
+    required property bool startHidden
+    required property string trayIconSource
 
     readonly property bool compact: width < 620
     readonly property int shellMargin: compact ? 14 : 20
 
     // 0 = ops, 1 = settings, 2 = about. Header buttons toggle back to ops.
     property int screen: 0
+
+    function restoreFromTray() {
+        window.showNormal()
+        window.raise()
+        window.requestActivate()
+    }
+
+    function confirmQuit() {
+        if (!window.visible) {
+            window.restoreFromTray()
+        }
+        quitDialog.open()
+    }
+
+    function hideToTray() {
+        window.hide()
+        if (!window.settingsVm.trayTipShown) {
+            tray.showMessage(qsTr("GSX Integrator"),
+                             qsTr("Still running in the tray. Right-click the icon to open or quit."))
+            window.settingsVm.trayTipShown = true
+        }
+    }
+
+    onClosing: close => {
+        if (window.settingsVm.closeToTray) {
+            close.accepted = false
+            window.hideToTray()
+        } else {
+            close.accepted = false
+            window.confirmQuit()
+        }
+    }
+
+    onVisibilityChanged: {
+        if (window.visibility === Window.Minimized && window.settingsVm.minimizeToTray) {
+            window.hideToTray()
+        }
+    }
+
+    Dialog {
+        id: quitDialog
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        focus: true
+        padding: 20
+
+        background: Rectangle {
+            radius: Theme.radius
+            color: Theme.panel
+            border.color: Theme.line
+            border.width: 1
+        }
+
+        Overlay.modal: Rectangle {
+            color: Qt.alpha(Theme.bg, 0.7)
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 18
+            focus: true
+            Keys.onReturnPressed: Qt.exit(0)
+            Keys.onEnterPressed: Qt.exit(0)
+
+            Text {
+                text: qsTr("Quit GSX Integrator?")
+                color: Theme.text
+                font.pixelSize: 12
+                font.bold: true
+                font.letterSpacing: 1.2
+                font.capitalization: Font.AllUppercase
+            }
+
+            Row {
+                Layout.alignment: Qt.AlignRight
+                spacing: 8
+
+                ActionButton {
+                    text: qsTr("Cancel")
+                    secondary: true
+                    small: true
+                    onClicked: quitDialog.close()
+                }
+
+                ActionButton {
+                    text: qsTr("Quit")
+                    tint: Theme.red
+                    small: true
+                    onClicked: Qt.exit(0)
+                }
+            }
+        }
+    }
+
+    Platform.SystemTrayIcon {
+        id: tray
+        visible: true
+        icon.source: window.trayIconSource
+        tooltip: qsTr("GSX Integrator")
+
+        menu: Platform.Menu {
+            Platform.MenuItem {
+                text: qsTr("Open")
+                onTriggered: window.restoreFromTray()
+            }
+            Platform.MenuItem {
+                text: qsTr("Quit")
+                onTriggered: window.confirmQuit()
+            }
+        }
+
+        onActivated: reason => {
+            if (reason === Platform.SystemTrayIcon.Trigger
+                    || reason === Platform.SystemTrayIcon.DoubleClick) {
+                window.restoreFromTray()
+            }
+        }
+    }
 
     Binding {
         target: Theme
