@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <QtCore/QDir>
 #include <QtCore/QLocale>
+#include <QtCore/QSettings>
 #include <QtCore/QSize>
 #include <QtCore/QTranslator>
 #include <QtGui/QFont>
@@ -12,6 +13,7 @@
 #include "application/IntegratorRuntime.h"
 #include "application/RuntimeIntegratorService.h"
 #include "infrastructure/settings/QSettingsRepository.h"
+#include "infrastructure/platform/ShowWindowMessageFilter.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
 #include "infrastructure/update/GithubUpdateService.h"
 #include "viewmodel/OperationsViewModel.h"
@@ -40,6 +42,15 @@ namespace
         }
         return true;
     }
+
+    bool LightTaskbar()
+    {
+        const QSettings personalize(
+            QStringLiteral(
+                R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)"),
+            QSettings::NativeFormat);
+        return personalize.value(QStringLiteral("SystemUsesLightTheme"), 0).toInt() == 1;
+    }
 }
 
 int main(int argc, char* argv[])
@@ -47,10 +58,12 @@ int main(int argc, char* argv[])
     CreateMutexW(nullptr, FALSE, L"Local\\gsx-integrator-client.single-instance");
     if (GetLastError() == ERROR_ALREADY_EXISTS)
     {
+        PostMessageW(HWND_BROADCAST, ShowWindowMessageFilter::MessageId(), 0, 0);
         return 0;
     }
 
     const QGuiApplication app(argc, argv);
+    QGuiApplication::setQuitOnLastWindowClosed(false);
     QGuiApplication::setOrganizationName(QStringLiteral("brunofgmag"));
     QGuiApplication::setApplicationName(QStringLiteral("gsx-integrator-client"));
     QGuiApplication::setApplicationDisplayName(QStringLiteral("GSX Integrator"));
@@ -127,15 +140,22 @@ int main(int argc, char* argv[])
                      &settingsViewModel, [&settingsViewModel] { settingsViewModel.RefreshEffectiveTheme(); });
 
     QObject::connect(&runtime, &IntegratorRuntime::SimulatorQuit,
-                     &app, &QCoreApplication::quit, Qt::QueuedConnection);
+                     &app, [] { QCoreApplication::exit(0); }, Qt::QueuedConnection);
 
     runtime.Setup();
+
+    const bool startInTray = QCoreApplication::arguments().contains(QStringLiteral("--tray"));
+    const QString trayIconSource = LightTaskbar()
+                                       ? QStringLiteral("qrc:/icons/tray_dark_32.png")
+                                       : QStringLiteral("qrc:/icons/tray_white_32.png");
 
     QQmlApplicationEngine engine;
     engine.setInitialProperties({
         {QStringLiteral("integratorVm"), QVariant::fromValue(&operationsViewModel)},
         {QStringLiteral("settingsVm"), QVariant::fromValue(&settingsViewModel)},
         {QStringLiteral("updateVm"), QVariant::fromValue(&updateViewModel)},
+        {QStringLiteral("startHidden"), startInTray},
+        {QStringLiteral("trayIconSource"), trayIconSource},
     });
 
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app,
@@ -165,8 +185,11 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    if (auto* rootWindow = qobject_cast<QWindow*>(engine.rootObjects().first()))
+    auto* rootWindow = qobject_cast<QWindow*>(engine.rootObjects().first());
+    ShowWindowMessageFilter showWindowFilter(rootWindow);
+    if (rootWindow != nullptr)
     {
+        QCoreApplication::instance()->installNativeEventFilter(&showWindowFilter);
         WindowsTitleBar::Apply(rootWindow, settingsViewModel.GetEffectiveDark());
 
         QObject::connect(&settingsViewModel, &SettingsViewModel::EffectiveDarkChanged,

@@ -10,6 +10,9 @@ namespace
     constexpr auto kKeyDarkThemeLegacy = "ui/darkTheme";
     constexpr auto kKeyLanguage = "ui/language";
     constexpr auto kKeyUpdateMode = "updates/mode";
+    constexpr auto kKeyCloseToTray = "ui/closeToTray";
+    constexpr auto kKeyMinimizeToTray = "ui/minimizeToTray";
+    constexpr auto kKeyTrayTipShown = "ui/trayTipShown";
 }
 
 AppSettings QSettingsRepository::Load() const
@@ -31,6 +34,9 @@ AppSettings QSettingsRepository::Load() const
 
     result.language = settings.value(kKeyLanguage, "system").toString().toStdString();
     result.updateMode = settings.value(kKeyUpdateMode, 1).toInt();
+    result.closeToTray = settings.value(kKeyCloseToTray, true).toBool();
+    result.minimizeToTray = settings.value(kKeyMinimizeToTray, true).toBool();
+    result.trayTipShown = settings.value(kKeyTrayTipShown, false).toBool();
 
     return result;
 }
@@ -45,6 +51,9 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyThemeMode, values.themeMode);
     settings.setValue(kKeyLanguage, QString::fromStdString(values.language));
     settings.setValue(kKeyUpdateMode, values.updateMode);
+    settings.setValue(kKeyCloseToTray, values.closeToTray);
+    settings.setValue(kKeyMinimizeToTray, values.minimizeToTray);
+    settings.setValue(kKeyTrayTipShown, values.trayTipShown);
     settings.sync();
 
     return settings.status() == QSettings::NoError;

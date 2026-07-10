@@ -149,7 +149,7 @@ void UpdateViewModel::restartNow()
 {
     if (service_->LaunchApplyHelper(true))
     {
-        QCoreApplication::quit();
+        QCoreApplication::exit(0);
         return;
     }
 

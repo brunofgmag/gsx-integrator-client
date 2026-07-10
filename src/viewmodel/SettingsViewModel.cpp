@@ -7,21 +7,21 @@
 
 namespace
 {
-double ParseFuelRate(const QString& text, bool* ok)
-{
-    const QString trimmed = text.trimmed();
-    const double value = QLocale().toDouble(trimmed, ok);
-    if (*ok)
+    double ParseFuelRate(const QString& text, bool* ok)
     {
-        return value;
+        const QString trimmed = text.trimmed();
+        const double value = QLocale().toDouble(trimmed, ok);
+        if (*ok)
+        {
+            return value;
+        }
+        return QLocale::c().toDouble(trimmed, ok);
     }
-    return QLocale::c().toDouble(trimmed, ok);
-}
 
-QString FormatFuelRate(const double value)
-{
-    return QLocale().toString(value, 'g', 12).remove(QLocale().groupSeparator());
-}
+    QString FormatFuelRate(const double value)
+    {
+        return QLocale().toString(value, 'g', 12).remove(QLocale().groupSeparator());
+    }
 }
 
 SettingsViewModel::SettingsViewModel(
@@ -178,6 +178,60 @@ void SettingsViewModel::SetUpdateMode(const int mode)
     settings_.updateMode = mode;
     PersistImmediateSetting();
     emit UpdateModeChanged();
+}
+
+bool SettingsViewModel::GetCloseToTray() const
+{
+    return settings_.closeToTray;
+}
+
+void SettingsViewModel::SetCloseToTray(const bool enabled)
+{
+    if (settings_.closeToTray == enabled)
+    {
+        return;
+    }
+
+    settings_.closeToTray = enabled;
+    PersistImmediateSetting();
+
+    emit CloseToTrayChanged();
+}
+
+bool SettingsViewModel::GetMinimizeToTray() const
+{
+    return settings_.minimizeToTray;
+}
+
+void SettingsViewModel::SetMinimizeToTray(const bool enabled)
+{
+    if (settings_.minimizeToTray == enabled)
+    {
+        return;
+    }
+
+    settings_.minimizeToTray = enabled;
+    PersistImmediateSetting();
+
+    emit MinimizeToTrayChanged();
+}
+
+bool SettingsViewModel::GetTrayTipShown() const
+{
+    return settings_.trayTipShown;
+}
+
+void SettingsViewModel::SetTrayTipShown(const bool shown)
+{
+    if (settings_.trayTipShown == shown)
+    {
+        return;
+    }
+
+    settings_.trayTipShown = shown;
+    PersistImmediateSetting();
+
+    emit TrayTipShownChanged();
 }
 
 void SettingsViewModel::RetranslateUi()

@@ -8,5 +8,7 @@
         <file alias="app-icon_64.png">branding/icon_64.png</file>
         <file alias="app-icon_128.png">branding/icon_128.png</file>
         <file alias="app-icon_256.png">branding/icon_256.png</file>
+        <file alias="tray_white_32.png">branding/tray_white_32.png</file>
+        <file alias="tray_dark_32.png">branding/tray_dark_32.png</file>
     </qresource>
 </RCC>

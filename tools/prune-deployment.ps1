@@ -26,7 +26,8 @@ $unusedPaths = @(
     'iconengines',
     'imageformats',
     'networkinformation',
-    'platforminputcontexts'
+    'platforminputcontexts',
+    'styles'
 )
 
 foreach ($relativePath in $unusedPaths) {
