@@ -13,6 +13,8 @@ private slots:
     static void rejectsInvalidDraft();
     static void savesValidDraft();
     static void persistsAutoStartFlowImmediately();
+    static void traySettingsDefaultToEnabled();
+    static void traySettingsPersistImmediately();
     static void rejectsNonNumericFuelRate();
     static void rejectsNonPositiveFuelRate();
     static void emptyPilotIdIsAcceptedAsZero();
@@ -99,6 +101,46 @@ void SettingsViewModelTest::persistsAutoStartFlowImmediately()
     QCOMPARE(repository.saveCalls, 1);
     QVERIFY(repository.stored.autoStartFlow);
     QVERIFY(service.appliedSettings.autoStartFlow);
+}
+
+void SettingsViewModelTest::traySettingsDefaultToEnabled()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(viewModel.GetCloseToTray());
+    QVERIFY(viewModel.GetMinimizeToTray());
+    QVERIFY(!viewModel.GetTrayTipShown());
+}
+
+void SettingsViewModelTest::traySettingsPersistImmediately()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    viewModel.SetCloseToTray(false);
+
+    QCOMPARE(repository.saveCalls, 1);
+    QVERIFY(!repository.stored.closeToTray);
+
+    viewModel.SetMinimizeToTray(false);
+
+    QCOMPARE(repository.saveCalls, 2);
+    QVERIFY(!repository.stored.minimizeToTray);
+
+    viewModel.SetTrayTipShown(true);
+
+    QCOMPARE(repository.saveCalls, 3);
+    QVERIFY(repository.stored.trayTipShown);
+
+    const int savesBefore = repository.saveCalls;
+    viewModel.SetCloseToTray(false);
+    viewModel.SetMinimizeToTray(false);
+    viewModel.SetTrayTipShown(true);
+
+    QCOMPARE(repository.saveCalls, savesBefore);
 }
 
 void SettingsViewModelTest::rejectsNonNumericFuelRate()

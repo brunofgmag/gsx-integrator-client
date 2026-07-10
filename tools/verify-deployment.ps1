@@ -7,7 +7,7 @@ param(
 
     [double]$MaximumSizeMiB = 0,
 
-    [int]$MaximumFileCount = 130
+    [int]$MaximumFileCount = 140
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,7 +16,7 @@ $root = [IO.Path]::GetFullPath($DeploymentDir)
 $isDebug = $Configuration -eq 'Debug'
 $suffix = if ($isDebug) { 'd' } else { '' }
 if ($MaximumSizeMiB -le 0) {
-    $MaximumSizeMiB = if ($isDebug) { 250 } else { 45 }
+    $MaximumSizeMiB = if ($isDebug) { 250 } else { 50 }
 }
 
 $requiredPaths = @(
@@ -31,7 +31,8 @@ $requiredPaths = @(
     "tls/qschannelbackend$suffix.dll",
     'qml/QtQuick/qmldir',
     'qml/QtQuick/Controls/Basic/qmldir',
-    'qml/QtQuick/Layouts/qmldir'
+    'qml/QtQuick/Layouts/qmldir',
+    'qml/Qt/labs/platform/qmldir'
 )
 if (-not $isDebug) {
     $requiredPaths += @(
@@ -55,7 +56,8 @@ $forbiddenPaths = @(
     'iconengines',
     'imageformats',
     'networkinformation',
-    'platforminputcontexts'
+    'platforminputcontexts',
+    'styles'
 )
 
 $missing = $requiredPaths | Where-Object {

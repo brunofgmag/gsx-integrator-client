@@ -100,6 +100,22 @@ ColumnLayout {
         onToggled: checked => root.settingsVm.autoStartFlow = checked
     }
 
+    SwitchRow {
+        Layout.fillWidth: true
+        title: qsTr("Close to tray")
+        caption: qsTr("Closing hides the window to the tray")
+        checked: root.settingsVm.closeToTray
+        onToggled: checked => root.settingsVm.closeToTray = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        title: qsTr("Minimize to tray")
+        caption: qsTr("Minimizing hides the window to the tray")
+        checked: root.settingsVm.minimizeToTray
+        onToggled: checked => root.settingsVm.minimizeToTray = checked
+    }
+
     SettingRow {
         Layout.fillWidth: true
         title: qsTr("Updates")
