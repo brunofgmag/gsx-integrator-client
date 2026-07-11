@@ -20,6 +20,7 @@ public:
     [[nodiscard]] virtual IntegratorSnapshot GetSnapshot() const = 0;
 
     [[nodiscard]] virtual CommandResult SetAutomationEnabled(bool enabled) = 0;
+    [[nodiscard]] virtual CommandResult StartLoading() = 0;
     [[nodiscard]] virtual CommandResult ReloadSimbrief() = 0;
 
     virtual void ApplySettings(const AppSettings& settings) = 0;

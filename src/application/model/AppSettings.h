@@ -10,6 +10,7 @@ struct AppSettings
     double fuelRateKgs = AutomationSettings::kDefaultFuelRateKgs;
     bool autoSelectGsxChoice = true;
     bool autoStartFlow = false;
+    bool autoStartLoading = true;
     int themeMode = 2;
     std::string language = "system";
     int updateMode = 1;

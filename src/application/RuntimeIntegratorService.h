@@ -16,6 +16,7 @@ public:
 
     [[nodiscard]] IntegratorSnapshot GetSnapshot() const override;
     [[nodiscard]] CommandResult SetAutomationEnabled(bool enabled) override;
+    [[nodiscard]] CommandResult StartLoading() override;
     [[nodiscard]] CommandResult ReloadSimbrief() override;
     void ApplySettings(const AppSettings& settings) override;
 
