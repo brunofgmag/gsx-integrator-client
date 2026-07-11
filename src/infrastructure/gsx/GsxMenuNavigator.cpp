@@ -14,11 +14,13 @@
 namespace
 {
     constexpr auto kGsxChoiceText = "GSX choice";
+    constexpr auto kBlockFuelText = "BLOCK FUEL from Simbrief";
     constexpr auto kSelectPositionText = "Select Position at";
     constexpr auto kRepositionRootText = "Reposition Aircraft";
     constexpr auto kRepositionHereText = "Reposition here";
     constexpr auto kPushTugQuestion = "Attach Pushback Tug";
     constexpr auto kConfirmEnginesText = "Confirm good engine";
+    constexpr auto kInterruptPushbackTitle = "Interrupt pushback";
 
     bool Contains(const std::string& hay, const std::string& needle)
     {
@@ -134,6 +136,23 @@ void GsxMenuNavigator::Reset()
     intentSinceMs_ = 0;
     lastPickedSig_.clear();
     lastDiagSig_.clear();
+    watchedSig_.clear();
+    resyncCount_ = 0;
+    resyncPending_ = false;
+}
+
+void GsxMenuNavigator::OnSnapshot()
+{
+    if (resyncPending_)
+    {
+        resyncPending_ = false;
+        if (state_->menu.shown && MenuSignature() == resyncSig_)
+        {
+            lastPickedSig_.clear();
+        }
+    }
+
+    OnMenuChanged();
 }
 
 void GsxMenuNavigator::OnMenuChanged()
@@ -143,6 +162,7 @@ void GsxMenuNavigator::OnMenuChanged()
     {
         lastPickedSig_.clear();
         lastDiagSig_.clear();
+        watchedSig_.clear();
         return;
     }
 
@@ -161,9 +181,28 @@ void GsxMenuNavigator::OnMenuChanged()
         logger_->LogInfo(std::format("RemoteAPI menu: '{}' -> [{}]", menu.title, joined));
     }
 
+    if (sig != watchedSig_)
+    {
+        watchedSig_ = sig;
+        watchedSinceMs_ = nowMs_();
+        resyncCount_ = 0;
+    }
+    else if ((settings_ == nullptr || settings_->autoSelectGsxChoice || HasActiveIntent())
+        && resyncCount_ < kMaxResyncs
+        && (nowMs_() - watchedSinceMs_) >= kResyncDelayMs)
+    {
+        ++resyncCount_;
+        watchedSinceMs_ = nowMs_();
+        resyncPending_ = true;
+        resyncSig_ = sig;
+        (void)client_->SendCommand("state.get");
+        logger_->LogInfo(std::format("RemoteAPI menu stalled: requesting snapshot resync {}/{} ('{}')",
+                                     resyncCount_, kMaxResyncs, menu.title));
+    }
+
     if ((settings_ == nullptr || settings_->autoSelectGsxChoice)
         && sig != lastPickedSig_
-        && PickByContains(kGsxChoiceText))
+        && (PickByContains(kGsxChoiceText) || PickByContains(kBlockFuelText)))
     {
         return;
     }
@@ -208,7 +247,7 @@ void GsxMenuNavigator::OnMenuChanged()
         return;
     }
 
-    if (Contains(menu.title, kConfirmEnginesText))
+    if (Contains(menu.title, kConfirmEnginesText) || Contains(menu.title, kInterruptPushbackTitle))
     {
         (void)ConfirmGoodEngines();
 
@@ -228,7 +267,7 @@ bool GsxMenuNavigator::TriggerService(const char* serviceId)
     return client_->SendCommand("service.trigger", QJsonObject{{"service", QString::fromLatin1(serviceId)}});
 }
 
-void GsxMenuNavigator::OpenMenu()
+void GsxMenuNavigator::OpenMenu() const
 {
     if (pluginClient_ != nullptr && !pluginClient_->IsGsxToolbarActive())
     {
