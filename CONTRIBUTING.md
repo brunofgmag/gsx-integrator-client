@@ -35,7 +35,7 @@ The turnaround workflow lives in the domain and drives everything through interf
 
 ## Adding an aircraft
 
-`src/infrastructure/aircraft/TfdiMd11.cpp` is the reference implementation. Read it side by side with this section.
+There are two reference implementations under `src/infrastructure/aircraft/`, and they show two different styles. `TfdiMd11.cpp` drives the airplane's own EFB: the setters store targets and `OnSlowTick` commits them to the EFB LVars. `IFly737Max.cpp` rides on top of GSX: the truck fills the native tanks on its own, and the adapter only writes payload, straight into the native stations. Read the one closer to your airplane side by side with this section.
 
 ### 1. Create the adapter
 
@@ -43,13 +43,21 @@ Add `YourAircraft.h` and `YourAircraft.cpp` under `src/infrastructure/aircraft/`
 
 - Planned figures: `IsFlightPlanLoaded`, `GetPlannedFuelKg`, `GetPlannedZfwKg`, `GetPlannedPassengers` and `GetEmptyZfwKg`. These report what the airplane's own systems know about the flight.
 - Current figures: `GetCurrentFuelKg`, `SetCurrentFuelKg`, `GetCurrentZfwKg` and `SetCurrentZfwKg`. The workflow calls the setters while GSX refuels and boards.
-- State and capabilities: `IsPowered`, `IsEngineRunning`, `IsParkingBrakeSet`, `IsReadyToPush`, `IsReadyToDeboard`, plus `SupportsProgressiveFuel`, `SupportsProgressiveLoad` and `SupportsStairsOrJetways`, which tell the workflow how the airplane wants to be loaded.
+- State and capabilities: `IsPowered`, `IsEngineRunning`, `IsParkingBrakeSet`, `IsReadyToPush`, `IsReadyToDeboard`, plus `SupportsProgressiveFuel`, `SupportsProgressiveLoad`, `SupportsStairsOrJetways` and `IsRefueledExternally`, which tell the workflow how the airplane wants to be loaded.
+
+`IsRefueledExternally` changes who owns the fuel. Return true when something other than the client fills the tanks during the GSX service, as on the iFly, where GSX pumps the native tanks directly. The workflow then stops simulating a fill rate: it mirrors `GetCurrentFuelKg` for the progress display, finishes when GSX reports the service complete, and `SetCurrentFuelKg` can be a no-op. Return false, and the workflow writes the fuel itself, in one step or ramping at the rate from the settings.
+
+The weight setters have the same freedom. The MD-11 turns `SetCurrentZfwKg` into an EFB target; the iFly writes the value into the native payload stations, split in proportion to the default station loads from `flight_model.cfg` so the CG lands somewhere sensible. Use whatever surface the airplane gives you, and if you believe the airplane manages its own weights, test it in the sim first.
+
+`ConsumeSmartSwitch` is the cockpit "go ahead" control. Implement it as an edge detector: return true once when the switch leaves its resting position, then false until it comes back and moves again. A spring-loaded switch needs no write-back (iFly); a latching one can be reset by writing the rest value (MD-11). The state machine polls it once per tick, and the active phase decides what a press means: start loading while the turnaround holds at "Requesting fuel", confirm the engine start during pushback, begin the next flight after the turnaround ends.
 
 `OnSlowTick` runs periodically. Use it for polling and cheap housekeeping, the way the MD-11 uses it to commit EFB targets.
 
 ### 2. Talk to the sim through VariableGateway
 
 The adapter reads and writes LVars and SimVars through the `VariableGateway` it receives in the constructor. One thing to know before you write predicates: a variable read returns its registered default until the first value actually arrives from the simulator. Pick defaults so your predicates fail safe during that window. A readiness check should read "not ready" while data is still missing, never "ready".
+
+The same window bites writes that are computed from a read. The iFly refuses to touch the payload stations until `HasReceivedAVar` confirms `EMPTY WEIGHT` has arrived, because subtracting a default of zero would turn the entire ZFW into payload. If your setter does arithmetic on a sim variable, guard it the same way.
 
 ### 3. Register the aircraft
 
