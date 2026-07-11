@@ -14,6 +14,10 @@ private slots:
     static void nonProgressiveSetsTargetImmediately();
     static void defuelsProgressively();
     static void defuelsAtOnce();
+    static void externallyRefueledAircraftMirrorsSimFuel();
+    static void externallyRefueledCompletesOnGsxEvenOffTarget();
+    static void externallyDefueledAircraftMirrorsSimFuel();
+    static void rebaselinesInitialFuelWhenCapturedBeforeSimData();
 };
 
 void RefuelingStateTest::holdsUntilGsxIsReady()
@@ -165,6 +169,112 @@ void RefuelingStateTest::defuelsAtOnce()
     QCOMPARE(transition->next, TurnaroundPhase::RequestBoarding);
     QCOMPARE(f.aircraft.currentFuelKg, 700.0);
     QCOMPARE(f.ctx.data.loadedFuelKg, 700.0);
+}
+
+void RefuelingStateTest::externallyRefueledAircraftMirrorsSimFuel()
+{
+    TurnaroundStateFixture f;
+    RefuelingState state;
+
+    f.settings.fuelRateKgs = 1000.0;
+    f.aircraft.refueledExternally = true;
+    f.aircraft.currentFuelKg = 1000.0;
+    f.ctx.data.plannedFuelKg = 6000.0;
+    f.ctx.data.initialFuelKg = 1000.0;
+    f.ctx.data.loadedFuelKg = 1000.0;
+    f.gsxService.refuelingState = GsxStateStatus::Active;
+    f.gsxService.hoseConnected = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.loadedFuelKg, 1000.0);
+    QCOMPARE(f.ctx.data.fuelProgress, 0.0);
+
+    f.aircraft.currentFuelKg = 3500.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.loadedFuelKg, 3500.0);
+    QCOMPARE(f.ctx.data.fuelProgress, 50.0);
+
+    f.aircraft.currentFuelKg = 5990.0;
+    f.gsxService.refuelingState = GsxStateStatus::Completed;
+    f.gsxService.hoseConnected = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestBoarding);
+    QCOMPARE(f.ctx.data.fuelProgress, 100.0);
+}
+
+void RefuelingStateTest::externallyRefueledCompletesOnGsxEvenOffTarget()
+{
+    TurnaroundStateFixture f;
+    RefuelingState state;
+
+    f.aircraft.refueledExternally = true;
+    f.aircraft.currentFuelKg = 5800.0;
+    f.ctx.data.plannedFuelKg = 6000.0;
+    f.ctx.data.initialFuelKg = 1000.0;
+    f.ctx.data.loadedFuelKg = 5800.0;
+    f.gsxService.refuelingState = GsxStateStatus::Completed;
+    f.gsxService.hoseConnected = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestBoarding);
+}
+
+void RefuelingStateTest::externallyDefueledAircraftMirrorsSimFuel()
+{
+    TurnaroundStateFixture f;
+    RefuelingState state;
+
+    f.aircraft.refueledExternally = true;
+    f.aircraft.currentFuelKg = 8000.0;
+    f.ctx.data.plannedFuelKg = 6000.0;
+    f.gsxService.refuelingState = GsxStateStatus::Active;
+    f.gsxService.hoseConnected = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.initialFuelKg, 8000.0);
+    QCOMPARE(f.ctx.data.fuelProgress, 0.0);
+
+    f.aircraft.currentFuelKg = 7000.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.loadedFuelKg, 7000.0);
+    QCOMPARE(f.ctx.data.fuelProgress, 50.0);
+
+    f.aircraft.currentFuelKg = 6010.0;
+    f.gsxService.refuelingState = GsxStateStatus::Completed;
+    f.gsxService.hoseConnected = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestBoarding);
+    QCOMPARE(f.ctx.data.loadedFuelKg, 6010.0);
+    QCOMPARE(f.ctx.data.fuelProgress, 100.0);
+}
+
+void RefuelingStateTest::rebaselinesInitialFuelWhenCapturedBeforeSimData()
+{
+    TurnaroundStateFixture f;
+    RefuelingState state;
+
+    f.aircraft.refueledExternally = true;
+    f.aircraft.currentFuelKg = 5000.0;
+    f.ctx.data.plannedFuelKg = 6151.0;
+    f.ctx.data.initialFuelKg = 0.0;
+    f.ctx.data.loadedFuelKg = 0.0;
+    f.gsxService.refuelingState = GsxStateStatus::Active;
+    f.gsxService.hoseConnected = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.ctx.data.initialFuelKg, 5000.0);
+    QCOMPARE(f.ctx.data.fuelProgress, 0.0);
 }
 
 QTEST_APPLESS_MAIN(RefuelingStateTest)

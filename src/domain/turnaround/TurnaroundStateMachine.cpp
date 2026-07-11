@@ -79,6 +79,11 @@ void TurnaroundStateMachine::Tick()
 
 void TurnaroundStateMachine::Step()
 {
+    if (context_.aircraft != nullptr && !context_.data.refuelBaselined)
+    {
+        context_.data.loadedFuelKg = context_.aircraft->GetCurrentFuelKg();
+    }
+
     context_.smartSwitchPressed = context_.aircraft != nullptr && context_.aircraft->ConsumeSmartSwitch();
     if (context_.smartSwitchPressed && context_.logger)
     {
@@ -126,6 +131,7 @@ void TurnaroundStateMachine::PublishStatus() const
     context_.status->fuelProgress = context_.data.fuelProgress;
     context_.status->boardingProgress = context_.data.boardingProgress;
     context_.status->deboardingProgress = context_.data.deboardingProgress;
+    context_.status->boardedPassengers = context_.data.boardedPassengers;
 }
 
 void TurnaroundStateMachine::AttachAircraft(Aircraft* aircraft)

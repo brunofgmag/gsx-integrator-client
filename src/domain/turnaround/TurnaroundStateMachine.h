@@ -22,8 +22,10 @@ public:
     void Tick();
     void AttachAircraft(Aircraft* aircraft);
     void Reset();
+    void ConfirmLoading() { context_.data.loadingConfirmed = true; }
 
     [[nodiscard]] TurnaroundPhase GetPhase() const { return phase_; }
+    [[nodiscard]] bool IsLoadingConfirmed() const { return context_.data.loadingConfirmed; }
 
 private:
     static constexpr std::size_t kPhaseCount = static_cast<std::size_t>(TurnaroundPhase::Count);

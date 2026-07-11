@@ -14,6 +14,7 @@ private slots:
     static void boardCargoNonProgressively();
     static void boardCargoProgressively();
     static void snapsToPlannedWhenGsxCountersFallShort();
+    static void rebaselinesInitialZfwWhenCapturedBeforeSimData();
 };
 
 void BoardingStateTest::holdsUntilGsxActive()
@@ -59,6 +60,7 @@ void BoardingStateTest::boardPassengersProgressively()
 
     f.aircraft.cargo = false;
     f.aircraft.progressiveLoad = true;
+    f.aircraft.emptyZfwKg = 100000.0;
     f.ctx.data.initialZfwKg = 100000.0;
     f.ctx.data.plannedZfwKg = 200000.0;
     f.ctx.data.plannedPassengers = 100;
@@ -82,6 +84,7 @@ void BoardingStateTest::boardPassengersProgressively()
     QCOMPARE(f.aircraft.currentZfwKg, 200000.0);
     QCOMPARE(f.gsxService.boardedPassengers, 100);
     QCOMPARE(f.gsxService.cargoPercent, 100.0);
+    QCOMPARE(f.ctx.data.boardedPassengers, 100);
 }
 
 void BoardingStateTest::boardCargoNonProgressively()
@@ -118,6 +121,7 @@ void BoardingStateTest::boardCargoProgressively()
     f.aircraft.cargo = true;
     f.aircraft.progressiveLoad = true;
     f.aircraft.currentZfwKg = 130000.0;
+    f.aircraft.emptyZfwKg = 130000.0;
     f.ctx.data.initialZfwKg = 130000.0;
     f.ctx.data.plannedZfwKg = 180000.0;
     f.ctx.data.plannedPassengers = 3;
@@ -158,6 +162,27 @@ void BoardingStateTest::snapsToPlannedWhenGsxCountersFallShort()
     QCOMPARE(transition->next, TurnaroundPhase::WaitingReadyToPush);
     QCOMPARE(f.aircraft.currentZfwKg, 200000.0);
     QCOMPARE(f.ctx.data.boardingProgress, 100.0);
+    QCOMPARE(f.ctx.data.boardedPassengers, 200);
+}
+
+void BoardingStateTest::rebaselinesInitialZfwWhenCapturedBeforeSimData()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    f.aircraft.progressiveLoad = true;
+    f.aircraft.emptyZfwKg = 45000.0;
+    f.ctx.data.initialZfwKg = 0.0;
+    f.ctx.data.plannedZfwKg = 65000.0;
+    f.ctx.data.plannedPassengers = 100;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardedPassengers = 50;
+    f.gsxService.cargoPercent = 50.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.ctx.data.initialZfwKg, 45000.0);
+    QCOMPARE(f.aircraft.currentZfwKg, 55000.0);
 }
 
 QTEST_APPLESS_MAIN(BoardingStateTest)
