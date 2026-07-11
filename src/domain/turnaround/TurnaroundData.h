@@ -6,6 +6,7 @@ struct TurnaroundData
     double plannedFuelKg = 0.0;
     double plannedZfwKg = 0.0;
     int plannedPassengers = 0;
+    int boardedPassengers = 0;
 
     double loadedFuelKg = 0.0;
     double initialFuelKg = 0.0;
@@ -16,6 +17,9 @@ struct TurnaroundData
     double boardingProgress = 0.0;
     double deboardingProgress = 0.0;
 
+    bool loadingConfirmed = false;
+    bool refuelBaselined = false;
+    bool boardingBaselined = false;
     bool refuelingRequested = false;
     bool boardingRequested = false;
     bool deboardingRequested = false;

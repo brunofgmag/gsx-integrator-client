@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 
+import QtCore
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
@@ -8,10 +9,9 @@ import Qt.labs.platform as Platform
 ApplicationWindow {
     id: window
 
-    width: 720
-    height: 680
+    width: 620
+    maximumWidth: 720
     minimumWidth: 560
-    minimumHeight: 600
     visible: !startHidden
     title: qsTr("GSX Integrator")
     color: Theme.bg
@@ -27,6 +27,31 @@ ApplicationWindow {
 
     // 0 = ops, 1 = settings, 2 = about. Header buttons toggle back to ops.
     property int screen: 0
+
+    readonly property int fittedHeight: Math.min(
+        header.height + (screens.children[window.screen]?.implicitHeight ?? 0) + 32,
+        Screen.desktopAvailableHeight - 48)
+
+    readonly property int lockedHeight: window.integratorVm.connected
+        ? window.fittedHeight
+        : Math.max(500, window.fittedHeight)
+
+    onLockedHeightChanged: Qt.callLater(window.applyLockedHeight)
+    Component.onCompleted: Qt.callLater(window.applyLockedHeight)
+
+    function applyLockedHeight() {
+        const h = window.lockedHeight
+        if (h > window.maximumHeight)
+            window.maximumHeight = h
+        window.minimumHeight = h
+        window.maximumHeight = h
+        window.height = h
+    }
+
+    Settings {
+        category: "window"
+        property alias width: window.width
+    }
 
     function restoreFromTray() {
         window.showNormal()
@@ -157,6 +182,7 @@ ApplicationWindow {
         spacing: 0
 
         Rectangle {
+            id: header
             Layout.fillWidth: true
             implicitHeight: 46
             color: Theme.panel2
@@ -211,7 +237,6 @@ ApplicationWindow {
                     }
                 }
 
-                // Forces a manual light/dark, leaving "Windows" mode.
                 HeaderButton {
                     text: Theme.dark ? "☀" : "☾"
                     tip: Theme.dark ? qsTr("Switch to light theme") : qsTr("Switch to dark theme")

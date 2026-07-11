@@ -24,11 +24,17 @@ IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
     snapshot.gsxAvailable = status.gsxAvailable;
     snapshot.aircraftSupported = status.aircraftSupported;
     snapshot.canToggleAutomation = snapshot.connected;
+    snapshot.canStartLoading = snapshot.connected
+        && status.enabled
+        && runtime_->GetPhase() == TurnaroundPhase::RequestFuel
+        && !runtime_->Settings().autoStartLoading
+        && !runtime_->IsLoadingConfirmed();
     snapshot.canReloadSimbrief = snapshot.connected
         && snapshot.sessionActive
         && runtime_->Settings().simbriefPilotId > 0
         && runtime_->GetPhase() <= TurnaroundPhase::WaitingFlightPlan;
     snapshot.aircraftName = runtime_->GetAircraftName().toStdString();
+    snapshot.refueledExternally = runtime_->IsAircraftRefueledExternally();
     snapshot.phase = runtime_->GetPhase();
     snapshot.flightPlanStatus = status.flightPlanStatus;
     snapshot.fuelProgress = status.fuelProgress;
@@ -38,6 +44,7 @@ IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
     snapshot.loadedFuelKg = status.loadedFuelKg;
     snapshot.plannedZfwKg = status.plannedZfwKg;
     snapshot.plannedPax = status.plannedPassengers;
+    snapshot.boardedPax = status.boardedPassengers;
 
     return snapshot;
 }
@@ -51,6 +58,25 @@ CommandResult RuntimeIntegratorService::SetAutomationEnabled(const bool enabled)
     }
 
     runtime_->SetAutomationEnabled(enabled);
+
+    return CommandResult::Success();
+}
+
+CommandResult RuntimeIntegratorService::StartLoading()
+{
+    if (!runtime_->IsConnected())
+    {
+        return CommandResult::Failure(
+            QCoreApplication::translate("Integrator", "Simulator is offline.").toStdString());
+    }
+
+    if (runtime_->GetPhase() != TurnaroundPhase::RequestFuel)
+    {
+        return CommandResult::Failure(
+            QCoreApplication::translate("Integrator", "The turnaround is not waiting to start loading.").toStdString());
+    }
+
+    runtime_->ConfirmLoading();
 
     return CommandResult::Success();
 }
@@ -94,6 +120,7 @@ void RuntimeIntegratorService::ApplySettings(const AppSettings& settings)
     automationSettings.fuelRateKgs = settings.fuelRateKgs;
     automationSettings.autoSelectGsxChoice = settings.autoSelectGsxChoice;
     automationSettings.autoStartFlow = settings.autoStartFlow;
+    automationSettings.autoStartLoading = settings.autoStartLoading;
 
     runtime_->ApplySettings(automationSettings);
 }

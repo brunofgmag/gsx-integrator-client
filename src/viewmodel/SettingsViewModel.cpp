@@ -106,6 +106,24 @@ void SettingsViewModel::SetAutoStartFlow(const bool enabled)
     emit AutoStartFlowChanged();
 }
 
+bool SettingsViewModel::GetAutoStartLoading() const
+{
+    return settings_.autoStartLoading;
+}
+
+void SettingsViewModel::SetAutoStartLoading(const bool enabled)
+{
+    if (settings_.autoStartLoading == enabled)
+    {
+        return;
+    }
+
+    settings_.autoStartLoading = enabled;
+    PersistImmediateSetting();
+
+    emit AutoStartLoadingChanged();
+}
+
 int SettingsViewModel::GetThemeMode() const
 {
     return settings_.themeMode;

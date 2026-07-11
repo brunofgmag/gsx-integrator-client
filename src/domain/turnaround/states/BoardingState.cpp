@@ -19,14 +19,23 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
         return std::nullopt;
     }
 
+    if (!data.boardingBaselined)
+    {
+        data.boardingBaselined = true;
+        data.initialZfwKg = ctx.aircraft->GetEmptyZfwKg();
+    }
+
     if (isCompleted)
     {
+        data.boardedPassengers = data.plannedPassengers;
         data.loadedZfwKg = data.plannedZfwKg;
         ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
         data.boardingProgress = 100.0;
 
         return TurnaroundTransition{TurnaroundPhase::WaitingReadyToPush, 60};
     }
+
+    data.boardedPassengers = ctx.gsxGateway->GetBoardedPassengers();
 
     if (ctx.aircraft->SupportsProgressiveLoad())
     {
@@ -52,7 +61,7 @@ void BoardingState::BoardProgressively(TurnaroundContext& ctx)
 
     const double cargoPercent = ctx.gsxGateway->GetBoardingCargoPercent();
     const double safePassengers = data.plannedPassengers <= 0 ? 1.0 : static_cast<double>(data.plannedPassengers);
-    const double passengerPercent = ctx.gsxGateway->GetBoardedPassengers() / safePassengers * 100.0;
+    const double passengerPercent = data.boardedPassengers / safePassengers * 100.0;
 
     const double progress = ctx.aircraft->IsCargoVariant()
                                 ? cargoPercent

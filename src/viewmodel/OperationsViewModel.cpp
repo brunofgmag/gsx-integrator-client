@@ -180,6 +180,11 @@ double OperationsViewModel::GetLoadedFuelKg() const
     return snapshot_.loadedFuelKg;
 }
 
+bool OperationsViewModel::IsRefueledExternally() const
+{
+    return snapshot_.refueledExternally;
+}
+
 double OperationsViewModel::GetPlannedZfwKg() const
 {
     return snapshot_.plannedZfwKg;
@@ -188,6 +193,11 @@ double OperationsViewModel::GetPlannedZfwKg() const
 int OperationsViewModel::GetPlannedPax() const
 {
     return snapshot_.plannedPax;
+}
+
+int OperationsViewModel::GetBoardedPax() const
+{
+    return snapshot_.boardedPax;
 }
 
 QString OperationsViewModel::GetSimbriefStatusText() const
@@ -210,6 +220,11 @@ bool OperationsViewModel::CanToggleAutomation() const
     return snapshot_.canToggleAutomation;
 }
 
+bool OperationsViewModel::CanStartLoading() const
+{
+    return snapshot_.canStartLoading;
+}
+
 bool OperationsViewModel::CanReloadSimbrief() const
 {
     return snapshot_.canReloadSimbrief;
@@ -223,6 +238,12 @@ QString OperationsViewModel::GetCommandError() const
 void OperationsViewModel::startFlow()
 {
     SetEnabled(true);
+}
+
+void OperationsViewModel::startLoading()
+{
+    SetCommandError(service_->StartLoading());
+    Refresh();
 }
 
 void OperationsViewModel::reloadSimbrief()

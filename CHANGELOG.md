@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v0.9.0...v0.10.0) (2026-07-11)
+
+
+### Features
+
+* add ifly 737 ([#17](https://github.com/brunofgmag/gsx-integrator-client/issues/17)) ([0a7117e](https://github.com/brunofgmag/gsx-integrator-client/commit/0a7117e8a2922b38c19c3ab0b6c605cce955a6bc))
+
 ## [0.9.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v0.8.0...v0.9.0) (2026-07-10)
 
 

@@ -40,8 +40,11 @@ public:
     [[nodiscard]] bool IsSessionPaused() const { return pauseFlags_ != 0; }
     [[nodiscard]] bool IsSessionReady();
     [[nodiscard]] TurnaroundPhase GetPhase() const { return stateMachine_.GetPhase(); }
+    [[nodiscard]] bool IsLoadingConfirmed() const { return stateMachine_.IsLoadingConfirmed(); }
     [[nodiscard]] QString GetAircraftName() const;
+    [[nodiscard]] bool IsAircraftRefueledExternally() const;
     void SetAutomationEnabled(bool enabled);
+    void ConfirmLoading();
     void ApplySettings(const AutomationSettings& settings);
     [[nodiscard]] bool ReloadSimbrief();
 

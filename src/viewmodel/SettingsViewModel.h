@@ -18,8 +18,8 @@ class SettingsViewModel final : public QObject
     Q_PROPERTY(QString fuelRateText READ GetFuelRateText WRITE SetFuelRateText NOTIFY FuelRateTextChanged)
     Q_PROPERTY(bool autoSelectGsxChoice READ GetAutoSelectGsxChoice
         WRITE SetAutoSelectGsxChoice NOTIFY AutoSelectGsxChoiceChanged)
-    Q_PROPERTY(bool autoStartFlow READ GetAutoStartFlow
-        WRITE SetAutoStartFlow NOTIFY AutoStartFlowChanged)
+    Q_PROPERTY(bool autoStartFlow READ GetAutoStartFlow WRITE SetAutoStartFlow NOTIFY AutoStartFlowChanged)
+    Q_PROPERTY(bool autoStartLoading READ GetAutoStartLoading WRITE SetAutoStartLoading NOTIFY AutoStartLoadingChanged)
     Q_PROPERTY(int themeMode READ GetThemeMode WRITE SetThemeMode NOTIFY ThemeModeChanged)
     Q_PROPERTY(bool effectiveDark READ GetEffectiveDark NOTIFY EffectiveDarkChanged)
     Q_PROPERTY(QString language READ GetLanguage WRITE SetLanguage NOTIFY LanguageChanged)
@@ -56,6 +56,9 @@ public:
 
     [[nodiscard]] bool GetAutoStartFlow() const;
     void SetAutoStartFlow(bool enabled);
+
+    [[nodiscard]] bool GetAutoStartLoading() const;
+    void SetAutoStartLoading(bool enabled);
 
     [[nodiscard]] int GetThemeMode() const;
     void SetThemeMode(int mode);
@@ -94,6 +97,7 @@ signals:
     void FuelRateTextChanged();
     void AutoSelectGsxChoiceChanged();
     void AutoStartFlowChanged();
+    void AutoStartLoadingChanged();
     void ThemeModeChanged();
     void EffectiveDarkChanged();
     void LanguageChanged();

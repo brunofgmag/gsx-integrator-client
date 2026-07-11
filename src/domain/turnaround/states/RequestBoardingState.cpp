@@ -7,7 +7,7 @@
 
 namespace
 {
-    constexpr int kRetryTicks = 60;
+    constexpr int kRetryTicks = 10;
 }
 
 std::optional<TurnaroundTransition> RequestBoardingState::Evaluate(TurnaroundContext& ctx)
@@ -36,8 +36,7 @@ std::optional<TurnaroundTransition> RequestBoardingState::Evaluate(TurnaroundCon
     }
 
     const bool departureCallable = boardingState == GsxStateStatus::Callable;
-    if (departureCallable && !hasBoardingStarted && data.boardingRequested
-        && ctx.TickCondition(kRetryTicks))
+    if (departureCallable && !hasBoardingStarted && data.boardingRequested && ctx.TickCondition(kRetryTicks))
     {
         data.boardingRequested = false;
     }

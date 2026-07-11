@@ -18,6 +18,7 @@ public:
     std::string atcModel;
     bool atcModelAvailable = true;
     int setLVarCalls = 0;
+    int setAVarCalls = 0;
     std::vector<std::string> fastRefreshNames;
 
     void SetFastRefresh(const std::string& name) override
@@ -33,7 +34,7 @@ public:
 
     bool HasReceivedLVar(const std::string& name) override
     {
-        return lvars.find(name) != lvars.end();
+        return lvars.contains(name);
     }
 
     void SetLVar(const std::string& name, const double value) override
@@ -50,7 +51,13 @@ public:
 
     bool HasReceivedAVar(const std::string& name, const std::string& /*unit*/) override
     {
-        return avars.find(name) != avars.end();
+        return avars.contains(name);
+    }
+
+    void SetAVar(const std::string& name, const std::string& /*unit*/, const double value) override
+    {
+        ++setAVarCalls;
+        avars[name] = value;
     }
 
     bool FetchAircraftName(char* buffer, const int bufferSize) override
@@ -70,19 +77,19 @@ public:
     }
 
 private:
-    static bool CopyString(const std::string& source, const bool available,
-                           char* buffer, const int bufferSize)
+    static bool CopyString(const std::string& source, const bool available, char* buffer, const int bufferSize)
     {
         if (!available || buffer == nullptr || bufferSize <= 0)
         {
             return false;
         }
 
-        const int copyLength = std::min(
-            static_cast<int>(source.size()),
-            bufferSize - 1);
+        const int copyLength = std::min(static_cast<int>(source.size()), bufferSize - 1);
+
         std::memcpy(buffer, source.data(), static_cast<size_t>(copyLength));
+
         buffer[copyLength] = '\0';
+
         return true;
     }
 };

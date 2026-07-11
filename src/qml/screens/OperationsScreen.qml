@@ -40,7 +40,7 @@ ColumnLayout {
         visible: root.integratorVm.connected
         spacing: 10
 
-        // LINK / GSX / ACFT / OFP / AUTO status strip.
+        // SIM / GSX PRO / AIRCRAFT / TURNAROUND / LOADING status strip.
         GridLayout {
             Layout.fillWidth: true
             columns: 5
@@ -49,39 +49,37 @@ ColumnLayout {
 
             StatusChip {
                 Layout.fillWidth: true
-                label: qsTr("Link")
-                value: root.integratorVm.connected ? qsTr("Sim OK") : qsTr("No link")
+                label: qsTr("Sim")
+                value: root.integratorVm.connected ? qsTr("Connected") : qsTr("Offline")
                 valueColor: root.integratorVm.connected ? Theme.ok : Theme.amber
             }
 
             StatusChip {
                 Layout.fillWidth: true
-                label: qsTr("GSX")
-                value: root.integratorVm.gsxAvailable ? qsTr("Couatl OK") : qsTr("Standby")
+                label: qsTr("GSX Pro")
+                value: root.integratorVm.gsxAvailable ? qsTr("Connected") : qsTr("Offline")
                 valueColor: root.integratorVm.gsxAvailable ? Theme.ok : Theme.amber
             }
 
             StatusChip {
                 Layout.fillWidth: true
-                label: qsTr("Acft")
+                label: qsTr("Aircraft")
                 value: root.integratorVm.aircraftSupported ? root.integratorVm.aircraftName : qsTr("Standby")
                 valueColor: root.integratorVm.aircraftSupported ? Theme.text : Theme.muted
             }
 
             StatusChip {
                 Layout.fillWidth: true
-                label: qsTr("OFP")
-                value: root.integratorVm.simbriefStatusText
-                valueColor: root.integratorVm.simbriefReady
-                    ? Theme.ok
-                    : (root.integratorVm.simbriefError ? Theme.red : Theme.muted)
+                label: qsTr("Turnaround")
+                value: root.settingsVm.autoStartFlow ? qsTr("Auto") : qsTr("Manual")
+                valueColor: root.integratorVm.enabled ? Theme.accent : Theme.muted
             }
 
             StatusChip {
                 Layout.fillWidth: true
-                label: qsTr("Auto")
-                value: root.integratorVm.enabled ? qsTr("Active") : qsTr("Off")
-                valueColor: root.integratorVm.enabled ? Theme.accent : Theme.muted
+                label: qsTr("Loading")
+                value: root.settingsVm.autoStartLoading ? qsTr("Auto") : qsTr("Manual")
+                valueColor: root.settingsVm.autoStartLoading ? Theme.accent : Theme.muted
             }
         }
 
@@ -175,6 +173,7 @@ ColumnLayout {
         // FUEL / BOARDING / SIMBRIEF OFP data grid.
         GridLayout {
             Layout.fillWidth: true
+            Layout.fillHeight: false
             columns: root.compact ? 1 : 3
             columnSpacing: 10
             rowSpacing: 10
@@ -196,7 +195,9 @@ ColumnLayout {
                 }
                 KeyValueRow {
                     label: qsTr("Rate")
-                    value: root.settingsVm.fuelRateText + " " + qsTr("kg/s")
+                    value: root.integratorVm.refueledExternally
+                        ? qsTr("Auto")
+                        : root.settingsVm.fuelRateText + " " + qsTr("kg/s")
                 }
             }
 
@@ -213,11 +214,13 @@ ColumnLayout {
 
                 KeyValueRow {
                     label: qsTr("Pax")
-                    value: Math.round(paxCard.paxProgress / 100 * root.integratorVm.plannedPax)
+                    value: (root.deboarding
+                            ? Math.round(paxCard.paxProgress / 100 * root.integratorVm.plannedPax)
+                            : root.integratorVm.boardedPax)
                            + " / " + root.integratorVm.plannedPax
                 }
                 KeyValueRow {
-                    label: qsTr("ZFW")
+                    label: qsTr("Planned ZFW")
                     value: root.formatKg(root.integratorVm.plannedZfwKg)
                 }
             }
@@ -257,12 +260,23 @@ ColumnLayout {
             }
         }
 
-        ActionButton {
+        RowLayout {
             Layout.alignment: Qt.AlignLeft
-            small: true
-            text: qsTr("Start Flow")
-            enabled: root.integratorVm.canToggleAutomation && !root.integratorVm.enabled && !root.settingsVm.autoStartFlow
-            onClicked: root.integratorVm.startFlow()
+            spacing: 8
+
+            ActionButton {
+                small: true
+                text: qsTr("Start Flow")
+                enabled: root.integratorVm.canToggleAutomation && !root.integratorVm.enabled && !root.settingsVm.autoStartFlow
+                onClicked: root.integratorVm.startFlow()
+            }
+
+            ActionButton {
+                small: true
+                text: qsTr("Start Loading")
+                enabled: root.integratorVm.canStartLoading
+                onClicked: root.integratorVm.startLoading()
+            }
         }
     }
 }
