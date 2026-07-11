@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <cstring>
 #include <QtCore/QDir>
 #include <QtCore/QLocale>
 #include <QtCore/QSettings>
@@ -51,16 +52,42 @@ namespace
             QSettings::NativeFormat);
         return personalize.value(QStringLiteral("SystemUsesLightTheme"), 0).toInt() == 1;
     }
+
+    QtMessageHandler defaultMessageHandler = nullptr;
+
+    void FilteredMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& message)
+    {
+        if (message.contains(QLatin1String("Component is not ready")))
+        {
+            return;
+        }
+        defaultMessageHandler(type, context, message);
+    }
 }
 
 int main(int argc, char* argv[])
 {
+    bool trayArg = false;
+    for (int i = 1; i < argc; ++i)
+    {
+        if (std::strcmp(argv[i], "--tray") == 0)
+        {
+            trayArg = true;
+        }
+    }
+
     CreateMutexW(nullptr, FALSE, L"Local\\gsx-integrator-client.single-instance");
     if (GetLastError() == ERROR_ALREADY_EXISTS)
     {
-        PostMessageW(HWND_BROADCAST, ShowWindowMessageFilter::MessageId(), 0, 0);
+        if (!trayArg)
+        {
+            PostMessageW(HWND_BROADCAST, ShowWindowMessageFilter::MessageId(), 0, 0);
+        }
+
         return 0;
     }
+
+    defaultMessageHandler = qInstallMessageHandler(FilteredMessageHandler);
 
     const QGuiApplication app(argc, argv);
     QGuiApplication::setQuitOnLastWindowClosed(false);
@@ -144,7 +171,6 @@ int main(int argc, char* argv[])
 
     runtime.Setup();
 
-    const bool startInTray = QCoreApplication::arguments().contains(QStringLiteral("--tray"));
     const QString trayIconSource = LightTaskbar()
                                        ? QStringLiteral("qrc:/icons/tray_dark_32.png")
                                        : QStringLiteral("qrc:/icons/tray_white_32.png");
@@ -154,7 +180,7 @@ int main(int argc, char* argv[])
         {QStringLiteral("integratorVm"), QVariant::fromValue(&operationsViewModel)},
         {QStringLiteral("settingsVm"), QVariant::fromValue(&settingsViewModel)},
         {QStringLiteral("updateVm"), QVariant::fromValue(&updateViewModel)},
-        {QStringLiteral("startHidden"), startInTray},
+        {QStringLiteral("startHidden"), trayArg},
         {QStringLiteral("trayIconSource"), trayIconSource},
     });
 
