@@ -196,6 +196,16 @@ gsxi_add_qt_test(gsxi-tfdi-md11-tests tfdi-md11
         src/domain/model/AutomationStatus.h
         src/domain/support/Weight.h)
 
+gsxi_add_qt_test(gsxi-ifly-737max-tests ifly-737max
+        tests/TestDoubles.h
+        tests/tst_ifly_737max.cpp
+        src/infrastructure/aircraft/AircraftIdentity.h
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/IFly737Max.cpp
+        src/infrastructure/aircraft/IFly737Max.h
+        src/domain/model/AutomationStatus.h)
+
 gsxi_add_qt_test(gsxi-aircraft-matching-tests aircraft-matching
         tests/tst_aircraft_matching.cpp
         src/infrastructure/aircraft/AircraftIdentity.h
@@ -210,6 +220,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/IFly737Max.cpp
+        src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/aircraft/TfdiMd11.cpp
         src/infrastructure/aircraft/TfdiMd11.h
         src/domain/model/AutomationStatus.h

@@ -25,6 +25,7 @@ public:
     [[nodiscard]] virtual bool SupportsProgressiveFuel() const = 0;
     [[nodiscard]] virtual bool SupportsProgressiveLoad() const = 0;
     [[nodiscard]] virtual bool SupportsStairsOrJetways() const = 0;
+    [[nodiscard]] virtual bool IsRefueledExternally() const = 0;
 
     [[nodiscard]] virtual bool ConsumeSmartSwitch() = 0;
 
