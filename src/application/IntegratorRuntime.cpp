@@ -35,7 +35,7 @@ void IntegratorRuntime::Setup()
             &gsxRemoteClient_, [this](const QJsonObject& s)
             {
                 GsxRemoteStateReducer::ApplySnapshot(gsxRemoteState_, s);
-                gsxMenu_.OnMenuChanged();
+                gsxMenu_.OnSnapshot();
             });
 
     connect(&gsxRemoteClient_, &GsxRemoteApiClient::PatchReceived,
@@ -331,6 +331,11 @@ QString IntegratorRuntime::GetAircraftName() const
     return aircraft_ ? QString::fromUtf8(aircraft_->GetName()) : QString();
 }
 
+bool IntegratorRuntime::IsAircraftRefueledExternally() const
+{
+    return aircraft_ && aircraft_->IsRefueledExternally();
+}
+
 void IntegratorRuntime::SetAutomationEnabled(const bool enabled)
 {
     if (status_.enabled == enabled)
@@ -339,6 +344,15 @@ void IntegratorRuntime::SetAutomationEnabled(const bool enabled)
     }
 
     status_.enabled = enabled;
+
+    emit Updated();
+}
+
+void IntegratorRuntime::ConfirmLoading()
+{
+    LOG_INFO("Loading confirmed: requesting refueling.");
+
+    stateMachine_.ConfirmLoading();
 
     emit Updated();
 }

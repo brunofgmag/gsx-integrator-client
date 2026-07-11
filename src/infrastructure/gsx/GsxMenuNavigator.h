@@ -35,8 +35,9 @@ public:
     [[nodiscard]] bool RequestRefueling() override;
     [[nodiscard]] bool ConfirmGoodEngines() override;
 
-    void OpenMenu();
+    void OpenMenu() const;
     void OnMenuChanged();
+    void OnSnapshot();
     void DisableGsxMenu() override;
 
     void Reset();
@@ -70,8 +71,15 @@ private:
     std::function<long long()> nowMs_;
     std::string lastPickedSig_;
     std::string lastDiagSig_;
+    std::string watchedSig_;
+    long long watchedSinceMs_ = 0;
+    int resyncCount_ = 0;
+    bool resyncPending_ = false;
+    std::string resyncSig_;
 
     static constexpr long long kIntentTtlMs = 60000;
+    static constexpr long long kResyncDelayMs = 1500;
+    static constexpr int kMaxResyncs = 3;
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_GSXMENUNAVIGATOR_H

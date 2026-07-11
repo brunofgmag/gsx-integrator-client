@@ -15,6 +15,7 @@ struct AutomationStatus
     double loadedFuelKg = 0.0;
     double plannedZfwKg = 0.0;
     int plannedPassengers = 0;
+    int boardedPassengers = 0;
     FlightPlanStatus flightPlanStatus = FlightPlanStatus::Idle;
 
     bool operator==(const AutomationStatus&) const = default;

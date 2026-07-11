@@ -10,8 +10,10 @@ class FakeIntegratorService final : public IntegratorService
 public:
     IntegratorSnapshot snapshot;
     CommandResult automationResult = CommandResult::Success();
+    CommandResult startLoadingResult = CommandResult::Success();
     AppSettings appliedSettings;
     int automationCalls = 0;
+    int startLoadingCalls = 0;
     int reloadCalls = 0;
     int applySettingsCalls = 0;
 
@@ -31,6 +33,18 @@ public:
         return automationResult;
     }
 
+    [[nodiscard]] CommandResult StartLoading() override
+    {
+        ++startLoadingCalls;
+        if (startLoadingResult.succeeded)
+        {
+            snapshot.canStartLoading = false;
+            Notify();
+        }
+
+        return startLoadingResult;
+    }
+
     [[nodiscard]] CommandResult ReloadSimbrief() override
     {
         ++reloadCalls;
@@ -46,7 +60,7 @@ public:
     void AddObserver(IntegratorServiceObserver* observer) override
     {
         if (observer != nullptr
-            && std::find(observers_.begin(), observers_.end(), observer) == observers_.end())
+            && std::ranges::find(observers_, observer) == observers_.end())
         {
             observers_.push_back(observer);
         }
@@ -54,10 +68,10 @@ public:
 
     void RemoveObserver(IntegratorServiceObserver* observer) override
     {
-        observers_.erase(std::remove(observers_.begin(), observers_.end(), observer), observers_.end());
+        std::erase(observers_, observer);
     }
 
-    void Notify()
+    void Notify() const
     {
         const auto observers = observers_;
         for (IntegratorServiceObserver* observer : observers)

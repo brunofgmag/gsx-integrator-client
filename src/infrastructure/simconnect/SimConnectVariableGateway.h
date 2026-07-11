@@ -20,6 +20,7 @@ public:
     void SetLVar(const std::string& name, double value) override;
     double GetAVar(const std::string& name, const std::string& unit, double defaultValue = 0.0) override;
     [[nodiscard]] bool HasReceivedAVar(const std::string& name, const std::string& unit) override;
+    void SetAVar(const std::string& name, const std::string& unit, double value) override;
 
     bool FetchAircraftName(char* buffer, int bufferSize) override;
     bool FetchAtcModel(char* buffer, int bufferSize) override;
@@ -40,8 +41,9 @@ private:
         char text[256] = {};
     };
 
-    Slot* EnsureSlot(const std::string& key, const std::string& datumName,
+    Slot& EnsureSlot(const std::string& key, const std::string& datumName,
                      const std::string& unit, bool isString, bool fastMode = false);
+    void WriteSlot(const Slot& slot, const std::string& name, double value) const;
     bool RegisterSlot(Slot& slot) const;
     bool FetchStringSlot(const char* key, const char* datumName, char* buffer, int bufferSize);
 

@@ -14,7 +14,9 @@ struct IntegratorSnapshot
     bool gsxAvailable = false;
     bool aircraftSupported = false;
     bool canToggleAutomation = false;
+    bool canStartLoading = false;
     bool canReloadSimbrief = false;
+    bool refueledExternally = false;
 
     std::string aircraftName;
     TurnaroundPhase phase = TurnaroundPhase::WaitingFlightPlan;
@@ -27,6 +29,7 @@ struct IntegratorSnapshot
     double loadedFuelKg = 0.0;
     double plannedZfwKg = 0.0;
     int plannedPax = 0;
+    int boardedPax = 0;
 };
 
 inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapshot& rhs)
@@ -43,7 +46,9 @@ inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapsho
         lhs.gsxAvailable == rhs.gsxAvailable &&
         lhs.aircraftSupported == rhs.aircraftSupported &&
         lhs.canToggleAutomation == rhs.canToggleAutomation &&
+        lhs.canStartLoading == rhs.canStartLoading &&
         lhs.canReloadSimbrief == rhs.canReloadSimbrief &&
+        lhs.refueledExternally == rhs.refueledExternally &&
         lhs.aircraftName == rhs.aircraftName &&
         lhs.phase == rhs.phase &&
         lhs.flightPlanStatus == rhs.flightPlanStatus &&
@@ -53,7 +58,8 @@ inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapsho
         nearlyEqual(lhs.plannedFuelKg, rhs.plannedFuelKg) &&
         nearlyEqual(lhs.loadedFuelKg, rhs.loadedFuelKg) &&
         nearlyEqual(lhs.plannedZfwKg, rhs.plannedZfwKg) &&
-        lhs.plannedPax == rhs.plannedPax;
+        lhs.plannedPax == rhs.plannedPax &&
+        lhs.boardedPax == rhs.boardedPax;
 }
 
 #endif // GSX_INTEGRATOR_CLIENT_INTEGRATORSNAPSHOT_H

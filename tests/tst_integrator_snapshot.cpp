@@ -24,7 +24,7 @@ void IntegratorSnapshotTest::defaultSnapshotsAreEquivalent()
 
 void IntegratorSnapshotTest::boolFieldDifferenceBreaksEquivalence()
 {
-    IntegratorSnapshot a;
+    const IntegratorSnapshot a;
     IntegratorSnapshot b;
 
     b.connected = true;
@@ -57,6 +57,11 @@ void IntegratorSnapshotTest::boolFieldDifferenceBreaksEquivalence()
     QVERIFY(!AreEquivalent(a, b));
 
     b.canToggleAutomation = false;
+    b.canStartLoading = true;
+
+    QVERIFY(!AreEquivalent(a, b));
+
+    b.canStartLoading = false;
     b.canReloadSimbrief = true;
 
     QVERIFY(!AreEquivalent(a, b));

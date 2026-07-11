@@ -23,11 +23,16 @@ public:
     bool engineRunning = false;
     bool parkingBrakeSet = false;
     bool supportsStairsOrJetways = true;
+    bool refueledExternally = false;
     int consumeSmartSwitchCalls = 0;
 
     [[nodiscard]] const char* GetName() const override { return "Fake Aircraft"; }
     [[nodiscard]] bool IsCargoVariant() const override { return cargo; }
-    void OnSlowTick() override {}
+
+    void OnSlowTick() override
+    {
+    }
+
     [[nodiscard]] bool IsFlightPlanLoaded() const override { return flightPlanLoaded; }
     [[nodiscard]] double GetPlannedFuelKg() const override { return plannedFuelKg; }
     [[nodiscard]] double GetPlannedZfwKg() const override { return plannedZfwKg; }
@@ -40,7 +45,14 @@ public:
     [[nodiscard]] bool SupportsProgressiveFuel() const override { return progressiveFuel; }
     [[nodiscard]] bool SupportsProgressiveLoad() const override { return progressiveLoad; }
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return supportsStairsOrJetways; }
-    [[nodiscard]] bool ConsumeSmartSwitch() override { ++consumeSmartSwitchCalls; return smartSwitchActivated; }
+    [[nodiscard]] bool IsRefueledExternally() const override { return refueledExternally; }
+
+    [[nodiscard]] bool ConsumeSmartSwitch() override
+    {
+        ++consumeSmartSwitchCalls;
+        return smartSwitchActivated;
+    }
+
     [[nodiscard]] bool IsPowered() const override { return powered; }
     [[nodiscard]] bool IsReadyToPush() const override { return readyToPush; }
     [[nodiscard]] bool IsReadyToDeboard() const override { return readyToDeboard; }

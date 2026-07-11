@@ -6,7 +6,7 @@ The app runs outside the simulator and talks to it through SimConnect. Nothing g
 
 ## Project status
 
-This is a work in progress, currently in a testing phase. Expect bugs, and expect behavior to change between releases. Right now the app ships as a plain folder with an executable; an installer is planned but not built yet. Until then, extract the release zip anywhere you like and start `gsx-integrator-client.exe`.
+This is a work in progress, currently in a testing phase. Expect bugs, and expect behavior to change between releases. The recommended way to install the app is the [GSX Integrator Installer](https://github.com/brunofgmag/gsx-integrator-installer), which sets up the client and the CommBus plugin together and updates both when new releases come out. If you would rather do it by hand, extract the release zip anywhere you like and start `gsx-integrator-client.exe`.
 
 ## What you need
 
@@ -17,13 +17,27 @@ This is a work in progress, currently in a testing phase. Expect bugs, and expec
 
 ## Supported aircraft
 
-- TFDi Design MD-11 (passenger and freighter)
+| Aircraft | Minimum version | Progressive fuel and load | GSX refueling | Smart switch |
+|----------|-----------------|---------------------------|---------------|--------------|
+| TFDi Design MD-11 (passenger and freighter) | Any | No | No | INT/RAD switch |
+| iFly 737 MAX 8 | SP1 | Yes | Yes | Push-to-talk switch |
 
-That is the only one for now. More aircraft will be added over time, and the project is structured so new ones can be added without touching the rest of the app. If you fly something else, the client will connect but will not automate anything.
+Progressive fuel and load means the aircraft's fuel and payload follow the GSX service as it happens: the tanks fill while the truck pumps, and the weight grows as passengers board. Without it, the client applies the final planned figures in one step.
+
+GSX refueling means the GSX fuel truck pumps the fuel itself, at its own pace. The client just follows the tank quantity, which is why the rate in the fuel card reads Auto for these aircraft and the fuel rate setting has no effect on them. If the pump feels slow, GSX has a Fuel Time Acceleration option of its own. Aircraft without it get their fuel written by the client instead.
+
+The iFly needs SP1 or newer because earlier versions lack the built-in GSX integration the client depends on.
+
+The smart switch is the cockpit control you flip to tell the client "go ahead". It works at three moments: at "Requesting fuel" with automatic loading turned off, where it does the same thing as the Start Loading button; during pushback, to confirm the engines started fine; and after a finished turnaround, to start the next one. Where each one is:
+
+- TFDi MD-11: the INT/RAD switch on the captain's audio control panel, center pedestal.
+- iFly 737 MAX 8: the R/T-I/C push-to-talk switch on the captain's audio control panel, lower left corner of the pedestal. Flick it to either side and let go.
+
+More aircraft will be added over time, and the project is structured so new ones can be added without touching the rest of the app. If you fly something else, the client will connect but will not automate anything.
 
 ## The CommBus plugin
 
-Install the CommBus plugin (`gsx-integrator-commbus`) in your Community folder. The client runs without it, but you should use it: the plugin is a small bridge that lets the client activate the GSX menu icon on the MSFS toolbar, which makes the whole integration much smoother.
+Install the CommBus plugin (`gsx-integrator-commbus`) in your Community folder; the installer above does that for you. The client runs without it, but you should use it: the plugin is a small bridge that lets the client activate the GSX menu icon on the MSFS toolbar, which makes the whole integration much smoother.
 
 ## How to use it
 

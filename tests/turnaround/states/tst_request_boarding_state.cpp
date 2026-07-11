@@ -93,7 +93,7 @@ void RequestBoardingStateTest::retriesWhenBoardingDoesNotStart()
 
     f.gsxService.boardingState = GsxStateStatus::Callable;
 
-    for (int tick = 0; tick < 62; ++tick)
+    for (int tick = 0; tick < 12; ++tick)
     {
         ++f.ctx.data.stateTickCount;
         QVERIFY(!state.Evaluate(f.ctx).has_value());

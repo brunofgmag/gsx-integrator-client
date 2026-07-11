@@ -79,6 +79,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/IFly737Max.cpp
+        src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/aircraft/TfdiMd11.cpp
         src/infrastructure/aircraft/TfdiMd11.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
@@ -135,6 +137,7 @@ set(APP_QML_FILES
         src/qml/components/HeaderButton.qml
         src/qml/components/HelpHint.qml
         src/qml/components/KeyValueRow.qml
+        src/qml/components/SectionLabel.qml
         src/qml/components/SegmentedControl.qml
         src/qml/components/SettingRow.qml
         src/qml/components/SquareSwitch.qml

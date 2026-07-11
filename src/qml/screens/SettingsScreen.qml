@@ -12,6 +12,11 @@ ColumnLayout {
 
     spacing: 8
 
+    SectionLabel {
+        Layout.fillWidth: true
+        text: qsTr("SimBrief")
+    }
+
     SettingRow {
         Layout.fillWidth: true
         title: qsTr("SimBrief Pilot ID")
@@ -42,11 +47,17 @@ ColumnLayout {
         }
     }
 
+    SectionLabel {
+        Layout.fillWidth: true
+        Layout.topMargin: 8
+        text: qsTr("Automation")
+    }
+
     SettingRow {
         Layout.fillWidth: true
         title: qsTr("Fuel rate")
         caption: qsTr("Refueling speed")
-        helpText: ""
+        helpText: qsTr("Used only by aircraft that don't support refueling through GSX. When GSX drives the fuel truck, the client follows the GSX pace and the rate shows as Auto.")
 
         TextField {
             id: fuelRateField
@@ -84,9 +95,9 @@ ColumnLayout {
 
     SwitchRow {
         Layout.fillWidth: true
-        title: qsTr("Auto-select GSX choice")
-        caption: qsTr("Always pick the \"GSX choice\" menu option")
-        helpText: qsTr("When on, the integrator automatically selects any GSX menu option marked \"GSX choice\", even on menus you open manually.")
+        title: qsTr("Accept actions automatically")
+        caption: qsTr("Picks the recommended GSX menu option for you")
+        helpText: qsTr("When on, the integrator answers GSX menus on its own: any option marked \"GSX choice\" and the Simbrief block fuel refueling level, even on menus you open manually.")
         checked: root.settingsVm.autoSelectGsxChoice
         onToggled: checked => root.settingsVm.autoSelectGsxChoice = checked
     }
@@ -98,6 +109,21 @@ ColumnLayout {
         helpText: qsTr("Starts the turnaround on its own once it detects a supported aircraft and a flight plan.")
         checked: root.settingsVm.autoStartFlow
         onToggled: checked => root.settingsVm.autoStartFlow = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        title: qsTr("Auto-start loading")
+        caption: qsTr("Request refueling without pressing anything")
+        helpText: qsTr("When off, the turnaround holds at \"Requesting fuel\" until you press Start Loading or activate the aircraft's SmartSwitch. Refueling requested manually in the GSX menu still resumes the flow.")
+        checked: root.settingsVm.autoStartLoading
+        onToggled: checked => root.settingsVm.autoStartLoading = checked
+    }
+
+    SectionLabel {
+        Layout.fillWidth: true
+        Layout.topMargin: 8
+        text: qsTr("Window")
     }
 
     SwitchRow {
@@ -114,6 +140,12 @@ ColumnLayout {
         caption: qsTr("Minimizing hides the window to the tray")
         checked: root.settingsVm.minimizeToTray
         onToggled: checked => root.settingsVm.minimizeToTray = checked
+    }
+
+    SectionLabel {
+        Layout.fillWidth: true
+        Layout.topMargin: 8
+        text: qsTr("Application")
     }
 
     SettingRow {
