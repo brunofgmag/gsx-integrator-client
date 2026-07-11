@@ -9,6 +9,20 @@
 #include "../../ports/GsxMenuGateway.h"
 #include "../../model/AutomationSettings.h"
 
+namespace
+{
+    bool IsWeightDone(const TurnaroundContext& ctx, const GsxStateStatus refuelingState)
+    {
+        if (ctx.aircraft->IsRefueledExternally())
+        {
+            return refuelingState == GsxStateStatus::Completed || ctx.gsxGateway->
+                                                                      WasStateCompleted(GsxState::Refueling);
+        }
+
+        return std::abs(ctx.data.plannedFuelKg - ctx.data.loadedFuelKg) <= turnaround::kWeightEpsilonKg;
+    }
+}
+
 std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
@@ -22,9 +36,20 @@ std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& 
         return std::nullopt;
     }
 
+    if (!data.refuelBaselined)
+    {
+        data.refuelBaselined = true;
+        data.initialFuelKg = ctx.aircraft->GetCurrentFuelKg();
+        data.loadedFuelKg = data.initialFuelKg;
+    }
+
     if (data.fuelProgress < 100.0)
     {
-        if (ctx.aircraft->SupportsProgressiveFuel())
+        if (ctx.aircraft->IsRefueledExternally())
+        {
+            data.loadedFuelKg = ctx.aircraft->GetCurrentFuelKg();
+        }
+        else if (ctx.aircraft->SupportsProgressiveFuel())
         {
             RefuelProgressively(ctx);
         }
@@ -40,14 +65,21 @@ std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& 
         data.loadedFuelKg,
         data.plannedFuelKg);
 
-    const bool weightDone = std::abs(data.plannedFuelKg - data.loadedFuelKg) <= turnaround::kWeightEpsilonKg;
-    if (!weightDone || ctx.gsxGateway->IsFuelHoseConnected())
+    if (!IsWeightDone(ctx, refuelingState) || ctx.gsxGateway->IsFuelHoseConnected())
     {
         return std::nullopt;
     }
 
-    data.loadedFuelKg = data.plannedFuelKg;
-    ctx.aircraft->SetCurrentFuelKg(data.plannedFuelKg);
+    if (ctx.aircraft->IsRefueledExternally())
+    {
+        data.loadedFuelKg = ctx.aircraft->GetCurrentFuelKg();
+    }
+    else
+    {
+        data.loadedFuelKg = data.plannedFuelKg;
+        ctx.aircraft->SetCurrentFuelKg(data.plannedFuelKg);
+    }
+
     data.fuelProgress = 100.0;
 
     const bool isCompleted = ctx.gsxGateway->GetStateStatus(GsxState::Refueling) == GsxStateStatus::Completed;

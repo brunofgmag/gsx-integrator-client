@@ -17,6 +17,9 @@ private slots:
     static void mapsFlightPlanStatusToText();
     static void simbriefReadyAndErrorFlags();
     static void noopWhenSettingSameEnabledValue();
+    static void startLoadingDelegatesToService();
+    static void startLoadingReportsRejectedCommands();
+    static void exposesCanStartLoadingFromSnapshot();
     static void reloadSimbriefDelegatesToService();
     static void exposesAircraftPropertiesFromSnapshot();
     static void successfulCommandClearsPreviousError();
@@ -26,7 +29,7 @@ private slots:
 void OperationsViewModelTest::exposesUpdatedSnapshot()
 {
     FakeIntegratorService service;
-    OperationsViewModel viewModel(&service);
+    const OperationsViewModel viewModel(&service);
 
     service.snapshot.connected = true;
     service.snapshot.phase = TurnaroundPhase::WaitingAircraftReady;
@@ -39,8 +42,8 @@ void OperationsViewModelTest::exposesUpdatedSnapshot()
 void OperationsViewModelTest::emitsOneSignalForSnapshotChanges()
 {
     FakeIntegratorService service;
-    OperationsViewModel viewModel(&service);
-    QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
+    const OperationsViewModel viewModel(&service);
+    const QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
 
     service.snapshot.connected = true;
     service.snapshot.sessionActive = true;
@@ -53,8 +56,8 @@ void OperationsViewModelTest::emitsOneSignalForSnapshotChanges()
 void OperationsViewModelTest::doesNotEmitWhenSnapshotIsUnchanged()
 {
     FakeIntegratorService service;
-    OperationsViewModel viewModel(&service);
-    QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
+    const OperationsViewModel viewModel(&service);
+    const QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
 
     service.Notify();
 
@@ -66,8 +69,8 @@ void OperationsViewModelTest::ignoresInsignificantFloatingPointChanges()
     FakeIntegratorService service;
     service.snapshot.fuelProgress = 10.0;
 
-    OperationsViewModel viewModel(&service);
-    QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
+    const OperationsViewModel viewModel(&service);
+    const QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
 
     service.snapshot.fuelProgress = 10.00001;
     service.Notify();
@@ -83,7 +86,7 @@ void OperationsViewModelTest::reportsRejectedCommands()
     service.automationResult = CommandResult::Failure("Rejected");
 
     OperationsViewModel viewModel(&service);
-    QSignalSpy errorSpy(&viewModel, &OperationsViewModel::CommandErrorChanged);
+    const QSignalSpy errorSpy(&viewModel, &OperationsViewModel::CommandErrorChanged);
 
     viewModel.startFlow();
 
@@ -96,7 +99,7 @@ void OperationsViewModelTest::reportsRejectedCommands()
 void OperationsViewModelTest::mapsFlightPlanStatusToText()
 {
     FakeIntegratorService service;
-    OperationsViewModel viewModel(&service);
+    const OperationsViewModel viewModel(&service);
 
     service.snapshot.flightPlanStatus = FlightPlanStatus::Idle;
     service.Notify();
@@ -122,7 +125,7 @@ void OperationsViewModelTest::mapsFlightPlanStatusToText()
 void OperationsViewModelTest::simbriefReadyAndErrorFlags()
 {
     FakeIntegratorService service;
-    OperationsViewModel viewModel(&service);
+    const OperationsViewModel viewModel(&service);
 
     service.snapshot.flightPlanStatus = FlightPlanStatus::Ready;
     service.Notify();
@@ -148,6 +151,46 @@ void OperationsViewModelTest::noopWhenSettingSameEnabledValue()
     QCOMPARE(service.automationCalls, 0);
 }
 
+void OperationsViewModelTest::startLoadingDelegatesToService()
+{
+    FakeIntegratorService service;
+    service.snapshot.canStartLoading = true;
+    OperationsViewModel viewModel(&service);
+
+    viewModel.startLoading();
+
+    QCOMPARE(service.startLoadingCalls, 1);
+    QVERIFY(viewModel.GetCommandError().isEmpty());
+    QVERIFY(!viewModel.CanStartLoading());
+}
+
+void OperationsViewModelTest::startLoadingReportsRejectedCommands()
+{
+    FakeIntegratorService service;
+    service.startLoadingResult = CommandResult::Failure("Rejected");
+
+    OperationsViewModel viewModel(&service);
+    const QSignalSpy errorSpy(&viewModel, &OperationsViewModel::CommandErrorChanged);
+
+    viewModel.startLoading();
+
+    QCOMPARE(errorSpy.count(), 1);
+    QCOMPARE(viewModel.GetCommandError(), QStringLiteral("Rejected"));
+}
+
+void OperationsViewModelTest::exposesCanStartLoadingFromSnapshot()
+{
+    FakeIntegratorService service;
+    const OperationsViewModel viewModel(&service);
+
+    QVERIFY(!viewModel.CanStartLoading());
+
+    service.snapshot.canStartLoading = true;
+    service.Notify();
+
+    QVERIFY(viewModel.CanStartLoading());
+}
+
 void OperationsViewModelTest::reloadSimbriefDelegatesToService()
 {
     FakeIntegratorService service;
@@ -169,7 +212,7 @@ void OperationsViewModelTest::exposesAircraftPropertiesFromSnapshot()
     service.snapshot.aircraftSupported = true;
     service.snapshot.sessionActive = true;
 
-    OperationsViewModel viewModel(&service);
+    const OperationsViewModel viewModel(&service);
 
     QCOMPARE(viewModel.GetAircraftName(), QStringLiteral("TFDi MD-11"));
     QCOMPARE(viewModel.GetPlannedFuelKg(), 12000.0);
@@ -193,7 +236,7 @@ void OperationsViewModelTest::successfulCommandClearsPreviousError()
     QCOMPARE(viewModel.GetCommandError(), QStringLiteral("Rejected"));
 
     service.automationResult = CommandResult::Success();
-    QSignalSpy spy(&viewModel, &OperationsViewModel::CommandErrorChanged);
+    const QSignalSpy spy(&viewModel, &OperationsViewModel::CommandErrorChanged);
     viewModel.startFlow();
 
     QVERIFY(viewModel.GetCommandError().isEmpty());
@@ -203,7 +246,7 @@ void OperationsViewModelTest::successfulCommandClearsPreviousError()
 void OperationsViewModelTest::exposesPhaseIndexCountAndTip()
 {
     FakeIntegratorService service;
-    OperationsViewModel viewModel(&service);
+    const OperationsViewModel viewModel(&service);
 
     QCOMPARE(viewModel.GetPhaseCount(), static_cast<int>(TurnaroundPhase::Count));
 

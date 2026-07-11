@@ -13,6 +13,8 @@ private slots:
     static void rejectsInvalidDraft();
     static void savesValidDraft();
     static void persistsAutoStartFlowImmediately();
+    static void autoStartLoadingDefaultsToEnabled();
+    static void persistsAutoStartLoadingImmediately();
     static void traySettingsDefaultToEnabled();
     static void traySettingsPersistImmediately();
     static void rejectsNonNumericFuelRate();
@@ -41,7 +43,7 @@ void SettingsViewModelTest::loadsAndAppliesStoredSettings()
     repository.stored.autoSelectGsxChoice = false;
     repository.stored.themeMode = 1;
 
-    SettingsViewModel viewModel(&repository, &service);
+    const SettingsViewModel viewModel(&repository, &service);
 
     QCOMPARE(viewModel.GetSimbriefPilotIdText(), QStringLiteral("42"));
     QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("150"));
@@ -103,11 +105,40 @@ void SettingsViewModelTest::persistsAutoStartFlowImmediately()
     QVERIFY(service.appliedSettings.autoStartFlow);
 }
 
-void SettingsViewModelTest::traySettingsDefaultToEnabled()
+void SettingsViewModelTest::autoStartLoadingDefaultsToEnabled()
 {
     FakeSettingsRepository repository;
     FakeIntegratorService service;
     SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(viewModel.GetAutoStartLoading());
+    QVERIFY(service.appliedSettings.autoStartLoading);
+}
+
+void SettingsViewModelTest::persistsAutoStartLoadingImmediately()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    viewModel.SetAutoStartLoading(false);
+
+    QVERIFY(!viewModel.GetAutoStartLoading());
+    QCOMPARE(repository.saveCalls, 1);
+    QVERIFY(!repository.stored.autoStartLoading);
+    QVERIFY(!service.appliedSettings.autoStartLoading);
+
+    const int savesBefore = repository.saveCalls;
+    viewModel.SetAutoStartLoading(false);
+
+    QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::traySettingsDefaultToEnabled()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    const SettingsViewModel viewModel(&repository, &service);
 
     QVERIFY(viewModel.GetCloseToTray());
     QVERIFY(viewModel.GetMinimizeToTray());
@@ -293,7 +324,7 @@ void SettingsViewModelTest::updateModeDefaultsToNotify()
 {
     FakeSettingsRepository repository;
     FakeIntegratorService service;
-    SettingsViewModel viewModel(&repository, &service);
+    const SettingsViewModel viewModel(&repository, &service);
 
     QCOMPARE(viewModel.GetUpdateMode(), static_cast<int>(SettingsViewModel::Notify));
 }

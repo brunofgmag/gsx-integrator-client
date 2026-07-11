@@ -38,19 +38,21 @@ void SimConnectVariableGateway::Detach()
 
 void SimConnectVariableGateway::SetFastRefresh(const std::string& name)
 {
-    const Slot* slot = EnsureSlot(name, name, kNumberUnit, false, true);
-    if (!slot || hSimConnect_ == nullptr)
+    EnsureSlot(name, name, kNumberUnit, false, true);
+    if (hSimConnect_ == nullptr)
     {
         LOG_ERROR("Could not write to LVar '%s', not connected.", name.c_str());
     }
 }
 
-SimConnectVariableGateway::Slot* SimConnectVariableGateway::EnsureSlot(const std::string& key, const std::string& datumName,
-                                         const std::string& unit, const bool isString, const bool fastMode)
+SimConnectVariableGateway::Slot& SimConnectVariableGateway::EnsureSlot(const std::string& key,
+                                                                       const std::string& datumName,
+                                                                       const std::string& unit, const bool isString,
+                                                                       const bool fastMode)
 {
     if (const auto it = index_.find(key); it != index_.end())
     {
-        return &slots_[it->second];
+        return slots_[it->second];
     }
 
     slots_.emplace_back();
@@ -68,7 +70,7 @@ SimConnectVariableGateway::Slot* SimConnectVariableGateway::EnsureSlot(const std
         LOG_WARN("Failed to register variable '%s'", datumName.c_str());
     }
 
-    return &slot;
+    return slot;
 }
 
 bool SimConnectVariableGateway::RegisterSlot(Slot& slot) const
@@ -117,46 +119,53 @@ bool SimConnectVariableGateway::RegisterSlot(Slot& slot) const
 
 double SimConnectVariableGateway::GetLVar(const std::string& name, const double defaultValue)
 {
-    const Slot* slot = EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false);
-    return (slot && slot->received) ? slot->value : defaultValue;
+    const Slot& slot = EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false);
+    return slot.received ? slot.value : defaultValue;
 }
 
 bool SimConnectVariableGateway::HasReceivedLVar(const std::string& name)
 {
-    const Slot* slot = EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false);
-    return slot && slot->received;
+    return EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false).received;
 }
 
 void SimConnectVariableGateway::SetLVar(const std::string& name, const double value)
 {
-    Slot* slot = EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false);
-    if (!slot || hSimConnect_ == nullptr)
+    WriteSlot(EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false), "L:" + name, value);
+}
+
+void SimConnectVariableGateway::WriteSlot(const Slot& slot, const std::string& name, const double value) const
+{
+    if (hSimConnect_ == nullptr)
     {
-        LOG_ERROR("Could not write to LVar '%s', not connected.", name.c_str());
+        LOG_ERROR("Could not write to '%s', not connected.", name.c_str());
         return;
     }
 
     double payload = value;
     if (const HRESULT hr = SimConnect_SetDataOnSimObject(
-            hSimConnect_, slot->defineId, SIMCONNECT_OBJECT_ID_USER, 0, 0,
+            hSimConnect_, slot.defineId, SIMCONNECT_OBJECT_ID_USER, 0, 0,
             sizeof(payload), &payload);
         FAILED(hr))
     {
-        LOG_ERROR("Failed to set LVar '%s' to value %f: Err code %i",
+        LOG_ERROR("Failed to set '%s' to value %f: Err code %i",
                   name.c_str(), value, static_cast<int>(hr));
     }
 }
 
 double SimConnectVariableGateway::GetAVar(const std::string& name, const std::string& unit, const double defaultValue)
 {
-    const Slot* slot = EnsureSlot("A:" + name + "|" + unit, name, unit, false);
-    return (slot && slot->received) ? slot->value : defaultValue;
+    const Slot& slot = EnsureSlot("A:" + name + "|" + unit, name, unit, false);
+    return slot.received ? slot.value : defaultValue;
 }
 
 bool SimConnectVariableGateway::HasReceivedAVar(const std::string& name, const std::string& unit)
 {
-    const Slot* slot = EnsureSlot("A:" + name + "|" + unit, name, unit, false);
-    return slot && slot->received;
+    return EnsureSlot("A:" + name + "|" + unit, name, unit, false).received;
+}
+
+void SimConnectVariableGateway::SetAVar(const std::string& name, const std::string& unit, const double value)
+{
+    WriteSlot(EnsureSlot("A:" + name + "|" + unit, name, unit, false), name, value);
 }
 
 bool SimConnectVariableGateway::FetchAircraftName(char* buffer, const int bufferSize)
@@ -174,13 +183,13 @@ bool SimConnectVariableGateway::FetchStringSlot(const char* key, const char* dat
 {
     buffer[0] = '\0';
 
-    const Slot* slot = EnsureSlot(key, datumName, "", true);
-    if (!slot || !slot->received)
+    const Slot& slot = EnsureSlot(key, datumName, "", true);
+    if (!slot.received)
     {
         return false;
     }
 
-    strncpy_s(buffer, bufferSize - 1, slot->text, _TRUNCATE);
+    strncpy_s(buffer, bufferSize - 1, slot.text, _TRUNCATE);
     buffer[bufferSize - 1] = '\0';
 
     return true;

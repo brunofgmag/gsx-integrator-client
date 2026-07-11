@@ -1,6 +1,7 @@
 #include "RequestFuelState.h"
 
 #include "../TurnaroundContext.h"
+#include "../../model/AutomationSettings.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
@@ -13,16 +14,21 @@ std::optional<TurnaroundTransition> RequestFuelState::Evaluate(TurnaroundContext
 {
     auto& data = ctx.data;
 
+    if (ctx.ConsumeSmartSwitch())
+    {
+        data.loadingConfirmed = true;
+    }
+
+    const bool loadingAllowed = ctx.settings == nullptr || ctx.settings->autoStartLoading || data.loadingConfirmed;
+
     const GsxStateStatus refuelingState = ctx.gsxGateway->GetStateStatus(GsxState::Refueling);
-    if (refuelingState == GsxStateStatus::Callable && !data.refuelingRequested)
+    if (loadingAllowed && refuelingState == GsxStateStatus::Callable && !data.refuelingRequested)
     {
         ctx.gsxGateway->TakeOverFuelAndPayload();
         data.refuelingRequested = ctx.menuGateway->RequestRefueling();
     }
 
-    const bool gsxReady =
-        ctx.gsxGateway->IsFuelHoseConnected() && refuelingState == GsxStateStatus::Active;
-    if (gsxReady)
+    if (ctx.gsxGateway->IsFuelHoseConnected() && refuelingState == GsxStateStatus::Active)
     {
         return TurnaroundTransition{TurnaroundPhase::Refueling};
     }

@@ -22,6 +22,10 @@ private slots:
     static void detectsByAtcModelWhenLiveryRenamesTitle();
     static void detectsCargoByAtcModel();
     static void detectsWhenAtcModelUnavailable();
+    static void detectsIFlyMax8FromBaseTitle();
+    static void detectsIFlyMax8FromLiveryTitle();
+    static void detectsIFlyMax8200FromTitle();
+    static void doesNotDetectIFlyByGenericBoeingAtcModel();
 };
 
 void AircraftDetectionTest::returnsNullWhenNameUnavailable()
@@ -159,6 +163,57 @@ void AircraftDetectionTest::detectsWhenAtcModelUnavailable()
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(!aircraft->IsCargoVariant());
+}
+
+void AircraftDetectionTest::detectsIFlyMax8FromBaseTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "iFly 737-MAX8 (178Seats)";
+
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(QString(aircraft->GetName()), QString("iFly 737 MAX 8"));
+    QVERIFY(!aircraft->IsCargoVariant());
+}
+
+void AircraftDetectionTest::detectsIFlyMax8FromLiveryTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "iFly 737-MAX8 GLO PRXML (166Seat)";
+
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(QString(aircraft->GetName()), QString("iFly 737 MAX 8"));
+}
+
+void AircraftDetectionTest::detectsIFlyMax8200FromTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "iFly 737-MAX8200";
+
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(QString(aircraft->GetName()), QString("iFly 737 MAX 8"));
+}
+
+void AircraftDetectionTest::doesNotDetectIFlyByGenericBoeingAtcModel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "PMDG 737-800 Houston";
+    gateway.atcModel = "B738";
+
+    QVERIFY(DetectAircraft(&gateway, &status) == nullptr);
 }
 
 QTEST_APPLESS_MAIN(AircraftDetectionTest)

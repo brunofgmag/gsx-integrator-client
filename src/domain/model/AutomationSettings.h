@@ -9,6 +9,7 @@ struct AutomationSettings
     double fuelRateKgs = kDefaultFuelRateKgs;
     bool autoSelectGsxChoice = true;
     bool autoStartFlow = false;
+    bool autoStartLoading = true;
 
     [[nodiscard]] double EffectiveFuelRateKgs() const
     {

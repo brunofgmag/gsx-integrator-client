@@ -24,12 +24,15 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(double deboardingProgress READ GetDeboardingProgress NOTIFY SnapshotChanged)
     Q_PROPERTY(double plannedFuelKg READ GetPlannedFuelKg NOTIFY SnapshotChanged)
     Q_PROPERTY(double loadedFuelKg READ GetLoadedFuelKg NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool refueledExternally READ IsRefueledExternally NOTIFY SnapshotChanged)
     Q_PROPERTY(double plannedZfwKg READ GetPlannedZfwKg NOTIFY SnapshotChanged)
     Q_PROPERTY(int plannedPax READ GetPlannedPax NOTIFY SnapshotChanged)
+    Q_PROPERTY(int boardedPax READ GetBoardedPax NOTIFY SnapshotChanged)
     Q_PROPERTY(QString simbriefStatusText READ GetSimbriefStatusText NOTIFY SnapshotChanged)
     Q_PROPERTY(bool simbriefReady READ IsSimbriefReady NOTIFY SnapshotChanged)
     Q_PROPERTY(bool simbriefError READ HasSimbriefError NOTIFY SnapshotChanged)
     Q_PROPERTY(bool canToggleAutomation READ CanToggleAutomation NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool canStartLoading READ CanStartLoading NOTIFY SnapshotChanged)
     Q_PROPERTY(bool canReloadSimbrief READ CanReloadSimbrief NOTIFY SnapshotChanged)
     Q_PROPERTY(QString commandError READ GetCommandError NOTIFY CommandErrorChanged)
 
@@ -54,16 +57,20 @@ public:
     [[nodiscard]] double GetDeboardingProgress() const;
     [[nodiscard]] double GetPlannedFuelKg() const;
     [[nodiscard]] double GetLoadedFuelKg() const;
+    [[nodiscard]] bool IsRefueledExternally() const;
     [[nodiscard]] double GetPlannedZfwKg() const;
     [[nodiscard]] int GetPlannedPax() const;
+    [[nodiscard]] int GetBoardedPax() const;
     [[nodiscard]] QString GetSimbriefStatusText() const;
     [[nodiscard]] bool IsSimbriefReady() const;
     [[nodiscard]] bool HasSimbriefError() const;
     [[nodiscard]] bool CanToggleAutomation() const;
+    [[nodiscard]] bool CanStartLoading() const;
     [[nodiscard]] bool CanReloadSimbrief() const;
     [[nodiscard]] QString GetCommandError() const;
 
     Q_INVOKABLE void startFlow();
+    Q_INVOKABLE void startLoading();
     Q_INVOKABLE void reloadSimbrief();
 
     void RetranslateUi();

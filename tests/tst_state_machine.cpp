@@ -323,14 +323,32 @@ private slots:
     static void unconsumedSmartSwitchPressIsDiscarded();
     static void attachAircraftAllowsLeavingWaitingSupportedAircraft();
     static void resetReturnsToWaitingSupportedAircraft();
+    static void holdsAtRequestFuelUntilLoadingConfirmed();
     static void waitsForRefuelingTransitionDelay();
     static void waitsForBoardingTransitionDelay();
     static void completesReachableWorkflowAndReturnsToStart();
+    static void publishesCurrentTankFuelBeforeRefuel();
 };
+
+void TurnaroundStateMachineTest::publishesCurrentTankFuelBeforeRefuel()
+{
+    TurnaroundWorkflow workflow;
+    workflow.f.aircraft.currentFuelKg = 5000.0;
+    workflow.machine.AttachAircraft(&workflow.f.aircraft);
+
+    workflow.machine.Tick();
+
+    QCOMPARE(workflow.f.status.loadedFuelKg, 5000.0);
+
+    workflow.f.aircraft.currentFuelKg = 5100.0;
+    workflow.machine.Tick();
+
+    QCOMPARE(workflow.f.status.loadedFuelKg, 5100.0);
+}
 
 void TurnaroundStateMachineTest::startsInWaitingSupportedAircraft()
 {
-    TurnaroundWorkflow workflow;
+    const TurnaroundWorkflow workflow;
 
     QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::WaitingSupportedAircraft);
 }
@@ -372,14 +390,12 @@ void TurnaroundStateMachineTest::unconsumedSmartSwitchPressIsDiscarded()
     TurnaroundWorkflow workflow;
     workflow.AttachAircraft();
 
-    // Press em fase que nao consome (WaitingFlightPlan): a informacao vive um tick e e' descartada.
     workflow.f.aircraft.smartSwitchActivated = true;
     workflow.TickHolding(TurnaroundPhase::WaitingFlightPlan);
 
     workflow.f.aircraft.smartSwitchActivated = false;
     workflow.TickHolding(TurnaroundPhase::WaitingFlightPlan);
 
-    // Se o press antigo tivesse ficado retido, o fluxo abaixo confirmaria motores sem um press novo.
     workflow.LoadFlightPlan();
     workflow.CompleteReposition();
     workflow.CompleteGroundServiceSetup();
@@ -420,6 +436,31 @@ void TurnaroundStateMachineTest::resetReturnsToWaitingSupportedAircraft()
     workflow.machine.Reset();
 
     QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::WaitingSupportedAircraft);
+}
+
+void TurnaroundStateMachineTest::holdsAtRequestFuelUntilLoadingConfirmed()
+{
+    TurnaroundWorkflow workflow;
+    workflow.f.settings.autoStartLoading = false;
+
+    ReachRequestFuel(workflow);
+    workflow.f.gsxService.refuelingState = GsxStateStatus::Callable;
+
+    workflow.TickHolding(TurnaroundPhase::RequestFuel);
+    workflow.TickHolding(TurnaroundPhase::RequestFuel);
+
+    QCOMPARE(workflow.f.menuGateway.refuelingCalls, 0);
+    QVERIFY(!workflow.machine.IsLoadingConfirmed());
+
+    workflow.machine.ConfirmLoading();
+
+    QVERIFY(workflow.machine.IsLoadingConfirmed());
+
+    workflow.TickHolding(TurnaroundPhase::RequestFuel);
+
+    QCOMPARE(workflow.f.menuGateway.refuelingCalls, 1);
+
+    workflow.StartRefueling();
 }
 
 void TurnaroundStateMachineTest::waitsForRefuelingTransitionDelay()
