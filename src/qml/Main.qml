@@ -153,7 +153,9 @@ ApplicationWindow {
         id: tray
         visible: true
         icon.source: window.trayIconSource
-        tooltip: qsTr("GSX Integrator")
+        tooltip: window.integratorVm.connected
+                 ? qsTr("GSX Integrator") + " — " + window.integratorVm.stateText
+                 : qsTr("GSX Integrator")
 
         menu: Platform.Menu {
             Platform.MenuItem {
