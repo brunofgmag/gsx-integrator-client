@@ -18,6 +18,7 @@ public:
     [[nodiscard]] CommandResult SetAutomationEnabled(bool enabled) override;
     [[nodiscard]] CommandResult StartLoading() override;
     [[nodiscard]] CommandResult ReloadSimbrief() override;
+    [[nodiscard]] CommandResult FixGsxProfile() override;
     void ApplySettings(const AppSettings& settings) override;
 
     void AddObserver(IntegratorServiceObserver* observer) override;
