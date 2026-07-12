@@ -19,6 +19,7 @@ public:
     [[nodiscard]] bool WasStateCompleted(GsxState gsxState) const override;
 
     [[nodiscard]] bool IsFuelHoseConnected() const override;
+    [[nodiscard]] double GetRefuelCounterGallons() const override;
     [[nodiscard]] bool HasPushbackStarted() const override;
     [[nodiscard]] bool IsPushbackFinished() const override;
     [[nodiscard]] bool IsWaitingForEngines() const override;

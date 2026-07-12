@@ -22,7 +22,7 @@ std::optional<TurnaroundTransition> RequestDeboardingState::Evaluate(TurnaroundC
 
     const bool hasPassengersDeboarding = ctx.gsxGateway->GetDeboardedPassengers() > 0;
     const bool hasCargoDeboarding = ctx.gsxGateway->GetDeboardingCargoPercent() > 0.0;
-    const bool hasDeboardingStarted = ctx.aircraft->IsCargoVariant() ? hasCargoDeboarding : hasPassengersDeboarding;
+    const bool hasDeboardingStarted = hasPassengersDeboarding || hasCargoDeboarding;
 
     const bool gsxReady = deboardingState == GsxStateStatus::Active;
     if (hasDeboardingStarted && gsxReady)

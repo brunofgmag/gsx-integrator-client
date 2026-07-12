@@ -30,6 +30,7 @@ public:
     [[nodiscard]] virtual bool WasStateCompleted(GsxState gsxState) const = 0;
     [[nodiscard]] virtual bool IsWaitingForEngines() const = 0;
     [[nodiscard]] virtual bool IsFuelHoseConnected() const = 0;
+    [[nodiscard]] virtual double GetRefuelCounterGallons() const = 0;
     [[nodiscard]] virtual bool HasPushbackStarted() const = 0;
     [[nodiscard]] virtual bool IsPushbackFinished() const = 0;
     [[nodiscard]] virtual bool IsRepositioning() const = 0;

@@ -118,6 +118,17 @@ ColumnLayout {
         Advisory {
             Layout.fillWidth: true
             hideable: true
+            visible: root.integratorVm.gsxProfileConflict
+            text: root.integratorVm.gsxProfileFixable
+                  ? qsTr("The GSX profile for this aircraft does not set 'refueling = 0', so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.")
+                  : qsTr("No GSX profile with 'refueling = 0' was found for this aircraft. Install an aircraft profile and set 'refueling = 0' in its gsx.cfg.")
+            actionText: root.integratorVm.gsxProfileFixable ? qsTr("Fix profile") : ""
+            onActionTriggered: root.integratorVm.fixGsxProfile()
+        }
+
+        Advisory {
+            Layout.fillWidth: true
+            hideable: true
             text: root.integratorVm.phaseTip
         }
 
@@ -197,7 +208,9 @@ ColumnLayout {
                     label: qsTr("Rate")
                     value: root.integratorVm.refueledExternally
                         ? qsTr("Auto")
-                        : root.settingsVm.fuelRateText + " " + qsTr("kg/s")
+                        : root.integratorVm.loadsViaUplink
+                            ? "GSX"
+                            : root.settingsVm.fuelRateText + " " + qsTr("kg/s")
                 }
             }
 

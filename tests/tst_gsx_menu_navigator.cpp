@@ -86,7 +86,8 @@ private slots:
     static void triggerServiceDoesNotToggleOpenMenu();
     static void confirmGoodEnginesPicksWhenMenuVisible();
     static void confirmGoodEnginesOpensMenuAndDefersPick();
-    static void confirmGoodEnginesPicksEntryOnInterruptPushbackMenu();
+    static void completePushbackPicksEntryOnInterruptPushbackMenu();
+    static void completeRefuelPicksCompleteNowViaServiceMenu();
     static void picksGsxChoiceDuringServiceIntent();
     static void gsxChoiceSurvivesDispatchDelay();
     static void gsxChoiceSurvivesTransientMenuClose();
@@ -261,7 +262,7 @@ void GsxMenuNavigatorTest::confirmGoodEnginesOpensMenuAndDefersPick()
     QCOMPARE(pick->args.value("index").toInt(), 0);
 }
 
-void GsxMenuNavigatorTest::confirmGoodEnginesPicksEntryOnInterruptPushbackMenu()
+void GsxMenuNavigatorTest::completePushbackPicksEntryOnInterruptPushbackMenu()
 {
     FakeRemoteClient client;
     GsxRemoteState state;
@@ -269,13 +270,14 @@ void GsxMenuNavigatorTest::confirmGoodEnginesPicksEntryOnInterruptPushbackMenu()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(!nav.ConfirmGoodEngines());
+    QVERIFY(!nav.CompletePushback());
 
     QCOMPARE(client.Count("menu.pick"), 0);
+    QCOMPARE(client.Count("menu.toggle"), 1);
 
     ShowMenu(state, "Interrupt pushback?",
              {
-                 "Confirm good engine Start",
+                 "Engines not started, call you back later",
                  "Stop here and complete pushback procedure",
                  "Abort pushback",
                  "Cameras"
@@ -286,7 +288,37 @@ void GsxMenuNavigatorTest::confirmGoodEnginesPicksEntryOnInterruptPushbackMenu()
 
     QVERIFY(pick != nullptr);
 
-    QCOMPARE(pick->args.value("index").toInt(), 0);
+    QCOMPARE(pick->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::completeRefuelPicksCompleteNowViaServiceMenu()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    QVERIFY(nav.CompleteRefuel());
+
+    QCOMPARE(client.Count("menu.toggle"), 1);
+
+    ShowMenu(state, "Activate Services at SBFZ",
+             {"Request Deboarding", "Refueling: 10761 kg loaded", "Request Boarding"});
+    nav.OnMenuChanged();
+
+    const Sent* first = client.Last("menu.pick");
+
+    QVERIFY(first != nullptr);
+    QCOMPARE(first->args.value("index").toInt(), 1);
+
+    ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
+    nav.OnMenuChanged();
+
+    const Sent* second = client.Last("menu.pick");
+
+    QVERIFY(second != nullptr);
+    QCOMPARE(second->args.value("index").toInt(), 0);
 }
 
 void GsxMenuNavigatorTest::picksGsxChoiceDuringServiceIntent()

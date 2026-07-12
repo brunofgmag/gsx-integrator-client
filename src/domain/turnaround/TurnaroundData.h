@@ -18,7 +18,11 @@ struct TurnaroundData
     double deboardingProgress = 0.0;
 
     bool loadingConfirmed = false;
+    bool loadingStartNotified = false;
     bool refuelBaselined = false;
+    double refuelStallSampleKg = 0.0;
+    int refuelStallTicks = 0;
+    bool refuelCompletionForced = false;
     bool boardingBaselined = false;
     bool refuelingRequested = false;
     bool boardingRequested = false;

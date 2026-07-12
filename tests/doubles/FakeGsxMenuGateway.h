@@ -9,6 +9,8 @@ public:
     bool callJetwayResult = true;
     bool callStairsResult = true;
     bool confirmGoodEnginesResult = true;
+    bool completePushbackResult = true;
+    bool completeRefuelResult = true;
 
     int callJetwayCalls = 0;
     int callStairsCalls = 0;
@@ -19,6 +21,8 @@ public:
     int pushbackCalls = 0;
     int refuelingCalls = 0;
     int confirmGoodEnginesCalls = 0;
+    int completePushbackCalls = 0;
+    int completeRefuelCalls = 0;
 
     [[nodiscard]] bool CallJetway() override
     {
@@ -72,6 +76,18 @@ public:
     {
         ++confirmGoodEnginesCalls;
         return confirmGoodEnginesResult;
+    }
+
+    [[nodiscard]] bool CompletePushback() override
+    {
+        ++completePushbackCalls;
+        return completePushbackResult;
+    }
+
+    [[nodiscard]] bool CompleteRefuel() override
+    {
+        ++completeRefuelCalls;
+        return completeRefuelResult;
     }
 
     void DisableGsxMenu() override {}

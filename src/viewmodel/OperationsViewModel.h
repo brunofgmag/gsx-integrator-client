@@ -25,6 +25,9 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(double plannedFuelKg READ GetPlannedFuelKg NOTIFY SnapshotChanged)
     Q_PROPERTY(double loadedFuelKg READ GetLoadedFuelKg NOTIFY SnapshotChanged)
     Q_PROPERTY(bool refueledExternally READ IsRefueledExternally NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool loadsViaUplink READ LoadsViaUplink NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool gsxProfileConflict READ HasGsxProfileConflict NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool gsxProfileFixable READ IsGsxProfileFixable NOTIFY SnapshotChanged)
     Q_PROPERTY(double plannedZfwKg READ GetPlannedZfwKg NOTIFY SnapshotChanged)
     Q_PROPERTY(int plannedPax READ GetPlannedPax NOTIFY SnapshotChanged)
     Q_PROPERTY(int boardedPax READ GetBoardedPax NOTIFY SnapshotChanged)
@@ -58,6 +61,9 @@ public:
     [[nodiscard]] double GetPlannedFuelKg() const;
     [[nodiscard]] double GetLoadedFuelKg() const;
     [[nodiscard]] bool IsRefueledExternally() const;
+    [[nodiscard]] bool LoadsViaUplink() const;
+    [[nodiscard]] bool HasGsxProfileConflict() const;
+    [[nodiscard]] bool IsGsxProfileFixable() const;
     [[nodiscard]] double GetPlannedZfwKg() const;
     [[nodiscard]] int GetPlannedPax() const;
     [[nodiscard]] int GetBoardedPax() const;
@@ -72,6 +78,7 @@ public:
     Q_INVOKABLE void startFlow();
     Q_INVOKABLE void startLoading();
     Q_INVOKABLE void reloadSimbrief();
+    Q_INVOKABLE void fixGsxProfile();
 
     void RetranslateUi();
 

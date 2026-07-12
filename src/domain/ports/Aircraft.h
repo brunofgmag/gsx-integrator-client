@@ -9,7 +9,9 @@ public:
     [[nodiscard]] virtual const char* GetName() const = 0;
     [[nodiscard]] virtual bool IsCargoVariant() const = 0;
 
-    virtual void OnSlowTick() = 0;
+    virtual void OnTick() {}
+    virtual void OnSlowTick() {}
+    virtual void OnLoadingStarted() = 0;
 
     [[nodiscard]] virtual bool IsFlightPlanLoaded() const = 0;
     [[nodiscard]] virtual double GetPlannedFuelKg() const = 0;
@@ -26,6 +28,8 @@ public:
     [[nodiscard]] virtual bool SupportsProgressiveLoad() const = 0;
     [[nodiscard]] virtual bool SupportsStairsOrJetways() const = 0;
     [[nodiscard]] virtual bool IsRefueledExternally() const = 0;
+    [[nodiscard]] virtual bool LoadsViaUplink() const = 0;
+    [[nodiscard]] virtual bool CompletesPushbackViaInterruptMenu() const = 0;
 
     [[nodiscard]] virtual bool ConsumeSmartSwitch() = 0;
 

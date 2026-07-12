@@ -15,6 +15,7 @@ private slots:
     static void holdsWhenConfirmPickFails();
     static void proceedsAfterDeferredConfirmationCompletes();
     static void confirmsAndProceedsWhenAllConditionsMet();
+    static void usesCompletePushbackForInterruptMenuAircraft();
     static void proceedsWhenConfirmationNotRequired();
     static void proceedsWhenPushbackFinished();
 };
@@ -127,6 +128,24 @@ void WaitingEnginesStateTest::confirmsAndProceedsWhenAllConditionsMet()
     QCOMPARE(transition->next, TurnaroundPhase::WaitingDeparture);
     QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 1);
     QVERIFY(!f.ctx.smartSwitchPressed);
+}
+
+void WaitingEnginesStateTest::usesCompletePushbackForInterruptMenuAircraft()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    ArmConfirmationScenario(f);
+    f.aircraft.completesPushbackViaInterruptMenu = true;
+    f.gsxService.waitingForEngines = false;
+    f.aircraft.parkingBrakeSet = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingDeparture);
+    QCOMPARE(f.menuGateway.completePushbackCalls, 1);
+    QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 0);
 }
 
 void WaitingEnginesStateTest::proceedsWhenConfirmationNotRequired()

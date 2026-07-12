@@ -62,6 +62,9 @@ ApplicationWindow {
     function confirmQuit() {
         if (!window.visible) {
             window.restoreFromTray()
+        } else {
+            window.raise()
+            window.requestActivate()
         }
         quitDialog.open()
     }
