@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v0.10.0...v0.11.0) (2026-07-12)
+
+
+### Features
+
+* add support for toliss a340-600 ([#20](https://github.com/brunofgmag/gsx-integrator-client/issues/20)) ([e53a991](https://github.com/brunofgmag/gsx-integrator-client/commit/e53a9919bb6143a29f98c51407b946d44f1d102d))
+
 ## [0.10.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v0.9.0...v0.10.0) (2026-07-11)
 
 
