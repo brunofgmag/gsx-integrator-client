@@ -12,6 +12,7 @@ private slots:
     static void doesNotRequestTwice();
     static void advancesForPassengers();
     static void advancesForCargo();
+    static void advancesForCargoBeforePassengersOnPassengerVariant();
     static void holdsUntilGsxActive();
     static void retriesWhenBoardingDoesNotStart();
     static void advancesWhenBoardingAlreadyCompleted();
@@ -67,6 +68,22 @@ void RequestBoardingStateTest::advancesForCargo()
     f.aircraft.cargo = true;
     f.gsxService.boardingState = GsxStateStatus::Active;
     f.gsxService.cargoPercent = 5.0;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::Boarding);
+}
+
+void RequestBoardingStateTest::advancesForCargoBeforePassengersOnPassengerVariant()
+{
+    TurnaroundStateFixture f;
+    RequestBoardingState state;
+
+    f.aircraft.cargo = false;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardedPassengers = 0;
+    f.gsxService.cargoPercent = 17.0;
 
     const auto transition = state.Evaluate(f.ctx);
 

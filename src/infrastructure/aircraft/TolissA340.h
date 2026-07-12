@@ -1,23 +1,23 @@
-#ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11_H
-#define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11_H
+#ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H
+#define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H
 
 #include "../../domain/ports/Aircraft.h"
 
 class VariableGateway;
 struct AutomationStatus;
 
-class TfdiMd11 final : public Aircraft
+class TolissA340 final : public Aircraft
 {
 public:
-    static constexpr auto kName = "TFDi MD-11";
+    static constexpr auto kName = "ToLiss A340-600";
 
-    TfdiMd11(VariableGateway* variableGateway, AutomationStatus* status, bool cargo);
+    TolissA340(VariableGateway* variableGateway, AutomationStatus* status, bool cargoVariant);
 
     [[nodiscard]] const char* GetName() const override;
     [[nodiscard]] bool IsCargoVariant() const override;
 
-    void OnSlowTick() override;
-    void OnLoadingStarted() override {}
+    void OnTick() override;
+    void OnLoadingStarted() override;
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
@@ -31,11 +31,11 @@ public:
     void SetCurrentZfwKg(double zfwKg) override;
 
     [[nodiscard]] bool SupportsProgressiveFuel() const override { return false; }
-    [[nodiscard]] bool SupportsProgressiveLoad() const override { return false; }
+    [[nodiscard]] bool SupportsProgressiveLoad() const override { return true; }
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
     [[nodiscard]] bool IsRefueledExternally() const override { return false; }
-    [[nodiscard]] bool LoadsViaUplink() const override { return false; }
-    [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
+    [[nodiscard]] bool LoadsViaUplink() const override { return true; }
+    [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return true; }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
@@ -45,23 +45,24 @@ public:
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
 private:
-    void CommitEfbTargets() const;
-    void SeedTargetsIfNeeded();
-
     [[nodiscard]] bool IsBeaconOn() const;
+    [[nodiscard]] bool IsExternalPowerOn() const;
+    void UpdateCargoDoors();
+    void DriveCargoDoor(const char* loaderStateLVar, const char* doorModeLVar, double& lastDoorTarget) const;
+    void UpdatePaxDoors();
+    void DrivePaxDoor(const char* stairsStateLVar, const char* doorModeLVar, double& lastDoorTarget) const;
 
     VariableGateway* variableGateway_;
     AutomationStatus* status_;
-
-    bool cargo_;
+    bool cargoVariant_;
+    bool uplinkArmed_ = false;
+    int uplinkStep_ = -1;
     bool smartSwitchResetPending_ = false;
-    bool pendingEfbCommit_ = false;
-    bool fuelTargetSeeded_ = false;
-    bool zfwTargetSeeded_ = false;
-    double targetFuelKg_ = 0.0;
-    double lastFuelKg_ = 0.0;
-    double targetZfwKg_ = 0.0;
-    double lastZfwKg_ = 0.0;
+    double fwdCargoDoorTarget_ = -1.0;
+    double aftCargoDoorTarget_ = -1.0;
+    double fwdPaxDoorTarget_ = -1.0;
+    double midPaxDoorTarget_ = -1.0;
+    double aftPaxDoorTarget_ = -1.0;
 };
 
-#endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11_H
+#endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H

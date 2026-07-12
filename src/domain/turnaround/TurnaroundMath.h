@@ -8,6 +8,7 @@ namespace turnaround
 {
     inline constexpr double kTickSeconds = 1.0;
     inline constexpr double kWeightEpsilonKg = 50.0;
+    inline constexpr double kJetFuelKgPerUsGallon = 3.04;
 
     [[nodiscard]] inline double ProgressPercent(
         const double initialValue,

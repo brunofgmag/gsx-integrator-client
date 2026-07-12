@@ -21,6 +21,10 @@ namespace
     constexpr auto kPushTugQuestion = "Attach Pushback Tug";
     constexpr auto kConfirmEnginesText = "Confirm good engine";
     constexpr auto kInterruptPushbackTitle = "Interrupt pushback";
+    constexpr auto kCompletePushbackText = "complete pushback procedure";
+    constexpr auto kServiceInProgressTitle = "Service in progress";
+    constexpr auto kCompleteNowText = "Complete now";
+    constexpr auto kRefuelingLoadedText = "kg loaded";
 
     bool Contains(const std::string& hay, const std::string& needle)
     {
@@ -118,6 +122,35 @@ bool GsxMenuNavigator::ConfirmGoodEngines()
     return false;
 }
 
+bool GsxMenuNavigator::CompletePushback()
+{
+    if (PickByContains(kCompletePushbackText))
+    {
+        completingPushback_ = false;
+
+        return true;
+    }
+
+    completingPushback_ = true;
+
+    OpenIntent(Intent::Service);
+
+    OpenMenu();
+
+    return false;
+}
+
+bool GsxMenuNavigator::CompleteRefuel()
+{
+    completingRefuel_ = true;
+
+    OpenIntent(Intent::Service);
+
+    OpenMenu();
+
+    return true;
+}
+
 void GsxMenuNavigator::DisableGsxMenu()
 {
     if (state_->menu.shown)
@@ -132,6 +165,8 @@ void GsxMenuNavigator::DisableGsxMenu()
 void GsxMenuNavigator::Reset()
 {
     reposition_ = Reposition::Idle;
+    completingPushback_ = false;
+    completingRefuel_ = false;
     intent_ = Intent::None;
     intentSinceMs_ = 0;
     lastPickedSig_.clear();
@@ -207,6 +242,34 @@ void GsxMenuNavigator::OnMenuChanged()
         return;
     }
 
+    if (completingPushback_ && Contains(menu.title, kInterruptPushbackTitle))
+    {
+        if (PickByContains(kCompletePushbackText))
+        {
+            completingPushback_ = false;
+        }
+
+        return;
+    }
+
+    if (completingRefuel_)
+    {
+        if (Contains(menu.title, kServiceInProgressTitle))
+        {
+            if (PickByContains(kCompleteNowText))
+            {
+                completingRefuel_ = false;
+            }
+
+            return;
+        }
+
+        if (PickByContains(kRefuelingLoadedText))
+        {
+            return;
+        }
+    }
+
     if (!HasActiveIntent())
     {
         return;
@@ -247,7 +310,7 @@ void GsxMenuNavigator::OnMenuChanged()
         return;
     }
 
-    if (Contains(menu.title, kConfirmEnginesText) || Contains(menu.title, kInterruptPushbackTitle))
+    if (Contains(menu.title, kConfirmEnginesText))
     {
         (void)ConfirmGoodEngines();
 

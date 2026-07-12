@@ -11,11 +11,13 @@ public:
     IntegratorSnapshot snapshot;
     CommandResult automationResult = CommandResult::Success();
     CommandResult startLoadingResult = CommandResult::Success();
+    CommandResult fixGsxProfileResult = CommandResult::Success();
     AppSettings appliedSettings;
     int automationCalls = 0;
     int startLoadingCalls = 0;
     int reloadCalls = 0;
     int applySettingsCalls = 0;
+    int fixGsxProfileCalls = 0;
 
     [[nodiscard]] IntegratorSnapshot GetSnapshot() const override
     {
@@ -49,6 +51,19 @@ public:
     {
         ++reloadCalls;
         return CommandResult::Success();
+    }
+
+    [[nodiscard]] CommandResult FixGsxProfile() override
+    {
+        ++fixGsxProfileCalls;
+        if (fixGsxProfileResult.succeeded)
+        {
+            snapshot.gsxProfileConflict = false;
+            snapshot.gsxProfileFixable = false;
+            Notify();
+        }
+
+        return fixGsxProfileResult;
     }
 
     void ApplySettings(const AppSettings& settings) override

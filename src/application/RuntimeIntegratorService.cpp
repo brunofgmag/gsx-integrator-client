@@ -35,6 +35,9 @@ IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
         && runtime_->GetPhase() <= TurnaroundPhase::WaitingFlightPlan;
     snapshot.aircraftName = runtime_->GetAircraftName().toStdString();
     snapshot.refueledExternally = runtime_->IsAircraftRefueledExternally();
+    snapshot.loadsViaUplink = runtime_->IsAircraftLoadsViaUplink();
+    snapshot.gsxProfileConflict = runtime_->HasGsxProfileConflict();
+    snapshot.gsxProfileFixable = runtime_->CanFixGsxProfile();
     snapshot.phase = runtime_->GetPhase();
     snapshot.flightPlanStatus = status.flightPlanStatus;
     snapshot.fuelProgress = status.fuelProgress;
@@ -108,6 +111,23 @@ CommandResult RuntimeIntegratorService::ReloadSimbrief()
     {
         return CommandResult::Failure(
             QCoreApplication::translate("Integrator", "Could not start the SimBrief request.").toStdString());
+    }
+
+    return CommandResult::Success();
+}
+
+CommandResult RuntimeIntegratorService::FixGsxProfile()
+{
+    if (!runtime_->HasGsxProfileConflict())
+    {
+        return CommandResult::Failure(
+            QCoreApplication::translate("Integrator", "The GSX profile does not need fixing.").toStdString());
+    }
+
+    if (!runtime_->FixGsxProfile())
+    {
+        return CommandResult::Failure(
+            QCoreApplication::translate("Integrator", "Could not update the GSX aircraft profile.").toStdString());
     }
 
     return CommandResult::Success();

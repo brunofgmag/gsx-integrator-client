@@ -54,7 +54,7 @@ TfdiMd11::TfdiMd11(VariableGateway* variableGateway, AutomationStatus* status, c
 
 const char* TfdiMd11::GetName() const
 {
-    return "TFDi MD-11";
+    return kName;
 }
 
 bool TfdiMd11::IsCargoVariant() const
@@ -270,7 +270,7 @@ namespace
     }
 
     const AircraftDescriptor kTfdiMd11Descriptor{
-        "TFDi MD-11",
+        TfdiMd11::kName,
         {
             {MatchField::Title, MatchOp::Contains, "TFDi Design MD-11"},
             {MatchField::AtcModel, MatchOp::Equals, "MD11"},

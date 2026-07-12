@@ -12,14 +12,21 @@ std::optional<TurnaroundTransition> WaitingEnginesState::Evaluate(TurnaroundCont
         return TurnaroundTransition{TurnaroundPhase::WaitingDeparture};
     }
 
-    if (!ctx.gsxGateway->IsWaitingForEngines()
-        || !ctx.aircraft->IsEngineRunning()
-        || !ctx.aircraft->IsParkingBrakeSet())
+    const bool viaInterruptMenu = ctx.aircraft->CompletesPushbackViaInterruptMenu();
+
+    if (!ctx.aircraft->IsEngineRunning())
     {
         return std::nullopt;
     }
 
-    if (ctx.ConsumeSmartSwitch() && ctx.menuGateway->ConfirmGoodEngines())
+    if (!viaInterruptMenu
+        && (!ctx.gsxGateway->IsWaitingForEngines() || !ctx.aircraft->IsParkingBrakeSet()))
+    {
+        return std::nullopt;
+    }
+
+    if (ctx.ConsumeSmartSwitch()
+        && (viaInterruptMenu ? ctx.menuGateway->CompletePushback() : ctx.menuGateway->ConfirmGoodEngines()))
     {
         return TurnaroundTransition{TurnaroundPhase::WaitingDeparture};
     }

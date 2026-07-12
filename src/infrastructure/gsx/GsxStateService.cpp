@@ -2,16 +2,19 @@
 
 #include <algorithm>
 #include <cctype>
+#include <ranges>
+
+#include "GsxLVars.h"
 #include "../logging/LogMacros.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
 
 namespace
 {
-    constexpr auto kCouatlStartedLVar = "FSDT_GSX_COUATL_STARTED";
-
     // Services / Progress
     constexpr auto kRefuelingStateLVar = "FSDT_GSX_REFUELING_STATE";
     constexpr auto kRefuelingProgressLVar = "FSDT_GSX_FUELHOSE_CONNECTED";
+    constexpr auto kFuelCounterLVar = "FSDT_GSX_FUEL_COUNTER";
+    constexpr auto kFuelCounterMaxLVar = "FSDT_GSX_FUEL_COUNTER_MAX";
     constexpr auto kBoardingStateLVar = "FSDT_GSX_BOARDING_STATE";
     constexpr auto kDeboardingStateLVar = "FSDT_GSX_DEBOARDING_STATE";
     constexpr auto kPushbackVehicleStateLVar = "FSDT_GSX_VEHICLE_PUSHBACK_STATE";
@@ -66,12 +69,12 @@ void GsxStateService::Reset()
     deboardingPassengersTotal_ = 0;
     lastDeboardingPassengers_ = 0;
 
-    for (auto& [state, completed] : statesCompletedMap_)
+    for (auto& completed : statesCompletedMap_ | std::views::values)
     {
         completed = false;
     }
 
-    for (auto& [state, status] : statesStatusMap_)
+    for (auto& status : statesStatusMap_ | std::views::values)
     {
         status = GsxStateStatus::Unavailable;
     }
@@ -79,7 +82,7 @@ void GsxStateService::Reset()
 
 bool GsxStateService::IsAvailable() const
 {
-    return varManager_->GetLVar(kCouatlStartedLVar) >= 1.0;
+    return varManager_->GetLVar(gsx::lvars::kCouatlStarted) >= 1.0;
 }
 
 GsxStateStatus GsxStateService::GetStateStatus(const GsxState gsxState)
@@ -120,6 +123,12 @@ bool GsxStateService::WasStateCompleted(const GsxState gsxState) const
 bool GsxStateService::IsFuelHoseConnected() const
 {
     return varManager_->GetLVar(kRefuelingProgressLVar) >= 1.0;
+}
+
+double GsxStateService::GetRefuelCounterGallons() const
+{
+    return std::max(varManager_->GetLVar(kFuelCounterLVar),
+                    varManager_->GetLVar(kFuelCounterMaxLVar));
 }
 
 bool GsxStateService::HasPushbackStarted() const

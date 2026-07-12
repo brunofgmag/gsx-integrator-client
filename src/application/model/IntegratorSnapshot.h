@@ -17,6 +17,9 @@ struct IntegratorSnapshot
     bool canStartLoading = false;
     bool canReloadSimbrief = false;
     bool refueledExternally = false;
+    bool loadsViaUplink = false;
+    bool gsxProfileConflict = false;
+    bool gsxProfileFixable = false;
 
     std::string aircraftName;
     TurnaroundPhase phase = TurnaroundPhase::WaitingFlightPlan;
@@ -49,6 +52,9 @@ inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapsho
         lhs.canStartLoading == rhs.canStartLoading &&
         lhs.canReloadSimbrief == rhs.canReloadSimbrief &&
         lhs.refueledExternally == rhs.refueledExternally &&
+        lhs.loadsViaUplink == rhs.loadsViaUplink &&
+        lhs.gsxProfileConflict == rhs.gsxProfileConflict &&
+        lhs.gsxProfileFixable == rhs.gsxProfileFixable &&
         lhs.aircraftName == rhs.aircraftName &&
         lhs.phase == rhs.phase &&
         lhs.flightPlanStatus == rhs.flightPlanStatus &&

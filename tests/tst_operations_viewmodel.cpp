@@ -24,6 +24,9 @@ private slots:
     static void exposesAircraftPropertiesFromSnapshot();
     static void successfulCommandClearsPreviousError();
     static void exposesPhaseIndexCountAndTip();
+    static void exposesGsxProfileConflictFromSnapshot();
+    static void fixGsxProfileDelegatesToService();
+    static void fixGsxProfileReportsRejectedCommands();
 };
 
 void OperationsViewModelTest::exposesUpdatedSnapshot()
@@ -259,6 +262,50 @@ void OperationsViewModelTest::exposesPhaseIndexCountAndTip()
     QCOMPARE(viewModel.phaseLabelAt(static_cast<int>(TurnaroundPhase::Boarding)),
              QStringLiteral("Boarding"));
     QVERIFY(viewModel.phaseLabelAt(-1).isEmpty());
+}
+
+void OperationsViewModelTest::exposesGsxProfileConflictFromSnapshot()
+{
+    FakeIntegratorService service;
+    const OperationsViewModel viewModel(&service);
+
+    QVERIFY(!viewModel.HasGsxProfileConflict());
+    QVERIFY(!viewModel.IsGsxProfileFixable());
+
+    service.snapshot.gsxProfileConflict = true;
+    service.snapshot.gsxProfileFixable = true;
+    service.Notify();
+
+    QVERIFY(viewModel.HasGsxProfileConflict());
+    QVERIFY(viewModel.IsGsxProfileFixable());
+}
+
+void OperationsViewModelTest::fixGsxProfileDelegatesToService()
+{
+    FakeIntegratorService service;
+    service.snapshot.gsxProfileConflict = true;
+    service.snapshot.gsxProfileFixable = true;
+    OperationsViewModel viewModel(&service);
+
+    viewModel.fixGsxProfile();
+
+    QCOMPARE(service.fixGsxProfileCalls, 1);
+    QVERIFY(viewModel.GetCommandError().isEmpty());
+    QVERIFY(!viewModel.HasGsxProfileConflict());
+}
+
+void OperationsViewModelTest::fixGsxProfileReportsRejectedCommands()
+{
+    FakeIntegratorService service;
+    service.fixGsxProfileResult = CommandResult::Failure("Rejected");
+
+    OperationsViewModel viewModel(&service);
+    const QSignalSpy errorSpy(&viewModel, &OperationsViewModel::CommandErrorChanged);
+
+    viewModel.fixGsxProfile();
+
+    QCOMPARE(errorSpy.count(), 1);
+    QCOMPARE(viewModel.GetCommandError(), QStringLiteral("Rejected"));
 }
 
 QTEST_APPLESS_MAIN(OperationsViewModelTest)
