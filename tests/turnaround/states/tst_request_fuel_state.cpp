@@ -18,6 +18,7 @@ private slots:
     static void advancesFromExternalRefuelingWhileHolding();
     static void requestsFuelWhenSmartSwitchIsPressed();
     static void smartSwitchActsAsStartLoadingButton();
+    static void doesNotNotifyAircraftWhileRequesting();
 };
 
 void RequestFuelStateTest::doesNotRequestFuelWhenServiceIsUnavailable()
@@ -188,6 +189,22 @@ void RequestFuelStateTest::smartSwitchActsAsStartLoadingButton()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.refuelingCalls, 1);
     QVERIFY(f.ctx.data.refuelingRequested);
+}
+
+void RequestFuelStateTest::doesNotNotifyAircraftWhileRequesting()
+{
+    TurnaroundStateFixture f;
+    RequestFuelState state;
+
+    f.gsxService.refuelingState = GsxStateStatus::Callable;
+
+    for (int tick = 0; tick < 65; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.aircraft.onLoadingStartedCalls, 0);
 }
 
 QTEST_APPLESS_MAIN(RequestFuelStateTest)
