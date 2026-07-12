@@ -4,8 +4,11 @@ Item {
     id: root
 
     property string text: ""
+    property string actionText: ""
     property bool hideable: false
     property bool hidden: false
+
+    signal actionTriggered()
 
     visible: root.text.length > 0
     implicitHeight: root.hidden ? collapsed.implicitHeight : strip.implicitHeight
@@ -51,12 +54,22 @@ Item {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - badge.implicitWidth - 24
+                       - (actionButton.visible ? actionButton.width + 10 : 0)
                        - (hideButton.visible ? hideButton.width + 10 : 0)
                 text: root.text
                 color: Theme.tipFg
                 font.pixelSize: 11
                 lineHeight: 1.3
                 wrapMode: Text.WordWrap
+            }
+
+            ActionButton {
+                id: actionButton
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.actionText.length > 0
+                small: true
+                text: root.actionText
+                onClicked: root.actionTriggered()
             }
 
             ActionButton {

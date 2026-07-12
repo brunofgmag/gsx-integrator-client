@@ -53,10 +53,6 @@ bool IFly737Max::IsCargoVariant() const
     return false;
 }
 
-void IFly737Max::OnSlowTick()
-{
-}
-
 bool IFly737Max::IsFlightPlanLoaded() const
 {
     return status_->flightPlanStatus == FlightPlanStatus::Ready;

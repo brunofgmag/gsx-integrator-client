@@ -3,6 +3,7 @@
 #include "sim/SessionReadiness.h"
 #include "../infrastructure/aircraft/AircraftFactory.h"
 #include "../infrastructure/logging/LogMacros.h"
+#include "../infrastructure/gsx/GsxAircraftProfile.h"
 #include "../infrastructure/gsx/GsxRemoteStateReducer.h"
 
 IntegratorRuntime::IntegratorRuntime(QObject* parent)
@@ -225,6 +226,7 @@ void IntegratorRuntime::Update()
     stateMachine_.AttachAircraft(aircraft_.get());
     gsxMenu_.OnMenuChanged();
     stateMachine_.Tick();
+    aircraft_->OnTick();
 }
 
 void IntegratorRuntime::UpdateSlow()
@@ -235,6 +237,8 @@ void IntegratorRuntime::UpdateSlow()
     }
 
     aircraft_->OnSlowTick();
+
+    CheckGsxProfile();
 }
 
 void IntegratorRuntime::Shutdown()
@@ -274,6 +278,10 @@ void IntegratorRuntime::OnFlightStart()
     isSessionActive_ = true;
 
     aircraft_.reset();
+    gsxProfileRoots_.clear();
+    gsxProfileCfgs_.clear();
+    gsxProfileConflict_ = false;
+    gsxProfileFlagsMissing_ = false;
 
     ResetSession();
 
@@ -289,6 +297,10 @@ void IntegratorRuntime::OnSessionEnd()
     isSessionActive_ = false;
 
     aircraft_.reset();
+    gsxProfileRoots_.clear();
+    gsxProfileCfgs_.clear();
+    gsxProfileConflict_ = false;
+    gsxProfileFlagsMissing_ = false;
 
     ResetSession();
 
@@ -306,7 +318,74 @@ void IntegratorRuntime::ResolveAircraft()
     if (aircraft_)
     {
         status_.aircraftSupported = true;
+        gsxProfileRoots_ = GsxAircraftProfile::ProfileRootsFor(aircraft_->GetName());
+        gsxProfileFlagsMissing_ = GsxAircraftProfile::FlagsMissingProfile(aircraft_->GetName());
+        CheckGsxProfile();
     }
+}
+
+void IntegratorRuntime::CheckGsxProfile()
+{
+    if (gsxProfileRoots_.empty())
+    {
+        gsxProfileCfgs_.clear();
+        gsxProfileConflict_ = false;
+        return;
+    }
+
+    gsxProfileCfgs_ = GsxAircraftProfile::FindCfgs(gsxProfileRoots_);
+
+    bool conflict = gsxProfileCfgs_.empty() && gsxProfileFlagsMissing_;
+    for (const auto& cfg : gsxProfileCfgs_)
+    {
+        const std::optional<int> refueling = GsxAircraftProfile::ReadRefueling(cfg);
+        if (!refueling.has_value() || *refueling != 0)
+        {
+            conflict = true;
+            if (!gsxProfileConflict_)
+            {
+                LOG_WARN("GSX profile '%s' does not set 'refueling = 0'; the fuel truck will not connect.",
+                         cfg.string().c_str());
+            }
+        }
+    }
+
+    gsxProfileConflict_ = conflict;
+}
+
+bool IntegratorRuntime::CanFixGsxProfile() const
+{
+    return gsxProfileConflict_ && !gsxProfileCfgs_.empty();
+}
+
+bool IntegratorRuntime::FixGsxProfile()
+{
+    if (gsxProfileCfgs_.empty())
+    {
+        return false;
+    }
+
+    for (const auto& cfg : gsxProfileCfgs_)
+    {
+        const std::optional<int> refueling = GsxAircraftProfile::ReadRefueling(cfg);
+        if (refueling.has_value() && *refueling == 0)
+        {
+            continue;
+        }
+
+        if (!GsxAircraftProfile::WriteRefueling(cfg, 0))
+        {
+            return false;
+        }
+
+        LOG_INFO("GSX profile '%s' updated: refueling = 0.", cfg.string().c_str());
+    }
+
+    CheckGsxProfile();
+
+    emit Updated();
+
+    return true;
 }
 
 bool IntegratorRuntime::IsSessionReady()
@@ -334,6 +413,11 @@ QString IntegratorRuntime::GetAircraftName() const
 bool IntegratorRuntime::IsAircraftRefueledExternally() const
 {
     return aircraft_ && aircraft_->IsRefueledExternally();
+}
+
+bool IntegratorRuntime::IsAircraftLoadsViaUplink() const
+{
+    return aircraft_ && aircraft_->LoadsViaUplink();
 }
 
 void IntegratorRuntime::SetAutomationEnabled(const bool enabled)

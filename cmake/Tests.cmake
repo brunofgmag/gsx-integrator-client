@@ -206,6 +206,21 @@ gsxi_add_qt_test(gsxi-ifly-737max-tests ifly-737max
         src/infrastructure/aircraft/IFly737Max.h
         src/domain/model/AutomationStatus.h)
 
+gsxi_add_qt_test(gsxi-gsx-aircraft-profile-tests gsx-aircraft-profile
+        tests/tst_gsx_aircraft_profile.cpp
+        src/infrastructure/gsx/GsxAircraftProfile.cpp
+        src/infrastructure/gsx/GsxAircraftProfile.h)
+
+gsxi_add_qt_test(gsxi-toliss-a340-tests toliss-a340
+        tests/TestDoubles.h
+        tests/tst_toliss_a340.cpp
+        src/infrastructure/aircraft/AircraftIdentity.h
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/TolissA340.cpp
+        src/infrastructure/aircraft/TolissA340.h
+        src/domain/model/AutomationStatus.h)
+
 gsxi_add_qt_test(gsxi-aircraft-matching-tests aircraft-matching
         tests/tst_aircraft_matching.cpp
         src/infrastructure/aircraft/AircraftIdentity.h
@@ -224,6 +239,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/aircraft/TfdiMd11.cpp
         src/infrastructure/aircraft/TfdiMd11.h
+        src/infrastructure/aircraft/TolissA340.cpp
+        src/infrastructure/aircraft/TolissA340.h
         src/domain/model/AutomationStatus.h
         src/domain/support/Weight.h)
 

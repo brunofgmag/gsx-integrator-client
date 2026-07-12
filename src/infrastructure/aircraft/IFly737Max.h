@@ -14,7 +14,7 @@ public:
     [[nodiscard]] const char* GetName() const override;
     [[nodiscard]] bool IsCargoVariant() const override;
 
-    void OnSlowTick() override;
+    void OnLoadingStarted() override {}
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
@@ -31,6 +31,8 @@ public:
     [[nodiscard]] bool SupportsProgressiveLoad() const override { return true; }
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
     [[nodiscard]] bool IsRefueledExternally() const override { return true; }
+    [[nodiscard]] bool LoadsViaUplink() const override { return false; }
+    [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;

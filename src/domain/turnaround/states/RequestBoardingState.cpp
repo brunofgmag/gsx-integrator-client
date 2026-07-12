@@ -22,7 +22,7 @@ std::optional<TurnaroundTransition> RequestBoardingState::Evaluate(TurnaroundCon
 
     const bool hasPassengersBoarding = ctx.gsxGateway->GetBoardedPassengers() > 0;
     const bool hasCargoBoarding = ctx.gsxGateway->GetBoardingCargoPercent() > 0.0;
-    const bool hasBoardingStarted = ctx.aircraft->IsCargoVariant() ? hasCargoBoarding : hasPassengersBoarding;
+    const bool hasBoardingStarted = hasPassengersBoarding || hasCargoBoarding;
 
     const bool gsxReady = boardingState == GsxStateStatus::Active;
     if (hasBoardingStarted && gsxReady)

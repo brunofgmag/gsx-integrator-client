@@ -71,7 +71,7 @@ void IFly737MaxTest::reportsSupportedProgressiveModes()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    IFly737Max aircraft(&gateway, &status);
+    const IFly737Max aircraft(&gateway, &status);
 
     QVERIFY(aircraft.SupportsProgressiveFuel());
     QVERIFY(aircraft.SupportsProgressiveLoad());
@@ -231,6 +231,7 @@ void IFly737MaxTest::fuelSetterDoesNotWriteToSim()
     IFly737Max aircraft(&gateway, &status);
 
     aircraft.SetCurrentFuelKg(7600.0);
+    aircraft.OnTick();
     aircraft.OnSlowTick();
 
     QCOMPARE(gateway.setLVarCalls, 0);
