@@ -120,6 +120,13 @@ ColumnLayout {
         onToggled: checked => root.settingsVm.autoStartLoading = checked
     }
 
+    SwitchRow {
+        Layout.fillWidth: true
+        title: qsTr("Skip aircraft repositioning")
+        checked: root.settingsVm.skipReposition
+        onToggled: checked => root.settingsVm.skipReposition = checked
+    }
+
     SectionLabel {
         Layout.fillWidth: true
         Layout.topMargin: 8

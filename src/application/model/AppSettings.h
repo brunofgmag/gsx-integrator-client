@@ -11,6 +11,7 @@ struct AppSettings
     bool autoSelectGsxChoice = true;
     bool autoStartFlow = false;
     bool autoStartLoading = true;
+    bool skipReposition = false;
     int themeMode = 2;
     std::string language = "system";
     int updateMode = 1;

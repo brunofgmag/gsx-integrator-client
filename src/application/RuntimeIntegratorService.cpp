@@ -141,6 +141,7 @@ void RuntimeIntegratorService::ApplySettings(const AppSettings& settings)
     automationSettings.autoSelectGsxChoice = settings.autoSelectGsxChoice;
     automationSettings.autoStartFlow = settings.autoStartFlow;
     automationSettings.autoStartLoading = settings.autoStartLoading;
+    automationSettings.skipReposition = settings.skipReposition;
 
     runtime_->ApplySettings(automationSettings);
 }

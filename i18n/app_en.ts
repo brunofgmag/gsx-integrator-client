@@ -645,6 +645,11 @@
         <translation>When off, the turnaround holds at &quot;Requesting fuel&quot; until you press Start Loading or activate the aircraft&apos;s SmartSwitch. Refueling requested manually in the GSX menu still resumes the flow.</translation>
     </message>
     <message>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="125"/>
+        <source>Skip aircraft repositioning</source>
+        <translation>Skip aircraft repositioning</translation>
+    </message>
+    <message>
         <location filename="../src/qml/screens/SettingsScreen.qml" line="140"/>
         <source>Minimizing hides the window to the tray</source>
         <translation>Minimizing hides the window to the tray</translation>

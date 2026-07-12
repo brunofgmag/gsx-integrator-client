@@ -645,6 +645,11 @@
         <translation>Quando desligado, o turnaround aguarda em &quot;Solicitando combustível&quot; até você pressionar Iniciar Carregamento ou acionar o SmartSwitch da aeronave. Um reabastecimento solicitado manualmente no menu do GSX ainda retoma o fluxo.</translation>
     </message>
     <message>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="125"/>
+        <source>Skip aircraft repositioning</source>
+        <translation>Pular reposicionamento da aeronave</translation>
+    </message>
+    <message>
         <location filename="../src/qml/screens/SettingsScreen.qml" line="140"/>
         <source>Minimizing hides the window to the tray</source>
         <translation>Minimizar esconde a janela para a bandeja</translation>

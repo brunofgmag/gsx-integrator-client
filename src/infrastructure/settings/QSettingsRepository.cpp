@@ -7,6 +7,7 @@ namespace
     constexpr auto kKeyAutoSelectGsxChoice = "gsx/autoSelectGsxChoice";
     constexpr auto kKeyAutoStartFlow = "automation/autoStartFlow";
     constexpr auto kKeyAutoStartLoading = "automation/autoStartLoading";
+    constexpr auto kKeySkipReposition = "automation/skipReposition";
     constexpr auto kKeyThemeMode = "ui/themeMode";
     constexpr auto kKeyDarkThemeLegacy = "ui/darkTheme";
     constexpr auto kKeyLanguage = "ui/language";
@@ -26,6 +27,7 @@ AppSettings QSettingsRepository::Load() const
     result.autoSelectGsxChoice = settings.value(kKeyAutoSelectGsxChoice, true).toBool();
     result.autoStartFlow = settings.value(kKeyAutoStartFlow, false).toBool();
     result.autoStartLoading = settings.value(kKeyAutoStartLoading, true).toBool();
+    result.skipReposition = settings.value(kKeySkipReposition, false).toBool();
 
     int themeMode = settings.value(kKeyThemeMode, -1).toInt();
     if (themeMode < 0)
@@ -51,6 +53,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyAutoSelectGsxChoice, values.autoSelectGsxChoice);
     settings.setValue(kKeyAutoStartFlow, values.autoStartFlow);
     settings.setValue(kKeyAutoStartLoading, values.autoStartLoading);
+    settings.setValue(kKeySkipReposition, values.skipReposition);
     settings.setValue(kKeyThemeMode, values.themeMode);
     settings.setValue(kKeyLanguage, QString::fromStdString(values.language));
     settings.setValue(kKeyUpdateMode, values.updateMode);

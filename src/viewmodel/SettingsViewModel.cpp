@@ -51,8 +51,11 @@ void SettingsViewModel::SetSimbriefPilotIdText(const QString& pilotId)
     {
         return;
     }
+
     simbriefPilotIdText_ = pilotId;
+
     SetSaveResult({}, false);
+
     emit SimbriefPilotIdTextChanged();
     emit ValidationChanged();
 }
@@ -68,8 +71,11 @@ void SettingsViewModel::SetFuelRateText(const QString& rate)
     {
         return;
     }
+
     fuelRateText_ = rate;
+
     SetSaveResult({}, false);
+
     emit FuelRateTextChanged();
     emit ValidationChanged();
 }
@@ -85,8 +91,11 @@ void SettingsViewModel::SetAutoSelectGsxChoice(const bool enabled)
     {
         return;
     }
+
     settings_.autoSelectGsxChoice = enabled;
+
     PersistImmediateSetting();
+
     emit AutoSelectGsxChoiceChanged();
 }
 
@@ -101,8 +110,11 @@ void SettingsViewModel::SetAutoStartFlow(const bool enabled)
     {
         return;
     }
+
     settings_.autoStartFlow = enabled;
+
     PersistImmediateSetting();
+
     emit AutoStartFlowChanged();
 }
 
@@ -119,9 +131,29 @@ void SettingsViewModel::SetAutoStartLoading(const bool enabled)
     }
 
     settings_.autoStartLoading = enabled;
+
     PersistImmediateSetting();
 
     emit AutoStartLoadingChanged();
+}
+
+bool SettingsViewModel::GetSkipReposition() const
+{
+    return settings_.skipReposition;
+}
+
+void SettingsViewModel::SetSkipReposition(const bool enabled)
+{
+    if (settings_.skipReposition == enabled)
+    {
+        return;
+    }
+
+    settings_.skipReposition = enabled;
+
+    PersistImmediateSetting();
+
+    emit SkipRepositionChanged();
 }
 
 int SettingsViewModel::GetThemeMode() const
@@ -135,8 +167,11 @@ void SettingsViewModel::SetThemeMode(const int mode)
     {
         return;
     }
+
     settings_.themeMode = mode;
+
     PersistImmediateSetting();
+
     emit ThemeModeChanged();
     emit EffectiveDarkChanged();
 }
@@ -157,6 +192,7 @@ bool SettingsViewModel::GetEffectiveDark() const
 void SettingsViewModel::SetSystemDarkProvider(std::function<bool()> provider)
 {
     systemDarkProvider_ = std::move(provider);
+
     emit EffectiveDarkChanged();
 }
 
@@ -177,8 +213,11 @@ void SettingsViewModel::SetLanguage(const QString& language)
     {
         return;
     }
+
     settings_.language = value;
+
     PersistImmediateSetting();
+
     emit LanguageChanged();
 }
 
@@ -193,8 +232,11 @@ void SettingsViewModel::SetUpdateMode(const int mode)
     {
         return;
     }
+
     settings_.updateMode = mode;
+
     PersistImmediateSetting();
+
     emit UpdateModeChanged();
 }
 
@@ -211,6 +253,7 @@ void SettingsViewModel::SetCloseToTray(const bool enabled)
     }
 
     settings_.closeToTray = enabled;
+
     PersistImmediateSetting();
 
     emit CloseToTrayChanged();
@@ -229,6 +272,7 @@ void SettingsViewModel::SetMinimizeToTray(const bool enabled)
     }
 
     settings_.minimizeToTray = enabled;
+
     PersistImmediateSetting();
 
     emit MinimizeToTrayChanged();
@@ -247,6 +291,7 @@ void SettingsViewModel::SetTrayTipShown(const bool shown)
     }
 
     settings_.trayTipShown = shown;
+
     PersistImmediateSetting();
 
     emit TrayTipShownChanged();
@@ -289,6 +334,7 @@ bool SettingsViewModel::save()
     if (!valid)
     {
         SetSaveResult(error, true);
+
         return false;
     }
 
@@ -297,6 +343,7 @@ bool SettingsViewModel::save()
     if (!repository_->Save(settings_))
     {
         SetSaveResult(tr("Could not save settings."), true);
+
         return false;
     }
 
@@ -327,6 +374,7 @@ SettingsViewModel::Draft SettingsViewModel::Validate() const
         if (!pilotOk || result.pilotId <= 0)
         {
             result.error = tr("Enter a valid SimBrief Pilot ID.");
+
             return result;
         }
     }
@@ -336,10 +384,12 @@ SettingsViewModel::Draft SettingsViewModel::Validate() const
     if (!rateOk || result.fuelRateKgs <= 0.0)
     {
         result.error = tr("Enter a valid fuel rate.");
+
         return result;
     }
 
     result.valid = true;
+
     return result;
 }
 
@@ -348,8 +398,10 @@ void SettingsViewModel::PersistImmediateSetting()
     if (!repository_->Save(settings_))
     {
         SetSaveResult(tr("Could not save settings."), true);
+
         return;
     }
+
     integratorService_->ApplySettings(settings_);
 }
 
@@ -359,7 +411,9 @@ void SettingsViewModel::SetSaveResult(QString message, const bool error)
     {
         return;
     }
+
     saveMessage_ = std::move(message);
     saveError_ = error;
+
     emit SaveResultChanged();
 }

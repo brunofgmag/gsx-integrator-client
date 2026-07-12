@@ -15,6 +15,8 @@ private slots:
     static void persistsAutoStartFlowImmediately();
     static void autoStartLoadingDefaultsToEnabled();
     static void persistsAutoStartLoadingImmediately();
+    static void skipRepositionDefaultsToDisabled();
+    static void persistsSkipRepositionImmediately();
     static void traySettingsDefaultToEnabled();
     static void traySettingsPersistImmediately();
     static void rejectsNonNumericFuelRate();
@@ -109,7 +111,7 @@ void SettingsViewModelTest::autoStartLoadingDefaultsToEnabled()
 {
     FakeSettingsRepository repository;
     FakeIntegratorService service;
-    SettingsViewModel viewModel(&repository, &service);
+    const SettingsViewModel viewModel(&repository, &service);
 
     QVERIFY(viewModel.GetAutoStartLoading());
     QVERIFY(service.appliedSettings.autoStartLoading);
@@ -130,6 +132,35 @@ void SettingsViewModelTest::persistsAutoStartLoadingImmediately()
 
     const int savesBefore = repository.saveCalls;
     viewModel.SetAutoStartLoading(false);
+
+    QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::skipRepositionDefaultsToDisabled()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    const SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(!viewModel.GetSkipReposition());
+    QVERIFY(!service.appliedSettings.skipReposition);
+}
+
+void SettingsViewModelTest::persistsSkipRepositionImmediately()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    viewModel.SetSkipReposition(true);
+
+    QVERIFY(viewModel.GetSkipReposition());
+    QCOMPARE(repository.saveCalls, 1);
+    QVERIFY(repository.stored.skipReposition);
+    QVERIFY(service.appliedSettings.skipReposition);
+
+    const int savesBefore = repository.saveCalls;
+    viewModel.SetSkipReposition(true);
 
     QCOMPARE(repository.saveCalls, savesBefore);
 }

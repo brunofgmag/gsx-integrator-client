@@ -10,6 +10,7 @@ struct AutomationSettings
     bool autoSelectGsxChoice = true;
     bool autoStartFlow = false;
     bool autoStartLoading = true;
+    bool skipReposition = false;
 
     [[nodiscard]] double EffectiveFuelRateKgs() const
     {

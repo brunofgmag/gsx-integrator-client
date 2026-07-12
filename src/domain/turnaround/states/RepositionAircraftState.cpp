@@ -1,6 +1,7 @@
 #include "RepositionAircraftState.h"
 
 #include "../TurnaroundContext.h"
+#include "../../model/AutomationSettings.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
@@ -12,6 +13,11 @@ namespace
 
 std::optional<TurnaroundTransition> RepositionAircraftState::Evaluate(TurnaroundContext& ctx)
 {
+    if (ctx.settings != nullptr && ctx.settings->skipReposition)
+    {
+        return TurnaroundTransition{TurnaroundPhase::CallStairsOrJetway};
+    }
+
     bool& repositionRequested = ctx.data.repositionRequested;
     bool& repositionCompleted = ctx.data.repositionCompleted;
 

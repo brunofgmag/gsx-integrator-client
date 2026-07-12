@@ -20,6 +20,7 @@ class SettingsViewModel final : public QObject
         WRITE SetAutoSelectGsxChoice NOTIFY AutoSelectGsxChoiceChanged)
     Q_PROPERTY(bool autoStartFlow READ GetAutoStartFlow WRITE SetAutoStartFlow NOTIFY AutoStartFlowChanged)
     Q_PROPERTY(bool autoStartLoading READ GetAutoStartLoading WRITE SetAutoStartLoading NOTIFY AutoStartLoadingChanged)
+    Q_PROPERTY(bool skipReposition READ GetSkipReposition WRITE SetSkipReposition NOTIFY SkipRepositionChanged)
     Q_PROPERTY(int themeMode READ GetThemeMode WRITE SetThemeMode NOTIFY ThemeModeChanged)
     Q_PROPERTY(bool effectiveDark READ GetEffectiveDark NOTIFY EffectiveDarkChanged)
     Q_PROPERTY(QString language READ GetLanguage WRITE SetLanguage NOTIFY LanguageChanged)
@@ -60,6 +61,9 @@ public:
     [[nodiscard]] bool GetAutoStartLoading() const;
     void SetAutoStartLoading(bool enabled);
 
+    [[nodiscard]] bool GetSkipReposition() const;
+    void SetSkipReposition(bool enabled);
+
     [[nodiscard]] int GetThemeMode() const;
     void SetThemeMode(int mode);
     [[nodiscard]] bool GetEffectiveDark() const;
@@ -98,6 +102,7 @@ signals:
     void AutoSelectGsxChoiceChanged();
     void AutoStartFlowChanged();
     void AutoStartLoadingChanged();
+    void SkipRepositionChanged();
     void ThemeModeChanged();
     void EffectiveDarkChanged();
     void LanguageChanged();
