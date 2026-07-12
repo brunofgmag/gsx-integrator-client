@@ -218,6 +218,12 @@ int main(int argc, char* argv[])
         QCoreApplication::instance()->installNativeEventFilter(&showWindowFilter);
         WindowsTitleBar::Apply(rootWindow, settingsViewModel.GetEffectiveDark());
 
+        if (!trayArg)
+        {
+            rootWindow->raise();
+            rootWindow->requestActivate();
+        }
+
         QObject::connect(&settingsViewModel, &SettingsViewModel::EffectiveDarkChanged,
                          rootWindow, [rootWindow, &settingsViewModel]
                          {
