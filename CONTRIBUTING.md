@@ -51,7 +51,7 @@ The weight setters have the same freedom. The MD-11 turns `SetCurrentZfwKg` into
 
 `ConsumeSmartSwitch` is the cockpit "go ahead" control. Implement it as an edge detector: return true once when the switch leaves its resting position, then false until it comes back and moves again. A spring-loaded switch needs no write-back (iFly); a latching one can be reset by writing the rest value (MD-11). The state machine polls it once per tick, and the active phase decides what a press means: start loading while the turnaround holds at "Requesting fuel", confirm the engine start during pushback, begin the next flight after the turnaround ends.
 
-`OnSlowTick` runs periodically. Use it for polling and cheap housekeeping, the way the MD-11 uses it to commit EFB targets.
+`OnTick` runs every second and `OnSlowTick` every four. Use them for polling and cheap housekeeping. The MD-11 commits EFB targets on `OnSlowTick` because the aircraft applies weight changes with a delay.
 
 ### 2. Talk to the sim through VariableGateway
 
@@ -66,9 +66,7 @@ Detection is self-registered; there is no central list to edit. At the bottom of
 ```cpp
 namespace
 {
-    std::unique_ptr<Aircraft> CreateYourAircraft(VariableGateway* variableGateway,
-                                                 AutomationStatus* status,
-                                                 const AircraftIdentity& identity)
+    std::unique_ptr<Aircraft> CreateYourAircraft(VariableGateway* variableGateway, AutomationStatus* status, const AircraftIdentity& identity)
     {
         return std::make_unique<YourAircraft>(variableGateway, status);
     }

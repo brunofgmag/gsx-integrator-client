@@ -10,6 +10,7 @@ public:
     GsxStateStatus boardingState = GsxStateStatus::Unavailable;
     GsxStateStatus departureState = GsxStateStatus::Unavailable;
     bool hoseConnected = false;
+    double refuelCounterGallons = 0.0;
     bool waitingForEngines = false;
     bool pushbackStarted = false;
     bool pushbackFinished = false;
@@ -35,7 +36,7 @@ public:
 
     [[nodiscard]] bool IsAvailable() const override { return true; }
 
-    [[nodiscard]] GsxStateStatus GetStateStatus(GsxState state) override
+    [[nodiscard]] GsxStateStatus GetStateStatus(const GsxState state) override
     {
         switch (state)
         {
@@ -52,7 +53,7 @@ public:
         }
     }
 
-    [[nodiscard]] bool WasStateCompleted(GsxState state) const override
+    [[nodiscard]] bool WasStateCompleted(const GsxState state) const override
     {
         switch (state)
         {
@@ -71,6 +72,7 @@ public:
 
     [[nodiscard]] bool IsWaitingForEngines() const override { return waitingForEngines; }
     [[nodiscard]] bool IsFuelHoseConnected() const override { return hoseConnected; }
+    [[nodiscard]] double GetRefuelCounterGallons() const override { return refuelCounterGallons; }
     [[nodiscard]] bool HasPushbackStarted() const override { return pushbackStarted; }
     [[nodiscard]] bool IsPushbackFinished() const override { return pushbackFinished; }
     [[nodiscard]] bool IsRepositioning() const override { return repositioning; }

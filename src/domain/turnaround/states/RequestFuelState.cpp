@@ -2,6 +2,7 @@
 
 #include "../TurnaroundContext.h"
 #include "../../model/AutomationSettings.h"
+#include "../../ports/Aircraft.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 

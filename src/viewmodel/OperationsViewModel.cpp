@@ -185,6 +185,21 @@ bool OperationsViewModel::IsRefueledExternally() const
     return snapshot_.refueledExternally;
 }
 
+bool OperationsViewModel::LoadsViaUplink() const
+{
+    return snapshot_.loadsViaUplink;
+}
+
+bool OperationsViewModel::HasGsxProfileConflict() const
+{
+    return snapshot_.gsxProfileConflict;
+}
+
+bool OperationsViewModel::IsGsxProfileFixable() const
+{
+    return snapshot_.gsxProfileFixable;
+}
+
 double OperationsViewModel::GetPlannedZfwKg() const
 {
     return snapshot_.plannedZfwKg;
@@ -249,6 +264,12 @@ void OperationsViewModel::startLoading()
 void OperationsViewModel::reloadSimbrief()
 {
     SetCommandError(service_->ReloadSimbrief());
+    Refresh();
+}
+
+void OperationsViewModel::fixGsxProfile()
+{
+    SetCommandError(service_->FixGsxProfile());
     Refresh();
 }
 

@@ -15,6 +15,8 @@ public:
     [[nodiscard]] virtual bool RequestPushback() = 0;
     [[nodiscard]] virtual bool RequestRefueling() = 0;
     [[nodiscard]] virtual bool ConfirmGoodEngines() = 0;
+    [[nodiscard]] virtual bool CompletePushback() = 0;
+    [[nodiscard]] virtual bool CompleteRefuel() = 0;
 
     virtual void DisableGsxMenu() = 0;
 };

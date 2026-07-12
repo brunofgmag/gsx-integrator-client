@@ -83,10 +83,15 @@ set(APP_SOURCES
         src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/aircraft/TfdiMd11.cpp
         src/infrastructure/aircraft/TfdiMd11.h
+        src/infrastructure/aircraft/TolissA340.cpp
+        src/infrastructure/aircraft/TolissA340.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
+        src/infrastructure/gsx/GsxAircraftProfile.cpp
+        src/infrastructure/gsx/GsxAircraftProfile.h
         src/infrastructure/gsx/GsxStateService.cpp
         src/infrastructure/gsx/GsxStateService.h
+        src/infrastructure/gsx/GsxLVars.h
         src/infrastructure/logging/LogMacros.h
         src/infrastructure/simbrief/SimbriefClient.cpp
         src/infrastructure/simbrief/SimbriefClient.h

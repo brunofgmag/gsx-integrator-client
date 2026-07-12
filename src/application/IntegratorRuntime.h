@@ -1,7 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INTEGRATORRUNTIME_H
 #define GSX_INTEGRATOR_CLIENT_INTEGRATORRUNTIME_H
 
+#include <filesystem>
 #include <memory>
+#include <vector>
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QTimer>
@@ -43,6 +45,10 @@ public:
     [[nodiscard]] bool IsLoadingConfirmed() const { return stateMachine_.IsLoadingConfirmed(); }
     [[nodiscard]] QString GetAircraftName() const;
     [[nodiscard]] bool IsAircraftRefueledExternally() const;
+    [[nodiscard]] bool IsAircraftLoadsViaUplink() const;
+    [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfileConflict_; }
+    [[nodiscard]] bool CanFixGsxProfile() const;
+    bool FixGsxProfile();
     void SetAutomationEnabled(bool enabled);
     void ConfirmLoading();
     void ApplySettings(const AutomationSettings& settings);
@@ -68,6 +74,7 @@ private:
     void OnFlightStart();
     void OnSessionEnd();
     void ResolveAircraft();
+    void CheckGsxProfile();
 
     static constexpr int kDispatchIntervalMs = 80;
     static constexpr int kReconnectIntervalMs = 5000;
@@ -92,6 +99,10 @@ private:
     SimVersion simVersion_ = SimVersion::Unknown;
     bool isSessionActive_ = false;
     unsigned pauseFlags_ = 1;
+    std::vector<std::filesystem::path> gsxProfileRoots_;
+    std::vector<std::filesystem::path> gsxProfileCfgs_;
+    bool gsxProfileConflict_ = false;
+    bool gsxProfileFlagsMissing_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INTEGRATORRUNTIME_H

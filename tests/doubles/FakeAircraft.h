@@ -24,13 +24,17 @@ public:
     bool parkingBrakeSet = false;
     bool supportsStairsOrJetways = true;
     bool refueledExternally = false;
+    bool loadsViaUplink = false;
+    bool completesPushbackViaInterruptMenu = false;
     int consumeSmartSwitchCalls = 0;
+    int onLoadingStartedCalls = 0;
 
     [[nodiscard]] const char* GetName() const override { return "Fake Aircraft"; }
     [[nodiscard]] bool IsCargoVariant() const override { return cargo; }
 
-    void OnSlowTick() override
+    void OnLoadingStarted() override
     {
+        ++onLoadingStartedCalls;
     }
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override { return flightPlanLoaded; }
@@ -46,6 +50,8 @@ public:
     [[nodiscard]] bool SupportsProgressiveLoad() const override { return progressiveLoad; }
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return supportsStairsOrJetways; }
     [[nodiscard]] bool IsRefueledExternally() const override { return refueledExternally; }
+    [[nodiscard]] bool LoadsViaUplink() const override { return loadsViaUplink; }
+    [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return completesPushbackViaInterruptMenu; }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override
     {

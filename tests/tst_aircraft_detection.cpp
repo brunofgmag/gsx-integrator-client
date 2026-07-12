@@ -26,6 +26,9 @@ private slots:
     static void detectsIFlyMax8FromLiveryTitle();
     static void detectsIFlyMax8200FromTitle();
     static void doesNotDetectIFlyByGenericBoeingAtcModel();
+    static void detectsTolissA340FromPresetTitle();
+    static void detectsTolissA340ByAtcModel();
+    static void detectsTolissA340CargoPreset();
 };
 
 void AircraftDetectionTest::returnsNullWhenNameUnavailable()
@@ -214,6 +217,47 @@ void AircraftDetectionTest::doesNotDetectIFlyByGenericBoeingAtcModel()
     gateway.atcModel = "B738";
 
     QVERIFY(DetectAircraft(&gateway, &status) == nullptr);
+}
+
+void AircraftDetectionTest::detectsTolissA340FromPresetTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "ToLiss A346 PRO [Preset Pax]";
+
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(QString(aircraft->GetName()), QString("ToLiss A340-600"));
+    QVERIFY(!aircraft->IsCargoVariant());
+}
+
+void AircraftDetectionTest::detectsTolissA340ByAtcModel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "Some Repainted A340 Livery";
+    gateway.atcModel = "A346";
+
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(QString(aircraft->GetName()), QString("ToLiss A340-600"));
+}
+
+void AircraftDetectionTest::detectsTolissA340CargoPreset()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "ToLiss A346 PRO [Preset Cargo]";
+
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+
+    QVERIFY(aircraft != nullptr);
+    QVERIFY(aircraft->IsCargoVariant());
 }
 
 QTEST_APPLESS_MAIN(AircraftDetectionTest)

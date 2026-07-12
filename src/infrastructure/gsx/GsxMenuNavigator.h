@@ -34,6 +34,8 @@ public:
     [[nodiscard]] bool RequestPushback() override;
     [[nodiscard]] bool RequestRefueling() override;
     [[nodiscard]] bool ConfirmGoodEngines() override;
+    [[nodiscard]] bool CompletePushback() override;
+    [[nodiscard]] bool CompleteRefuel() override;
 
     void OpenMenu() const;
     void OnMenuChanged();
@@ -65,6 +67,8 @@ private:
     enum class Reposition { Idle, Opening, PickingRoot, AwaitingSubmenu, Done };
 
     Reposition reposition_ = Reposition::Idle;
+    bool completingPushback_ = false;
+    bool completingRefuel_ = false;
 
     Intent intent_ = Intent::None;
     long long intentSinceMs_ = 0;

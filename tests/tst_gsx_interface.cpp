@@ -25,6 +25,8 @@ namespace
     constexpr auto kNumPaxDeboardingTotal = "FSDT_GSX_NUMPASSENGERS_DEBOARDING_TOTAL";
     constexpr auto kSimOnGround = "SIM ON GROUND";
     constexpr auto kGoodEngineStart = "FSDT_GSX_SETTINGS_GOOD_ENGINE_START";
+    constexpr auto kFuelCounter = "FSDT_GSX_FUEL_COUNTER";
+    constexpr auto kFuelCounterMax = "FSDT_GSX_FUEL_COUNTER_MAX";
 }
 
 class GsxInterfaceTest final : public QObject
@@ -52,13 +54,14 @@ private slots:
     static void boardedPassengersAccumulatesAcrossResets();
     static void deboardedPassengersAccumulatesAcrossResets();
     static void takeOverFuelAndPayloadClearsAutomationLVars();
+    static void refuelCounterComesFromFuelCounterLvar();
 };
 
 void GsxInterfaceTest::availabilityFollowsCouatlFlag()
 {
     FakeVariableGateway gateway;
 
-    GsxStateService gsx(&gateway);
+    const GsxStateService gsx(&gateway);
 
     QVERIFY(!gsx.IsAvailable());
 
@@ -135,7 +138,7 @@ void GsxInterfaceTest::readsFuelHoseAndPassengerCounts()
 void GsxInterfaceTest::detectsSimbriefLoaded()
 {
     FakeVariableGateway gateway;
-    GsxStateService gsx(&gateway);
+    const GsxStateService gsx(&gateway);
 
     QVERIFY(!gsx.IsSimbriefLoaded());
 
@@ -164,7 +167,7 @@ void GsxInterfaceTest::resetClearsCompletionFlags()
 void GsxInterfaceTest::detectsWaitingForEngines()
 {
     FakeVariableGateway gateway;
-    GsxStateService gsx(&gateway);
+    const GsxStateService gsx(&gateway);
 
     QVERIFY(!gsx.IsWaitingForEngines());
 
@@ -180,7 +183,7 @@ void GsxInterfaceTest::detectsWaitingForEngines()
 void GsxInterfaceTest::detectsPushbackStarted()
 {
     FakeVariableGateway gateway;
-    GsxStateService gsx(&gateway);
+    const GsxStateService gsx(&gateway);
 
     QVERIFY(!gsx.HasPushbackStarted());
 
@@ -200,7 +203,7 @@ void GsxInterfaceTest::detectsPushbackStarted()
 void GsxInterfaceTest::detectsPushbackFinished()
 {
     FakeVariableGateway gateway;
-    GsxStateService gsx(&gateway);
+    const GsxStateService gsx(&gateway);
 
     gateway.lvars[kPushbackStatus] = 0.0;
     gateway.lvars[kPushbackVehicleState] = static_cast<double>(GsxStateStatus::Active);
@@ -224,7 +227,7 @@ void GsxInterfaceTest::detectsPushbackFinished()
 void GsxInterfaceTest::detectsRepositioning()
 {
     FakeVariableGateway gateway;
-    GsxStateService gsx(&gateway);
+    const GsxStateService gsx(&gateway);
 
     QVERIFY(!gsx.IsRepositioning());
 
@@ -240,7 +243,7 @@ void GsxInterfaceTest::detectsRepositioning()
 void GsxInterfaceTest::cargoPercentReadsLVars()
 {
     FakeVariableGateway gateway;
-    GsxStateService gsx(&gateway);
+    const GsxStateService gsx(&gateway);
 
     gateway.lvars[kBoardingCargoPercent] = 42.5;
     gateway.lvars[kDeboardingCargoPercent] = 17.0;
@@ -252,7 +255,7 @@ void GsxInterfaceTest::cargoPercentReadsLVars()
 void GsxInterfaceTest::jetwayAndStairsAvailability()
 {
     FakeVariableGateway gateway;
-    GsxStateService gsx(&gateway);
+    const GsxStateService gsx(&gateway);
 
     gateway.lvars[kJetway] = 5.0;
     gateway.lvars[kStairs] = 5.0;
@@ -279,7 +282,7 @@ void GsxInterfaceTest::jetwayAndStairsAvailability()
 void GsxInterfaceTest::jetwayAndStairsUnavailableUntilLVarsReceived()
 {
     FakeVariableGateway gateway;
-    GsxStateService gsx(&gateway);
+    const GsxStateService gsx(&gateway);
 
     QVERIFY(!gsx.IsJetwayAvailable());
     QVERIFY(!gsx.AreStairsAvailable());
@@ -294,7 +297,7 @@ void GsxInterfaceTest::jetwayAndStairsUnavailableUntilLVarsReceived()
 void GsxInterfaceTest::goodEngineStartAssumedEnabledUntilLVarReceived()
 {
     FakeVariableGateway gateway;
-    GsxStateService gsx(&gateway);
+    const GsxStateService gsx(&gateway);
 
     QVERIFY(gsx.IsGoodEngineStartConfirmationEnabled());
 
@@ -310,7 +313,7 @@ void GsxInterfaceTest::goodEngineStartAssumedEnabledUntilLVarReceived()
 void GsxInterfaceTest::aircraftOnGroundFollowsSimVar()
 {
     FakeVariableGateway gateway;
-    GsxStateService gsx(&gateway);
+    const GsxStateService gsx(&gateway);
 
     QVERIFY(gsx.IsAircraftOnGround());
 
@@ -375,6 +378,23 @@ void GsxInterfaceTest::takeOverFuelAndPayloadClearsAutomationLVars()
 
     QCOMPARE(gateway.Written(kAutomationFuel), 0.0);
     QCOMPARE(gateway.Written(kAutomationPayload), 0.0);
+}
+
+void GsxInterfaceTest::refuelCounterComesFromFuelCounterLvar()
+{
+    FakeVariableGateway gateway;
+    const GsxStateService gsx(&gateway);
+
+    QCOMPARE(gsx.GetRefuelCounterGallons(), 0.0);
+
+    gateway.lvars[kFuelCounter] = 5000.0;
+    QCOMPARE(gsx.GetRefuelCounterGallons(), 5000.0);
+
+    gateway.lvars[kFuelCounterMax] = 8000.0;
+    QCOMPARE(gsx.GetRefuelCounterGallons(), 8000.0);
+
+    gateway.lvars[kFuelCounter] = 9000.0;
+    QCOMPARE(gsx.GetRefuelCounterGallons(), 9000.0);
 }
 
 QTEST_APPLESS_MAIN(GsxInterfaceTest)
