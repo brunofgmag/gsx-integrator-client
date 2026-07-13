@@ -496,7 +496,7 @@ void IFly737MaxTest::reportsLoadMethods()
     const IFly737Max aircraft(&gateway, &status);
 
     QVERIFY(aircraft.RefuelMethod() == RefuelBy::Gsx);
-    QVERIFY(aircraft.BoardMethod() == BoardBy::Gsx);
+    QVERIFY(aircraft.BoardMethod() == BoardBy::Client);
 }
 
 QTEST_APPLESS_MAIN(IFly737MaxTest)
