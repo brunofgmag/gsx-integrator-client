@@ -58,6 +58,8 @@ namespace
             return QCoreApplication::translate("Turnaround", "Shut down the engines, turn off the beacon lights and set the parking brake.");
         case TurnaroundPhase::WaitingNewFlight:
             return QCoreApplication::translate("Turnaround", "Activate the SmartSwitch to start a new flight.");
+        case TurnaroundPhase::CabinServices:
+            return QCoreApplication::translate("Turnaround", "Calling lavatory, water and cleaning services.");
         default:
             return {};
         }
