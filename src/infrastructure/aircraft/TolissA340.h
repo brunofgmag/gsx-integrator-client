@@ -30,11 +30,7 @@ public:
     [[nodiscard]] double GetCurrentZfwKg() const override;
     void SetCurrentZfwKg(double zfwKg) override;
 
-    [[nodiscard]] bool SupportsProgressiveFuel() const override { return false; }
-    [[nodiscard]] bool SupportsProgressiveLoad() const override { return true; }
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
-    [[nodiscard]] bool IsRefueledExternally() const override { return false; }
-    [[nodiscard]] bool LoadsViaUplink() const override { return true; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return true; }
     [[nodiscard]] RefuelBy RefuelMethod() const override { return RefuelBy::Self; }
     [[nodiscard]] BoardBy BoardMethod() const override { return BoardBy::Self; }

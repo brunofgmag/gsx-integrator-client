@@ -106,11 +106,7 @@ void TolissA340Test::reportsSupportedProgressiveModes()
     AutomationStatus status;
     const TolissA340 aircraft(&gateway, &status, false);
 
-    QVERIFY(!aircraft.SupportsProgressiveFuel());
-    QVERIFY(aircraft.SupportsProgressiveLoad());
     QVERIFY(aircraft.SupportsStairsOrJetways());
-    QVERIFY(!aircraft.IsRefueledExternally());
-    QVERIFY(aircraft.LoadsViaUplink());
 }
 
 void TolissA340Test::readsCurrentFuelFromSim()

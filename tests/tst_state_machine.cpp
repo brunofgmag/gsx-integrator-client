@@ -34,8 +34,8 @@ namespace
     void PrepareFlightPlan(FakeAircraft& aircraft)
     {
         aircraft.flightPlanLoaded = true;
-        aircraft.progressiveFuel = false;
-        aircraft.progressiveLoad = false;
+        aircraft.refuelMethod = RefuelBy::Self;
+        aircraft.boardMethod = BoardBy::Self;
         aircraft.plannedFuelKg = 12000.0;
         aircraft.plannedZfwKg = 180000.0;
         aircraft.emptyZfwKg = 130000.0;

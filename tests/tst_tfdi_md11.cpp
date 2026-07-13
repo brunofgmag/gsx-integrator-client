@@ -49,7 +49,6 @@ class TfdiMd11Test final : public QObject
 
 private slots:
     static void reportsNameAndVariant();
-    static void reportsUnsupportedProgressiveModes();
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
@@ -86,16 +85,6 @@ void TfdiMd11Test::reportsNameAndVariant()
     QCOMPARE(QString(passenger.GetName()), QString("TFDi MD-11"));
     QVERIFY(!passenger.IsCargoVariant());
     QVERIFY(freighter.IsCargoVariant());
-}
-
-void TfdiMd11Test::reportsUnsupportedProgressiveModes()
-{
-    FakeVariableGateway gateway;
-    AutomationStatus status;
-    const TfdiMd11 aircraft(&gateway, &status, false);
-
-    QVERIFY(!aircraft.SupportsProgressiveFuel());
-    QVERIFY(!aircraft.SupportsProgressiveLoad());
 }
 
 void TfdiMd11Test::readsCurrentFuelFromSim()

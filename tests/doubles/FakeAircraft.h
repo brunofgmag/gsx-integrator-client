@@ -8,8 +8,6 @@ class FakeAircraft final : public Aircraft
 public:
     bool cargo = false;
     bool flightPlanLoaded = false;
-    bool progressiveFuel = true;
-    bool progressiveLoad = true;
     double plannedFuelKg = 0.0;
     double plannedZfwKg = 0.0;
     double emptyZfwKg = 0.0;
@@ -23,8 +21,6 @@ public:
     bool engineRunning = false;
     bool parkingBrakeSet = false;
     bool supportsStairsOrJetways = true;
-    bool refueledExternally = false;
-    bool loadsViaUplink = false;
     bool completesPushbackViaInterruptMenu = false;
     RefuelBy refuelMethod = RefuelBy::Self;
     BoardBy boardMethod = BoardBy::Self;
@@ -48,11 +44,7 @@ public:
     void SetCurrentFuelKg(const double value) override { currentFuelKg = value; }
     [[nodiscard]] double GetCurrentZfwKg() const override { return currentZfwKg; }
     void SetCurrentZfwKg(const double value) override { currentZfwKg = value; }
-    [[nodiscard]] bool SupportsProgressiveFuel() const override { return progressiveFuel; }
-    [[nodiscard]] bool SupportsProgressiveLoad() const override { return progressiveLoad; }
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return supportsStairsOrJetways; }
-    [[nodiscard]] bool IsRefueledExternally() const override { return refueledExternally; }
-    [[nodiscard]] bool LoadsViaUplink() const override { return loadsViaUplink; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return completesPushbackViaInterruptMenu; }
     [[nodiscard]] RefuelBy RefuelMethod() const override { return refuelMethod; }
     [[nodiscard]] BoardBy BoardMethod() const override { return boardMethod; }

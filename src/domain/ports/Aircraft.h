@@ -27,11 +27,7 @@ public:
     [[nodiscard]] virtual double GetCurrentZfwKg() const = 0;
     virtual void SetCurrentZfwKg(double zfwKg) = 0;
 
-    [[nodiscard]] virtual bool SupportsProgressiveFuel() const = 0;
-    [[nodiscard]] virtual bool SupportsProgressiveLoad() const = 0;
     [[nodiscard]] virtual bool SupportsStairsOrJetways() const = 0;
-    [[nodiscard]] virtual bool IsRefueledExternally() const = 0;
-    [[nodiscard]] virtual bool LoadsViaUplink() const = 0;
     [[nodiscard]] virtual bool CompletesPushbackViaInterruptMenu() const = 0;
     [[nodiscard]] virtual RefuelBy RefuelMethod() const = 0;
     [[nodiscard]] virtual BoardBy BoardMethod() const = 0;

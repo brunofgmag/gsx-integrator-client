@@ -74,8 +74,6 @@ void IFly737MaxTest::reportsSupportedProgressiveModes()
     AutomationStatus status;
     const IFly737Max aircraft(&gateway, &status);
 
-    QVERIFY(aircraft.SupportsProgressiveFuel());
-    QVERIFY(aircraft.SupportsProgressiveLoad());
     QVERIFY(aircraft.SupportsStairsOrJetways());
 }
 
