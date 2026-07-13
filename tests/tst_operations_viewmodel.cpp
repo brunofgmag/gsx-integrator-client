@@ -214,6 +214,7 @@ void OperationsViewModelTest::exposesAircraftPropertiesFromSnapshot()
     service.snapshot.gsxAvailable = true;
     service.snapshot.aircraftSupported = true;
     service.snapshot.sessionActive = true;
+    service.snapshot.refuelBySelf = true;
 
     const OperationsViewModel viewModel(&service);
 
@@ -224,6 +225,8 @@ void OperationsViewModelTest::exposesAircraftPropertiesFromSnapshot()
     QVERIFY(viewModel.IsGsxAvailable());
     QVERIFY(viewModel.IsAircraftSupported());
     QVERIFY(viewModel.IsSessionActive());
+    QVERIFY(!viewModel.RefuelByGsx());
+    QVERIFY(viewModel.RefuelBySelf());
 }
 
 void OperationsViewModelTest::successfulCommandClearsPreviousError()

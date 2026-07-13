@@ -65,6 +65,16 @@ void IntegratorSnapshotTest::boolFieldDifferenceBreaksEquivalence()
     b.canReloadSimbrief = true;
 
     QVERIFY(!AreEquivalent(a, b));
+
+    b.canReloadSimbrief = false;
+    b.refuelByGsx = true;
+
+    QVERIFY(!AreEquivalent(a, b));
+
+    b.refuelByGsx = false;
+    b.refuelBySelf = true;
+
+    QVERIFY(!AreEquivalent(a, b));
 }
 
 void IntegratorSnapshotTest::aircraftNameDifferenceBreaksEquivalence()
