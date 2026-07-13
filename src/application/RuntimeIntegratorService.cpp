@@ -84,6 +84,19 @@ CommandResult RuntimeIntegratorService::StartLoading()
     return CommandResult::Success();
 }
 
+CommandResult RuntimeIntegratorService::RestartFlow()
+{
+    if (!runtime_->IsConnected())
+    {
+        return CommandResult::Failure(
+            QCoreApplication::translate("Integrator", "Simulator is offline.").toStdString());
+    }
+
+    runtime_->RestartFlow();
+
+    return CommandResult::Success();
+}
+
 CommandResult RuntimeIntegratorService::ReloadSimbrief()
 {
     const IntegratorSnapshot snapshot = GetSnapshot();

@@ -277,17 +277,7 @@ void IntegratorRuntime::OnFlightStart()
 
     isSessionActive_ = true;
 
-    aircraft_.reset();
-    gsxProfileRoots_.clear();
-    gsxProfileCfgs_.clear();
-    gsxProfileConflict_ = false;
-    gsxProfileFlagsMissing_ = false;
-
-    ResetSession();
-
-    MaybeAutoStart();
-
-    emit Updated();
+    RestartFlow();
 }
 
 void IntegratorRuntime::OnSessionEnd()
@@ -451,6 +441,23 @@ void IntegratorRuntime::MaybeAutoStart()
     LOG_INFO("Auto-start enabled: starting automation flow.");
 
     SetAutomationEnabled(true);
+}
+
+void IntegratorRuntime::RestartFlow()
+{
+    LOG_INFO("Restarting turnaround flow.");
+
+    aircraft_.reset();
+    gsxProfileRoots_.clear();
+    gsxProfileCfgs_.clear();
+    gsxProfileConflict_ = false;
+    gsxProfileFlagsMissing_ = false;
+
+    ResetSession();
+
+    MaybeAutoStart();
+
+    emit Updated();
 }
 
 void IntegratorRuntime::ApplySettings(const AutomationSettings& settings)

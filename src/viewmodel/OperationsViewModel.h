@@ -77,6 +77,7 @@ public:
 
     Q_INVOKABLE void startFlow();
     Q_INVOKABLE void startLoading();
+    Q_INVOKABLE void restartFlow();
     Q_INVOKABLE void reloadSimbrief();
     Q_INVOKABLE void fixGsxProfile();
 

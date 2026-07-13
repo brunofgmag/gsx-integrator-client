@@ -11,10 +11,12 @@ public:
     IntegratorSnapshot snapshot;
     CommandResult automationResult = CommandResult::Success();
     CommandResult startLoadingResult = CommandResult::Success();
+    CommandResult restartFlowResult = CommandResult::Success();
     CommandResult fixGsxProfileResult = CommandResult::Success();
     AppSettings appliedSettings;
     int automationCalls = 0;
     int startLoadingCalls = 0;
+    int restartFlowCalls = 0;
     int reloadCalls = 0;
     int applySettingsCalls = 0;
     int fixGsxProfileCalls = 0;
@@ -45,6 +47,17 @@ public:
         }
 
         return startLoadingResult;
+    }
+
+    [[nodiscard]] CommandResult RestartFlow() override
+    {
+        ++restartFlowCalls;
+        if (restartFlowResult.succeeded)
+        {
+            Notify();
+        }
+
+        return restartFlowResult;
     }
 
     [[nodiscard]] CommandResult ReloadSimbrief() override

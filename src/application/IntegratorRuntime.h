@@ -50,6 +50,7 @@ public:
     [[nodiscard]] bool CanFixGsxProfile() const;
     bool FixGsxProfile();
     void SetAutomationEnabled(bool enabled);
+    void RestartFlow();
     void ConfirmLoading();
     void ApplySettings(const AutomationSettings& settings);
     [[nodiscard]] bool ReloadSimbrief();

@@ -261,6 +261,12 @@ void OperationsViewModel::startLoading()
     Refresh();
 }
 
+void OperationsViewModel::restartFlow()
+{
+    SetCommandError(service_->RestartFlow());
+    Refresh();
+}
+
 void OperationsViewModel::reloadSimbrief()
 {
     SetCommandError(service_->ReloadSimbrief());

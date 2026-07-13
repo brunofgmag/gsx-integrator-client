@@ -27,6 +27,8 @@ private slots:
     static void exposesGsxProfileConflictFromSnapshot();
     static void fixGsxProfileDelegatesToService();
     static void fixGsxProfileReportsRejectedCommands();
+    static void restartFlowDelegatesToService();
+    static void restartFlowReportsRejectedCommands();
 };
 
 void OperationsViewModelTest::exposesUpdatedSnapshot()
@@ -309,6 +311,30 @@ void OperationsViewModelTest::fixGsxProfileReportsRejectedCommands()
 
     QCOMPARE(errorSpy.count(), 1);
     QCOMPARE(viewModel.GetCommandError(), QStringLiteral("Rejected"));
+}
+
+void OperationsViewModelTest::restartFlowDelegatesToService()
+{
+    FakeIntegratorService service;
+    OperationsViewModel viewModel(&service);
+
+    viewModel.restartFlow();
+
+    QCOMPARE(service.restartFlowCalls, 1);
+    QCOMPARE(viewModel.GetCommandError(), QString());
+}
+
+void OperationsViewModelTest::restartFlowReportsRejectedCommands()
+{
+    FakeIntegratorService service;
+    OperationsViewModel viewModel(&service);
+
+    service.restartFlowResult = CommandResult::Failure("Simulator is offline.");
+
+    viewModel.restartFlow();
+
+    QCOMPARE(service.restartFlowCalls, 1);
+    QCOMPARE(viewModel.GetCommandError(), QStringLiteral("Simulator is offline."));
 }
 
 QTEST_APPLESS_MAIN(OperationsViewModelTest)
