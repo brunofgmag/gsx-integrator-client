@@ -46,8 +46,8 @@ public:
     void SetCurrentZfwKg(const double value) override { currentZfwKg = value; }
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return supportsStairsOrJetways; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return completesPushbackViaInterruptMenu; }
-    [[nodiscard]] RefuelBy RefuelMethod() const override { return refuelMethod; }
-    [[nodiscard]] BoardBy BoardMethod() const override { return boardMethod; }
+    [[nodiscard]] RefuelBy GetRefuelMethod() const override { return refuelMethod; }
+    [[nodiscard]] BoardBy GetBoardMethod() const override { return boardMethod; }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override
     {

@@ -531,8 +531,8 @@ void TfdiMd11Test::reportsLoadMethods()
     AutomationStatus status;
     const TfdiMd11 aircraft(&gateway, &status, false);
 
-    QVERIFY(aircraft.RefuelMethod() == RefuelBy::Self);
-    QVERIFY(aircraft.BoardMethod() == BoardBy::Self);
+    QVERIFY(aircraft.GetRefuelMethod() == RefuelBy::Self);
+    QVERIFY(aircraft.GetBoardMethod() == BoardBy::Self);
 }
 
 QTEST_APPLESS_MAIN(TfdiMd11Test)

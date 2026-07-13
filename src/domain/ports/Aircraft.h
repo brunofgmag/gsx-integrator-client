@@ -29,8 +29,8 @@ public:
 
     [[nodiscard]] virtual bool SupportsStairsOrJetways() const = 0;
     [[nodiscard]] virtual bool CompletesPushbackViaInterruptMenu() const = 0;
-    [[nodiscard]] virtual RefuelBy RefuelMethod() const = 0;
-    [[nodiscard]] virtual BoardBy BoardMethod() const = 0;
+    [[nodiscard]] virtual RefuelBy GetRefuelMethod() const = 0;
+    [[nodiscard]] virtual BoardBy GetBoardMethod() const = 0;
 
     [[nodiscard]] virtual bool ConsumeSmartSwitch() = 0;
 

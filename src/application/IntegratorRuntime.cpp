@@ -412,12 +412,12 @@ QString IntegratorRuntime::GetAircraftName() const
 
 bool IntegratorRuntime::IsAircraftRefuelByGsx() const
 {
-    return aircraft_ && aircraft_->RefuelMethod() == RefuelBy::Gsx;
+    return aircraft_ && aircraft_->GetRefuelMethod() == RefuelBy::Gsx;
 }
 
 bool IntegratorRuntime::IsAircraftRefuelBySelf() const
 {
-    return aircraft_ && aircraft_->RefuelMethod() == RefuelBy::Self;
+    return aircraft_ && aircraft_->GetRefuelMethod() == RefuelBy::Self;
 }
 
 void IntegratorRuntime::SetAutomationEnabled(const bool enabled)

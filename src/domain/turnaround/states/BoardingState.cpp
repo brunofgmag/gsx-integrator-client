@@ -23,7 +23,7 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
     {
         data.boardingBaselined = true;
         data.initialZfwKg = ctx.aircraft->GetEmptyZfwKg();
-        if (ctx.aircraft->BoardMethod() == BoardBy::Self)
+        if (ctx.aircraft->GetBoardMethod() == BoardBy::Self)
         {
             ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
         }
@@ -42,7 +42,7 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
     data.boardedPassengers = ctx.gsxGateway->GetBoardedPassengers();
 
     AdvanceBoardingBar(ctx);
-    if (ctx.aircraft->BoardMethod() == BoardBy::Client)
+    if (ctx.aircraft->GetBoardMethod() == BoardBy::Client)
     {
         ctx.aircraft->SetCurrentZfwKg(data.loadedZfwKg);
     }

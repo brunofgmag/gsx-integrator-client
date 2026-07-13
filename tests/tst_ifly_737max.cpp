@@ -485,8 +485,8 @@ void IFly737MaxTest::reportsLoadMethods()
     AutomationStatus status;
     const IFly737Max aircraft(&gateway, &status);
 
-    QVERIFY(aircraft.RefuelMethod() == RefuelBy::Gsx);
-    QVERIFY(aircraft.BoardMethod() == BoardBy::Client);
+    QVERIFY(aircraft.GetRefuelMethod() == RefuelBy::Gsx);
+    QVERIFY(aircraft.GetBoardMethod() == BoardBy::Client);
     QVERIFY(aircraft.SupportsStairsOrJetways());
 }
 

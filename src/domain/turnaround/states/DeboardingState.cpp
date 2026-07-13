@@ -24,7 +24,7 @@ std::optional<TurnaroundTransition> DeboardingState::Evaluate(TurnaroundContext&
     if (!data.deboardingBaselined)
     {
         data.deboardingBaselined = true;
-        if (ctx.aircraft->BoardMethod() == BoardBy::Self)
+        if (ctx.aircraft->GetBoardMethod() == BoardBy::Self)
         {
             ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
         }
@@ -40,7 +40,7 @@ std::optional<TurnaroundTransition> DeboardingState::Evaluate(TurnaroundContext&
     }
 
     AdvanceDeboardingBar(ctx);
-    if (ctx.aircraft->BoardMethod() == BoardBy::Client)
+    if (ctx.aircraft->GetBoardMethod() == BoardBy::Client)
     {
         ctx.aircraft->SetCurrentZfwKg(data.loadedZfwKg);
     }

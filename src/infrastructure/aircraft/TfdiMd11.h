@@ -32,8 +32,8 @@ public:
 
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
-    [[nodiscard]] RefuelBy RefuelMethod() const override { return RefuelBy::Self; }
-    [[nodiscard]] BoardBy BoardMethod() const override { return BoardBy::Self; }
+    [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Self; }
+    [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Self; }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;

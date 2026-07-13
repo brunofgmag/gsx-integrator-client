@@ -15,7 +15,7 @@ namespace
 
     bool IsWeightDone(const TurnaroundContext& ctx, const GsxStateStatus refuelingState)
     {
-        if (ctx.aircraft->RefuelMethod() != RefuelBy::Client)
+        if (ctx.aircraft->GetRefuelMethod() != RefuelBy::Client)
         {
             return refuelingState == GsxStateStatus::Completed
                 || ctx.gsxGateway->WasStateCompleted(GsxState::Refueling);
@@ -50,7 +50,7 @@ std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& 
     {
         data.loadingStartNotified = true;
         ctx.aircraft->OnLoadingStarted();
-        if (ctx.aircraft->RefuelMethod() == RefuelBy::Self)
+        if (ctx.aircraft->GetRefuelMethod() == RefuelBy::Self)
         {
             ctx.aircraft->SetCurrentFuelKg(data.plannedFuelKg);
         }
@@ -58,7 +58,7 @@ std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& 
 
     if (data.fuelProgress < 100.0)
     {
-        switch (ctx.aircraft->RefuelMethod())
+        switch (ctx.aircraft->GetRefuelMethod())
         {
         case RefuelBy::Gsx:
             data.loadedFuelKg = ctx.aircraft->GetCurrentFuelKg();
@@ -105,7 +105,7 @@ std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& 
         return std::nullopt;
     }
 
-    switch (ctx.aircraft->RefuelMethod())
+    switch (ctx.aircraft->GetRefuelMethod())
     {
     case RefuelBy::Gsx:
         data.loadedFuelKg = ctx.aircraft->GetCurrentFuelKg();

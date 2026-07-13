@@ -726,8 +726,8 @@ void TolissA340Test::reportsLoadMethods()
     AutomationStatus status;
     const TolissA340 aircraft(&gateway, &status, false);
 
-    QVERIFY(aircraft.RefuelMethod() == RefuelBy::Self);
-    QVERIFY(aircraft.BoardMethod() == BoardBy::Self);
+    QVERIFY(aircraft.GetRefuelMethod() == RefuelBy::Self);
+    QVERIFY(aircraft.GetBoardMethod() == BoardBy::Self);
     QVERIFY(aircraft.SupportsStairsOrJetways());
 }
 
