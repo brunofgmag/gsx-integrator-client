@@ -14,7 +14,7 @@ public:
     [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
 
 private:
-    static void DeboardProgressively(TurnaroundContext& ctx);
+    static void AdvanceDeboardingBar(TurnaroundContext& ctx);
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_DEBOARDINGSTATE_H

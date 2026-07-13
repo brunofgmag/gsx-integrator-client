@@ -23,13 +23,20 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
     {
         data.boardingBaselined = true;
         data.initialZfwKg = ctx.aircraft->GetEmptyZfwKg();
+        if (ctx.aircraft->BoardMethod() == BoardBy::Self)
+        {
+            ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
+        }
     }
 
     if (isCompleted)
     {
         data.boardedPassengers = data.plannedPassengers;
         data.loadedZfwKg = data.plannedZfwKg;
-        ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
+        if (ctx.aircraft->BoardMethod() != BoardBy::Gsx)
+        {
+            ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
+        }
         data.boardingProgress = 100.0;
 
         return TurnaroundTransition{TurnaroundPhase::WaitingReadyToPush, 60};
@@ -37,14 +44,10 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
 
     data.boardedPassengers = ctx.gsxGateway->GetBoardedPassengers();
 
-    if (ctx.aircraft->SupportsProgressiveLoad())
+    AdvanceBoardingBar(ctx);
+    if (ctx.aircraft->BoardMethod() == BoardBy::Client)
     {
-        BoardProgressively(ctx);
-    }
-    else
-    {
-        data.loadedZfwKg = data.plannedZfwKg;
-        ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
+        ctx.aircraft->SetCurrentZfwKg(data.loadedZfwKg);
     }
 
     data.boardingProgress = turnaround::ProgressPercent(
@@ -55,7 +58,7 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
     return std::nullopt;
 }
 
-void BoardingState::BoardProgressively(TurnaroundContext& ctx)
+void BoardingState::AdvanceBoardingBar(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 
@@ -71,5 +74,4 @@ void BoardingState::BoardProgressively(TurnaroundContext& ctx)
         data.initialZfwKg + (data.plannedZfwKg - data.initialZfwKg) * (progress / 100.0),
         0.0,
         data.plannedZfwKg);
-    ctx.aircraft->SetCurrentZfwKg(data.loadedZfwKg);
 }

@@ -1,6 +1,7 @@
 #include "DeboardingState.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include "../TurnaroundMath.h"
 #include "../TurnaroundContext.h"
@@ -20,23 +21,31 @@ std::optional<TurnaroundTransition> DeboardingState::Evaluate(TurnaroundContext&
         return std::nullopt;
     }
 
+    if (!data.deboardingBaselined)
+    {
+        data.deboardingBaselined = true;
+        if (ctx.aircraft->BoardMethod() == BoardBy::Self)
+        {
+            ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
+        }
+    }
+
     if (isCompleted)
     {
         data.loadedZfwKg = data.initialZfwKg;
-        ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
+        if (ctx.aircraft->BoardMethod() != BoardBy::Gsx)
+        {
+            ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
+        }
         data.deboardingProgress = 100.0;
 
         return TurnaroundTransition{TurnaroundPhase::WaitingNewFlight, 60};
     }
 
-    if (ctx.aircraft->SupportsProgressiveLoad())
+    AdvanceDeboardingBar(ctx);
+    if (ctx.aircraft->BoardMethod() == BoardBy::Client)
     {
-        DeboardProgressively(ctx);
-    }
-    else
-    {
-        data.loadedZfwKg = data.initialZfwKg;
-        ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
+        ctx.aircraft->SetCurrentZfwKg(data.loadedZfwKg);
     }
 
     data.deboardingProgress = turnaround::ProgressPercent(
@@ -47,7 +56,7 @@ std::optional<TurnaroundTransition> DeboardingState::Evaluate(TurnaroundContext&
     return std::nullopt;
 }
 
-void DeboardingState::DeboardProgressively(TurnaroundContext& ctx)
+void DeboardingState::AdvanceDeboardingBar(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 
@@ -63,6 +72,4 @@ void DeboardingState::DeboardProgressively(TurnaroundContext& ctx)
         data.plannedZfwKg - (data.plannedZfwKg - data.initialZfwKg) * (progress / 100.0),
         data.initialZfwKg,
         data.plannedZfwKg);
-
-    ctx.aircraft->SetCurrentZfwKg(data.loadedZfwKg);
 }
