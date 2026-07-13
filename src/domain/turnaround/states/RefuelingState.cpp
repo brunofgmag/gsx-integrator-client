@@ -15,7 +15,7 @@ namespace
 
     bool IsWeightDone(const TurnaroundContext& ctx, const GsxStateStatus refuelingState)
     {
-        if (ctx.aircraft->IsRefueledExternally() || ctx.aircraft->LoadsViaUplink())
+        if (ctx.aircraft->RefuelMethod() != RefuelBy::Client)
         {
             return refuelingState == GsxStateStatus::Completed
                 || ctx.gsxGateway->WasStateCompleted(GsxState::Refueling);
@@ -50,15 +50,20 @@ std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& 
     {
         data.loadingStartNotified = true;
         ctx.aircraft->OnLoadingStarted();
+        if (ctx.aircraft->RefuelMethod() == RefuelBy::Self)
+        {
+            ctx.aircraft->SetCurrentFuelKg(data.plannedFuelKg);
+        }
     }
 
     if (data.fuelProgress < 100.0)
     {
-        if (ctx.aircraft->IsRefueledExternally())
+        switch (ctx.aircraft->RefuelMethod())
         {
+        case RefuelBy::Gsx:
             data.loadedFuelKg = ctx.aircraft->GetCurrentFuelKg();
-        }
-        else if (ctx.aircraft->LoadsViaUplink())
+            break;
+        case RefuelBy::Self:
         {
             const double pumpedKg =
                 ctx.gsxGateway->GetRefuelCounterGallons() * turnaround::kJetFuelKgPerUsGallon;
@@ -68,15 +73,11 @@ std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& 
                                         ? std::min(data.initialFuelKg + pumpedKg, data.plannedFuelKg)
                                         : std::max(data.initialFuelKg - pumpedKg, data.plannedFuelKg);
             }
+            break;
         }
-        else if (ctx.aircraft->SupportsProgressiveFuel())
-        {
+        case RefuelBy::Client:
             RefuelProgressively(ctx);
-        }
-        else
-        {
-            data.loadedFuelKg = data.plannedFuelKg;
-            ctx.aircraft->SetCurrentFuelKg(data.plannedFuelKg);
+            break;
         }
     }
 
@@ -104,18 +105,18 @@ std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& 
         return std::nullopt;
     }
 
-    if (ctx.aircraft->IsRefueledExternally())
+    switch (ctx.aircraft->RefuelMethod())
     {
+    case RefuelBy::Gsx:
         data.loadedFuelKg = ctx.aircraft->GetCurrentFuelKg();
-    }
-    else if (ctx.aircraft->LoadsViaUplink())
-    {
+        break;
+    case RefuelBy::Self:
         data.loadedFuelKg = data.plannedFuelKg;
-    }
-    else
-    {
+        break;
+    case RefuelBy::Client:
         data.loadedFuelKg = data.plannedFuelKg;
         ctx.aircraft->SetCurrentFuelKg(data.plannedFuelKg);
+        break;
     }
 
     data.fuelProgress = 100.0;
