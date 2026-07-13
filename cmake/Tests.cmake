@@ -60,6 +60,7 @@ set(TURNAROUND_STATE_TESTS
         gsxi-turnaround-waiting-engine-shutdown-state-tests turnaround-state-waiting-engine-shutdown tests/turnaround/states/tst_waiting_engine_shutdown_state.cpp
         gsxi-turnaround-request-deboarding-state-tests turnaround-state-request-deboarding tests/turnaround/states/tst_request_deboarding_state.cpp
         gsxi-turnaround-deboarding-state-tests turnaround-state-deboarding tests/turnaround/states/tst_deboarding_state.cpp
+        gsxi-turnaround-cabin-services-state-tests turnaround-state-cabin-services tests/turnaround/states/tst_cabin_services_state.cpp
         gsxi-turnaround-waiting-new-flight-state-tests turnaround-state-waiting-new-flight tests/turnaround/states/tst_waiting_new_flight_state.cpp
 )
 

@@ -80,7 +80,7 @@ void DeboardingStateTest::deboardPassengersProgressively()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);
+    QCOMPARE(transition->next, TurnaroundPhase::CabinServices);
     QCOMPARE(f.aircraft.currentZfwKg, 100000.0);
     QCOMPARE(f.gsxService.deboardedPassengers, 100);
     QCOMPARE(f.gsxService.deboardingCargoPercent, 100.0);
@@ -110,7 +110,7 @@ void DeboardingStateTest::deboardCargoProgressively()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);
+    QCOMPARE(transition->next, TurnaroundPhase::CabinServices);
     QCOMPARE(f.aircraft.currentZfwKg, 130000.0);
 }
 
@@ -132,7 +132,7 @@ void DeboardingStateTest::snapsToInitialWhenGsxCountersFallShort()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);
+    QCOMPARE(transition->next, TurnaroundPhase::CabinServices);
     QCOMPARE(f.aircraft.currentZfwKg, 100000.0);
     QCOMPARE(f.ctx.data.deboardingProgress, 100.0);
 }

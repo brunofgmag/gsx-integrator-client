@@ -24,6 +24,7 @@
 #include "../model/AutomationStatus.h"
 #include "../model/AutomationSettings.h"
 #include "states/DeboardingState.h"
+#include "states/CabinServicesState.h"
 #include "states/RequestDeboardingState.h"
 #include "states/WaitingNewFlightState.h"
 
@@ -70,6 +71,7 @@ void TurnaroundStateMachine::RegisterStates()
     add(std::make_unique<WaitingEngineShutdownState>());
     add(std::make_unique<RequestDeboardingState>());
     add(std::make_unique<DeboardingState>());
+    add(std::make_unique<CabinServicesState>());
     add(std::make_unique<WaitingNewFlightState>());
 }
 

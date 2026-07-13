@@ -30,6 +30,7 @@ namespace
         case TurnaroundPhase::WaitingEngineShutdown: return QCoreApplication::translate("Turnaround", "Waiting for engine shutdown");
         case TurnaroundPhase::RequestDeboarding: return QCoreApplication::translate("Turnaround", "Requesting deboarding");
         case TurnaroundPhase::Deboarding: return QCoreApplication::translate("Turnaround", "Deboarding");
+        case TurnaroundPhase::CabinServices: return QCoreApplication::translate("Turnaround", "Cabin services");
         case TurnaroundPhase::WaitingNewFlight: return QCoreApplication::translate("Turnaround", "Waiting for new flight");
         default: return QCoreApplication::translate("Turnaround", "Unknown");
         }

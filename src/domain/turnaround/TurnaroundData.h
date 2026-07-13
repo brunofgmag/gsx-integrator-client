@@ -37,6 +37,9 @@ struct TurnaroundData
     bool cateringRequested = false;
     bool gpuDismissRequested = false;
     int gpuDismissAttempts = 0;
+    bool lavatoryRequested = false;
+    bool waterRequested = false;
+    bool cleaningRequested = false;
     bool flightPlanRequested = false;
     bool repositionRequested = false;
     bool repositionCompleted = false;

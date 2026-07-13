@@ -36,7 +36,7 @@ std::optional<TurnaroundTransition> DeboardingState::Evaluate(TurnaroundContext&
         ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
         data.deboardingProgress = 100.0;
 
-        return TurnaroundTransition{TurnaroundPhase::WaitingNewFlight, 60};
+        return TurnaroundTransition{TurnaroundPhase::CabinServices};
     }
 
     AdvanceDeboardingBar(ctx);

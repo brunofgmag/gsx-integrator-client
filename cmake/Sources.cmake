@@ -44,6 +44,8 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/states/RequestDeboardingState.h
         src/domain/turnaround/states/DeboardingState.cpp
         src/domain/turnaround/states/DeboardingState.h
+        src/domain/turnaround/states/CabinServicesState.cpp
+        src/domain/turnaround/states/CabinServicesState.h
         src/domain/turnaround/states/WaitingNewFlightState.cpp
         src/domain/turnaround/states/WaitingNewFlightState.h
 )

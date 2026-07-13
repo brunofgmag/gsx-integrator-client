@@ -23,6 +23,7 @@ enum class TurnaroundPhase : int
     WaitingEngineShutdown,
     RequestDeboarding,
     Deboarding,
+    CabinServices,
     WaitingNewFlight,
     Count,
 };
@@ -51,6 +52,7 @@ inline const char* TurnaroundPhaseToString(const TurnaroundPhase phase)
     case TurnaroundPhase::WaitingEngineShutdown: return "WaitingEngineShutdown";
     case TurnaroundPhase::RequestDeboarding: return "RequestDeboarding";
     case TurnaroundPhase::Deboarding: return "Deboarding";
+    case TurnaroundPhase::CabinServices: return "CabinServices";
     case TurnaroundPhase::WaitingNewFlight: return "WaitingNewFlight";
     case TurnaroundPhase::Count:
     default: return "Unknown";

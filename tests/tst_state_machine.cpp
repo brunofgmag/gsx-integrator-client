@@ -28,6 +28,7 @@ namespace
         TurnaroundPhase::WaitingEngineShutdown,
         TurnaroundPhase::RequestDeboarding,
         TurnaroundPhase::Deboarding,
+        TurnaroundPhase::CabinServices,
         TurnaroundPhase::WaitingNewFlight,
         TurnaroundPhase::WaitingSupportedAircraft,
     };
@@ -269,7 +270,8 @@ namespace
             f.gsxService.deboardedPassengers = f.aircraft.plannedPax;
             f.gsxService.deboardingCargoPercent = 100.0;
 
-            TickHolding(TurnaroundPhase::Deboarding);
+            TickTo(TurnaroundPhase::CabinServices);
+            TickHolding(TurnaroundPhase::CabinServices);
             FinishDelay(60, TurnaroundPhase::WaitingNewFlight);
         }
 
