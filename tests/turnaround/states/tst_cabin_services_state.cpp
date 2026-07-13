@@ -11,6 +11,7 @@ private slots:
     static void advancesImmediatelyWhenAllDisabled();
     static void requestsServicesInLavatoryWaterCleaningOrder();
     static void onlyRequestsEnabledServices();
+    static void skipsCabinServicesWhenSettingsAreNull();
 };
 
 void CabinServicesStateTest::advancesImmediatelyWhenAllDisabled()
@@ -68,6 +69,23 @@ void CabinServicesStateTest::onlyRequestsEnabledServices()
     const auto transition = state.Evaluate(f.ctx);
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);
+}
+
+void CabinServicesStateTest::skipsCabinServicesWhenSettingsAreNull()
+{
+    TurnaroundStateFixture f;
+    CabinServicesState state;
+
+    f.ctx.settings = nullptr;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);
+    QCOMPARE(transition->delayTicks, 60);
+    QCOMPARE(f.menuGateway.requestLavatoryCalls, 0);
+    QCOMPARE(f.menuGateway.requestWaterCalls, 0);
+    QCOMPARE(f.menuGateway.requestCleaningCalls, 0);
 }
 
 QTEST_APPLESS_MAIN(CabinServicesStateTest)

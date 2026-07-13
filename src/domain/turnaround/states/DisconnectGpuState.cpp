@@ -22,7 +22,8 @@ std::optional<TurnaroundTransition> DisconnectGpuState::Evaluate(TurnaroundConte
 
     if (!ctx.data.gpuDismissRequested)
     {
-        ctx.data.gpuDismissRequested = ctx.menuGateway->ToggleGpu();
+        static_cast<void>(ctx.menuGateway->ToggleGpu());
+        ctx.data.gpuDismissRequested = true;
         ++ctx.data.gpuDismissAttempts;
 
         return std::nullopt;

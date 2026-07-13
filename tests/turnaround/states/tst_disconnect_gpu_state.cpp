@@ -82,6 +82,7 @@ void DisconnectGpuStateTest::advancesAfterMaxAttempts()
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 3);
 }
 
 QTEST_APPLESS_MAIN(DisconnectGpuStateTest)

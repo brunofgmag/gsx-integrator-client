@@ -78,7 +78,7 @@ bool CallServicesState::RequestNextGroundService(TurnaroundContext& ctx)
         return false;
     }
 
-    if (ctx.settings->callGpu && !ctx.data.gpuRequested)
+    if (ctx.settings->callGpu && !ctx.data.gpuRequested && !ctx.gsxGateway->IsGpuConnected())
     {
         ctx.data.gpuRequested = ctx.menuGateway->ToggleGpu();
         return ctx.data.gpuRequested;

@@ -17,6 +17,8 @@ private slots:
     static void givesUpAfterTwoAttempts();
     static void requestsGpuAndCateringWhenEnabled();
     static void doesNotRequestGroundServicesWhenDisabled();
+    static void skipsGpuToggleWhenAlreadyConnected();
+    static void skipsGroundServicesWhenSettingsAreNull();
 };
 
 void CallServicesStateTest::advancesWhenStairsAreAvailable()
@@ -188,6 +190,38 @@ void CallServicesStateTest::doesNotRequestGroundServicesWhenDisabled()
     TurnaroundStateFixture f;
     CallServicesState state;
 
+    f.aircraft.supportsStairsOrJetways = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+    QCOMPARE(f.menuGateway.requestCateringCalls, 0);
+}
+
+void CallServicesStateTest::skipsGpuToggleWhenAlreadyConnected()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.settings.callGpu = true;
+    f.gsxService.gpuConnected = true;
+    f.aircraft.supportsStairsOrJetways = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+}
+
+void CallServicesStateTest::skipsGroundServicesWhenSettingsAreNull()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.ctx.settings = nullptr;
     f.aircraft.supportsStairsOrJetways = false;
 
     const auto transition = state.Evaluate(f.ctx);
