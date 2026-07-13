@@ -1,6 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_AIRCRAFT_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_AIRCRAFT_H
 
+enum class RefuelBy { Gsx, Self, Client };
+enum class BoardBy { Gsx, Self, Client };
+
 class Aircraft
 {
 public:
@@ -30,6 +33,8 @@ public:
     [[nodiscard]] virtual bool IsRefueledExternally() const = 0;
     [[nodiscard]] virtual bool LoadsViaUplink() const = 0;
     [[nodiscard]] virtual bool CompletesPushbackViaInterruptMenu() const = 0;
+    [[nodiscard]] virtual RefuelBy RefuelMethod() const = 0;
+    [[nodiscard]] virtual BoardBy BoardMethod() const = 0;
 
     [[nodiscard]] virtual bool ConsumeSmartSwitch() = 0;
 

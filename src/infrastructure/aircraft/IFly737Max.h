@@ -33,6 +33,8 @@ public:
     [[nodiscard]] bool IsRefueledExternally() const override { return true; }
     [[nodiscard]] bool LoadsViaUplink() const override { return false; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
+    [[nodiscard]] RefuelBy RefuelMethod() const override { return RefuelBy::Gsx; }
+    [[nodiscard]] BoardBy BoardMethod() const override { return BoardBy::Gsx; }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;

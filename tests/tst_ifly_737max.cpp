@@ -55,6 +55,7 @@ private slots:
     static void readyToPushFollowsPowerBeaconAndEngines();
     static void engineRunningDetectsAnyCombustion();
     static void engineAssumedRunningUntilCombustionDataArrives();
+    static void reportsLoadMethods();
 };
 
 void IFly737MaxTest::reportsNameAndVariant()
@@ -488,6 +489,16 @@ void IFly737MaxTest::engineAssumedRunningUntilCombustionDataArrives()
     gateway.avars[kSimEng2Combustion] = 1.0;
 
     QVERIFY(aircraft.IsEngineRunning());
+}
+
+void IFly737MaxTest::reportsLoadMethods()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const IFly737Max aircraft(&gateway, &status);
+
+    QVERIFY(aircraft.RefuelMethod() == RefuelBy::Gsx);
+    QVERIFY(aircraft.BoardMethod() == BoardBy::Gsx);
 }
 
 QTEST_APPLESS_MAIN(IFly737MaxTest)

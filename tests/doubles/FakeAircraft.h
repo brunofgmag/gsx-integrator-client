@@ -26,6 +26,8 @@ public:
     bool refueledExternally = false;
     bool loadsViaUplink = false;
     bool completesPushbackViaInterruptMenu = false;
+    RefuelBy refuelMethod = RefuelBy::Self;
+    BoardBy boardMethod = BoardBy::Self;
     int consumeSmartSwitchCalls = 0;
     int onLoadingStartedCalls = 0;
 
@@ -52,6 +54,8 @@ public:
     [[nodiscard]] bool IsRefueledExternally() const override { return refueledExternally; }
     [[nodiscard]] bool LoadsViaUplink() const override { return loadsViaUplink; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return completesPushbackViaInterruptMenu; }
+    [[nodiscard]] RefuelBy RefuelMethod() const override { return refuelMethod; }
+    [[nodiscard]] BoardBy BoardMethod() const override { return boardMethod; }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override
     {

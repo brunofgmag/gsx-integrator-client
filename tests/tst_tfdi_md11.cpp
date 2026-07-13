@@ -72,6 +72,7 @@ private slots:
     static void readyToPushFollowsPowerBeaconAndEngines();
     static void engineRunningDetectsAnyEngineAboveIdle();
     static void engineAssumedRunningUntilAllN1DataArrives();
+    static void reportsLoadMethods();
 };
 
 void TfdiMd11Test::reportsNameAndVariant()
@@ -79,8 +80,8 @@ void TfdiMd11Test::reportsNameAndVariant()
     FakeVariableGateway gateway;
     AutomationStatus status;
 
-    TfdiMd11 passenger(&gateway, &status, false);
-    TfdiMd11 freighter(&gateway, &status, true);
+    const TfdiMd11 passenger(&gateway, &status, false);
+    const TfdiMd11 freighter(&gateway, &status, true);
 
     QCOMPARE(QString(passenger.GetName()), QString("TFDi MD-11"));
     QVERIFY(!passenger.IsCargoVariant());
@@ -91,7 +92,7 @@ void TfdiMd11Test::reportsUnsupportedProgressiveModes()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TfdiMd11 aircraft(&gateway, &status, false);
+    const TfdiMd11 aircraft(&gateway, &status, false);
 
     QVERIFY(!aircraft.SupportsProgressiveFuel());
     QVERIFY(!aircraft.SupportsProgressiveLoad());
@@ -100,9 +101,10 @@ void TfdiMd11Test::reportsUnsupportedProgressiveModes()
 void TfdiMd11Test::readsCurrentFuelFromSim()
 {
     FakeVariableGateway gateway;
-    gateway.avars[kSimFuelTotalKg] = 18500.0;
     AutomationStatus status;
-    TfdiMd11 aircraft(&gateway, &status, false);
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.avars[kSimFuelTotalKg] = 18500.0;
 
     QCOMPARE(aircraft.GetCurrentFuelKg(), 18500.0);
 }
@@ -110,11 +112,12 @@ void TfdiMd11Test::readsCurrentFuelFromSim()
 void TfdiMd11Test::currentZfwSubtractsFuelFromTotalWeight()
 {
     FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
     gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     gateway.avars[kSimTotalWeight] = 200000.0;
     gateway.avars[kSimFuelTotalKg] = 20000.0;
-    AutomationStatus status;
-    TfdiMd11 aircraft(&gateway, &status, false);
 
     QCOMPARE(aircraft.GetCurrentZfwKg(), 180000.0);
 }
@@ -122,10 +125,11 @@ void TfdiMd11Test::currentZfwSubtractsFuelFromTotalWeight()
 void TfdiMd11Test::currentZfwDoesNotDropBelowEmptyWeight()
 {
     FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
     gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     gateway.avars[kSimTotalWeight] = 100000.0;
-    AutomationStatus status;
-    TfdiMd11 aircraft(&gateway, &status, false);
 
     QCOMPARE(aircraft.GetCurrentZfwKg(), kEmptyOperatingZfwKg);
 }
@@ -134,10 +138,11 @@ void TfdiMd11Test::plannedValuesComeFromSession()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
     status.plannedFuelKg = 12000.0;
     status.plannedZfwKg = 175000.0;
     status.plannedPassengers = 205;
-    TfdiMd11 aircraft(&gateway, &status, false);
 
     QCOMPARE(aircraft.GetPlannedFuelKg(), 12000.0);
     QCOMPARE(aircraft.GetPlannedZfwKg(), 175000.0);
@@ -148,7 +153,7 @@ void TfdiMd11Test::flightPlanLoadedWhenSessionReady()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TfdiMd11 aircraft(&gateway, &status, false);
+    const TfdiMd11 aircraft(&gateway, &status, false);
 
     QVERIFY(!aircraft.IsFlightPlanLoaded());
 
@@ -178,7 +183,7 @@ void TfdiMd11Test::smartSwitchRegistersFastRefresh()
     AutomationStatus status;
     TfdiMd11 aircraft(&gateway, &status, false);
 
-    QCOMPARE(gateway.fastRefreshNames.size(), std::size_t(1));
+    QCOMPARE(gateway.fastRefreshNames.size(), static_cast<std::size_t>(1));
     QVERIFY(gateway.fastRefreshNames.front() == std::string("L:") + kSmartSwitch);
 }
 
@@ -189,15 +194,18 @@ void TfdiMd11Test::smartSwitchReassertsResetWhileSimKeepsOldValue()
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kSmartSwitch] = 2.0;
+
     QVERIFY(aircraft.ConsumeSmartSwitch());
     QCOMPARE(gateway.setLVarCalls, 1);
 
     gateway.lvars[kSmartSwitch] = 2.0;
+
     QVERIFY(!aircraft.ConsumeSmartSwitch());
     QCOMPARE(gateway.setLVarCalls, 2);
     QCOMPARE(gateway.Written(kSmartSwitch), 1.0);
 
     gateway.lvars[kSmartSwitch] = 2.0;
+
     QVERIFY(!aircraft.ConsumeSmartSwitch());
     QCOMPARE(gateway.setLVarCalls, 3);
 }
@@ -209,23 +217,27 @@ void TfdiMd11Test::smartSwitchReportsSinglePressPerActivation()
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kSmartSwitch] = 2.0;
+
     QVERIFY(aircraft.ConsumeSmartSwitch());
 
     gateway.lvars[kSmartSwitch] = 2.0;
+
     QVERIFY(!aircraft.ConsumeSmartSwitch());
 
     QVERIFY(!aircraft.ConsumeSmartSwitch());
 
     gateway.lvars[kSmartSwitch] = 2.0;
+
     QVERIFY(aircraft.ConsumeSmartSwitch());
 }
 
 void TfdiMd11Test::emptyZfwReadsSimEmptyWeight()
 {
     FakeVariableGateway gateway;
-    gateway.avars[kSimEmptyWeight] = 128500.0;
     AutomationStatus status;
-    TfdiMd11 aircraft(&gateway, &status, false);
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.avars[kSimEmptyWeight] = 128500.0;
 
     QCOMPARE(aircraft.GetEmptyZfwKg(), 128500.0);
 }
@@ -250,10 +262,11 @@ void TfdiMd11Test::parkingBrakeRequiresLeverAndSimBrake()
     for (const auto& testCase : cases)
     {
         FakeVariableGateway gateway;
-        gateway.lvars[kParkingBrake] = testCase.lever;
-        gateway.avars[kSimParkingBrake] = testCase.simBrake;
         AutomationStatus status;
         TfdiMd11 aircraft(&gateway, &status, false);
+
+        gateway.lvars[kParkingBrake] = testCase.lever;
+        gateway.avars[kSimParkingBrake] = testCase.simBrake;
 
         QVERIFY2(aircraft.IsParkingBrakeSet() == testCase.expected, testCase.name);
     }
@@ -282,6 +295,9 @@ void TfdiMd11Test::readyToDeboardFollowsSafetyState()
     for (const auto& testCase : cases)
     {
         FakeVariableGateway gateway;
+        AutomationStatus status;
+        TfdiMd11 aircraft(&gateway, &status, false);
+
         gateway.lvars[kParkingBrake] = testCase.parkingBrake;
         gateway.avars[kSimParkingBrake] = testCase.parkingBrake;
         gateway.lvars[kChocks] = testCase.chocks;
@@ -289,8 +305,6 @@ void TfdiMd11Test::readyToDeboardFollowsSafetyState()
         gateway.lvars[kEng1N1] = 0.0;
         gateway.lvars[kEng2N1] = testCase.engineN1;
         gateway.lvars[kEng3N1] = 0.0;
-        AutomationStatus status;
-        TfdiMd11 aircraft(&gateway, &status, false);
 
         QVERIFY2(aircraft.IsReadyToDeboard() == testCase.expected, testCase.name);
     }
@@ -310,10 +324,10 @@ void TfdiMd11Test::slowTickWithoutPendingCommitDoesNothing()
 void TfdiMd11Test::commitWritesEfbTargetsInPounds()
 {
     FakeVariableGateway gateway;
-    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     AutomationStatus status;
     TfdiMd11 aircraft(&gateway, &status, false);
 
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     aircraft.SetCurrentFuelKg(20000.0);
     aircraft.SetCurrentZfwKg(160000.0);
     aircraft.OnSlowTick();
@@ -339,10 +353,10 @@ void TfdiMd11Test::commitWritesEfbTargetsInPounds()
 void TfdiMd11Test::commitClampsEfbTargetsBeforeWriting()
 {
     FakeVariableGateway gateway;
-    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     AutomationStatus status;
     TfdiMd11 aircraft(&gateway, &status, false);
 
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     aircraft.SetCurrentFuelKg(-500.0);
     aircraft.SetCurrentZfwKg(100000.0);
     aircraft.OnSlowTick();
@@ -357,10 +371,10 @@ void TfdiMd11Test::commitClampsEfbTargetsBeforeWriting()
 void TfdiMd11Test::commitSetsReadReadyMask()
 {
     FakeVariableGateway gateway;
-    gateway.lvars[kEfbReadReady] = 2.0;
     AutomationStatus status;
     TfdiMd11 aircraft(&gateway, &status, false);
 
+    gateway.lvars[kEfbReadReady] = 2.0;
     aircraft.SetCurrentFuelKg(15000.0);
     aircraft.OnSlowTick();
 
@@ -370,12 +384,12 @@ void TfdiMd11Test::commitSetsReadReadyMask()
 void TfdiMd11Test::seedsUnsetFuelTargetFromReceivedSimValue()
 {
     FakeVariableGateway gateway;
-    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
-    gateway.avars[kSimTotalWeight] = 200000.0;
-    gateway.avars[kSimFuelTotalKg] = 18500.0;
     AutomationStatus status;
     TfdiMd11 aircraft(&gateway, &status, false);
 
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+    gateway.avars[kSimTotalWeight] = 200000.0;
+    gateway.avars[kSimFuelTotalKg] = 18500.0;
     aircraft.SetCurrentZfwKg(160000.0);
     aircraft.OnSlowTick();
 
@@ -385,11 +399,11 @@ void TfdiMd11Test::seedsUnsetFuelTargetFromReceivedSimValue()
 void TfdiMd11Test::doesNotSeedFuelTargetBeforeSimDataArrives()
 {
     FakeVariableGateway gateway;
-    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
-    gateway.avars[kSimTotalWeight] = 200000.0;
     AutomationStatus status;
     TfdiMd11 aircraft(&gateway, &status, false);
 
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+    gateway.avars[kSimTotalWeight] = 200000.0;
     aircraft.SetCurrentZfwKg(160000.0);
     aircraft.OnSlowTick();
 
@@ -421,12 +435,13 @@ void TfdiMd11Test::aircraftPowerFollowsElectricalState()
     for (const auto& testCase : cases)
     {
         FakeVariableGateway gateway;
+        AutomationStatus status;
+        TfdiMd11 aircraft(&gateway, &status, false);
+
         gateway.lvars[kPowerOn] = testCase.cabinPower;
         gateway.lvars[kBattery] = testCase.battery;
         gateway.lvars[kExtPower] = testCase.externalPower;
         gateway.lvars[kApu] = testCase.apu;
-        AutomationStatus status;
-        TfdiMd11 aircraft(&gateway, &status, false);
 
         QVERIFY2(aircraft.IsPowered() == testCase.expected, testCase.name);
     }
@@ -453,13 +468,14 @@ void TfdiMd11Test::readyToPushFollowsPowerBeaconAndEngines()
     for (const auto& testCase : cases)
     {
         FakeVariableGateway gateway;
+        AutomationStatus status;
+        TfdiMd11 aircraft(&gateway, &status, false);
+
         gateway.lvars[kPowerOn] = testCase.power;
         gateway.lvars[kBeaconBtn] = testCase.beacon;
         gateway.lvars[kEng1N1] = 0.0;
         gateway.lvars[kEng2N1] = testCase.engineN1;
         gateway.lvars[kEng3N1] = 0.0;
-        AutomationStatus status;
-        TfdiMd11 aircraft(&gateway, &status, false);
 
         QVERIFY2(aircraft.IsReadyToPush() == testCase.expected, testCase.name);
     }
@@ -487,11 +503,12 @@ void TfdiMd11Test::engineRunningDetectsAnyEngineAboveIdle()
     for (const auto& testCase : cases)
     {
         FakeVariableGateway gateway;
+        AutomationStatus status;
+        TfdiMd11 aircraft(&gateway, &status, false);
+
         gateway.lvars[kEng1N1] = testCase.eng1N1;
         gateway.lvars[kEng2N1] = testCase.eng2N1;
         gateway.lvars[kEng3N1] = testCase.eng3N1;
-        AutomationStatus status;
-        TfdiMd11 aircraft(&gateway, &status, false);
 
         QVERIFY2(aircraft.IsEngineRunning() == testCase.expected, testCase.name);
     }
@@ -501,19 +518,32 @@ void TfdiMd11Test::engineAssumedRunningUntilAllN1DataArrives()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TfdiMd11 aircraft(&gateway, &status, false);
+    const TfdiMd11 aircraft(&gateway, &status, false);
 
     QVERIFY(aircraft.IsEngineRunning());
 
     gateway.lvars[kEng1N1] = 0.0;
     gateway.lvars[kEng2N1] = 0.0;
+
     QVERIFY(aircraft.IsEngineRunning());
 
     gateway.lvars[kEng3N1] = 0.0;
+
     QVERIFY(!aircraft.IsEngineRunning());
 
     gateway.lvars[kEng3N1] = 25.166;
+
     QVERIFY(aircraft.IsEngineRunning());
+}
+
+void TfdiMd11Test::reportsLoadMethods()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    QVERIFY(aircraft.RefuelMethod() == RefuelBy::Self);
+    QVERIFY(aircraft.BoardMethod() == BoardBy::Self);
 }
 
 QTEST_APPLESS_MAIN(TfdiMd11Test)

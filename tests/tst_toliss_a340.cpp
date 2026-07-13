@@ -85,6 +85,7 @@ private slots:
     static void paxDoorsOpenOnlyAtFinalPosition();
     static void paxDoorsUntouchedWithJetway();
     static void paxDoorsUntouchedWithoutGsx();
+    static void reportsLoadMethods();
 };
 
 void TolissA340Test::reportsNameAndVariant()
@@ -731,6 +732,16 @@ void TolissA340Test::paxDoorsUntouchedWithoutGsx()
     }
 
     QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode1L));
+}
+
+void TolissA340Test::reportsLoadMethods()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TolissA340 aircraft(&gateway, &status, false);
+
+    QVERIFY(aircraft.RefuelMethod() == RefuelBy::Self);
+    QVERIFY(aircraft.BoardMethod() == BoardBy::Self);
 }
 
 QTEST_APPLESS_MAIN(TolissA340Test)
