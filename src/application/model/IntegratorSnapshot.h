@@ -16,8 +16,8 @@ struct IntegratorSnapshot
     bool canToggleAutomation = false;
     bool canStartLoading = false;
     bool canReloadSimbrief = false;
-    bool refueledExternally = false;
-    bool loadsViaUplink = false;
+    bool refuelByGsx = false;
+    bool refuelBySelf = false;
     bool gsxProfileConflict = false;
     bool gsxProfileFixable = false;
 
@@ -51,8 +51,8 @@ inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapsho
         lhs.canToggleAutomation == rhs.canToggleAutomation &&
         lhs.canStartLoading == rhs.canStartLoading &&
         lhs.canReloadSimbrief == rhs.canReloadSimbrief &&
-        lhs.refueledExternally == rhs.refueledExternally &&
-        lhs.loadsViaUplink == rhs.loadsViaUplink &&
+        lhs.refuelByGsx == rhs.refuelByGsx &&
+        lhs.refuelBySelf == rhs.refuelBySelf &&
         lhs.gsxProfileConflict == rhs.gsxProfileConflict &&
         lhs.gsxProfileFixable == rhs.gsxProfileFixable &&
         lhs.aircraftName == rhs.aircraftName &&

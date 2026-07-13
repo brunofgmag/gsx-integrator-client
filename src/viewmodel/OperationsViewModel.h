@@ -24,8 +24,8 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(double deboardingProgress READ GetDeboardingProgress NOTIFY SnapshotChanged)
     Q_PROPERTY(double plannedFuelKg READ GetPlannedFuelKg NOTIFY SnapshotChanged)
     Q_PROPERTY(double loadedFuelKg READ GetLoadedFuelKg NOTIFY SnapshotChanged)
-    Q_PROPERTY(bool refueledExternally READ IsRefueledExternally NOTIFY SnapshotChanged)
-    Q_PROPERTY(bool loadsViaUplink READ LoadsViaUplink NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool refuelByGsx READ RefuelByGsx NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool refuelBySelf READ RefuelBySelf NOTIFY SnapshotChanged)
     Q_PROPERTY(bool gsxProfileConflict READ HasGsxProfileConflict NOTIFY SnapshotChanged)
     Q_PROPERTY(bool gsxProfileFixable READ IsGsxProfileFixable NOTIFY SnapshotChanged)
     Q_PROPERTY(double plannedZfwKg READ GetPlannedZfwKg NOTIFY SnapshotChanged)
@@ -60,8 +60,8 @@ public:
     [[nodiscard]] double GetDeboardingProgress() const;
     [[nodiscard]] double GetPlannedFuelKg() const;
     [[nodiscard]] double GetLoadedFuelKg() const;
-    [[nodiscard]] bool IsRefueledExternally() const;
-    [[nodiscard]] bool LoadsViaUplink() const;
+    [[nodiscard]] bool RefuelByGsx() const;
+    [[nodiscard]] bool RefuelBySelf() const;
     [[nodiscard]] bool HasGsxProfileConflict() const;
     [[nodiscard]] bool IsGsxProfileFixable() const;
     [[nodiscard]] double GetPlannedZfwKg() const;

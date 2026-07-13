@@ -180,14 +180,14 @@ double OperationsViewModel::GetLoadedFuelKg() const
     return snapshot_.loadedFuelKg;
 }
 
-bool OperationsViewModel::IsRefueledExternally() const
+bool OperationsViewModel::RefuelByGsx() const
 {
-    return snapshot_.refueledExternally;
+    return snapshot_.refuelByGsx;
 }
 
-bool OperationsViewModel::LoadsViaUplink() const
+bool OperationsViewModel::RefuelBySelf() const
 {
-    return snapshot_.loadsViaUplink;
+    return snapshot_.refuelBySelf;
 }
 
 bool OperationsViewModel::HasGsxProfileConflict() const

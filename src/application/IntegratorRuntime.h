@@ -44,8 +44,8 @@ public:
     [[nodiscard]] TurnaroundPhase GetPhase() const { return stateMachine_.GetPhase(); }
     [[nodiscard]] bool IsLoadingConfirmed() const { return stateMachine_.IsLoadingConfirmed(); }
     [[nodiscard]] QString GetAircraftName() const;
-    [[nodiscard]] bool IsAircraftRefueledExternally() const;
-    [[nodiscard]] bool IsAircraftLoadsViaUplink() const;
+    [[nodiscard]] bool IsAircraftRefuelByGsx() const;
+    [[nodiscard]] bool IsAircraftRefuelBySelf() const;
     [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfileConflict_; }
     [[nodiscard]] bool CanFixGsxProfile() const;
     bool FixGsxProfile();

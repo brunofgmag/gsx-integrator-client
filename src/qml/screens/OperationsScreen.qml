@@ -206,9 +206,9 @@ ColumnLayout {
                 }
                 KeyValueRow {
                     label: qsTr("Rate")
-                    value: root.integratorVm.refueledExternally
+                    value: root.integratorVm.refuelByGsx
                         ? qsTr("Auto")
-                        : root.integratorVm.loadsViaUplink
+                        : root.integratorVm.refuelBySelf
                             ? "GSX"
                             : root.settingsVm.fuelRateText + " " + qsTr("kg/s")
                 }

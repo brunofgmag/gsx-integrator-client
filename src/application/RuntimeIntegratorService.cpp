@@ -34,8 +34,8 @@ IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
         && runtime_->Settings().simbriefPilotId > 0
         && runtime_->GetPhase() <= TurnaroundPhase::WaitingFlightPlan;
     snapshot.aircraftName = runtime_->GetAircraftName().toStdString();
-    snapshot.refueledExternally = runtime_->IsAircraftRefueledExternally();
-    snapshot.loadsViaUplink = runtime_->IsAircraftLoadsViaUplink();
+    snapshot.refuelByGsx = runtime_->IsAircraftRefuelByGsx();
+    snapshot.refuelBySelf = runtime_->IsAircraftRefuelBySelf();
     snapshot.gsxProfileConflict = runtime_->HasGsxProfileConflict();
     snapshot.gsxProfileFixable = runtime_->CanFixGsxProfile();
     snapshot.phase = runtime_->GetPhase();

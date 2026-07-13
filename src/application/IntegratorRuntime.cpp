@@ -410,14 +410,14 @@ QString IntegratorRuntime::GetAircraftName() const
     return aircraft_ ? QString::fromUtf8(aircraft_->GetName()) : QString();
 }
 
-bool IntegratorRuntime::IsAircraftRefueledExternally() const
+bool IntegratorRuntime::IsAircraftRefuelByGsx() const
 {
-    return aircraft_ && aircraft_->IsRefueledExternally();
+    return aircraft_ && aircraft_->RefuelMethod() == RefuelBy::Gsx;
 }
 
-bool IntegratorRuntime::IsAircraftLoadsViaUplink() const
+bool IntegratorRuntime::IsAircraftRefuelBySelf() const
 {
-    return aircraft_ && aircraft_->LoadsViaUplink();
+    return aircraft_ && aircraft_->RefuelMethod() == RefuelBy::Self;
 }
 
 void IntegratorRuntime::SetAutomationEnabled(const bool enabled)
