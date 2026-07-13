@@ -33,10 +33,7 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
     {
         data.boardedPassengers = data.plannedPassengers;
         data.loadedZfwKg = data.plannedZfwKg;
-        if (ctx.aircraft->BoardMethod() != BoardBy::Gsx)
-        {
-            ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
-        }
+        ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
         data.boardingProgress = 100.0;
 
         return TurnaroundTransition{TurnaroundPhase::WaitingReadyToPush, 60};

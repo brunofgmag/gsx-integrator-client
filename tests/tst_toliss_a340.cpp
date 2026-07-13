@@ -51,7 +51,6 @@ class TolissA340Test final : public QObject
 
 private slots:
     static void reportsNameAndVariant();
-    static void reportsSupportedProgressiveModes();
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
@@ -98,15 +97,6 @@ void TolissA340Test::reportsNameAndVariant()
     QCOMPARE(QString(passenger.GetName()), QString("ToLiss A340-600"));
     QVERIFY(!passenger.IsCargoVariant());
     QVERIFY(freighter.IsCargoVariant());
-}
-
-void TolissA340Test::reportsSupportedProgressiveModes()
-{
-    FakeVariableGateway gateway;
-    AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
-
-    QVERIFY(aircraft.SupportsStairsOrJetways());
 }
 
 void TolissA340Test::readsCurrentFuelFromSim()
@@ -738,6 +728,7 @@ void TolissA340Test::reportsLoadMethods()
 
     QVERIFY(aircraft.RefuelMethod() == RefuelBy::Self);
     QVERIFY(aircraft.BoardMethod() == BoardBy::Self);
+    QVERIFY(aircraft.SupportsStairsOrJetways());
 }
 
 QTEST_APPLESS_MAIN(TolissA340Test)

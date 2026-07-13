@@ -32,7 +32,6 @@ class IFly737MaxTest final : public QObject
 
 private slots:
     static void reportsNameAndVariant();
-    static void reportsSupportedProgressiveModes();
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
@@ -66,15 +65,6 @@ void IFly737MaxTest::reportsNameAndVariant()
 
     QCOMPARE(QString(aircraft.GetName()), QString("iFly 737 MAX 8"));
     QVERIFY(!aircraft.IsCargoVariant());
-}
-
-void IFly737MaxTest::reportsSupportedProgressiveModes()
-{
-    FakeVariableGateway gateway;
-    AutomationStatus status;
-    const IFly737Max aircraft(&gateway, &status);
-
-    QVERIFY(aircraft.SupportsStairsOrJetways());
 }
 
 void IFly737MaxTest::readsCurrentFuelFromSim()
@@ -497,6 +487,7 @@ void IFly737MaxTest::reportsLoadMethods()
 
     QVERIFY(aircraft.RefuelMethod() == RefuelBy::Gsx);
     QVERIFY(aircraft.BoardMethod() == BoardBy::Client);
+    QVERIFY(aircraft.SupportsStairsOrJetways());
 }
 
 QTEST_APPLESS_MAIN(IFly737MaxTest)

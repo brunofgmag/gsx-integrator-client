@@ -33,10 +33,7 @@ std::optional<TurnaroundTransition> DeboardingState::Evaluate(TurnaroundContext&
     if (isCompleted)
     {
         data.loadedZfwKg = data.initialZfwKg;
-        if (ctx.aircraft->BoardMethod() != BoardBy::Gsx)
-        {
-            ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
-        }
+        ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
         data.deboardingProgress = 100.0;
 
         return TurnaroundTransition{TurnaroundPhase::WaitingNewFlight, 60};

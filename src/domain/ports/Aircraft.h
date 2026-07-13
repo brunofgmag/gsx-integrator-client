@@ -2,7 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_AIRCRAFT_H
 
 enum class RefuelBy { Gsx, Self, Client };
-enum class BoardBy { Gsx, Self, Client };
+enum class BoardBy { Self, Client };
 
 class Aircraft
 {
