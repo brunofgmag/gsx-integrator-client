@@ -109,6 +109,31 @@ bool GsxMenuNavigator::RequestRefueling()
     return TriggerService("Refueling");
 }
 
+bool GsxMenuNavigator::ToggleGpu()
+{
+    return TriggerService("GPU");
+}
+
+bool GsxMenuNavigator::RequestCatering()
+{
+    return TriggerService("Catering");
+}
+
+bool GsxMenuNavigator::RequestLavatory()
+{
+    return TriggerService("Lavatory");
+}
+
+bool GsxMenuNavigator::RequestWater()
+{
+    return TriggerService("Water");
+}
+
+bool GsxMenuNavigator::RequestCleaning()
+{
+    return TriggerService("Cleaning");
+}
+
 bool GsxMenuNavigator::ConfirmGoodEngines()
 {
     if (PickByContains(kConfirmEnginesText))

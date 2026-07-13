@@ -23,6 +23,11 @@ public:
     int confirmGoodEnginesCalls = 0;
     int completePushbackCalls = 0;
     int completeRefuelCalls = 0;
+    int toggleGpuCalls = 0;
+    int requestCateringCalls = 0;
+    int requestLavatoryCalls = 0;
+    int requestWaterCalls = 0;
+    int requestCleaningCalls = 0;
 
     [[nodiscard]] bool CallJetway() override
     {
@@ -88,6 +93,36 @@ public:
     {
         ++completeRefuelCalls;
         return completeRefuelResult;
+    }
+
+    [[nodiscard]] bool ToggleGpu() override
+    {
+        ++toggleGpuCalls;
+        return true;
+    }
+
+    [[nodiscard]] bool RequestCatering() override
+    {
+        ++requestCateringCalls;
+        return true;
+    }
+
+    [[nodiscard]] bool RequestLavatory() override
+    {
+        ++requestLavatoryCalls;
+        return true;
+    }
+
+    [[nodiscard]] bool RequestWater() override
+    {
+        ++requestWaterCalls;
+        return true;
+    }
+
+    [[nodiscard]] bool RequestCleaning() override
+    {
+        ++requestCleaningCalls;
+        return true;
     }
 
     void DisableGsxMenu() override {}

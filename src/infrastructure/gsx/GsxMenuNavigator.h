@@ -36,6 +36,11 @@ public:
     [[nodiscard]] bool ConfirmGoodEngines() override;
     [[nodiscard]] bool CompletePushback() override;
     [[nodiscard]] bool CompleteRefuel() override;
+    [[nodiscard]] bool ToggleGpu() override;
+    [[nodiscard]] bool RequestCatering() override;
+    [[nodiscard]] bool RequestLavatory() override;
+    [[nodiscard]] bool RequestWater() override;
+    [[nodiscard]] bool RequestCleaning() override;
 
     void OpenMenu() const;
     void OnMenuChanged();

@@ -17,6 +17,11 @@ public:
     [[nodiscard]] virtual bool ConfirmGoodEngines() = 0;
     [[nodiscard]] virtual bool CompletePushback() = 0;
     [[nodiscard]] virtual bool CompleteRefuel() = 0;
+    [[nodiscard]] virtual bool ToggleGpu() = 0;
+    [[nodiscard]] virtual bool RequestCatering() = 0;
+    [[nodiscard]] virtual bool RequestLavatory() = 0;
+    [[nodiscard]] virtual bool RequestWater() = 0;
+    [[nodiscard]] virtual bool RequestCleaning() = 0;
 
     virtual void DisableGsxMenu() = 0;
 };

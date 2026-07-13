@@ -108,6 +108,7 @@ private slots:
     static void swallowedRepositionPickRetriesAfterResyncSnapshot();
     static void stalledMenuResyncIsBounded();
     static void lateResyncSnapshotDoesNotRepickAdvancedMenu();
+    static void groundServiceTriggersUseCanonicalVerbs();
 };
 
 void GsxMenuNavigatorTest::serviceTriggersUseCanonicalVerbs()
@@ -822,6 +823,30 @@ void GsxMenuNavigatorTest::stalledMenuResyncIsBounded()
     }
 
     QCOMPARE(client.Count("state.get"), 3);
+}
+
+void GsxMenuNavigatorTest::groundServiceTriggersUseCanonicalVerbs()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator navigator(&client, &state, &settings, &logger);
+
+    QVERIFY(navigator.ToggleGpu());
+    QCOMPARE(client.Last("service.trigger")->args.value("service").toString(), QStringLiteral("GPU"));
+
+    QVERIFY(navigator.RequestCatering());
+    QCOMPARE(client.Last("service.trigger")->args.value("service").toString(), QStringLiteral("Catering"));
+
+    QVERIFY(navigator.RequestLavatory());
+    QCOMPARE(client.Last("service.trigger")->args.value("service").toString(), QStringLiteral("Lavatory"));
+
+    QVERIFY(navigator.RequestWater());
+    QCOMPARE(client.Last("service.trigger")->args.value("service").toString(), QStringLiteral("Water"));
+
+    QVERIFY(navigator.RequestCleaning());
+    QCOMPARE(client.Last("service.trigger")->args.value("service").toString(), QStringLiteral("Cleaning"));
 }
 
 QTEST_GUILESS_MAIN(GsxMenuNavigatorTest)
