@@ -1,4 +1,4 @@
-#include "CallStairsOrJetwayState.h"
+#include "CallServicesState.h"
 
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
@@ -11,7 +11,7 @@ namespace
     constexpr int kMaxAttempts = 2;
 }
 
-std::optional<TurnaroundTransition> CallStairsOrJetwayState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> CallServicesState::Evaluate(TurnaroundContext& ctx)
 {
     if (!ctx.aircraft->SupportsStairsOrJetways())
     {

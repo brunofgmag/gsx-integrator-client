@@ -13,7 +13,7 @@ namespace
         case TurnaroundPhase::WaitingSupportedAircraft: return QCoreApplication::translate("Turnaround", "Waiting for sim ready");
         case TurnaroundPhase::WaitingAircraftReady: return QCoreApplication::translate("Turnaround", "Waiting for aircraft ready");
         case TurnaroundPhase::RepositionAircraft: return QCoreApplication::translate("Turnaround", "Repositioning aircraft");
-        case TurnaroundPhase::CallStairsOrJetway: return QCoreApplication::translate("Turnaround", "Starting GSX services");
+        case TurnaroundPhase::CallServices: return QCoreApplication::translate("Turnaround", "Starting GSX services");
         case TurnaroundPhase::WaitingPowerOn: return QCoreApplication::translate("Turnaround", "Waiting for power on");
         case TurnaroundPhase::WaitingFlightPlan: return QCoreApplication::translate("Turnaround", "Waiting for flight plan");
         case TurnaroundPhase::RequestFuel: return QCoreApplication::translate("Turnaround", "Requesting fuel");

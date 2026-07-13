@@ -12,7 +12,7 @@ namespace
         TurnaroundPhase::WaitingAircraftReady,
         TurnaroundPhase::WaitingFlightPlan,
         TurnaroundPhase::RepositionAircraft,
-        TurnaroundPhase::CallStairsOrJetway,
+        TurnaroundPhase::CallServices,
         TurnaroundPhase::WaitingPowerOn,
         TurnaroundPhase::RequestFuel,
         TurnaroundPhase::Refueling,
@@ -121,13 +121,13 @@ namespace
             TickHolding(TurnaroundPhase::RepositionAircraft);
 
             f.gsxService.repositioning = false;
-            TickTo(TurnaroundPhase::CallStairsOrJetway);
+            TickTo(TurnaroundPhase::CallServices);
         }
 
         void CompleteGroundServiceSetup()
         {
             f.gsxService.stairsAvailable = true;
-            TickHolding(TurnaroundPhase::CallStairsOrJetway);
+            TickHolding(TurnaroundPhase::CallServices);
 
             f.gsxService.stairsAvailable = false;
             f.gsxService.stairsInPlace = true;

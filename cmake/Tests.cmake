@@ -43,7 +43,7 @@ set(TURNAROUND_STATE_TESTS
         gsxi-turnaround-waiting-supported-aircraft-state-tests turnaround-state-waiting-supported-aircraft tests/turnaround/states/tst_waiting_supported_aircraft_state.cpp
         gsxi-turnaround-waiting-flight-plan-state-tests turnaround-state-waiting-flight-plan tests/turnaround/states/tst_waiting_flight_plan_state.cpp
         gsxi-turnaround-reposition-aircraft-state-tests turnaround-state-reposition-aircraft tests/turnaround/states/tst_reposition_aircraft_state.cpp
-        gsxi-turnaround-call-stairs-or-jetway-state-tests turnaround-state-call-stairs-or-jetway tests/turnaround/states/tst_call_stairs_or_jetway_state.cpp
+        gsxi-turnaround-call-services-state-tests turnaround-state-call-services tests/turnaround/states/tst_call_services_state.cpp
         gsxi-turnaround-waiting-power-on-state-tests turnaround-state-waiting-power-on tests/turnaround/states/tst_waiting_power_on_state.cpp
         gsxi-turnaround-request-fuel-state-tests turnaround-state-request-fuel tests/turnaround/states/tst_request_fuel_state.cpp
         gsxi-turnaround-refueling-state-tests turnaround-state-refueling tests/turnaround/states/tst_refueling_state.cpp

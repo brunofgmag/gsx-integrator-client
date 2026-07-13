@@ -1,9 +1,9 @@
 #include <QtTest/QTest>
 
 #include "../TurnaroundStateFixture.h"
-#include "../../../src/domain/turnaround/states/CallStairsOrJetwayState.h"
+#include "../../../src/domain/turnaround/states/CallServicesState.h"
 
-class CallStairsOrJetwayStateTest final : public QObject
+class CallServicesStateTest final : public QObject
 {
     Q_OBJECT
 
@@ -17,10 +17,10 @@ private slots:
     static void givesUpAfterTwoAttempts();
 };
 
-void CallStairsOrJetwayStateTest::advancesWhenStairsAreAvailable()
+void CallServicesStateTest::advancesWhenStairsAreAvailable()
 {
     TurnaroundStateFixture f;
-    CallStairsOrJetwayState state;
+    CallServicesState state;
 
     f.gsxService.stairsAvailable = true;
 
@@ -37,10 +37,10 @@ void CallStairsOrJetwayStateTest::advancesWhenStairsAreAvailable()
     QVERIFY(f.ctx.data.jetwayOrStairsCompleted);
 }
 
-void CallStairsOrJetwayStateTest::advancesWhenJetwayIsAvailable()
+void CallServicesStateTest::advancesWhenJetwayIsAvailable()
 {
     TurnaroundStateFixture f;
-    CallStairsOrJetwayState state;
+    CallServicesState state;
 
     f.gsxService.jetwayAvailable = true;
 
@@ -57,10 +57,10 @@ void CallStairsOrJetwayStateTest::advancesWhenJetwayIsAvailable()
     QVERIFY(f.ctx.data.jetwayOrStairsCompleted);
 }
 
-void CallStairsOrJetwayStateTest::prefersJetwayWhenBothAreAvailable()
+void CallServicesStateTest::prefersJetwayWhenBothAreAvailable()
 {
     TurnaroundStateFixture f;
-    CallStairsOrJetwayState state;
+    CallServicesState state;
 
     f.gsxService.jetwayAvailable = true;
     f.gsxService.stairsAvailable = true;
@@ -81,10 +81,10 @@ void CallStairsOrJetwayStateTest::prefersJetwayWhenBothAreAvailable()
     QVERIFY(f.ctx.data.jetwayOrStairsCompleted);
 }
 
-void CallStairsOrJetwayStateTest::callStairsWhenJetwayFailsToComplete()
+void CallServicesStateTest::callStairsWhenJetwayFailsToComplete()
 {
     TurnaroundStateFixture f;
-    CallStairsOrJetwayState state;
+    CallServicesState state;
 
     f.gsxService.jetwayAvailable = true;
     f.gsxService.stairsAvailable = true;
@@ -101,10 +101,10 @@ void CallStairsOrJetwayStateTest::callStairsWhenJetwayFailsToComplete()
     QCOMPARE(f.menuGateway.callStairsCalls, 1);
 }
 
-void CallStairsOrJetwayStateTest::skipsWhenAircraftDoesNotSupportStairsOrJetways()
+void CallServicesStateTest::skipsWhenAircraftDoesNotSupportStairsOrJetways()
 {
     TurnaroundStateFixture f;
-    CallStairsOrJetwayState state;
+    CallServicesState state;
 
     f.aircraft.supportsStairsOrJetways = false;
     f.gsxService.jetwayAvailable = true;
@@ -118,10 +118,10 @@ void CallStairsOrJetwayStateTest::skipsWhenAircraftDoesNotSupportStairsOrJetways
     QCOMPARE(f.menuGateway.callStairsCalls, 0);
 }
 
-void CallStairsOrJetwayStateTest::advancesImmediatelyWhenJetwayAlreadyInPlace()
+void CallServicesStateTest::advancesImmediatelyWhenJetwayAlreadyInPlace()
 {
     TurnaroundStateFixture f;
-    CallStairsOrJetwayState state;
+    CallServicesState state;
 
     f.gsxService.jetwayInPlace = true;
     f.gsxService.stairsAvailable = true;
@@ -135,10 +135,10 @@ void CallStairsOrJetwayStateTest::advancesImmediatelyWhenJetwayAlreadyInPlace()
     QVERIFY(f.ctx.data.jetwayOrStairsCompleted);
 }
 
-void CallStairsOrJetwayStateTest::givesUpAfterTwoAttempts()
+void CallServicesStateTest::givesUpAfterTwoAttempts()
 {
     TurnaroundStateFixture f;
-    CallStairsOrJetwayState state;
+    CallServicesState state;
 
     f.gsxService.jetwayAvailable = true;
 
@@ -156,6 +156,6 @@ void CallStairsOrJetwayStateTest::givesUpAfterTwoAttempts()
     QCOMPARE(f.ctx.data.jetwayOrStairsAttempts, 2);
 }
 
-QTEST_APPLESS_MAIN(CallStairsOrJetwayStateTest)
+QTEST_APPLESS_MAIN(CallServicesStateTest)
 
-#include "tst_call_stairs_or_jetway_state.moc"
+#include "tst_call_services_state.moc"

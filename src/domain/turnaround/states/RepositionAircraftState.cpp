@@ -15,7 +15,7 @@ std::optional<TurnaroundTransition> RepositionAircraftState::Evaluate(Turnaround
 {
     if (ctx.settings != nullptr && ctx.settings->skipReposition)
     {
-        return TurnaroundTransition{TurnaroundPhase::CallStairsOrJetway};
+        return TurnaroundTransition{TurnaroundPhase::CallServices};
     }
 
     bool& repositionRequested = ctx.data.repositionRequested;
@@ -46,7 +46,7 @@ std::optional<TurnaroundTransition> RepositionAircraftState::Evaluate(Turnaround
 
     if (repositionCompleted)
     {
-        return TurnaroundTransition{TurnaroundPhase::CallStairsOrJetway};
+        return TurnaroundTransition{TurnaroundPhase::CallServices};
     }
 
     if (ctx.TickCondition(kRetryTicks) && repositionRequested)

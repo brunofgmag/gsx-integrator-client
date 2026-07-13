@@ -45,7 +45,7 @@ void RepositionAircraftStateTest::advancesWhenRepositioningCompletes()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::CallStairsOrJetway);
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
     QCOMPARE(f.menuGateway.repositionCalls, 1);
     QVERIFY(f.ctx.data.repositionRequested);
     QVERIFY(f.ctx.data.repositionCompleted);
@@ -66,7 +66,7 @@ void RepositionAircraftStateTest::advancesAfterGiveUpWhenRepositioningNeverHappe
     }
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::CallStairsOrJetway);
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
     QVERIFY(f.ctx.data.repositionCompleted);
 }
 
@@ -80,7 +80,7 @@ void RepositionAircraftStateTest::skipsRepositioningWhenSettingEnabled()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::CallStairsOrJetway);
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
     QCOMPARE(f.menuGateway.repositionCalls, 0);
 }
 

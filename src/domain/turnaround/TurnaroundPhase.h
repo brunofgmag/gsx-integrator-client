@@ -7,7 +7,7 @@ enum class TurnaroundPhase : int
     WaitingAircraftReady,
     WaitingFlightPlan,
     RepositionAircraft,
-    CallStairsOrJetway,
+    CallServices,
     WaitingPowerOn,
     RequestFuel,
     Refueling,
@@ -33,7 +33,7 @@ inline const char* TurnaroundPhaseToString(const TurnaroundPhase phase)
     case TurnaroundPhase::WaitingSupportedAircraft: return "WaitingSupportedAircraft";
     case TurnaroundPhase::WaitingAircraftReady: return "WaitingAircraftReady";
     case TurnaroundPhase::WaitingFlightPlan: return "WaitingFlightPlan";
-    case TurnaroundPhase::CallStairsOrJetway: return "CallStairsOrJetway";
+    case TurnaroundPhase::CallServices: return "CallServices";
     case TurnaroundPhase::WaitingPowerOn: return "WaitingPowerOn";
     case TurnaroundPhase::RequestFuel: return "RequestFuel";
     case TurnaroundPhase::Refueling: return "Refueling";
