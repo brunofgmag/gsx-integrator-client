@@ -24,19 +24,17 @@ This is a work in progress, currently in a testing phase. Expect bugs, and expec
 
 ## Supported aircraft
 
-| Aircraft                                    | Minimum version | Progressive fuel and load | GSX refueling | Smart switch | Status |
-|---------------------------------------------|-----------------|---------------------------|---------------|--------------|--------|
-| TFDi Design MD-11 (passenger and freighter) | Any | No | No | INT/RAD switch | Beta |
-| iFly 737 MAX 8                              | SP1 | Yes | Yes | Push-to-talk switch | Supported |
-| Toliss A340-600 (Aerosoft A346 Pro)         | Any | SimBrief uplink | No | INT/RAD switch | Beta |
+| Aircraft                                    | Minimum version | Fuel                  | Payload               | Smart switch | Status |
+|---------------------------------------------|-----------------|-----------------------|-----------------------|--------------|--------|
+| TFDi Design MD-11 (passenger and freighter) | Any | Client (at once)      | Client (at once)      | INT/RAD switch | Beta |
+| iFly 737 MAX 8                              | SP1 | GSX (progressive)     | Client (progressive)  | Push-to-talk switch | Supported |
+| Toliss A340-600                             | Any | MCDU uplink (at once) | MCDU uplink (at once) | INT/RAD switch | Beta |
 
-Progressive fuel and load means the aircraft's fuel and payload follow the GSX service as it happens: the tanks fill while the truck pumps, and the weight grows as passengers board. Without it, the client applies the final planned figures in one step.
-
-GSX refueling means the GSX fuel truck pumps the fuel itself, at its own pace. The client just follows the tank quantity, which is why the rate in the fuel card reads Auto for these aircraft and the fuel rate setting has no effect on them. If the pump feels slow, GSX has a Fuel Time Acceleration option of its own. Aircraft without it get their fuel written by the client instead.
+Every aircraft gets the same progress bars during refueling and boarding. The Fuel and Payload columns say who actually moves the numbers behind them. On the iFly, the GSX truck pumps the native tanks at its own pace, so the rate in the fuel card reads Auto and the fuel rate setting has no effect on it. If the pump feels slow, GSX has a Fuel Time Acceleration option of its own. The iFly's payload is written by the client as passengers board. The MD-11 and the A340 load themselves: the client hands the planned figures to the MD-11's EFB or triggers the A340's SimBrief uplink through the MCDU, and the aircraft applies fuel and payload on its own (at once) while the bars follow GSX's fuel counter and boarding progress.
 
 The iFly needs SP1 or newer because earlier versions lack the built-in GSX integration the client depends on.
 
-The MD-11 and A340 are marked Beta because neither aircraft lets GSX load its fuel and cargo. The client fills them another way, the MD-11 by writing its weights directly and the Toliss through a SimBrief uplink, and both paths have had less testing than the iFly's built-in GSX integration.
+The MD-11 and A340 are marked Beta because their loading paths are workarounds because the aircraft does not support external loading.
 
 The smart switch is the cockpit control you flip to tell the client "go ahead". It works at three moments: at "Requesting fuel" with automatic loading turned off, where it does the same thing as the Start Loading button; during pushback, to confirm the engines started fine; and after a finished turnaround, to start the next one. Where each one is:
 
