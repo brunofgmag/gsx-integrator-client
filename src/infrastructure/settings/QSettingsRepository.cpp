@@ -8,6 +8,11 @@ namespace
     constexpr auto kKeyAutoStartFlow = "automation/autoStartFlow";
     constexpr auto kKeyAutoStartLoading = "automation/autoStartLoading";
     constexpr auto kKeySkipReposition = "automation/skipReposition";
+    constexpr auto kKeyCallGpu = "services/callGpu";
+    constexpr auto kKeyCallCatering = "services/callCatering";
+    constexpr auto kKeyCallLavatory = "services/callLavatory";
+    constexpr auto kKeyCallWater = "services/callWater";
+    constexpr auto kKeyCallCleaning = "services/callCleaning";
     constexpr auto kKeyThemeMode = "ui/themeMode";
     constexpr auto kKeyDarkThemeLegacy = "ui/darkTheme";
     constexpr auto kKeyLanguage = "ui/language";
@@ -28,6 +33,11 @@ AppSettings QSettingsRepository::Load() const
     result.autoStartFlow = settings.value(kKeyAutoStartFlow, false).toBool();
     result.autoStartLoading = settings.value(kKeyAutoStartLoading, true).toBool();
     result.skipReposition = settings.value(kKeySkipReposition, false).toBool();
+    result.callGpu = settings.value(kKeyCallGpu, false).toBool();
+    result.callCatering = settings.value(kKeyCallCatering, false).toBool();
+    result.callLavatory = settings.value(kKeyCallLavatory, false).toBool();
+    result.callWater = settings.value(kKeyCallWater, false).toBool();
+    result.callCleaning = settings.value(kKeyCallCleaning, false).toBool();
 
     int themeMode = settings.value(kKeyThemeMode, -1).toInt();
     if (themeMode < 0)
@@ -54,6 +64,11 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyAutoStartFlow, values.autoStartFlow);
     settings.setValue(kKeyAutoStartLoading, values.autoStartLoading);
     settings.setValue(kKeySkipReposition, values.skipReposition);
+    settings.setValue(kKeyCallGpu, values.callGpu);
+    settings.setValue(kKeyCallCatering, values.callCatering);
+    settings.setValue(kKeyCallLavatory, values.callLavatory);
+    settings.setValue(kKeyCallWater, values.callWater);
+    settings.setValue(kKeyCallCleaning, values.callCleaning);
     settings.setValue(kKeyThemeMode, values.themeMode);
     settings.setValue(kKeyLanguage, QString::fromStdString(values.language));
     settings.setValue(kKeyUpdateMode, values.updateMode);

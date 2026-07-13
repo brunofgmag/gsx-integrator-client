@@ -21,6 +21,11 @@ class SettingsViewModel final : public QObject
     Q_PROPERTY(bool autoStartFlow READ GetAutoStartFlow WRITE SetAutoStartFlow NOTIFY AutoStartFlowChanged)
     Q_PROPERTY(bool autoStartLoading READ GetAutoStartLoading WRITE SetAutoStartLoading NOTIFY AutoStartLoadingChanged)
     Q_PROPERTY(bool skipReposition READ GetSkipReposition WRITE SetSkipReposition NOTIFY SkipRepositionChanged)
+    Q_PROPERTY(bool callGpu READ GetCallGpu WRITE SetCallGpu NOTIFY CallGpuChanged)
+    Q_PROPERTY(bool callCatering READ GetCallCatering WRITE SetCallCatering NOTIFY CallCateringChanged)
+    Q_PROPERTY(bool callLavatory READ GetCallLavatory WRITE SetCallLavatory NOTIFY CallLavatoryChanged)
+    Q_PROPERTY(bool callWater READ GetCallWater WRITE SetCallWater NOTIFY CallWaterChanged)
+    Q_PROPERTY(bool callCleaning READ GetCallCleaning WRITE SetCallCleaning NOTIFY CallCleaningChanged)
     Q_PROPERTY(int themeMode READ GetThemeMode WRITE SetThemeMode NOTIFY ThemeModeChanged)
     Q_PROPERTY(bool effectiveDark READ GetEffectiveDark NOTIFY EffectiveDarkChanged)
     Q_PROPERTY(QString language READ GetLanguage WRITE SetLanguage NOTIFY LanguageChanged)
@@ -64,6 +69,21 @@ public:
     [[nodiscard]] bool GetSkipReposition() const;
     void SetSkipReposition(bool enabled);
 
+    [[nodiscard]] bool GetCallGpu() const;
+    void SetCallGpu(bool enabled);
+
+    [[nodiscard]] bool GetCallCatering() const;
+    void SetCallCatering(bool enabled);
+
+    [[nodiscard]] bool GetCallLavatory() const;
+    void SetCallLavatory(bool enabled);
+
+    [[nodiscard]] bool GetCallWater() const;
+    void SetCallWater(bool enabled);
+
+    [[nodiscard]] bool GetCallCleaning() const;
+    void SetCallCleaning(bool enabled);
+
     [[nodiscard]] int GetThemeMode() const;
     void SetThemeMode(int mode);
     [[nodiscard]] bool GetEffectiveDark() const;
@@ -103,6 +123,11 @@ signals:
     void AutoStartFlowChanged();
     void AutoStartLoadingChanged();
     void SkipRepositionChanged();
+    void CallGpuChanged();
+    void CallCateringChanged();
+    void CallLavatoryChanged();
+    void CallWaterChanged();
+    void CallCleaningChanged();
     void ThemeModeChanged();
     void EffectiveDarkChanged();
     void LanguageChanged();

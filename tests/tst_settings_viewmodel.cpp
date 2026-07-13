@@ -17,6 +17,8 @@ private slots:
     static void persistsAutoStartLoadingImmediately();
     static void skipRepositionDefaultsToDisabled();
     static void persistsSkipRepositionImmediately();
+    static void groundServicesDefaultToDisabled();
+    static void groundServicesPersistImmediately();
     static void traySettingsDefaultToEnabled();
     static void traySettingsPersistImmediately();
     static void rejectsNonNumericFuelRate();
@@ -161,6 +163,75 @@ void SettingsViewModelTest::persistsSkipRepositionImmediately()
 
     const int savesBefore = repository.saveCalls;
     viewModel.SetSkipReposition(true);
+
+    QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::groundServicesDefaultToDisabled()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    const SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(!viewModel.GetCallGpu());
+    QVERIFY(!viewModel.GetCallCatering());
+    QVERIFY(!viewModel.GetCallLavatory());
+    QVERIFY(!viewModel.GetCallWater());
+    QVERIFY(!viewModel.GetCallCleaning());
+    QVERIFY(!service.appliedSettings.callGpu);
+    QVERIFY(!service.appliedSettings.callCatering);
+    QVERIFY(!service.appliedSettings.callLavatory);
+    QVERIFY(!service.appliedSettings.callWater);
+    QVERIFY(!service.appliedSettings.callCleaning);
+}
+
+void SettingsViewModelTest::groundServicesPersistImmediately()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    viewModel.SetCallGpu(true);
+
+    QVERIFY(viewModel.GetCallGpu());
+    QCOMPARE(repository.saveCalls, 1);
+    QVERIFY(repository.stored.callGpu);
+    QVERIFY(service.appliedSettings.callGpu);
+
+    viewModel.SetCallCatering(true);
+
+    QVERIFY(viewModel.GetCallCatering());
+    QCOMPARE(repository.saveCalls, 2);
+    QVERIFY(repository.stored.callCatering);
+    QVERIFY(service.appliedSettings.callCatering);
+
+    viewModel.SetCallLavatory(true);
+
+    QVERIFY(viewModel.GetCallLavatory());
+    QCOMPARE(repository.saveCalls, 3);
+    QVERIFY(repository.stored.callLavatory);
+    QVERIFY(service.appliedSettings.callLavatory);
+
+    viewModel.SetCallWater(true);
+
+    QVERIFY(viewModel.GetCallWater());
+    QCOMPARE(repository.saveCalls, 4);
+    QVERIFY(repository.stored.callWater);
+    QVERIFY(service.appliedSettings.callWater);
+
+    viewModel.SetCallCleaning(true);
+
+    QVERIFY(viewModel.GetCallCleaning());
+    QCOMPARE(repository.saveCalls, 5);
+    QVERIFY(repository.stored.callCleaning);
+    QVERIFY(service.appliedSettings.callCleaning);
+
+    const int savesBefore = repository.saveCalls;
+    viewModel.SetCallGpu(true);
+    viewModel.SetCallCatering(true);
+    viewModel.SetCallLavatory(true);
+    viewModel.SetCallWater(true);
+    viewModel.SetCallCleaning(true);
 
     QCOMPARE(repository.saveCalls, savesBefore);
 }

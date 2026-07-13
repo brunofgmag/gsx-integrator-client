@@ -11,6 +11,11 @@ struct AutomationSettings
     bool autoStartFlow = false;
     bool autoStartLoading = true;
     bool skipReposition = false;
+    bool callGpu = false;
+    bool callCatering = false;
+    bool callLavatory = false;
+    bool callWater = false;
+    bool callCleaning = false;
 
     [[nodiscard]] double EffectiveFuelRateKgs() const
     {

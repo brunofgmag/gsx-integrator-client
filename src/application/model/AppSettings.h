@@ -12,6 +12,11 @@ struct AppSettings
     bool autoStartFlow = false;
     bool autoStartLoading = true;
     bool skipReposition = false;
+    bool callGpu = false;
+    bool callCatering = false;
+    bool callLavatory = false;
+    bool callWater = false;
+    bool callCleaning = false;
     int themeMode = 2;
     std::string language = "system";
     int updateMode = 1;

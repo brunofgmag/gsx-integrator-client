@@ -156,6 +156,101 @@ void SettingsViewModel::SetSkipReposition(const bool enabled)
     emit SkipRepositionChanged();
 }
 
+bool SettingsViewModel::GetCallGpu() const
+{
+    return settings_.callGpu;
+}
+
+void SettingsViewModel::SetCallGpu(const bool enabled)
+{
+    if (settings_.callGpu == enabled)
+    {
+        return;
+    }
+
+    settings_.callGpu = enabled;
+
+    PersistImmediateSetting();
+
+    emit CallGpuChanged();
+}
+
+bool SettingsViewModel::GetCallCatering() const
+{
+    return settings_.callCatering;
+}
+
+void SettingsViewModel::SetCallCatering(const bool enabled)
+{
+    if (settings_.callCatering == enabled)
+    {
+        return;
+    }
+
+    settings_.callCatering = enabled;
+
+    PersistImmediateSetting();
+
+    emit CallCateringChanged();
+}
+
+bool SettingsViewModel::GetCallLavatory() const
+{
+    return settings_.callLavatory;
+}
+
+void SettingsViewModel::SetCallLavatory(const bool enabled)
+{
+    if (settings_.callLavatory == enabled)
+    {
+        return;
+    }
+
+    settings_.callLavatory = enabled;
+
+    PersistImmediateSetting();
+
+    emit CallLavatoryChanged();
+}
+
+bool SettingsViewModel::GetCallWater() const
+{
+    return settings_.callWater;
+}
+
+void SettingsViewModel::SetCallWater(const bool enabled)
+{
+    if (settings_.callWater == enabled)
+    {
+        return;
+    }
+
+    settings_.callWater = enabled;
+
+    PersistImmediateSetting();
+
+    emit CallWaterChanged();
+}
+
+bool SettingsViewModel::GetCallCleaning() const
+{
+    return settings_.callCleaning;
+}
+
+void SettingsViewModel::SetCallCleaning(const bool enabled)
+{
+    if (settings_.callCleaning == enabled)
+    {
+        return;
+    }
+
+    settings_.callCleaning = enabled;
+
+    PersistImmediateSetting();
+
+    emit CallCleaningChanged();
+}
+
 int SettingsViewModel::GetThemeMode() const
 {
     return settings_.themeMode;

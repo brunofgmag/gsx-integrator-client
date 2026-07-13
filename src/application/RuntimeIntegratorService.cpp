@@ -155,6 +155,11 @@ void RuntimeIntegratorService::ApplySettings(const AppSettings& settings)
     automationSettings.autoStartFlow = settings.autoStartFlow;
     automationSettings.autoStartLoading = settings.autoStartLoading;
     automationSettings.skipReposition = settings.skipReposition;
+    automationSettings.callGpu = settings.callGpu;
+    automationSettings.callCatering = settings.callCatering;
+    automationSettings.callLavatory = settings.callLavatory;
+    automationSettings.callWater = settings.callWater;
+    automationSettings.callCleaning = settings.callCleaning;
 
     runtime_->ApplySettings(automationSettings);
 }
