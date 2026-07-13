@@ -32,6 +32,7 @@ public:
     bool simbriefLoaded = false;
     bool onGround = true;
     bool goodEngineStartConfirmation = false;
+    bool gpuConnected = false;
     int takeOverCalls = 0;
 
     [[nodiscard]] bool IsAvailable() const override { return true; }
@@ -88,6 +89,7 @@ public:
     [[nodiscard]] bool IsSimbriefLoaded() const override { return simbriefLoaded; }
     [[nodiscard]] bool IsAircraftOnGround() const override { return onGround; }
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override { return goodEngineStartConfirmation; }
+    [[nodiscard]] bool IsGpuConnected() const override { return gpuConnected; }
 
     void TakeOverFuelAndPayload() override
     {

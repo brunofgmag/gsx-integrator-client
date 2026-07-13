@@ -38,6 +38,7 @@ namespace
     constexpr auto kJetwayAvailableLVar = "FSDT_GSX_JETWAY";
     constexpr auto kStairsAvailableLVar = "FSDT_GSX_STAIRS";
     constexpr auto kRepositioningStatusLVar = "FSDT_GSX_REPOSITIONING";
+    constexpr auto kGpuConnectedLVar = "FSDT_GSX_GPU_CONNECTED";
 
     // GSX Settings
     constexpr auto kGoodEngineStartLVar = "FSDT_GSX_SETTINGS_GOOD_ENGINE_START";
@@ -200,6 +201,11 @@ bool GsxStateService::AreStairsInPlace() const
 bool GsxStateService::IsJetwayInPlace() const
 {
     return varManager_->GetLVar(kJetwayAvailableLVar) == 5.0;
+}
+
+bool GsxStateService::IsGpuConnected() const
+{
+    return varManager_->GetLVar(kGpuConnectedLVar) == 1.0;
 }
 
 bool GsxStateService::AreStairsAvailable() const

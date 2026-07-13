@@ -35,6 +35,7 @@ public:
     [[nodiscard]] bool IsJetwayAvailable() const override;
     [[nodiscard]] bool IsAircraftOnGround() const override;
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override;
+    [[nodiscard]] bool IsGpuConnected() const override;
 
     void TakeOverFuelAndPayload() override;
 

@@ -46,6 +46,7 @@ public:
     [[nodiscard]] virtual bool IsSimbriefLoaded() const = 0;
     [[nodiscard]] virtual bool IsAircraftOnGround() const = 0;
     [[nodiscard]] virtual bool IsGoodEngineStartConfirmationEnabled() const = 0;
+    [[nodiscard]] virtual bool IsGpuConnected() const = 0;
 
     virtual void TakeOverFuelAndPayload() = 0;
 };

@@ -27,6 +27,7 @@ namespace
     constexpr auto kGoodEngineStart = "FSDT_GSX_SETTINGS_GOOD_ENGINE_START";
     constexpr auto kFuelCounter = "FSDT_GSX_FUEL_COUNTER";
     constexpr auto kFuelCounterMax = "FSDT_GSX_FUEL_COUNTER_MAX";
+    constexpr auto kGpuConnected = "FSDT_GSX_GPU_CONNECTED";
 }
 
 class GsxInterfaceTest final : public QObject
@@ -55,6 +56,7 @@ private slots:
     static void deboardedPassengersAccumulatesAcrossResets();
     static void takeOverFuelAndPayloadClearsAutomationLVars();
     static void refuelCounterComesFromFuelCounterLvar();
+    static void gpuConnectedFollowsLVar();
 };
 
 void GsxInterfaceTest::availabilityFollowsCouatlFlag()
@@ -395,6 +397,23 @@ void GsxInterfaceTest::refuelCounterComesFromFuelCounterLvar()
 
     gateway.lvars[kFuelCounter] = 9000.0;
     QCOMPARE(gsx.GetRefuelCounterGallons(), 9000.0);
+}
+
+void GsxInterfaceTest::gpuConnectedFollowsLVar()
+{
+    FakeVariableGateway gateway;
+
+    const GsxStateService gsx(&gateway);
+
+    QVERIFY(!gsx.IsGpuConnected());
+
+    gateway.lvars[kGpuConnected] = 1.0;
+
+    QVERIFY(gsx.IsGpuConnected());
+
+    gateway.lvars[kGpuConnected] = 0.0;
+
+    QVERIFY(!gsx.IsGpuConnected());
 }
 
 QTEST_APPLESS_MAIN(GsxInterfaceTest)
