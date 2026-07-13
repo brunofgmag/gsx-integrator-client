@@ -290,6 +290,34 @@ ColumnLayout {
                 enabled: root.integratorVm.canStartLoading
                 onClicked: root.integratorVm.startLoading()
             }
+
+            ActionButton {
+                id: restartButton
+
+                property bool armed: false
+
+                small: true
+                secondary: !restartButton.armed
+                tint: Theme.red
+                text: restartButton.armed ? qsTr("Confirm restart") : qsTr("Restart Flow")
+                enabled: root.integratorVm.connected && root.integratorVm.enabled
+                onEnabledChanged: restartButton.armed = false
+                onClicked: {
+                    if (restartButton.armed) {
+                        restartButton.armed = false;
+                        root.integratorVm.restartFlow();
+                    } else {
+                        restartButton.armed = true;
+                        disarmTimer.restart();
+                    }
+                }
+
+                Timer {
+                    id: disarmTimer
+                    interval: 3000
+                    onTriggered: restartButton.armed = false
+                }
+            }
         }
     }
 }
