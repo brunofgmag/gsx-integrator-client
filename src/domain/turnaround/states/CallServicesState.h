@@ -12,6 +12,9 @@ public:
     }
 
     [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
+
+private:
+    static bool RequestNextGroundService(TurnaroundContext& ctx);
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_CALLSERVICESSTATE_H

@@ -1,6 +1,7 @@
 #include "CallServicesState.h"
 
 #include "../TurnaroundContext.h"
+#include "../../model/AutomationSettings.h"
 #include "../../ports/Aircraft.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
@@ -13,6 +14,11 @@ namespace
 
 std::optional<TurnaroundTransition> CallServicesState::Evaluate(TurnaroundContext& ctx)
 {
+    if (RequestNextGroundService(ctx))
+    {
+        return std::nullopt;
+    }
+
     if (!ctx.aircraft->SupportsStairsOrJetways())
     {
         return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
@@ -63,4 +69,26 @@ std::optional<TurnaroundTransition> CallServicesState::Evaluate(TurnaroundContex
     }
 
     return std::nullopt;
+}
+
+bool CallServicesState::RequestNextGroundService(TurnaroundContext& ctx)
+{
+    if (ctx.settings == nullptr)
+    {
+        return false;
+    }
+
+    if (ctx.settings->callGpu && !ctx.data.gpuRequested)
+    {
+        ctx.data.gpuRequested = ctx.menuGateway->ToggleGpu();
+        return ctx.data.gpuRequested;
+    }
+
+    if (ctx.settings->callCatering && !ctx.data.cateringRequested)
+    {
+        ctx.data.cateringRequested = ctx.menuGateway->RequestCatering();
+        return ctx.data.cateringRequested;
+    }
+
+    return false;
 }
