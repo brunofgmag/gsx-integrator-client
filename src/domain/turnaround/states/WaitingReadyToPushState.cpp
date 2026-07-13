@@ -7,7 +7,7 @@ std::optional<TurnaroundTransition> WaitingReadyToPushState::Evaluate(Turnaround
 {
     if (ctx.aircraft->IsReadyToPush())
     {
-        return TurnaroundTransition{TurnaroundPhase::RequestPushback};
+        return TurnaroundTransition{TurnaroundPhase::DisconnectGpu};
     }
 
     return std::nullopt;

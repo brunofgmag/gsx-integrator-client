@@ -10,8 +10,7 @@ ColumnLayout {
     required property var settingsVm
     required property bool compact
 
-    readonly property int deboardingPhaseStart: 16
-    readonly property bool deboarding: integratorVm.phase >= root.deboardingPhaseStart
+    readonly property bool deboarding: integratorVm.inDeboardingPhase
 
     spacing: 10
 

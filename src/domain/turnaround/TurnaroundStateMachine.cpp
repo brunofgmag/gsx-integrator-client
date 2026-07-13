@@ -14,6 +14,7 @@
 #include "states/WaitingEnginesState.h"
 #include "states/WaitingAircraftReadyState.h"
 #include "states/WaitingReadyToPushState.h"
+#include "states/DisconnectGpuState.h"
 #include "states/WaitingDepartureState.h"
 #include "states/WaitingEngineShutdownState.h"
 #include "states/WaitingPowerOnState.h"
@@ -60,6 +61,7 @@ void TurnaroundStateMachine::RegisterStates()
     add(std::make_unique<RequestBoardingState>());
     add(std::make_unique<BoardingState>());
     add(std::make_unique<WaitingReadyToPushState>());
+    add(std::make_unique<DisconnectGpuState>());
     add(std::make_unique<RequestPushbackState>());
     add(std::make_unique<WaitingPushbackToStartState>());
     add(std::make_unique<WaitingEnginesState>());

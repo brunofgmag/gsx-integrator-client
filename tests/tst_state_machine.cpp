@@ -19,6 +19,7 @@ namespace
         TurnaroundPhase::RequestBoarding,
         TurnaroundPhase::Boarding,
         TurnaroundPhase::WaitingReadyToPush,
+        TurnaroundPhase::DisconnectGpu,
         TurnaroundPhase::RequestPushback,
         TurnaroundPhase::WaitingPushbackToStart,
         TurnaroundPhase::WaitingForEngines,
@@ -193,6 +194,7 @@ namespace
         void RequestPushback()
         {
             f.aircraft.readyToPush = true;
+            TickTo(TurnaroundPhase::DisconnectGpu);
             TickTo(TurnaroundPhase::RequestPushback);
 
             f.gsxService.departureState = GsxStateStatus::Callable;

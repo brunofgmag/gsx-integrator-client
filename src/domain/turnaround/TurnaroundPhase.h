@@ -14,6 +14,7 @@ enum class TurnaroundPhase : int
     RequestBoarding,
     Boarding,
     WaitingReadyToPush,
+    DisconnectGpu,
     RequestPushback,
     WaitingPushbackToStart,
     WaitingForEngines,
@@ -40,6 +41,7 @@ inline const char* TurnaroundPhaseToString(const TurnaroundPhase phase)
     case TurnaroundPhase::RequestBoarding: return "RequestBoarding";
     case TurnaroundPhase::Boarding: return "Boarding";
     case TurnaroundPhase::WaitingReadyToPush: return "WaitingReadyToPush";
+    case TurnaroundPhase::DisconnectGpu: return "DisconnectGpu";
     case TurnaroundPhase::RequestPushback: return "RequestPushback";
     case TurnaroundPhase::WaitingForEngines: return "WaitingForEngines";
     case TurnaroundPhase::WaitingPushbackToStart: return "WaitingPushbackToStart";

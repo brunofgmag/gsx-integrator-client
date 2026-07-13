@@ -29,6 +29,7 @@ private slots:
     static void fixGsxProfileReportsRejectedCommands();
     static void restartFlowDelegatesToService();
     static void restartFlowReportsRejectedCommands();
+    static void exposesInDeboardingPhaseFromSnapshot();
 };
 
 void OperationsViewModelTest::exposesUpdatedSnapshot()
@@ -335,6 +336,27 @@ void OperationsViewModelTest::restartFlowReportsRejectedCommands()
 
     QCOMPARE(service.restartFlowCalls, 1);
     QCOMPARE(viewModel.GetCommandError(), QStringLiteral("Simulator is offline."));
+}
+
+void OperationsViewModelTest::exposesInDeboardingPhaseFromSnapshot()
+{
+    FakeIntegratorService service;
+    const OperationsViewModel viewModel(&service);
+
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.Notify();
+
+    QVERIFY(!viewModel.IsInDeboardingPhase());
+
+    service.snapshot.phase = TurnaroundPhase::WaitingEngineShutdown;
+    service.Notify();
+
+    QVERIFY(viewModel.IsInDeboardingPhase());
+
+    service.snapshot.phase = TurnaroundPhase::Deboarding;
+    service.Notify();
+
+    QVERIFY(viewModel.IsInDeboardingPhase());
 }
 
 QTEST_APPLESS_MAIN(OperationsViewModelTest)

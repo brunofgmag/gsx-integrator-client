@@ -35,6 +35,8 @@ struct TurnaroundData
     int jetwayOrStairsAttempts = 0;
     bool gpuRequested = false;
     bool cateringRequested = false;
+    bool gpuDismissRequested = false;
+    int gpuDismissAttempts = 0;
     bool flightPlanRequested = false;
     bool repositionRequested = false;
     bool repositionCompleted = false;

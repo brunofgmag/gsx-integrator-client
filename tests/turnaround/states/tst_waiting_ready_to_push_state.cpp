@@ -30,7 +30,7 @@ void WaitingReadyToPushStateTest::advancesWhenReady()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+    QCOMPARE(transition->next, TurnaroundPhase::DisconnectGpu);
 }
 
 QTEST_APPLESS_MAIN(WaitingReadyToPushStateTest)

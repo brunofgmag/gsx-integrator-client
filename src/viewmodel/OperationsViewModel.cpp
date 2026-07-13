@@ -21,6 +21,7 @@ namespace
         case TurnaroundPhase::RequestBoarding: return QCoreApplication::translate("Turnaround", "Requesting boarding");
         case TurnaroundPhase::Boarding: return QCoreApplication::translate("Turnaround", "Boarding");
         case TurnaroundPhase::WaitingReadyToPush: return QCoreApplication::translate("Turnaround", "Preparing for pushback");
+        case TurnaroundPhase::DisconnectGpu: return QCoreApplication::translate("Turnaround", "Disconnecting GPU");
         case TurnaroundPhase::RequestPushback: return QCoreApplication::translate("Turnaround", "Requesting pushback");
         case TurnaroundPhase::WaitingPushbackToStart: return QCoreApplication::translate("Turnaround", "Waiting for pushback start");
         case TurnaroundPhase::WaitingForEngines: return QCoreApplication::translate("Turnaround", "Waiting for engines");
@@ -153,6 +154,11 @@ QString OperationsViewModel::phaseLabelAt(const int index)
         return {};
     }
     return PhaseLabel(static_cast<TurnaroundPhase>(index));
+}
+
+bool OperationsViewModel::IsInDeboardingPhase() const
+{
+    return snapshot_.phase >= TurnaroundPhase::WaitingEngineShutdown;
 }
 
 double OperationsViewModel::GetFuelProgress() const
