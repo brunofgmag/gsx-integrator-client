@@ -9,6 +9,7 @@ namespace
 {
     constexpr int kExitDelayTicks = 60;
     constexpr int kMaxTriggerAttempts = 3;
+    constexpr int kTriggerRetryTicks = 10;
     constexpr int kWaitTicks = 30;
     constexpr int kMaxWaitIntervals = 10;
 }
@@ -48,13 +49,24 @@ bool CabinServicesState::DispatchNextService(TurnaroundContext& ctx)
 {
     if (ctx.settings->callLavatory && !ctx.data.lavatoryRequested)
     {
-        if (ctx.menuGateway->RequestLavatory())
+        if (ctx.gsxGateway->IsServiceInProgress(GroundService::Lavatory))
         {
+            ctx.data.lavatoryActiveSeen = true;
             ctx.data.lavatoryRequested = true;
+
+            return true;
         }
-        else if (++ctx.data.lavatoryTriggerAttempts >= kMaxTriggerAttempts)
+
+        if (ctx.data.lavatoryTriggerAttempts == 0 || ctx.TickCondition(kTriggerRetryTicks))
         {
-            ctx.data.lavatoryRequested = true;
+            if (ctx.data.lavatoryTriggerAttempts >= kMaxTriggerAttempts)
+            {
+                ctx.data.lavatoryRequested = true;
+                return true;
+            }
+
+            static_cast<void>(ctx.menuGateway->RequestLavatory());
+            ++ctx.data.lavatoryTriggerAttempts;
         }
 
         return true;
@@ -62,13 +74,24 @@ bool CabinServicesState::DispatchNextService(TurnaroundContext& ctx)
 
     if (ctx.settings->callWater && !ctx.data.waterRequested)
     {
-        if (ctx.menuGateway->RequestWater())
+        if (ctx.gsxGateway->IsServiceInProgress(GroundService::Water))
         {
+            ctx.data.waterActiveSeen = true;
             ctx.data.waterRequested = true;
+
+            return true;
         }
-        else if (++ctx.data.waterTriggerAttempts >= kMaxTriggerAttempts)
+
+        if (ctx.data.waterTriggerAttempts == 0 || ctx.TickCondition(kTriggerRetryTicks))
         {
-            ctx.data.waterRequested = true;
+            if (ctx.data.waterTriggerAttempts >= kMaxTriggerAttempts)
+            {
+                ctx.data.waterRequested = true;
+                return true;
+            }
+
+            static_cast<void>(ctx.menuGateway->RequestWater());
+            ++ctx.data.waterTriggerAttempts;
         }
 
         return true;
@@ -76,13 +99,24 @@ bool CabinServicesState::DispatchNextService(TurnaroundContext& ctx)
 
     if (ctx.settings->callCleaning && !ctx.data.cleaningRequested)
     {
-        if (ctx.menuGateway->RequestCleaning())
+        if (ctx.gsxGateway->IsServiceInProgress(GroundService::Cleaning))
         {
+            ctx.data.cleaningActiveSeen = true;
             ctx.data.cleaningRequested = true;
+
+            return true;
         }
-        else if (++ctx.data.cleaningTriggerAttempts >= kMaxTriggerAttempts)
+
+        if (ctx.data.cleaningTriggerAttempts == 0 || ctx.TickCondition(kTriggerRetryTicks))
         {
-            ctx.data.cleaningRequested = true;
+            if (ctx.data.cleaningTriggerAttempts >= kMaxTriggerAttempts)
+            {
+                ctx.data.cleaningRequested = true;
+                return true;
+            }
+
+            static_cast<void>(ctx.menuGateway->RequestCleaning());
+            ++ctx.data.cleaningTriggerAttempts;
         }
 
         return true;
@@ -124,5 +158,10 @@ bool CabinServicesState::IsServiceDone(const TurnaroundContext& ctx, const bool 
         return true;
     }
 
-    return activeSeen && !ctx.gsxGateway->IsServiceInProgress(service);
+    if (!activeSeen)
+    {
+        return true;
+    }
+
+    return !ctx.gsxGateway->IsServiceInProgress(service);
 }

@@ -10,11 +10,9 @@ class CabinServicesStateTest final : public QObject
 private slots:
     static void advancesImmediatelyWhenAllDisabled();
     static void skipsCabinServicesWhenSettingsAreNull();
-    static void dispatchesAllThreeThenWaitsForCompletion();
-    static void retriesFailedTriggerWithoutSkippingOthers();
-    static void doesNotCompleteBeforeServiceSeenInProgress();
-    static void advancesAfterTimeoutWhenServiceStuck();
-    static void forcesProgressAfterMaxFailedTriggerAttempts();
+    static void confirmsEachServiceThenWaitsForCompletion();
+    static void retriesTriggerUntilServiceInProgress();
+    static void givesUpWhenServiceNeverStarts();
 };
 
 void CabinServicesStateTest::advancesImmediatelyWhenAllDisabled()
@@ -49,7 +47,7 @@ void CabinServicesStateTest::skipsCabinServicesWhenSettingsAreNull()
     QCOMPARE(f.menuGateway.requestCleaningCalls, 0);
 }
 
-void CabinServicesStateTest::dispatchesAllThreeThenWaitsForCompletion()
+void CabinServicesStateTest::confirmsEachServiceThenWaitsForCompletion()
 {
     TurnaroundStateFixture f;
     CabinServicesState state;
@@ -60,14 +58,24 @@ void CabinServicesStateTest::dispatchesAllThreeThenWaitsForCompletion()
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.requestLavatoryCalls, 1);
+    QCOMPARE(f.menuGateway.requestWaterCalls, 0);
+
+    f.gsxService.lavatoryInProgress = true;
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(f.ctx.data.lavatoryRequested);
+
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.requestWaterCalls, 1);
+    QCOMPARE(f.menuGateway.requestCleaningCalls, 0);
+
+    f.gsxService.waterInProgress = true;
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.requestCleaningCalls, 1);
 
-    f.gsxService.lavatoryInProgress = true;
-    f.gsxService.waterInProgress = true;
     f.gsxService.cleaningInProgress = true;
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 
@@ -82,33 +90,7 @@ void CabinServicesStateTest::dispatchesAllThreeThenWaitsForCompletion()
     QCOMPARE(transition->delayTicks, 60);
 }
 
-void CabinServicesStateTest::retriesFailedTriggerWithoutSkippingOthers()
-{
-    TurnaroundStateFixture f;
-    CabinServicesState state;
-
-    f.settings.callLavatory = true;
-    f.settings.callWater = true;
-    f.menuGateway.requestLavatoryResult = false;
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QCOMPARE(f.menuGateway.requestLavatoryCalls, 1);
-    QCOMPARE(f.menuGateway.requestWaterCalls, 0);
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QCOMPARE(f.menuGateway.requestLavatoryCalls, 2);
-    QCOMPARE(f.menuGateway.requestWaterCalls, 0);
-
-    f.menuGateway.requestLavatoryResult = true;
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QCOMPARE(f.menuGateway.requestLavatoryCalls, 3);
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QCOMPARE(f.menuGateway.requestWaterCalls, 1);
-}
-
-void CabinServicesStateTest::doesNotCompleteBeforeServiceSeenInProgress()
+void CabinServicesStateTest::retriesTriggerUntilServiceInProgress()
 {
     TurnaroundStateFixture f;
     CabinServicesState state;
@@ -117,21 +99,31 @@ void CabinServicesStateTest::doesNotCompleteBeforeServiceSeenInProgress()
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.requestLavatoryCalls, 1);
+    QVERIFY(!f.ctx.data.lavatoryRequested);
 
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-}
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        (void)state.Evaluate(f.ctx);
+    }
 
-void CabinServicesStateTest::advancesAfterTimeoutWhenServiceStuck()
-{
-    TurnaroundStateFixture f;
-    CabinServicesState state;
+    QVERIFY(f.menuGateway.requestLavatoryCalls >= 2);
+    QVERIFY(!f.ctx.data.lavatoryRequested);
 
-    f.settings.callLavatory = true;
     f.gsxService.lavatoryInProgress = true;
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(f.ctx.data.lavatoryRequested);
+}
+
+void CabinServicesStateTest::givesUpWhenServiceNeverStarts()
+{
+    TurnaroundStateFixture f;
+    CabinServicesState state;
+
+    f.settings.callLavatory = true;
 
     std::optional<TurnaroundTransition> transition;
-    for (int tick = 0; tick < 400 && !transition; ++tick)
+    for (int tick = 0; tick < 200 && !transition; ++tick)
     {
         ++f.ctx.data.stateTickCount;
         transition = state.Evaluate(f.ctx);
@@ -139,28 +131,6 @@ void CabinServicesStateTest::advancesAfterTimeoutWhenServiceStuck()
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);
-}
-
-void CabinServicesStateTest::forcesProgressAfterMaxFailedTriggerAttempts()
-{
-    TurnaroundStateFixture f;
-    CabinServicesState state;
-
-    f.settings.callLavatory = true;
-    f.settings.callWater = true;
-    f.menuGateway.requestLavatoryResult = false;
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QCOMPARE(f.menuGateway.requestLavatoryCalls, 1);
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QCOMPARE(f.menuGateway.requestLavatoryCalls, 2);
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QCOMPARE(f.menuGateway.requestLavatoryCalls, 3);
-    QCOMPARE(f.menuGateway.requestWaterCalls, 0);
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QCOMPARE(f.menuGateway.requestLavatoryCalls, 3);
-    QCOMPARE(f.menuGateway.requestWaterCalls, 1);
 }
 
 QTEST_APPLESS_MAIN(CabinServicesStateTest)

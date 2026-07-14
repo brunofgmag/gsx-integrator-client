@@ -16,6 +16,8 @@ private slots:
     static void advancesImmediatelyWhenJetwayAlreadyInPlace();
     static void givesUpAfterTwoAttempts();
     static void requestsGpuAndCateringWhenEnabled();
+    static void retriesCateringUntilConfirmed();
+    static void advancesWhenCateringNeverStarts();
     static void doesNotRequestGroundServicesWhenDisabled();
     static void skipsGpuToggleWhenAlreadyConnected();
     static void skipsGroundServicesWhenSettingsAreNull();
@@ -175,14 +177,66 @@ void CallServicesStateTest::requestsGpuAndCateringWhenEnabled()
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.requestCateringCalls, 1);
-    QVERIFY(f.ctx.data.cateringRequested);
+    QVERIFY(!f.ctx.data.cateringRequested);
+
+    f.gsxService.cateringInProgress = true;
 
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
+    QVERIFY(f.ctx.data.cateringRequested);
     QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
     QCOMPARE(f.menuGateway.requestCateringCalls, 1);
+}
+
+void CallServicesStateTest::retriesCateringUntilConfirmed()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.settings.callCatering = true;
+    f.aircraft.supportsStairsOrJetways = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.requestCateringCalls, 1);
+    QVERIFY(!f.ctx.data.cateringRequested);
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        (void)state.Evaluate(f.ctx);
+    }
+
+    QVERIFY(f.menuGateway.requestCateringCalls >= 2);
+    QVERIFY(!f.ctx.data.cateringRequested);
+
+    f.gsxService.cateringInProgress = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QVERIFY(f.ctx.data.cateringRequested);
+}
+
+void CallServicesStateTest::advancesWhenCateringNeverStarts()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.settings.callCatering = true;
+    f.aircraft.supportsStairsOrJetways = false;
+
+    std::optional<TurnaroundTransition> transition;
+    for (int tick = 0; tick < 200 && !transition; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        transition = state.Evaluate(f.ctx);
+    }
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
+    QVERIFY(f.ctx.data.cateringRequested);
 }
 
 void CallServicesStateTest::doesNotRequestGroundServicesWhenDisabled()

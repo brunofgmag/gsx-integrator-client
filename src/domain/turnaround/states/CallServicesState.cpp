@@ -10,6 +10,8 @@ namespace
 {
     constexpr int kRetryTicks = 120;
     constexpr int kMaxAttempts = 2;
+    constexpr int kCateringRetryTicks = 10;
+    constexpr int kMaxCateringAttempts = 3;
 }
 
 std::optional<TurnaroundTransition> CallServicesState::Evaluate(TurnaroundContext& ctx)
@@ -86,8 +88,25 @@ bool CallServicesState::RequestNextGroundService(TurnaroundContext& ctx)
 
     if (ctx.settings->callCatering && !ctx.data.cateringRequested)
     {
-        ctx.data.cateringRequested = ctx.menuGateway->RequestCatering();
-        return ctx.data.cateringRequested;
+        if (ctx.gsxGateway->IsServiceInProgress(GroundService::Catering))
+        {
+            ctx.data.cateringRequested = true;
+            return false;
+        }
+
+        if (ctx.data.cateringAttempts == 0 || ctx.TickCondition(kCateringRetryTicks))
+        {
+            if (ctx.data.cateringAttempts >= kMaxCateringAttempts)
+            {
+                ctx.data.cateringRequested = true;
+                return false;
+            }
+
+            static_cast<void>(ctx.menuGateway->RequestCatering());
+            ++ctx.data.cateringAttempts;
+        }
+
+        return true;
     }
 
     return false;
