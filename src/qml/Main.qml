@@ -36,16 +36,40 @@ ApplicationWindow {
         ? window.fittedHeight
         : Math.max(500, window.fittedHeight)
 
-    onLockedHeightChanged: Qt.callLater(window.applyLockedHeight)
-    Component.onCompleted: Qt.callLater(window.applyLockedHeight)
+    property bool heightReady: false
 
-    function applyLockedHeight() {
-        const h = window.lockedHeight
+    onLockedHeightChanged: Qt.callLater(window.applyLockedHeight)
+    Component.onCompleted: Qt.callLater(() => {
+        window.applyLockedHeight()
+        window.heightReady = true
+    })
+
+    function pinHeight(h) {
         if (h > window.maximumHeight)
             window.maximumHeight = h
         window.minimumHeight = h
         window.maximumHeight = h
-        window.height = h
+    }
+
+    function applyLockedHeight() {
+        const h = window.lockedHeight
+        if (window.heightReady) {
+            window.minimumHeight = Math.min(window.height, h)
+            window.maximumHeight = Math.max(window.height, h)
+            window.height = h
+        } else {
+            window.pinHeight(h)
+            window.height = h
+        }
+    }
+
+    Behavior on height {
+        enabled: window.heightReady
+        NumberAnimation {
+            duration: 140
+            easing.type: Easing.OutCubic
+            onRunningChanged: if (!running) window.pinHeight(window.height)
+        }
     }
 
     Settings {

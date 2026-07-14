@@ -12,7 +12,6 @@ ColumnLayout {
 
     property int sectionIndex: 0
 
-    readonly property int paneHeight: 560
     readonly property var sections: [
         qsTr("General"), qsTr("Automation"), qsTr("Services"),
         qsTr("Profiles"), qsTr("Window")
@@ -22,11 +21,12 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        Layout.preferredHeight: root.paneHeight
-        Layout.maximumHeight: root.paneHeight
+        Layout.preferredHeight: Math.max(rail.implicitHeight,
+                                         paneStack.children[root.sectionIndex]?.implicitHeight ?? 0)
         spacing: 12
 
         ColumnLayout {
+            id: rail
             Layout.preferredWidth: root.compact ? 96 : 116
             Layout.alignment: Qt.AlignTop
             spacing: 2
@@ -74,6 +74,7 @@ ColumnLayout {
         }
 
         StackLayout {
+            id: paneStack
             Layout.fillWidth: true
             Layout.fillHeight: true
             currentIndex: root.sectionIndex
