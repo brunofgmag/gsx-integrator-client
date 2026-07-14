@@ -863,6 +863,11 @@
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="24"/>
+        <source>Waiting for catering</source>
+        <translation>Waiting for catering</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="25"/>
         <source>Disconnecting GPU</source>
         <translation>Disconnecting GPU</translation>
     </message>
