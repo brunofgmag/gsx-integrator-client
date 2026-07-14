@@ -47,82 +47,74 @@ std::optional<TurnaroundTransition> CabinServicesState::Evaluate(TurnaroundConte
 
 bool CabinServicesState::DispatchNextService(TurnaroundContext& ctx)
 {
-    if (ctx.settings->callLavatory && !ctx.data.lavatoryRequested)
+    return DispatchService(ctx,
+                           ctx.settings->callLavatory,
+                           ctx.data.lavatoryRequested,
+                           ctx.data.lavatoryActiveSeen,
+                           ctx.data.lavatoryTriggerAttempts,
+                           GroundService::Lavatory)
+        || DispatchService(ctx,
+                           ctx.settings->callWater,
+                           ctx.data.waterRequested,
+                           ctx.data.waterActiveSeen,
+                           ctx.data.waterTriggerAttempts,
+                           GroundService::Water)
+        || DispatchService(ctx,
+                           ctx.settings->callCleaning,
+                           ctx.data.cleaningRequested,
+                           ctx.data.cleaningActiveSeen,
+                           ctx.data.cleaningTriggerAttempts,
+                           GroundService::Cleaning);
+}
+
+bool CabinServicesState::DispatchService(const TurnaroundContext& ctx,
+                                         const bool enabled,
+                                         bool& requested,
+                                         bool& activeSeen,
+                                         int& attempts,
+                                         const GroundService service)
+{
+    if (!enabled || requested)
     {
-        if (ctx.gsxGateway->IsServiceInProgress(GroundService::Lavatory))
-        {
-            ctx.data.lavatoryActiveSeen = true;
-            ctx.data.lavatoryRequested = true;
+        return false;
+    }
 
-            return true;
-        }
-
-        if (ctx.data.lavatoryTriggerAttempts == 0 || ctx.TickCondition(kTriggerRetryTicks))
-        {
-            if (ctx.data.lavatoryTriggerAttempts >= kMaxTriggerAttempts)
-            {
-                ctx.data.lavatoryRequested = true;
-                return true;
-            }
-
-            static_cast<void>(ctx.menuGateway->RequestLavatory());
-            ++ctx.data.lavatoryTriggerAttempts;
-        }
+    if (ctx.gsxGateway->IsServiceInProgress(service))
+    {
+        activeSeen = true;
+        requested = true;
 
         return true;
     }
 
-    if (ctx.settings->callWater && !ctx.data.waterRequested)
+    if (attempts == 0 || ctx.TickCondition(kTriggerRetryTicks))
     {
-        if (ctx.gsxGateway->IsServiceInProgress(GroundService::Water))
+        if (attempts >= kMaxTriggerAttempts)
         {
-            ctx.data.waterActiveSeen = true;
-            ctx.data.waterRequested = true;
-
+            requested = true;
             return true;
         }
 
-        if (ctx.data.waterTriggerAttempts == 0 || ctx.TickCondition(kTriggerRetryTicks))
-        {
-            if (ctx.data.waterTriggerAttempts >= kMaxTriggerAttempts)
-            {
-                ctx.data.waterRequested = true;
-                return true;
-            }
-
-            static_cast<void>(ctx.menuGateway->RequestWater());
-            ++ctx.data.waterTriggerAttempts;
-        }
-
-        return true;
+        static_cast<void>(SendServiceTrigger(ctx, service));
+        ++attempts;
     }
 
-    if (ctx.settings->callCleaning && !ctx.data.cleaningRequested)
+    return true;
+}
+
+bool CabinServicesState::SendServiceTrigger(const TurnaroundContext& ctx, const GroundService service)
+{
+    switch (service)
     {
-        if (ctx.gsxGateway->IsServiceInProgress(GroundService::Cleaning))
-        {
-            ctx.data.cleaningActiveSeen = true;
-            ctx.data.cleaningRequested = true;
-
-            return true;
-        }
-
-        if (ctx.data.cleaningTriggerAttempts == 0 || ctx.TickCondition(kTriggerRetryTicks))
-        {
-            if (ctx.data.cleaningTriggerAttempts >= kMaxTriggerAttempts)
-            {
-                ctx.data.cleaningRequested = true;
-                return true;
-            }
-
-            static_cast<void>(ctx.menuGateway->RequestCleaning());
-            ++ctx.data.cleaningTriggerAttempts;
-        }
-
-        return true;
+    case GroundService::Lavatory:
+        return ctx.menuGateway->RequestLavatory();
+    case GroundService::Water:
+        return ctx.menuGateway->RequestWater();
+    case GroundService::Cleaning:
+        return ctx.menuGateway->RequestCleaning();
+    default:
+        return false;
     }
-
-    return false;
 }
 
 void CabinServicesState::UpdateActiveSeen(TurnaroundContext& ctx)

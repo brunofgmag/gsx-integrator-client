@@ -58,6 +58,7 @@ private slots:
     static void refuelCounterComesFromFuelCounterLvar();
     static void gpuConnectedFollowsLVar();
     static void serviceInProgressFollowsRemoteStateRaw();
+    static void serviceInProgressFalseWhenAbsentOrNoRemote();
 };
 
 void GsxInterfaceTest::availabilityFollowsCouatlFlag()
@@ -422,13 +423,31 @@ void GsxInterfaceTest::serviceInProgressFollowsRemoteStateRaw()
     FakeVariableGateway gateway;
     GsxRemoteState remote;
     remote.services.push_back(GsxRemoteService{"Catering", "", "", 5, "", "", "", false, false});
+    remote.services.push_back(GsxRemoteService{"Water", "", "", 4, "", "", "", false, false});
     remote.services.push_back(GsxRemoteService{"Lavatory", "", "", 1, "", "", "", true, false});
+    remote.services.push_back(GsxRemoteService{"Cleaning", "", "", 6, "", "", "", false, false});
 
     const GsxStateService gsx(&gateway, &remote);
 
     QVERIFY(gsx.IsServiceInProgress(GroundService::Catering));
+    QVERIFY(gsx.IsServiceInProgress(GroundService::Water));
     QVERIFY(!gsx.IsServiceInProgress(GroundService::Lavatory));
-    QVERIFY(!gsx.IsServiceInProgress(GroundService::Water));
+    QVERIFY(!gsx.IsServiceInProgress(GroundService::Cleaning));
+}
+
+void GsxInterfaceTest::serviceInProgressFalseWhenAbsentOrNoRemote()
+{
+    FakeVariableGateway gateway;
+    GsxRemoteState remote;
+    remote.services.push_back(GsxRemoteService{"Catering", "", "", 5, "", "", "", false, false});
+
+    const GsxStateService withRemote(&gateway, &remote);
+
+    QVERIFY(!withRemote.IsServiceInProgress(GroundService::Lavatory));
+
+    const GsxStateService noRemote(&gateway);
+
+    QVERIFY(!noRemote.IsServiceInProgress(GroundService::Catering));
 }
 
 QTEST_APPLESS_MAIN(GsxInterfaceTest)
