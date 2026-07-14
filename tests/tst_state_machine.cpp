@@ -19,6 +19,7 @@ namespace
         TurnaroundPhase::RequestBoarding,
         TurnaroundPhase::Boarding,
         TurnaroundPhase::WaitingReadyToPush,
+        TurnaroundPhase::WaitCatering,
         TurnaroundPhase::DisconnectGpu,
         TurnaroundPhase::RequestPushback,
         TurnaroundPhase::WaitingPushbackToStart,
@@ -195,6 +196,7 @@ namespace
         void RequestPushback()
         {
             f.aircraft.readyToPush = true;
+            TickTo(TurnaroundPhase::WaitCatering);
             TickTo(TurnaroundPhase::DisconnectGpu);
             TickTo(TurnaroundPhase::RequestPushback);
 

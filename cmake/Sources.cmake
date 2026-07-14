@@ -28,6 +28,8 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/states/WaitingAircraftReadyState.h
         src/domain/turnaround/states/WaitingReadyToPushState.cpp
         src/domain/turnaround/states/WaitingReadyToPushState.h
+        src/domain/turnaround/states/WaitCateringState.cpp
+        src/domain/turnaround/states/WaitCateringState.h
         src/domain/turnaround/states/DisconnectGpuState.cpp
         src/domain/turnaround/states/DisconnectGpuState.h
         src/domain/turnaround/states/CallServicesState.cpp

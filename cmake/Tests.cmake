@@ -51,6 +51,7 @@ set(TURNAROUND_STATE_TESTS
         gsxi-turnaround-boarding-state-tests turnaround-state-boarding tests/turnaround/states/tst_boarding_state.cpp
         gsxi-turnaround-waiting-aircraft-ready-state-tests turnaround-state-waiting-aircraft-ready tests/turnaround/states/tst_waiting_aircraft_ready_state.cpp
         gsxi-turnaround-waiting-ready-to-push-state-tests turnaround-state-waiting-ready-to-push tests/turnaround/states/tst_waiting_ready_to_push_state.cpp
+        gsxi-turnaround-wait-catering-state-tests turnaround-state-wait-catering tests/turnaround/states/tst_wait_catering_state.cpp
         gsxi-turnaround-disconnect-gpu-state-tests turnaround-state-disconnect-gpu tests/turnaround/states/tst_disconnect_gpu_state.cpp
         gsxi-turnaround-request-pushback-state-tests turnaround-state-request-pushback tests/turnaround/states/tst_request_pushback_state.cpp
         gsxi-turnaround-waiting-engines-state-tests turnaround-state-waiting-engines tests/turnaround/states/tst_waiting_engines_state.cpp
