@@ -2,6 +2,7 @@
 
 #include "sim/SessionReadiness.h"
 #include "../infrastructure/aircraft/AircraftFactory.h"
+#include "../infrastructure/aircraft/AircraftRegistry.h"
 #include "../infrastructure/logging/LogMacros.h"
 #include "../infrastructure/gsx/GsxAircraftProfile.h"
 #include "../infrastructure/gsx/GsxRemoteStateReducer.h"
@@ -304,13 +305,14 @@ void IntegratorRuntime::ResolveAircraft()
         return;
     }
 
-    aircraft_ = DetectAircraft(&varGateway_, &status_);
+    aircraft_ = DetectAircraft(&varGateway_, &status_, &aircraftDescriptor_);
     if (aircraft_)
     {
         status_.aircraftSupported = true;
         gsxProfileRoots_ = GsxAircraftProfile::ProfileRootsFor(aircraft_->GetName());
         gsxProfileFlagsMissing_ = GsxAircraftProfile::FlagsMissingProfile(aircraft_->GetName());
         CheckGsxProfile();
+        emit Updated();
     }
 }
 
@@ -398,6 +400,11 @@ bool IntegratorRuntime::IsSessionReady()
 QString IntegratorRuntime::GetAircraftName() const
 {
     return aircraft_ ? QString::fromUtf8(aircraft_->GetName()) : QString();
+}
+
+std::string IntegratorRuntime::GetAircraftProfileId() const
+{
+    return aircraft_ && aircraftDescriptor_ ? aircraftDescriptor_->id : std::string();
 }
 
 bool IntegratorRuntime::IsAircraftRefuelByGsx() const

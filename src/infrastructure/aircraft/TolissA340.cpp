@@ -312,7 +312,7 @@ namespace
             {MatchField::Title, MatchOp::Contains, "Aerosoft A346"},
             {MatchField::AtcModel, MatchOp::Equals, "A346"}
         },
-        &CreateTolissA340
+        &CreateTolissA340, "toliss-a340", "A346", RefuelBy::Self
     };
 
     [[maybe_unused]] const AircraftRegistration kTolissA340Registration{kTolissA340Descriptor};

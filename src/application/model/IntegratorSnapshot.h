@@ -22,6 +22,7 @@ struct IntegratorSnapshot
     bool gsxProfileFixable = false;
 
     std::string aircraftName;
+    std::string aircraftProfileId;
     TurnaroundPhase phase = TurnaroundPhase::WaitingFlightPlan;
     FlightPlanStatus flightPlanStatus = FlightPlanStatus::Idle;
 
@@ -56,6 +57,7 @@ inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapsho
         lhs.gsxProfileConflict == rhs.gsxProfileConflict &&
         lhs.gsxProfileFixable == rhs.gsxProfileFixable &&
         lhs.aircraftName == rhs.aircraftName &&
+        lhs.aircraftProfileId == rhs.aircraftProfileId &&
         lhs.phase == rhs.phase &&
         lhs.flightPlanStatus == rhs.flightPlanStatus &&
         nearlyEqual(lhs.fuelProgress, rhs.fuelProgress) &&

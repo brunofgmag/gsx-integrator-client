@@ -271,7 +271,9 @@ gsxi_add_qt_test(gsxi-commbus-install-probe-tests commbus-install-probe
 
 gsxi_add_qt_test(gsxi-automation-settings-tests automation-settings
         tests/tst_automation_settings.cpp
-        src/domain/model/AutomationSettings.h)
+        src/domain/model/AutomationSettings.h
+        src/application/model/AircraftProfile.h
+        src/application/model/EffectiveSettings.h)
 
 gsxi_add_qt_test(gsxi-command-result-tests command-result
         tests/tst_command_result.cpp

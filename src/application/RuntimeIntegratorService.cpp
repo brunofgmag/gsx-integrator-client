@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <QtCore/QCoreApplication>
 #include "IntegratorRuntime.h"
+#include "model/EffectiveSettings.h"
 #include "../domain/model/AutomationStatus.h"
 #include "../domain/model/AutomationSettings.h"
 #include "../domain/turnaround/TurnaroundPhase.h"
@@ -10,7 +11,7 @@
 RuntimeIntegratorService::RuntimeIntegratorService(IntegratorRuntime* runtime, QObject* parent)
     : QObject(parent), runtime_(runtime)
 {
-    connect(runtime_, &IntegratorRuntime::Updated, this, &RuntimeIntegratorService::NotifyObservers);
+    connect(runtime_, &IntegratorRuntime::Updated, this, &RuntimeIntegratorService::OnRuntimeUpdated);
 }
 
 IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
@@ -34,6 +35,7 @@ IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
         && runtime_->Settings().simbriefPilotId > 0
         && runtime_->GetPhase() <= TurnaroundPhase::WaitingFlightPlan;
     snapshot.aircraftName = runtime_->GetAircraftName().toStdString();
+    snapshot.aircraftProfileId = runtime_->GetAircraftProfileId();
     snapshot.refuelByGsx = runtime_->IsAircraftRefuelByGsx();
     snapshot.refuelBySelf = runtime_->IsAircraftRefuelBySelf();
     snapshot.gsxProfileConflict = runtime_->HasGsxProfileConflict();
@@ -148,20 +150,23 @@ CommandResult RuntimeIntegratorService::FixGsxProfile()
 
 void RuntimeIntegratorService::ApplySettings(const AppSettings& settings)
 {
-    AutomationSettings automationSettings;
-    automationSettings.simbriefPilotId = settings.simbriefPilotId;
-    automationSettings.fuelRateKgs = settings.fuelRateKgs;
-    automationSettings.autoSelectGsxChoice = settings.autoSelectGsxChoice;
-    automationSettings.autoStartFlow = settings.autoStartFlow;
-    automationSettings.autoStartLoading = settings.autoStartLoading;
-    automationSettings.skipReposition = settings.skipReposition;
-    automationSettings.callGpu = settings.callGpu;
-    automationSettings.callCatering = settings.callCatering;
-    automationSettings.callLavatory = settings.callLavatory;
-    automationSettings.callWater = settings.callWater;
-    automationSettings.callCleaning = settings.callCleaning;
+    appSettings_ = settings;
+    PushEffectiveSettings();
+}
 
-    runtime_->ApplySettings(automationSettings);
+void RuntimeIntegratorService::PushEffectiveSettings()
+{
+    appliedProfileId_ = runtime_->GetAircraftProfileId();
+    runtime_->ApplySettings(ResolveAutomationSettings(appSettings_, appliedProfileId_));
+}
+
+void RuntimeIntegratorService::OnRuntimeUpdated()
+{
+    if (runtime_->GetAircraftProfileId() != appliedProfileId_)
+    {
+        PushEffectiveSettings();
+    }
+    NotifyObservers();
 }
 
 void RuntimeIntegratorService::AddObserver(IntegratorServiceObserver* observer)

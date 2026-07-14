@@ -3,8 +3,12 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QString>
+#include <QtCore/QVariantList>
 #include <functional>
+#include <map>
+#include <vector>
 #include "../application/model/AppSettings.h"
+#include "../application/model/AircraftProfile.h"
 
 class SettingsRepository;
 class IntegratorService;
@@ -37,6 +41,28 @@ class SettingsViewModel final : public QObject
     Q_PROPERTY(QString validationMessage READ GetValidationMessage NOTIFY ValidationChanged)
     Q_PROPERTY(QString saveMessage READ GetSaveMessage NOTIFY SaveResultChanged)
     Q_PROPERTY(bool saveError READ HasSaveError NOTIFY SaveResultChanged)
+    Q_PROPERTY(QVariantList profileModel READ GetProfileModel NOTIFY ProfileModelChanged)
+    Q_PROPERTY(int selectedProfileIndex READ GetSelectedProfileIndex
+        WRITE SetSelectedProfileIndex NOTIFY ProfileSelectionChanged)
+    Q_PROPERTY(int detectedProfileIndex READ GetDetectedProfileIndex NOTIFY ProfileSelectionChanged)
+    Q_PROPERTY(bool profileFuelEditable READ GetProfileFuelEditable NOTIFY ProfileSelectionChanged)
+    Q_PROPERTY(QString profileFuelBadge READ GetProfileFuelBadge NOTIFY ProfileSelectionChanged)
+    Q_PROPERTY(bool profileUseGlobal READ GetProfileUseGlobal
+        WRITE SetProfileUseGlobal NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(QString profileFuelRateText READ GetProfileFuelRateText
+        WRITE SetProfileFuelRateText NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profileSkipReposition READ GetProfileSkipReposition
+        WRITE SetProfileSkipReposition NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profileCallGpu READ GetProfileCallGpu
+        WRITE SetProfileCallGpu NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profileCallCatering READ GetProfileCallCatering
+        WRITE SetProfileCallCatering NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profileCallLavatory READ GetProfileCallLavatory
+        WRITE SetProfileCallLavatory NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profileCallWater READ GetProfileCallWater
+        WRITE SetProfileCallWater NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profileCallCleaning READ GetProfileCallCleaning
+        WRITE SetProfileCallCleaning NOTIFY ProfileDraftChanged)
 
 public:
     enum ThemeMode { Light = 0, Dark = 1, System = 2 };
@@ -49,6 +75,7 @@ public:
 
     explicit SettingsViewModel(SettingsRepository* repository,
                                IntegratorService* integratorService,
+                               std::vector<AircraftProfileInfo> profileInfos = {},
                                QObject* parent = nullptr);
 
     [[nodiscard]] QString GetSimbriefPilotIdText() const;
@@ -116,6 +143,40 @@ public:
     Q_INVOKABLE bool save();
     Q_INVOKABLE void clearSaveMessage();
 
+    [[nodiscard]] QVariantList GetProfileModel() const;
+    [[nodiscard]] int GetSelectedProfileIndex() const;
+    void SetSelectedProfileIndex(int index);
+    [[nodiscard]] int GetDetectedProfileIndex() const;
+    [[nodiscard]] bool GetProfileFuelEditable() const;
+    [[nodiscard]] QString GetProfileFuelBadge() const;
+    Q_INVOKABLE void selectDetectedProfile();
+    Q_INVOKABLE void setProfileAsGlobalDefault();
+    Q_INVOKABLE void applyProfileToAllProfiles();
+
+    [[nodiscard]] bool GetProfileUseGlobal() const;
+    void SetProfileUseGlobal(bool useGlobal);
+
+    [[nodiscard]] QString GetProfileFuelRateText() const;
+    void SetProfileFuelRateText(const QString& rate);
+
+    [[nodiscard]] bool GetProfileSkipReposition() const;
+    void SetProfileSkipReposition(bool enabled);
+
+    [[nodiscard]] bool GetProfileCallGpu() const;
+    void SetProfileCallGpu(bool enabled);
+
+    [[nodiscard]] bool GetProfileCallCatering() const;
+    void SetProfileCallCatering(bool enabled);
+
+    [[nodiscard]] bool GetProfileCallLavatory() const;
+    void SetProfileCallLavatory(bool enabled);
+
+    [[nodiscard]] bool GetProfileCallWater() const;
+    void SetProfileCallWater(bool enabled);
+
+    [[nodiscard]] bool GetProfileCallCleaning() const;
+    void SetProfileCallCleaning(bool enabled);
+
 signals:
     void SimbriefPilotIdTextChanged();
     void FuelRateTextChanged();
@@ -137,19 +198,39 @@ signals:
     void TrayTipShownChanged();
     void ValidationChanged();
     void SaveResultChanged();
+    void ProfileModelChanged();
+    void ProfileSelectionChanged();
+    void ProfileDraftChanged();
 
 private:
     struct Draft
     {
         int pilotId = 0;
         double fuelRateKgs = 0.0;
+        std::map<std::string, double> profileFuelRates;
         bool valid = false;
         QString error;
+    };
+
+    struct ProfileDraft
+    {
+        bool useGlobal = true;
+        QString fuelRateText;
+        bool skipReposition = false;
+        bool callGpu = false;
+        bool callCatering = false;
+        bool callLavatory = false;
+        bool callWater = false;
+        bool callCleaning = false;
     };
 
     [[nodiscard]] Draft Validate() const;
     void PersistImmediateSetting();
     void SetSaveResult(QString message, bool error);
+    void RefreshDetectedProfile();
+    [[nodiscard]] ProfileDraft& SelectedDraft();
+    [[nodiscard]] const ProfileDraft& SelectedDraft() const;
+    void TouchProfileDraft();
 
     SettingsRepository* repository_;
     IntegratorService* integratorService_;
@@ -161,6 +242,11 @@ private:
     QString fuelRateText_;
     QString saveMessage_;
     bool saveError_ = false;
+
+    std::vector<AircraftProfileInfo> profileInfos_;
+    int selectedProfileIndex_ = 0;
+    int detectedProfileIndex_ = -1;
+    std::vector<ProfileDraft> profileDrafts_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_SETTINGSVIEWMODEL_H

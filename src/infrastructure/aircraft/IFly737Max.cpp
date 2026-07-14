@@ -192,7 +192,7 @@ namespace
         {
             {MatchField::Title, MatchOp::Contains, "iFly 737-MAX"}
         },
-        &CreateIFly737Max
+        &CreateIFly737Max, "ifly-737max8", "B38M", RefuelBy::Gsx
     };
 
     [[maybe_unused]] const AircraftRegistration kIFly737MaxRegistration{kIFly737MaxDescriptor};

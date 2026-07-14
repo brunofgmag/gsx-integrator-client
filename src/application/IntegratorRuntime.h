@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <string>
 #include <vector>
 #include <QtCore/QObject>
 #include <QtCore/QString>
@@ -22,6 +23,7 @@
 #include "../infrastructure/gsx/GsxRemoteState.h"
 
 class Aircraft;
+struct AircraftDescriptor;
 
 class IntegratorRuntime final : public QObject
 {
@@ -44,6 +46,7 @@ public:
     [[nodiscard]] TurnaroundPhase GetPhase() const { return stateMachine_.GetPhase(); }
     [[nodiscard]] bool IsLoadingConfirmed() const { return stateMachine_.IsLoadingConfirmed(); }
     [[nodiscard]] QString GetAircraftName() const;
+    [[nodiscard]] std::string GetAircraftProfileId() const;
     [[nodiscard]] bool IsAircraftRefuelByGsx() const;
     [[nodiscard]] bool IsAircraftRefuelBySelf() const;
     [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfileConflict_; }
@@ -92,6 +95,7 @@ private:
     SimbriefClient simbriefClient_;
     SimConnectSession simConnect_;
     std::unique_ptr<Aircraft> aircraft_;
+    const AircraftDescriptor* aircraftDescriptor_ = nullptr;
 
     QTimer dispatchTimer_;
     QTimer reconnectTimer_;

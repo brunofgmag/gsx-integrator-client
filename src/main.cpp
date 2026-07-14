@@ -13,6 +13,7 @@
 #include <QtQuick/QQuickWindow>
 #include "application/IntegratorRuntime.h"
 #include "application/RuntimeIntegratorService.h"
+#include "infrastructure/aircraft/AircraftFactory.h"
 #include "infrastructure/settings/QSettingsRepository.h"
 #include "infrastructure/platform/ShowWindowMessageFilter.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
@@ -127,7 +128,8 @@ int main(int argc, char* argv[])
 
     IntegratorRuntime runtime;
     RuntimeIntegratorService integratorService(&runtime);
-    SettingsViewModel settingsViewModel(&settingsRepository, &integratorService);
+    SettingsViewModel settingsViewModel(&settingsRepository, &integratorService,
+                                        SupportedAircraftProfiles());
     OperationsViewModel operationsViewModel(&integratorService);
 
     GithubUpdateService updateService(

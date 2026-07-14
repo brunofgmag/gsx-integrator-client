@@ -20,11 +20,20 @@ namespace
     constexpr auto kKeyCloseToTray = "ui/closeToTray";
     constexpr auto kKeyMinimizeToTray = "ui/minimizeToTray";
     constexpr auto kKeyTrayTipShown = "ui/trayTipShown";
+    constexpr auto kGroupProfiles = "profiles";
+    constexpr auto kKeyProfileUseGlobal = "useGlobal";
+    constexpr auto kKeyProfileFuelRateKgs = "fuelRateKgs";
+    constexpr auto kKeyProfileSkipReposition = "skipReposition";
+    constexpr auto kKeyProfileCallGpu = "callGpu";
+    constexpr auto kKeyProfileCallCatering = "callCatering";
+    constexpr auto kKeyProfileCallLavatory = "callLavatory";
+    constexpr auto kKeyProfileCallWater = "callWater";
+    constexpr auto kKeyProfileCallCleaning = "callCleaning";
 }
 
 AppSettings QSettingsRepository::Load() const
 {
-    const QSettings settings;
+    QSettings settings;
 
     AppSettings result;
     result.simbriefPilotId = settings.value(kKeySimbriefPilotId, 0).toInt();
@@ -52,6 +61,26 @@ AppSettings QSettingsRepository::Load() const
     result.minimizeToTray = settings.value(kKeyMinimizeToTray, true).toBool();
     result.trayTipShown = settings.value(kKeyTrayTipShown, false).toBool();
 
+    settings.beginGroup(kGroupProfiles);
+    const QStringList profileIds = settings.childGroups();
+    for (const QString& profileId : profileIds)
+    {
+        settings.beginGroup(profileId);
+        AircraftProfile profile;
+        profile.useGlobal = settings.value(kKeyProfileUseGlobal, false).toBool();
+        profile.fuelRateKgs = settings.value(kKeyProfileFuelRateKgs,
+                                             AutomationSettings::kDefaultFuelRateKgs).toDouble();
+        profile.skipReposition = settings.value(kKeyProfileSkipReposition, false).toBool();
+        profile.callGpu = settings.value(kKeyProfileCallGpu, false).toBool();
+        profile.callCatering = settings.value(kKeyProfileCallCatering, false).toBool();
+        profile.callLavatory = settings.value(kKeyProfileCallLavatory, false).toBool();
+        profile.callWater = settings.value(kKeyProfileCallWater, false).toBool();
+        profile.callCleaning = settings.value(kKeyProfileCallCleaning, false).toBool();
+        result.profiles.emplace(profileId.toStdString(), profile);
+        settings.endGroup();
+    }
+    settings.endGroup();
+
     return result;
 }
 
@@ -75,6 +104,28 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyCloseToTray, values.closeToTray);
     settings.setValue(kKeyMinimizeToTray, values.minimizeToTray);
     settings.setValue(kKeyTrayTipShown, values.trayTipShown);
+
+    settings.beginGroup(kGroupProfiles);
+    settings.remove("");
+    for (const auto& [profileId, profile] : values.profiles)
+    {
+        if (profile.useGlobal)
+        {
+            continue;
+        }
+        settings.beginGroup(QString::fromStdString(profileId));
+        settings.setValue(kKeyProfileUseGlobal, profile.useGlobal);
+        settings.setValue(kKeyProfileFuelRateKgs, profile.fuelRateKgs);
+        settings.setValue(kKeyProfileSkipReposition, profile.skipReposition);
+        settings.setValue(kKeyProfileCallGpu, profile.callGpu);
+        settings.setValue(kKeyProfileCallCatering, profile.callCatering);
+        settings.setValue(kKeyProfileCallLavatory, profile.callLavatory);
+        settings.setValue(kKeyProfileCallWater, profile.callWater);
+        settings.setValue(kKeyProfileCallCleaning, profile.callCleaning);
+        settings.endGroup();
+    }
+    settings.endGroup();
+
     settings.sync();
 
     return settings.status() == QSettings::NoError;

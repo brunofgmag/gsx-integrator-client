@@ -1,7 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_APPSETTINGS_H
 #define GSX_INTEGRATOR_CLIENT_APPSETTINGS_H
 
+#include <map>
 #include <string>
+#include "AircraftProfile.h"
 #include "../../domain/model/AutomationSettings.h"
 
 struct AppSettings
@@ -23,6 +25,7 @@ struct AppSettings
     bool closeToTray = true;
     bool minimizeToTray = true;
     bool trayTipShown = false;
+    std::map<std::string, AircraftProfile> profiles;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_APPSETTINGS_H

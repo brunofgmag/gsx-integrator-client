@@ -276,7 +276,7 @@ namespace
             {MatchField::AtcModel, MatchOp::Equals, "MD11"},
             {MatchField::AtcModel, MatchOp::Equals, "MD11F"}
         },
-        &CreateTfdiMd11
+        &CreateTfdiMd11, "tfdi-md11", "MD11", RefuelBy::Self
     };
 
     [[maybe_unused]] const AircraftRegistration kTfdiMd11Registration{kTfdiMd11Descriptor};
