@@ -41,6 +41,13 @@ struct TurnaroundData
     bool lavatoryRequested = false;
     bool waterRequested = false;
     bool cleaningRequested = false;
+    bool lavatoryActiveSeen = false;
+    bool waterActiveSeen = false;
+    bool cleaningActiveSeen = false;
+    int lavatoryTriggerAttempts = 0;
+    int waterTriggerAttempts = 0;
+    int cleaningTriggerAttempts = 0;
+    int cabinWaitIntervals = 0;
     bool flightPlanRequested = false;
     bool repositionRequested = false;
     bool repositionCompleted = false;

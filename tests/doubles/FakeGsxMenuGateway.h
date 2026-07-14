@@ -11,6 +11,9 @@ public:
     bool confirmGoodEnginesResult = true;
     bool completePushbackResult = true;
     bool completeRefuelResult = true;
+    bool requestLavatoryResult = true;
+    bool requestWaterResult = true;
+    bool requestCleaningResult = true;
 
     int callJetwayCalls = 0;
     int callStairsCalls = 0;
@@ -110,19 +113,19 @@ public:
     [[nodiscard]] bool RequestLavatory() override
     {
         ++requestLavatoryCalls;
-        return true;
+        return requestLavatoryResult;
     }
 
     [[nodiscard]] bool RequestWater() override
     {
         ++requestWaterCalls;
-        return true;
+        return requestWaterResult;
     }
 
     [[nodiscard]] bool RequestCleaning() override
     {
         ++requestCleaningCalls;
-        return true;
+        return requestCleaningResult;
     }
 
     void DisableGsxMenu() override {}
