@@ -33,6 +33,8 @@ private slots:
     static void groundServicesPersistImmediately();
     static void traySettingsDefaultToEnabled();
     static void traySettingsPersistImmediately();
+    static void streamerModeDefaultsToDisabled();
+    static void streamerModePersistsImmediately();
     static void rejectsNonNumericFuelRate();
     static void rejectsNonPositiveFuelRate();
     static void emptyPilotIdIsAcceptedAsZero();
@@ -298,6 +300,32 @@ void SettingsViewModelTest::traySettingsPersistImmediately()
     viewModel.SetCloseToTray(false);
     viewModel.SetMinimizeToTray(false);
     viewModel.SetTrayTipShown(true);
+
+    QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::streamerModeDefaultsToDisabled()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    const SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(!viewModel.GetStreamerMode());
+}
+
+void SettingsViewModelTest::streamerModePersistsImmediately()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    viewModel.SetStreamerMode(true);
+
+    QCOMPARE(repository.saveCalls, 1);
+    QVERIFY(repository.stored.streamerMode);
+
+    const int savesBefore = repository.saveCalls;
+    viewModel.SetStreamerMode(true);
 
     QCOMPARE(repository.saveCalls, savesBefore);
 }

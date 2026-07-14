@@ -26,6 +26,7 @@ ColumnLayout {
             font.pixelSize: 12
             horizontalAlignment: TextInput.AlignRight
             leftPadding: 10
+            echoMode: root.settingsVm.streamerMode ? TextInput.Password : TextInput.Normal
             validator: IntValidator {
                 bottom: 1
             }
@@ -39,6 +40,14 @@ ColumnLayout {
                 border.width: 1
             }
         }
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        title: qsTr("Streamer mode")
+        caption: qsTr("Hides personal IDs and credentials")
+        checked: root.settingsVm.streamerMode
+        onToggled: checked => root.settingsVm.streamerMode = checked
     }
 
     SettingRow {

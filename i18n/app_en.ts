@@ -254,68 +254,78 @@
         <translation>Used to fetch your latest OFP</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="46"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="47"/>
+        <source>Streamer mode</source>
+        <translation>Streamer mode</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="48"/>
+        <source>Hides personal IDs and credentials</source>
+        <translation>Hides personal IDs and credentials</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="55"/>
         <source>Updates</source>
         <translation>Updates</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="47"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="56"/>
         <source>How new versions are installed</source>
         <translation>How new versions are installed</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="48"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="57"/>
         <source>Auto downloads updates and applies them when the app closes. Notify only shows an alert in the header. Manual never checks on its own.</source>
         <translation>Auto downloads updates and applies them when the app closes. Notify only shows an alert in the header. Manual never checks on its own.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="52"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="52"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
         <source>Notify</source>
         <translation>Notify</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="52"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
         <source>Manual</source>
         <translation>Manual</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="60"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="69"/>
         <source>Theme</source>
         <translation>Theme</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="70"/>
         <source>&quot;Windows&quot; follows the system</source>
         <translation>&quot;Windows&quot; follows the system</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="65"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="74"/>
         <source>Light</source>
         <translation>Light</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="65"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="74"/>
         <source>Dark</source>
         <translation>Dark</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="65"/>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="78"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="74"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="87"/>
         <source>Windows</source>
         <translation>Windows</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="73"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="82"/>
         <source>Language</source>
         <translation>Language</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="74"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="83"/>
         <source>&quot;Windows&quot; uses the system language</source>
         <translation>&quot;Windows&quot; uses the system language</translation>
     </message>
@@ -411,75 +421,75 @@
     <name>Main</name>
     <message>
         <location filename="../src/qml/Main.qml" line="16"/>
-        <location filename="../src/qml/Main.qml" line="75"/>
-        <location filename="../src/qml/Main.qml" line="157"/>
-        <location filename="../src/qml/Main.qml" line="158"/>
+        <location filename="../src/qml/Main.qml" line="99"/>
+        <location filename="../src/qml/Main.qml" line="181"/>
+        <location filename="../src/qml/Main.qml" line="182"/>
         <source>GSX Integrator</source>
         <translation>GSX Integrator</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="76"/>
+        <location filename="../src/qml/Main.qml" line="100"/>
         <source>Still running in the tray. Right-click the icon to open or quit.</source>
         <translation>Still running in the tray. Right-click the icon to open or quit.</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="162"/>
+        <location filename="../src/qml/Main.qml" line="186"/>
         <source>Open</source>
         <translation>Open</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="143"/>
-        <location filename="../src/qml/Main.qml" line="166"/>
+        <location filename="../src/qml/Main.qml" line="167"/>
+        <location filename="../src/qml/Main.qml" line="190"/>
         <source>Quit</source>
         <translation>Quit</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="123"/>
+        <location filename="../src/qml/Main.qml" line="147"/>
         <source>Quit GSX Integrator?</source>
         <translation>Quit GSX Integrator?</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="136"/>
+        <location filename="../src/qml/Main.qml" line="160"/>
         <source>Cancel</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="230"/>
+        <location filename="../src/qml/Main.qml" line="254"/>
         <source>Restart to update</source>
         <translation>Restart to update</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="232"/>
+        <location filename="../src/qml/Main.qml" line="256"/>
         <source>↓ CommBus</source>
         <translation>↓ CommBus</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="234"/>
+        <location filename="../src/qml/Main.qml" line="258"/>
         <source>Apply the update and restart now</source>
         <translation>Apply the update and restart now</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="235"/>
+        <location filename="../src/qml/Main.qml" line="259"/>
         <source>Update available</source>
         <translation>Update available</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="247"/>
+        <location filename="../src/qml/Main.qml" line="271"/>
         <source>Switch to light theme</source>
         <translation>Switch to light theme</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="247"/>
+        <location filename="../src/qml/Main.qml" line="271"/>
         <source>Switch to dark theme</source>
         <translation>Switch to dark theme</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="261"/>
+        <location filename="../src/qml/Main.qml" line="285"/>
         <source>About</source>
         <translation>About</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="254"/>
+        <location filename="../src/qml/Main.qml" line="278"/>
         <source>Settings</source>
         <translation>Settings</translation>
     </message>
@@ -829,27 +839,27 @@
         <translation type="vanished">SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
         <source>Automation</source>
         <translation>Automation</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
         <source>General</source>
         <translation>General</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
         <source>Services</source>
         <translation>Services</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="18"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
         <source>Window</source>
         <translation>Window</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="18"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
         <source>Profiles</source>
         <translation>Profiles</translation>
     </message>
@@ -1022,7 +1032,7 @@
         <translation type="vanished">&quot;Windows&quot; uses the system language</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="143"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="144"/>
         <source>Save settings</source>
         <translation>Save settings</translation>
     </message>
@@ -1030,33 +1040,33 @@
 <context>
     <name>SettingsViewModel</name>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="562"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="581"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="830"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="849"/>
         <source>Enter a valid SimBrief Pilot ID.</source>
         <translation>Enter a valid SimBrief Pilot ID.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="840"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="859"/>
         <source>Enter a valid fuel rate.</source>
         <translation>Enter a valid fuel rate.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="857"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="876"/>
         <source>Enter a valid fuel rate for %1.</source>
         <translation>Enter a valid fuel rate for %1.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="494"/>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="874"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="513"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="893"/>
         <source>Could not save settings.</source>
         <translation>Could not save settings.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="500"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="519"/>
         <source>Settings saved.</source>
         <translation>Settings saved.</translation>
     </message>

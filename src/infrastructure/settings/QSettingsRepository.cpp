@@ -20,6 +20,7 @@ namespace
     constexpr auto kKeyCloseToTray = "ui/closeToTray";
     constexpr auto kKeyMinimizeToTray = "ui/minimizeToTray";
     constexpr auto kKeyTrayTipShown = "ui/trayTipShown";
+    constexpr auto kKeyStreamerMode = "ui/streamerMode";
     constexpr auto kGroupProfiles = "profiles";
     constexpr auto kKeyProfileUseGlobal = "useGlobal";
     constexpr auto kKeyProfileFuelRateKgs = "fuelRateKgs";
@@ -60,6 +61,7 @@ AppSettings QSettingsRepository::Load() const
     result.closeToTray = settings.value(kKeyCloseToTray, true).toBool();
     result.minimizeToTray = settings.value(kKeyMinimizeToTray, true).toBool();
     result.trayTipShown = settings.value(kKeyTrayTipShown, false).toBool();
+    result.streamerMode = settings.value(kKeyStreamerMode, false).toBool();
 
     settings.beginGroup(kGroupProfiles);
     const QStringList profileIds = settings.childGroups();
@@ -104,6 +106,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyCloseToTray, values.closeToTray);
     settings.setValue(kKeyMinimizeToTray, values.minimizeToTray);
     settings.setValue(kKeyTrayTipShown, values.trayTipShown);
+    settings.setValue(kKeyStreamerMode, values.streamerMode);
 
     settings.beginGroup(kGroupProfiles);
     settings.remove("");

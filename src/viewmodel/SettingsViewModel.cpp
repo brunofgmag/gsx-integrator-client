@@ -86,6 +86,25 @@ void SettingsViewModel::SetSimbriefPilotIdText(const QString& pilotId)
     emit ValidationChanged();
 }
 
+bool SettingsViewModel::GetStreamerMode() const
+{
+    return settings_.streamerMode;
+}
+
+void SettingsViewModel::SetStreamerMode(const bool enabled)
+{
+    if (settings_.streamerMode == enabled)
+    {
+        return;
+    }
+
+    settings_.streamerMode = enabled;
+
+    PersistImmediateSetting();
+
+    emit StreamerModeChanged();
+}
+
 QString SettingsViewModel::GetFuelRateText() const
 {
     return fuelRateText_;

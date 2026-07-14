@@ -19,6 +19,7 @@ class SettingsViewModel final : public QObject
 
     Q_PROPERTY(QString simbriefPilotIdText READ GetSimbriefPilotIdText
         WRITE SetSimbriefPilotIdText NOTIFY SimbriefPilotIdTextChanged)
+    Q_PROPERTY(bool streamerMode READ GetStreamerMode WRITE SetStreamerMode NOTIFY StreamerModeChanged)
     Q_PROPERTY(QString fuelRateText READ GetFuelRateText WRITE SetFuelRateText NOTIFY FuelRateTextChanged)
     Q_PROPERTY(bool autoSelectGsxChoice READ GetAutoSelectGsxChoice
         WRITE SetAutoSelectGsxChoice NOTIFY AutoSelectGsxChoiceChanged)
@@ -80,6 +81,9 @@ public:
 
     [[nodiscard]] QString GetSimbriefPilotIdText() const;
     void SetSimbriefPilotIdText(const QString& pilotId);
+
+    [[nodiscard]] bool GetStreamerMode() const;
+    void SetStreamerMode(bool enabled);
 
     [[nodiscard]] QString GetFuelRateText() const;
     void SetFuelRateText(const QString& rate);
@@ -179,6 +183,7 @@ public:
 
 signals:
     void SimbriefPilotIdTextChanged();
+    void StreamerModeChanged();
     void FuelRateTextChanged();
     void AutoSelectGsxChoiceChanged();
     void AutoStartFlowChanged();

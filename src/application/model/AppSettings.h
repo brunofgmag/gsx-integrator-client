@@ -9,6 +9,7 @@
 struct AppSettings
 {
     int simbriefPilotId = 0;
+    bool streamerMode = false;
     double fuelRateKgs = AutomationSettings::kDefaultFuelRateKgs;
     bool autoSelectGsxChoice = true;
     bool autoStartFlow = false;
