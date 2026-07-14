@@ -20,6 +20,14 @@ enum class GsxState : int
     Deboarding = 3,
 };
 
+enum class GroundService : int
+{
+    Catering,
+    Lavatory,
+    Water,
+    Cleaning,
+};
+
 class GsxGateway
 {
 public:
@@ -47,6 +55,7 @@ public:
     [[nodiscard]] virtual bool IsAircraftOnGround() const = 0;
     [[nodiscard]] virtual bool IsGoodEngineStartConfirmationEnabled() const = 0;
     [[nodiscard]] virtual bool IsGpuConnected() const = 0;
+    [[nodiscard]] virtual bool IsServiceInProgress(GroundService service) const = 0;
 
     virtual void TakeOverFuelAndPayload() = 0;
 };

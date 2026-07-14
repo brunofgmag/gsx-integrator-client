@@ -44,8 +44,8 @@ namespace
     constexpr auto kGoodEngineStartLVar = "FSDT_GSX_SETTINGS_GOOD_ENGINE_START";
 }
 
-GsxStateService::GsxStateService(VariableGateway* variableGateway)
-    : varManager_(variableGateway)
+GsxStateService::GsxStateService(VariableGateway* variableGateway, const GsxRemoteState* remoteState)
+    : varManager_(variableGateway), remote_(remoteState)
 {
     statesStatusMap_ = {
         {GsxState::Refueling, GsxStateStatus::Unavailable},
@@ -206,6 +206,42 @@ bool GsxStateService::IsJetwayInPlace() const
 bool GsxStateService::IsGpuConnected() const
 {
     return varManager_->GetLVar(kGpuConnectedLVar) == 1.0;
+}
+
+bool GsxStateService::IsServiceInProgress(const GroundService service) const
+{
+    if (remote_ == nullptr)
+    {
+        return false;
+    }
+
+    const char* id = nullptr;
+    switch (service)
+    {
+    case GroundService::Catering:
+        id = "Catering";
+        break;
+    case GroundService::Lavatory:
+        id = "Lavatory";
+        break;
+    case GroundService::Water:
+        id = "Water";
+        break;
+    case GroundService::Cleaning:
+        id = "Cleaning";
+        break;
+    default:
+        return false;
+    }
+
+    const GsxRemoteService* svc = FindService(*remote_, id);
+    if (svc == nullptr)
+    {
+        return false;
+    }
+
+    return svc->stateRaw == static_cast<int>(GsxStateStatus::Requested)
+        || svc->stateRaw == static_cast<int>(GsxStateStatus::Active);
 }
 
 bool GsxStateService::AreStairsAvailable() const

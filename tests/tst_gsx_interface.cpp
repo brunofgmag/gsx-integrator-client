@@ -57,6 +57,7 @@ private slots:
     static void takeOverFuelAndPayloadClearsAutomationLVars();
     static void refuelCounterComesFromFuelCounterLvar();
     static void gpuConnectedFollowsLVar();
+    static void serviceInProgressFollowsRemoteStateRaw();
 };
 
 void GsxInterfaceTest::availabilityFollowsCouatlFlag()
@@ -414,6 +415,20 @@ void GsxInterfaceTest::gpuConnectedFollowsLVar()
     gateway.lvars[kGpuConnected] = 0.0;
 
     QVERIFY(!gsx.IsGpuConnected());
+}
+
+void GsxInterfaceTest::serviceInProgressFollowsRemoteStateRaw()
+{
+    FakeVariableGateway gateway;
+    GsxRemoteState remote;
+    remote.services.push_back(GsxRemoteService{"Catering", "", "", 5, "", "", "", false, false});
+    remote.services.push_back(GsxRemoteService{"Lavatory", "", "", 1, "", "", "", true, false});
+
+    const GsxStateService gsx(&gateway, &remote);
+
+    QVERIFY(gsx.IsServiceInProgress(GroundService::Catering));
+    QVERIFY(!gsx.IsServiceInProgress(GroundService::Lavatory));
+    QVERIFY(!gsx.IsServiceInProgress(GroundService::Water));
 }
 
 QTEST_APPLESS_MAIN(GsxInterfaceTest)

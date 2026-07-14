@@ -34,6 +34,10 @@ public:
     bool goodEngineStartConfirmation = false;
     bool gpuConnected = false;
     int takeOverCalls = 0;
+    bool cateringInProgress = false;
+    bool lavatoryInProgress = false;
+    bool waterInProgress = false;
+    bool cleaningInProgress = false;
 
     [[nodiscard]] bool IsAvailable() const override { return true; }
 
@@ -90,6 +94,23 @@ public:
     [[nodiscard]] bool IsAircraftOnGround() const override { return onGround; }
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override { return goodEngineStartConfirmation; }
     [[nodiscard]] bool IsGpuConnected() const override { return gpuConnected; }
+
+    [[nodiscard]] bool IsServiceInProgress(const GroundService service) const override
+    {
+        switch (service)
+        {
+        case GroundService::Catering:
+            return cateringInProgress;
+        case GroundService::Lavatory:
+            return lavatoryInProgress;
+        case GroundService::Water:
+            return waterInProgress;
+        case GroundService::Cleaning:
+            return cleaningInProgress;
+        default:
+            return false;
+        }
+    }
 
     void TakeOverFuelAndPayload() override
     {

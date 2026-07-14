@@ -9,7 +9,7 @@
 IntegratorRuntime::IntegratorRuntime(QObject* parent)
     : QObject(parent),
       pluginClient_(&varGateway_),
-      gsxService_(&varGateway_),
+      gsxService_(&varGateway_, &gsxRemoteState_),
       gsxMenu_(&gsxRemoteClient_, &gsxRemoteState_, &settings_, &qtLogger_, &pluginClient_),
       stateMachine_(&status_, &settings_, &gsxService_, &gsxMenu_, &qtLogger_),
       simbriefClient_(&status_, &settings_, this)

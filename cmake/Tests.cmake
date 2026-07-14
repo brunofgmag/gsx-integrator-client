@@ -169,6 +169,7 @@ gsxi_add_qt_test(gsxi-gsx-interface-tests gsx-interface
         tests/tst_gsx_interface.cpp
         src/infrastructure/gsx/GsxStateService.cpp
         src/infrastructure/gsx/GsxStateService.h
+        src/infrastructure/gsx/GsxRemoteState.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
         src/infrastructure/simvars/VariableGateway.h)

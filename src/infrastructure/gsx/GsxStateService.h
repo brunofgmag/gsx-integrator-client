@@ -3,13 +3,14 @@
 
 #include <map>
 #include "../../domain/ports/GsxGateway.h"
+#include "GsxRemoteState.h"
 
 class VariableGateway;
 
 class GsxStateService final : public GsxGateway
 {
 public:
-    explicit GsxStateService(VariableGateway* variableGateway);
+    explicit GsxStateService(VariableGateway* variableGateway, const GsxRemoteState* remoteState = nullptr);
 
     void Reset();
 
@@ -36,6 +37,7 @@ public:
     [[nodiscard]] bool IsAircraftOnGround() const override;
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override;
     [[nodiscard]] bool IsGpuConnected() const override;
+    [[nodiscard]] bool IsServiceInProgress(GroundService service) const override;
 
     void TakeOverFuelAndPayload() override;
 
@@ -45,6 +47,7 @@ private:
     void ParseCompleted(GsxState gsxState, GsxStateStatus stateStatus);
 
     VariableGateway* varManager_;
+    const GsxRemoteState* remote_;
     std::map<GsxState, GsxStateStatus> statesStatusMap_;
     std::map<GsxState, bool> statesCompletedMap_;
 
