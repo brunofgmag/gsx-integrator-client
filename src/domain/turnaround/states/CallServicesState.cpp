@@ -26,51 +26,7 @@ std::optional<TurnaroundTransition> CallServicesState::Evaluate(TurnaroundContex
         return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
     }
 
-    bool& jetwayOrStairsRequested = ctx.data.jetwayOrStairsRequested;
-    bool& jetwayOrStairsCompleted = ctx.data.jetwayOrStairsCompleted;
-
-    jetwayOrStairsCompleted = ctx.gsxGateway->AreStairsInPlace() || ctx.gsxGateway->IsJetwayInPlace();
-    if (jetwayOrStairsCompleted)
-    {
-        return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
-    }
-
-    if (ctx.gsxGateway->IsJetwayAvailable() && !jetwayOrStairsRequested)
-    {
-        jetwayOrStairsRequested = ctx.menuGateway->CallJetway();
-        if (jetwayOrStairsRequested)
-        {
-            ++ctx.data.jetwayOrStairsAttempts;
-        }
-        return std::nullopt;
-    }
-
-    if (ctx.gsxGateway->AreStairsAvailable() && !jetwayOrStairsRequested)
-    {
-        jetwayOrStairsRequested = ctx.menuGateway->CallStairs();
-        if (jetwayOrStairsRequested)
-        {
-            ++ctx.data.jetwayOrStairsAttempts;
-        }
-        return std::nullopt;
-    }
-
-    if (ctx.TickCondition(kRetryTicks))
-    {
-        if (ctx.data.jetwayOrStairsAttempts >= kMaxAttempts)
-        {
-            return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
-        }
-
-        jetwayOrStairsRequested = ctx.menuGateway->CallStairs();
-        if (jetwayOrStairsRequested)
-        {
-            ++ctx.data.jetwayOrStairsAttempts;
-        }
-        return std::nullopt;
-    }
-
-    return std::nullopt;
+    return ResolveJetwayOrStairs(ctx);
 }
 
 bool CallServicesState::RequestNextGroundService(TurnaroundContext& ctx)
@@ -88,26 +44,73 @@ bool CallServicesState::RequestNextGroundService(TurnaroundContext& ctx)
 
     if (ctx.settings->callCatering && !ctx.data.cateringRequested)
     {
-        if (ctx.gsxGateway->IsServiceInProgress(GroundService::Catering))
+        return DispatchCatering(ctx);
+    }
+
+    return false;
+}
+
+bool CallServicesState::DispatchCatering(TurnaroundContext& ctx)
+{
+    if (ctx.gsxGateway->IsServiceInProgress(GroundService::Catering))
+    {
+        ctx.data.cateringRequested = true;
+        return false;
+    }
+
+    if (ctx.data.cateringAttempts == 0 || ctx.TickCondition(kCateringRetryTicks))
+    {
+        if (ctx.data.cateringAttempts >= kMaxCateringAttempts)
         {
             ctx.data.cateringRequested = true;
             return false;
         }
 
-        if (ctx.data.cateringAttempts == 0 || ctx.TickCondition(kCateringRetryTicks))
-        {
-            if (ctx.data.cateringAttempts >= kMaxCateringAttempts)
-            {
-                ctx.data.cateringRequested = true;
-                return false;
-            }
-
-            static_cast<void>(ctx.menuGateway->RequestCatering());
-            ++ctx.data.cateringAttempts;
-        }
-
-        return true;
+        static_cast<void>(ctx.menuGateway->RequestCatering());
+        ++ctx.data.cateringAttempts;
     }
 
-    return false;
+    return true;
+}
+
+std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(TurnaroundContext& ctx)
+{
+    ctx.data.jetwayOrStairsCompleted = ctx.gsxGateway->AreStairsInPlace() || ctx.gsxGateway->IsJetwayInPlace();
+    if (ctx.data.jetwayOrStairsCompleted)
+    {
+        return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
+    }
+
+    if (ctx.gsxGateway->IsJetwayAvailable() && !ctx.data.jetwayOrStairsRequested)
+    {
+        RegisterJetwayOrStairsRequest(ctx, ctx.menuGateway->CallJetway());
+        return std::nullopt;
+    }
+
+    if (ctx.gsxGateway->AreStairsAvailable() && !ctx.data.jetwayOrStairsRequested)
+    {
+        RegisterJetwayOrStairsRequest(ctx, ctx.menuGateway->CallStairs());
+        return std::nullopt;
+    }
+
+    if (ctx.TickCondition(kRetryTicks))
+    {
+        if (ctx.data.jetwayOrStairsAttempts >= kMaxAttempts)
+        {
+            return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
+        }
+
+        RegisterJetwayOrStairsRequest(ctx, ctx.menuGateway->CallStairs());
+    }
+
+    return std::nullopt;
+}
+
+void CallServicesState::RegisterJetwayOrStairsRequest(TurnaroundContext& ctx, const bool requested)
+{
+    ctx.data.jetwayOrStairsRequested = requested;
+    if (requested)
+    {
+        ++ctx.data.jetwayOrStairsAttempts;
+    }
 }

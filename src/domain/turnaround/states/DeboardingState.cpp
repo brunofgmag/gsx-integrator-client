@@ -21,21 +21,11 @@ std::optional<TurnaroundTransition> DeboardingState::Evaluate(TurnaroundContext&
         return std::nullopt;
     }
 
-    if (!data.deboardingBaselined)
-    {
-        data.deboardingBaselined = true;
-        if (ctx.aircraft->GetBoardMethod() == BoardBy::Self)
-        {
-            ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
-        }
-    }
+    EnsureBaseline(ctx);
 
     if (isCompleted)
     {
-        data.loadedZfwKg = data.initialZfwKg;
-        ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
-        data.deboardingProgress = 100.0;
-
+        FinishDeboarding(ctx);
         return TurnaroundTransition{TurnaroundPhase::CabinServices};
     }
 
@@ -51,6 +41,29 @@ std::optional<TurnaroundTransition> DeboardingState::Evaluate(TurnaroundContext&
         data.initialZfwKg);
 
     return std::nullopt;
+}
+
+void DeboardingState::EnsureBaseline(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+    if (data.deboardingBaselined)
+    {
+        return;
+    }
+
+    data.deboardingBaselined = true;
+    if (ctx.aircraft->GetBoardMethod() == BoardBy::Self)
+    {
+        ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
+    }
+}
+
+void DeboardingState::FinishDeboarding(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+    data.loadedZfwKg = data.initialZfwKg;
+    ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
+    data.deboardingProgress = 100.0;
 }
 
 void DeboardingState::AdvanceDeboardingBar(TurnaroundContext& ctx)

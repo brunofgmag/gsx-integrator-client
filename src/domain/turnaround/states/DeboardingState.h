@@ -14,6 +14,8 @@ public:
     [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
 
 private:
+    static void EnsureBaseline(TurnaroundContext& ctx);
+    static void FinishDeboarding(TurnaroundContext& ctx);
     static void AdvanceDeboardingBar(TurnaroundContext& ctx);
 };
 

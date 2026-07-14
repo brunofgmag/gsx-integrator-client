@@ -14,6 +14,8 @@ public:
     [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
 
 private:
+    static void EnsureBaseline(TurnaroundContext& ctx);
+    static void FinishBoarding(TurnaroundContext& ctx);
     static void AdvanceBoardingBar(TurnaroundContext& ctx);
 };
 

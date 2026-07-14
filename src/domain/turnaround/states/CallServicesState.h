@@ -15,6 +15,9 @@ public:
 
 private:
     static bool RequestNextGroundService(TurnaroundContext& ctx);
+    static bool DispatchCatering(TurnaroundContext& ctx);
+    static std::optional<TurnaroundTransition> ResolveJetwayOrStairs(TurnaroundContext& ctx);
+    static void RegisterJetwayOrStairsRequest(TurnaroundContext& ctx, bool requested);
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_CALLSERVICESSTATE_H

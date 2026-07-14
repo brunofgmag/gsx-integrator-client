@@ -15,6 +15,11 @@ public:
     [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
 
 private:
+    static void EnsureBaseline(TurnaroundContext& ctx);
+    static void NotifyLoadingStarted(TurnaroundContext& ctx);
+    static void AccumulateFuel(TurnaroundContext& ctx);
+    static void MaybeForceCompletion(TurnaroundContext& ctx);
+    static void SnapToPlanned(TurnaroundContext& ctx);
     static void RefuelProgressively(TurnaroundContext& ctx);
 };
 

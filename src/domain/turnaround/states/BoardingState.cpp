@@ -19,23 +19,11 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
         return std::nullopt;
     }
 
-    if (!data.boardingBaselined)
-    {
-        data.boardingBaselined = true;
-        data.initialZfwKg = ctx.aircraft->GetEmptyZfwKg();
-        if (ctx.aircraft->GetBoardMethod() == BoardBy::Self)
-        {
-            ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
-        }
-    }
+    EnsureBaseline(ctx);
 
     if (isCompleted)
     {
-        data.boardedPassengers = data.plannedPassengers;
-        data.loadedZfwKg = data.plannedZfwKg;
-        ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
-        data.boardingProgress = 100.0;
-
+        FinishBoarding(ctx);
         return TurnaroundTransition{TurnaroundPhase::WaitingReadyToPush, 60};
     }
 
@@ -53,6 +41,31 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
         data.plannedZfwKg);
 
     return std::nullopt;
+}
+
+void BoardingState::EnsureBaseline(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+    if (data.boardingBaselined)
+    {
+        return;
+    }
+
+    data.boardingBaselined = true;
+    data.initialZfwKg = ctx.aircraft->GetEmptyZfwKg();
+    if (ctx.aircraft->GetBoardMethod() == BoardBy::Self)
+    {
+        ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
+    }
+}
+
+void BoardingState::FinishBoarding(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+    data.boardedPassengers = data.plannedPassengers;
+    data.loadedZfwKg = data.plannedZfwKg;
+    ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
+    data.boardingProgress = 100.0;
 }
 
 void BoardingState::AdvanceBoardingBar(TurnaroundContext& ctx)

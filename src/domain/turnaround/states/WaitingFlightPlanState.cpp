@@ -42,6 +42,13 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::Evaluate(TurnaroundC
         return std::nullopt;
     }
 
+    CaptureFlightPlan(ctx);
+
+    return TurnaroundTransition{TurnaroundPhase::RepositionAircraft};
+}
+
+void WaitingFlightPlanState::CaptureFlightPlan(TurnaroundContext& ctx)
+{
     auto& data = ctx.data;
     data.plannedFuelKg = ctx.aircraft->GetPlannedFuelKg();
     data.plannedZfwKg = ctx.aircraft->GetPlannedZfwKg();
@@ -57,6 +64,4 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::Evaluate(TurnaroundC
     {
         data.plannedPassengers = ctx.gsxGateway->GetPlannedPassengers();
     }
-
-    return TurnaroundTransition{TurnaroundPhase::RepositionAircraft};
 }
