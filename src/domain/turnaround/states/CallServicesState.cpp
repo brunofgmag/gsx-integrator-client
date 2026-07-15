@@ -42,7 +42,7 @@ bool CallServicesState::RequestNextGroundService(TurnaroundContext& ctx)
         return ctx.data.gpuRequested;
     }
 
-    if (ctx.settings->callCatering && !ctx.data.cateringRequested)
+    if (ctx.settings->callCatering && !ctx.aircraft->IsCargoVariant() && !ctx.data.cateringRequested)
     {
         return DispatchCatering(ctx);
     }

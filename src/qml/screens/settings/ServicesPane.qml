@@ -22,6 +22,7 @@ ColumnLayout {
     SwitchRow {
         Layout.fillWidth: true
         title: qsTr("Call catering")
+        helpText: qsTr("Cargo aircraft skip catering automatically, even when this is on.")
         checked: root.settingsVm.callCatering
         onToggled: checked => root.settingsVm.callCatering = checked
     }

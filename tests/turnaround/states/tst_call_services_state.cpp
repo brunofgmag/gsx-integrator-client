@@ -16,6 +16,7 @@ private slots:
     static void advancesImmediatelyWhenJetwayAlreadyInPlace();
     static void givesUpAfterTwoAttempts();
     static void requestsGpuAndCateringWhenEnabled();
+    static void skipsCateringForCargoVariant();
     static void retriesCateringUntilConfirmed();
     static void advancesWhenCateringNeverStarts();
     static void doesNotRequestGroundServicesWhenDisabled();
@@ -188,6 +189,23 @@ void CallServicesStateTest::requestsGpuAndCateringWhenEnabled()
     QVERIFY(f.ctx.data.cateringRequested);
     QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
     QCOMPARE(f.menuGateway.requestCateringCalls, 1);
+}
+
+void CallServicesStateTest::skipsCateringForCargoVariant()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.settings.callCatering = true;
+    f.aircraft.cargo = true;
+    f.aircraft.supportsStairsOrJetways = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
+    QCOMPARE(f.menuGateway.requestCateringCalls, 0);
+    QVERIFY(!f.ctx.data.cateringRequested);
 }
 
 void CallServicesStateTest::retriesCateringUntilConfirmed()

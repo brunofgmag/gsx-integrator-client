@@ -143,6 +143,7 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Call catering")
+        helpText: qsTr("Cargo aircraft skip catering automatically, even when this is on.")
         checked: root.ghost ? root.settingsVm.callCatering
                             : root.settingsVm.profileCallCatering
         onToggled: checked => root.settingsVm.profileCallCatering = checked
