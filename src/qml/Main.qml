@@ -29,7 +29,8 @@ ApplicationWindow {
     property int screen: 0
 
     readonly property int fittedHeight: Math.min(
-        header.height + (screens.children[window.screen]?.implicitHeight ?? 0) + 32,
+        header.height + (screens.children[window.screen]?.implicitHeight ?? 0) + 32
+            + (window.screen === 1 ? settingsFooter.implicitHeight : 0),
         Screen.desktopAvailableHeight - 48)
 
     readonly property int lockedHeight: window.integratorVm.connected
@@ -347,6 +348,66 @@ ApplicationWindow {
                 anchors.leftMargin: window.shellMargin
                 anchors.rightMargin: window.shellMargin
                 visible: body.showConnecting
+            }
+        }
+
+        Rectangle {
+            id: settingsFooter
+            Layout.fillWidth: true
+            visible: window.screen === 1
+            Layout.preferredHeight: visible ? implicitHeight : 0
+            implicitHeight: 60
+            color: Theme.panel2
+
+            readonly property bool showValidation: !window.settingsVm.canSave
+                                                   && window.settingsVm.validationMessage.length > 0
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: 1
+                color: Theme.line
+            }
+
+            Text {
+                id: saveFeedback
+                anchors.left: parent.left
+                anchors.leftMargin: window.shellMargin
+                anchors.right: saveButton.left
+                anchors.rightMargin: 12
+                anchors.verticalCenter: parent.verticalCenter
+                text: settingsFooter.showValidation
+                      ? window.settingsVm.validationMessage
+                      : window.settingsVm.saveMessage
+                color: (settingsFooter.showValidation || window.settingsVm.saveError) ? Theme.red : Theme.muted
+                font.pixelSize: 11
+                font.capitalization: Font.AllUppercase
+                elide: Text.ElideRight
+                opacity: (settingsFooter.showValidation || text.length > 0) ? 1 : 0
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 200
+                    }
+                }
+
+                Timer {
+                    interval: 2500
+                    running: !settingsFooter.showValidation && saveFeedback.text.length > 0
+                    onTriggered: window.settingsVm.clearSaveMessage()
+                }
+            }
+
+            ActionButton {
+                id: saveButton
+                anchors.right: parent.right
+                anchors.rightMargin: window.shellMargin
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Save settings")
+                enabled: window.settingsVm.canSave
+
+                onClicked: window.settingsVm.save()
             }
         }
     }
