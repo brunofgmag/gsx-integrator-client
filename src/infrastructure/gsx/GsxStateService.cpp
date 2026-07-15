@@ -8,41 +8,7 @@
 #include "../logging/LogMacros.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
 
-namespace
-{
-    // Services / Progress
-    constexpr auto kRefuelingStateLVar = "FSDT_GSX_REFUELING_STATE";
-    constexpr auto kRefuelingProgressLVar = "FSDT_GSX_FUELHOSE_CONNECTED";
-    constexpr auto kFuelCounterLVar = "FSDT_GSX_FUEL_COUNTER";
-    constexpr auto kFuelCounterMaxLVar = "FSDT_GSX_FUEL_COUNTER_MAX";
-    constexpr auto kBoardingStateLVar = "FSDT_GSX_BOARDING_STATE";
-    constexpr auto kDeboardingStateLVar = "FSDT_GSX_DEBOARDING_STATE";
-    constexpr auto kPushbackVehicleStateLVar = "FSDT_GSX_VEHICLE_PUSHBACK_STATE";
-    constexpr auto kPushbackStatusLVar = "FSDT_GSX_PUSHBACK_STATUS";
-
-    // Passengers and Cargo
-    constexpr auto kMaxPassengersLVar = "FSDT_GSX_MAX_NUMPASSENGERS";
-    constexpr auto kNumPassengersBoardingTotalLVar = "FSDT_GSX_NUMPASSENGERS_BOARDING_TOTAL";
-    constexpr auto kNumPassengerDeboardingTotalLVar = "FSDT_GSX_NUMPASSENGERS_DEBOARDING_TOTAL";
-    constexpr auto kBoardingCargoPercentLVar = "FSDT_GSX_BOARDING_CARGO_PERCENT";
-    constexpr auto kDeboardingCargoPercentLVar = "FSDT_GSX_DEBOARDING_CARGO_PERCENT";
-
-    // Fuel Automation
-    constexpr auto kAutomationFuelLVar = "FSDT_GSX_AUTOMATION_FUEL";
-    constexpr auto kAutomationPayloadLVar = "FSDT_GSX_AUTOMATION_PAYLOAD";
-
-    // GSX Simbrief integration
-    constexpr auto kSimbriefSuccessLVar = "FSDT_GSX_SIMBRIEF_SUCCESS";
-
-    // GSX Extras
-    constexpr auto kJetwayAvailableLVar = "FSDT_GSX_JETWAY";
-    constexpr auto kStairsAvailableLVar = "FSDT_GSX_STAIRS";
-    constexpr auto kRepositioningStatusLVar = "FSDT_GSX_REPOSITIONING";
-    constexpr auto kGpuConnectedLVar = "FSDT_GSX_GPU_CONNECTED";
-
-    // GSX Settings
-    constexpr auto kGoodEngineStartLVar = "FSDT_GSX_SETTINGS_GOOD_ENGINE_START";
-}
+using namespace gsx::lvars;
 
 GsxStateService::GsxStateService(VariableGateway* variableGateway, const GsxRemoteState* remoteState)
     : varManager_(variableGateway), remote_(remoteState)
@@ -83,7 +49,7 @@ void GsxStateService::Reset()
 
 bool GsxStateService::IsAvailable() const
 {
-    return varManager_->GetLVar(gsx::lvars::kCouatlStarted) >= 1.0;
+    return varManager_->GetLVar(kCouatlStarted) >= 1.0;
 }
 
 GsxStateStatus GsxStateService::GetStateStatus(const GsxState gsxState)
@@ -93,16 +59,16 @@ GsxStateStatus GsxStateService::GetStateStatus(const GsxState gsxState)
     switch (gsxState)
     {
     case GsxState::Refueling:
-        stateLVar = kRefuelingStateLVar;
+        stateLVar = kRefuelingState;
         break;
     case GsxState::Boarding:
-        stateLVar = kBoardingStateLVar;
+        stateLVar = kBoardingState;
         break;
     case GsxState::Pushback:
-        stateLVar = kPushbackVehicleStateLVar;
+        stateLVar = kPushbackVehicleState;
         break;
     case GsxState::Deboarding:
-        stateLVar = kDeboardingStateLVar;
+        stateLVar = kDeboardingState;
         break;
     default:
         return GsxStateStatus::Unavailable;
@@ -123,43 +89,43 @@ bool GsxStateService::WasStateCompleted(const GsxState gsxState) const
 
 bool GsxStateService::IsFuelHoseConnected() const
 {
-    return varManager_->GetLVar(kRefuelingProgressLVar) >= 1.0;
+    return varManager_->GetLVar(kFuelHoseConnected) >= 1.0;
 }
 
 double GsxStateService::GetRefuelCounterGallons() const
 {
-    return std::max(varManager_->GetLVar(kFuelCounterLVar),
-                    varManager_->GetLVar(kFuelCounterMaxLVar));
+    return std::max(varManager_->GetLVar(kFuelCounter),
+                    varManager_->GetLVar(kFuelCounterMax));
 }
 
 bool GsxStateService::HasPushbackStarted() const
 {
-    return varManager_->GetLVar(kPushbackStatusLVar) >= 5.0;
+    return varManager_->GetLVar(kPushbackStatus) >= 5.0;
 }
 
 bool GsxStateService::IsPushbackFinished() const
 {
-    return varManager_->GetLVar(kPushbackStatusLVar) == 11;
+    return varManager_->GetLVar(kPushbackStatus) == 11;
 }
 
 bool GsxStateService::IsWaitingForEngines() const
 {
-    return varManager_->GetLVar(kPushbackStatusLVar) == 8;
+    return varManager_->GetLVar(kPushbackStatus) == 8;
 }
 
 bool GsxStateService::IsRepositioning() const
 {
-    return varManager_->GetLVar(kRepositioningStatusLVar) == 1.0;
+    return varManager_->GetLVar(kRepositioning) == 1.0;
 }
 
 int GsxStateService::GetPlannedPassengers() const
 {
-    return static_cast<int>(varManager_->GetLVar(kMaxPassengersLVar));
+    return static_cast<int>(varManager_->GetLVar(kMaxPassengers));
 }
 
 int GsxStateService::GetBoardedPassengers()
 {
-    const int currentBoarding = static_cast<int>(varManager_->GetLVar(kNumPassengersBoardingTotalLVar));
+    const int currentBoarding = static_cast<int>(varManager_->GetLVar(kNumPassengersBoardingTotal));
     if (currentBoarding < lastBoardingPassengers_)
     {
         boardingPassengersTotal_ += lastBoardingPassengers_;
@@ -172,7 +138,7 @@ int GsxStateService::GetBoardedPassengers()
 
 int GsxStateService::GetDeboardedPassengers()
 {
-    const int currentDeboarding = static_cast<int>(varManager_->GetLVar(kNumPassengerDeboardingTotalLVar));
+    const int currentDeboarding = static_cast<int>(varManager_->GetLVar(kNumPassengersDeboardingTotal));
     if (currentDeboarding < lastDeboardingPassengers_)
     {
         deboardingPassengersTotal_ += lastDeboardingPassengers_;
@@ -185,27 +151,27 @@ int GsxStateService::GetDeboardedPassengers()
 
 double GsxStateService::GetBoardingCargoPercent() const
 {
-    return varManager_->GetLVar(kBoardingCargoPercentLVar);
+    return varManager_->GetLVar(kBoardingCargoPercent);
 }
 
 double GsxStateService::GetDeboardingCargoPercent() const
 {
-    return varManager_->GetLVar(kDeboardingCargoPercentLVar);
+    return varManager_->GetLVar(kDeboardingCargoPercent);
 }
 
 bool GsxStateService::AreStairsInPlace() const
 {
-    return varManager_->GetLVar(kStairsAvailableLVar) == 5.0;
+    return varManager_->GetLVar(kStairs) == 5.0;
 }
 
 bool GsxStateService::IsJetwayInPlace() const
 {
-    return varManager_->GetLVar(kJetwayAvailableLVar) == 5.0;
+    return varManager_->GetLVar(kJetway) == 5.0;
 }
 
 bool GsxStateService::IsGpuConnected() const
 {
-    return varManager_->GetLVar(kGpuConnectedLVar) == 1.0;
+    return varManager_->GetLVar(kGpuConnected) == 1.0;
 }
 
 bool GsxStateService::IsServiceInProgress(const GroundService service) const
@@ -246,12 +212,12 @@ bool GsxStateService::IsServiceInProgress(const GroundService service) const
 
 bool GsxStateService::AreStairsAvailable() const
 {
-    return varManager_->GetLVar(kStairsAvailableLVar, 2.0) != 2.0;
+    return varManager_->GetLVar(kStairs, 2.0) != 2.0;
 }
 
 bool GsxStateService::IsJetwayAvailable() const
 {
-    return varManager_->GetLVar(kJetwayAvailableLVar, 2.0) != 2.0;
+    return varManager_->GetLVar(kJetway, 2.0) != 2.0;
 }
 
 bool GsxStateService::IsAircraftOnGround() const
@@ -261,8 +227,8 @@ bool GsxStateService::IsAircraftOnGround() const
 
 void GsxStateService::TakeOverFuelAndPayload()
 {
-    varManager_->SetLVar(kAutomationFuelLVar, 0.0);
-    varManager_->SetLVar(kAutomationPayloadLVar, 0.0);
+    varManager_->SetLVar(kAutomationFuel, 0.0);
+    varManager_->SetLVar(kAutomationPayload, 0.0);
 
     LOG_INFO("Taking over fuel and payload insertion");
 }
@@ -270,12 +236,12 @@ void GsxStateService::TakeOverFuelAndPayload()
 
 bool GsxStateService::IsSimbriefLoaded() const
 {
-    return varManager_->GetLVar(kSimbriefSuccessLVar) >= 1.0;
+    return varManager_->GetLVar(kSimbriefSuccess) >= 1.0;
 }
 
 bool GsxStateService::IsGoodEngineStartConfirmationEnabled() const
 {
-    return varManager_->GetLVar(kGoodEngineStartLVar, 1.0) >= 1.0;
+    return varManager_->GetLVar(kGoodEngineStart, 1.0) >= 1.0;
 }
 
 void GsxStateService::ParseCompleted(const GsxState gsxState, const GsxStateStatus stateStatus)

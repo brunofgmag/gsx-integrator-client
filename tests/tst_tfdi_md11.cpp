@@ -6,6 +6,7 @@
 #include "../src/domain/model/FlightPlan.h"
 #include "../src/domain/support/Weight.h"
 #include "../src/infrastructure/aircraft/TfdiMd11.h"
+#include "../src/infrastructure/gsx/GsxLVars.h"
 
 namespace
 {
@@ -34,13 +35,13 @@ namespace
     constexpr auto kApu = "MD11_OVHD_ELEC_APU_PWR_ON_LT";
     constexpr auto kExtPower = "MD11_OVHD_ELEC_EXT_PWR_ON_LT";
 
-    constexpr auto kCouatlStarted = "FSDT_GSX_COUATL_STARTED";
-    constexpr auto kGsxLoaderFront = "FSDT_GSX_VEHICLE_BAGGAGELOADERFRONT_STATE";
-    constexpr auto kGsxLoaderRear = "FSDT_GSX_VEHICLE_BAGGAGELOADERREAR_STATE";
-    constexpr auto kGsxLoaderMain = "FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE";
-    constexpr auto kStairsFront = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSFRONT_STATE";
-    constexpr auto kStairsMiddle = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSMIDDLE_STATE";
-    constexpr auto kStairsRear = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSREAR_STATE";
+    constexpr auto kCouatlStarted = gsx::lvars::kCouatlStarted;
+    constexpr auto kGsxLoaderFront = gsx::lvars::kBaggageLoaderFrontState;
+    constexpr auto kGsxLoaderRear = gsx::lvars::kBaggageLoaderRearState;
+    constexpr auto kGsxLoaderMain = gsx::lvars::kBaggageLoaderMainState;
+    constexpr auto kStairsFront = gsx::lvars::kPassengerStairsFrontState;
+    constexpr auto kStairsMiddle = gsx::lvars::kPassengerStairsMiddleState;
+    constexpr auto kStairsRear = gsx::lvars::kPassengerStairsRearState;
     constexpr auto kPaxDoor1L = "MD11_EXT_DOOR_CMD_PAX_1L";
     constexpr auto kPaxDoor2L = "MD11_EXT_DOOR_CMD_PAX_2L";
     constexpr auto kPaxDoor4L = "MD11_EXT_DOOR_CMD_PAX_4L";

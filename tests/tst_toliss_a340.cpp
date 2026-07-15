@@ -5,6 +5,7 @@
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/domain/model/FlightPlan.h"
 #include "../src/infrastructure/aircraft/TolissA340.h"
+#include "../src/infrastructure/gsx/GsxLVars.h"
 
 namespace
 {
@@ -32,14 +33,14 @@ namespace
     constexpr auto kMcduAocMenuKey = "AB_MCDU3_LSK1R";
     constexpr auto kMcduFlightInitKey = "AB_MCDU3_LSK1L";
 
-    constexpr auto kCouatlStarted = "FSDT_GSX_COUATL_STARTED";
-    constexpr auto kGsxLoaderFront = "FSDT_GSX_VEHICLE_BAGGAGELOADERFRONT_STATE";
-    constexpr auto kGsxLoaderRear = "FSDT_GSX_VEHICLE_BAGGAGELOADERREAR_STATE";
+    constexpr auto kCouatlStarted = gsx::lvars::kCouatlStarted;
+    constexpr auto kGsxLoaderFront = gsx::lvars::kBaggageLoaderFrontState;
+    constexpr auto kGsxLoaderRear = gsx::lvars::kBaggageLoaderRearState;
     constexpr auto kCargoDoorModeFwd = "TLS_CARGO_DOOR_MODE_FWD";
     constexpr auto kCargoDoorModeAft = "TLS_CARGO_DOOR_MODE_AFT";
-    constexpr auto kStairsFront = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSFRONT_STATE";
-    constexpr auto kStairsMiddle = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSMIDDLE_STATE";
-    constexpr auto kStairsRear = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSREAR_STATE";
+    constexpr auto kStairsFront = gsx::lvars::kPassengerStairsFrontState;
+    constexpr auto kStairsMiddle = gsx::lvars::kPassengerStairsMiddleState;
+    constexpr auto kStairsRear = gsx::lvars::kPassengerStairsRearState;
     constexpr auto kPaxDoorMode1L = "TLS_PAX_DOOR_MODE_1L";
     constexpr auto kPaxDoorMode2L = "TLS_PAX_DOOR_MODE_2L";
     constexpr auto kPaxDoorMode4L = "TLS_PAX_DOOR_MODE_4L";

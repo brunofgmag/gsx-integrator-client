@@ -2,32 +2,13 @@
 
 #include "TestDoubles.h"
 #include "../src/infrastructure/gsx/GsxStateService.h"
+#include "../src/infrastructure/gsx/GsxLVars.h"
 
 namespace
 {
-    constexpr auto kCouatlStarted = "FSDT_GSX_COUATL_STARTED";
-    constexpr auto kRefuelingState = "FSDT_GSX_REFUELING_STATE";
-    constexpr auto kBoardingState = "FSDT_GSX_BOARDING_STATE";
-    constexpr auto kFuelHoseConnected = "FSDT_GSX_FUELHOSE_CONNECTED";
-    constexpr auto kMaxPassengers = "FSDT_GSX_MAX_NUMPASSENGERS";
-    constexpr auto kBoardingTotal = "FSDT_GSX_NUMPASSENGERS_BOARDING_TOTAL";
-    constexpr auto kSimbriefSuccess = "FSDT_GSX_SIMBRIEF_SUCCESS";
-    constexpr auto kPushbackStatus = "FSDT_GSX_PUSHBACK_STATUS";
-    constexpr auto kPushbackVehicleState = "FSDT_GSX_VEHICLE_PUSHBACK_STATE";
-    constexpr auto kRepositioning = "FSDT_GSX_REPOSITIONING";
-    constexpr auto kJetway = "FSDT_GSX_JETWAY";
-    constexpr auto kStairs = "FSDT_GSX_STAIRS";
-    constexpr auto kBoardingCargoPercent = "FSDT_GSX_BOARDING_CARGO_PERCENT";
-    constexpr auto kDeboardingCargoPercent = "FSDT_GSX_DEBOARDING_CARGO_PERCENT";
-    constexpr auto kAutomationFuel = "FSDT_GSX_AUTOMATION_FUEL";
-    constexpr auto kAutomationPayload = "FSDT_GSX_AUTOMATION_PAYLOAD";
-    constexpr auto kNumPaxBoardingTotal = "FSDT_GSX_NUMPASSENGERS_BOARDING_TOTAL";
-    constexpr auto kNumPaxDeboardingTotal = "FSDT_GSX_NUMPASSENGERS_DEBOARDING_TOTAL";
+    using namespace gsx::lvars;
+
     constexpr auto kSimOnGround = "SIM ON GROUND";
-    constexpr auto kGoodEngineStart = "FSDT_GSX_SETTINGS_GOOD_ENGINE_START";
-    constexpr auto kFuelCounter = "FSDT_GSX_FUEL_COUNTER";
-    constexpr auto kFuelCounterMax = "FSDT_GSX_FUEL_COUNTER_MAX";
-    constexpr auto kGpuConnected = "FSDT_GSX_GPU_CONNECTED";
 }
 
 class GsxInterfaceTest final : public QObject
@@ -132,7 +113,7 @@ void GsxInterfaceTest::readsFuelHoseAndPassengerCounts()
 
     gateway.lvars[kFuelHoseConnected] = 1.0;
     gateway.lvars[kMaxPassengers] = 215.0;
-    gateway.lvars[kBoardingTotal] = 130.0;
+    gateway.lvars[kNumPassengersBoardingTotal] = 130.0;
 
     QVERIFY(gsx.IsFuelHoseConnected());
     QCOMPARE(gsx.GetPlannedPassengers(), 215);
@@ -335,19 +316,19 @@ void GsxInterfaceTest::boardedPassengersAccumulatesAcrossResets()
     FakeVariableGateway gateway;
     GsxStateService gsx(&gateway);
 
-    gateway.lvars[kNumPaxBoardingTotal] = 50.0;
+    gateway.lvars[kNumPassengersBoardingTotal] = 50.0;
 
     QCOMPARE(gsx.GetBoardedPassengers(), 50);
 
-    gateway.lvars[kNumPaxBoardingTotal] = 10.0;
+    gateway.lvars[kNumPassengersBoardingTotal] = 10.0;
 
     QCOMPARE(gsx.GetBoardedPassengers(), 60);
 
-    gateway.lvars[kNumPaxBoardingTotal] = 30.0;
+    gateway.lvars[kNumPassengersBoardingTotal] = 30.0;
 
     QCOMPARE(gsx.GetBoardedPassengers(), 80);
 
-    gateway.lvars[kNumPaxBoardingTotal] = 0;
+    gateway.lvars[kNumPassengersBoardingTotal] = 0;
 
     QCOMPARE(gsx.GetBoardedPassengers(), 80);
 }
@@ -357,15 +338,15 @@ void GsxInterfaceTest::deboardedPassengersAccumulatesAcrossResets()
     FakeVariableGateway gateway;
     GsxStateService gsx(&gateway);
 
-    gateway.lvars[kNumPaxDeboardingTotal] = 80.0;
+    gateway.lvars[kNumPassengersDeboardingTotal] = 80.0;
 
     QCOMPARE(gsx.GetDeboardedPassengers(), 80);
 
-    gateway.lvars[kNumPaxDeboardingTotal] = 5.0;
+    gateway.lvars[kNumPassengersDeboardingTotal] = 5.0;
 
     QCOMPARE(gsx.GetDeboardedPassengers(), 85);
 
-    gateway.lvars[kNumPaxDeboardingTotal] = 0;
+    gateway.lvars[kNumPassengersDeboardingTotal] = 0;
 
     QCOMPARE(gsx.GetDeboardedPassengers(), 85);
 }
