@@ -14,13 +14,13 @@ namespace
     constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
     constexpr auto kSmartSwitch = "MD11_PED_CPT_AUDIO_PNL_INT_RADIO_SW";
 
-    constexpr auto kBeaconBtn = "MD11_OVHD_LTS_BCN_BT";
+    constexpr auto kSimBeacon = "LIGHT BEACON";
     constexpr auto kParkingBrake = "MD11_THR_PARK_LVR";
     constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
     constexpr auto kChocks = "MD11_EXT_CHOCKS";
-    constexpr auto kEng1N1 = "md11_eng1_n1";
-    constexpr auto kEng2N1 = "md11_eng2_n1";
-    constexpr auto kEng3N1 = "md11_eng3_n1";
+    constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
+    constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
+    constexpr auto kSimEng3Combustion = "ENG COMBUSTION:3";
 
     constexpr auto kEfbGw = "MD11_EFB_PAYLOAD_GW";
     constexpr auto kEfbZfw = "MD11_EFB_PAYLOAD_ZFW";
@@ -33,6 +33,20 @@ namespace
     constexpr auto kBattery = "MD11_OVHD_ELEC_BATT_BT";
     constexpr auto kApu = "MD11_OVHD_ELEC_APU_PWR_ON_LT";
     constexpr auto kExtPower = "MD11_OVHD_ELEC_EXT_PWR_ON_LT";
+
+    constexpr auto kCouatlStarted = "FSDT_GSX_COUATL_STARTED";
+    constexpr auto kGsxLoaderFront = "FSDT_GSX_VEHICLE_BAGGAGELOADERFRONT_STATE";
+    constexpr auto kGsxLoaderRear = "FSDT_GSX_VEHICLE_BAGGAGELOADERREAR_STATE";
+    constexpr auto kGsxLoaderMain = "FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE";
+    constexpr auto kStairsFront = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSFRONT_STATE";
+    constexpr auto kStairsMiddle = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSMIDDLE_STATE";
+    constexpr auto kStairsRear = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSREAR_STATE";
+    constexpr auto kPaxDoor1L = "MD11_EXT_DOOR_CMD_PAX_1L";
+    constexpr auto kPaxDoor2L = "MD11_EXT_DOOR_CMD_PAX_2L";
+    constexpr auto kPaxDoor4L = "MD11_EXT_DOOR_CMD_PAX_4L";
+    constexpr auto kCargoDoor1R = "MD11_EXT_DOOR_CMD_CARGO1R";
+    constexpr auto kCargoDoor2R = "MD11_EXT_DOOR_CMD_CARGO2R";
+    constexpr auto kCargoDoorMain = "MD11_EXT_DOOR_CMD_CARGO_MAIN";
 
     constexpr double kEmptyOperatingZfwKg = 130000.0;
     constexpr double kMtowKg = 283730.0;
@@ -69,8 +83,15 @@ private slots:
     static void doesNotSeedFuelTargetBeforeSimDataArrives();
     static void aircraftPowerFollowsElectricalState();
     static void readyToPushFollowsPowerBeaconAndEngines();
-    static void engineRunningDetectsAnyEngineAboveIdle();
-    static void engineAssumedRunningUntilAllN1DataArrives();
+    static void engineRunningDetectsAnyCombustion();
+    static void engineAssumedRunningUntilCombustionDataArrives();
+    static void cargoDoorsClosedByDefaultWhenGsxAvailable();
+    static void cargoDoorsOpenPerLoaderAndCloseWhenDone();
+    static void mainCargoDoorOpensOnlyOnFreighter();
+    static void cargoDoorsUntouchedWithoutGsx();
+    static void paxDoorsOpenPerStairsAndCloseWhenGone();
+    static void paxDoorsOpenOnlyAtFinalPosition();
+    static void paxDoorsUntouchedWithoutGsx();
     static void reportsLoadMethods();
 };
 
@@ -269,14 +290,14 @@ void TfdiMd11Test::readyToDeboardFollowsSafetyState()
         double parkingBrake;
         double chocks;
         double beacon;
-        double engineN1;
+        double engineCombustion;
         bool expected;
     };
 
     constexpr auto cases = std::array{
         TestCase{"brake set", 1.0, 0.0, 0.0, 0.0, true},
         TestCase{"chocks set", 0.0, 1.0, 0.0, 0.0, true},
-        TestCase{"engine running", 1.0, 0.0, 0.0, 50.0, false},
+        TestCase{"engine running", 1.0, 0.0, 0.0, 1.0, false},
         TestCase{"beacon on", 1.0, 0.0, 1.0, 0.0, false},
         TestCase{"brake released", 0.0, 0.0, 0.0, 0.0, false},
     };
@@ -290,10 +311,10 @@ void TfdiMd11Test::readyToDeboardFollowsSafetyState()
         gateway.lvars[kParkingBrake] = testCase.parkingBrake;
         gateway.avars[kSimParkingBrake] = testCase.parkingBrake;
         gateway.lvars[kChocks] = testCase.chocks;
-        gateway.lvars[kBeaconBtn] = testCase.beacon;
-        gateway.lvars[kEng1N1] = 0.0;
-        gateway.lvars[kEng2N1] = testCase.engineN1;
-        gateway.lvars[kEng3N1] = 0.0;
+        gateway.avars[kSimBeacon] = testCase.beacon;
+        gateway.avars[kSimEng1Combustion] = 0.0;
+        gateway.avars[kSimEng2Combustion] = testCase.engineCombustion;
+        gateway.avars[kSimEng3Combustion] = 0.0;
 
         QVERIFY2(aircraft.IsReadyToDeboard() == testCase.expected, testCase.name);
     }
@@ -443,7 +464,7 @@ void TfdiMd11Test::readyToPushFollowsPowerBeaconAndEngines()
         const char* name;
         double power;
         double beacon;
-        double engineN1;
+        double engineCombustion;
         bool expected;
     };
 
@@ -451,7 +472,7 @@ void TfdiMd11Test::readyToPushFollowsPowerBeaconAndEngines()
         TestCase{"ready", 1.0, 1.0, 0.0, true},
         TestCase{"dark", 0.0, 1.0, 0.0, false},
         TestCase{"beacon off", 1.0, 0.0, 0.0, false},
-        TestCase{"engine running", 1.0, 1.0, 50.0, false},
+        TestCase{"engine running", 1.0, 1.0, 1.0, false},
     };
 
     for (const auto& testCase : cases)
@@ -461,32 +482,31 @@ void TfdiMd11Test::readyToPushFollowsPowerBeaconAndEngines()
         TfdiMd11 aircraft(&gateway, &status, false);
 
         gateway.lvars[kPowerOn] = testCase.power;
-        gateway.lvars[kBeaconBtn] = testCase.beacon;
-        gateway.lvars[kEng1N1] = 0.0;
-        gateway.lvars[kEng2N1] = testCase.engineN1;
-        gateway.lvars[kEng3N1] = 0.0;
+        gateway.avars[kSimBeacon] = testCase.beacon;
+        gateway.avars[kSimEng1Combustion] = 0.0;
+        gateway.avars[kSimEng2Combustion] = testCase.engineCombustion;
+        gateway.avars[kSimEng3Combustion] = 0.0;
 
         QVERIFY2(aircraft.IsReadyToPush() == testCase.expected, testCase.name);
     }
 }
 
-void TfdiMd11Test::engineRunningDetectsAnyEngineAboveIdle()
+void TfdiMd11Test::engineRunningDetectsAnyCombustion()
 {
     struct TestCase
     {
         const char* name;
-        double eng1N1;
-        double eng2N1;
-        double eng3N1;
+        double eng1;
+        double eng2;
+        double eng3;
         bool expected;
     };
 
     constexpr auto cases = std::array{
         TestCase{"stopped", 0.0, 0.0, 0.0, false},
-        TestCase{"threshold", 3.0, 0.0, 0.0, false},
-        TestCase{"engine 1", 3.5, 0.0, 0.0, true},
-        TestCase{"engine 2", 0.0, 50.0, 0.0, true},
-        TestCase{"engine 3", 0.0, 0.0, 50.0, true},
+        TestCase{"engine 1", 1.0, 0.0, 0.0, true},
+        TestCase{"engine 2", 0.0, 1.0, 0.0, true},
+        TestCase{"engine 3", 0.0, 0.0, 1.0, true},
     };
 
     for (const auto& testCase : cases)
@@ -495,15 +515,15 @@ void TfdiMd11Test::engineRunningDetectsAnyEngineAboveIdle()
         AutomationStatus status;
         TfdiMd11 aircraft(&gateway, &status, false);
 
-        gateway.lvars[kEng1N1] = testCase.eng1N1;
-        gateway.lvars[kEng2N1] = testCase.eng2N1;
-        gateway.lvars[kEng3N1] = testCase.eng3N1;
+        gateway.avars[kSimEng1Combustion] = testCase.eng1;
+        gateway.avars[kSimEng2Combustion] = testCase.eng2;
+        gateway.avars[kSimEng3Combustion] = testCase.eng3;
 
         QVERIFY2(aircraft.IsEngineRunning() == testCase.expected, testCase.name);
     }
 }
 
-void TfdiMd11Test::engineAssumedRunningUntilAllN1DataArrives()
+void TfdiMd11Test::engineAssumedRunningUntilCombustionDataArrives()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -511,18 +531,172 @@ void TfdiMd11Test::engineAssumedRunningUntilAllN1DataArrives()
 
     QVERIFY(aircraft.IsEngineRunning());
 
-    gateway.lvars[kEng1N1] = 0.0;
-    gateway.lvars[kEng2N1] = 0.0;
+    gateway.avars[kSimEng1Combustion] = 0.0;
+    gateway.avars[kSimEng2Combustion] = 0.0;
 
     QVERIFY(aircraft.IsEngineRunning());
 
-    gateway.lvars[kEng3N1] = 0.0;
+    gateway.avars[kSimEng3Combustion] = 0.0;
 
     QVERIFY(!aircraft.IsEngineRunning());
 
-    gateway.lvars[kEng3N1] = 25.166;
+    gateway.avars[kSimEng3Combustion] = 1.0;
 
     QVERIFY(aircraft.IsEngineRunning());
+}
+
+void TfdiMd11Test::cargoDoorsClosedByDefaultWhenGsxAvailable()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
+    QCOMPARE(gateway.Written(kCargoDoor2R), 0.0);
+}
+
+void TfdiMd11Test::cargoDoorsOpenPerLoaderAndCloseWhenDone()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kGsxLoaderFront] = 6.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
+    QCOMPARE(gateway.Written(kCargoDoor2R), 0.0);
+
+    gateway.lvars[kGsxLoaderRear] = 8.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kCargoDoor2R), 100.0);
+
+    const int callsAfterOpen = gateway.setLVarCalls;
+    gateway.lvars[kGsxLoaderFront] = 9.0;
+    aircraft.OnTick();
+    gateway.lvars[kGsxLoaderFront] = 4.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.setLVarCalls, callsAfterOpen);
+    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
+
+    gateway.lvars[kGsxLoaderFront] = 1.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
+}
+
+void TfdiMd11Test::mainCargoDoorOpensOnlyOnFreighter()
+{
+    FakeVariableGateway passengerGateway;
+    AutomationStatus passengerStatus;
+    TfdiMd11 passenger(&passengerGateway, &passengerStatus, false);
+
+    passengerGateway.lvars[kCouatlStarted] = 1.0;
+    passengerGateway.lvars[kGsxLoaderMain] = 6.0;
+    passenger.OnTick();
+
+    QVERIFY(!passengerGateway.HasReceivedLVar(kCargoDoorMain));
+
+    FakeVariableGateway freighterGateway;
+    AutomationStatus freighterStatus;
+    TfdiMd11 freighter(&freighterGateway, &freighterStatus, true);
+
+    freighterGateway.lvars[kCouatlStarted] = 1.0;
+    freighterGateway.lvars[kGsxLoaderMain] = 6.0;
+    freighter.OnTick();
+
+    QCOMPARE(freighterGateway.Written(kCargoDoorMain), 100.0);
+}
+
+void TfdiMd11Test::cargoDoorsUntouchedWithoutGsx()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kGsxLoaderFront] = 6.0;
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QVERIFY(!gateway.HasReceivedLVar(kCargoDoor1R));
+    QCOMPARE(gateway.setLVarCalls, 0);
+}
+
+void TfdiMd11Test::paxDoorsOpenPerStairsAndCloseWhenGone()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+
+    gateway.lvars[kStairsFront] = 3.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
+    QVERIFY(!gateway.HasReceivedLVar(kPaxDoor2L));
+    QVERIFY(!gateway.HasReceivedLVar(kPaxDoor4L));
+
+    gateway.lvars[kStairsMiddle] = 3.0;
+    gateway.lvars[kStairsRear] = 3.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kPaxDoor2L), 100.0);
+    QCOMPARE(gateway.Written(kPaxDoor4L), 100.0);
+
+    gateway.lvars[kStairsFront] = 2.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kPaxDoor1L), 0.0);
+}
+
+void TfdiMd11Test::paxDoorsOpenOnlyAtFinalPosition()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+
+    gateway.lvars[kStairsFront] = 5.0;
+    aircraft.OnTick();
+
+    QVERIFY(!gateway.HasReceivedLVar(kPaxDoor1L));
+
+    gateway.lvars[kStairsFront] = 6.0;
+    aircraft.OnTick();
+
+    QVERIFY(!gateway.HasReceivedLVar(kPaxDoor1L));
+
+    gateway.lvars[kStairsFront] = 3.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
+}
+
+void TfdiMd11Test::paxDoorsUntouchedWithoutGsx()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kStairsFront] = 3.0;
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QVERIFY(!gateway.HasReceivedLVar(kPaxDoor1L));
 }
 
 void TfdiMd11Test::reportsLoadMethods()

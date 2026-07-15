@@ -16,6 +16,7 @@ public:
     [[nodiscard]] const char* GetName() const override;
     [[nodiscard]] bool IsCargoVariant() const override;
 
+    void OnTick() override;
     void OnSlowTick() override;
     void OnLoadingStarted() override {}
 
@@ -46,6 +47,11 @@ private:
     void CommitEfbTargets() const;
     void SeedTargetsIfNeeded();
 
+    void UpdateCargoDoors();
+    void UpdatePaxDoors();
+    void DriveLoaderDoor(const char* loaderStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const;
+    void DriveStairsDoor(const char* stairsStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const;
+
     [[nodiscard]] bool IsBeaconOn() const;
 
     VariableGateway* variableGateway_;
@@ -60,6 +66,12 @@ private:
     double lastFuelKg_ = 0.0;
     double targetZfwKg_ = 0.0;
     double lastZfwKg_ = 0.0;
+    double fwdCargoDoorTarget_ = -1.0;
+    double aftCargoDoorTarget_ = -1.0;
+    double mainCargoDoorTarget_ = -1.0;
+    double fwdPaxDoorTarget_ = -1.0;
+    double midPaxDoorTarget_ = -1.0;
+    double aftPaxDoorTarget_ = -1.0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11_H

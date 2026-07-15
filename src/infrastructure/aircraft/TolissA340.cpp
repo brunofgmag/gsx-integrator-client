@@ -48,15 +48,10 @@ namespace
     constexpr auto kCargoDoorModeAftLVar = "TLS_CARGO_DOOR_MODE_AFT";
     constexpr double kCargoDoorOpen = 2.0;
     constexpr double kCargoDoorClosed = 0.0;
-    constexpr double kLoaderWaitingForDoor = 6.0;
-    constexpr double kLoaderInPosition = 8.0;
-    constexpr double kLoaderLoading = 9.0;
-    constexpr double kLoaderRemoving = 4.0;
 
     constexpr auto kPaxDoorMode1LLVar = "TLS_PAX_DOOR_MODE_1L";
     constexpr auto kPaxDoorMode2LLVar = "TLS_PAX_DOOR_MODE_2L";
     constexpr auto kPaxDoorMode4LLVar = "TLS_PAX_DOOR_MODE_4L";
-    constexpr double kStairsFinalPosition = 3.0;
     constexpr double kPaxDoorOpen = 2.0;
     constexpr double kPaxDoorClosed = 0.0;
 
@@ -142,12 +137,8 @@ void TolissA340::DriveCargoDoor(const char* loaderStateLVar, const char* doorMod
 {
     const double loaderState = variableGateway_->GetLVar(loaderStateLVar, 0.0);
 
-    const bool loaderPresent = loaderState == kLoaderWaitingForDoor
-        || loaderState == kLoaderInPosition
-        || loaderState == kLoaderLoading
-        || loaderState == kLoaderRemoving;
-
-    const double doorTarget = loaderPresent ? kCargoDoorOpen : kCargoDoorClosed;
+    const double doorTarget =
+        gsx::states::IsLoaderPresent(loaderState) ? kCargoDoorOpen : kCargoDoorClosed;
 
     if (doorTarget != lastDoorTarget)
     {
@@ -170,7 +161,7 @@ void TolissA340::UpdatePaxDoors()
 
 void TolissA340::DrivePaxDoor(const char* stairsStateLVar, const char* doorModeLVar, double& lastDoorTarget) const
 {
-    if (variableGateway_->GetLVar(stairsStateLVar, 0.0) == kStairsFinalPosition)
+    if (variableGateway_->GetLVar(stairsStateLVar, 0.0) == gsx::states::kStairsFinalPosition)
     {
         if (lastDoorTarget != kPaxDoorOpen)
         {
