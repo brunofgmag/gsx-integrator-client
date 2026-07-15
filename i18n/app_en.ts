@@ -409,87 +409,92 @@
     <message>
         <location filename="../src/application/RuntimeIntegratorService.cpp" line="139"/>
         <source>The GSX profile does not need fixing.</source>
-        <translation type="unfinished"></translation>
+        <translation>The GSX profile does not need fixing.</translation>
     </message>
     <message>
         <location filename="../src/application/RuntimeIntegratorService.cpp" line="145"/>
         <source>Could not update the GSX aircraft profile.</source>
-        <translation type="unfinished"></translation>
+        <translation>Could not update the GSX aircraft profile.</translation>
     </message>
 </context>
 <context>
     <name>Main</name>
     <message>
         <location filename="../src/qml/Main.qml" line="16"/>
-        <location filename="../src/qml/Main.qml" line="99"/>
-        <location filename="../src/qml/Main.qml" line="181"/>
+        <location filename="../src/qml/Main.qml" line="100"/>
         <location filename="../src/qml/Main.qml" line="182"/>
+        <location filename="../src/qml/Main.qml" line="183"/>
         <source>GSX Integrator</source>
         <translation>GSX Integrator</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="100"/>
+        <location filename="../src/qml/Main.qml" line="101"/>
         <source>Still running in the tray. Right-click the icon to open or quit.</source>
         <translation>Still running in the tray. Right-click the icon to open or quit.</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="186"/>
+        <location filename="../src/qml/Main.qml" line="187"/>
         <source>Open</source>
         <translation>Open</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="167"/>
-        <location filename="../src/qml/Main.qml" line="190"/>
+        <location filename="../src/qml/Main.qml" line="168"/>
+        <location filename="../src/qml/Main.qml" line="191"/>
         <source>Quit</source>
         <translation>Quit</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="147"/>
+        <location filename="../src/qml/Main.qml" line="148"/>
         <source>Quit GSX Integrator?</source>
         <translation>Quit GSX Integrator?</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="160"/>
+        <location filename="../src/qml/Main.qml" line="161"/>
         <source>Cancel</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="254"/>
+        <location filename="../src/qml/Main.qml" line="255"/>
         <source>Restart to update</source>
         <translation>Restart to update</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="256"/>
+        <location filename="../src/qml/Main.qml" line="257"/>
         <source>↓ CommBus</source>
         <translation>↓ CommBus</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="258"/>
+        <location filename="../src/qml/Main.qml" line="259"/>
         <source>Apply the update and restart now</source>
         <translation>Apply the update and restart now</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="259"/>
+        <location filename="../src/qml/Main.qml" line="260"/>
         <source>Update available</source>
         <translation>Update available</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="271"/>
+        <location filename="../src/qml/Main.qml" line="272"/>
         <source>Switch to light theme</source>
         <translation>Switch to light theme</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="271"/>
+        <location filename="../src/qml/Main.qml" line="272"/>
         <source>Switch to dark theme</source>
         <translation>Switch to dark theme</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="285"/>
+        <location filename="../src/qml/Main.qml" line="286"/>
         <source>About</source>
         <translation>About</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="278"/>
+        <location filename="../src/qml/Main.qml" line="407"/>
+        <source>Save settings</source>
+        <translation>Save settings</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/Main.qml" line="279"/>
         <source>Settings</source>
         <translation>Settings</translation>
     </message>
@@ -572,17 +577,17 @@
     <message>
         <location filename="../src/qml/screens/OperationsScreen.qml" line="122"/>
         <source>The GSX profile for this aircraft does not set &apos;refueling = 0&apos;, so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.</source>
-        <translation type="unfinished"></translation>
+        <translation>The GSX profile for this aircraft does not set &apos;refueling = 0&apos;, so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/OperationsScreen.qml" line="123"/>
         <source>No GSX profile with &apos;refueling = 0&apos; was found for this aircraft. Install an aircraft profile and set &apos;refueling = 0&apos; in its gsx.cfg.</source>
-        <translation type="unfinished"></translation>
+        <translation>No GSX profile with &apos;refueling = 0&apos; was found for this aircraft. Install an aircraft profile and set &apos;refueling = 0&apos; in its gsx.cfg.</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/OperationsScreen.qml" line="124"/>
         <source>Fix profile</source>
-        <translation type="unfinished"></translation>
+        <translation>Fix profile</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/OperationsScreen.qml" line="194"/>
@@ -767,27 +772,32 @@
         <translation>Call catering</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="154"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="146"/>
+        <source>Cargo aircraft skip catering automatically, even when this is on.</source>
+        <translation>Cargo aircraft skip catering automatically, even when this is on.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="155"/>
         <source>Call lavatory service</source>
         <translation>Call lavatory service</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="163"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="164"/>
         <source>Call water service</source>
         <translation>Call water service</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="172"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="173"/>
         <source>Call cleaning service</source>
         <translation>Call cleaning service</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="183"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="184"/>
         <source>Set as global default</source>
         <translation>Set as global default</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="189"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="190"/>
         <source>Apply to all profiles</source>
         <translation>Apply to all profiles</translation>
     </message>
@@ -810,24 +820,29 @@
         <translation>Call catering</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="31"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="25"/>
+        <source>Cargo aircraft skip catering automatically, even when this is on.</source>
+        <translation>Cargo aircraft skip catering automatically, even when this is on.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="32"/>
         <source>Call lavatory service</source>
         <translation>Call lavatory service</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="32"/>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="40"/>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="48"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="33"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="41"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="49"/>
         <source>After deboarding</source>
         <translation>After deboarding</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="39"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="40"/>
         <source>Call water service</source>
         <translation>Call water service</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="47"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="48"/>
         <source>Call cleaning service</source>
         <translation>Call cleaning service</translation>
     </message>
@@ -1032,9 +1047,8 @@
         <translation type="vanished">&quot;Windows&quot; uses the system language</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="144"/>
         <source>Save settings</source>
-        <translation>Save settings</translation>
+        <translation type="vanished">Save settings</translation>
     </message>
 </context>
 <context>

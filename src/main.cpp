@@ -4,6 +4,7 @@
 #include <QtCore/QLocale>
 #include <QtCore/QSettings>
 #include <QtCore/QSize>
+#include <QtCore/QTimer>
 #include <QtCore/QTranslator>
 #include <QtGui/QFont>
 #include <QtGui/QGuiApplication>
@@ -16,6 +17,7 @@
 #include "infrastructure/aircraft/AircraftFactory.h"
 #include "infrastructure/settings/QSettingsRepository.h"
 #include "infrastructure/platform/ShowWindowMessageFilter.h"
+#include "infrastructure/platform/WindowForeground.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
 #include "infrastructure/update/GithubUpdateService.h"
 #include "viewmodel/OperationsViewModel.h"
@@ -222,8 +224,9 @@ int main(int argc, char* argv[])
 
         if (!trayArg)
         {
-            rootWindow->raise();
-            rootWindow->requestActivate();
+            QTimer::singleShot(0, rootWindow, [rootWindow] {
+                WindowForeground::Bring(rootWindow);
+            });
         }
 
         QObject::connect(&settingsViewModel, &SettingsViewModel::EffectiveDarkChanged,
