@@ -186,10 +186,7 @@ bool GsxMenuNavigator::CompleteRefuel()
 
 void GsxMenuNavigator::DisableGsxMenu()
 {
-    if (state_->menu.shown)
-    {
-        (void)client_->SendCommand("menu.toggle");
-    }
+    (void)client_->SendCommand("menu.close");
 
     reposition_ = Reposition::Idle;
     CloseIntent();
@@ -325,9 +322,19 @@ void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
         return;
     }
 
+    if (nowMs_() - watchedSinceMs_ < kResyncDelayMs)
+    {
+        return;
+    }
+
+    if (MaybeCloseStaleMenu())
+    {
+        return;
+    }
+
     const bool automationInterested = settings_ == nullptr || settings_->autoSelectGsxChoice
         || settings_->autoDeice || HasActiveIntent();
-    if (!automationInterested || resyncCount_ >= kMaxResyncs || nowMs_() - watchedSinceMs_ < kResyncDelayMs)
+    if (!automationInterested || resyncCount_ >= kMaxResyncs)
     {
         return;
     }
@@ -340,6 +347,26 @@ void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
     (void)client_->SendCommand("state.get");
     logger_->LogInfo(std::format("RemoteAPI menu stalled: requesting snapshot resync {}/{} ('{}')",
                                  resyncCount_, kMaxResyncs, state_->menu.title));
+}
+
+bool GsxMenuNavigator::MaybeCloseStaleMenu()
+{
+    const bool repositionWalking = reposition_ == Reposition::Opening
+        || reposition_ == Reposition::PickingRoot
+        || reposition_ == Reposition::AwaitingSubmenu;
+    const bool repositionLeftover = !repositionWalking && HasActiveIntent()
+        && Contains(state_->menu.title, kSelectPositionText);
+    if (!repositionLeftover)
+    {
+        return false;
+    }
+
+    watchedSinceMs_ = nowMs_();
+    lastActionMs_ = nowMs_();
+    (void)client_->SendCommand("menu.close");
+    logger_->LogInfo(std::format("RemoteAPI closing stale menu '{}'", state_->menu.title));
+
+    return true;
 }
 
 bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
@@ -463,18 +490,23 @@ bool GsxMenuNavigator::HandleIntentPrompts()
 bool GsxMenuNavigator::TriggerService(const char* serviceId)
 {
     OpenIntent(Intent::Service);
-    OpenMenu();
+    ShowGsxToolbar();
     lastActionMs_ = nowMs_();
 
     return client_->SendCommand("service.trigger", QJsonObject{{"service", QString::fromLatin1(serviceId)}});
 }
 
-void GsxMenuNavigator::OpenMenu() const
+void GsxMenuNavigator::ShowGsxToolbar() const
 {
     if (settings_->openGsxOnRequests && pluginClient_ != nullptr && !pluginClient_->IsGsxToolbarActive())
     {
         (void)pluginClient_->OpenGsxToolbar();
     }
+}
+
+void GsxMenuNavigator::OpenMenu() const
+{
+    ShowGsxToolbar();
 
     if (!state_->menu.shown)
     {

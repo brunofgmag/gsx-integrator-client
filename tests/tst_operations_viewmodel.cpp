@@ -20,6 +20,7 @@ private slots:
     static void startLoadingDelegatesToService();
     static void startLoadingReportsRejectedCommands();
     static void exposesCanStartLoadingFromSnapshot();
+    static void waitingForLoadingOverridesStateTextAndTip();
     static void reloadSimbriefDelegatesToService();
     static void exposesAircraftPropertiesFromSnapshot();
     static void successfulCommandClearsPreviousError();
@@ -31,6 +32,23 @@ private slots:
     static void restartFlowReportsRejectedCommands();
     static void exposesInDeboardingPhaseFromSnapshot();
 };
+
+void OperationsViewModelTest::waitingForLoadingOverridesStateTextAndTip()
+{
+    FakeIntegratorService service;
+    const OperationsViewModel viewModel(&service);
+
+    service.snapshot.phase = TurnaroundPhase::RequestFuel;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetStateText(), QStringLiteral("Requesting fuel"));
+
+    service.snapshot.canStartLoading = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetStateText(), QStringLiteral("Waiting for start loading"));
+    QVERIFY(viewModel.GetPhaseTip().contains(QStringLiteral("START LOADING")));
+}
 
 void OperationsViewModelTest::exposesUpdatedSnapshot()
 {

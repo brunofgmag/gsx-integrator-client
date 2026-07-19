@@ -5,9 +5,11 @@
 #include <memory>
 #include <string>
 #include "AircraftRegistry.h"
+#include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
 #include "../../domain/model/FlightPlan.h"
 #include "../../domain/model/AutomationStatus.h"
+#include "../../domain/ports/GsxGateway.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
 
 namespace
@@ -33,10 +35,29 @@ namespace
     constexpr auto kSimPayloadStationPrefix = "PAYLOAD STATION WEIGHT:";
     constexpr std::array kStationDefaultLoadsLbs =
         {2100.0, 5250.0, 1050.0, 2975.0, 3150.0, 3500.0, 2275.0, 5752.0, 8018.0};
+
+    constexpr auto kFwdCargoAnimLVar = "Animation_FWD_Cargo_VAL";
+    constexpr auto kAftCargoAnimLVar = "Animation_AFT_Cargo_VAL";
+    constexpr double kCargoDoorOpenThreshold = 90.0;
+    constexpr int kPulseSettleTicks = 5;
+    constexpr int kMaxDoorPulseAttempts = 3;
+
+    bool IsState(const double lvarValue, const GsxStateStatus state)
+    {
+        return lvarValue == static_cast<double>(state);
+    }
 }
 
 IFly737Max::IFly737Max(VariableGateway* variableGateway, AutomationStatus* status)
-    : variableGateway_(variableGateway), status_(status)
+    : variableGateway_(variableGateway), status_(status),
+      fwdCargoDoor_{
+          "FWD", kFwdCargoAnimLVar, gsx::lvars::kAircraftCargo1Toggle,
+          gsx::lvars::kBaggageLoaderFrontState
+      },
+      aftCargoDoor_{
+          "AFT", kAftCargoAnimLVar, gsx::lvars::kAircraftCargo2Toggle,
+          gsx::lvars::kBaggageLoaderRearState
+      }
 {
     variableGateway_->SetFastRefresh(std::string("L:") + kSmartSwitch);
 
@@ -46,6 +67,176 @@ IFly737Max::IFly737Max(VariableGateway* variableGateway, AutomationStatus* statu
 const char* IFly737Max::GetName() const
 {
     return "iFly 737 MAX 8";
+}
+
+void IFly737Max::OnTick()
+{
+    CloseCargoDoorsAfterUnloading();
+}
+
+void IFly737Max::CloseCargoDoorsAfterUnloading()
+{
+    const double deboarding = variableGateway_->GetLVar(gsx::lvars::kDeboardingState, 0.0);
+    const bool deboardActive = IsState(deboarding, GsxStateStatus::Active);
+
+    if (deboardActive && !cargoDoorCloseArmed_)
+    {
+        ArmCargoDoorCloser();
+    }
+
+    if (!cargoDoorCloseArmed_)
+    {
+        return;
+    }
+
+    if (IsBoardingUnderway())
+    {
+        DisarmCargoDoorCloser();
+
+        return;
+    }
+
+    TrackBaggageLoader(fwdCargoDoor_);
+    TrackBaggageLoader(aftCargoDoor_);
+
+    if (AdvanceDoorPulse())
+    {
+        return;
+    }
+
+    if (!deboardActive && !HasPendingCargoDoorWork())
+    {
+        cargoDoorCloseArmed_ = false;
+    }
+}
+
+void IFly737Max::ArmCargoDoorCloser()
+{
+    cargoDoorCloseArmed_ = true;
+    ResetDoorTracking(fwdCargoDoor_);
+    ResetDoorTracking(aftCargoDoor_);
+}
+
+void IFly737Max::ResetDoorTracking(CargoDoorCloser& door)
+{
+    door.unloadingSeen = false;
+    door.loaderDone = false;
+    door.attempts = 0;
+}
+
+bool IFly737Max::AdvanceDoorPulse()
+{
+    if (pulseHighDoor_ != nullptr)
+    {
+        variableGateway_->SetLVar(pulseHighDoor_->toggleLVar, 0.0);
+        pulseHighDoor_ = nullptr;
+        pulseSettleTicks_ = kPulseSettleTicks;
+
+        return true;
+    }
+
+    if (pulseSettleTicks_ > 0)
+    {
+        --pulseSettleTicks_;
+
+        return true;
+    }
+
+    CargoDoorCloser* door = NextCloseableDoor();
+    if (door == nullptr)
+    {
+        return false;
+    }
+
+    ++door->attempts;
+    variableGateway_->SetLVar(door->toggleLVar, 1.0);
+    pulseHighDoor_ = door;
+
+    LOG_INFO("iFly: closing %s cargo door behind its baggage loader (attempt %d/%d)",
+             door->doorName, door->attempts, kMaxDoorPulseAttempts);
+
+    return true;
+}
+
+bool IFly737Max::IsBoardingUnderway() const
+{
+    const double boarding = variableGateway_->GetLVar(gsx::lvars::kBoardingState, 0.0);
+
+    return IsState(boarding, GsxStateStatus::Requested) || IsState(boarding, GsxStateStatus::Active);
+}
+
+bool IFly737Max::HasPendingCargoDoorWork() const
+{
+    return IsBaggageLoaderPresent(fwdCargoDoor_.loaderLVar)
+        || IsBaggageLoaderPresent(aftCargoDoor_.loaderLVar)
+        || IsDoorClosePending(fwdCargoDoor_)
+        || IsDoorClosePending(aftCargoDoor_);
+}
+
+void IFly737Max::TrackBaggageLoader(CargoDoorCloser& door) const
+{
+    const double loaderState = variableGateway_->GetLVar(door.loaderLVar, 0.0);
+
+    if (loaderState == gsx::states::kLoaderUnloading)
+    {
+        door.unloadingSeen = true;
+    }
+
+    if (gsx::states::IsLoaderAtDoor(loaderState) || loaderState == gsx::states::kLoaderRetracting)
+    {
+        door.loaderDone = false;
+        door.attempts = 0;
+
+        return;
+    }
+
+    if (door.unloadingSeen)
+    {
+        door.loaderDone = true;
+    }
+}
+
+bool IFly737Max::IsBaggageLoaderPresent(const char* loaderLVar) const
+{
+    return variableGateway_->HasReceivedLVar(loaderLVar)
+        && gsx::states::IsLoaderPresent(variableGateway_->GetLVar(loaderLVar, 0.0));
+}
+
+bool IFly737Max::IsDoorCloseable(const CargoDoorCloser& door) const
+{
+    return door.loaderDone
+        && door.attempts < kMaxDoorPulseAttempts
+        && variableGateway_->GetLVar(door.animLVar, 0.0) > kCargoDoorOpenThreshold;
+}
+
+bool IFly737Max::IsDoorClosePending(const CargoDoorCloser& door) const
+{
+    return (door.unloadingSeen && !door.loaderDone) || IsDoorCloseable(door);
+}
+
+IFly737Max::CargoDoorCloser* IFly737Max::NextCloseableDoor()
+{
+    for (CargoDoorCloser* door : {&fwdCargoDoor_, &aftCargoDoor_})
+    {
+        if (IsDoorCloseable(*door))
+        {
+            return door;
+        }
+    }
+
+    return nullptr;
+}
+
+void IFly737Max::DisarmCargoDoorCloser()
+{
+    if (pulseHighDoor_ != nullptr)
+    {
+        variableGateway_->SetLVar(pulseHighDoor_->toggleLVar, 0.0);
+        pulseHighDoor_ = nullptr;
+    }
+
+    cargoDoorCloseArmed_ = false;
+    pulseSettleTicks_ = 0;
 }
 
 bool IFly737Max::IsCargoVariant() const

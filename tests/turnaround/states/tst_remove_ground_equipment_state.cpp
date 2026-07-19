@@ -11,7 +11,9 @@ private slots:
     static void skipsWhenGpuManagementDisabled();
     static void skipsWhenGpuNotConnected();
     static void dismissesConnectedGpuThenAdvances();
-    static void advancesAfterMaxAttempts();
+    static void retriesWhileGpuServiceBusy();
+    static void advancesWhenGpuServiceIdlesWhileConnected();
+    static void dismissesGpuStillEnRoute();
     static void dismissesWhenAircraftReportsConnected();
     static void skipsWhenAircraftReportsDisconnected();
     static void holdsDismissWhileMenuUnsettled();
@@ -76,7 +78,33 @@ void RemoveGroundEquipmentStateTest::dismissesConnectedGpuThenAdvances()
     QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
 }
 
-void RemoveGroundEquipmentStateTest::advancesAfterMaxAttempts()
+void RemoveGroundEquipmentStateTest::retriesWhileGpuServiceBusy()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
+    f.gsxService.gpuInProgress = true;
+
+    for (int tick = 0; tick < 240; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 4);
+
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+    f.gsxService.gpuInProgress = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+}
+
+void RemoveGroundEquipmentStateTest::advancesWhenGpuServiceIdlesWhileConnected()
 {
     TurnaroundStateFixture f;
     RemoveGroundEquipmentState state;
@@ -93,7 +121,21 @@ void RemoveGroundEquipmentStateTest::advancesAfterMaxAttempts()
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
-    QCOMPARE(f.menuGateway.toggleGpuCalls, 3);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
+}
+
+void RemoveGroundEquipmentStateTest::dismissesGpuStillEnRoute()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+    f.gsxService.gpuInProgress = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
+    QVERIFY(f.ctx.data.gpuDismissRequested);
 }
 
 void RemoveGroundEquipmentStateTest::dismissesWhenAircraftReportsConnected()

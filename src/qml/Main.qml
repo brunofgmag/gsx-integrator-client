@@ -28,6 +28,14 @@ ApplicationWindow {
     readonly property bool compact: width < 620
     readonly property int shellMargin: compact ? 14 : 20
 
+    readonly property bool waitingForInput: window.integratorVm.canStartLoading
+    onWaitingForInputChanged: {
+        if (window.waitingForInput) {
+            tray.showMessage(qsTr("GSX Integrator"),
+                             qsTr("Waiting for input: press START LOADING or activate the SmartSwitch."))
+        }
+    }
+
     // 0 = ops, 1 = settings, 2 = about. Header buttons toggle back to ops.
     property int screen: 0
 

@@ -82,9 +82,9 @@ private slots:
     static void serviceTriggersUseCanonicalVerbs();
     static void inactiveGsxIconIsActivatedBeforeMenuAction();
     static void activeGsxIconIsNotReactivated();
-    static void openGsxOnRequestsOffSkipsToolbarButStillToggles();
+    static void openGsxOnRequestsOffSkipsToolbar();
     static void openGsxOnRequestsOnActivatesToolbar();
-    static void triggerServiceOpensMenuWhenClosed();
+    static void triggerServiceDoesNotOpenClosedMenu();
     static void triggerServiceDoesNotToggleOpenMenu();
     static void confirmGoodEnginesPicksWhenMenuVisible();
     static void confirmGoodEnginesOpensMenuAndDefersPick();
@@ -115,6 +115,9 @@ private slots:
     static void skipsDisabledEntryAndPicksEnabled();
     static void repositionWalksRootThenSubmenu();
     static void repositionSurvivesTransientCloseAndRootReshow();
+    static void staleSelectPositionMenuClosedAfterReposition();
+    static void staleSelectPositionMenuClosedAfterServiceIntentReplacedReposition();
+    static void staleSelectPositionMenuIgnoredAfterIntentTtl();
     static void rejectedPickAllowsRepick();
     static void resetAllowsRepickingSameMenu();
     static void staleRefuelingLevelMenuResyncsAndPicksBlockFuel();
@@ -204,7 +207,7 @@ void GsxMenuNavigatorTest::activeGsxIconIsNotReactivated()
     QCOMPARE(client.Count("service.trigger"), 1);
 }
 
-void GsxMenuNavigatorTest::openGsxOnRequestsOffSkipsToolbarButStillToggles()
+void GsxMenuNavigatorTest::openGsxOnRequestsOffSkipsToolbar()
 {
     FakeRemoteClient client;
     GsxRemoteState state;
@@ -218,7 +221,7 @@ void GsxMenuNavigatorTest::openGsxOnRequestsOffSkipsToolbarButStillToggles()
     QVERIFY(nav.RequestRefueling());
 
     QCOMPARE(gateway.Written(IntegratorPluginCommBus::kToolbarCmdLVar), -1.0);
-    QCOMPARE(client.Count("menu.toggle"), 1);
+    QCOMPARE(client.Count("menu.toggle"), 0);
     QCOMPARE(client.Count("service.trigger"), 1);
 }
 
@@ -239,7 +242,7 @@ void GsxMenuNavigatorTest::openGsxOnRequestsOnActivatesToolbar()
     QCOMPARE(client.Count("service.trigger"), 1);
 }
 
-void GsxMenuNavigatorTest::triggerServiceOpensMenuWhenClosed()
+void GsxMenuNavigatorTest::triggerServiceDoesNotOpenClosedMenu()
 {
     FakeRemoteClient client;
     GsxRemoteState state;
@@ -249,9 +252,8 @@ void GsxMenuNavigatorTest::triggerServiceOpensMenuWhenClosed()
 
     QVERIFY(nav.RequestRefueling());
 
-    QCOMPARE(client.sent.size(), static_cast<std::size_t>(2));
-    QCOMPARE(client.sent[0].verb, QString("menu.toggle"));
-    QCOMPARE(client.sent[1].verb, QString("service.trigger"));
+    QCOMPARE(client.sent.size(), static_cast<std::size_t>(1));
+    QCOMPARE(client.sent[0].verb, QString("service.trigger"));
 }
 
 void GsxMenuNavigatorTest::triggerServiceDoesNotToggleOpenMenu()
@@ -262,7 +264,7 @@ void GsxMenuNavigatorTest::triggerServiceDoesNotToggleOpenMenu()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    ShowMenu(state, "Activate Services at CYVR/Vancouver Intl", {"Request Refueling"});
+    ShowMenu(state, "Activate Services at ZZZZ/Test Airport", {"Request Refueling"});
 
     QVERIFY(nav.RequestRefueling());
 
@@ -383,7 +385,7 @@ void GsxMenuNavigatorTest::completeRefuelPicksCompleteNowViaServiceMenu()
 
     QCOMPARE(client.Count("menu.toggle"), 1);
 
-    ShowMenu(state, "Activate Services at SBFZ",
+    ShowMenu(state, "Activate Services at ZZZZ",
              {"Request Deboarding", "Refueling: 10761 kg loaded", "Request Boarding"});
     nav.OnMenuChanged();
 
@@ -431,7 +433,7 @@ void GsxMenuNavigatorTest::completeRefuelMatchesLbsLoadedEntry()
 
     QVERIFY(nav.CompleteRefuel());
 
-    ShowMenu(state, "Activate Services at SBFZ",
+    ShowMenu(state, "Activate Services at ZZZZ",
              {"Request Deboarding", "Refueling: 23724 lbs loaded", "Request Boarding"});
     nav.OnMenuChanged();
 
@@ -472,7 +474,7 @@ void GsxMenuNavigatorTest::staleRepositionClearedByServiceIntent()
     QVERIFY(nav.RepositionAircraft());
     QVERIFY(nav.RequestBoarding());
 
-    ShowMenu(state, "Activate Services at SBFZ",
+    ShowMenu(state, "Activate Services at ZZZZ",
              {"Request Deboarding", "Request Boarding", "Reposition Aircraft"});
     nav.OnMenuChanged();
 
@@ -489,7 +491,7 @@ void GsxMenuNavigatorTest::picksGsxChoiceDuringServiceIntent()
 
     QVERIFY(nav.RequestRefueling());
 
-    ShowMenu(state, "Select fueltruck operator", {"Air North [GSX choice]", "Strategic Aviation Canada", "Back"});
+    ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B", "Back"});
     nav.OnMenuChanged();
 
     const Sent* pick = client.Last("menu.pick");
@@ -513,7 +515,7 @@ void GsxMenuNavigatorTest::gsxChoiceSurvivesDispatchDelay()
     QVERIFY(nav.RequestRefueling());
 
     fakeNow = 30000;
-    ShowMenu(state, "Select fueltruck operator", {"Air North [GSX choice]", "Strategic Aviation Canada"});
+    ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
     nav.OnMenuChanged();
 
     const Sent* pick = client.Last("menu.pick");
@@ -533,7 +535,7 @@ void GsxMenuNavigatorTest::gsxChoiceSurvivesTransientMenuClose()
 
     QVERIFY(nav.RequestRefueling());
 
-    ShowMenu(state, "Activate Services at CYVR/Vancouver Intl", {"Request Refueling", "Request Boarding"});
+    ShowMenu(state, "Activate Services at ZZZZ/Test Airport", {"Request Refueling", "Request Boarding"});
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("menu.pick"), 0);
@@ -543,7 +545,7 @@ void GsxMenuNavigatorTest::gsxChoiceSurvivesTransientMenuClose()
     state.menu.entries.clear();
     nav.OnMenuChanged();
 
-    ShowMenu(state, "Select fueltruck operator", {"Air North [GSX choice]", "Strategic Aviation Canada"});
+    ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
     nav.OnMenuChanged();
 
     const Sent* pick = client.Last("menu.pick");
@@ -563,7 +565,7 @@ void GsxMenuNavigatorTest::resolverDoesNotRepickSameMenu()
 
     QVERIFY(nav.RequestRefueling());
 
-    ShowMenu(state, "Select fueltruck operator", {"Air North [GSX choice]", "Strategic Aviation Canada"});
+    ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
 
     nav.OnMenuChanged(); // tick 1
     nav.OnMenuChanged(); // tick 2
@@ -586,7 +588,7 @@ void GsxMenuNavigatorTest::gsxChoicePickedEvenAfterIntentTtl()
     QVERIFY(nav.RequestRefueling());
 
     fakeNow = 120000;
-    ShowMenu(state, "Select fueltruck operator", {"Air North [GSX choice]", "Strategic Aviation Canada"});
+    ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
     nav.OnMenuChanged();
 
     const Sent* pick = client.Last("menu.pick");
@@ -607,7 +609,7 @@ void GsxMenuNavigatorTest::gsxChoiceNotPickedWhenFlagOff()
 
     QVERIFY(nav.RequestRefueling());
 
-    ShowMenu(state, "Select fueltruck operator", {"Air North [GSX choice]", "Strategic Aviation Canada"});
+    ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("menu.pick"), 0);
@@ -807,7 +809,7 @@ void GsxMenuNavigatorTest::manualMenuWithGsxChoiceIsPicked()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    ShowMenu(state, "Select fueltruck operator", {"Air North [GSX choice]", "Strategic Aviation Canada"});
+    ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
     nav.OnMenuChanged();
 
     const Sent* pick = client.Last("menu.pick");
@@ -825,7 +827,7 @@ void GsxMenuNavigatorTest::manualMenuIsNotRepickedWhileUnchanged()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    ShowMenu(state, "Select fueltruck operator", {"Air North [GSX choice]", "Strategic Aviation Canada"});
+    ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
 
     nav.OnMenuChanged();
     nav.OnMenuChanged();
@@ -842,7 +844,7 @@ void GsxMenuNavigatorTest::manualMenuWithoutGsxChoiceIsIgnored()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    ShowMenu(state, "Activate Services at CYVR/Vancouver Intl", {"Request Refueling", "Request Boarding"});
+    ShowMenu(state, "Activate Services at ZZZZ/Test Airport", {"Request Refueling", "Request Boarding"});
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("menu.pick"), 0);
@@ -859,7 +861,7 @@ void GsxMenuNavigatorTest::skipsDisabledEntryAndPicksEnabled()
     QVERIFY(nav.RequestBoarding());
 
     ShowMenu(state, "Select handling operator",
-             {"Air North [GSX choice]", "Menzies [GSX choice]"}, {true, false});
+             {"Operator A [GSX choice]", "Operator B [GSX choice]"}, {true, false});
     nav.OnMenuChanged();
 
     const Sent* pick = client.Last("menu.pick");
@@ -881,7 +883,7 @@ void GsxMenuNavigatorTest::repositionWalksRootThenSubmenu()
 
     QVERIFY(client.Last("menu.toggle") != nullptr);
 
-    ShowMenu(state, "Activate Services at KJFK/JFK",
+    ShowMenu(state, "Activate Services at ZZZZ/Test Airport",
              {"Request Deboarding", "Reposition Aircraft", "Operate Stairs"});
     nav.OnMenuChanged();
     const Sent* rootPick = client.Last("menu.pick");
@@ -890,7 +892,7 @@ void GsxMenuNavigatorTest::repositionWalksRootThenSubmenu()
 
     QCOMPARE(rootPick->args.value("index").toInt(), 1);
 
-    ShowMenu(state, "Select Position at KJFK", {"Reposition here", "Cancel"});
+    ShowMenu(state, "Select Position at ZZZZ", {"Reposition here", "Cancel"});
     nav.OnMenuChanged();
     const Sent* herePick = client.Last("menu.pick");
 
@@ -909,7 +911,7 @@ void GsxMenuNavigatorTest::repositionSurvivesTransientCloseAndRootReshow()
 
     QVERIFY(nav.RepositionAircraft());
 
-    ShowMenu(state, "Activate Services at CYVR/Vancouver Intl",
+    ShowMenu(state, "Activate Services at ZZZZ/Test Airport",
              {"Request Refueling", "Reposition Aircraft"});
     nav.OnMenuChanged();
 
@@ -920,12 +922,12 @@ void GsxMenuNavigatorTest::repositionSurvivesTransientCloseAndRootReshow()
     state.menu.entries.clear();
     nav.OnMenuChanged();
 
-    ShowMenu(state, "Activate Services at CYVR/Vancouver Intl",
+    ShowMenu(state, "Activate Services at ZZZZ/Test Airport",
              {"Request Refueling", "Reposition Aircraft"});
     nav.OnMenuChanged();
     QCOMPARE(client.Count("menu.pick"), 2);
 
-    ShowMenu(state, "Select Position at CYVR", {"Reposition here [Apron 6|Gate 70]", "Cancel"});
+    ShowMenu(state, "Select Position at ZZZZ", {"Reposition here [Apron 1|Gate 1]", "Cancel"});
     nav.OnMenuChanged();
 
     const Sent* pick = client.Last("menu.pick");
@@ -934,6 +936,125 @@ void GsxMenuNavigatorTest::repositionSurvivesTransientCloseAndRootReshow()
 
     QCOMPARE(pick->args.value("index").toInt(), 0);
     QCOMPARE(client.Count("menu.pick"), 3);
+}
+
+void GsxMenuNavigatorTest::staleSelectPositionMenuClosedAfterReposition()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 0;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    QVERIFY(nav.RepositionAircraft());
+    QCOMPARE(client.Count("menu.toggle"), 1);
+
+    ShowMenu(state, "Select Position at ZZZZ/Test Airport",
+             {"Reposition here [Gate 1]", "Cancel"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 1);
+
+    state.menu.shown = false;
+    state.menu.title.clear();
+    state.menu.entries.clear();
+    nav.OnMenuChanged();
+
+    fakeNow = 5000;
+    ShowMenu(state, "Select Position at ZZZZ/Test Airport",
+             {"Reposition here [Gate 1]", "Cancel"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.close"), 0);
+
+    fakeNow = 7000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.close"), 1);
+    QCOMPARE(client.Count("menu.pick"), 1);
+    QCOMPARE(client.Count("state.get"), 0);
+
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.close"), 1);
+}
+
+void GsxMenuNavigatorTest::staleSelectPositionMenuClosedAfterServiceIntentReplacedReposition()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 0;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    QVERIFY(nav.RepositionAircraft());
+
+    ShowMenu(state, "Select Position at ZZZZ/Test Airport",
+             {"Reposition here [Gate 1]", "Cancel"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 1);
+
+    state.menu.shown = false;
+    state.menu.title.clear();
+    state.menu.entries.clear();
+    nav.OnMenuChanged();
+
+    QVERIFY(nav.RequestCatering());
+
+    fakeNow = 5000;
+    ShowMenu(state, "Select Position at ZZZZ/Test Airport",
+             {"Reposition here [Gate 1]", "Cancel"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.close"), 0);
+
+    fakeNow = 7000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.close"), 1);
+    QCOMPARE(client.Count("menu.pick"), 1);
+}
+
+void GsxMenuNavigatorTest::staleSelectPositionMenuIgnoredAfterIntentTtl()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 0;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    QVERIFY(nav.RepositionAircraft());
+
+    ShowMenu(state, "Select Position at ZZZZ/Test Airport",
+             {"Reposition here [Gate 1]", "Cancel"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 1);
+
+    state.menu.shown = false;
+    state.menu.title.clear();
+    state.menu.entries.clear();
+    nav.OnMenuChanged();
+
+    fakeNow = 61000;
+    ShowMenu(state, "Select Position at ZZZZ/Test Airport",
+             {"Reposition here [Gate 1]", "Cancel"});
+    nav.OnMenuChanged();
+
+    fakeNow = 63000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.close"), 0);
 }
 
 void GsxMenuNavigatorTest::rejectedPickAllowsRepick()
@@ -946,7 +1067,7 @@ void GsxMenuNavigatorTest::rejectedPickAllowsRepick()
 
     QVERIFY(nav.RequestRefueling());
 
-    ShowMenu(state, "Select fueltruck operator", {"Air North [GSX choice]", "Strategic Aviation Canada"});
+    ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
 
     nav.OnMenuChanged();
 
@@ -972,7 +1093,7 @@ void GsxMenuNavigatorTest::resetAllowsRepickingSameMenu()
 
     QVERIFY(nav.RequestRefueling());
 
-    ShowMenu(state, "Select fueltruck operator", {"Air North [GSX choice]", "Strategic Aviation Canada"});
+    ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("menu.pick"), 1);
@@ -1036,7 +1157,7 @@ void GsxMenuNavigatorTest::swallowedRepositionPickRetriesAfterResyncSnapshot()
 
     QVERIFY(nav.RepositionAircraft());
 
-    ShowMenu(state, "Activate Services at SBFZ/Pinto Martins Intl",
+    ShowMenu(state, "Activate Services at ZZZZ/Test Airport",
              {"Request Refueling", "Reposition Aircraft"});
     nav.OnMenuChanged();
 
@@ -1052,7 +1173,7 @@ void GsxMenuNavigatorTest::swallowedRepositionPickRetriesAfterResyncSnapshot()
 
     QCOMPARE(client.Count("menu.pick"), 2);
 
-    ShowMenu(state, "Select Position at SBFZ/Pinto Martins Intl", {"Reposition here [Gate 0]", "Cancel"});
+    ShowMenu(state, "Select Position at ZZZZ/Test Airport", {"Reposition here [Gate 1]", "Cancel"});
     nav.OnMenuChanged();
 
     const Sent* pick = client.Last("menu.pick");

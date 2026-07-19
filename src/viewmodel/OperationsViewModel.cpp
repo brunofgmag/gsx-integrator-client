@@ -70,6 +70,17 @@ namespace
         }
     }
 
+    QString StartLoadingLabel()
+    {
+        return QCoreApplication::translate("Turnaround", "Waiting for start loading");
+    }
+
+    QString StartLoadingTip()
+    {
+        return QCoreApplication::translate("Turnaround",
+                                           "Press START LOADING or activate the SmartSwitch to begin refueling and boarding.");
+    }
+
     QString FlightPlanStatusLabel(const FlightPlanStatus status)
     {
         switch (status)
@@ -137,7 +148,7 @@ QString OperationsViewModel::GetAircraftName() const
 
 QString OperationsViewModel::GetStateText() const
 {
-    return PhaseLabel(snapshot_.phase);
+    return IsAwaitingStartLoading() ? StartLoadingLabel() : PhaseLabel(snapshot_.phase);
 }
 
 int OperationsViewModel::GetPhase() const
@@ -152,7 +163,12 @@ int OperationsViewModel::GetPhaseCount()
 
 QString OperationsViewModel::GetPhaseTip() const
 {
-    return PhaseTip(snapshot_.phase);
+    return IsAwaitingStartLoading() ? StartLoadingTip() : PhaseTip(snapshot_.phase);
+}
+
+bool OperationsViewModel::IsAwaitingStartLoading() const
+{
+    return snapshot_.canStartLoading;
 }
 
 int OperationsViewModel::GetDelayTicksRemaining() const

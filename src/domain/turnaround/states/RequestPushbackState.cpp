@@ -20,14 +20,15 @@ std::optional<TurnaroundTransition> RequestPushbackState::Evaluate(TurnaroundCon
     }
 
     const GsxStateStatus departureState = ctx.gsxGateway->GetStateStatus(GsxState::Pushback);
+    if (departureState == GsxStateStatus::Requested || departureState == GsxStateStatus::Active
+        || ctx.gsxGateway->IsServiceInProgress(GroundService::Departure))
+    {
+        return TurnaroundTransition{TurnaroundPhase::WaitingPushbackToStart};
+    }
+
     if (departureState == GsxStateStatus::Callable && !data.pushbackRequested && ctx.menuGateway->IsMenuSettled())
     {
         data.pushbackRequested = ctx.menuGateway->RequestPushback();
-    }
-
-    if (departureState == GsxStateStatus::Requested || departureState == GsxStateStatus::Active)
-    {
-        return TurnaroundTransition{TurnaroundPhase::WaitingPushbackToStart};
     }
 
     if (departureState == GsxStateStatus::Completed || ctx.gsxGateway->WasStateCompleted(GsxState::Pushback))

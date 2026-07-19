@@ -33,6 +33,8 @@ namespace
         case GroundService::Lavatory: return "Lavatory";
         case GroundService::Water: return "Water";
         case GroundService::Cleaning: return "Cleaning";
+        case GroundService::Gpu: return "GPU";
+        case GroundService::Departure: return "Departure";
         default: return nullptr;
         }
     }
@@ -125,19 +127,45 @@ int GsxStateService::GetPlannedPassengers() const
 
 int GsxStateService::GetBoardedPassengers()
 {
-    return boarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersBoardingTotal)));
+    const bool active = varManager_->GetLVar(kBoardingState) == static_cast<double>(GsxStateStatus::Active);
+
+    return boarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersBoardingTotal)), active);
 }
 
 int GsxStateService::GetDeboardedPassengers()
 {
-    return deboarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersDeboardingTotal)));
+    const bool active = varManager_->GetLVar(kDeboardingState) == static_cast<double>(GsxStateStatus::Active);
+
+    return deboarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersDeboardingTotal)), active);
 }
 
-int GsxStateService::PassengerCounter::Update(const int current)
+int GsxStateService::PassengerCounter::Update(const int current, const bool active)
 {
+    if (!counting)
+    {
+        if (!active)
+        {
+            return 0;
+        }
+
+        counting = true;
+        last = current;
+
+        return total + current;
+    }
+
     if (current < last)
     {
-        total += last;
+        if (grown)
+        {
+            total += last;
+        }
+
+        grown = current > 0;
+    }
+    else if (current > last)
+    {
+        grown = true;
     }
 
     last = current;

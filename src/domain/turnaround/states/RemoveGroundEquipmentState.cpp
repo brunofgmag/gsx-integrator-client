@@ -9,7 +9,6 @@
 namespace
 {
     constexpr int kRetryTicks = 60;
-    constexpr int kMaxAttempts = 3;
 }
 
 std::optional<TurnaroundTransition> RemoveGroundEquipmentState::Evaluate(TurnaroundContext& ctx)
@@ -26,8 +25,11 @@ std::optional<TurnaroundTransition> RemoveGroundEquipmentState::Evaluate(Turnaro
     const bool connected =
         ctx.aircraft->GetGroundPowerStatus().value_or(ctx.gsxGateway->GetGpuStatus())
         == GroundPowerStatus::Connected;
+    const bool gpuBusy = ctx.gsxGateway->IsServiceInProgress(GroundService::Gpu);
+    const bool gpuGone = !connected && !gpuBusy;
+    const bool gpuUnmanaged = !manageEquipment && !ctx.data.gpuDismissRequested;
 
-    if ((!manageEquipment && !ctx.data.gpuDismissRequested) || !connected)
+    if (gpuUnmanaged || gpuGone)
     {
         return TurnaroundTransition{TurnaroundPhase::RequestPushback};
     }
@@ -41,14 +43,13 @@ std::optional<TurnaroundTransition> RemoveGroundEquipmentState::Evaluate(Turnaro
 
         static_cast<void>(ctx.menuGateway->ToggleGpu());
         ctx.data.gpuDismissRequested = true;
-        ++ctx.data.gpuDismissAttempts;
 
         return std::nullopt;
     }
 
     if (ctx.TickCondition(kRetryTicks))
     {
-        if (ctx.data.gpuDismissAttempts >= kMaxAttempts)
+        if (!gpuBusy)
         {
             return TurnaroundTransition{TurnaroundPhase::RequestPushback};
         }

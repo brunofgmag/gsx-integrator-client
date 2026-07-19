@@ -12,6 +12,7 @@ private slots:
     static void doesNotRequestTwice();
     static void advancesOnRequested();
     static void advancesOnActive();
+    static void advancesWhenDepartureRequestedRemotely();
     static void retryWhenPushbackStaysCallable();
     static void advancesWhenPushbackAlreadyCompleted();
     static void holdsRequestWhileMenuUnsettled();
@@ -71,6 +72,21 @@ void RequestPushbackStateTest::advancesOnActive()
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingPushbackToStart);
+}
+
+void RequestPushbackStateTest::advancesWhenDepartureRequestedRemotely()
+{
+    TurnaroundStateFixture f;
+    RequestPushbackState state;
+
+    f.gsxService.departureState = GsxStateStatus::Callable;
+    f.gsxService.departureInProgress = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingPushbackToStart);
+    QCOMPARE(f.menuGateway.pushbackCalls, 0);
 }
 
 void RequestPushbackStateTest::retryWhenPushbackStaysCallable()

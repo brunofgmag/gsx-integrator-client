@@ -99,6 +99,7 @@ signals:
     void CommandErrorChanged();
 
 private:
+    [[nodiscard]] bool IsAwaitingStartLoading() const;
     void Refresh();
     void SetCommandError(const CommandResult& result);
 

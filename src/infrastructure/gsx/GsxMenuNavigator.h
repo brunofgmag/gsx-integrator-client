@@ -45,6 +45,7 @@ public:
     [[nodiscard]] bool IsMenuSettled() const override;
 
     void OpenMenu() const;
+    void ShowGsxToolbar() const;
     void OnMenuChanged();
     void OnSnapshot();
     void DisableGsxMenu() override;
@@ -71,6 +72,7 @@ private:
     void ClearMenuTracking();
     bool LogMenuIfNew(const std::string& sig);
     void MaybeResyncStalledMenu(const std::string& sig);
+    bool MaybeCloseStaleMenu();
     bool HandleAutoPicks(const std::string& sig);
     bool HandlePendingCompletions();
     bool HandleRepositionFlow();

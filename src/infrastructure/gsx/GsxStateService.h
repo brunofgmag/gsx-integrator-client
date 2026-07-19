@@ -54,8 +54,10 @@ private:
     {
         int last = 0;
         int total = 0;
+        bool counting = false;
+        bool grown = false;
 
-        int Update(int current);
+        int Update(int current, bool active);
     };
 
     void ParseCompleted(GsxState gsxState, GsxStateStatus stateStatus);

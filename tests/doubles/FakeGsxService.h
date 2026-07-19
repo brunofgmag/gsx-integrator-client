@@ -39,6 +39,8 @@ public:
     bool lavatoryInProgress = false;
     bool waterInProgress = false;
     bool cleaningInProgress = false;
+    bool gpuInProgress = false;
+    bool departureInProgress = false;
 
     [[nodiscard]] bool IsAvailable() const override { return true; }
 
@@ -110,6 +112,10 @@ public:
             return waterInProgress;
         case GroundService::Cleaning:
             return cleaningInProgress;
+        case GroundService::Gpu:
+            return gpuInProgress;
+        case GroundService::Departure:
+            return departureInProgress;
         default:
             return false;
         }

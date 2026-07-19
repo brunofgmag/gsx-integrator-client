@@ -29,6 +29,8 @@ enum class GroundService : int
     Lavatory,
     Water,
     Cleaning,
+    Gpu,
+    Departure,
 };
 
 class GsxGateway

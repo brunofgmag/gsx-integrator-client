@@ -34,6 +34,9 @@ namespace gsx::lvars
 
     inline constexpr auto kSimbriefSuccess = "FSDT_GSX_SIMBRIEF_SUCCESS";
 
+    inline constexpr auto kAircraftCargo1Toggle = "FSDT_GSX_AIRCRAFT_CARGO_1_TOGGLE";
+    inline constexpr auto kAircraftCargo2Toggle = "FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE";
+
     inline constexpr auto kJetway = "FSDT_GSX_JETWAY";
     inline constexpr auto kStairs = "FSDT_GSX_STAIRS";
     inline constexpr auto kRepositioning = "FSDT_GSX_REPOSITIONING";
@@ -46,19 +49,26 @@ namespace gsx::lvars
 namespace gsx::states
 {
     inline constexpr double kLoaderWaitingForDoor = 6.0;
+    inline constexpr double kLoaderUnloading = 7.0;
     inline constexpr double kLoaderInPosition = 8.0;
     inline constexpr double kLoaderLoading = 9.0;
+    inline constexpr double kLoaderRetracting = 11.0;
     inline constexpr double kLoaderRemoving = 4.0;
     inline constexpr double kStairsFinalPosition = 3.0;
     inline constexpr double kCateringWaitingForDoor = 6.0;
     inline constexpr double kCateringInProgress = 7.0;
 
-    [[nodiscard]] inline bool IsLoaderPresent(const double state)
+    [[nodiscard]] inline bool IsLoaderAtDoor(const double state)
     {
         return state == kLoaderWaitingForDoor
+            || state == kLoaderUnloading
             || state == kLoaderInPosition
-            || state == kLoaderLoading
-            || state == kLoaderRemoving;
+            || state == kLoaderLoading;
+    }
+
+    [[nodiscard]] inline bool IsLoaderPresent(const double state)
+    {
+        return IsLoaderAtDoor(state) || state == kLoaderRetracting || state == kLoaderRemoving;
     }
 
     [[nodiscard]] inline bool IsCateringAtDoor(const double state)

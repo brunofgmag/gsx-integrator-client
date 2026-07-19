@@ -35,6 +35,9 @@ private slots:
     static void aircraftOnGroundFollowsSimVar();
     static void boardedPassengersAccumulatesAcrossResets();
     static void deboardedPassengersAccumulatesAcrossResets();
+    static void boardedPassengersIgnoresStaleTotalBeforeBoardingStarts();
+    static void deboardedPassengersIgnoresStaleTotalBeforeDeboardingStarts();
+    static void boardedPassengersDiscardsStaleTotalZeroedAfterBoardingStarts();
     static void takeOverFuelAndPayloadClearsAutomationLVars();
     static void refuelCounterComesFromFuelCounterLvar();
     static void gpuStatusFollowsStateLVar();
@@ -116,6 +119,7 @@ void GsxInterfaceTest::readsFuelHoseAndPassengerCounts()
 
     gateway.lvars[kFuelHoseConnected] = 1.0;
     gateway.lvars[kMaxPassengers] = 215.0;
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
     gateway.lvars[kNumPassengersBoardingTotal] = 130.0;
 
     QVERIFY(gsx.IsFuelHoseConnected());
@@ -319,6 +323,11 @@ void GsxInterfaceTest::boardedPassengersAccumulatesAcrossResets()
     FakeVariableGateway gateway;
     GsxStateService gsx(&gateway);
 
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersBoardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
+
     gateway.lvars[kNumPassengersBoardingTotal] = 50.0;
 
     QCOMPARE(gsx.GetBoardedPassengers(), 50);
@@ -341,6 +350,11 @@ void GsxInterfaceTest::deboardedPassengersAccumulatesAcrossResets()
     FakeVariableGateway gateway;
     GsxStateService gsx(&gateway);
 
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersDeboardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetDeboardedPassengers(), 0);
+
     gateway.lvars[kNumPassengersDeboardingTotal] = 80.0;
 
     QCOMPARE(gsx.GetDeboardedPassengers(), 80);
@@ -352,6 +366,69 @@ void GsxInterfaceTest::deboardedPassengersAccumulatesAcrossResets()
     gateway.lvars[kNumPassengersDeboardingTotal] = 0;
 
     QCOMPARE(gsx.GetDeboardedPassengers(), 85);
+}
+
+void GsxInterfaceTest::boardedPassengersIgnoresStaleTotalBeforeBoardingStarts()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Callable);
+    gateway.lvars[kNumPassengersBoardingTotal] = 192.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Requested);
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersBoardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
+
+    gateway.lvars[kNumPassengersBoardingTotal] = 12.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 12);
+}
+
+void GsxInterfaceTest::deboardedPassengersIgnoresStaleTotalBeforeDeboardingStarts()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Requested);
+    gateway.lvars[kNumPassengersDeboardingTotal] = 192.0;
+
+    QCOMPARE(gsx.GetDeboardedPassengers(), 0);
+
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersDeboardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetDeboardedPassengers(), 0);
+
+    gateway.lvars[kNumPassengersDeboardingTotal] = 7.0;
+
+    QCOMPARE(gsx.GetDeboardedPassengers(), 7);
+}
+
+void GsxInterfaceTest::boardedPassengersDiscardsStaleTotalZeroedAfterBoardingStarts()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersBoardingTotal] = 192.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 192);
+
+    gateway.lvars[kNumPassengersBoardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
+
+    gateway.lvars[kNumPassengersBoardingTotal] = 10.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 10);
 }
 
 void GsxInterfaceTest::takeOverFuelAndPayloadClearsAutomationLVars()
