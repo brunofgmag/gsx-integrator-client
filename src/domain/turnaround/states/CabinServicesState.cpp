@@ -137,23 +137,18 @@ void CabinServicesState::UpdateActiveSeen(TurnaroundContext& ctx)
 
 bool CabinServicesState::AllEnabledCompleted(const TurnaroundContext& ctx)
 {
-    return IsServiceDone(ctx, ctx.settings->callLavatory, ctx.data.lavatoryActiveSeen, GroundService::Lavatory)
-        && IsServiceDone(ctx, ctx.settings->callWater, ctx.data.waterActiveSeen, GroundService::Water)
-        && IsServiceDone(ctx, ctx.settings->callCleaning, ctx.data.cleaningActiveSeen, GroundService::Cleaning);
+    return IsServiceDone(ctx, ctx.data.lavatoryActiveSeen, GroundService::Lavatory)
+        && IsServiceDone(ctx, ctx.data.waterActiveSeen, GroundService::Water)
+        && IsServiceDone(ctx, ctx.data.cleaningActiveSeen, GroundService::Cleaning);
 }
 
-bool CabinServicesState::IsServiceDone(const TurnaroundContext& ctx, const bool enabled,
+bool CabinServicesState::IsServiceDone(const TurnaroundContext& ctx,
                                        const bool activeSeen, const GroundService service)
 {
-    if (!enabled)
+    if (activeSeen)
     {
-        return true;
+        return !ctx.gsxGateway->IsServiceInProgress(service);
     }
 
-    if (!activeSeen)
-    {
-        return true;
-    }
-
-    return !ctx.gsxGateway->IsServiceInProgress(service);
+    return true;
 }

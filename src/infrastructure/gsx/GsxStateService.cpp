@@ -10,40 +10,54 @@
 
 using namespace gsx::lvars;
 
-GsxStateService::GsxStateService(VariableGateway* variableGateway, const GsxRemoteState* remoteState)
-    : varManager_(variableGateway), remote_(remoteState)
+namespace
 {
-    statesStatusMap_ = {
-        {GsxState::Refueling, GsxStateStatus::Unavailable},
-        {GsxState::Boarding, GsxStateStatus::Unavailable},
-        {GsxState::Pushback, GsxStateStatus::Unavailable},
-        {GsxState::Deboarding, GsxStateStatus::Unavailable},
-    };
+    const char* StateLVarName(const GsxState gsxState)
+    {
+        switch (gsxState)
+        {
+        case GsxState::Refueling: return kRefuelingState;
+        case GsxState::Boarding: return kBoardingState;
+        case GsxState::Pushback: return kPushbackVehicleState;
+        case GsxState::Deboarding: return kDeboardingState;
+        case GsxState::Deice: return kDeiceState;
+        default: return nullptr;
+        }
+    }
 
-    statesCompletedMap_ = {
-        {GsxState::Refueling, false},
-        {GsxState::Boarding, false},
-        {GsxState::Pushback, false},
-        {GsxState::Deboarding, false},
-    };
+    const char* ServiceId(const GroundService service)
+    {
+        switch (service)
+        {
+        case GroundService::Catering: return "Catering";
+        case GroundService::Lavatory: return "Lavatory";
+        case GroundService::Water: return "Water";
+        case GroundService::Cleaning: return "Cleaning";
+        default: return nullptr;
+        }
+    }
 }
 
+GsxStateService::GsxStateService(VariableGateway* variableGateway, const GsxRemoteState* remoteState)
+    : varManager_(variableGateway), remote_(remoteState),
+      states_{
+          {GsxState::Refueling, {}},
+          {GsxState::Boarding, {}},
+          {GsxState::Pushback, {}},
+          {GsxState::Deboarding, {}},
+          {GsxState::Deice, {}},
+      }
+{
+}
 
 void GsxStateService::Reset()
 {
-    lastBoardingPassengers_ = 0;
-    boardingPassengersTotal_ = 0;
-    deboardingPassengersTotal_ = 0;
-    lastDeboardingPassengers_ = 0;
+    boarding_ = {};
+    deboarding_ = {};
 
-    for (auto& completed : statesCompletedMap_ | std::views::values)
+    for (auto& track : states_ | std::views::values)
     {
-        completed = false;
-    }
-
-    for (auto& status : statesStatusMap_ | std::views::values)
-    {
-        status = GsxStateStatus::Unavailable;
+        track = {};
     }
 }
 
@@ -54,37 +68,23 @@ bool GsxStateService::IsAvailable() const
 
 GsxStateStatus GsxStateService::GetStateStatus(const GsxState gsxState)
 {
-    const char* stateLVar = nullptr;
-
-    switch (gsxState)
+    const char* stateLVar = StateLVarName(gsxState);
+    if (stateLVar == nullptr)
     {
-    case GsxState::Refueling:
-        stateLVar = kRefuelingState;
-        break;
-    case GsxState::Boarding:
-        stateLVar = kBoardingState;
-        break;
-    case GsxState::Pushback:
-        stateLVar = kPushbackVehicleState;
-        break;
-    case GsxState::Deboarding:
-        stateLVar = kDeboardingState;
-        break;
-    default:
         return GsxStateStatus::Unavailable;
     }
 
     const auto stateStatus = static_cast<GsxStateStatus>(varManager_->GetLVar(stateLVar));
 
     ParseCompleted(gsxState, stateStatus);
-    statesStatusMap_.at(gsxState) = stateStatus;
+    states_.at(gsxState).status = stateStatus;
 
     return stateStatus;
 }
 
 bool GsxStateService::WasStateCompleted(const GsxState gsxState) const
 {
-    return statesCompletedMap_.at(gsxState);
+    return states_.at(gsxState).completed;
 }
 
 bool GsxStateService::IsFuelHoseConnected() const
@@ -125,28 +125,24 @@ int GsxStateService::GetPlannedPassengers() const
 
 int GsxStateService::GetBoardedPassengers()
 {
-    const int currentBoarding = static_cast<int>(varManager_->GetLVar(kNumPassengersBoardingTotal));
-    if (currentBoarding < lastBoardingPassengers_)
-    {
-        boardingPassengersTotal_ += lastBoardingPassengers_;
-    }
-
-    lastBoardingPassengers_ = currentBoarding;
-
-    return boardingPassengersTotal_ + currentBoarding;
+    return boarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersBoardingTotal)));
 }
 
 int GsxStateService::GetDeboardedPassengers()
 {
-    const int currentDeboarding = static_cast<int>(varManager_->GetLVar(kNumPassengersDeboardingTotal));
-    if (currentDeboarding < lastDeboardingPassengers_)
+    return deboarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersDeboardingTotal)));
+}
+
+int GsxStateService::PassengerCounter::Update(const int current)
+{
+    if (current < last)
     {
-        deboardingPassengersTotal_ += lastDeboardingPassengers_;
+        total += last;
     }
 
-    lastDeboardingPassengers_ = currentDeboarding;
+    last = current;
 
-    return deboardingPassengersTotal_ + currentDeboarding;
+    return total + current;
 }
 
 double GsxStateService::GetBoardingCargoPercent() const
@@ -169,9 +165,18 @@ bool GsxStateService::IsJetwayInPlace() const
     return varManager_->GetLVar(kJetway) == 5.0;
 }
 
-bool GsxStateService::IsGpuConnected() const
+GroundPowerStatus GsxStateService::GetGpuStatus() const
 {
-    return varManager_->GetLVar(kGpuConnected) == 1.0;
+    if (!varManager_->HasReceivedLVar(kGpuState))
+    {
+        return GroundPowerStatus::Unknown;
+    }
+
+    const bool connected =
+        varManager_->GetLVar(kGpuState) == static_cast<double>(GsxStateStatus::Active)
+        || varManager_->GetLVar(kGpuConnected) == 1.0;
+
+    return connected ? GroundPowerStatus::Connected : GroundPowerStatus::Disconnected;
 }
 
 bool GsxStateService::IsServiceInProgress(const GroundService service) const
@@ -181,22 +186,9 @@ bool GsxStateService::IsServiceInProgress(const GroundService service) const
         return false;
     }
 
-    const char* id = nullptr;
-    switch (service)
+    const char* id = ServiceId(service);
+    if (id == nullptr)
     {
-    case GroundService::Catering:
-        id = "Catering";
-        break;
-    case GroundService::Lavatory:
-        id = "Lavatory";
-        break;
-    case GroundService::Water:
-        id = "Water";
-        break;
-    case GroundService::Cleaning:
-        id = "Cleaning";
-        break;
-    default:
         return false;
     }
 
@@ -246,10 +238,11 @@ bool GsxStateService::IsGoodEngineStartConfirmationEnabled() const
 
 void GsxStateService::ParseCompleted(const GsxState gsxState, const GsxStateStatus stateStatus)
 {
+    StateTrack& track = states_.at(gsxState);
+
     const bool returnedToIdle =
         (stateStatus == GsxStateStatus::Callable || stateStatus == GsxStateStatus::Bypassed)
-        && statesStatusMap_.at(gsxState) == GsxStateStatus::Active;
+        && track.status == GsxStateStatus::Active;
 
-    statesCompletedMap_.at(gsxState) = statesCompletedMap_.at(gsxState) ||
-        stateStatus == GsxStateStatus::Completed || returnedToIdle;
+    track.completed = track.completed || stateStatus == GsxStateStatus::Completed || returnedToIdle;
 }

@@ -13,8 +13,14 @@ std::optional<TurnaroundTransition> RequestPushbackState::Evaluate(TurnaroundCon
 {
     auto& data = ctx.data;
 
+    const GsxStateStatus deiceState = ctx.gsxGateway->GetStateStatus(GsxState::Deice);
+    if (deiceState == GsxStateStatus::Requested || deiceState == GsxStateStatus::Active)
+    {
+        return std::nullopt;
+    }
+
     const GsxStateStatus departureState = ctx.gsxGateway->GetStateStatus(GsxState::Pushback);
-    if (departureState == GsxStateStatus::Callable && !data.pushbackRequested)
+    if (departureState == GsxStateStatus::Callable && !data.pushbackRequested && ctx.menuGateway->IsMenuSettled())
     {
         data.pushbackRequested = ctx.menuGateway->RequestPushback();
     }

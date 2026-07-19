@@ -20,6 +20,7 @@ public:
     bool stairsAvailable = false;
     bool jetwayAvailable = false;
     GsxStateStatus deboardingState = GsxStateStatus::Unavailable;
+    GsxStateStatus deiceState = GsxStateStatus::Unavailable;
     int plannedPassengers = 0;
     int boardedPassengers = 0;
     int deboardedPassengers = 0;
@@ -32,7 +33,7 @@ public:
     bool simbriefLoaded = false;
     bool onGround = true;
     bool goodEngineStartConfirmation = false;
-    bool gpuConnected = false;
+    GroundPowerStatus gpuStatus = GroundPowerStatus::Disconnected;
     int takeOverCalls = 0;
     bool cateringInProgress = false;
     bool lavatoryInProgress = false;
@@ -53,6 +54,8 @@ public:
             return departureState;
         case GsxState::Deboarding:
             return deboardingState;
+        case GsxState::Deice:
+            return deiceState;
         default:
             return GsxStateStatus::Unavailable;
         }
@@ -93,7 +96,7 @@ public:
     [[nodiscard]] bool IsSimbriefLoaded() const override { return simbriefLoaded; }
     [[nodiscard]] bool IsAircraftOnGround() const override { return onGround; }
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override { return goodEngineStartConfirmation; }
-    [[nodiscard]] bool IsGpuConnected() const override { return gpuConnected; }
+    [[nodiscard]] GroundPowerStatus GetGpuStatus() const override { return gpuStatus; }
 
     [[nodiscard]] bool IsServiceInProgress(const GroundService service) const override
     {

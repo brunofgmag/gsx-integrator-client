@@ -36,7 +36,7 @@ public:
     [[nodiscard]] bool IsJetwayAvailable() const override;
     [[nodiscard]] bool IsAircraftOnGround() const override;
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override;
-    [[nodiscard]] bool IsGpuConnected() const override;
+    [[nodiscard]] GroundPowerStatus GetGpuStatus() const override;
     [[nodiscard]] bool IsServiceInProgress(GroundService service) const override;
 
     void TakeOverFuelAndPayload() override;
@@ -44,16 +44,26 @@ public:
     [[nodiscard]] bool IsSimbriefLoaded() const override;
 
 private:
+    struct StateTrack
+    {
+        GsxStateStatus status = GsxStateStatus::Unavailable;
+        bool completed = false;
+    };
+
+    struct PassengerCounter
+    {
+        int last = 0;
+        int total = 0;
+
+        int Update(int current);
+    };
+
     void ParseCompleted(GsxState gsxState, GsxStateStatus stateStatus);
 
     VariableGateway* varManager_;
     const GsxRemoteState* remote_;
-    std::map<GsxState, GsxStateStatus> statesStatusMap_;
-    std::map<GsxState, bool> statesCompletedMap_;
-
-    int lastBoardingPassengers_ = 0;
-    int boardingPassengersTotal_ = 0;
-    int deboardingPassengersTotal_ = 0;
-    int lastDeboardingPassengers_ = 0;
+    std::map<GsxState, StateTrack> states_;
+    PassengerCounter boarding_;
+    PassengerCounter deboarding_;
 };
 #endif //GSX_INTEGRATOR_CLIENT_GSXSTATESERVICE_H

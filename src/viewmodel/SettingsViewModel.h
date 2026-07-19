@@ -23,14 +23,19 @@ class SettingsViewModel final : public QObject
     Q_PROPERTY(QString fuelRateText READ GetFuelRateText WRITE SetFuelRateText NOTIFY FuelRateTextChanged)
     Q_PROPERTY(bool autoSelectGsxChoice READ GetAutoSelectGsxChoice
         WRITE SetAutoSelectGsxChoice NOTIFY AutoSelectGsxChoiceChanged)
+    Q_PROPERTY(bool autoDeice READ GetAutoDeice WRITE SetAutoDeice NOTIFY AutoDeiceChanged)
+    Q_PROPERTY(int crewBoarding READ GetCrewBoarding WRITE SetCrewBoarding NOTIFY CrewBoardingChanged)
     Q_PROPERTY(bool autoStartFlow READ GetAutoStartFlow WRITE SetAutoStartFlow NOTIFY AutoStartFlowChanged)
     Q_PROPERTY(bool autoStartLoading READ GetAutoStartLoading WRITE SetAutoStartLoading NOTIFY AutoStartLoadingChanged)
     Q_PROPERTY(bool skipReposition READ GetSkipReposition WRITE SetSkipReposition NOTIFY SkipRepositionChanged)
     Q_PROPERTY(bool callGpu READ GetCallGpu WRITE SetCallGpu NOTIFY CallGpuChanged)
+    Q_PROPERTY(bool callGpuOnArrival READ GetCallGpuOnArrival WRITE SetCallGpuOnArrival NOTIFY CallGpuOnArrivalChanged)
     Q_PROPERTY(bool callCatering READ GetCallCatering WRITE SetCallCatering NOTIFY CallCateringChanged)
     Q_PROPERTY(bool callLavatory READ GetCallLavatory WRITE SetCallLavatory NOTIFY CallLavatoryChanged)
     Q_PROPERTY(bool callWater READ GetCallWater WRITE SetCallWater NOTIFY CallWaterChanged)
     Q_PROPERTY(bool callCleaning READ GetCallCleaning WRITE SetCallCleaning NOTIFY CallCleaningChanged)
+    Q_PROPERTY(bool openGsxOnRequests READ GetOpenGsxOnRequests
+        WRITE SetOpenGsxOnRequests NOTIFY OpenGsxOnRequestsChanged)
     Q_PROPERTY(int themeMode READ GetThemeMode WRITE SetThemeMode NOTIFY ThemeModeChanged)
     Q_PROPERTY(bool effectiveDark READ GetEffectiveDark NOTIFY EffectiveDarkChanged)
     Q_PROPERTY(QString language READ GetLanguage WRITE SetLanguage NOTIFY LanguageChanged)
@@ -56,6 +61,8 @@ class SettingsViewModel final : public QObject
         WRITE SetProfileSkipReposition NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileCallGpu READ GetProfileCallGpu
         WRITE SetProfileCallGpu NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profileCallGpuOnArrival READ GetProfileCallGpuOnArrival
+        WRITE SetProfileCallGpuOnArrival NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileCallCatering READ GetProfileCallCatering
         WRITE SetProfileCallCatering NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileCallLavatory READ GetProfileCallLavatory
@@ -91,6 +98,12 @@ public:
     [[nodiscard]] bool GetAutoSelectGsxChoice() const;
     void SetAutoSelectGsxChoice(bool enabled);
 
+    [[nodiscard]] bool GetAutoDeice() const;
+    void SetAutoDeice(bool enabled);
+
+    [[nodiscard]] int GetCrewBoarding() const;
+    void SetCrewBoarding(int choice);
+
     [[nodiscard]] bool GetAutoStartFlow() const;
     void SetAutoStartFlow(bool enabled);
 
@@ -103,6 +116,9 @@ public:
     [[nodiscard]] bool GetCallGpu() const;
     void SetCallGpu(bool enabled);
 
+    [[nodiscard]] bool GetCallGpuOnArrival() const;
+    void SetCallGpuOnArrival(bool enabled);
+
     [[nodiscard]] bool GetCallCatering() const;
     void SetCallCatering(bool enabled);
 
@@ -114,6 +130,9 @@ public:
 
     [[nodiscard]] bool GetCallCleaning() const;
     void SetCallCleaning(bool enabled);
+
+    [[nodiscard]] bool GetOpenGsxOnRequests() const;
+    void SetOpenGsxOnRequests(bool enabled);
 
     [[nodiscard]] int GetThemeMode() const;
     void SetThemeMode(int mode);
@@ -169,6 +188,9 @@ public:
     [[nodiscard]] bool GetProfileCallGpu() const;
     void SetProfileCallGpu(bool enabled);
 
+    [[nodiscard]] bool GetProfileCallGpuOnArrival() const;
+    void SetProfileCallGpuOnArrival(bool enabled);
+
     [[nodiscard]] bool GetProfileCallCatering() const;
     void SetProfileCallCatering(bool enabled);
 
@@ -186,14 +208,18 @@ signals:
     void StreamerModeChanged();
     void FuelRateTextChanged();
     void AutoSelectGsxChoiceChanged();
+    void AutoDeiceChanged();
+    void CrewBoardingChanged();
     void AutoStartFlowChanged();
     void AutoStartLoadingChanged();
     void SkipRepositionChanged();
     void CallGpuChanged();
+    void CallGpuOnArrivalChanged();
     void CallCateringChanged();
     void CallLavatoryChanged();
     void CallWaterChanged();
     void CallCleaningChanged();
+    void OpenGsxOnRequestsChanged();
     void ThemeModeChanged();
     void EffectiveDarkChanged();
     void LanguageChanged();
@@ -223,6 +249,7 @@ private:
         QString fuelRateText;
         bool skipReposition = false;
         bool callGpu = false;
+        bool callGpuOnArrival = false;
         bool callCatering = false;
         bool callLavatory = false;
         bool callWater = false;
@@ -236,6 +263,24 @@ private:
     [[nodiscard]] ProfileDraft& SelectedDraft();
     [[nodiscard]] const ProfileDraft& SelectedDraft() const;
     void TouchProfileDraft();
+    void SetProfileToggle(bool ProfileDraft::* member, bool value);
+
+    template <typename T>
+    bool SetPersisted(T& field, const T& value, void (SettingsViewModel::*signal)())
+    {
+        if (field == value)
+        {
+            return false;
+        }
+
+        field = value;
+
+        PersistImmediateSetting();
+
+        emit (this->*signal)();
+
+        return true;
+    }
 
     SettingsRepository* repository_;
     IntegratorService* integratorService_;

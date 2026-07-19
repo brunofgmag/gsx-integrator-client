@@ -23,6 +23,8 @@ public:
     [[nodiscard]] virtual bool RequestWater() = 0;
     [[nodiscard]] virtual bool RequestCleaning() = 0;
 
+    [[nodiscard]] virtual bool IsMenuSettled() const = 0;
+
     virtual void DisableGsxMenu() = 0;
 };
 

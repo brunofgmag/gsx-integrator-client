@@ -12,6 +12,7 @@ namespace
         TurnaroundPhase::WaitingAircraftReady,
         TurnaroundPhase::WaitingFlightPlan,
         TurnaroundPhase::RepositionAircraft,
+        TurnaroundPhase::PlaceGroundEquipment,
         TurnaroundPhase::CallServices,
         TurnaroundPhase::WaitingPowerOn,
         TurnaroundPhase::RequestFuel,
@@ -20,13 +21,14 @@ namespace
         TurnaroundPhase::Boarding,
         TurnaroundPhase::WaitingReadyToPush,
         TurnaroundPhase::WaitCatering,
-        TurnaroundPhase::DisconnectGpu,
+        TurnaroundPhase::RemoveGroundEquipment,
         TurnaroundPhase::RequestPushback,
         TurnaroundPhase::WaitingPushbackToStart,
         TurnaroundPhase::WaitingForEngines,
         TurnaroundPhase::WaitingDeparture,
         TurnaroundPhase::OnFlight,
         TurnaroundPhase::WaitingEngineShutdown,
+        TurnaroundPhase::PlaceArrivalGroundEquipment,
         TurnaroundPhase::RequestDeboarding,
         TurnaroundPhase::Deboarding,
         TurnaroundPhase::CabinServices,
@@ -124,6 +126,7 @@ namespace
             TickHolding(TurnaroundPhase::RepositionAircraft);
 
             f.gsxService.repositioning = false;
+            TickTo(TurnaroundPhase::PlaceGroundEquipment);
             TickTo(TurnaroundPhase::CallServices);
         }
 
@@ -197,7 +200,7 @@ namespace
         {
             f.aircraft.readyToPush = true;
             TickTo(TurnaroundPhase::WaitCatering);
-            TickTo(TurnaroundPhase::DisconnectGpu);
+            TickTo(TurnaroundPhase::RemoveGroundEquipment);
             TickTo(TurnaroundPhase::RequestPushback);
 
             f.gsxService.departureState = GsxStateStatus::Callable;
@@ -246,6 +249,9 @@ namespace
             f.gsxService.onGround = true;
 
             TickTo(TurnaroundPhase::WaitingEngineShutdown);
+
+            f.aircraft.engineRunning = false;
+            TickTo(TurnaroundPhase::PlaceArrivalGroundEquipment);
         }
 
         void RequestDeboarding()
@@ -334,6 +340,7 @@ private slots:
     static void waitsForBoardingTransitionDelay();
     static void completesReachableWorkflowAndReturnsToStart();
     static void publishesCurrentTankFuelBeforeRefuel();
+    static void debugSkipPhaseClampsToEnumRange();
 };
 
 void TurnaroundStateMachineTest::publishesCurrentTankFuelBeforeRefuel()
@@ -475,8 +482,16 @@ void TurnaroundStateMachineTest::waitsForRefuelingTransitionDelay()
     ReachRefueling(workflow);
 
     workflow.BeginRefuelingDelay();
+
+    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 30);
+
     workflow.FinishDelay(29, TurnaroundPhase::Refueling);
+
+    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 1);
+
     workflow.TickTo(TurnaroundPhase::RequestBoarding);
+
+    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 0);
 }
 
 void TurnaroundStateMachineTest::waitsForBoardingTransitionDelay()
@@ -513,6 +528,31 @@ void TurnaroundStateMachineTest::completesReachableWorkflowAndReturnsToStart()
     QCOMPARE(workflow.f.menuGateway.boardingCalls, 1);
     QCOMPARE(workflow.f.menuGateway.pushbackCalls, 1);
     QCOMPARE(workflow.f.menuGateway.deboardingCalls, 1);
+}
+
+void TurnaroundStateMachineTest::debugSkipPhaseClampsToEnumRange()
+{
+#ifndef NDEBUG
+    TurnaroundWorkflow workflow;
+
+    workflow.machine.DebugSkipPhase(1);
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::WaitingAircraftReady);
+
+    workflow.machine.DebugSkipPhase(-5);
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::WaitingSupportedAircraft);
+
+    workflow.machine.DebugSkipPhase(static_cast<int>(TurnaroundPhase::Count));
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::WaitingNewFlight);
+
+    workflow.machine.DebugSkipPhase(1);
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::WaitingNewFlight);
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
 }
 
 QTEST_APPLESS_MAIN(TurnaroundStateMachineTest)

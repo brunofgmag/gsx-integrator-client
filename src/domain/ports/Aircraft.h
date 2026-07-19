@@ -1,6 +1,10 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_AIRCRAFT_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_AIRCRAFT_H
 
+#include <optional>
+
+#include "../model/GroundPowerStatus.h"
+
 enum class RefuelBy { Gsx, Self, Client };
 enum class BoardBy { Self, Client };
 
@@ -35,6 +39,10 @@ public:
     [[nodiscard]] virtual bool ConsumeSmartSwitch() = 0;
 
     [[nodiscard]] virtual bool IsPowered() const = 0;
+    [[nodiscard]] virtual std::optional<GroundPowerStatus> GetGroundPowerStatus() const { return std::nullopt; }
+    [[nodiscard]] virtual bool SupportsChocksControl() const { return false; }
+    virtual void SetChocks(bool) {}
+    virtual void CloseAllDoors() {}
     [[nodiscard]] virtual bool IsReadyToPush() const = 0 ;
     [[nodiscard]] virtual bool IsReadyToDeboard() const = 0;
     [[nodiscard]] virtual bool IsEngineRunning() const = 0;

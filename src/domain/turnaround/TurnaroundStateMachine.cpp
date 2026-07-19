@@ -1,5 +1,6 @@
 #include "TurnaroundStateMachine.h"
 
+#include <algorithm>
 #include <format>
 #include "states/WaitingFlightPlanState.h"
 #include "states/RequestFuelState.h"
@@ -15,7 +16,9 @@
 #include "states/WaitingAircraftReadyState.h"
 #include "states/WaitingReadyToPushState.h"
 #include "states/WaitCateringState.h"
-#include "states/DisconnectGpuState.h"
+#include "states/PlaceGroundEquipmentState.h"
+#include "states/PlaceArrivalGroundEquipmentState.h"
+#include "states/RemoveGroundEquipmentState.h"
 #include "states/WaitingDepartureState.h"
 #include "states/WaitingEngineShutdownState.h"
 #include "states/WaitingPowerOnState.h"
@@ -56,6 +59,7 @@ void TurnaroundStateMachine::RegisterStates()
     add(std::make_unique<WaitingAircraftReadyState>());
     add(std::make_unique<WaitingFlightPlanState>());
     add(std::make_unique<RepositionAircraftState>());
+    add(std::make_unique<PlaceGroundEquipmentState>());
     add(std::make_unique<CallServicesState>());
     add(std::make_unique<WaitingPowerOnState>());
     add(std::make_unique<RequestFuelState>());
@@ -64,13 +68,14 @@ void TurnaroundStateMachine::RegisterStates()
     add(std::make_unique<BoardingState>());
     add(std::make_unique<WaitingReadyToPushState>());
     add(std::make_unique<WaitCateringState>());
-    add(std::make_unique<DisconnectGpuState>());
+    add(std::make_unique<RemoveGroundEquipmentState>());
     add(std::make_unique<RequestPushbackState>());
     add(std::make_unique<WaitingPushbackToStartState>());
     add(std::make_unique<WaitingEnginesState>());
     add(std::make_unique<WaitingDepartureState>());
     add(std::make_unique<OnFlightState>());
     add(std::make_unique<WaitingEngineShutdownState>());
+    add(std::make_unique<PlaceArrivalGroundEquipmentState>());
     add(std::make_unique<RequestDeboardingState>());
     add(std::make_unique<DeboardingState>());
     add(std::make_unique<CabinServicesState>());
@@ -154,6 +159,16 @@ void TurnaroundStateMachine::Reset()
     pendingPhase_ = TurnaroundPhase::WaitingSupportedAircraft;
     ticksRemaining_ = 0;
 }
+
+#ifndef NDEBUG
+void TurnaroundStateMachine::DebugSkipPhase(const int delta)
+{
+    const int target = std::clamp(static_cast<int>(phase_) + delta,
+                                  0, static_cast<int>(TurnaroundPhase::Count) - 1);
+    ticksRemaining_ = 0;
+    TransitionTo(static_cast<TurnaroundPhase>(target));
+}
+#endif
 
 std::optional<TurnaroundTransition> TurnaroundStateMachine::EvaluateCurrentPhase()
 {

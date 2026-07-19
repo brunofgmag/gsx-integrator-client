@@ -12,7 +12,9 @@ ApplicationWindow {
     width: 620
     maximumWidth: 720
     minimumWidth: 560
-    visible: !startHidden
+    visibility: startHidden ? Window.Hidden
+              : startMinimized ? Window.Minimized
+              : Window.AutomaticVisibility
     title: qsTr("GSX Integrator")
     color: Theme.bg
 
@@ -20,6 +22,7 @@ ApplicationWindow {
     required property var settingsVm
     required property var updateVm
     required property bool startHidden
+    required property bool startMinimized
     required property string trayIconSource
 
     readonly property bool compact: width < 620

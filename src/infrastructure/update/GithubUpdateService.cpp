@@ -42,6 +42,42 @@ Remove-Item -Force $PSCommandPath -ErrorAction SilentlyContinue
 
         return reply->errorString();
     }
+
+    QNetworkReply* TakeReply(QNetworkReply*& member)
+    {
+        QNetworkReply* reply = std::exchange(member, nullptr);
+        reply->deleteLater();
+
+        return reply;
+    }
+
+    bool WriteDownloadedZip(QNetworkReply* reply, const QString& zipPath)
+    {
+        QFile zipFile(zipPath);
+        if (!zipFile.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        {
+            return false;
+        }
+
+        zipFile.write(reply->readAll());
+        zipFile.close();
+
+        return true;
+    }
+
+    bool WriteApplyScript(const QString& scriptPath)
+    {
+        QFile script(scriptPath);
+        if (!script.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        {
+            return false;
+        }
+
+        script.write(kApplyScript);
+        script.close();
+
+        return true;
+    }
 }
 
 GithubUpdateService::GithubUpdateService(QString clientFeedUrl,
@@ -133,17 +169,21 @@ bool GithubUpdateService::LaunchApplyHelper(const bool relaunch)
     }
 
     const QString scriptPath = UpdatesRootDir() + QStringLiteral("/apply.ps1");
-    QFile script(scriptPath);
-
-    if (!script.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    if (!WriteApplyScript(scriptPath))
     {
         return false;
     }
 
-    script.write(kApplyScript);
-    script.close();
+    helperLaunched_ = QProcess::startDetached(QStringLiteral("powershell.exe"),
+                                              BuildApplyArguments(scriptPath, exeName, relaunch));
 
-    const QStringList arguments = {
+    return helperLaunched_;
+}
+
+QStringList GithubUpdateService::BuildApplyArguments(const QString& scriptPath, const QString& exeName,
+                                                     const bool relaunch) const
+{
+    return {
         QStringLiteral("-NoProfile"),
         QStringLiteral("-ExecutionPolicy"), QStringLiteral("Bypass"),
         QStringLiteral("-WindowStyle"), QStringLiteral("Hidden"),
@@ -155,11 +195,6 @@ bool GithubUpdateService::LaunchApplyHelper(const bool relaunch)
         QStringLiteral("-ExeName"), exeName,
         QStringLiteral("-Relaunch"), relaunch ? QStringLiteral("1") : QStringLiteral("0"),
     };
-
-    helperLaunched_ =
-        QProcess::startDetached(QStringLiteral("powershell.exe"), arguments);
-
-    return helperLaunched_;
 }
 
 void GithubUpdateService::AddObserver(UpdateServiceObserver* observer)
@@ -174,15 +209,11 @@ void GithubUpdateService::RemoveObserver(UpdateServiceObserver* observer)
 
 void GithubUpdateService::OnClientCheckHttpFinished()
 {
-    QNetworkReply* reply = std::exchange(clientCheckReply_, nullptr);
-    reply->deleteLater();
+    QNetworkReply* reply = TakeReply(clientCheckReply_);
 
     if (reply->error() != QNetworkReply::NoError)
     {
-        for (auto* observer : observers_)
-        {
-            observer->OnCheckFinished(false, false, {}, HttpError(reply));
-        }
+        NotifyCheckFinished(false, false, {}, HttpError(reply));
 
         return;
     }
@@ -190,10 +221,7 @@ void GithubUpdateService::OnClientCheckHttpFinished()
     const auto info = ParseLatestRelease(reply->readAll());
     if (!info.has_value())
     {
-        for (auto* observer : observers_)
-        {
-            observer->OnCheckFinished(false, false, {}, tr("Unexpected release feed format."));
-        }
+        NotifyCheckFinished(false, false, {}, tr("Unexpected release feed format."));
 
         return;
     }
@@ -204,23 +232,16 @@ void GithubUpdateService::OnClientCheckHttpFinished()
     }
 
     const bool available = IsNewerVersion(info->version, currentVersion_);
-    for (auto* observer : observers_)
-    {
-        observer->OnCheckFinished(true, available, *info, {});
-    }
+    NotifyCheckFinished(true, available, *info, {});
 }
 
 void GithubUpdateService::OnCommbusCheckHttpFinished()
 {
-    QNetworkReply* reply = std::exchange(commbusCheckReply_, nullptr);
-    reply->deleteLater();
+    QNetworkReply* reply = TakeReply(commbusCheckReply_);
 
     if (reply->error() != QNetworkReply::NoError)
     {
-        for (auto* observer : observers_)
-        {
-            observer->OnCommbusCheckFinished(false, {}, {}, {});
-        }
+        NotifyCommbusCheckFinished(false, {}, {}, {});
 
         return;
     }
@@ -228,25 +249,18 @@ void GithubUpdateService::OnCommbusCheckHttpFinished()
     const auto info = ParseLatestRelease(reply->readAll());
     if (!info.has_value())
     {
-        for (auto* observer : observers_)
-        {
-            observer->OnCommbusCheckFinished(false, {}, {}, {});
-        }
+        NotifyCommbusCheckFinished(false, {}, {}, {});
 
         return;
     }
 
     const QString installed = DetectInstalledCommbusVersion(qEnvironmentVariable("GSXI_COMMBUS_COMMUNITY_DIR"));
-    for (auto* observer : observers_)
-    {
-        observer->OnCommbusCheckFinished(true, installed, info->version, info->releasePageUrl);
-    }
+    NotifyCommbusCheckFinished(true, installed, info->version, info->releasePageUrl);
 }
 
 void GithubUpdateService::OnShaHttpFinished()
 {
-    QNetworkReply* reply = std::exchange(shaReply_, nullptr);
-    reply->deleteLater();
+    QNetworkReply* reply = TakeReply(shaReply_);
 
     if (reply->error() != QNetworkReply::NoError)
     {
@@ -277,8 +291,7 @@ void GithubUpdateService::OnShaHttpFinished()
 
 void GithubUpdateService::OnZipHttpFinished()
 {
-    QNetworkReply* reply = std::exchange(zipReply_, nullptr);
-    reply->deleteLater();
+    QNetworkReply* reply = TakeReply(zipReply_);
 
     if (reply->error() != QNetworkReply::NoError)
     {
@@ -288,15 +301,24 @@ void GithubUpdateService::OnZipHttpFinished()
 
     const QString zipPath = UpdatesRootDir() + QStringLiteral("/download/")
         + pendingDownload_.zipName;
-    QFile zipFile(zipPath);
-    if (!zipFile.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    if (!WriteDownloadedZip(reply, zipPath))
     {
         NotifyStageFinished(false, tr("Could not write the download."));
         return;
     }
-    zipFile.write(reply->readAll());
-    zipFile.close();
 
+    if (!VerifyChecksum(zipPath))
+    {
+        NotifyStageFinished(false, tr("Checksum mismatch. Download discarded."));
+        return;
+    }
+
+    StartExtraction(zipPath, UpdatesRootDir() + QStringLiteral("/staged"));
+}
+
+bool GithubUpdateService::VerifyChecksum(const QString& zipPath) const
+{
+    QFile zipFile(zipPath);
     zipFile.open(QIODevice::ReadOnly);
     QCryptographicHash hash(QCryptographicHash::Sha256);
     hash.addData(&zipFile);
@@ -305,11 +327,15 @@ void GithubUpdateService::OnZipHttpFinished()
     if (QString::fromLatin1(hash.result().toHex()) != expectedSha256_)
     {
         QFile::remove(zipPath);
-        NotifyStageFinished(false, tr("Checksum mismatch. Download discarded."));
-        return;
+
+        return false;
     }
 
-    const QString stagedRoot = UpdatesRootDir() + QStringLiteral("/staged");
+    return true;
+}
+
+void GithubUpdateService::StartExtraction(const QString& zipPath, const QString& stagedRoot)
+{
     (void)QDir().mkpath(stagedRoot);
 
     extractProcess_ = new QProcess(this);
@@ -366,9 +392,29 @@ QString GithubUpdateService::UpdatesRootDir()
         + QStringLiteral("/updates");
 }
 
-QString GithubUpdateService::StagedAppDir() const
+QString GithubUpdateService::StagedAppDir()
 {
     return UpdatesRootDir() + QStringLiteral("/staged/") + QLatin1String(kZipRootDir);
+}
+
+void GithubUpdateService::NotifyCheckFinished(const bool ok, const bool available,
+                                              const UpdateInfo& info, const QString& error) const
+{
+    for (auto* observer : observers_)
+    {
+        observer->OnCheckFinished(ok, available, info, error);
+    }
+}
+
+void GithubUpdateService::NotifyCommbusCheckFinished(const bool ok,
+                                                     const QString& installedVersion,
+                                                     const QString& latestVersion,
+                                                     const QString& releaseUrl) const
+{
+    for (auto* observer : observers_)
+    {
+        observer->OnCommbusCheckFinished(ok, installedVersion, latestVersion, releaseUrl);
+    }
 }
 
 void GithubUpdateService::NotifyStageFinished(const bool ok, const QString& error)

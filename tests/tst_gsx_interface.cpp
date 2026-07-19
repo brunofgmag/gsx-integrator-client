@@ -37,7 +37,8 @@ private slots:
     static void deboardedPassengersAccumulatesAcrossResets();
     static void takeOverFuelAndPayloadClearsAutomationLVars();
     static void refuelCounterComesFromFuelCounterLvar();
-    static void gpuConnectedFollowsLVar();
+    static void gpuStatusFollowsStateLVar();
+    static void gpuStatusConnectedWhenConnectedFlagSetDespiteState();
     static void serviceInProgressFollowsRemoteStateRaw();
     static void serviceInProgressFalseWhenAbsentOrNoRemote();
 };
@@ -62,10 +63,12 @@ void GsxInterfaceTest::mapsServiceStateLVars()
 
     gateway.lvars[kRefuelingState] = static_cast<double>(GsxStateStatus::Active);
     gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Completed);
+    gateway.lvars[kDeiceState] = static_cast<double>(GsxStateStatus::Requested);
 
     QCOMPARE(gsx.GetStateStatus(GsxState::Refueling), GsxStateStatus::Active);
     QCOMPARE(gsx.GetStateStatus(GsxState::Boarding), GsxStateStatus::Completed);
     QCOMPARE(gsx.GetStateStatus(GsxState::Pushback), GsxStateStatus::Unavailable);
+    QCOMPARE(gsx.GetStateStatus(GsxState::Deice), GsxStateStatus::Requested);
 }
 
 void GsxInterfaceTest::recordsExplicitCompletedState()
@@ -382,21 +385,34 @@ void GsxInterfaceTest::refuelCounterComesFromFuelCounterLvar()
     QCOMPARE(gsx.GetRefuelCounterGallons(), 9000.0);
 }
 
-void GsxInterfaceTest::gpuConnectedFollowsLVar()
+void GsxInterfaceTest::gpuStatusFollowsStateLVar()
 {
     FakeVariableGateway gateway;
 
     const GsxStateService gsx(&gateway);
 
-    QVERIFY(!gsx.IsGpuConnected());
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Unknown);
 
-    gateway.lvars[kGpuConnected] = 1.0;
-
-    QVERIFY(gsx.IsGpuConnected());
-
+    gateway.lvars[kGpuState] = static_cast<double>(GsxStateStatus::Active);
     gateway.lvars[kGpuConnected] = 0.0;
 
-    QVERIFY(!gsx.IsGpuConnected());
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Connected);
+
+    gateway.lvars[kGpuState] = static_cast<double>(GsxStateStatus::Callable);
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Disconnected);
+}
+
+void GsxInterfaceTest::gpuStatusConnectedWhenConnectedFlagSetDespiteState()
+{
+    FakeVariableGateway gateway;
+
+    const GsxStateService gsx(&gateway);
+
+    gateway.lvars[kGpuState] = static_cast<double>(GsxStateStatus::Callable);
+    gateway.lvars[kGpuConnected] = 1.0;
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Connected);
 }
 
 void GsxInterfaceTest::serviceInProgressFollowsRemoteStateRaw()

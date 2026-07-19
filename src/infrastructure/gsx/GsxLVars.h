@@ -10,6 +10,8 @@ namespace gsx::lvars
     inline constexpr auto kPassengerStairsFrontState = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSFRONT_STATE";
     inline constexpr auto kPassengerStairsMiddleState = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSMIDDLE_STATE";
     inline constexpr auto kPassengerStairsRearState = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSREAR_STATE";
+    inline constexpr auto kCateringFrontState = "FSDT_GSX_VEHICLE_CATERINGVEHICLEFRONT_STATE";
+    inline constexpr auto kCateringRearState = "FSDT_GSX_VEHICLE_CATERINGVEHICLEREAR_STATE";
 
     inline constexpr auto kRefuelingState = "FSDT_GSX_REFUELING_STATE";
     inline constexpr auto kFuelHoseConnected = "FSDT_GSX_FUELHOSE_CONNECTED";
@@ -19,6 +21,7 @@ namespace gsx::lvars
     inline constexpr auto kDeboardingState = "FSDT_GSX_DEBOARDING_STATE";
     inline constexpr auto kPushbackVehicleState = "FSDT_GSX_VEHICLE_PUSHBACK_STATE";
     inline constexpr auto kPushbackStatus = "FSDT_GSX_PUSHBACK_STATUS";
+    inline constexpr auto kDeiceState = "FSDT_GSX_DEICE_STATE";
 
     inline constexpr auto kMaxPassengers = "FSDT_GSX_MAX_NUMPASSENGERS";
     inline constexpr auto kNumPassengersBoardingTotal = "FSDT_GSX_NUMPASSENGERS_BOARDING_TOTAL";
@@ -35,6 +38,7 @@ namespace gsx::lvars
     inline constexpr auto kStairs = "FSDT_GSX_STAIRS";
     inline constexpr auto kRepositioning = "FSDT_GSX_REPOSITIONING";
     inline constexpr auto kGpuConnected = "FSDT_GSX_GPU_CONNECTED";
+    inline constexpr auto kGpuState = "FSDT_GSX_GPU_STATE";
 
     inline constexpr auto kGoodEngineStart = "FSDT_GSX_SETTINGS_GOOD_ENGINE_START";
 }
@@ -46,6 +50,8 @@ namespace gsx::states
     inline constexpr double kLoaderLoading = 9.0;
     inline constexpr double kLoaderRemoving = 4.0;
     inline constexpr double kStairsFinalPosition = 3.0;
+    inline constexpr double kCateringWaitingForDoor = 6.0;
+    inline constexpr double kCateringInProgress = 7.0;
 
     [[nodiscard]] inline bool IsLoaderPresent(const double state)
     {
@@ -53,6 +59,12 @@ namespace gsx::states
             || state == kLoaderInPosition
             || state == kLoaderLoading
             || state == kLoaderRemoving;
+    }
+
+    [[nodiscard]] inline bool IsCateringAtDoor(const double state)
+    {
+        return state == kCateringWaitingForDoor
+            || state == kCateringInProgress;
     }
 }
 

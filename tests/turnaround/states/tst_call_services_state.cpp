@@ -15,12 +15,13 @@ private slots:
     static void skipsWhenAircraftDoesNotSupportStairsOrJetways();
     static void advancesImmediatelyWhenJetwayAlreadyInPlace();
     static void givesUpAfterTwoAttempts();
-    static void requestsGpuAndCateringWhenEnabled();
+    static void requestsCateringWhenEnabled();
     static void skipsCateringForCargoVariant();
     static void retriesCateringUntilConfirmed();
     static void advancesWhenCateringNeverStarts();
     static void doesNotRequestGroundServicesWhenDisabled();
-    static void skipsGpuToggleWhenAlreadyConnected();
+    static void holdsEveryTriggerWhileMenuUnsettled();
+    static void defersStairsUntilMenuSettledAfterCatering();
     static void skipsGroundServicesWhenSettingsAreNull();
 };
 
@@ -163,18 +164,13 @@ void CallServicesStateTest::givesUpAfterTwoAttempts()
     QCOMPARE(f.ctx.data.jetwayOrStairsAttempts, 2);
 }
 
-void CallServicesStateTest::requestsGpuAndCateringWhenEnabled()
+void CallServicesStateTest::requestsCateringWhenEnabled()
 {
     TurnaroundStateFixture f;
     CallServicesState state;
 
-    f.settings.callGpu = true;
     f.settings.callCatering = true;
     f.aircraft.supportsStairsOrJetways = false;
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
-    QVERIFY(f.ctx.data.gpuRequested);
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.requestCateringCalls, 1);
@@ -187,7 +183,6 @@ void CallServicesStateTest::requestsGpuAndCateringWhenEnabled()
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
     QVERIFY(f.ctx.data.cateringRequested);
-    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
     QCOMPARE(f.menuGateway.requestCateringCalls, 1);
 }
 
@@ -272,20 +267,44 @@ void CallServicesStateTest::doesNotRequestGroundServicesWhenDisabled()
     QCOMPARE(f.menuGateway.requestCateringCalls, 0);
 }
 
-void CallServicesStateTest::skipsGpuToggleWhenAlreadyConnected()
+void CallServicesStateTest::holdsEveryTriggerWhileMenuUnsettled()
 {
     TurnaroundStateFixture f;
     CallServicesState state;
 
-    f.settings.callGpu = true;
-    f.gsxService.gpuConnected = true;
-    f.aircraft.supportsStairsOrJetways = false;
+    f.settings.callCatering = true;
+    f.gsxService.stairsAvailable = true;
+    f.menuGateway.menuSettled = false;
 
     const auto transition = state.Evaluate(f.ctx);
 
-    QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
-    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+    QVERIFY(!transition.has_value());
+    QCOMPARE(f.menuGateway.requestCateringCalls, 0);
+    QCOMPARE(f.menuGateway.callStairsCalls, 0);
+}
+
+void CallServicesStateTest::defersStairsUntilMenuSettledAfterCatering()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.settings.callCatering = true;
+    f.gsxService.stairsAvailable = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.requestCateringCalls, 1);
+    QCOMPARE(f.menuGateway.callStairsCalls, 0);
+
+    f.gsxService.cateringInProgress = true;
+    f.menuGateway.menuSettled = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.callStairsCalls, 0);
+
+    f.menuGateway.menuSettled = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.callStairsCalls, 1);
 }
 
 void CallServicesStateTest::skipsGroundServicesWhenSettingsAreNull()

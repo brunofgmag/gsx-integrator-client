@@ -50,6 +50,15 @@ ColumnLayout {
         onToggled: checked => root.settingsVm.streamerMode = checked
     }
 
+    SwitchRow {
+        Layout.fillWidth: true
+        title: qsTr("Open GSX on requests")
+        caption: qsTr("Shows the GSX window in the sim when requesting services")
+        helpText: qsTr("When off, requests are sent silently: the GSX window no longer opens on every request, but GSX menus and messages won't appear in the sim.")
+        checked: root.settingsVm.openGsxOnRequests
+        onToggled: checked => root.settingsVm.openGsxOnRequests = checked
+    }
+
     SettingRow {
         Layout.fillWidth: true
         title: qsTr("Updates")

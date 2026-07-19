@@ -8,24 +8,23 @@ class WaitCateringStateTest final : public QObject
     Q_OBJECT
 
 private slots:
-    static void skipsWhenCateringDisabled();
+    static void skipsWhenCateringNeverRequested();
     static void skipsWhenCateringNotInProgress();
     static void waitsWhileCateringInProgressThenAdvances();
     static void advancesAfterTimeout();
 };
 
-void WaitCateringStateTest::skipsWhenCateringDisabled()
+void WaitCateringStateTest::skipsWhenCateringNeverRequested()
 {
     TurnaroundStateFixture f;
     WaitCateringState state;
 
-    f.settings.callCatering = false;
     f.gsxService.cateringInProgress = true;
 
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::DisconnectGpu);
+    QCOMPARE(transition->next, TurnaroundPhase::RemoveGroundEquipment);
 }
 
 void WaitCateringStateTest::skipsWhenCateringNotInProgress()
@@ -33,13 +32,13 @@ void WaitCateringStateTest::skipsWhenCateringNotInProgress()
     TurnaroundStateFixture f;
     WaitCateringState state;
 
-    f.settings.callCatering = true;
+    f.ctx.data.cateringRequested = true;
     f.gsxService.cateringInProgress = false;
 
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::DisconnectGpu);
+    QCOMPARE(transition->next, TurnaroundPhase::RemoveGroundEquipment);
 }
 
 void WaitCateringStateTest::waitsWhileCateringInProgressThenAdvances()
@@ -47,8 +46,12 @@ void WaitCateringStateTest::waitsWhileCateringInProgressThenAdvances()
     TurnaroundStateFixture f;
     WaitCateringState state;
 
-    f.settings.callCatering = true;
+    f.ctx.data.cateringRequested = true;
     f.gsxService.cateringInProgress = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    f.settings.callCatering = false;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 
@@ -57,7 +60,7 @@ void WaitCateringStateTest::waitsWhileCateringInProgressThenAdvances()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::DisconnectGpu);
+    QCOMPARE(transition->next, TurnaroundPhase::RemoveGroundEquipment);
 }
 
 void WaitCateringStateTest::advancesAfterTimeout()
@@ -65,7 +68,7 @@ void WaitCateringStateTest::advancesAfterTimeout()
     TurnaroundStateFixture f;
     WaitCateringState state;
 
-    f.settings.callCatering = true;
+    f.ctx.data.cateringRequested = true;
     f.gsxService.cateringInProgress = true;
 
     std::optional<TurnaroundTransition> transition;
@@ -79,7 +82,7 @@ void WaitCateringStateTest::advancesAfterTimeout()
     transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::DisconnectGpu);
+    QCOMPARE(transition->next, TurnaroundPhase::RemoveGroundEquipment);
 }
 
 QTEST_APPLESS_MAIN(WaitCateringStateTest)

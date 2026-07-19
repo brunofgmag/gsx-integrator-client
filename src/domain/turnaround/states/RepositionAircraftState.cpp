@@ -13,9 +13,9 @@ namespace
 
 std::optional<TurnaroundTransition> RepositionAircraftState::Evaluate(TurnaroundContext& ctx)
 {
-    if (ctx.settings != nullptr && ctx.settings->skipReposition)
+    if (ctx.settings != nullptr && ctx.settings->skipReposition && !ctx.data.repositionRequested)
     {
-        return TurnaroundTransition{TurnaroundPhase::CallServices};
+        return TurnaroundTransition{TurnaroundPhase::PlaceGroundEquipment};
     }
 
     bool& repositionRequested = ctx.data.repositionRequested;
@@ -46,7 +46,7 @@ std::optional<TurnaroundTransition> RepositionAircraftState::Evaluate(Turnaround
 
     if (repositionCompleted)
     {
-        return TurnaroundTransition{TurnaroundPhase::CallServices};
+        return TurnaroundTransition{TurnaroundPhase::PlaceGroundEquipment};
     }
 
     if (ctx.TickCondition(kRetryTicks) && repositionRequested)

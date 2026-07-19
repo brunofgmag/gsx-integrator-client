@@ -52,11 +52,13 @@ void AutomationSettingsTest::resolvesGlobalsWhenProfileMissing()
     AppSettings settings;
     settings.fuelRateKgs = 25.0;
     settings.callGpu = true;
+    settings.callGpuOnArrival = true;
 
     const AutomationSettings resolved = ResolveAutomationSettings(settings, "unknown-id");
 
     QCOMPARE(resolved.fuelRateKgs, 25.0);
     QVERIFY(resolved.callGpu);
+    QVERIFY(resolved.callGpuOnArrival);
 }
 
 void AutomationSettingsTest::resolvesGlobalsWhenProfileUsesGlobal()
@@ -84,6 +86,7 @@ void AutomationSettingsTest::customProfileOverridesAutomationFields()
     profile.fuelRateKgs = 12.5;
     profile.skipReposition = true;
     profile.callGpu = true;
+    profile.callGpuOnArrival = true;
     profile.callCatering = true;
     profile.callLavatory = true;
     profile.callWater = true;
@@ -95,6 +98,7 @@ void AutomationSettingsTest::customProfileOverridesAutomationFields()
     QCOMPARE(resolved.fuelRateKgs, 12.5);
     QVERIFY(resolved.skipReposition);
     QVERIFY(resolved.callGpu);
+    QVERIFY(resolved.callGpuOnArrival);
     QVERIFY(resolved.callCatering);
     QVERIFY(resolved.callLavatory);
     QVERIFY(resolved.callWater);
@@ -106,6 +110,8 @@ void AutomationSettingsTest::customProfileKeepsPilotIdAndAutoFlags()
     AppSettings settings;
     settings.simbriefPilotId = 42;
     settings.autoSelectGsxChoice = false;
+    settings.autoDeice = true;
+    settings.crewBoarding = 1;
     settings.autoStartFlow = true;
     settings.autoStartLoading = false;
     AircraftProfile profile;
@@ -116,6 +122,8 @@ void AutomationSettingsTest::customProfileKeepsPilotIdAndAutoFlags()
 
     QCOMPARE(resolved.simbriefPilotId, 42);
     QVERIFY(!resolved.autoSelectGsxChoice);
+    QVERIFY(resolved.autoDeice);
+    QCOMPARE(resolved.crewBoarding, CrewBoarding::Crew);
     QVERIFY(resolved.autoStartFlow);
     QVERIFY(!resolved.autoStartLoading);
 }

@@ -24,7 +24,7 @@ private:
     static bool SendServiceTrigger(const TurnaroundContext& ctx, GroundService service);
     static void UpdateActiveSeen(TurnaroundContext& ctx);
     static bool AllEnabledCompleted(const TurnaroundContext& ctx);
-    static bool IsServiceDone(const TurnaroundContext& ctx, bool enabled, bool activeSeen, GroundService service);
+    static bool IsServiceDone(const TurnaroundContext& ctx, bool activeSeen, GroundService service);
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_CABINSERVICESSTATE_H

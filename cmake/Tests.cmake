@@ -43,6 +43,7 @@ set(TURNAROUND_STATE_TESTS
         gsxi-turnaround-waiting-supported-aircraft-state-tests turnaround-state-waiting-supported-aircraft tests/turnaround/states/tst_waiting_supported_aircraft_state.cpp
         gsxi-turnaround-waiting-flight-plan-state-tests turnaround-state-waiting-flight-plan tests/turnaround/states/tst_waiting_flight_plan_state.cpp
         gsxi-turnaround-reposition-aircraft-state-tests turnaround-state-reposition-aircraft tests/turnaround/states/tst_reposition_aircraft_state.cpp
+        gsxi-turnaround-place-ground-equipment-state-tests turnaround-state-place-ground-equipment tests/turnaround/states/tst_place_ground_equipment_state.cpp
         gsxi-turnaround-call-services-state-tests turnaround-state-call-services tests/turnaround/states/tst_call_services_state.cpp
         gsxi-turnaround-waiting-power-on-state-tests turnaround-state-waiting-power-on tests/turnaround/states/tst_waiting_power_on_state.cpp
         gsxi-turnaround-request-fuel-state-tests turnaround-state-request-fuel tests/turnaround/states/tst_request_fuel_state.cpp
@@ -52,12 +53,13 @@ set(TURNAROUND_STATE_TESTS
         gsxi-turnaround-waiting-aircraft-ready-state-tests turnaround-state-waiting-aircraft-ready tests/turnaround/states/tst_waiting_aircraft_ready_state.cpp
         gsxi-turnaround-waiting-ready-to-push-state-tests turnaround-state-waiting-ready-to-push tests/turnaround/states/tst_waiting_ready_to_push_state.cpp
         gsxi-turnaround-wait-catering-state-tests turnaround-state-wait-catering tests/turnaround/states/tst_wait_catering_state.cpp
-        gsxi-turnaround-disconnect-gpu-state-tests turnaround-state-disconnect-gpu tests/turnaround/states/tst_disconnect_gpu_state.cpp
+        gsxi-turnaround-remove-ground-equipment-state-tests turnaround-state-remove-ground-equipment tests/turnaround/states/tst_remove_ground_equipment_state.cpp
         gsxi-turnaround-request-pushback-state-tests turnaround-state-request-pushback tests/turnaround/states/tst_request_pushback_state.cpp
         gsxi-turnaround-waiting-engines-state-tests turnaround-state-waiting-engines tests/turnaround/states/tst_waiting_engines_state.cpp
         gsxi-turnaround-waiting-pushback-to-start-state-tests turnaround-state-waiting-pushback-to-start tests/turnaround/states/tst_waiting_pushback_to_start_state.cpp
         gsxi-turnaround-waiting-departure-state-tests turnaround-state-waiting-departure tests/turnaround/states/tst_waiting_departure_state.cpp
         gsxi-turnaround-on-flight-state-tests turnaround-state-on-flight tests/turnaround/states/tst_on_flight_state.cpp
+        gsxi-turnaround-place-arrival-ground-equipment-state-tests turnaround-state-place-arrival-ground-equipment tests/turnaround/states/tst_place_arrival_ground_equipment_state.cpp
         gsxi-turnaround-waiting-engine-shutdown-state-tests turnaround-state-waiting-engine-shutdown tests/turnaround/states/tst_waiting_engine_shutdown_state.cpp
         gsxi-turnaround-request-deboarding-state-tests turnaround-state-request-deboarding tests/turnaround/states/tst_request_deboarding_state.cpp
         gsxi-turnaround-deboarding-state-tests turnaround-state-deboarding tests/turnaround/states/tst_deboarding_state.cpp
@@ -175,6 +177,55 @@ gsxi_add_qt_test(gsxi-gsx-interface-tests gsx-interface
         src/infrastructure/commbus/CommBusPluginClient.h
         src/infrastructure/simvars/VariableGateway.h)
 
+gsxi_add_qt_test(gsxi-gsx-remote-api-client-tests gsx-remote-api-client
+        tests/tst_gsx_remote_api_client.cpp
+        src/infrastructure/gsx/GsxRemoteApiClient.cpp
+        src/infrastructure/gsx/GsxRemoteApiClient.h)
+target_link_libraries(gsxi-gsx-remote-api-client-tests PRIVATE Qt6::WebSockets)
+
+add_custom_command(TARGET gsxi-gsx-remote-api-client-tests POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "$<TARGET_FILE:Qt6::WebSockets>"
+        "$<TARGET_FILE:Qt6::Network>"
+        "$<TARGET_FILE_DIR:gsxi-gsx-remote-api-client-tests>"
+        VERBATIM)
+
+gsxi_add_qt_test(gsxi-github-update-service-tests github-update-service
+        tests/tst_github_update_service.cpp
+        src/infrastructure/update/GithubUpdateService.cpp
+        src/infrastructure/update/GithubUpdateService.h
+        src/infrastructure/update/GithubReleaseParser.cpp
+        src/infrastructure/update/GithubReleaseParser.h
+        src/infrastructure/update/CommbusInstallProbe.cpp
+        src/infrastructure/update/CommbusInstallProbe.h
+        src/application/ports/UpdateService.h
+        src/application/model/UpdateInfo.h)
+target_link_libraries(gsxi-github-update-service-tests PRIVATE Qt6::Network)
+
+add_custom_command(TARGET gsxi-github-update-service-tests POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "$<TARGET_FILE:Qt6::Network>"
+        "$<TARGET_FILE_DIR:gsxi-github-update-service-tests>"
+        VERBATIM)
+
+gsxi_add_qt_test(gsxi-qsettings-repository-tests qsettings-repository
+        tests/tst_qsettings_repository.cpp
+        src/infrastructure/settings/QSettingsRepository.cpp
+        src/infrastructure/settings/QSettingsRepository.h
+        src/application/ports/SettingsRepository.h
+        src/application/model/AppSettings.h
+        src/application/model/AircraftProfile.h)
+
+gsxi_add_qt_test(gsxi-simconnect-session-tests simconnect-session
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
+        tests/tst_simconnect_session.cpp
+        src/infrastructure/simconnect/SimConnectSession.cpp
+        src/infrastructure/simconnect/SimConnectSession.h
+        src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+        src/infrastructure/simconnect/SimConnectVariableGateway.h)
+target_include_directories(gsxi-simconnect-session-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
 gsxi_add_qt_test(gsxi-variable-gateway-tests variable-gateway
         tests/tst_variable_gateway.cpp
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
@@ -284,3 +335,58 @@ gsxi_add_qt_test(gsxi-integrator-snapshot-tests integrator-snapshot
         src/application/model/IntegratorSnapshot.h
         src/domain/model/FlightPlan.h
         src/domain/turnaround/TurnaroundPhase.h)
+
+gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-service
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
+        tests/tst_runtime_integrator_service.cpp
+        src/application/IntegratorRuntime.cpp
+        src/application/IntegratorRuntime.h
+        src/application/RuntimeIntegratorService.cpp
+        src/application/RuntimeIntegratorService.h
+        src/domain/turnaround/TurnaroundStateMachine.cpp
+        src/domain/turnaround/TurnaroundStateMachine.h
+        src/infrastructure/aircraft/AircraftFactory.cpp
+        src/infrastructure/aircraft/AircraftFactory.h
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/IFly737Max.cpp
+        src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/aircraft/TfdiMd11.cpp
+        src/infrastructure/aircraft/TfdiMd11.h
+        src/infrastructure/aircraft/TolissA340.cpp
+        src/infrastructure/aircraft/TolissA340.h
+        src/infrastructure/commbus/CommBusPluginClient.cpp
+        src/infrastructure/commbus/CommBusPluginClient.h
+        src/infrastructure/gsx/GsxAircraftProfile.cpp
+        src/infrastructure/gsx/GsxAircraftProfile.h
+        src/infrastructure/gsx/GsxMenuNavigator.cpp
+        src/infrastructure/gsx/GsxMenuNavigator.h
+        src/infrastructure/gsx/GsxRemoteApiClient.cpp
+        src/infrastructure/gsx/GsxRemoteApiClient.h
+        src/infrastructure/gsx/GsxRemoteStateReducer.cpp
+        src/infrastructure/gsx/GsxRemoteStateReducer.h
+        src/infrastructure/gsx/GsxStateService.cpp
+        src/infrastructure/gsx/GsxStateService.h
+        src/infrastructure/logging/QtDomainLogger.cpp
+        src/infrastructure/logging/QtDomainLogger.h
+        src/infrastructure/simbrief/SimbriefClient.cpp
+        src/infrastructure/simbrief/SimbriefClient.h
+        src/infrastructure/simbrief/SimbriefOfpParser.cpp
+        src/infrastructure/simbrief/SimbriefOfpParser.h
+        src/infrastructure/simconnect/SimConnectSession.cpp
+        src/infrastructure/simconnect/SimConnectSession.h
+        src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+        src/infrastructure/simconnect/SimConnectVariableGateway.h)
+target_link_libraries(gsxi-runtime-integrator-service-tests PRIVATE
+        gsxi-turnaround-state-test-support
+        Qt6::Network
+        Qt6::WebSockets)
+target_include_directories(gsxi-runtime-integrator-service-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
+add_custom_command(TARGET gsxi-runtime-integrator-service-tests POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "$<TARGET_FILE:Qt6::WebSockets>"
+        "$<TARGET_FILE:Qt6::Network>"
+        "$<TARGET_FILE_DIR:gsxi-runtime-integrator-service-tests>"
+        VERBATIM)

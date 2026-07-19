@@ -11,6 +11,7 @@ private slots:
     static void advancesImmediatelyWhenAllDisabled();
     static void skipsCabinServicesWhenSettingsAreNull();
     static void confirmsEachServiceThenWaitsForCompletion();
+    static void waitsForActiveServiceWhenDisabledMidRun();
     static void retriesTriggerUntilServiceInProgress();
     static void givesUpWhenServiceNeverStarts();
 };
@@ -88,6 +89,33 @@ void CabinServicesStateTest::confirmsEachServiceThenWaitsForCompletion()
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);
     QCOMPARE(transition->delayTicks, 60);
+}
+
+void CabinServicesStateTest::waitsForActiveServiceWhenDisabledMidRun()
+{
+    TurnaroundStateFixture f;
+    CabinServicesState state;
+
+    f.settings.callLavatory = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.requestLavatoryCalls, 1);
+
+    f.gsxService.lavatoryInProgress = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(f.ctx.data.lavatoryActiveSeen);
+
+    f.settings.callLavatory = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    f.gsxService.lavatoryInProgress = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);
 }
 
 void CabinServicesStateTest::retriesTriggerUntilServiceInProgress()

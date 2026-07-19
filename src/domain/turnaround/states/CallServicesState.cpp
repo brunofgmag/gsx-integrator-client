@@ -16,6 +16,11 @@ namespace
 
 std::optional<TurnaroundTransition> CallServicesState::Evaluate(TurnaroundContext& ctx)
 {
+    if (!ctx.menuGateway->IsMenuSettled())
+    {
+        return std::nullopt;
+    }
+
     if (RequestNextGroundService(ctx))
     {
         return std::nullopt;
@@ -34,12 +39,6 @@ bool CallServicesState::RequestNextGroundService(TurnaroundContext& ctx)
     if (ctx.settings == nullptr)
     {
         return false;
-    }
-
-    if (ctx.settings->callGpu && !ctx.data.gpuRequested && !ctx.gsxGateway->IsGpuConnected())
-    {
-        ctx.data.gpuRequested = ctx.menuGateway->ToggleGpu();
-        return ctx.data.gpuRequested;
     }
 
     if (ctx.settings->callCatering && !ctx.aircraft->IsCargoVariant() && !ctx.data.cateringRequested)

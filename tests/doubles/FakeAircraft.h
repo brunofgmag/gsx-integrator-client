@@ -22,6 +22,11 @@ public:
     bool parkingBrakeSet = false;
     bool supportsStairsOrJetways = true;
     bool completesPushbackViaInterruptMenu = false;
+    std::optional<GroundPowerStatus> groundPowerStatus = std::nullopt;
+    bool supportsChocksControl = false;
+    bool chocksPlaced = false;
+    int setChocksCalls = 0;
+    int closeAllDoorsCalls = 0;
     RefuelBy refuelMethod = RefuelBy::Self;
     BoardBy boardMethod = BoardBy::Self;
     int consumeSmartSwitchCalls = 0;
@@ -56,6 +61,17 @@ public:
     }
 
     [[nodiscard]] bool IsPowered() const override { return powered; }
+    [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override { return groundPowerStatus; }
+
+    [[nodiscard]] bool SupportsChocksControl() const override { return supportsChocksControl; }
+
+    void SetChocks(const bool placed) override
+    {
+        ++setChocksCalls;
+        chocksPlaced = placed;
+    }
+
+    void CloseAllDoors() override { ++closeAllDoorsCalls; }
     [[nodiscard]] bool IsReadyToPush() const override { return readyToPush; }
     [[nodiscard]] bool IsReadyToDeboard() const override { return readyToDeboard; }
     [[nodiscard]] bool IsEngineRunning() const override { return engineRunning; }

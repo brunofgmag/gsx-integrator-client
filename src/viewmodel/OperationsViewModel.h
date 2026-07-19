@@ -19,6 +19,7 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(int phase READ GetPhase NOTIFY SnapshotChanged)
     Q_PROPERTY(int phaseCount READ GetPhaseCount CONSTANT)
     Q_PROPERTY(QString phaseTip READ GetPhaseTip NOTIFY SnapshotChanged)
+    Q_PROPERTY(int delayTicksRemaining READ GetDelayTicksRemaining NOTIFY SnapshotChanged)
     Q_PROPERTY(bool inDeboardingPhase READ IsInDeboardingPhase NOTIFY SnapshotChanged)
     Q_PROPERTY(double fuelProgress READ GetFuelProgress NOTIFY SnapshotChanged)
     Q_PROPERTY(double boardingProgress READ GetBoardingProgress NOTIFY SnapshotChanged)
@@ -32,6 +33,7 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(double plannedZfwKg READ GetPlannedZfwKg NOTIFY SnapshotChanged)
     Q_PROPERTY(int plannedPax READ GetPlannedPax NOTIFY SnapshotChanged)
     Q_PROPERTY(int boardedPax READ GetBoardedPax NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool cargoAircraft READ IsCargoAircraft NOTIFY SnapshotChanged)
     Q_PROPERTY(QString simbriefStatusText READ GetSimbriefStatusText NOTIFY SnapshotChanged)
     Q_PROPERTY(bool simbriefReady READ IsSimbriefReady NOTIFY SnapshotChanged)
     Q_PROPERTY(bool simbriefError READ HasSimbriefError NOTIFY SnapshotChanged)
@@ -39,6 +41,7 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(bool canStartLoading READ CanStartLoading NOTIFY SnapshotChanged)
     Q_PROPERTY(bool canReloadSimbrief READ CanReloadSimbrief NOTIFY SnapshotChanged)
     Q_PROPERTY(QString commandError READ GetCommandError NOTIFY CommandErrorChanged)
+    Q_PROPERTY(bool debugToolsAvailable READ AreDebugToolsAvailable CONSTANT)
 
 public:
     explicit OperationsViewModel(IntegratorService* service, QObject* parent = nullptr);
@@ -55,6 +58,7 @@ public:
     [[nodiscard]] int GetPhase() const;
     [[nodiscard]] static int GetPhaseCount();
     [[nodiscard]] QString GetPhaseTip() const;
+    [[nodiscard]] int GetDelayTicksRemaining() const;
     Q_INVOKABLE static QString phaseLabelAt(int index);
     [[nodiscard]] bool IsInDeboardingPhase() const;
     [[nodiscard]] double GetFuelProgress() const;
@@ -69,6 +73,7 @@ public:
     [[nodiscard]] double GetPlannedZfwKg() const;
     [[nodiscard]] int GetPlannedPax() const;
     [[nodiscard]] int GetBoardedPax() const;
+    [[nodiscard]] bool IsCargoAircraft() const;
     [[nodiscard]] QString GetSimbriefStatusText() const;
     [[nodiscard]] bool IsSimbriefReady() const;
     [[nodiscard]] bool HasSimbriefError() const;
@@ -76,12 +81,14 @@ public:
     [[nodiscard]] bool CanStartLoading() const;
     [[nodiscard]] bool CanReloadSimbrief() const;
     [[nodiscard]] QString GetCommandError() const;
+    [[nodiscard]] static bool AreDebugToolsAvailable();
 
     Q_INVOKABLE void startFlow();
     Q_INVOKABLE void startLoading();
     Q_INVOKABLE void restartFlow();
     Q_INVOKABLE void reloadSimbrief();
     Q_INVOKABLE void fixGsxProfile();
+    Q_INVOKABLE void debugSkipPhase(int delta);
 
     void RetranslateUi();
 

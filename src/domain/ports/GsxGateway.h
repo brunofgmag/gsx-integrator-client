@@ -1,6 +1,8 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_GSXGATEWAY_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_GSXGATEWAY_H
 
+#include "../model/GroundPowerStatus.h"
+
 enum class GsxStateStatus : int
 {
     Unavailable = 0,
@@ -18,6 +20,7 @@ enum class GsxState : int
     Boarding = 1,
     Pushback = 2,
     Deboarding = 3,
+    Deice = 4,
 };
 
 enum class GroundService : int
@@ -54,7 +57,7 @@ public:
     [[nodiscard]] virtual bool IsSimbriefLoaded() const = 0;
     [[nodiscard]] virtual bool IsAircraftOnGround() const = 0;
     [[nodiscard]] virtual bool IsGoodEngineStartConfirmationEnabled() const = 0;
-    [[nodiscard]] virtual bool IsGpuConnected() const = 0;
+    [[nodiscard]] virtual GroundPowerStatus GetGpuStatus() const = 0;
     [[nodiscard]] virtual bool IsServiceInProgress(GroundService service) const = 0;
 
     virtual void TakeOverFuelAndPayload() = 0;

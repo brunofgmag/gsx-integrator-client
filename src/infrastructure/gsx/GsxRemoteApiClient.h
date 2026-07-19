@@ -34,8 +34,9 @@ private slots:
 
 private:
     static quint16 ResolvePort();
-    void SendSubscribe();
+    void SendSubscribe() const;
     void ScheduleReconnect();
+    void HandleResult(const QJsonObject& msg);
 
     QWebSocket* socket_ = nullptr;
     QTimer* reconnectTimer_ = nullptr;

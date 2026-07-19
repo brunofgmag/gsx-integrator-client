@@ -15,7 +15,9 @@ std::optional<TurnaroundTransition> RequestDeboardingState::Evaluate(TurnaroundC
     auto& data = ctx.data;
 
     const GsxStateStatus deboardingState = ctx.gsxGateway->GetStateStatus(GsxState::Deboarding);
-    if (deboardingState == GsxStateStatus::Callable && !ctx.data.deboardingRequested)
+    if (ctx.aircraft->IsReadyToDeboard()
+        && deboardingState == GsxStateStatus::Callable && !ctx.data.deboardingRequested
+        && ctx.menuGateway->IsMenuSettled())
     {
         ctx.data.deboardingRequested = ctx.menuGateway->RequestDeboarding();
     }

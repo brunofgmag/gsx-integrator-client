@@ -27,6 +27,10 @@ public:
 
     virtual void ApplySettings(const AppSettings& settings) = 0;
 
+#ifndef NDEBUG
+    virtual void DebugSkipPhase(int) {}
+#endif
+
     virtual void AddObserver(IntegratorServiceObserver* observer) = 0;
     virtual void RemoveObserver(IntegratorServiceObserver* observer) = 0;
 };

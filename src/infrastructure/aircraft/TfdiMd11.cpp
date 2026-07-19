@@ -44,6 +44,7 @@ namespace
 
     constexpr auto kParkingBrakeLVar = "MD11_THR_PARK_LVR";
     constexpr auto kChocksLVar = "MD11_EXT_CHOCKS";
+    constexpr auto kExtGpuLVar = "MD11_EXT_GPU";
 
     constexpr auto kPaxDoor1LLVar = "MD11_EXT_DOOR_CMD_PAX_1L";
     constexpr auto kPaxDoor2LLVar = "MD11_EXT_DOOR_CMD_PAX_2L";
@@ -150,16 +151,16 @@ void TfdiMd11::OnSlowTick()
 
 void TfdiMd11::SeedTargetsIfNeeded()
 {
-    if (!fuelTargetSeeded_ && variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit))
+    if (!fuelTarget_.seeded && variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit))
     {
-        targetFuelKg_ = GetCurrentFuelKg();
-        fuelTargetSeeded_ = true;
+        fuelTarget_.target = GetCurrentFuelKg();
+        fuelTarget_.seeded = true;
     }
 
-    if (!zfwTargetSeeded_ && variableGateway_->HasReceivedAVar(kSimTotalWeight, kKgUnit))
+    if (!zfwTarget_.seeded && variableGateway_->HasReceivedAVar(kSimTotalWeight, kKgUnit))
     {
-        targetZfwKg_ = std::max(GetCurrentZfwKg(), GetEmptyZfwKg());
-        zfwTargetSeeded_ = true;
+        zfwTarget_.target = std::max(GetCurrentZfwKg(), GetEmptyZfwKg());
+        zfwTarget_.seeded = true;
     }
 }
 
@@ -195,14 +196,19 @@ double TfdiMd11::GetCurrentFuelKg() const
 
 void TfdiMd11::SetCurrentFuelKg(const double fuelKg)
 {
-    if (lastFuelKg_ == fuelKg)
+    UpdateTarget(fuelTarget_, fuelKg);
+}
+
+void TfdiMd11::UpdateTarget(EfbTarget& efbTarget, const double valueKg)
+{
+    if (efbTarget.last == valueKg)
     {
         return;
     }
 
-    lastFuelKg_ = fuelKg;
-    targetFuelKg_ = fuelKg;
-    fuelTargetSeeded_ = true;
+    efbTarget.last = valueKg;
+    efbTarget.target = valueKg;
+    efbTarget.seeded = true;
     pendingEfbCommit_ = true;
 }
 
@@ -216,15 +222,7 @@ double TfdiMd11::GetCurrentZfwKg() const
 
 void TfdiMd11::SetCurrentZfwKg(const double zfwKg)
 {
-    if (lastZfwKg_ == zfwKg)
-    {
-        return;
-    }
-
-    lastZfwKg_ = zfwKg;
-    targetZfwKg_ = zfwKg;
-    zfwTargetSeeded_ = true;
-    pendingEfbCommit_ = true;
+    UpdateTarget(zfwTarget_, zfwKg);
 }
 
 bool TfdiMd11::ConsumeSmartSwitch()
@@ -268,6 +266,23 @@ bool TfdiMd11::IsPowered() const
     return true;
 }
 
+std::optional<GroundPowerStatus> TfdiMd11::GetGroundPowerStatus() const
+{
+    if (!variableGateway_->HasReceivedLVar(kExtGpuLVar))
+    {
+        return GroundPowerStatus::Unknown;
+    }
+
+    return variableGateway_->GetLVar(kExtGpuLVar, 0.0) > 0.0
+        ? GroundPowerStatus::Connected
+        : GroundPowerStatus::Disconnected;
+}
+
+void TfdiMd11::SetChocks(const bool placed)
+{
+    variableGateway_->SetLVar(kChocksLVar, placed ? 1.0 : 0.0);
+}
+
 bool TfdiMd11::IsReadyToPush() const
 {
     return IsPowered() && !IsEngineRunning() && IsBeaconOn();
@@ -304,8 +319,8 @@ bool TfdiMd11::IsBeaconOn() const
 
 void TfdiMd11::CommitEfbTargets() const
 {
-    const double zfw = std::max(targetZfwKg_, GetEmptyZfwKg());
-    const double fuel = std::max(targetFuelKg_, 0.0);
+    const double zfw = std::max(zfwTarget_.target, GetEmptyZfwKg());
+    const double fuel = std::max(fuelTarget_.target, 0.0);
     const double payload = std::max(zfw - GetEmptyZfwKg(), 0.0);
     const double grossWeight = zfw + fuel;
     const double payloadCapacityKg = kMtowKg - GetEmptyZfwKg();

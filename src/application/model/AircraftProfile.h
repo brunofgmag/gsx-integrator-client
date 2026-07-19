@@ -11,6 +11,7 @@ struct AircraftProfile
     double fuelRateKgs = AutomationSettings::kDefaultFuelRateKgs;
     bool skipReposition = false;
     bool callGpu = false;
+    bool callGpuOnArrival = false;
     bool callCatering = false;
     bool callLavatory = false;
     bool callWater = false;

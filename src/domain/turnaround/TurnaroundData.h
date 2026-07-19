@@ -34,6 +34,12 @@ struct TurnaroundData
     bool jetwayOrStairsCompleted = false;
     int jetwayOrStairsAttempts = 0;
     bool gpuRequested = false;
+    bool chocksPlaced = false;
+    bool chocksRemoved = false;
+    bool doorsClosed = false;
+    bool arrivalGpuRequested = false;
+    bool arrivalChocksPlaced = false;
+    bool arrivalDoorsClosed = false;
     bool cateringRequested = false;
     int cateringAttempts = 0;
     bool gpuDismissRequested = false;

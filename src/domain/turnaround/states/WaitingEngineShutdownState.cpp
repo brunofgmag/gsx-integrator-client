@@ -5,9 +5,9 @@
 
 std::optional<TurnaroundTransition> WaitingEngineShutdownState::Evaluate(TurnaroundContext& ctx)
 {
-    if (ctx.aircraft->IsReadyToDeboard())
+    if (!ctx.aircraft->IsEngineRunning())
     {
-        return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
+        return TurnaroundTransition{TurnaroundPhase::PlaceArrivalGroundEquipment};
     }
 
     return std::nullopt;

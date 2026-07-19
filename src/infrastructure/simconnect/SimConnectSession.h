@@ -58,6 +58,12 @@ private:
 
     static void CALLBACK DispatchTrampoline(SIMCONNECT_RECV* pData, DWORD cbData, void* ctx);
     void HandleMessage(SIMCONNECT_RECV* pData, DWORD cbData);
+    void HandleOpen(const SIMCONNECT_RECV* pData, DWORD cbData) const;
+    void HandleEvent(const SIMCONNECT_RECV* pData, DWORD cbData) const;
+    void HandleSystemState(const SIMCONNECT_RECV* pData, DWORD cbData) const;
+
+    template <typename Fn>
+    bool SubscribeSystemEvent(Fn& target, Fn fn, SIMCONNECT_CLIENT_EVENT_ID eventId, const char* name);
 
     HANDLE hSimConnect_ = nullptr;
     SimConnectVariableGateway* varManager_ = nullptr;

@@ -52,6 +52,49 @@ namespace
 
         return ToLower(Trim(line.substr(0, equals))) == kRefuelingKey;
     }
+
+    struct LineView
+    {
+        std::string text;
+        std::size_t start = 0;
+        std::size_t end = 0;
+        std::size_t next = 0;
+    };
+
+    LineView NextLine(const std::string& content, const std::size_t lineStart)
+    {
+        const std::size_t newline = content.find('\n', lineStart);
+        const std::size_t next = newline == std::string::npos ? content.size() : newline + 1;
+        std::size_t end = newline == std::string::npos ? content.size() : newline;
+        if (end > lineStart && content[end - 1] == '\r')
+        {
+            --end;
+        }
+
+        return {content.substr(lineStart, end - lineStart), lineStart, end, next};
+    }
+
+    std::optional<std::string> ReadContent(const std::filesystem::path& path)
+    {
+        const std::ifstream input(path, std::ios::binary);
+        if (!input.is_open())
+        {
+            return std::nullopt;
+        }
+
+        std::ostringstream buffer;
+        buffer << input.rdbuf();
+
+        return buffer.str();
+    }
+
+    bool WriteContent(const std::filesystem::path& path, const std::string& content)
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << content;
+
+        return output.good();
+    }
 }
 
 std::vector<std::filesystem::path> GsxAircraftProfile::ProfileRootsFor(const std::string& aircraftName)
@@ -116,22 +159,19 @@ std::vector<std::filesystem::path> GsxAircraftProfile::FindCfgs(
 
 std::optional<int> GsxAircraftProfile::ReadRefueling(const std::filesystem::path& cfgPath)
 {
-    std::ifstream file(cfgPath);
-    if (!file.is_open())
+    const std::optional<std::string> content = ReadContent(cfgPath);
+    if (!content.has_value())
     {
         return std::nullopt;
     }
 
-    std::string line;
     std::string section;
-    while (std::getline(file, line))
+    LineView line;
+    for (std::size_t pos = 0; pos < content->size(); pos = line.next)
     {
-        if (!line.empty() && line.back() == '\r')
-        {
-            line.pop_back();
-        }
+        line = NextLine(*content, pos);
 
-        const std::string trimmed = Trim(line);
+        const std::string trimmed = Trim(line.text);
         if (const auto name = SectionName(trimmed))
         {
             section = *name;
@@ -158,62 +198,45 @@ std::optional<int> GsxAircraftProfile::ReadRefueling(const std::filesystem::path
 
 bool GsxAircraftProfile::WriteRefueling(const std::filesystem::path& cfgPath, const int value)
 {
-    std::ifstream input(cfgPath, std::ios::binary);
-    if (!input.is_open())
+    std::optional<std::string> content = ReadContent(cfgPath);
+    if (!content.has_value())
     {
         return false;
     }
 
-    std::ostringstream buffer;
-    buffer << input.rdbuf();
-    std::string content = buffer.str();
-    input.close();
-
-    const std::string eol = content.find("\r\n") != std::string::npos ? "\r\n" : "\n";
+    const std::string eol = content->find("\r\n") != std::string::npos ? "\r\n" : "\n";
     const std::string refuelingLine = std::string(kRefuelingKey) + " = " + std::to_string(value);
 
     std::string section;
-    std::size_t aircraftSectionEnd = std::string::npos;
-    std::size_t lineStart = 0;
-    while (lineStart < content.size())
+    std::size_t afterAircraftHeader = std::string::npos;
+    LineView line;
+    for (std::size_t pos = 0; pos < content->size(); pos = line.next)
     {
-        const std::size_t newline = content.find('\n', lineStart);
-        const std::size_t nextLine = newline == std::string::npos ? content.size() : newline + 1;
-        std::size_t lineEnd = newline == std::string::npos ? content.size() : newline;
-        if (lineEnd > lineStart && content[lineEnd - 1] == '\r')
-        {
-            --lineEnd;
-        }
+        line = NextLine(*content, pos);
 
-        const std::string line = content.substr(lineStart, lineEnd - lineStart);
-        const std::string trimmed = Trim(line);
+        const std::string trimmed = Trim(line.text);
         if (const auto name = SectionName(trimmed))
         {
             section = *name;
             if (section == kAircraftSection)
             {
-                aircraftSectionEnd = nextLine;
+                afterAircraftHeader = line.next;
             }
         }
         else if (section == kAircraftSection && IsRefuelingLine(trimmed))
         {
-            content.replace(lineStart, lineEnd - lineStart, refuelingLine);
-            std::ofstream output(cfgPath, std::ios::binary | std::ios::trunc);
-            output << content;
-            return output.good();
-        }
+            content->replace(line.start, line.end - line.start, refuelingLine);
 
-        lineStart = nextLine;
+            return WriteContent(cfgPath, *content);
+        }
     }
 
-    if (aircraftSectionEnd == std::string::npos)
+    if (afterAircraftHeader == std::string::npos)
     {
         return false;
     }
 
-    content.insert(aircraftSectionEnd, refuelingLine + eol);
-    std::ofstream output(cfgPath, std::ios::binary | std::ios::trunc);
-    output << content;
+    content->insert(afterAircraftHeader, refuelingLine + eol);
 
-    return output.good();
+    return WriteContent(cfgPath, *content);
 }

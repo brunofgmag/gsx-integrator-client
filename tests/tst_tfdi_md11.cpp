@@ -34,6 +34,7 @@ namespace
     constexpr auto kBattery = "MD11_OVHD_ELEC_BATT_BT";
     constexpr auto kApu = "MD11_OVHD_ELEC_APU_PWR_ON_LT";
     constexpr auto kExtPower = "MD11_OVHD_ELEC_EXT_PWR_ON_LT";
+    constexpr auto kExtGpu = "MD11_EXT_GPU";
 
     constexpr auto kCouatlStarted = gsx::lvars::kCouatlStarted;
     constexpr auto kGsxLoaderFront = gsx::lvars::kBaggageLoaderFrontState;
@@ -83,6 +84,8 @@ private slots:
     static void seedsUnsetFuelTargetFromReceivedSimValue();
     static void doesNotSeedFuelTargetBeforeSimDataArrives();
     static void aircraftPowerFollowsElectricalState();
+    static void groundPowerStatusFollowsExtGpuLVar();
+    static void setChocksWritesChocksLVar();
     static void readyToPushFollowsPowerBeaconAndEngines();
     static void engineRunningDetectsAnyCombustion();
     static void engineAssumedRunningUntilCombustionDataArrives();
@@ -456,6 +459,40 @@ void TfdiMd11Test::aircraftPowerFollowsElectricalState()
 
         QVERIFY2(aircraft.IsPowered() == testCase.expected, testCase.name);
     }
+}
+
+void TfdiMd11Test::groundPowerStatusFollowsExtGpuLVar()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    QCOMPARE(aircraft.GetGroundPowerStatus(), std::optional{GroundPowerStatus::Unknown});
+
+    gateway.lvars[kExtGpu] = 1.0;
+
+    QCOMPARE(aircraft.GetGroundPowerStatus(), std::optional{GroundPowerStatus::Connected});
+
+    gateway.lvars[kExtGpu] = 0.0;
+
+    QCOMPARE(aircraft.GetGroundPowerStatus(), std::optional{GroundPowerStatus::Disconnected});
+}
+
+void TfdiMd11Test::setChocksWritesChocksLVar()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    QVERIFY(aircraft.SupportsChocksControl());
+
+    aircraft.SetChocks(true);
+
+    QCOMPARE(gateway.Written(kChocks), 1.0);
+
+    aircraft.SetChocks(false);
+
+    QCOMPARE(gateway.Written(kChocks), 0.0);
 }
 
 void TfdiMd11Test::readyToPushFollowsPowerBeaconAndEngines()

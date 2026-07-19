@@ -1,7 +1,6 @@
 #include "WaitCateringState.h"
 
 #include "../TurnaroundContext.h"
-#include "../../model/AutomationSettings.h"
 #include "../../ports/GsxGateway.h"
 
 namespace
@@ -12,11 +11,11 @@ namespace
 
 std::optional<TurnaroundTransition> WaitCateringState::Evaluate(TurnaroundContext& ctx)
 {
-    const bool waitCatering = ctx.settings != nullptr && ctx.settings->callCatering == true;
+    const bool waitCatering = ctx.data.cateringRequested;
 
     if (!waitCatering || !ctx.gsxGateway->IsServiceInProgress(GroundService::Catering))
     {
-        return TurnaroundTransition{TurnaroundPhase::DisconnectGpu};
+        return TurnaroundTransition{TurnaroundPhase::RemoveGroundEquipment};
     }
 
     if (ctx.TickCondition(kWaitTicks))
@@ -24,7 +23,7 @@ std::optional<TurnaroundTransition> WaitCateringState::Evaluate(TurnaroundContex
         ++ctx.data.cateringWaitIntervals;
         if (ctx.data.cateringWaitIntervals >= kMaxWaitIntervals)
         {
-            return TurnaroundTransition{TurnaroundPhase::DisconnectGpu};
+            return TurnaroundTransition{TurnaroundPhase::RemoveGroundEquipment};
         }
     }
 

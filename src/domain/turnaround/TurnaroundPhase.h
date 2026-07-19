@@ -7,6 +7,7 @@ enum class TurnaroundPhase : int
     WaitingAircraftReady,
     WaitingFlightPlan,
     RepositionAircraft,
+    PlaceGroundEquipment,
     CallServices,
     WaitingPowerOn,
     RequestFuel,
@@ -15,13 +16,14 @@ enum class TurnaroundPhase : int
     Boarding,
     WaitingReadyToPush,
     WaitCatering,
-    DisconnectGpu,
+    RemoveGroundEquipment,
     RequestPushback,
     WaitingPushbackToStart,
     WaitingForEngines,
     WaitingDeparture,
     OnFlight,
     WaitingEngineShutdown,
+    PlaceArrivalGroundEquipment,
     RequestDeboarding,
     Deboarding,
     CabinServices,
@@ -36,6 +38,7 @@ inline const char* TurnaroundPhaseToString(const TurnaroundPhase phase)
     case TurnaroundPhase::WaitingSupportedAircraft: return "WaitingSupportedAircraft";
     case TurnaroundPhase::WaitingAircraftReady: return "WaitingAircraftReady";
     case TurnaroundPhase::WaitingFlightPlan: return "WaitingFlightPlan";
+    case TurnaroundPhase::PlaceGroundEquipment: return "PlaceGroundEquipment";
     case TurnaroundPhase::CallServices: return "CallServices";
     case TurnaroundPhase::WaitingPowerOn: return "WaitingPowerOn";
     case TurnaroundPhase::RequestFuel: return "RequestFuel";
@@ -44,13 +47,14 @@ inline const char* TurnaroundPhaseToString(const TurnaroundPhase phase)
     case TurnaroundPhase::Boarding: return "Boarding";
     case TurnaroundPhase::WaitingReadyToPush: return "WaitingReadyToPush";
     case TurnaroundPhase::WaitCatering: return "WaitCatering";
-    case TurnaroundPhase::DisconnectGpu: return "DisconnectGpu";
+    case TurnaroundPhase::RemoveGroundEquipment: return "RemoveGroundEquipment";
     case TurnaroundPhase::RequestPushback: return "RequestPushback";
     case TurnaroundPhase::WaitingForEngines: return "WaitingForEngines";
     case TurnaroundPhase::WaitingPushbackToStart: return "WaitingPushbackToStart";
     case TurnaroundPhase::RepositionAircraft: return "RepositionAircraft";
     case TurnaroundPhase::WaitingDeparture: return "WaitingDeparture";
     case TurnaroundPhase::OnFlight: return "OnFlight";
+    case TurnaroundPhase::PlaceArrivalGroundEquipment: return "PlaceArrivalGroundEquipment";
     case TurnaroundPhase::WaitingEngineShutdown: return "WaitingEngineShutdown";
     case TurnaroundPhase::RequestDeboarding: return "RequestDeboarding";
     case TurnaroundPhase::Deboarding: return "Deboarding";

@@ -31,10 +31,11 @@ private slots:
     static void persistsSkipRepositionImmediately();
     static void groundServicesDefaultToDisabled();
     static void groundServicesPersistImmediately();
-    static void traySettingsDefaultToEnabled();
+    static void traySettingsDefaults();
     static void traySettingsPersistImmediately();
     static void streamerModeDefaultsToDisabled();
     static void streamerModePersistsImmediately();
+    static void openGsxOnRequestsDefaultsToEnabledAndPersists();
     static void rejectsNonNumericFuelRate();
     static void rejectsNonPositiveFuelRate();
     static void emptyPilotIdIsAcceptedAsZero();
@@ -264,13 +265,13 @@ void SettingsViewModelTest::groundServicesPersistImmediately()
     QCOMPARE(repository.saveCalls, savesBefore);
 }
 
-void SettingsViewModelTest::traySettingsDefaultToEnabled()
+void SettingsViewModelTest::traySettingsDefaults()
 {
     FakeSettingsRepository repository;
     FakeIntegratorService service;
     const SettingsViewModel viewModel(&repository, &service);
 
-    QVERIFY(viewModel.GetCloseToTray());
+    QVERIFY(!viewModel.GetCloseToTray());
     QVERIFY(viewModel.GetMinimizeToTray());
     QVERIFY(!viewModel.GetTrayTipShown());
 }
@@ -281,10 +282,10 @@ void SettingsViewModelTest::traySettingsPersistImmediately()
     FakeIntegratorService service;
     SettingsViewModel viewModel(&repository, &service);
 
-    viewModel.SetCloseToTray(false);
+    viewModel.SetCloseToTray(true);
 
     QCOMPARE(repository.saveCalls, 1);
-    QVERIFY(!repository.stored.closeToTray);
+    QVERIFY(repository.stored.closeToTray);
 
     viewModel.SetMinimizeToTray(false);
 
@@ -297,7 +298,7 @@ void SettingsViewModelTest::traySettingsPersistImmediately()
     QVERIFY(repository.stored.trayTipShown);
 
     const int savesBefore = repository.saveCalls;
-    viewModel.SetCloseToTray(false);
+    viewModel.SetCloseToTray(true);
     viewModel.SetMinimizeToTray(false);
     viewModel.SetTrayTipShown(true);
 
@@ -326,6 +327,28 @@ void SettingsViewModelTest::streamerModePersistsImmediately()
 
     const int savesBefore = repository.saveCalls;
     viewModel.SetStreamerMode(true);
+
+    QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::openGsxOnRequestsDefaultsToEnabledAndPersists()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(viewModel.GetOpenGsxOnRequests());
+    QVERIFY(service.appliedSettings.openGsxOnRequests);
+
+    viewModel.SetOpenGsxOnRequests(false);
+
+    QVERIFY(!viewModel.GetOpenGsxOnRequests());
+    QCOMPARE(repository.saveCalls, 1);
+    QVERIFY(!repository.stored.openGsxOnRequests);
+    QVERIFY(!service.appliedSettings.openGsxOnRequests);
+
+    const int savesBefore = repository.saveCalls;
+    viewModel.SetOpenGsxOnRequests(false);
 
     QCOMPARE(repository.saveCalls, savesBefore);
 }

@@ -26,6 +26,9 @@ private:
     bool FetchData();
     void SetStatus(FlightPlanStatus status);
     void OnHttpFinished();
+    [[nodiscard]] bool HasHttpError() const;
+    void ApplyFlightPlan(const FlightPlan& flightPlan);
+    void ClearResponse();
 
     AutomationStatus* automationStatus_;
     const AutomationSettings* settings_;

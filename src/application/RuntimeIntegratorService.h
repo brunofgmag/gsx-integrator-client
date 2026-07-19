@@ -23,6 +23,10 @@ public:
     [[nodiscard]] CommandResult FixGsxProfile() override;
     void ApplySettings(const AppSettings& settings) override;
 
+#ifndef NDEBUG
+    void DebugSkipPhase(int delta) override;
+#endif
+
     void AddObserver(IntegratorServiceObserver* observer) override;
     void RemoveObserver(IntegratorServiceObserver* observer) override;
 

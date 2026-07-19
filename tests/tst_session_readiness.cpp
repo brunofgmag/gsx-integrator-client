@@ -17,6 +17,7 @@ private slots:
     static void fs2020IgnoresAircraftAndAvatarVars();
     static void detectsSimVersionFromAppName_data();
     static void detectsSimVersionFromAppName();
+    static void labelsSimVersions();
 };
 
 void SessionReadinessTest::evaluatesTruthTable_data()
@@ -54,8 +55,6 @@ void SessionReadinessTest::evaluatesTruthTable_data()
 
 void SessionReadinessTest::evaluatesTruthTable()
 {
-    // QFETCH stringizes the name to look up the column, so it must match
-    // addColumn exactly — no `const` qualifier here.
     QFETCH(SimVersion, version);
     QFETCH(double, cameraState);
     QFETCH(double, isAircraft);
@@ -101,6 +100,13 @@ void SessionReadinessTest::detectsSimVersionFromAppName()
     const std::string name = appName.toStdString();
 
     QCOMPARE(SimVersionDetect::FromAppName(name), expected);
+}
+
+void SessionReadinessTest::labelsSimVersions()
+{
+    QCOMPARE(SimVersionLabel(SimVersion::Msfs2020), "MSFS 2020");
+    QCOMPARE(SimVersionLabel(SimVersion::Msfs2024), "MSFS 2024");
+    QCOMPARE(SimVersionLabel(SimVersion::Unknown), "Unknown");
 }
 
 QTEST_APPLESS_MAIN(SessionReadinessTest)

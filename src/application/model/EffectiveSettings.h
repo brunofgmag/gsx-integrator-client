@@ -11,14 +11,18 @@ inline AutomationSettings ResolveAutomationSettings(const AppSettings& settings,
     result.simbriefPilotId = settings.simbriefPilotId;
     result.fuelRateKgs = settings.fuelRateKgs;
     result.autoSelectGsxChoice = settings.autoSelectGsxChoice;
+    result.autoDeice = settings.autoDeice;
+    result.crewBoarding = static_cast<CrewBoarding>(settings.crewBoarding);
     result.autoStartFlow = settings.autoStartFlow;
     result.autoStartLoading = settings.autoStartLoading;
     result.skipReposition = settings.skipReposition;
     result.callGpu = settings.callGpu;
+    result.callGpuOnArrival = settings.callGpuOnArrival;
     result.callCatering = settings.callCatering;
     result.callLavatory = settings.callLavatory;
     result.callWater = settings.callWater;
     result.callCleaning = settings.callCleaning;
+    result.openGsxOnRequests = settings.openGsxOnRequests;
 
     const auto it = settings.profiles.find(aircraftProfileId);
     if (it == settings.profiles.end() || it->second.useGlobal)
@@ -30,6 +34,7 @@ inline AutomationSettings ResolveAutomationSettings(const AppSettings& settings,
     result.fuelRateKgs = profile.fuelRateKgs;
     result.skipReposition = profile.skipReposition;
     result.callGpu = profile.callGpu;
+    result.callGpuOnArrival = profile.callGpuOnArrival;
     result.callCatering = profile.callCatering;
     result.callLavatory = profile.callLavatory;
     result.callWater = profile.callWater;

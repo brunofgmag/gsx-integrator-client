@@ -103,20 +103,38 @@ ColumnLayout {
 
             Item { width: 1; height: 4 }
 
-            Text {
+            Item {
                 width: parent.width
-                text: qsTr("Next") + " ▸ " + root.nextPhaseLabel
-                color: Theme.muted
-                font.pixelSize: 11
-                font.letterSpacing: 0.8
-                font.capitalization: Font.AllUppercase
-                elide: Text.ElideRight
+                height: nextLabel.implicitHeight
+
+                Text {
+                    id: nextLabel
+                    anchors.left: parent.left
+                    anchors.right: holdCountdown.visible ? holdCountdown.left : parent.right
+                    anchors.rightMargin: holdCountdown.visible ? 10 : 0
+                    text: qsTr("Next") + " ▸ " + root.nextPhaseLabel
+                    color: Theme.muted
+                    font.pixelSize: 11
+                    font.letterSpacing: 0.8
+                    font.capitalization: Font.AllUppercase
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    id: holdCountdown
+                    anchors.right: parent.right
+                    visible: root.integratorVm.delayTicksRemaining > 0
+                    text: qsTr("Next state in %1s").arg(root.integratorVm.delayTicksRemaining)
+                    color: Theme.accent
+                    font.pixelSize: 11
+                    font.letterSpacing: 0.8
+                    font.capitalization: Font.AllUppercase
+                }
             }
         }
 
         Advisory {
             Layout.fillWidth: true
-            hideable: true
             visible: root.integratorVm.gsxProfileConflict
             text: root.integratorVm.gsxProfileFixable
                   ? qsTr("The GSX profile for this aircraft does not set 'refueling = 0', so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.")
@@ -127,7 +145,6 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
-            hideable: true
             text: root.integratorVm.phaseTip
         }
 
@@ -225,6 +242,7 @@ ColumnLayout {
                 progress: paxCard.paxProgress
 
                 KeyValueRow {
+                    visible: !root.integratorVm.cargoAircraft
                     label: qsTr("Pax")
                     value: (root.deboarding
                             ? Math.round(paxCard.paxProgress / 100 * root.integratorVm.plannedPax)
@@ -316,6 +334,22 @@ ColumnLayout {
                     interval: 3000
                     onTriggered: restartButton.armed = false
                 }
+            }
+
+            ActionButton {
+                small: true
+                secondary: true
+                visible: root.integratorVm.debugToolsAvailable
+                text: "◂ Phase"
+                onClicked: root.integratorVm.debugSkipPhase(-1)
+            }
+
+            ActionButton {
+                small: true
+                secondary: true
+                visible: root.integratorVm.debugToolsAvailable
+                text: "Phase ▸"
+                onClicked: root.integratorVm.debugSkipPhase(1)
             }
         }
     }

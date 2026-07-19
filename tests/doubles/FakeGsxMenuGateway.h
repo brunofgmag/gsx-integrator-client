@@ -14,6 +14,8 @@ public:
     bool requestLavatoryResult = true;
     bool requestWaterResult = true;
     bool requestCleaningResult = true;
+    bool toggleGpuResult = true;
+    bool menuSettled = true;
 
     int callJetwayCalls = 0;
     int callStairsCalls = 0;
@@ -101,7 +103,7 @@ public:
     [[nodiscard]] bool ToggleGpu() override
     {
         ++toggleGpuCalls;
-        return true;
+        return toggleGpuResult;
     }
 
     [[nodiscard]] bool RequestCatering() override
@@ -127,6 +129,8 @@ public:
         ++requestCleaningCalls;
         return requestCleaningResult;
     }
+
+    [[nodiscard]] bool IsMenuSettled() const override { return menuSettled; }
 
     void DisableGsxMenu() override {}
 };

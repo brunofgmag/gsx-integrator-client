@@ -133,10 +133,19 @@ ColumnLayout {
     SwitchRow {
         Layout.fillWidth: true
         enabled: !root.ghost
-        title: qsTr("Call GPU")
+        title: qsTr("Call GPU & chocks")
         checked: root.ghost ? root.settingsVm.callGpu
                             : root.settingsVm.profileCallGpu
         onToggled: checked => root.settingsVm.profileCallGpu = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        enabled: !root.ghost
+        title: qsTr("Call GPU & chocks on arrival")
+        checked: root.ghost ? root.settingsVm.callGpuOnArrival
+                            : root.settingsVm.profileCallGpuOnArrival
+        onToggled: checked => root.settingsVm.profileCallGpuOnArrival = checked
     }
 
     SwitchRow {

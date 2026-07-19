@@ -30,8 +30,12 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/states/WaitingReadyToPushState.h
         src/domain/turnaround/states/WaitCateringState.cpp
         src/domain/turnaround/states/WaitCateringState.h
-        src/domain/turnaround/states/DisconnectGpuState.cpp
-        src/domain/turnaround/states/DisconnectGpuState.h
+        src/domain/turnaround/states/RemoveGroundEquipmentState.cpp
+        src/domain/turnaround/states/RemoveGroundEquipmentState.h
+        src/domain/turnaround/states/PlaceGroundEquipmentState.cpp
+        src/domain/turnaround/states/PlaceGroundEquipmentState.h
+        src/domain/turnaround/states/PlaceArrivalGroundEquipmentState.cpp
+        src/domain/turnaround/states/PlaceArrivalGroundEquipmentState.h
         src/domain/turnaround/states/CallServicesState.cpp
         src/domain/turnaround/states/CallServicesState.h
         src/domain/turnaround/states/RepositionAircraftState.cpp
