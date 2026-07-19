@@ -20,6 +20,7 @@ private slots:
     static void startLoadingDelegatesToService();
     static void startLoadingReportsRejectedCommands();
     static void exposesCanStartLoadingFromSnapshot();
+    static void waitingForLoadingOverridesStateTextAndTip();
     static void reloadSimbriefDelegatesToService();
     static void exposesAircraftPropertiesFromSnapshot();
     static void successfulCommandClearsPreviousError();
@@ -27,7 +28,27 @@ private slots:
     static void exposesGsxProfileConflictFromSnapshot();
     static void fixGsxProfileDelegatesToService();
     static void fixGsxProfileReportsRejectedCommands();
+    static void restartFlowDelegatesToService();
+    static void restartFlowReportsRejectedCommands();
+    static void exposesInDeboardingPhaseFromSnapshot();
 };
+
+void OperationsViewModelTest::waitingForLoadingOverridesStateTextAndTip()
+{
+    FakeIntegratorService service;
+    const OperationsViewModel viewModel(&service);
+
+    service.snapshot.phase = TurnaroundPhase::RequestFuel;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetStateText(), QStringLiteral("Requesting fuel"));
+
+    service.snapshot.canStartLoading = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetStateText(), QStringLiteral("Waiting for start loading"));
+    QVERIFY(viewModel.GetPhaseTip().contains(QStringLiteral("START LOADING")));
+}
 
 void OperationsViewModelTest::exposesUpdatedSnapshot()
 {
@@ -214,6 +235,7 @@ void OperationsViewModelTest::exposesAircraftPropertiesFromSnapshot()
     service.snapshot.gsxAvailable = true;
     service.snapshot.aircraftSupported = true;
     service.snapshot.sessionActive = true;
+    service.snapshot.refuelBySelf = true;
 
     const OperationsViewModel viewModel(&service);
 
@@ -224,6 +246,8 @@ void OperationsViewModelTest::exposesAircraftPropertiesFromSnapshot()
     QVERIFY(viewModel.IsGsxAvailable());
     QVERIFY(viewModel.IsAircraftSupported());
     QVERIFY(viewModel.IsSessionActive());
+    QVERIFY(!viewModel.RefuelByGsx());
+    QVERIFY(viewModel.RefuelBySelf());
 }
 
 void OperationsViewModelTest::successfulCommandClearsPreviousError()
@@ -306,6 +330,51 @@ void OperationsViewModelTest::fixGsxProfileReportsRejectedCommands()
 
     QCOMPARE(errorSpy.count(), 1);
     QCOMPARE(viewModel.GetCommandError(), QStringLiteral("Rejected"));
+}
+
+void OperationsViewModelTest::restartFlowDelegatesToService()
+{
+    FakeIntegratorService service;
+    OperationsViewModel viewModel(&service);
+
+    viewModel.restartFlow();
+
+    QCOMPARE(service.restartFlowCalls, 1);
+    QCOMPARE(viewModel.GetCommandError(), QString());
+}
+
+void OperationsViewModelTest::restartFlowReportsRejectedCommands()
+{
+    FakeIntegratorService service;
+    OperationsViewModel viewModel(&service);
+
+    service.restartFlowResult = CommandResult::Failure("Simulator is offline.");
+
+    viewModel.restartFlow();
+
+    QCOMPARE(service.restartFlowCalls, 1);
+    QCOMPARE(viewModel.GetCommandError(), QStringLiteral("Simulator is offline."));
+}
+
+void OperationsViewModelTest::exposesInDeboardingPhaseFromSnapshot()
+{
+    FakeIntegratorService service;
+    const OperationsViewModel viewModel(&service);
+
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.Notify();
+
+    QVERIFY(!viewModel.IsInDeboardingPhase());
+
+    service.snapshot.phase = TurnaroundPhase::WaitingEngineShutdown;
+    service.Notify();
+
+    QVERIFY(viewModel.IsInDeboardingPhase());
+
+    service.snapshot.phase = TurnaroundPhase::Deboarding;
+    service.Notify();
+
+    QVERIFY(viewModel.IsInDeboardingPhase());
 }
 
 QTEST_APPLESS_MAIN(OperationsViewModelTest)

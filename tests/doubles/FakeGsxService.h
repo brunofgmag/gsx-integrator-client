@@ -20,6 +20,7 @@ public:
     bool stairsAvailable = false;
     bool jetwayAvailable = false;
     GsxStateStatus deboardingState = GsxStateStatus::Unavailable;
+    GsxStateStatus deiceState = GsxStateStatus::Unavailable;
     int plannedPassengers = 0;
     int boardedPassengers = 0;
     int deboardedPassengers = 0;
@@ -32,7 +33,14 @@ public:
     bool simbriefLoaded = false;
     bool onGround = true;
     bool goodEngineStartConfirmation = false;
+    GroundPowerStatus gpuStatus = GroundPowerStatus::Disconnected;
     int takeOverCalls = 0;
+    bool cateringInProgress = false;
+    bool lavatoryInProgress = false;
+    bool waterInProgress = false;
+    bool cleaningInProgress = false;
+    bool gpuInProgress = false;
+    bool departureInProgress = false;
 
     [[nodiscard]] bool IsAvailable() const override { return true; }
 
@@ -48,6 +56,8 @@ public:
             return departureState;
         case GsxState::Deboarding:
             return deboardingState;
+        case GsxState::Deice:
+            return deiceState;
         default:
             return GsxStateStatus::Unavailable;
         }
@@ -88,6 +98,28 @@ public:
     [[nodiscard]] bool IsSimbriefLoaded() const override { return simbriefLoaded; }
     [[nodiscard]] bool IsAircraftOnGround() const override { return onGround; }
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override { return goodEngineStartConfirmation; }
+    [[nodiscard]] GroundPowerStatus GetGpuStatus() const override { return gpuStatus; }
+
+    [[nodiscard]] bool IsServiceInProgress(const GroundService service) const override
+    {
+        switch (service)
+        {
+        case GroundService::Catering:
+            return cateringInProgress;
+        case GroundService::Lavatory:
+            return lavatoryInProgress;
+        case GroundService::Water:
+            return waterInProgress;
+        case GroundService::Cleaning:
+            return cleaningInProgress;
+        case GroundService::Gpu:
+            return gpuInProgress;
+        case GroundService::Departure:
+            return departureInProgress;
+        default:
+            return false;
+        }
+    }
 
     void TakeOverFuelAndPayload() override
     {

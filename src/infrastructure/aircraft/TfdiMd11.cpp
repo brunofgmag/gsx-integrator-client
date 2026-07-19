@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include "AircraftRegistry.h"
+#include "../gsx/GsxLVars.h"
 #include "../../domain/support/Weight.h"
 #include "../logging/LogMacros.h"
 #include "../../domain/model/FlightPlan.h"
@@ -26,22 +27,33 @@ namespace
     constexpr auto kSimTotalWeight = "TOTAL WEIGHT";
     constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
     constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
+    constexpr auto kSimBeaconLight = "LIGHT BEACON";
+    constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
+    constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
+    constexpr auto kSimEng3Combustion = "ENG COMBUSTION:3";
     constexpr auto kKgUnit = "kg";
     constexpr auto kBoolUnit = "Bool";
 
     constexpr auto kSmartSwitch = "MD11_PED_CPT_AUDIO_PNL_INT_RADIO_SW";
+    constexpr double kSmartSwitchNeutral = 1.0;
 
     constexpr auto kPowerOnLVar = "MD11_CABIN_POWER";
     constexpr auto kBatteryOnLVar = "MD11_OVHD_ELEC_BATT_BT";
     constexpr auto kApuOnLVar = "MD11_OVHD_ELEC_APU_PWR_ON_LT";
     constexpr auto kExtPowerOnLightLVar = "MD11_OVHD_ELEC_EXT_PWR_ON_LT";
-    constexpr auto kEng1N1LVar = "md11_eng1_n1";
-    constexpr auto kEng2N1LVar = "md11_eng2_n1";
-    constexpr auto kEng3N1LVar = "md11_eng3_n1";
 
-    constexpr auto kBeaconBtnLVar = "MD11_OVHD_LTS_BCN_BT";
     constexpr auto kParkingBrakeLVar = "MD11_THR_PARK_LVR";
     constexpr auto kChocksLVar = "MD11_EXT_CHOCKS";
+    constexpr auto kExtGpuLVar = "MD11_EXT_GPU";
+
+    constexpr auto kPaxDoor1LLVar = "MD11_EXT_DOOR_CMD_PAX_1L";
+    constexpr auto kPaxDoor2LLVar = "MD11_EXT_DOOR_CMD_PAX_2L";
+    constexpr auto kPaxDoor4LLVar = "MD11_EXT_DOOR_CMD_PAX_4L";
+    constexpr auto kCargoDoor1RLVar = "MD11_EXT_DOOR_CMD_CARGO1R";
+    constexpr auto kCargoDoor2RLVar = "MD11_EXT_DOOR_CMD_CARGO2R";
+    constexpr auto kCargoDoorMainLVar = "MD11_EXT_DOOR_CMD_CARGO_MAIN";
+    constexpr double kDoorOpen = 100.0;
+    constexpr double kDoorClosed = 0.0;
 }
 
 TfdiMd11::TfdiMd11(VariableGateway* variableGateway, AutomationStatus* status, const bool cargo)
@@ -62,6 +74,69 @@ bool TfdiMd11::IsCargoVariant() const
     return cargo_;
 }
 
+void TfdiMd11::OnTick()
+{
+    UpdateCargoDoors();
+    UpdatePaxDoors();
+}
+
+void TfdiMd11::UpdateCargoDoors()
+{
+    if (variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
+    {
+        return;
+    }
+
+    DriveLoaderDoor(gsx::lvars::kBaggageLoaderFrontState, kCargoDoor1RLVar, fwdCargoDoorTarget_);
+    DriveLoaderDoor(gsx::lvars::kBaggageLoaderRearState, kCargoDoor2RLVar, aftCargoDoorTarget_);
+
+    if (cargo_)
+    {
+        DriveLoaderDoor(gsx::lvars::kBaggageLoaderMainState, kCargoDoorMainLVar, mainCargoDoorTarget_);
+    }
+}
+
+void TfdiMd11::DriveLoaderDoor(const char* loaderStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const
+{
+    const double loaderState = variableGateway_->GetLVar(loaderStateLVar, 0.0);
+    const double doorTarget = gsx::states::IsLoaderPresent(loaderState) ? kDoorOpen : kDoorClosed;
+
+    if (doorTarget != lastDoorTarget)
+    {
+        variableGateway_->SetLVar(doorCmdLVar, doorTarget);
+        lastDoorTarget = doorTarget;
+    }
+}
+
+void TfdiMd11::UpdatePaxDoors()
+{
+    if (variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
+    {
+        return;
+    }
+
+    DriveStairsDoor(gsx::lvars::kPassengerStairsFrontState, kPaxDoor1LLVar, fwdPaxDoorTarget_);
+    DriveStairsDoor(gsx::lvars::kPassengerStairsMiddleState, kPaxDoor2LLVar, midPaxDoorTarget_);
+    DriveStairsDoor(gsx::lvars::kPassengerStairsRearState, kPaxDoor4LLVar, aftPaxDoorTarget_);
+}
+
+void TfdiMd11::DriveStairsDoor(const char* stairsStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const
+{
+    if (variableGateway_->GetLVar(stairsStateLVar, 0.0) == gsx::states::kStairsFinalPosition)
+    {
+        if (lastDoorTarget != kDoorOpen)
+        {
+            variableGateway_->SetLVar(doorCmdLVar, kDoorOpen);
+            lastDoorTarget = kDoorOpen;
+        }
+    }
+    else if (lastDoorTarget == kDoorOpen)
+    {
+        variableGateway_->SetLVar(doorCmdLVar, kDoorClosed);
+        lastDoorTarget = kDoorClosed;
+    }
+}
+
 void TfdiMd11::OnSlowTick()
 {
     if (!pendingEfbCommit_)
@@ -76,16 +151,16 @@ void TfdiMd11::OnSlowTick()
 
 void TfdiMd11::SeedTargetsIfNeeded()
 {
-    if (!fuelTargetSeeded_ && variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit))
+    if (!fuelTarget_.seeded && variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit))
     {
-        targetFuelKg_ = GetCurrentFuelKg();
-        fuelTargetSeeded_ = true;
+        fuelTarget_.target = GetCurrentFuelKg();
+        fuelTarget_.seeded = true;
     }
 
-    if (!zfwTargetSeeded_ && variableGateway_->HasReceivedAVar(kSimTotalWeight, kKgUnit))
+    if (!zfwTarget_.seeded && variableGateway_->HasReceivedAVar(kSimTotalWeight, kKgUnit))
     {
-        targetZfwKg_ = std::max(GetCurrentZfwKg(), GetEmptyZfwKg());
-        zfwTargetSeeded_ = true;
+        zfwTarget_.target = std::max(GetCurrentZfwKg(), GetEmptyZfwKg());
+        zfwTarget_.seeded = true;
     }
 }
 
@@ -121,14 +196,19 @@ double TfdiMd11::GetCurrentFuelKg() const
 
 void TfdiMd11::SetCurrentFuelKg(const double fuelKg)
 {
-    if (lastFuelKg_ == fuelKg)
+    UpdateTarget(fuelTarget_, fuelKg);
+}
+
+void TfdiMd11::UpdateTarget(EfbTarget& efbTarget, const double valueKg)
+{
+    if (efbTarget.last == valueKg)
     {
         return;
     }
 
-    lastFuelKg_ = fuelKg;
-    targetFuelKg_ = fuelKg;
-    fuelTargetSeeded_ = true;
+    efbTarget.last = valueKg;
+    efbTarget.target = valueKg;
+    efbTarget.seeded = true;
     pendingEfbCommit_ = true;
 }
 
@@ -142,20 +222,12 @@ double TfdiMd11::GetCurrentZfwKg() const
 
 void TfdiMd11::SetCurrentZfwKg(const double zfwKg)
 {
-    if (lastZfwKg_ == zfwKg)
-    {
-        return;
-    }
-
-    lastZfwKg_ = zfwKg;
-    targetZfwKg_ = zfwKg;
-    zfwTargetSeeded_ = true;
-    pendingEfbCommit_ = true;
+    UpdateTarget(zfwTarget_, zfwKg);
 }
 
 bool TfdiMd11::ConsumeSmartSwitch()
 {
-    const bool isActive = variableGateway_->GetLVar(kSmartSwitch, 1.0) > 1.0;
+    const bool isActive = variableGateway_->GetLVar(kSmartSwitch, kSmartSwitchNeutral) > kSmartSwitchNeutral;
 
     if (!isActive)
     {
@@ -163,7 +235,7 @@ bool TfdiMd11::ConsumeSmartSwitch()
         return false;
     }
 
-    variableGateway_->SetLVar(kSmartSwitch, 1.0);
+    variableGateway_->SetLVar(kSmartSwitch, kSmartSwitchNeutral);
 
     if (smartSwitchResetPending_)
     {
@@ -194,6 +266,23 @@ bool TfdiMd11::IsPowered() const
     return true;
 }
 
+std::optional<GroundPowerStatus> TfdiMd11::GetGroundPowerStatus() const
+{
+    if (!variableGateway_->HasReceivedLVar(kExtGpuLVar))
+    {
+        return GroundPowerStatus::Unknown;
+    }
+
+    return variableGateway_->GetLVar(kExtGpuLVar, 0.0) > 0.0
+        ? GroundPowerStatus::Connected
+        : GroundPowerStatus::Disconnected;
+}
+
+void TfdiMd11::SetChocks(const bool placed)
+{
+    variableGateway_->SetLVar(kChocksLVar, placed ? 1.0 : 0.0);
+}
+
 bool TfdiMd11::IsReadyToPush() const
 {
     return IsPowered() && !IsEngineRunning() && IsBeaconOn();
@@ -208,9 +297,9 @@ bool TfdiMd11::IsReadyToDeboard() const
 
 bool TfdiMd11::IsEngineRunning() const
 {
-    const bool isEng1Running = variableGateway_->GetLVar(kEng1N1LVar, 100.0) > 3.0;
-    const bool isEng2Running = variableGateway_->GetLVar(kEng2N1LVar, 100.0) > 3.0;
-    const bool isEng3Running = variableGateway_->GetLVar(kEng3N1LVar, 100.0) > 3.0;
+    const bool isEng1Running = variableGateway_->GetAVar(kSimEng1Combustion, kBoolUnit, 1.0) > 0.0;
+    const bool isEng2Running = variableGateway_->GetAVar(kSimEng2Combustion, kBoolUnit, 1.0) > 0.0;
+    const bool isEng3Running = variableGateway_->GetAVar(kSimEng3Combustion, kBoolUnit, 1.0) > 0.0;
 
     return isEng1Running || isEng2Running || isEng3Running;
 }
@@ -225,13 +314,13 @@ bool TfdiMd11::IsParkingBrakeSet() const
 
 bool TfdiMd11::IsBeaconOn() const
 {
-    return variableGateway_->GetLVar(kBeaconBtnLVar, 0.0) > 0.0;
+    return variableGateway_->GetAVar(kSimBeaconLight, kBoolUnit, 0.0) > 0.0;
 }
 
 void TfdiMd11::CommitEfbTargets() const
 {
-    const double zfw = std::max(targetZfwKg_, GetEmptyZfwKg());
-    const double fuel = std::max(targetFuelKg_, 0.0);
+    const double zfw = std::max(zfwTarget_.target, GetEmptyZfwKg());
+    const double fuel = std::max(fuelTarget_.target, 0.0);
     const double payload = std::max(zfw - GetEmptyZfwKg(), 0.0);
     const double grossWeight = zfw + fuel;
     const double payloadCapacityKg = kMtowKg - GetEmptyZfwKg();
@@ -276,7 +365,7 @@ namespace
             {MatchField::AtcModel, MatchOp::Equals, "MD11"},
             {MatchField::AtcModel, MatchOp::Equals, "MD11F"}
         },
-        &CreateTfdiMd11
+        &CreateTfdiMd11, "tfdi-md11", "MD11", RefuelBy::Self
     };
 
     [[maybe_unused]] const AircraftRegistration kTfdiMd11Registration{kTfdiMd11Descriptor};

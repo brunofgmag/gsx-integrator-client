@@ -16,6 +16,7 @@ private slots:
     static void holdsUntilGsxActive();
     static void retriesWhenBoardingDoesNotStart();
     static void advancesWhenBoardingAlreadyCompleted();
+    static void holdsRequestWhileMenuUnsettled();
 };
 
 void RequestBoardingStateTest::callsMenuWhenCallable()
@@ -134,6 +135,20 @@ void RequestBoardingStateTest::advancesWhenBoardingAlreadyCompleted()
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::Boarding);
     QCOMPARE(f.menuGateway.boardingCalls, 0);
+}
+
+void RequestBoardingStateTest::holdsRequestWhileMenuUnsettled()
+{
+    TurnaroundStateFixture f;
+    RequestBoardingState state;
+
+    f.gsxService.boardingState = GsxStateStatus::Callable;
+    f.menuGateway.menuSettled = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.menuGateway.boardingCalls, 0);
+    QVERIFY(!f.ctx.data.boardingRequested);
 }
 
 QTEST_APPLESS_MAIN(RequestBoardingStateTest)

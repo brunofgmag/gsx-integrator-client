@@ -1,6 +1,13 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_AIRCRAFT_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_AIRCRAFT_H
 
+#include <optional>
+
+#include "../model/GroundPowerStatus.h"
+
+enum class RefuelBy { Gsx, Self, Client };
+enum class BoardBy { Self, Client };
+
 class Aircraft
 {
 public:
@@ -24,16 +31,18 @@ public:
     [[nodiscard]] virtual double GetCurrentZfwKg() const = 0;
     virtual void SetCurrentZfwKg(double zfwKg) = 0;
 
-    [[nodiscard]] virtual bool SupportsProgressiveFuel() const = 0;
-    [[nodiscard]] virtual bool SupportsProgressiveLoad() const = 0;
     [[nodiscard]] virtual bool SupportsStairsOrJetways() const = 0;
-    [[nodiscard]] virtual bool IsRefueledExternally() const = 0;
-    [[nodiscard]] virtual bool LoadsViaUplink() const = 0;
     [[nodiscard]] virtual bool CompletesPushbackViaInterruptMenu() const = 0;
+    [[nodiscard]] virtual RefuelBy GetRefuelMethod() const = 0;
+    [[nodiscard]] virtual BoardBy GetBoardMethod() const = 0;
 
     [[nodiscard]] virtual bool ConsumeSmartSwitch() = 0;
 
     [[nodiscard]] virtual bool IsPowered() const = 0;
+    [[nodiscard]] virtual std::optional<GroundPowerStatus> GetGroundPowerStatus() const { return std::nullopt; }
+    [[nodiscard]] virtual bool SupportsChocksControl() const { return false; }
+    virtual void SetChocks(bool) {}
+    virtual void CloseAllDoors() {}
     [[nodiscard]] virtual bool IsReadyToPush() const = 0 ;
     [[nodiscard]] virtual bool IsReadyToDeboard() const = 0;
     [[nodiscard]] virtual bool IsEngineRunning() const = 0;

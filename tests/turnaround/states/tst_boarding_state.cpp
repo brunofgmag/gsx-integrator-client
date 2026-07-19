@@ -9,9 +9,8 @@ class BoardingStateTest final : public QObject
 
 private slots:
     static void holdsUntilGsxActive();
-    static void boardPassengersNonProgressively();
+    static void boardSelfLoadsPayloadOnceAndAnimatesBar();
     static void boardPassengersProgressively();
-    static void boardCargoNonProgressively();
     static void boardCargoProgressively();
     static void snapsToPlannedWhenGsxCountersFallShort();
     static void rebaselinesInitialZfwWhenCapturedBeforeSimData();
@@ -27,30 +26,31 @@ void BoardingStateTest::holdsUntilGsxActive()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 }
 
-void BoardingStateTest::boardPassengersNonProgressively()
+void BoardingStateTest::boardSelfLoadsPayloadOnceAndAnimatesBar()
 {
     TurnaroundStateFixture f;
     BoardingState state;
 
     f.aircraft.cargo = false;
-    f.aircraft.progressiveLoad = false;
-    f.aircraft.currentZfwKg = 130000.0;
+    f.aircraft.boardMethod = BoardBy::Self;
+    f.aircraft.emptyZfwKg = 130000.0;
     f.ctx.data.initialZfwKg = 130000.0;
     f.ctx.data.plannedZfwKg = 180000.0;
     f.ctx.data.plannedPassengers = 200;
     f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardedPassengers = 0;
+    f.gsxService.cargoPercent = 0.0;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.currentZfwKg, 180000.0);
+    QCOMPARE(f.ctx.data.boardingProgress, 0.0);
 
-    f.gsxService.boardingState = GsxStateStatus::Completed;
-    f.gsxService.boardedPassengers = 200;
+    f.gsxService.boardedPassengers = 100;
     f.gsxService.cargoPercent = 100.0;
 
-    const auto transition = state.Evaluate(f.ctx);
-
-    QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::WaitingReadyToPush);
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.aircraft.currentZfwKg, 180000.0);
+    QCOMPARE(f.ctx.data.boardingProgress, 75.0);
 }
 
 void BoardingStateTest::boardPassengersProgressively()
@@ -59,7 +59,7 @@ void BoardingStateTest::boardPassengersProgressively()
     BoardingState state;
 
     f.aircraft.cargo = false;
-    f.aircraft.progressiveLoad = true;
+    f.aircraft.boardMethod = BoardBy::Client;
     f.aircraft.emptyZfwKg = 100000.0;
     f.ctx.data.initialZfwKg = 100000.0;
     f.ctx.data.plannedZfwKg = 200000.0;
@@ -87,39 +87,13 @@ void BoardingStateTest::boardPassengersProgressively()
     QCOMPARE(f.ctx.data.boardedPassengers, 100);
 }
 
-void BoardingStateTest::boardCargoNonProgressively()
-{
-    TurnaroundStateFixture f;
-    BoardingState state;
-
-    f.aircraft.cargo = true;
-    f.aircraft.progressiveLoad = false;
-    f.aircraft.currentZfwKg = 130000.0;
-    f.ctx.data.initialZfwKg = 130000.0;
-    f.ctx.data.plannedZfwKg = 180000.0;
-    f.ctx.data.plannedPassengers = 3;
-    f.gsxService.boardingState = GsxStateStatus::Active;
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-
-    f.gsxService.boardingState = GsxStateStatus::Completed;
-    f.gsxService.boardedPassengers = 3;
-    f.gsxService.cargoPercent = 100.0;
-
-    const auto transition = state.Evaluate(f.ctx);
-
-    QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::WaitingReadyToPush);
-    QCOMPARE(f.aircraft.currentZfwKg, 180000.0);
-}
-
 void BoardingStateTest::boardCargoProgressively()
 {
     TurnaroundStateFixture f;
     BoardingState state;
 
     f.aircraft.cargo = true;
-    f.aircraft.progressiveLoad = true;
+    f.aircraft.boardMethod = BoardBy::Client;
     f.aircraft.currentZfwKg = 130000.0;
     f.aircraft.emptyZfwKg = 130000.0;
     f.ctx.data.initialZfwKg = 130000.0;
@@ -148,7 +122,7 @@ void BoardingStateTest::snapsToPlannedWhenGsxCountersFallShort()
     BoardingState state;
 
     f.aircraft.cargo = false;
-    f.aircraft.progressiveLoad = true;
+    f.aircraft.boardMethod = BoardBy::Client;
     f.ctx.data.initialZfwKg = 100000.0;
     f.ctx.data.plannedZfwKg = 200000.0;
     f.ctx.data.plannedPassengers = 200;
@@ -170,7 +144,7 @@ void BoardingStateTest::rebaselinesInitialZfwWhenCapturedBeforeSimData()
     TurnaroundStateFixture f;
     BoardingState state;
 
-    f.aircraft.progressiveLoad = true;
+    f.aircraft.boardMethod = BoardBy::Client;
     f.aircraft.emptyZfwKg = 45000.0;
     f.ctx.data.initialZfwKg = 0.0;
     f.ctx.data.plannedZfwKg = 65000.0;

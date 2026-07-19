@@ -12,7 +12,9 @@ ApplicationWindow {
     width: 620
     maximumWidth: 720
     minimumWidth: 560
-    visible: !startHidden
+    visibility: startHidden ? Window.Hidden
+              : startMinimized ? Window.Minimized
+              : Window.AutomaticVisibility
     title: qsTr("GSX Integrator")
     color: Theme.bg
 
@@ -20,32 +22,66 @@ ApplicationWindow {
     required property var settingsVm
     required property var updateVm
     required property bool startHidden
+    required property bool startMinimized
     required property string trayIconSource
 
     readonly property bool compact: width < 620
     readonly property int shellMargin: compact ? 14 : 20
 
+    readonly property bool waitingForInput: window.integratorVm.canStartLoading
+    onWaitingForInputChanged: {
+        if (window.waitingForInput) {
+            tray.showMessage(qsTr("GSX Integrator"),
+                             qsTr("Waiting for input: press START LOADING or activate the SmartSwitch."))
+        }
+    }
+
     // 0 = ops, 1 = settings, 2 = about. Header buttons toggle back to ops.
     property int screen: 0
 
     readonly property int fittedHeight: Math.min(
-        header.height + (screens.children[window.screen]?.implicitHeight ?? 0) + 32,
+        header.height + (screens.children[window.screen]?.implicitHeight ?? 0) + 32
+            + (window.screen === 1 ? settingsFooter.implicitHeight : 0),
         Screen.desktopAvailableHeight - 48)
 
     readonly property int lockedHeight: window.integratorVm.connected
         ? window.fittedHeight
         : Math.max(500, window.fittedHeight)
 
-    onLockedHeightChanged: Qt.callLater(window.applyLockedHeight)
-    Component.onCompleted: Qt.callLater(window.applyLockedHeight)
+    property bool heightReady: false
 
-    function applyLockedHeight() {
-        const h = window.lockedHeight
+    onLockedHeightChanged: Qt.callLater(window.applyLockedHeight)
+    Component.onCompleted: Qt.callLater(() => {
+        window.applyLockedHeight()
+        window.heightReady = true
+    })
+
+    function pinHeight(h) {
         if (h > window.maximumHeight)
             window.maximumHeight = h
         window.minimumHeight = h
         window.maximumHeight = h
-        window.height = h
+    }
+
+    function applyLockedHeight() {
+        const h = window.lockedHeight
+        if (window.heightReady) {
+            window.minimumHeight = Math.min(window.height, h)
+            window.maximumHeight = Math.max(window.height, h)
+            window.height = h
+        } else {
+            window.pinHeight(h)
+            window.height = h
+        }
+    }
+
+    Behavior on height {
+        enabled: window.heightReady
+        NumberAnimation {
+            duration: 140
+            easing.type: Easing.OutCubic
+            onRunningChanged: if (!running) window.pinHeight(window.height)
+        }
     }
 
     Settings {
@@ -153,7 +189,9 @@ ApplicationWindow {
         id: tray
         visible: true
         icon.source: window.trayIconSource
-        tooltip: qsTr("GSX Integrator")
+        tooltip: window.integratorVm.connected
+                 ? qsTr("GSX Integrator") + " — " + window.integratorVm.stateText
+                 : qsTr("GSX Integrator")
 
         menu: Platform.Menu {
             Platform.MenuItem {
@@ -321,6 +359,66 @@ ApplicationWindow {
                 anchors.leftMargin: window.shellMargin
                 anchors.rightMargin: window.shellMargin
                 visible: body.showConnecting
+            }
+        }
+
+        Rectangle {
+            id: settingsFooter
+            Layout.fillWidth: true
+            visible: window.screen === 1
+            Layout.preferredHeight: visible ? implicitHeight : 0
+            implicitHeight: 60
+            color: Theme.panel2
+
+            readonly property bool showValidation: !window.settingsVm.canSave
+                                                   && window.settingsVm.validationMessage.length > 0
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: 1
+                color: Theme.line
+            }
+
+            Text {
+                id: saveFeedback
+                anchors.left: parent.left
+                anchors.leftMargin: window.shellMargin
+                anchors.right: saveButton.left
+                anchors.rightMargin: 12
+                anchors.verticalCenter: parent.verticalCenter
+                text: settingsFooter.showValidation
+                      ? window.settingsVm.validationMessage
+                      : window.settingsVm.saveMessage
+                color: (settingsFooter.showValidation || window.settingsVm.saveError) ? Theme.red : Theme.muted
+                font.pixelSize: 11
+                font.capitalization: Font.AllUppercase
+                elide: Text.ElideRight
+                opacity: (settingsFooter.showValidation || text.length > 0) ? 1 : 0
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 200
+                    }
+                }
+
+                Timer {
+                    interval: 2500
+                    running: !settingsFooter.showValidation && saveFeedback.text.length > 0
+                    onTriggered: window.settingsVm.clearSaveMessage()
+                }
+            }
+
+            ActionButton {
+                id: saveButton
+                anchors.right: parent.right
+                anchors.rightMargin: window.shellMargin
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Save settings")
+                enabled: window.settingsVm.canSave
+
+                onClicked: window.settingsVm.save()
             }
         }
     }

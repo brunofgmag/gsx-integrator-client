@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v0.11.0...v1.0.0) (2026-07-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* major client refactor ([#23](https://github.com/brunofgmag/gsx-integrator-client/issues/23))
+
+### Features
+
+* major client refactor ([#23](https://github.com/brunofgmag/gsx-integrator-client/issues/23)) ([6157401](https://github.com/brunofgmag/gsx-integrator-client/commit/6157401836c35eb98977a2eacf56695ca985df6a))
+
 ## [0.11.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v0.10.0...v0.11.0) (2026-07-12)
 
 

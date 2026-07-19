@@ -8,29 +8,29 @@ class WaitingEngineShutdownStateTest final : public QObject
     Q_OBJECT
 
 private slots:
-    static void holdsUntilReadyToDeboard();
-    static void advancesWhenReadyToDeboard();
+    static void holdsWhileEnginesRunning();
+    static void advancesWhenEnginesOff();
 };
 
-void WaitingEngineShutdownStateTest::holdsUntilReadyToDeboard()
+void WaitingEngineShutdownStateTest::holdsWhileEnginesRunning()
 {
     TurnaroundStateFixture f;
     WaitingEngineShutdownState state;
+
+    f.aircraft.engineRunning = true;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 }
 
-void WaitingEngineShutdownStateTest::advancesWhenReadyToDeboard()
+void WaitingEngineShutdownStateTest::advancesWhenEnginesOff()
 {
     TurnaroundStateFixture f;
     WaitingEngineShutdownState state;
 
-    f.aircraft.readyToDeboard = true;
-
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::RequestDeboarding);
+    QCOMPARE(transition->next, TurnaroundPhase::PlaceArrivalGroundEquipment);
 }
 
 QTEST_APPLESS_MAIN(WaitingEngineShutdownStateTest)

@@ -30,7 +30,7 @@ void SimbriefClient::Poll()
 
     pending_ = false;
 
-    if (lastError_ < 200 || lastError_ >= 300)
+    if (HasHttpError())
     {
         LOG_ERROR("Simbrief fetch failed, error code %d", lastError_);
 
@@ -49,12 +49,22 @@ void SimbriefClient::Poll()
         return;
     }
 
-    automationStatus_->plannedFuelKg = flightPlan->fuelKg;
-    automationStatus_->plannedZfwKg = flightPlan->zfwKg;
-    automationStatus_->plannedPassengers = flightPlan->passengers;
+    ApplyFlightPlan(*flightPlan);
+}
+
+bool SimbriefClient::HasHttpError() const
+{
+    return lastError_ < 200 || lastError_ >= 300;
+}
+
+void SimbriefClient::ApplyFlightPlan(const FlightPlan& flightPlan)
+{
+    automationStatus_->plannedFuelKg = flightPlan.fuelKg;
+    automationStatus_->plannedZfwKg = flightPlan.zfwKg;
+    automationStatus_->plannedPassengers = flightPlan.passengers;
 
     LOG_INFO("SimBrief OFP loaded: fuel=%.0fkg zfw=%.0fkg pax=%d",
-             flightPlan->fuelKg, flightPlan->zfwKg, flightPlan->passengers);
+             flightPlan.fuelKg, flightPlan.zfwKg, flightPlan.passengers);
 
     SetStatus(FlightPlanStatus::Ready);
 }
@@ -69,10 +79,15 @@ void SimbriefClient::Reset()
         reply_ = nullptr;
     }
 
+    ClearResponse();
+    SetStatus(FlightPlanStatus::Idle);
+}
+
+void SimbriefClient::ClearResponse()
+{
     pending_ = false;
     lastError_ = 0;
     responseBody_.clear();
-    SetStatus(FlightPlanStatus::Idle);
 }
 
 bool SimbriefClient::Reload()
@@ -89,9 +104,7 @@ bool SimbriefClient::FetchData()
         return false;
     }
 
-    pending_ = false;
-    lastError_ = 0;
-    responseBody_.clear();
+    ClearResponse();
 
     network_.setTransferTimeout(30000);
 

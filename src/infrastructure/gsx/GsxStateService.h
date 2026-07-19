@@ -3,13 +3,14 @@
 
 #include <map>
 #include "../../domain/ports/GsxGateway.h"
+#include "GsxRemoteState.h"
 
 class VariableGateway;
 
 class GsxStateService final : public GsxGateway
 {
 public:
-    explicit GsxStateService(VariableGateway* variableGateway);
+    explicit GsxStateService(VariableGateway* variableGateway, const GsxRemoteState* remoteState = nullptr);
 
     void Reset();
 
@@ -35,21 +36,36 @@ public:
     [[nodiscard]] bool IsJetwayAvailable() const override;
     [[nodiscard]] bool IsAircraftOnGround() const override;
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override;
+    [[nodiscard]] GroundPowerStatus GetGpuStatus() const override;
+    [[nodiscard]] bool IsServiceInProgress(GroundService service) const override;
 
     void TakeOverFuelAndPayload() override;
 
     [[nodiscard]] bool IsSimbriefLoaded() const override;
 
 private:
+    struct StateTrack
+    {
+        GsxStateStatus status = GsxStateStatus::Unavailable;
+        bool completed = false;
+    };
+
+    struct PassengerCounter
+    {
+        int last = 0;
+        int total = 0;
+        bool counting = false;
+        bool grown = false;
+
+        int Update(int current, bool active);
+    };
+
     void ParseCompleted(GsxState gsxState, GsxStateStatus stateStatus);
 
     VariableGateway* varManager_;
-    std::map<GsxState, GsxStateStatus> statesStatusMap_;
-    std::map<GsxState, bool> statesCompletedMap_;
-
-    int lastBoardingPassengers_ = 0;
-    int boardingPassengersTotal_ = 0;
-    int deboardingPassengersTotal_ = 0;
-    int lastDeboardingPassengers_ = 0;
+    const GsxRemoteState* remote_;
+    std::map<GsxState, StateTrack> states_;
+    PassengerCounter boarding_;
+    PassengerCounter deboarding_;
 };
 #endif //GSX_INTEGRATOR_CLIENT_GSXSTATESERVICE_H

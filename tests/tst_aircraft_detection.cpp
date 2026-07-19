@@ -1,10 +1,13 @@
 #include <QtTest/QTest>
 
 #include <memory>
+#include <set>
 #include "TestDoubles.h"
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/domain/ports/Aircraft.h"
 #include "../src/infrastructure/aircraft/AircraftFactory.h"
+#include "../src/application/model/AircraftProfile.h"
+#include "../src/infrastructure/aircraft/AircraftRegistry.h"
 
 class AircraftDetectionTest final : public QObject
 {
@@ -29,6 +32,9 @@ private slots:
     static void detectsTolissA340FromPresetTitle();
     static void detectsTolissA340ByAtcModel();
     static void detectsTolissA340CargoPreset();
+    static void everyDescriptorHasUniqueProfileMetadata();
+    static void supportedProfilesAreSortedByShortCode();
+    static void detectionReportsMatchedDescriptor();
 };
 
 void AircraftDetectionTest::returnsNullWhenNameUnavailable()
@@ -258,6 +264,46 @@ void AircraftDetectionTest::detectsTolissA340CargoPreset()
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(aircraft->IsCargoVariant());
+}
+
+void AircraftDetectionTest::everyDescriptorHasUniqueProfileMetadata()
+{
+    std::set<std::string> ids;
+    std::set<std::string> codes;
+    for (const AircraftDescriptor* descriptor : AircraftRegistry())
+    {
+        QVERIFY(descriptor->id != nullptr && descriptor->id[0] != '\0');
+        QVERIFY(descriptor->shortCode != nullptr && descriptor->shortCode[0] != '\0');
+        QVERIFY(ids.insert(descriptor->id).second);
+        QVERIFY(codes.insert(descriptor->shortCode).second);
+    }
+}
+
+void AircraftDetectionTest::supportedProfilesAreSortedByShortCode()
+{
+    const std::vector<AircraftProfileInfo> infos = SupportedAircraftProfiles();
+
+    QCOMPARE(infos.size(), AircraftRegistry().size());
+    for (size_t i = 1; i < infos.size(); ++i)
+    {
+        QVERIFY(infos[i - 1].shortCode < infos[i].shortCode);
+    }
+}
+
+void AircraftDetectionTest::detectionReportsMatchedDescriptor()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "TFDi Design MD-11";
+
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, &descriptor);
+
+    QVERIFY(aircraft != nullptr);
+    QVERIFY(descriptor != nullptr);
+    QCOMPARE(std::string(descriptor->id), std::string("tfdi-md11"));
+    QCOMPARE(descriptor->refuelBy, RefuelBy::Self);
 }
 
 QTEST_APPLESS_MAIN(AircraftDetectionTest)

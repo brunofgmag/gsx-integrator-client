@@ -20,11 +20,24 @@ namespace
     constexpr auto kRepositionHereText = "Reposition here";
     constexpr auto kPushTugQuestion = "Attach Pushback Tug";
     constexpr auto kConfirmEnginesText = "Confirm good engine";
-    constexpr auto kInterruptPushbackTitle = "Interrupt pushback";
     constexpr auto kCompletePushbackText = "complete pushback procedure";
     constexpr auto kServiceInProgressTitle = "Service in progress";
     constexpr auto kCompleteNowText = "Complete now";
-    constexpr auto kRefuelingLoadedText = "kg loaded";
+    constexpr auto kRefuelingLoadedText = "loaded";
+    constexpr auto kBoardCrewQuestion = "board crew";
+    constexpr auto kDeIceQuestion = "de-icing";
+
+    const char* CrewBoardingEntry(const CrewBoarding choice)
+    {
+        switch (choice)
+        {
+        case CrewBoarding::Nobody: return "No";
+        case CrewBoarding::Crew: return "Crew";
+        case CrewBoarding::Pilots: return "Pilots";
+        case CrewBoarding::Both: return "Both";
+        }
+        return "Both";
+    }
 
     bool Contains(const std::string& hay, const std::string& needle)
     {
@@ -109,43 +122,63 @@ bool GsxMenuNavigator::RequestRefueling()
     return TriggerService("Refueling");
 }
 
-bool GsxMenuNavigator::ConfirmGoodEngines()
+bool GsxMenuNavigator::ToggleGpu()
 {
-    if (PickByContains(kConfirmEnginesText))
+    return TriggerService("GPU");
+}
+
+bool GsxMenuNavigator::RequestCatering()
+{
+    return TriggerService("Catering");
+}
+
+bool GsxMenuNavigator::RequestLavatory()
+{
+    return TriggerService("Lavatory");
+}
+
+bool GsxMenuNavigator::RequestWater()
+{
+    return TriggerService("Water");
+}
+
+bool GsxMenuNavigator::RequestCleaning()
+{
+    return TriggerService("Cleaning");
+}
+
+bool GsxMenuNavigator::PickNowOrArm(const char* entry, TimedIntent& intent)
+{
+    if (PickByContains(entry))
     {
+        intent = {};
+
         return true;
     }
+
+    intent = {true, nowMs_()};
 
     OpenIntent(Intent::Service);
     OpenMenu();
 
     return false;
+}
+
+bool GsxMenuNavigator::ConfirmGoodEngines()
+{
+    return PickNowOrArm(kConfirmEnginesText, confirmingEngines_);
 }
 
 bool GsxMenuNavigator::CompletePushback()
 {
-    if (PickByContains(kCompletePushbackText))
-    {
-        completingPushback_ = false;
-
-        return true;
-    }
-
-    completingPushback_ = true;
-
-    OpenIntent(Intent::Service);
-
-    OpenMenu();
-
-    return false;
+    return PickNowOrArm(kCompletePushbackText, completingPushback_);
 }
 
 bool GsxMenuNavigator::CompleteRefuel()
 {
-    completingRefuel_ = true;
+    completingRefuel_ = {true, nowMs_()};
 
     OpenIntent(Intent::Service);
-
     OpenMenu();
 
     return true;
@@ -153,10 +186,7 @@ bool GsxMenuNavigator::CompleteRefuel()
 
 void GsxMenuNavigator::DisableGsxMenu()
 {
-    if (state_->menu.shown)
-    {
-        (void)client_->SendCommand("menu.toggle");
-    }
+    (void)client_->SendCommand("menu.close");
 
     reposition_ = Reposition::Idle;
     CloseIntent();
@@ -165,8 +195,9 @@ void GsxMenuNavigator::DisableGsxMenu()
 void GsxMenuNavigator::Reset()
 {
     reposition_ = Reposition::Idle;
-    completingPushback_ = false;
-    completingRefuel_ = false;
+    completingPushback_ = {};
+    completingRefuel_ = {};
+    confirmingEngines_ = {};
     intent_ = Intent::None;
     intentSinceMs_ = 0;
     lastPickedSig_.clear();
@@ -174,6 +205,7 @@ void GsxMenuNavigator::Reset()
     watchedSig_.clear();
     resyncCount_ = 0;
     resyncPending_ = false;
+    lastActionMs_ = 0;
 }
 
 void GsxMenuNavigator::OnSnapshot()
@@ -192,155 +224,300 @@ void GsxMenuNavigator::OnSnapshot()
 
 void GsxMenuNavigator::OnMenuChanged()
 {
-    const auto& menu = state_->menu;
-    if (!menu.shown)
+    ExpireTimedIntents();
+
+    if (!state_->menu.shown)
     {
-        lastPickedSig_.clear();
-        lastDiagSig_.clear();
-        watchedSig_.clear();
+        ClearMenuTracking();
+
         return;
     }
 
     const std::string sig = MenuSignature();
-    const bool newMenu = sig != lastDiagSig_;
+    const bool newMenu = LogMenuIfNew(sig);
+    MaybeResyncStalledMenu(sig);
+
+    if (HandleAutoPicks(sig))
+    {
+        return;
+    }
+
+    if (HandlePendingCompletions())
+    {
+        return;
+    }
+
+    if (!HasActiveIntent() || sig == lastPickedSig_)
+    {
+        return;
+    }
+
+    if (HandleRepositionFlow())
+    {
+        return;
+    }
+
+    if (HandleIntentPrompts())
+    {
+        return;
+    }
 
     if (newMenu)
     {
-        lastDiagSig_ = sig;
-        std::string joined;
-        for (const auto& entry : menu.entries)
-        {
-            if (!joined.empty()) joined += " | ";
-            joined += entry;
-        }
-        logger_->LogInfo(std::format("RemoteAPI menu: '{}' -> [{}]", menu.title, joined));
+        logger_->LogInfo(std::format("RemoteAPI menu unmatched by intent: '{}'", state_->menu.title));
+    }
+}
+
+void GsxMenuNavigator::ExpireTimedIntents()
+{
+    ExpireIntent(completingPushback_, "complete-pushback");
+    ExpireIntent(completingRefuel_, "complete-refuel");
+    ExpireIntent(confirmingEngines_, "confirm-engines");
+}
+
+void GsxMenuNavigator::ExpireIntent(TimedIntent& intent, const char* name) const
+{
+    if (intent.active && nowMs_() - intent.sinceMs >= kCompleteTtlMs)
+    {
+        intent = {};
+        logger_->LogInfo(std::format("RemoteAPI {} intent expired", name));
+    }
+}
+
+void GsxMenuNavigator::ClearMenuTracking()
+{
+    lastPickedSig_.clear();
+    lastDiagSig_.clear();
+    watchedSig_.clear();
+}
+
+bool GsxMenuNavigator::LogMenuIfNew(const std::string& sig)
+{
+    if (sig == lastDiagSig_)
+    {
+        return false;
     }
 
+    lastDiagSig_ = sig;
+
+    std::string joined;
+    for (const auto& entry : state_->menu.entries)
+    {
+        if (!joined.empty()) joined += " | ";
+        joined += entry;
+    }
+    logger_->LogInfo(std::format("RemoteAPI menu: '{}' -> [{}]", state_->menu.title, joined));
+
+    return true;
+}
+
+void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
+{
     if (sig != watchedSig_)
     {
         watchedSig_ = sig;
         watchedSinceMs_ = nowMs_();
         resyncCount_ = 0;
+
+        return;
     }
-    else if ((settings_ == nullptr || settings_->autoSelectGsxChoice || HasActiveIntent())
-        && resyncCount_ < kMaxResyncs
-        && (nowMs_() - watchedSinceMs_) >= kResyncDelayMs)
+
+    if (nowMs_() - watchedSinceMs_ < kResyncDelayMs)
     {
-        ++resyncCount_;
-        watchedSinceMs_ = nowMs_();
-        resyncPending_ = true;
-        resyncSig_ = sig;
-        (void)client_->SendCommand("state.get");
-        logger_->LogInfo(std::format("RemoteAPI menu stalled: requesting snapshot resync {}/{} ('{}')",
-                                     resyncCount_, kMaxResyncs, menu.title));
+        return;
+    }
+
+    if (MaybeCloseStaleMenu())
+    {
+        return;
+    }
+
+    const bool automationInterested = settings_ == nullptr || settings_->autoSelectGsxChoice
+        || settings_->autoDeice || HasActiveIntent();
+    if (!automationInterested || resyncCount_ >= kMaxResyncs)
+    {
+        return;
+    }
+
+    ++resyncCount_;
+    watchedSinceMs_ = nowMs_();
+    resyncPending_ = true;
+    resyncSig_ = sig;
+    lastActionMs_ = nowMs_();
+    (void)client_->SendCommand("state.get");
+    logger_->LogInfo(std::format("RemoteAPI menu stalled: requesting snapshot resync {}/{} ('{}')",
+                                 resyncCount_, kMaxResyncs, state_->menu.title));
+}
+
+bool GsxMenuNavigator::MaybeCloseStaleMenu()
+{
+    const bool repositionWalking = reposition_ == Reposition::Opening
+        || reposition_ == Reposition::PickingRoot
+        || reposition_ == Reposition::AwaitingSubmenu;
+    const bool repositionLeftover = !repositionWalking && HasActiveIntent()
+        && Contains(state_->menu.title, kSelectPositionText);
+    if (!repositionLeftover)
+    {
+        return false;
+    }
+
+    watchedSinceMs_ = nowMs_();
+    lastActionMs_ = nowMs_();
+    (void)client_->SendCommand("menu.close");
+    logger_->LogInfo(std::format("RemoteAPI closing stale menu '{}'", state_->menu.title));
+
+    return true;
+}
+
+bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
+{
+    const auto& menu = state_->menu;
+
+    if (settings_ != nullptr && settings_->autoDeice
+        && sig != lastPickedSig_
+        && Contains(menu.title, kDeIceQuestion)
+        && PickByContains("Yes"))
+    {
+        return true;
     }
 
     if ((settings_ == nullptr || settings_->autoSelectGsxChoice)
         && sig != lastPickedSig_
         && (PickByContains(kGsxChoiceText) || PickByContains(kBlockFuelText)))
     {
-        return;
+        return true;
     }
 
-    if (completingPushback_ && Contains(menu.title, kInterruptPushbackTitle))
+    if (sig != lastPickedSig_ && Contains(menu.title, kBoardCrewQuestion))
     {
-        if (PickByContains(kCompletePushbackText))
+        const auto choice = settings_ != nullptr ? settings_->crewBoarding : CrewBoarding::Both;
+        if (PickByContains(CrewBoardingEntry(choice)))
         {
-            completingPushback_ = false;
+            return true;
         }
-
-        return;
     }
 
-    if (completingRefuel_)
+    return false;
+}
+
+bool GsxMenuNavigator::HandlePendingCompletions()
+{
+    if (completingPushback_.active && PickByContains(kCompletePushbackText))
     {
-        if (Contains(menu.title, kServiceInProgressTitle))
+        completingPushback_ = {};
+
+        return true;
+    }
+
+    if (confirmingEngines_.active && PickByContains(kConfirmEnginesText))
+    {
+        confirmingEngines_ = {};
+
+        return true;
+    }
+
+    if (completingRefuel_.active)
+    {
+        if (Contains(state_->menu.title, kServiceInProgressTitle))
         {
             if (PickByContains(kCompleteNowText))
             {
-                completingRefuel_ = false;
+                completingRefuel_ = {};
             }
 
-            return;
+            return true;
         }
 
         if (PickByContains(kRefuelingLoadedText))
         {
-            return;
+            return true;
         }
     }
 
-    if (!HasActiveIntent())
+    return false;
+}
+
+bool GsxMenuNavigator::HandleRepositionFlow()
+{
+    if (reposition_ != Reposition::Opening
+        && reposition_ != Reposition::PickingRoot
+        && reposition_ != Reposition::AwaitingSubmenu)
     {
-        return;
+        return false;
     }
 
-    if (sig == lastPickedSig_)
+    if (Contains(state_->menu.title, kSelectPositionText))
     {
-        return;
-    }
-
-    if (reposition_ == Reposition::Opening
-        || reposition_ == Reposition::PickingRoot
-        || reposition_ == Reposition::AwaitingSubmenu)
-    {
-        if (Contains(menu.title, kSelectPositionText))
+        if (PickByContains(kRepositionHereText))
         {
-            if (PickByContains(kRepositionHereText))
-            {
-                reposition_ = Reposition::Done;
-            }
-
-            return;
+            reposition_ = Reposition::Done;
         }
 
-        if (PickByContains(kRepositionRootText))
-        {
-            reposition_ = Reposition::AwaitingSubmenu;
-
-            return;
-        }
-        reposition_ = Reposition::PickingRoot;
+        return true;
     }
 
-    if (Contains(menu.title, kPushTugQuestion))
+    if (PickByContains(kRepositionRootText))
+    {
+        reposition_ = Reposition::AwaitingSubmenu;
+
+        return true;
+    }
+
+    reposition_ = Reposition::PickingRoot;
+
+    return false;
+}
+
+bool GsxMenuNavigator::HandleIntentPrompts()
+{
+    if (Contains(state_->menu.title, kPushTugQuestion))
     {
         (void)PickByContains("No");
 
-        return;
+        return true;
     }
 
-    if (Contains(menu.title, kConfirmEnginesText))
+    if (Contains(state_->menu.title, kConfirmEnginesText))
     {
         (void)ConfirmGoodEngines();
 
-        return;
+        return true;
     }
 
-    if (newMenu)
-    {
-        logger_->LogInfo(std::format("RemoteAPI menu unmatched by intent: '{}'", menu.title));
-    }
+    return false;
 }
 
 bool GsxMenuNavigator::TriggerService(const char* serviceId)
 {
     OpenIntent(Intent::Service);
-    OpenMenu();
+    ShowGsxToolbar();
+    lastActionMs_ = nowMs_();
+
     return client_->SendCommand("service.trigger", QJsonObject{{"service", QString::fromLatin1(serviceId)}});
+}
+
+void GsxMenuNavigator::ShowGsxToolbar() const
+{
+    if (settings_->openGsxOnRequests && pluginClient_ != nullptr && !pluginClient_->IsGsxToolbarActive())
+    {
+        (void)pluginClient_->OpenGsxToolbar();
+    }
 }
 
 void GsxMenuNavigator::OpenMenu() const
 {
-    if (pluginClient_ != nullptr && !pluginClient_->IsGsxToolbarActive())
-    {
-        (void)pluginClient_->OpenGsxToolbar();
-    }
+    ShowGsxToolbar();
 
     if (!state_->menu.shown)
     {
+        lastActionMs_ = nowMs_();
         (void)client_->SendCommand("menu.toggle");
     }
+}
+
+bool GsxMenuNavigator::IsMenuSettled() const
+{
+    return !resyncPending_ && (nowMs_() - lastActionMs_) >= kMenuSettleMs;
 }
 
 bool GsxMenuNavigator::PickByContains(const std::string& needle)
@@ -353,8 +530,10 @@ bool GsxMenuNavigator::PickByContains(const std::string& needle)
         {
             continue;
         }
+
         if (Contains(e[i], needle))
         {
+            lastActionMs_ = nowMs_();
             client_->SendCommand("menu.pick", QJsonObject{{"index", static_cast<int>(i)}});
             logger_->LogInfo(std::format("RemoteAPI menu.pick {} ({})", i, e[i]));
             lastPickedSig_ = MenuSignature();
@@ -394,6 +573,11 @@ bool GsxMenuNavigator::HasActiveIntent() const
 
 void GsxMenuNavigator::OpenIntent(const Intent intent)
 {
+    if (intent != Intent::Reposition)
+    {
+        reposition_ = Reposition::Idle;
+    }
+
     intent_ = intent;
     intentSinceMs_ = nowMs_();
 }

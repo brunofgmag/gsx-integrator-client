@@ -28,8 +28,16 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/states/WaitingAircraftReadyState.h
         src/domain/turnaround/states/WaitingReadyToPushState.cpp
         src/domain/turnaround/states/WaitingReadyToPushState.h
-        src/domain/turnaround/states/CallStairsOrJetwayState.cpp
-        src/domain/turnaround/states/CallStairsOrJetwayState.h
+        src/domain/turnaround/states/WaitCateringState.cpp
+        src/domain/turnaround/states/WaitCateringState.h
+        src/domain/turnaround/states/RemoveGroundEquipmentState.cpp
+        src/domain/turnaround/states/RemoveGroundEquipmentState.h
+        src/domain/turnaround/states/PlaceGroundEquipmentState.cpp
+        src/domain/turnaround/states/PlaceGroundEquipmentState.h
+        src/domain/turnaround/states/PlaceArrivalGroundEquipmentState.cpp
+        src/domain/turnaround/states/PlaceArrivalGroundEquipmentState.h
+        src/domain/turnaround/states/CallServicesState.cpp
+        src/domain/turnaround/states/CallServicesState.h
         src/domain/turnaround/states/RepositionAircraftState.cpp
         src/domain/turnaround/states/RepositionAircraftState.h
         src/domain/turnaround/states/WaitingDepartureState.cpp
@@ -42,6 +50,8 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/states/RequestDeboardingState.h
         src/domain/turnaround/states/DeboardingState.cpp
         src/domain/turnaround/states/DeboardingState.h
+        src/domain/turnaround/states/CabinServicesState.cpp
+        src/domain/turnaround/states/CabinServicesState.h
         src/domain/turnaround/states/WaitingNewFlightState.cpp
         src/domain/turnaround/states/WaitingNewFlightState.h
 )
@@ -64,6 +74,8 @@ set(APP_SOURCES
         src/application/RuntimeIntegratorService.cpp
         src/application/RuntimeIntegratorService.h
         src/application/model/AppSettings.h
+        src/application/model/AircraftProfile.h
+        src/application/model/EffectiveSettings.h
         src/application/model/IntegratorSnapshot.h
         src/domain/model/AutomationStatus.h
         src/domain/model/AutomationSettings.h
@@ -138,11 +150,11 @@ set(APP_QML_FILES
         src/qml/Theme.qml
         src/qml/components/ActionButton.qml
         src/qml/components/Advisory.qml
+        src/qml/components/ConfirmButton.qml
         src/qml/components/DataCard.qml
         src/qml/components/HeaderButton.qml
         src/qml/components/HelpHint.qml
         src/qml/components/KeyValueRow.qml
-        src/qml/components/SectionLabel.qml
         src/qml/components/SegmentedControl.qml
         src/qml/components/SettingRow.qml
         src/qml/components/SquareSwitch.qml
@@ -153,4 +165,9 @@ set(APP_QML_FILES
         src/qml/screens/ConnectingPanel.qml
         src/qml/screens/OperationsScreen.qml
         src/qml/screens/SettingsScreen.qml
+        src/qml/screens/settings/AutomationPane.qml
+        src/qml/screens/settings/GeneralPane.qml
+        src/qml/screens/settings/ProfilesPane.qml
+        src/qml/screens/settings/ServicesPane.qml
+        src/qml/screens/settings/WindowPane.qml
 )

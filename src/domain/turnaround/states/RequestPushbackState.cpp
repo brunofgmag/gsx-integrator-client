@@ -13,15 +13,22 @@ std::optional<TurnaroundTransition> RequestPushbackState::Evaluate(TurnaroundCon
 {
     auto& data = ctx.data;
 
-    const GsxStateStatus departureState = ctx.gsxGateway->GetStateStatus(GsxState::Pushback);
-    if (departureState == GsxStateStatus::Callable && !data.pushbackRequested)
+    const GsxStateStatus deiceState = ctx.gsxGateway->GetStateStatus(GsxState::Deice);
+    if (deiceState == GsxStateStatus::Requested || deiceState == GsxStateStatus::Active)
     {
-        data.pushbackRequested = ctx.menuGateway->RequestPushback();
+        return std::nullopt;
     }
 
-    if (departureState == GsxStateStatus::Requested || departureState == GsxStateStatus::Active)
+    const GsxStateStatus departureState = ctx.gsxGateway->GetStateStatus(GsxState::Pushback);
+    if (departureState == GsxStateStatus::Requested || departureState == GsxStateStatus::Active
+        || ctx.gsxGateway->IsServiceInProgress(GroundService::Departure))
     {
         return TurnaroundTransition{TurnaroundPhase::WaitingPushbackToStart};
+    }
+
+    if (departureState == GsxStateStatus::Callable && !data.pushbackRequested && ctx.menuGateway->IsMenuSettled())
+    {
+        data.pushbackRequested = ctx.menuGateway->RequestPushback();
     }
 
     if (departureState == GsxStateStatus::Completed || ctx.gsxGateway->WasStateCompleted(GsxState::Pushback))
