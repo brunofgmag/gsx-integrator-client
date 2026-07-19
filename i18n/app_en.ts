@@ -50,8 +50,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/AboutScreen.qml" line="131"/>
-        <source>Download &amp;&amp; restart</source>
-        <translation>Download &amp;&amp; restart</translation>
+        <source>Download &amp; restart</source>
+        <translation>Download &amp; restart</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/AboutScreen.qml" line="138"/>

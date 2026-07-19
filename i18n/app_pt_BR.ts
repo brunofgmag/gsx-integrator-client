@@ -50,7 +50,7 @@
     </message>
     <message>
         <location filename="../src/qml/screens/AboutScreen.qml" line="131"/>
-        <source>Download &amp;&amp; restart</source>
+        <source>Download &amp; restart</source>
         <translation>Baixar e reiniciar</translation>
     </message>
     <message>
