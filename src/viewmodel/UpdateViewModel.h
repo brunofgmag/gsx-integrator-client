@@ -77,6 +77,7 @@ signals:
 
 private:
     void StartBackgroundCheck();
+    void BeginDownload(bool restartWhenStaged);
     void SetState(State state);
 
     UpdateService* service_;

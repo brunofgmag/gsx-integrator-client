@@ -1,6 +1,7 @@
 #include "DeboardingState.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include "../TurnaroundMath.h"
 #include "../TurnaroundContext.h"
@@ -20,23 +21,18 @@ std::optional<TurnaroundTransition> DeboardingState::Evaluate(TurnaroundContext&
         return std::nullopt;
     }
 
+    EnsureBaseline(ctx);
+
     if (isCompleted)
     {
-        data.loadedZfwKg = data.initialZfwKg;
-        ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
-        data.deboardingProgress = 100.0;
-
-        return TurnaroundTransition{TurnaroundPhase::WaitingNewFlight, 60};
+        FinishDeboarding(ctx);
+        return TurnaroundTransition{TurnaroundPhase::CabinServices};
     }
 
-    if (ctx.aircraft->SupportsProgressiveLoad())
+    AdvanceDeboardingBar(ctx);
+    if (ctx.aircraft->GetBoardMethod() == BoardBy::Client)
     {
-        DeboardProgressively(ctx);
-    }
-    else
-    {
-        data.loadedZfwKg = data.initialZfwKg;
-        ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
+        ctx.aircraft->SetCurrentZfwKg(data.loadedZfwKg);
     }
 
     data.deboardingProgress = turnaround::ProgressPercent(
@@ -47,7 +43,30 @@ std::optional<TurnaroundTransition> DeboardingState::Evaluate(TurnaroundContext&
     return std::nullopt;
 }
 
-void DeboardingState::DeboardProgressively(TurnaroundContext& ctx)
+void DeboardingState::EnsureBaseline(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+    if (data.deboardingBaselined)
+    {
+        return;
+    }
+
+    data.deboardingBaselined = true;
+    if (ctx.aircraft->GetBoardMethod() == BoardBy::Self)
+    {
+        ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
+    }
+}
+
+void DeboardingState::FinishDeboarding(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+    data.loadedZfwKg = data.initialZfwKg;
+    ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
+    data.deboardingProgress = 100.0;
+}
+
+void DeboardingState::AdvanceDeboardingBar(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 
@@ -63,6 +82,4 @@ void DeboardingState::DeboardProgressively(TurnaroundContext& ctx)
         data.plannedZfwKg - (data.plannedZfwKg - data.initialZfwKg) * (progress / 100.0),
         data.initialZfwKg,
         data.plannedZfwKg);
-
-    ctx.aircraft->SetCurrentZfwKg(data.loadedZfwKg);
 }

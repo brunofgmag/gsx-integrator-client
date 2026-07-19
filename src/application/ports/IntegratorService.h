@@ -21,10 +21,15 @@ public:
 
     [[nodiscard]] virtual CommandResult SetAutomationEnabled(bool enabled) = 0;
     [[nodiscard]] virtual CommandResult StartLoading() = 0;
+    [[nodiscard]] virtual CommandResult RestartFlow() = 0;
     [[nodiscard]] virtual CommandResult ReloadSimbrief() = 0;
     [[nodiscard]] virtual CommandResult FixGsxProfile() = 0;
 
     virtual void ApplySettings(const AppSettings& settings) = 0;
+
+#ifndef NDEBUG
+    virtual void DebugSkipPhase(int) {}
+#endif
 
     virtual void AddObserver(IntegratorServiceObserver* observer) = 0;
     virtual void RemoveObserver(IntegratorServiceObserver* observer) = 0;

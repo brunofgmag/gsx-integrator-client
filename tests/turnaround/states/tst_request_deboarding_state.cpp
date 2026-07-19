@@ -9,6 +9,7 @@ class RequestDeboardingStateTest final : public QObject
 
 private slots:
     static void callsMenuWhenCallable();
+    static void holdsRequestUntilReadyToDeboard();
     static void doesNotRequestTwice();
     static void advancesForPassengers();
     static void advancesForCargo();
@@ -17,6 +18,7 @@ private slots:
     static void holdsUntilGsxActive();
     static void retriesWhenBoardingDoesNotStart();
     static void retriesForPassengersWhenDeboardingDoesNotStart();
+    static void holdsRequestWhileMenuUnsettled();
 };
 
 void RequestDeboardingStateTest::callsMenuWhenCallable()
@@ -24,6 +26,7 @@ void RequestDeboardingStateTest::callsMenuWhenCallable()
     TurnaroundStateFixture f;
     RequestDeboardingState state;
 
+    f.aircraft.readyToDeboard = true;
     f.gsxService.deboardingState = GsxStateStatus::Callable;
 
     const auto transition = state.Evaluate(f.ctx);
@@ -33,11 +36,25 @@ void RequestDeboardingStateTest::callsMenuWhenCallable()
     QVERIFY(f.ctx.data.deboardingRequested);
 }
 
+void RequestDeboardingStateTest::holdsRequestUntilReadyToDeboard()
+{
+    TurnaroundStateFixture f;
+    RequestDeboardingState state;
+
+    f.gsxService.deboardingState = GsxStateStatus::Callable;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.menuGateway.deboardingCalls, 0);
+    QVERIFY(!f.ctx.data.deboardingRequested);
+}
+
 void RequestDeboardingStateTest::doesNotRequestTwice()
 {
     TurnaroundStateFixture f;
     RequestDeboardingState state;
 
+    f.aircraft.readyToDeboard = true;
     f.gsxService.deboardingState = GsxStateStatus::Callable;
     f.ctx.data.deboardingRequested = true;
 
@@ -126,6 +143,7 @@ void RequestDeboardingStateTest::retriesWhenBoardingDoesNotStart()
     TurnaroundStateFixture f;
     RequestDeboardingState state;
 
+    f.aircraft.readyToDeboard = true;
     f.gsxService.deboardingState = GsxStateStatus::Callable;
 
     for (int tick = 0; tick < 62; ++tick)
@@ -146,6 +164,7 @@ void RequestDeboardingStateTest::retriesForPassengersWhenDeboardingDoesNotStart(
     f.aircraft.cargo = false;
     f.ctx.data.plannedPassengers = 200;
     f.gsxService.deboardedPassengers = 0;
+    f.aircraft.readyToDeboard = true;
     f.gsxService.deboardingState = GsxStateStatus::Callable;
 
     for (int tick = 0; tick < 62; ++tick)
@@ -156,6 +175,21 @@ void RequestDeboardingStateTest::retriesForPassengersWhenDeboardingDoesNotStart(
 
     QCOMPARE(f.menuGateway.deboardingCalls, 2);
     QVERIFY(f.ctx.data.deboardingRequested);
+}
+
+void RequestDeboardingStateTest::holdsRequestWhileMenuUnsettled()
+{
+    TurnaroundStateFixture f;
+    RequestDeboardingState state;
+
+    f.aircraft.readyToDeboard = true;
+    f.gsxService.deboardingState = GsxStateStatus::Callable;
+    f.menuGateway.menuSettled = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.menuGateway.deboardingCalls, 0);
+    QVERIFY(!f.ctx.data.deboardingRequested);
 }
 
 QTEST_APPLESS_MAIN(RequestDeboardingStateTest)

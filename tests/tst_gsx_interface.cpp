@@ -2,31 +2,13 @@
 
 #include "TestDoubles.h"
 #include "../src/infrastructure/gsx/GsxStateService.h"
+#include "../src/infrastructure/gsx/GsxLVars.h"
 
 namespace
 {
-    constexpr auto kCouatlStarted = "FSDT_GSX_COUATL_STARTED";
-    constexpr auto kRefuelingState = "FSDT_GSX_REFUELING_STATE";
-    constexpr auto kBoardingState = "FSDT_GSX_BOARDING_STATE";
-    constexpr auto kFuelHoseConnected = "FSDT_GSX_FUELHOSE_CONNECTED";
-    constexpr auto kMaxPassengers = "FSDT_GSX_MAX_NUMPASSENGERS";
-    constexpr auto kBoardingTotal = "FSDT_GSX_NUMPASSENGERS_BOARDING_TOTAL";
-    constexpr auto kSimbriefSuccess = "FSDT_GSX_SIMBRIEF_SUCCESS";
-    constexpr auto kPushbackStatus = "FSDT_GSX_PUSHBACK_STATUS";
-    constexpr auto kPushbackVehicleState = "FSDT_GSX_VEHICLE_PUSHBACK_STATE";
-    constexpr auto kRepositioning = "FSDT_GSX_REPOSITIONING";
-    constexpr auto kJetway = "FSDT_GSX_JETWAY";
-    constexpr auto kStairs = "FSDT_GSX_STAIRS";
-    constexpr auto kBoardingCargoPercent = "FSDT_GSX_BOARDING_CARGO_PERCENT";
-    constexpr auto kDeboardingCargoPercent = "FSDT_GSX_DEBOARDING_CARGO_PERCENT";
-    constexpr auto kAutomationFuel = "FSDT_GSX_AUTOMATION_FUEL";
-    constexpr auto kAutomationPayload = "FSDT_GSX_AUTOMATION_PAYLOAD";
-    constexpr auto kNumPaxBoardingTotal = "FSDT_GSX_NUMPASSENGERS_BOARDING_TOTAL";
-    constexpr auto kNumPaxDeboardingTotal = "FSDT_GSX_NUMPASSENGERS_DEBOARDING_TOTAL";
+    using namespace gsx::lvars;
+
     constexpr auto kSimOnGround = "SIM ON GROUND";
-    constexpr auto kGoodEngineStart = "FSDT_GSX_SETTINGS_GOOD_ENGINE_START";
-    constexpr auto kFuelCounter = "FSDT_GSX_FUEL_COUNTER";
-    constexpr auto kFuelCounterMax = "FSDT_GSX_FUEL_COUNTER_MAX";
 }
 
 class GsxInterfaceTest final : public QObject
@@ -53,8 +35,15 @@ private slots:
     static void aircraftOnGroundFollowsSimVar();
     static void boardedPassengersAccumulatesAcrossResets();
     static void deboardedPassengersAccumulatesAcrossResets();
+    static void boardedPassengersIgnoresStaleTotalBeforeBoardingStarts();
+    static void deboardedPassengersIgnoresStaleTotalBeforeDeboardingStarts();
+    static void boardedPassengersDiscardsStaleTotalZeroedAfterBoardingStarts();
     static void takeOverFuelAndPayloadClearsAutomationLVars();
     static void refuelCounterComesFromFuelCounterLvar();
+    static void gpuStatusFollowsStateLVar();
+    static void gpuStatusConnectedWhenConnectedFlagSetDespiteState();
+    static void serviceInProgressFollowsRemoteStateRaw();
+    static void serviceInProgressFalseWhenAbsentOrNoRemote();
 };
 
 void GsxInterfaceTest::availabilityFollowsCouatlFlag()
@@ -77,10 +66,12 @@ void GsxInterfaceTest::mapsServiceStateLVars()
 
     gateway.lvars[kRefuelingState] = static_cast<double>(GsxStateStatus::Active);
     gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Completed);
+    gateway.lvars[kDeiceState] = static_cast<double>(GsxStateStatus::Requested);
 
     QCOMPARE(gsx.GetStateStatus(GsxState::Refueling), GsxStateStatus::Active);
     QCOMPARE(gsx.GetStateStatus(GsxState::Boarding), GsxStateStatus::Completed);
     QCOMPARE(gsx.GetStateStatus(GsxState::Pushback), GsxStateStatus::Unavailable);
+    QCOMPARE(gsx.GetStateStatus(GsxState::Deice), GsxStateStatus::Requested);
 }
 
 void GsxInterfaceTest::recordsExplicitCompletedState()
@@ -128,7 +119,8 @@ void GsxInterfaceTest::readsFuelHoseAndPassengerCounts()
 
     gateway.lvars[kFuelHoseConnected] = 1.0;
     gateway.lvars[kMaxPassengers] = 215.0;
-    gateway.lvars[kBoardingTotal] = 130.0;
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersBoardingTotal] = 130.0;
 
     QVERIFY(gsx.IsFuelHoseConnected());
     QCOMPARE(gsx.GetPlannedPassengers(), 215);
@@ -331,19 +323,24 @@ void GsxInterfaceTest::boardedPassengersAccumulatesAcrossResets()
     FakeVariableGateway gateway;
     GsxStateService gsx(&gateway);
 
-    gateway.lvars[kNumPaxBoardingTotal] = 50.0;
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersBoardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
+
+    gateway.lvars[kNumPassengersBoardingTotal] = 50.0;
 
     QCOMPARE(gsx.GetBoardedPassengers(), 50);
 
-    gateway.lvars[kNumPaxBoardingTotal] = 10.0;
+    gateway.lvars[kNumPassengersBoardingTotal] = 10.0;
 
     QCOMPARE(gsx.GetBoardedPassengers(), 60);
 
-    gateway.lvars[kNumPaxBoardingTotal] = 30.0;
+    gateway.lvars[kNumPassengersBoardingTotal] = 30.0;
 
     QCOMPARE(gsx.GetBoardedPassengers(), 80);
 
-    gateway.lvars[kNumPaxBoardingTotal] = 0;
+    gateway.lvars[kNumPassengersBoardingTotal] = 0;
 
     QCOMPARE(gsx.GetBoardedPassengers(), 80);
 }
@@ -353,17 +350,85 @@ void GsxInterfaceTest::deboardedPassengersAccumulatesAcrossResets()
     FakeVariableGateway gateway;
     GsxStateService gsx(&gateway);
 
-    gateway.lvars[kNumPaxDeboardingTotal] = 80.0;
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersDeboardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetDeboardedPassengers(), 0);
+
+    gateway.lvars[kNumPassengersDeboardingTotal] = 80.0;
 
     QCOMPARE(gsx.GetDeboardedPassengers(), 80);
 
-    gateway.lvars[kNumPaxDeboardingTotal] = 5.0;
+    gateway.lvars[kNumPassengersDeboardingTotal] = 5.0;
 
     QCOMPARE(gsx.GetDeboardedPassengers(), 85);
 
-    gateway.lvars[kNumPaxDeboardingTotal] = 0;
+    gateway.lvars[kNumPassengersDeboardingTotal] = 0;
 
     QCOMPARE(gsx.GetDeboardedPassengers(), 85);
+}
+
+void GsxInterfaceTest::boardedPassengersIgnoresStaleTotalBeforeBoardingStarts()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Callable);
+    gateway.lvars[kNumPassengersBoardingTotal] = 192.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Requested);
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersBoardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
+
+    gateway.lvars[kNumPassengersBoardingTotal] = 12.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 12);
+}
+
+void GsxInterfaceTest::deboardedPassengersIgnoresStaleTotalBeforeDeboardingStarts()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Requested);
+    gateway.lvars[kNumPassengersDeboardingTotal] = 192.0;
+
+    QCOMPARE(gsx.GetDeboardedPassengers(), 0);
+
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersDeboardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetDeboardedPassengers(), 0);
+
+    gateway.lvars[kNumPassengersDeboardingTotal] = 7.0;
+
+    QCOMPARE(gsx.GetDeboardedPassengers(), 7);
+}
+
+void GsxInterfaceTest::boardedPassengersDiscardsStaleTotalZeroedAfterBoardingStarts()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersBoardingTotal] = 192.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 192);
+
+    gateway.lvars[kNumPassengersBoardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
+
+    gateway.lvars[kNumPassengersBoardingTotal] = 10.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 10);
 }
 
 void GsxInterfaceTest::takeOverFuelAndPayloadClearsAutomationLVars()
@@ -395,6 +460,68 @@ void GsxInterfaceTest::refuelCounterComesFromFuelCounterLvar()
 
     gateway.lvars[kFuelCounter] = 9000.0;
     QCOMPARE(gsx.GetRefuelCounterGallons(), 9000.0);
+}
+
+void GsxInterfaceTest::gpuStatusFollowsStateLVar()
+{
+    FakeVariableGateway gateway;
+
+    const GsxStateService gsx(&gateway);
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Unknown);
+
+    gateway.lvars[kGpuState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kGpuConnected] = 0.0;
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Connected);
+
+    gateway.lvars[kGpuState] = static_cast<double>(GsxStateStatus::Callable);
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Disconnected);
+}
+
+void GsxInterfaceTest::gpuStatusConnectedWhenConnectedFlagSetDespiteState()
+{
+    FakeVariableGateway gateway;
+
+    const GsxStateService gsx(&gateway);
+
+    gateway.lvars[kGpuState] = static_cast<double>(GsxStateStatus::Callable);
+    gateway.lvars[kGpuConnected] = 1.0;
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Connected);
+}
+
+void GsxInterfaceTest::serviceInProgressFollowsRemoteStateRaw()
+{
+    FakeVariableGateway gateway;
+    GsxRemoteState remote;
+    remote.services.push_back(GsxRemoteService{"Catering", "", "", 5, "", "", "", false, false});
+    remote.services.push_back(GsxRemoteService{"Water", "", "", 4, "", "", "", false, false});
+    remote.services.push_back(GsxRemoteService{"Lavatory", "", "", 1, "", "", "", true, false});
+    remote.services.push_back(GsxRemoteService{"Cleaning", "", "", 6, "", "", "", false, false});
+
+    const GsxStateService gsx(&gateway, &remote);
+
+    QVERIFY(gsx.IsServiceInProgress(GroundService::Catering));
+    QVERIFY(gsx.IsServiceInProgress(GroundService::Water));
+    QVERIFY(!gsx.IsServiceInProgress(GroundService::Lavatory));
+    QVERIFY(!gsx.IsServiceInProgress(GroundService::Cleaning));
+}
+
+void GsxInterfaceTest::serviceInProgressFalseWhenAbsentOrNoRemote()
+{
+    FakeVariableGateway gateway;
+    GsxRemoteState remote;
+    remote.services.push_back(GsxRemoteService{"Catering", "", "", 5, "", "", "", false, false});
+
+    const GsxStateService withRemote(&gateway, &remote);
+
+    QVERIFY(!withRemote.IsServiceInProgress(GroundService::Lavatory));
+
+    const GsxStateService noRemote(&gateway);
+
+    QVERIFY(!noRemote.IsServiceInProgress(GroundService::Catering));
 }
 
 QTEST_APPLESS_MAIN(GsxInterfaceTest)

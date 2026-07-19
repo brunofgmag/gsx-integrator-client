@@ -14,7 +14,9 @@ public:
     [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
 
 private:
-    static void BoardProgressively(TurnaroundContext& ctx);
+    static void EnsureBaseline(TurnaroundContext& ctx);
+    static void FinishBoarding(TurnaroundContext& ctx);
+    static void AdvanceBoardingBar(TurnaroundContext& ctx);
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_BOARDSTATE_H

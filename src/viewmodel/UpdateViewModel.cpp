@@ -138,11 +138,7 @@ void UpdateViewModel::downloadAndInstall()
         return;
     }
 
-    restartWhenStaged_ = mode_ != Auto;
-    progress_ = 0.0;
-    emit ProgressChanged();
-    SetState(Downloading);
-    service_->DownloadAndStage(latest_);
+    BeginDownload(mode_ != Auto);
 }
 
 void UpdateViewModel::restartNow()
@@ -216,11 +212,7 @@ void UpdateViewModel::OnCheckFinished(const bool ok, const bool updateAvailable,
 
     if (mode_ == Auto)
     {
-        restartWhenStaged_ = false;
-        progress_ = 0.0;
-        emit ProgressChanged();
-        SetState(Downloading);
-        service_->DownloadAndStage(latest_);
+        BeginDownload(false);
         return;
     }
 
@@ -267,6 +259,15 @@ void UpdateViewModel::OnStageFinished(const bool ok, const QString& error)
     {
         restartNow();
     }
+}
+
+void UpdateViewModel::BeginDownload(const bool restartWhenStaged)
+{
+    restartWhenStaged_ = restartWhenStaged;
+    progress_ = 0.0;
+    emit ProgressChanged();
+    SetState(Downloading);
+    service_->DownloadAndStage(latest_);
 }
 
 void UpdateViewModel::StartBackgroundCheck()

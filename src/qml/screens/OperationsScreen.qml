@@ -10,8 +10,7 @@ ColumnLayout {
     required property var settingsVm
     required property bool compact
 
-    readonly property int deboardingPhaseStart: 16
-    readonly property bool deboarding: integratorVm.phase >= root.deboardingPhaseStart
+    readonly property bool deboarding: integratorVm.inDeboardingPhase
 
     spacing: 10
 
@@ -104,20 +103,38 @@ ColumnLayout {
 
             Item { width: 1; height: 4 }
 
-            Text {
+            Item {
                 width: parent.width
-                text: qsTr("Next") + " ▸ " + root.nextPhaseLabel
-                color: Theme.muted
-                font.pixelSize: 11
-                font.letterSpacing: 0.8
-                font.capitalization: Font.AllUppercase
-                elide: Text.ElideRight
+                height: nextLabel.implicitHeight
+
+                Text {
+                    id: nextLabel
+                    anchors.left: parent.left
+                    anchors.right: holdCountdown.visible ? holdCountdown.left : parent.right
+                    anchors.rightMargin: holdCountdown.visible ? 10 : 0
+                    text: qsTr("Next") + " ▸ " + root.nextPhaseLabel
+                    color: Theme.muted
+                    font.pixelSize: 11
+                    font.letterSpacing: 0.8
+                    font.capitalization: Font.AllUppercase
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    id: holdCountdown
+                    anchors.right: parent.right
+                    visible: root.integratorVm.delayTicksRemaining > 0
+                    text: qsTr("Next state in %1s").arg(root.integratorVm.delayTicksRemaining)
+                    color: Theme.accent
+                    font.pixelSize: 11
+                    font.letterSpacing: 0.8
+                    font.capitalization: Font.AllUppercase
+                }
             }
         }
 
         Advisory {
             Layout.fillWidth: true
-            hideable: true
             visible: root.integratorVm.gsxProfileConflict
             text: root.integratorVm.gsxProfileFixable
                   ? qsTr("The GSX profile for this aircraft does not set 'refueling = 0', so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.")
@@ -128,7 +145,6 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
-            hideable: true
             text: root.integratorVm.phaseTip
         }
 
@@ -206,9 +222,9 @@ ColumnLayout {
                 }
                 KeyValueRow {
                     label: qsTr("Rate")
-                    value: root.integratorVm.refueledExternally
+                    value: root.integratorVm.refuelByGsx
                         ? qsTr("Auto")
-                        : root.integratorVm.loadsViaUplink
+                        : root.integratorVm.refuelBySelf
                             ? "GSX"
                             : root.settingsVm.fuelRateText + " " + qsTr("kg/s")
                 }
@@ -226,6 +242,7 @@ ColumnLayout {
                 progress: paxCard.paxProgress
 
                 KeyValueRow {
+                    visible: !root.integratorVm.cargoAircraft
                     label: qsTr("Pax")
                     value: (root.deboarding
                             ? Math.round(paxCard.paxProgress / 100 * root.integratorVm.plannedPax)
@@ -289,6 +306,50 @@ ColumnLayout {
                 text: qsTr("Start Loading")
                 enabled: root.integratorVm.canStartLoading
                 onClicked: root.integratorVm.startLoading()
+            }
+
+            ActionButton {
+                id: restartButton
+
+                property bool armed: false
+
+                small: true
+                secondary: !restartButton.armed
+                tint: Theme.red
+                text: restartButton.armed ? qsTr("Confirm restart") : qsTr("Restart Flow")
+                enabled: root.integratorVm.connected && root.integratorVm.enabled
+                onEnabledChanged: restartButton.armed = false
+                onClicked: {
+                    if (restartButton.armed) {
+                        restartButton.armed = false;
+                        root.integratorVm.restartFlow();
+                    } else {
+                        restartButton.armed = true;
+                        disarmTimer.restart();
+                    }
+                }
+
+                Timer {
+                    id: disarmTimer
+                    interval: 3000
+                    onTriggered: restartButton.armed = false
+                }
+            }
+
+            ActionButton {
+                small: true
+                secondary: true
+                visible: root.integratorVm.debugToolsAvailable
+                text: "◂ Phase"
+                onClicked: root.integratorVm.debugSkipPhase(-1)
+            }
+
+            ActionButton {
+                small: true
+                secondary: true
+                visible: root.integratorVm.debugToolsAvailable
+                text: "Phase ▸"
+                onClicked: root.integratorVm.debugSkipPhase(1)
             }
         }
     }

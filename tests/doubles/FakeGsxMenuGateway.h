@@ -11,6 +11,11 @@ public:
     bool confirmGoodEnginesResult = true;
     bool completePushbackResult = true;
     bool completeRefuelResult = true;
+    bool requestLavatoryResult = true;
+    bool requestWaterResult = true;
+    bool requestCleaningResult = true;
+    bool toggleGpuResult = true;
+    bool menuSettled = true;
 
     int callJetwayCalls = 0;
     int callStairsCalls = 0;
@@ -23,6 +28,11 @@ public:
     int confirmGoodEnginesCalls = 0;
     int completePushbackCalls = 0;
     int completeRefuelCalls = 0;
+    int toggleGpuCalls = 0;
+    int requestCateringCalls = 0;
+    int requestLavatoryCalls = 0;
+    int requestWaterCalls = 0;
+    int requestCleaningCalls = 0;
 
     [[nodiscard]] bool CallJetway() override
     {
@@ -89,6 +99,38 @@ public:
         ++completeRefuelCalls;
         return completeRefuelResult;
     }
+
+    [[nodiscard]] bool ToggleGpu() override
+    {
+        ++toggleGpuCalls;
+        return toggleGpuResult;
+    }
+
+    [[nodiscard]] bool RequestCatering() override
+    {
+        ++requestCateringCalls;
+        return true;
+    }
+
+    [[nodiscard]] bool RequestLavatory() override
+    {
+        ++requestLavatoryCalls;
+        return requestLavatoryResult;
+    }
+
+    [[nodiscard]] bool RequestWater() override
+    {
+        ++requestWaterCalls;
+        return requestWaterResult;
+    }
+
+    [[nodiscard]] bool RequestCleaning() override
+    {
+        ++requestCleaningCalls;
+        return requestCleaningResult;
+    }
+
+    [[nodiscard]] bool IsMenuSettled() const override { return menuSettled; }
 
     void DisableGsxMenu() override {}
 };

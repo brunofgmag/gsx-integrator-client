@@ -33,6 +33,7 @@ __pycache__/
 .agents/
 .serena/
 .ai/
+.superpowers/
 
 # Docs
 docs

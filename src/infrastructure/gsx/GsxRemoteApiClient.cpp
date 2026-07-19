@@ -18,6 +18,16 @@ namespace
 {
     constexpr int kMaxBackoffMs = 15000;
     constexpr int kSupportedProtocol = 1;
+
+    void WarnOnProtocolMismatch(const QJsonObject& msg)
+    {
+        const int protocol = msg.value("protocol").toInt(kSupportedProtocol);
+        if (protocol != kSupportedProtocol)
+        {
+            LOG_WARN("GSX RemoteAPI: protocol %d difere do suportado %d; leitura best-effort.",
+                     protocol, kSupportedProtocol);
+        }
+    }
 }
 
 GsxRemoteApiClient::GsxRemoteApiClient(QObject* parent) : QObject(parent)
@@ -85,7 +95,7 @@ void GsxRemoteApiClient::ScheduleReconnect()
     backoffMs_ = std::min(backoffMs_ * 2, kMaxBackoffMs);
 }
 
-void GsxRemoteApiClient::SendSubscribe()
+void GsxRemoteApiClient::SendSubscribe() const
 {
     const QJsonObject sub{
         {"type", "subscribe"},
@@ -126,12 +136,7 @@ void GsxRemoteApiClient::OnTextMessage(const QString& text)
 
     if (type == "hello")
     {
-        const int protocol = msg.value("protocol").toInt(kSupportedProtocol);
-        if (protocol != kSupportedProtocol)
-        {
-            LOG_WARN("GSX RemoteAPI: protocol %d difere do suportado %d; leitura best-effort.",
-                     protocol, kSupportedProtocol);
-        }
+        WarnOnProtocolMismatch(msg);
     }
     else if (type == "snapshot")
     {
@@ -143,21 +148,27 @@ void GsxRemoteApiClient::OnTextMessage(const QString& text)
     }
     else if (type == "result")
     {
-        const bool ok = msg.value("ok").toBool();
-        if (!ok)
-        {
-            const QJsonObject error = msg.value("error").toObject();
-            const QString code = error.value("code").toString();
-            LOG_WARN("GSX RemoteAPI: command rejected (%s): %s",
-                     code.toUtf8().constData(),
-                     error.value("message").toString().toUtf8().constData());
-            emit ResultReceived(false, code);
-        }
-        else
-        {
-            emit ResultReceived(true, QString());
-        }
+        HandleResult(msg);
     }
+}
+
+void GsxRemoteApiClient::HandleResult(const QJsonObject& msg)
+{
+    if (!msg.value("ok").toBool())
+    {
+        const QJsonObject error = msg.value("error").toObject();
+        const QString code = error.value("code").toString();
+
+        LOG_WARN("GSX RemoteAPI: command rejected (%s): %s",
+                 code.toUtf8().constData(),
+                 error.value("message").toString().toUtf8().constData());
+
+        emit ResultReceived(false, code);
+
+        return;
+    }
+
+    emit ResultReceived(true, QString());
 }
 
 quint16 GsxRemoteApiClient::ResolvePort()

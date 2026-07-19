@@ -2,14 +2,25 @@
 
 #include "sim/SessionReadiness.h"
 #include "../infrastructure/aircraft/AircraftFactory.h"
+#include "../infrastructure/aircraft/AircraftRegistry.h"
 #include "../infrastructure/logging/LogMacros.h"
 #include "../infrastructure/gsx/GsxAircraftProfile.h"
 #include "../infrastructure/gsx/GsxRemoteStateReducer.h"
 
+namespace
+{
+    bool NeedsRefuelingFix(const std::filesystem::path& cfg)
+    {
+        const std::optional<int> refueling = GsxAircraftProfile::ReadRefueling(cfg);
+
+        return !refueling.has_value() || *refueling != 0;
+    }
+}
+
 IntegratorRuntime::IntegratorRuntime(QObject* parent)
     : QObject(parent),
       pluginClient_(&varGateway_),
-      gsxService_(&varGateway_),
+      gsxService_(&varGateway_, &gsxRemoteState_),
       gsxMenu_(&gsxRemoteClient_, &gsxRemoteState_, &settings_, &qtLogger_, &pluginClient_),
       stateMachine_(&status_, &settings_, &gsxService_, &gsxMenu_, &qtLogger_),
       simbriefClient_(&status_, &settings_, this)
@@ -64,14 +75,7 @@ void IntegratorRuntime::OnSimOpen(const char* appName)
 {
     simVersion_ = SimVersionDetect::FromAppName(appName ? appName : "");
 
-    const char* label =
-        simVersion_ == SimVersion::Msfs2024
-            ? "MSFS 2024"
-            : simVersion_ == SimVersion::Msfs2020
-            ? "MSFS 2020"
-            : "Unknown";
-
-    LOG_INFO("Connected simulator: '%s' (%s)", appName ? appName : "?", label);
+    LOG_INFO("Connected simulator: '%s' (%s)", appName ? appName : "?", SimVersionLabel(simVersion_));
 }
 
 void IntegratorRuntime::TryConnect()
@@ -99,36 +103,8 @@ void IntegratorRuntime::TryConnect()
     varGateway_.Attach(simConnect_.Handle());
     simConnect_.SetOnQuit([this] { HandleDisconnected(); });
 
-    if (!simConnect_.SubscribeOneSecond([this] { Update(); }))
+    if (!SubscribeSimEvents())
     {
-        LOG_ERROR("Failed to subscribe to 1sec SimConnect event.");
-
-
-        return;
-    }
-
-    if (!simConnect_.SubscribeFourSeconds([this] { UpdateSlow(); }))
-    {
-        LOG_ERROR("Failed to subscribe to 4sec SimConnect event.");
-
-        HandleDisconnected();
-
-        return;
-    }
-
-    if (!simConnect_.SubscribeSimRunning([this](const bool running) { OnSimRunningChanged(running); }))
-    {
-        LOG_ERROR("Failed to subscribe to 'Sim' SimConnect system event.");
-
-        HandleDisconnected();
-
-        return;
-    }
-
-    if (!simConnect_.SubscribeToPause([this](const unsigned flag) { OnPauseChanged(flag); }))
-    {
-        LOG_ERROR("Failed to subscribe to 'Pause_EX1' SimConnect event.");
-
         HandleDisconnected();
 
         return;
@@ -142,6 +118,39 @@ void IntegratorRuntime::TryConnect()
     LOG_INFO("GSX Integrator connected to the simulator.");
 
     emit Updated();
+}
+
+bool IntegratorRuntime::SubscribeSimEvents()
+{
+    if (!simConnect_.SubscribeOneSecond([this] { Update(); }))
+    {
+        LOG_ERROR("Failed to subscribe to 1sec SimConnect event.");
+
+        return false;
+    }
+
+    if (!simConnect_.SubscribeFourSeconds([this] { UpdateSlow(); }))
+    {
+        LOG_ERROR("Failed to subscribe to 4sec SimConnect event.");
+
+        return false;
+    }
+
+    if (!simConnect_.SubscribeSimRunning([this](const bool running) { OnSimRunningChanged(running); }))
+    {
+        LOG_ERROR("Failed to subscribe to 'Sim' SimConnect system event.");
+
+        return false;
+    }
+
+    if (!simConnect_.SubscribeToPause([this](const unsigned flag) { OnPauseChanged(flag); }))
+    {
+        LOG_ERROR("Failed to subscribe to 'Pause_EX1' SimConnect event.");
+
+        return false;
+    }
+
+    return true;
 }
 
 void IntegratorRuntime::HandleDisconnected()
@@ -271,23 +280,21 @@ void IntegratorRuntime::ResetSession()
     simbriefClient_.Reset();
 }
 
+void IntegratorRuntime::ClearFlightState()
+{
+    aircraft_.reset();
+    gsxProfile_.Reset();
+
+    ResetSession();
+}
+
 void IntegratorRuntime::OnFlightStart()
 {
     LOG_INFO("Flight started. Initializing session...");
 
     isSessionActive_ = true;
 
-    aircraft_.reset();
-    gsxProfileRoots_.clear();
-    gsxProfileCfgs_.clear();
-    gsxProfileConflict_ = false;
-    gsxProfileFlagsMissing_ = false;
-
-    ResetSession();
-
-    MaybeAutoStart();
-
-    emit Updated();
+    RestartFlow();
 }
 
 void IntegratorRuntime::OnSessionEnd()
@@ -296,13 +303,7 @@ void IntegratorRuntime::OnSessionEnd()
 
     isSessionActive_ = false;
 
-    aircraft_.reset();
-    gsxProfileRoots_.clear();
-    gsxProfileCfgs_.clear();
-    gsxProfileConflict_ = false;
-    gsxProfileFlagsMissing_ = false;
-
-    ResetSession();
+    ClearFlightState();
 
     emit Updated();
 }
@@ -314,35 +315,35 @@ void IntegratorRuntime::ResolveAircraft()
         return;
     }
 
-    aircraft_ = DetectAircraft(&varGateway_, &status_);
+    aircraft_ = DetectAircraft(&varGateway_, &status_, &aircraftDescriptor_);
     if (aircraft_)
     {
         status_.aircraftSupported = true;
-        gsxProfileRoots_ = GsxAircraftProfile::ProfileRootsFor(aircraft_->GetName());
-        gsxProfileFlagsMissing_ = GsxAircraftProfile::FlagsMissingProfile(aircraft_->GetName());
+        gsxProfile_.roots = GsxAircraftProfile::ProfileRootsFor(aircraft_->GetName());
+        gsxProfile_.flagsMissing = GsxAircraftProfile::FlagsMissingProfile(aircraft_->GetName());
         CheckGsxProfile();
+        emit Updated();
     }
 }
 
 void IntegratorRuntime::CheckGsxProfile()
 {
-    if (gsxProfileRoots_.empty())
+    if (gsxProfile_.roots.empty())
     {
-        gsxProfileCfgs_.clear();
-        gsxProfileConflict_ = false;
+        gsxProfile_.cfgs.clear();
+        gsxProfile_.conflict = false;
         return;
     }
 
-    gsxProfileCfgs_ = GsxAircraftProfile::FindCfgs(gsxProfileRoots_);
+    gsxProfile_.cfgs = GsxAircraftProfile::FindCfgs(gsxProfile_.roots);
 
-    bool conflict = gsxProfileCfgs_.empty() && gsxProfileFlagsMissing_;
-    for (const auto& cfg : gsxProfileCfgs_)
+    bool conflict = gsxProfile_.cfgs.empty() && gsxProfile_.flagsMissing;
+    for (const auto& cfg : gsxProfile_.cfgs)
     {
-        const std::optional<int> refueling = GsxAircraftProfile::ReadRefueling(cfg);
-        if (!refueling.has_value() || *refueling != 0)
+        if (NeedsRefuelingFix(cfg))
         {
             conflict = true;
-            if (!gsxProfileConflict_)
+            if (!gsxProfile_.conflict)
             {
                 LOG_WARN("GSX profile '%s' does not set 'refueling = 0'; the fuel truck will not connect.",
                          cfg.string().c_str());
@@ -350,25 +351,24 @@ void IntegratorRuntime::CheckGsxProfile()
         }
     }
 
-    gsxProfileConflict_ = conflict;
+    gsxProfile_.conflict = conflict;
 }
 
 bool IntegratorRuntime::CanFixGsxProfile() const
 {
-    return gsxProfileConflict_ && !gsxProfileCfgs_.empty();
+    return gsxProfile_.conflict && !gsxProfile_.cfgs.empty();
 }
 
 bool IntegratorRuntime::FixGsxProfile()
 {
-    if (gsxProfileCfgs_.empty())
+    if (gsxProfile_.cfgs.empty())
     {
         return false;
     }
 
-    for (const auto& cfg : gsxProfileCfgs_)
+    for (const auto& cfg : gsxProfile_.cfgs)
     {
-        const std::optional<int> refueling = GsxAircraftProfile::ReadRefueling(cfg);
-        if (refueling.has_value() && *refueling == 0)
+        if (!NeedsRefuelingFix(cfg))
         {
             continue;
         }
@@ -410,14 +410,24 @@ QString IntegratorRuntime::GetAircraftName() const
     return aircraft_ ? QString::fromUtf8(aircraft_->GetName()) : QString();
 }
 
-bool IntegratorRuntime::IsAircraftRefueledExternally() const
+std::string IntegratorRuntime::GetAircraftProfileId() const
 {
-    return aircraft_ && aircraft_->IsRefueledExternally();
+    return aircraft_ && aircraftDescriptor_ ? aircraftDescriptor_->id : std::string();
 }
 
-bool IntegratorRuntime::IsAircraftLoadsViaUplink() const
+bool IntegratorRuntime::IsAircraftRefuelByGsx() const
 {
-    return aircraft_ && aircraft_->LoadsViaUplink();
+    return aircraft_ && aircraft_->GetRefuelMethod() == RefuelBy::Gsx;
+}
+
+bool IntegratorRuntime::IsAircraftRefuelBySelf() const
+{
+    return aircraft_ && aircraft_->GetRefuelMethod() == RefuelBy::Self;
+}
+
+bool IntegratorRuntime::IsAircraftCargoVariant() const
+{
+    return aircraft_ && aircraft_->IsCargoVariant();
 }
 
 void IntegratorRuntime::SetAutomationEnabled(const bool enabled)
@@ -451,6 +461,17 @@ void IntegratorRuntime::MaybeAutoStart()
     LOG_INFO("Auto-start enabled: starting automation flow.");
 
     SetAutomationEnabled(true);
+}
+
+void IntegratorRuntime::RestartFlow()
+{
+    LOG_INFO("Restarting turnaround flow.");
+
+    ClearFlightState();
+
+    MaybeAutoStart();
+
+    emit Updated();
 }
 
 void IntegratorRuntime::ApplySettings(const AutomationSettings& settings)

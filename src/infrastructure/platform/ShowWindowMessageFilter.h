@@ -4,6 +4,7 @@
 #include <windows.h>
 #include <QtCore/QAbstractNativeEventFilter>
 #include <QtGui/QWindow>
+#include "WindowForeground.h"
 
 class ShowWindowMessageFilter final : public QAbstractNativeEventFilter
 {
@@ -24,9 +25,7 @@ public:
         if (const auto* msg = static_cast<MSG*>(message);
             msg->message == MessageId() && window_ != nullptr)
         {
-            window_->showNormal();
-            window_->raise();
-            window_->requestActivate();
+            WindowForeground::Bring(window_);
         }
         return false;
     }

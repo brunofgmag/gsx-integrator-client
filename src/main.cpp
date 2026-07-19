@@ -4,6 +4,7 @@
 #include <QtCore/QLocale>
 #include <QtCore/QSettings>
 #include <QtCore/QSize>
+#include <QtCore/QTimer>
 #include <QtCore/QTranslator>
 #include <QtGui/QFont>
 #include <QtGui/QGuiApplication>
@@ -13,8 +14,10 @@
 #include <QtQuick/QQuickWindow>
 #include "application/IntegratorRuntime.h"
 #include "application/RuntimeIntegratorService.h"
+#include "infrastructure/aircraft/AircraftFactory.h"
 #include "infrastructure/settings/QSettingsRepository.h"
 #include "infrastructure/platform/ShowWindowMessageFilter.h"
+#include "infrastructure/platform/WindowForeground.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
 #include "infrastructure/update/GithubUpdateService.h"
 #include "viewmodel/OperationsViewModel.h"
@@ -55,7 +58,7 @@ namespace
 
     QtMessageHandler defaultMessageHandler = nullptr;
 
-    void FilteredMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& message)
+    void FilteredMessageHandler(const QtMsgType type, const QMessageLogContext& context, const QString& message)
     {
         if (message.contains(QLatin1String("Component is not ready")))
         {
@@ -63,21 +66,72 @@ namespace
         }
         defaultMessageHandler(type, context, message);
     }
+
+    bool HasTrayArg(const int argc, char* argv[])
+    {
+        for (int i = 1; i < argc; ++i)
+        {
+            if (std::strcmp(argv[i], "--tray") == 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool SecondaryInstance()
+    {
+        CreateMutexW(nullptr, FALSE, L"Local\\gsx-integrator-client.single-instance");
+
+        return GetLastError() == ERROR_ALREADY_EXISTS;
+    }
+
+    void ConfigureApplication()
+    {
+        QGuiApplication::setQuitOnLastWindowClosed(false);
+        QGuiApplication::setOrganizationName(QStringLiteral("brunofgmag"));
+        QGuiApplication::setApplicationName(QStringLiteral("gsx-integrator-client"));
+        QGuiApplication::setApplicationDisplayName(QStringLiteral("GSX Integrator"));
+        QGuiApplication::setApplicationVersion(QStringLiteral(GSXI_VERSION));
+
+        QFont monoFont(QStringLiteral("Cascadia Mono"));
+        monoFont.setStyleHint(QFont::Monospace);
+        QGuiApplication::setFont(monoFont);
+
+        QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
+    }
+
+    void InstallAppTranslator(QTranslator& translator, const QString& language)
+    {
+        QCoreApplication::removeTranslator(&translator);
+        const QLocale uiLocale = (language.isEmpty() || language == QStringLiteral("system"))
+                                     ? QLocale()
+                                     : QLocale(language);
+        if (translator.load(uiLocale, QStringLiteral("app"), QStringLiteral("_"), QStringLiteral(":/i18n")))
+        {
+            QCoreApplication::installTranslator(&translator);
+        }
+    }
+
+    QIcon BuildAppIcon()
+    {
+        QIcon appIcon;
+        for (const int size : {16, 24, 32, 48, 64, 128, 256})
+        {
+            appIcon.addFile(QStringLiteral(":/icons/app-icon_%1.png").arg(size),
+                            QSize(size, size));
+        }
+
+        return appIcon;
+    }
 }
 
 int main(int argc, char* argv[])
 {
-    bool trayArg = false;
-    for (int i = 1; i < argc; ++i)
-    {
-        if (std::strcmp(argv[i], "--tray") == 0)
-        {
-            trayArg = true;
-        }
-    }
+    const bool trayArg = HasTrayArg(argc, argv);
 
-    CreateMutexW(nullptr, FALSE, L"Local\\gsx-integrator-client.single-instance");
-    if (GetLastError() == ERROR_ALREADY_EXISTS)
+    if (SecondaryInstance())
     {
         if (!trayArg)
         {
@@ -90,44 +144,21 @@ int main(int argc, char* argv[])
     defaultMessageHandler = qInstallMessageHandler(FilteredMessageHandler);
 
     const QGuiApplication app(argc, argv);
-    QGuiApplication::setQuitOnLastWindowClosed(false);
-    QGuiApplication::setOrganizationName(QStringLiteral("brunofgmag"));
-    QGuiApplication::setApplicationName(QStringLiteral("gsx-integrator-client"));
-    QGuiApplication::setApplicationDisplayName(QStringLiteral("GSX Integrator"));
-    QGuiApplication::setApplicationVersion(QStringLiteral(GSXI_VERSION));
-
-    QFont monoFont(QStringLiteral("Cascadia Mono"));
-    monoFont.setStyleHint(QFont::Monospace);
-    QGuiApplication::setFont(monoFont);
-
-    QQuickWindow::setTextRenderType(QQuickWindow::NativeTextRendering);
+    ConfigureApplication();
 
     QSettingsRepository settingsRepository;
     const AppSettings startupSettings = settingsRepository.Load();
+    const bool trayCapable = startupSettings.closeToTray || startupSettings.minimizeToTray;
 
     QTranslator translator;
-    {
-        const QString uiLanguage = QString::fromStdString(startupSettings.language);
-        const QLocale uiLocale = (uiLanguage.isEmpty() || uiLanguage == QStringLiteral("system"))
-                                     ? QLocale()
-                                     : QLocale(uiLanguage);
-        if (translator.load(uiLocale, QStringLiteral("app"), QStringLiteral("_"), QStringLiteral(":/i18n")))
-        {
-            QCoreApplication::installTranslator(&translator);
-        }
-    }
+    InstallAppTranslator(translator, QString::fromStdString(startupSettings.language));
 
-    QIcon appIcon;
-    for (const int size : {16, 24, 32, 48, 64, 128, 256})
-    {
-        appIcon.addFile(QStringLiteral(":/icons/app-icon_%1.png").arg(size),
-                        QSize(size, size));
-    }
-    QGuiApplication::setWindowIcon(appIcon);
+    QGuiApplication::setWindowIcon(BuildAppIcon());
 
     IntegratorRuntime runtime;
     RuntimeIntegratorService integratorService(&runtime);
-    SettingsViewModel settingsViewModel(&settingsRepository, &integratorService);
+    SettingsViewModel settingsViewModel(&settingsRepository, &integratorService,
+                                        SupportedAircraftProfiles());
     OperationsViewModel operationsViewModel(&integratorService);
 
     GithubUpdateService updateService(
@@ -180,7 +211,8 @@ int main(int argc, char* argv[])
         {QStringLiteral("integratorVm"), QVariant::fromValue(&operationsViewModel)},
         {QStringLiteral("settingsVm"), QVariant::fromValue(&settingsViewModel)},
         {QStringLiteral("updateVm"), QVariant::fromValue(&updateViewModel)},
-        {QStringLiteral("startHidden"), trayArg},
+        {QStringLiteral("startHidden"), trayArg && trayCapable},
+        {QStringLiteral("startMinimized"), trayArg && !trayCapable},
         {QStringLiteral("trayIconSource"), trayIconSource},
     });
 
@@ -190,16 +222,7 @@ int main(int argc, char* argv[])
     QObject::connect(&settingsViewModel, &SettingsViewModel::LanguageChanged, &app,
                      [&settingsViewModel, &operationsViewModel, &translator, &engine]
                      {
-                         QCoreApplication::removeTranslator(&translator);
-                         const QString uiLanguage = settingsViewModel.GetLanguage();
-                         const QLocale uiLocale = (uiLanguage.isEmpty() || uiLanguage == QStringLiteral("system"))
-                                                      ? QLocale()
-                                                      : QLocale(uiLanguage);
-                         if (translator.load(uiLocale, QStringLiteral("app"), QStringLiteral("_"),
-                                             QStringLiteral(":/i18n")))
-                         {
-                             QCoreApplication::installTranslator(&translator);
-                         }
+                         InstallAppTranslator(translator, settingsViewModel.GetLanguage());
                          engine.retranslate();
                          operationsViewModel.RetranslateUi();
                          settingsViewModel.RetranslateUi();
@@ -217,6 +240,13 @@ int main(int argc, char* argv[])
     {
         QCoreApplication::instance()->installNativeEventFilter(&showWindowFilter);
         WindowsTitleBar::Apply(rootWindow, settingsViewModel.GetEffectiveDark());
+
+        if (!trayArg)
+        {
+            QTimer::singleShot(0, rootWindow, [rootWindow] {
+                WindowForeground::Bring(rootWindow);
+            });
+        }
 
         QObject::connect(&settingsViewModel, &SettingsViewModel::EffectiveDarkChanged,
                          rootWindow, [rootWindow, &settingsViewModel]

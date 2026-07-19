@@ -12,6 +12,9 @@ public:
     }
 
     [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
+
+private:
+    static void CaptureFlightPlan(TurnaroundContext& ctx);
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_WAITFORFLIGHTPLANSTATE_H

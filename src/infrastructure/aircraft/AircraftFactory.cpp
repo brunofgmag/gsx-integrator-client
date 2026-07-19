@@ -1,5 +1,6 @@
 #include "AircraftFactory.h"
 
+#include <algorithm>
 #include <string>
 #include "AircraftIdentity.h"
 #include "AircraftRegistry.h"
@@ -20,7 +21,9 @@ namespace
     }
 }
 
-std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway, AutomationStatus* status)
+std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway,
+                                         AutomationStatus* status,
+                                         const AircraftDescriptor** outDescriptor)
 {
     char title[64] = {};
     if (!variableGateway->FetchAircraftName(title, sizeof(title)))
@@ -46,7 +49,23 @@ std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway, Autom
         return nullptr;
     }
 
+    if (outDescriptor != nullptr)
+    {
+        *outDescriptor = descriptor;
+    }
+
     std::unique_ptr<Aircraft> aircraft = descriptor->create(variableGateway, status, identity);
     LOG_INFO("Aircraft detected: %s", aircraft->GetName());
     return aircraft;
+}
+
+std::vector<AircraftProfileInfo> SupportedAircraftProfiles()
+{
+    std::vector<AircraftProfileInfo> infos;
+    for (const AircraftDescriptor* descriptor : AircraftRegistry())
+    {
+        infos.push_back({descriptor->id, descriptor->shortCode, descriptor->name, descriptor->refuelBy});
+    }
+    std::ranges::sort(infos, {}, &AircraftProfileInfo::shortCode);
+    return infos;
 }
