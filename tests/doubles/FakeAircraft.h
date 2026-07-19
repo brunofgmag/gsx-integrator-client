@@ -8,8 +8,6 @@ class FakeAircraft final : public Aircraft
 public:
     bool cargo = false;
     bool flightPlanLoaded = false;
-    bool progressiveFuel = true;
-    bool progressiveLoad = true;
     double plannedFuelKg = 0.0;
     double plannedZfwKg = 0.0;
     double emptyZfwKg = 0.0;
@@ -23,9 +21,14 @@ public:
     bool engineRunning = false;
     bool parkingBrakeSet = false;
     bool supportsStairsOrJetways = true;
-    bool refueledExternally = false;
-    bool loadsViaUplink = false;
     bool completesPushbackViaInterruptMenu = false;
+    std::optional<GroundPowerStatus> groundPowerStatus = std::nullopt;
+    bool supportsChocksControl = false;
+    bool chocksPlaced = false;
+    int setChocksCalls = 0;
+    int closeAllDoorsCalls = 0;
+    RefuelBy refuelMethod = RefuelBy::Self;
+    BoardBy boardMethod = BoardBy::Self;
     int consumeSmartSwitchCalls = 0;
     int onLoadingStartedCalls = 0;
 
@@ -46,12 +49,10 @@ public:
     void SetCurrentFuelKg(const double value) override { currentFuelKg = value; }
     [[nodiscard]] double GetCurrentZfwKg() const override { return currentZfwKg; }
     void SetCurrentZfwKg(const double value) override { currentZfwKg = value; }
-    [[nodiscard]] bool SupportsProgressiveFuel() const override { return progressiveFuel; }
-    [[nodiscard]] bool SupportsProgressiveLoad() const override { return progressiveLoad; }
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return supportsStairsOrJetways; }
-    [[nodiscard]] bool IsRefueledExternally() const override { return refueledExternally; }
-    [[nodiscard]] bool LoadsViaUplink() const override { return loadsViaUplink; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return completesPushbackViaInterruptMenu; }
+    [[nodiscard]] RefuelBy GetRefuelMethod() const override { return refuelMethod; }
+    [[nodiscard]] BoardBy GetBoardMethod() const override { return boardMethod; }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override
     {
@@ -60,6 +61,17 @@ public:
     }
 
     [[nodiscard]] bool IsPowered() const override { return powered; }
+    [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override { return groundPowerStatus; }
+
+    [[nodiscard]] bool SupportsChocksControl() const override { return supportsChocksControl; }
+
+    void SetChocks(const bool placed) override
+    {
+        ++setChocksCalls;
+        chocksPlaced = placed;
+    }
+
+    void CloseAllDoors() override { ++closeAllDoorsCalls; }
     [[nodiscard]] bool IsReadyToPush() const override { return readyToPush; }
     [[nodiscard]] bool IsReadyToDeboard() const override { return readyToDeboard; }
     [[nodiscard]] bool IsEngineRunning() const override { return engineRunning; }

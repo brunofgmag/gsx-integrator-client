@@ -48,25 +48,25 @@
    "state": 5,
    "stateText": "Our airplane is Parked",
    "airport": {
-    "icao": "CYVR",
-    "name": "Vancouver Intl",
-    "country": "Canada"
+    "icao": "ZZZZ",
+    "name": "Test Airport",
+    "country": "Testland"
    },
-   "parking": "Air Canada Cargo|Parking 1",
+   "parking": "Cargo Apron|Parking 1",
    "gateProperties": [
     "Ramp Cargo",
     "max wingspan 66m"
    ],
    "aircraft": "TFDI MD11",
    "simBrief": {
-    "origin": "CYVR",
-    "destination": "PANC",
+    "origin": "ZZZZ",
+    "destination": "XXXX",
     "flightNumber": "12120",
-    "airline": "BZL",
+    "airline": "ZZZ",
     "airlineName": "",
     "passengers": 3
    },
-   "airline": "BZL",
+   "airline": "ZZZ",
    "services": [
     {
      "id": "Deboarding",
@@ -453,7 +453,7 @@
    "ts": 1782224448,
    "path": "/menu",
    "value": {
-    "title": "Activate Services at CYVR/Vancouver Intl",
+    "title": "Activate Services at ZZZZ/Test Airport",
     "entries": [
      "Request Deboarding",
      "Request Catering service",
@@ -491,7 +491,7 @@
      false
     ],
     "header": "GSX - Activate Ground Services",
-    "subtitle": "Activate Services at CYVR/Vancouver Intl\nAir Canada Cargo|Parking 1"
+    "subtitle": "Activate Services at ZZZZ/Test Airport\nCargo Apron|Parking 1"
    }
   }
  },
@@ -546,7 +546,7 @@
    "ts": 1782224454,
    "path": "/operators",
    "value": {
-    "handling": "Air North"
+    "handling": "Operator A"
    }
   }
  },

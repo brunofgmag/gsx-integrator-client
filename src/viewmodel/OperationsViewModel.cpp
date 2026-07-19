@@ -13,7 +13,8 @@ namespace
         case TurnaroundPhase::WaitingSupportedAircraft: return QCoreApplication::translate("Turnaround", "Waiting for sim ready");
         case TurnaroundPhase::WaitingAircraftReady: return QCoreApplication::translate("Turnaround", "Waiting for aircraft ready");
         case TurnaroundPhase::RepositionAircraft: return QCoreApplication::translate("Turnaround", "Repositioning aircraft");
-        case TurnaroundPhase::CallStairsOrJetway: return QCoreApplication::translate("Turnaround", "Starting GSX services");
+        case TurnaroundPhase::PlaceGroundEquipment: return QCoreApplication::translate("Turnaround", "Placing GPU & chocks");
+        case TurnaroundPhase::CallServices: return QCoreApplication::translate("Turnaround", "Starting GSX services");
         case TurnaroundPhase::WaitingPowerOn: return QCoreApplication::translate("Turnaround", "Waiting for power on");
         case TurnaroundPhase::WaitingFlightPlan: return QCoreApplication::translate("Turnaround", "Waiting for flight plan");
         case TurnaroundPhase::RequestFuel: return QCoreApplication::translate("Turnaround", "Requesting fuel");
@@ -21,14 +22,18 @@ namespace
         case TurnaroundPhase::RequestBoarding: return QCoreApplication::translate("Turnaround", "Requesting boarding");
         case TurnaroundPhase::Boarding: return QCoreApplication::translate("Turnaround", "Boarding");
         case TurnaroundPhase::WaitingReadyToPush: return QCoreApplication::translate("Turnaround", "Preparing for pushback");
+        case TurnaroundPhase::WaitCatering: return QCoreApplication::translate("Turnaround", "Waiting for catering");
+        case TurnaroundPhase::RemoveGroundEquipment: return QCoreApplication::translate("Turnaround", "Removing GPU & chocks");
         case TurnaroundPhase::RequestPushback: return QCoreApplication::translate("Turnaround", "Requesting pushback");
         case TurnaroundPhase::WaitingPushbackToStart: return QCoreApplication::translate("Turnaround", "Waiting for pushback start");
         case TurnaroundPhase::WaitingForEngines: return QCoreApplication::translate("Turnaround", "Waiting for engines");
         case TurnaroundPhase::WaitingDeparture: return QCoreApplication::translate("Turnaround", "Waiting for departure");
         case TurnaroundPhase::OnFlight: return QCoreApplication::translate("Turnaround", "On flight");
+        case TurnaroundPhase::PlaceArrivalGroundEquipment: return QCoreApplication::translate("Turnaround", "Placing GPU & chocks");
         case TurnaroundPhase::WaitingEngineShutdown: return QCoreApplication::translate("Turnaround", "Waiting for engine shutdown");
         case TurnaroundPhase::RequestDeboarding: return QCoreApplication::translate("Turnaround", "Requesting deboarding");
         case TurnaroundPhase::Deboarding: return QCoreApplication::translate("Turnaround", "Deboarding");
+        case TurnaroundPhase::CabinServices: return QCoreApplication::translate("Turnaround", "Cabin services");
         case TurnaroundPhase::WaitingNewFlight: return QCoreApplication::translate("Turnaround", "Waiting for new flight");
         default: return QCoreApplication::translate("Turnaround", "Unknown");
         }
@@ -53,12 +58,27 @@ namespace
         case TurnaroundPhase::WaitingForEngines:
             return QCoreApplication::translate("Turnaround", "Confirm a good engine start with the SmartSwitch.");
         case TurnaroundPhase::WaitingEngineShutdown:
-            return QCoreApplication::translate("Turnaround", "Shut down the engines, turn off the beacon lights and set the parking brake.");
+            return QCoreApplication::translate("Turnaround", "Shut down the engines.");
+        case TurnaroundPhase::PlaceArrivalGroundEquipment:
+            return QCoreApplication::translate("Turnaround", "Set the parking brake.");
+        case TurnaroundPhase::RequestDeboarding:
+            return QCoreApplication::translate("Turnaround", "Turn off the beacon lights and set the parking brake.");
         case TurnaroundPhase::WaitingNewFlight:
             return QCoreApplication::translate("Turnaround", "Activate the SmartSwitch to start a new flight.");
         default:
             return {};
         }
+    }
+
+    QString StartLoadingLabel()
+    {
+        return QCoreApplication::translate("Turnaround", "Waiting for start loading");
+    }
+
+    QString StartLoadingTip()
+    {
+        return QCoreApplication::translate("Turnaround",
+                                           "Press START LOADING or activate the SmartSwitch to begin refueling and boarding.");
     }
 
     QString FlightPlanStatusLabel(const FlightPlanStatus status)
@@ -128,7 +148,7 @@ QString OperationsViewModel::GetAircraftName() const
 
 QString OperationsViewModel::GetStateText() const
 {
-    return PhaseLabel(snapshot_.phase);
+    return IsAwaitingStartLoading() ? StartLoadingLabel() : PhaseLabel(snapshot_.phase);
 }
 
 int OperationsViewModel::GetPhase() const
@@ -143,7 +163,17 @@ int OperationsViewModel::GetPhaseCount()
 
 QString OperationsViewModel::GetPhaseTip() const
 {
-    return PhaseTip(snapshot_.phase);
+    return IsAwaitingStartLoading() ? StartLoadingTip() : PhaseTip(snapshot_.phase);
+}
+
+bool OperationsViewModel::IsAwaitingStartLoading() const
+{
+    return snapshot_.canStartLoading;
+}
+
+int OperationsViewModel::GetDelayTicksRemaining() const
+{
+    return snapshot_.delayTicksRemaining;
 }
 
 QString OperationsViewModel::phaseLabelAt(const int index)
@@ -153,6 +183,11 @@ QString OperationsViewModel::phaseLabelAt(const int index)
         return {};
     }
     return PhaseLabel(static_cast<TurnaroundPhase>(index));
+}
+
+bool OperationsViewModel::IsInDeboardingPhase() const
+{
+    return snapshot_.phase >= TurnaroundPhase::WaitingEngineShutdown;
 }
 
 double OperationsViewModel::GetFuelProgress() const
@@ -180,14 +215,14 @@ double OperationsViewModel::GetLoadedFuelKg() const
     return snapshot_.loadedFuelKg;
 }
 
-bool OperationsViewModel::IsRefueledExternally() const
+bool OperationsViewModel::RefuelByGsx() const
 {
-    return snapshot_.refueledExternally;
+    return snapshot_.refuelByGsx;
 }
 
-bool OperationsViewModel::LoadsViaUplink() const
+bool OperationsViewModel::RefuelBySelf() const
 {
-    return snapshot_.loadsViaUplink;
+    return snapshot_.refuelBySelf;
 }
 
 bool OperationsViewModel::HasGsxProfileConflict() const
@@ -213,6 +248,11 @@ int OperationsViewModel::GetPlannedPax() const
 int OperationsViewModel::GetBoardedPax() const
 {
     return snapshot_.boardedPax;
+}
+
+bool OperationsViewModel::IsCargoAircraft() const
+{
+    return snapshot_.cargoAircraft;
 }
 
 QString OperationsViewModel::GetSimbriefStatusText() const
@@ -261,6 +301,12 @@ void OperationsViewModel::startLoading()
     Refresh();
 }
 
+void OperationsViewModel::restartFlow()
+{
+    SetCommandError(service_->RestartFlow());
+    Refresh();
+}
+
 void OperationsViewModel::reloadSimbrief()
 {
     SetCommandError(service_->ReloadSimbrief());
@@ -271,6 +317,25 @@ void OperationsViewModel::fixGsxProfile()
 {
     SetCommandError(service_->FixGsxProfile());
     Refresh();
+}
+
+bool OperationsViewModel::AreDebugToolsAvailable()
+{
+#ifndef NDEBUG
+    return true;
+#else
+    return false;
+#endif
+}
+
+void OperationsViewModel::debugSkipPhase(const int delta)
+{
+#ifndef NDEBUG
+    service_->DebugSkipPhase(delta);
+    Refresh();
+#else
+    Q_UNUSED(delta)
+#endif
 }
 
 void OperationsViewModel::OnIntegratorStateChanged()

@@ -23,8 +23,12 @@ public:
     void AttachAircraft(Aircraft* aircraft);
     void Reset();
     void ConfirmLoading() { context_.data.loadingConfirmed = true; }
+#ifndef NDEBUG
+    void DebugSkipPhase(int delta);
+#endif
 
     [[nodiscard]] TurnaroundPhase GetPhase() const { return phase_; }
+    [[nodiscard]] int GetDelayTicksRemaining() const { return ticksRemaining_; }
     [[nodiscard]] bool IsLoadingConfirmed() const { return context_.data.loadingConfirmed; }
 
 private:

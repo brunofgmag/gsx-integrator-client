@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <string>
 #include <vector>
 #include <QtCore/QObject>
 #include <QtCore/QString>
@@ -22,6 +23,7 @@
 #include "../infrastructure/gsx/GsxRemoteState.h"
 
 class Aircraft;
+struct AircraftDescriptor;
 
 class IntegratorRuntime final : public QObject
 {
@@ -42,14 +44,21 @@ public:
     [[nodiscard]] bool IsSessionPaused() const { return pauseFlags_ != 0; }
     [[nodiscard]] bool IsSessionReady();
     [[nodiscard]] TurnaroundPhase GetPhase() const { return stateMachine_.GetPhase(); }
+    [[nodiscard]] int GetDelayTicksRemaining() const { return stateMachine_.GetDelayTicksRemaining(); }
     [[nodiscard]] bool IsLoadingConfirmed() const { return stateMachine_.IsLoadingConfirmed(); }
     [[nodiscard]] QString GetAircraftName() const;
-    [[nodiscard]] bool IsAircraftRefueledExternally() const;
-    [[nodiscard]] bool IsAircraftLoadsViaUplink() const;
-    [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfileConflict_; }
+    [[nodiscard]] std::string GetAircraftProfileId() const;
+    [[nodiscard]] bool IsAircraftRefuelByGsx() const;
+    [[nodiscard]] bool IsAircraftRefuelBySelf() const;
+    [[nodiscard]] bool IsAircraftCargoVariant() const;
+    [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfile_.conflict; }
     [[nodiscard]] bool CanFixGsxProfile() const;
     bool FixGsxProfile();
     void SetAutomationEnabled(bool enabled);
+    void RestartFlow();
+#ifndef NDEBUG
+    void DebugSkipPhase(const int delta) { stateMachine_.DebugSkipPhase(delta); }
+#endif
     void ConfirmLoading();
     void ApplySettings(const AutomationSettings& settings);
     [[nodiscard]] bool ReloadSimbrief();
@@ -59,9 +68,26 @@ signals:
     void SimulatorQuit();
 
 private:
+    struct GsxProfileState
+    {
+        std::vector<std::filesystem::path> roots;
+        std::vector<std::filesystem::path> cfgs;
+        bool conflict = false;
+        bool flagsMissing = false;
+
+        void Reset()
+        {
+            roots.clear();
+            cfgs.clear();
+            conflict = false;
+            flagsMissing = false;
+        }
+    };
+
     bool IsSimOnMenu();
     void OnSimOpen(const char* appName);
     void TryConnect();
+    bool SubscribeSimEvents();
     void HandleDisconnected();
     void OnDispatchTimer();
     void OnSimRunningChanged(bool running);
@@ -71,6 +97,7 @@ private:
     void UpdateSlow();
     void MaybeAutoStart();
     void ResetSession();
+    void ClearFlightState();
     void OnFlightStart();
     void OnSessionEnd();
     void ResolveAircraft();
@@ -91,6 +118,7 @@ private:
     SimbriefClient simbriefClient_;
     SimConnectSession simConnect_;
     std::unique_ptr<Aircraft> aircraft_;
+    const AircraftDescriptor* aircraftDescriptor_ = nullptr;
 
     QTimer dispatchTimer_;
     QTimer reconnectTimer_;
@@ -99,10 +127,7 @@ private:
     SimVersion simVersion_ = SimVersion::Unknown;
     bool isSessionActive_ = false;
     unsigned pauseFlags_ = 1;
-    std::vector<std::filesystem::path> gsxProfileRoots_;
-    std::vector<std::filesystem::path> gsxProfileCfgs_;
-    bool gsxProfileConflict_ = false;
-    bool gsxProfileFlagsMissing_ = false;
+    GsxProfileState gsxProfile_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INTEGRATORRUNTIME_H

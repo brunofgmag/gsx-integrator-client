@@ -61,22 +61,30 @@ bool SimConnectSession::TransmitExternalSystemToggle(const int state) const
     return true;
 }
 
-bool SimConnectSession::SubscribeToPause(PauseFn onPause)
+template <typename Fn>
+bool SimConnectSession::SubscribeSystemEvent(Fn& target, Fn fn, const SIMCONNECT_CLIENT_EVENT_ID eventId,
+                                             const char* name)
 {
     if (!IsConnected())
     {
         return false;
     }
 
-    onPause_ = std::move(onPause);
+    target = std::move(fn);
 
-    if (FAILED(SimConnect_SubscribeToSystemEvent(hSimConnect_, kEventPauseEx1, "Pause_EX1")))
+    if (FAILED(SimConnect_SubscribeToSystemEvent(hSimConnect_, eventId, name)))
     {
-        onPause_ = nullptr;
+        target = nullptr;
+
         return false;
     }
 
     return true;
+}
+
+bool SimConnectSession::SubscribeToPause(PauseFn onPause)
+{
+    return SubscribeSystemEvent(onPause_, std::move(onPause), kEventPauseEx1, "Pause_EX1");
 }
 
 bool SimConnectSession::SubscribeToExternalSystemToggle(MenuEventFn onMenuEvent)
@@ -88,21 +96,15 @@ bool SimConnectSession::SubscribeToExternalSystemToggle(MenuEventFn onMenuEvent)
 
     onMenuEvent_ = std::move(onMenuEvent);
 
-    if (FAILED(SimConnect_MapClientEventToSimEvent(hSimConnect_,kEventMenuToggle,"EXTERNAL_SYSTEM_TOGGLE")))
+    const bool mapped =
+        SUCCEEDED(SimConnect_MapClientEventToSimEvent(hSimConnect_, kEventMenuToggle, "EXTERNAL_SYSTEM_TOGGLE"))
+        && SUCCEEDED(SimConnect_AddClientEventToNotificationGroup(hSimConnect_, kGroupMenu, kEventMenuToggle))
+        && SUCCEEDED(SimConnect_SetNotificationGroupPriority(hSimConnect_, kGroupMenu,
+                                                             SIMCONNECT_GROUP_PRIORITY_HIGHEST));
+    if (!mapped)
     {
         onMenuEvent_ = nullptr;
-        return false;
-    }
 
-    if (FAILED(SimConnect_AddClientEventToNotificationGroup(hSimConnect_, kGroupMenu, kEventMenuToggle)))
-    {
-        onMenuEvent_ = nullptr;
-        return false;
-    }
-
-    if (FAILED(SimConnect_SetNotificationGroupPriority(hSimConnect_, kGroupMenu, SIMCONNECT_GROUP_PRIORITY_HIGHEST)))
-    {
-        onMenuEvent_ = nullptr;
         return false;
     }
 
@@ -111,70 +113,23 @@ bool SimConnectSession::SubscribeToExternalSystemToggle(MenuEventFn onMenuEvent)
 
 bool SimConnectSession::SubscribeOneSecond(EventFn onOneSecond)
 {
-    if (!IsConnected())
-    {
-        return false;
-    }
-
-    onOneSecond_ = std::move(onOneSecond);
-
-    if (FAILED(SimConnect_SubscribeToSystemEvent(hSimConnect_,kEvent1Sec,"1sec")))
-    {
-        onOneSecond_ = nullptr;
-        return false;
-    }
-
-    return true;
+    return SubscribeSystemEvent(onOneSecond_, std::move(onOneSecond), kEvent1Sec, "1sec");
 }
 
 bool SimConnectSession::SubscribeFourSeconds(EventFn onFourSeconds)
 {
-    if (!IsConnected())
-    {
-        return false;
-    }
-
-    onFourSeconds_ = std::move(onFourSeconds);
-
-    if (FAILED(SimConnect_SubscribeToSystemEvent(hSimConnect_, kEvent4Sec, "4sec")))
-    {
-        onFourSeconds_ = nullptr;
-        return false;
-    }
-
-    return true;
+    return SubscribeSystemEvent(onFourSeconds_, std::move(onFourSeconds), kEvent4Sec, "4sec");
 }
 
 bool SimConnectSession::SubscribeSixHz(EventFn onSixHz)
 {
-    if (!IsConnected())
-    {
-        return false;
-    }
-
-    onSixHz_ = std::move(onSixHz);
-
-    if (FAILED(SimConnect_SubscribeToSystemEvent(hSimConnect_, kEvent6Hz, "6Hz")))
-    {
-        onSixHz_ = nullptr;
-        return false;
-    }
-
-    return true;
+    return SubscribeSystemEvent(onSixHz_, std::move(onSixHz), kEvent6Hz, "6Hz");
 }
 
 bool SimConnectSession::SubscribeSimRunning(SimRunningFn onSimRunning)
 {
-    if (!IsConnected())
+    if (!SubscribeSystemEvent(onSimRunning_, std::move(onSimRunning), kEventSimRunning, "Sim"))
     {
-        return false;
-    }
-
-    onSimRunning_ = std::move(onSimRunning);
-
-    if (FAILED(SimConnect_SubscribeToSystemEvent(hSimConnect_, kEventSimRunning, "Sim")))
-    {
-        onSimRunning_ = nullptr;
         return false;
     }
 
@@ -223,78 +178,23 @@ void SimConnectSession::HandleMessage(SIMCONNECT_RECV* pData, const DWORD cbData
     switch (pData->dwID)
     {
     case SIMCONNECT_RECV_ID_OPEN:
-        {
-            if (cbData < sizeof(SIMCONNECT_RECV_OPEN))
-            {
-                break;
-            }
+        HandleOpen(pData, cbData);
+        break;
 
-            const auto* openData = static_cast<const SIMCONNECT_RECV_OPEN*>(pData);
-            if (onOpen_)
-            {
-                onOpen_(openData->szApplicationName);
-            }
-
-            break;
-        }
     case SIMCONNECT_RECV_ID_EVENT:
-        {
-            if (cbData < sizeof(SIMCONNECT_RECV_EVENT))
-            {
-                break;
-            }
-
-            const auto* eventData = static_cast<const SIMCONNECT_RECV_EVENT*>(pData);
-            if (eventData->uEventID == kEvent1Sec && onOneSecond_)
-            {
-                onOneSecond_();
-            }
-            else if (eventData->uEventID == kEvent4Sec && onFourSeconds_)
-            {
-                onFourSeconds_();
-            }
-            else if (eventData->uEventID == kEvent6Hz && onSixHz_)
-            {
-                onSixHz_();
-            }
-            else if (eventData->uEventID == kEventSimRunning && onSimRunning_)
-            {
-                onSimRunning_(eventData->dwData >= 1);
-            }
-            else if (eventData->uEventID == kEventMenuToggle && onMenuEvent_)
-            {
-                onMenuEvent_(static_cast<int>(eventData->dwData));
-            }
-            else if (eventData->uEventID == kEventPauseEx1 && onPause_)
-            {
-                onPause_(static_cast<int>(eventData->dwData));
-            }
-            break;
-        }
+        HandleEvent(pData, cbData);
+        break;
 
     case SIMCONNECT_RECV_ID_SYSTEM_STATE:
-        {
-            if (cbData < sizeof(SIMCONNECT_RECV_SYSTEM_STATE))
-            {
-                break;
-            }
-
-            const auto* stateData = static_cast<const SIMCONNECT_RECV_SYSTEM_STATE*>(pData);
-            if (stateData->dwRequestID == kRequestSimState && onSimRunning_)
-            {
-                onSimRunning_(stateData->dwInteger >= 1);
-            }
-            break;
-        }
+        HandleSystemState(pData, cbData);
+        break;
 
     case SIMCONNECT_RECV_ID_SIMOBJECT_DATA:
+        if (varManager_)
         {
-            if (varManager_)
-            {
-                varManager_->HandleSimObjectData(static_cast<const SIMCONNECT_RECV_SIMOBJECT_DATA*>(pData));
-            }
-            break;
+            varManager_->HandleSimObjectData(static_cast<const SIMCONNECT_RECV_SIMOBJECT_DATA*>(pData));
         }
+        break;
 
     case SIMCONNECT_RECV_ID_EXCEPTION:
         {
@@ -307,13 +207,73 @@ void SimConnectSession::HandleMessage(SIMCONNECT_RECV* pData, const DWORD cbData
         }
 
     case SIMCONNECT_RECV_ID_QUIT:
-        {
-            LOG_INFO("Simulator quit notification received.");
-            quitPending_ = true;
-            break;
-        }
+        LOG_INFO("Simulator quit notification received.");
+        quitPending_ = true;
+        break;
 
     default:
         break;
+    }
+}
+
+void SimConnectSession::HandleOpen(const SIMCONNECT_RECV* pData, const DWORD cbData) const
+{
+    if (cbData < sizeof(SIMCONNECT_RECV_OPEN))
+    {
+        return;
+    }
+
+    const auto* openData = static_cast<const SIMCONNECT_RECV_OPEN*>(pData);
+    if (onOpen_)
+    {
+        onOpen_(openData->szApplicationName);
+    }
+}
+
+void SimConnectSession::HandleEvent(const SIMCONNECT_RECV* pData, const DWORD cbData) const
+{
+    if (cbData < sizeof(SIMCONNECT_RECV_EVENT))
+    {
+        return;
+    }
+
+    const auto* eventData = static_cast<const SIMCONNECT_RECV_EVENT*>(pData);
+    if (eventData->uEventID == kEvent1Sec && onOneSecond_)
+    {
+        onOneSecond_();
+    }
+    else if (eventData->uEventID == kEvent4Sec && onFourSeconds_)
+    {
+        onFourSeconds_();
+    }
+    else if (eventData->uEventID == kEvent6Hz && onSixHz_)
+    {
+        onSixHz_();
+    }
+    else if (eventData->uEventID == kEventSimRunning && onSimRunning_)
+    {
+        onSimRunning_(eventData->dwData >= 1);
+    }
+    else if (eventData->uEventID == kEventMenuToggle && onMenuEvent_)
+    {
+        onMenuEvent_(static_cast<int>(eventData->dwData));
+    }
+    else if (eventData->uEventID == kEventPauseEx1 && onPause_)
+    {
+        onPause_(static_cast<int>(eventData->dwData));
+    }
+}
+
+void SimConnectSession::HandleSystemState(const SIMCONNECT_RECV* pData, const DWORD cbData) const
+{
+    if (cbData < sizeof(SIMCONNECT_RECV_SYSTEM_STATE))
+    {
+        return;
+    }
+
+    const auto* stateData = static_cast<const SIMCONNECT_RECV_SYSTEM_STATE*>(pData);
+    if (stateData->dwRequestID == kRequestSimState && onSimRunning_)
+    {
+        onSimRunning_(stateData->dwInteger >= 1);
     }
 }

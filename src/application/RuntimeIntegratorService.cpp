@@ -3,14 +3,24 @@
 #include <algorithm>
 #include <QtCore/QCoreApplication>
 #include "IntegratorRuntime.h"
+#include "model/EffectiveSettings.h"
 #include "../domain/model/AutomationStatus.h"
 #include "../domain/model/AutomationSettings.h"
 #include "../domain/turnaround/TurnaroundPhase.h"
 
+namespace
+{
+    CommandResult OfflineFailure()
+    {
+        return CommandResult::Failure(
+            QCoreApplication::translate("Integrator", "Simulator is offline.").toStdString());
+    }
+}
+
 RuntimeIntegratorService::RuntimeIntegratorService(IntegratorRuntime* runtime, QObject* parent)
     : QObject(parent), runtime_(runtime)
 {
-    connect(runtime_, &IntegratorRuntime::Updated, this, &RuntimeIntegratorService::NotifyObservers);
+    connect(runtime_, &IntegratorRuntime::Updated, this, &RuntimeIntegratorService::OnRuntimeUpdated);
 }
 
 IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
@@ -34,8 +44,10 @@ IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
         && runtime_->Settings().simbriefPilotId > 0
         && runtime_->GetPhase() <= TurnaroundPhase::WaitingFlightPlan;
     snapshot.aircraftName = runtime_->GetAircraftName().toStdString();
-    snapshot.refueledExternally = runtime_->IsAircraftRefueledExternally();
-    snapshot.loadsViaUplink = runtime_->IsAircraftLoadsViaUplink();
+    snapshot.aircraftProfileId = runtime_->GetAircraftProfileId();
+    snapshot.refuelByGsx = runtime_->IsAircraftRefuelByGsx();
+    snapshot.refuelBySelf = runtime_->IsAircraftRefuelBySelf();
+    snapshot.cargoAircraft = runtime_->IsAircraftCargoVariant();
     snapshot.gsxProfileConflict = runtime_->HasGsxProfileConflict();
     snapshot.gsxProfileFixable = runtime_->CanFixGsxProfile();
     snapshot.phase = runtime_->GetPhase();
@@ -48,6 +60,7 @@ IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
     snapshot.plannedZfwKg = status.plannedZfwKg;
     snapshot.plannedPax = status.plannedPassengers;
     snapshot.boardedPax = status.boardedPassengers;
+    snapshot.delayTicksRemaining = runtime_->GetDelayTicksRemaining();
 
     return snapshot;
 }
@@ -56,8 +69,7 @@ CommandResult RuntimeIntegratorService::SetAutomationEnabled(const bool enabled)
 {
     if (!runtime_->IsConnected())
     {
-        return CommandResult::Failure(
-            QCoreApplication::translate("Integrator", "Simulator is offline.").toStdString());
+        return OfflineFailure();
     }
 
     runtime_->SetAutomationEnabled(enabled);
@@ -69,8 +81,7 @@ CommandResult RuntimeIntegratorService::StartLoading()
 {
     if (!runtime_->IsConnected())
     {
-        return CommandResult::Failure(
-            QCoreApplication::translate("Integrator", "Simulator is offline.").toStdString());
+        return OfflineFailure();
     }
 
     if (runtime_->GetPhase() != TurnaroundPhase::RequestFuel)
@@ -84,15 +95,32 @@ CommandResult RuntimeIntegratorService::StartLoading()
     return CommandResult::Success();
 }
 
+CommandResult RuntimeIntegratorService::RestartFlow()
+{
+    if (!runtime_->IsConnected())
+    {
+        return OfflineFailure();
+    }
+
+    runtime_->RestartFlow();
+
+    return CommandResult::Success();
+}
+
+#ifndef NDEBUG
+void RuntimeIntegratorService::DebugSkipPhase(const int delta)
+{
+    runtime_->DebugSkipPhase(delta);
+}
+#endif
+
 CommandResult RuntimeIntegratorService::ReloadSimbrief()
 {
-    const IntegratorSnapshot snapshot = GetSnapshot();
-    if (!snapshot.connected)
+    if (!runtime_->IsConnected())
     {
-        return CommandResult::Failure(
-            QCoreApplication::translate("Integrator", "Simulator is offline.").toStdString());
+        return OfflineFailure();
     }
-    if (!snapshot.sessionActive)
+    if (!runtime_->IsSessionActive())
     {
         return CommandResult::Failure(
             QCoreApplication::translate("Integrator", "Wait for an active flight session.").toStdString());
@@ -100,7 +128,9 @@ CommandResult RuntimeIntegratorService::ReloadSimbrief()
     if (runtime_->GetPhase() > TurnaroundPhase::WaitingFlightPlan)
     {
         return CommandResult::Failure(
-            QCoreApplication::translate("Integrator", "The flight plan can no longer be reloaded during the turnaround.").toStdString());
+            QCoreApplication::translate("Integrator",
+                                        "The flight plan can no longer be reloaded during the turnaround.").
+            toStdString());
     }
     if (runtime_->Settings().simbriefPilotId <= 0)
     {
@@ -135,14 +165,23 @@ CommandResult RuntimeIntegratorService::FixGsxProfile()
 
 void RuntimeIntegratorService::ApplySettings(const AppSettings& settings)
 {
-    AutomationSettings automationSettings;
-    automationSettings.simbriefPilotId = settings.simbriefPilotId;
-    automationSettings.fuelRateKgs = settings.fuelRateKgs;
-    automationSettings.autoSelectGsxChoice = settings.autoSelectGsxChoice;
-    automationSettings.autoStartFlow = settings.autoStartFlow;
-    automationSettings.autoStartLoading = settings.autoStartLoading;
+    appSettings_ = settings;
+    PushEffectiveSettings();
+}
 
-    runtime_->ApplySettings(automationSettings);
+void RuntimeIntegratorService::PushEffectiveSettings()
+{
+    appliedProfileId_ = runtime_->GetAircraftProfileId();
+    runtime_->ApplySettings(ResolveAutomationSettings(appSettings_, appliedProfileId_));
+}
+
+void RuntimeIntegratorService::OnRuntimeUpdated()
+{
+    if (runtime_->GetAircraftProfileId() != appliedProfileId_)
+    {
+        PushEffectiveSettings();
+    }
+    NotifyObservers();
 }
 
 void RuntimeIntegratorService::AddObserver(IntegratorServiceObserver* observer)

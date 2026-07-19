@@ -12,6 +12,16 @@ enum class SimVersion
     Msfs2024,
 };
 
+inline const char* SimVersionLabel(const SimVersion version)
+{
+    switch (version)
+    {
+    case SimVersion::Msfs2020: return "MSFS 2020";
+    case SimVersion::Msfs2024: return "MSFS 2024";
+    default: return "Unknown";
+    }
+}
+
 namespace SimVersionDetect
 {
     inline constexpr std::string_view kAppName2020 = "KittyHawk";

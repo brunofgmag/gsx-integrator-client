@@ -11,6 +11,8 @@ private slots:
     static void holdsWhenRepositioningFails();
     static void advancesWhenRepositioningCompletes();
     static void advancesAfterGiveUpWhenRepositioningNeverHappens();
+    static void skipsRepositioningWhenSettingEnabled();
+    static void completesRepositionWhenSkipEnabledMidRun();
 };
 
 void RepositionAircraftStateTest::holdsWhenRepositioningFails()
@@ -44,7 +46,7 @@ void RepositionAircraftStateTest::advancesWhenRepositioningCompletes()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::CallStairsOrJetway);
+    QCOMPARE(transition->next, TurnaroundPhase::PlaceGroundEquipment);
     QCOMPARE(f.menuGateway.repositionCalls, 1);
     QVERIFY(f.ctx.data.repositionRequested);
     QVERIFY(f.ctx.data.repositionCompleted);
@@ -65,8 +67,45 @@ void RepositionAircraftStateTest::advancesAfterGiveUpWhenRepositioningNeverHappe
     }
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::CallStairsOrJetway);
+    QCOMPARE(transition->next, TurnaroundPhase::PlaceGroundEquipment);
     QVERIFY(f.ctx.data.repositionCompleted);
+}
+
+void RepositionAircraftStateTest::skipsRepositioningWhenSettingEnabled()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.settings.skipReposition = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::PlaceGroundEquipment);
+    QCOMPARE(f.menuGateway.repositionCalls, 0);
+}
+
+void RepositionAircraftStateTest::completesRepositionWhenSkipEnabledMidRun()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.gsxService.repositioning = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(f.ctx.data.repositionRequested);
+
+    f.settings.skipReposition = true;
+    f.gsxService.repositioning = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(f.ctx.data.repositionCompleted);
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::PlaceGroundEquipment);
+    QCOMPARE(f.menuGateway.repositionCalls, 1);
 }
 
 QTEST_APPLESS_MAIN(RepositionAircraftStateTest)

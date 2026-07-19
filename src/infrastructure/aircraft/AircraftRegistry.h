@@ -39,6 +39,9 @@ struct AircraftDescriptor
     const char* name;
     std::vector<MatchRule> rules;
     AircraftCreator create;
+    const char* id = "";
+    const char* shortCode = "";
+    RefuelBy refuelBy = RefuelBy::Gsx;
 };
 
 std::vector<const AircraftDescriptor*>& AircraftRegistry();

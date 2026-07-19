@@ -18,6 +18,7 @@ public:
 
     void OnTick() override;
     void OnLoadingStarted() override;
+    void CloseAllDoors() override;
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
@@ -30,12 +31,10 @@ public:
     [[nodiscard]] double GetCurrentZfwKg() const override;
     void SetCurrentZfwKg(double zfwKg) override;
 
-    [[nodiscard]] bool SupportsProgressiveFuel() const override { return false; }
-    [[nodiscard]] bool SupportsProgressiveLoad() const override { return true; }
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
-    [[nodiscard]] bool IsRefueledExternally() const override { return false; }
-    [[nodiscard]] bool LoadsViaUplink() const override { return true; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return true; }
+    [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Self; }
+    [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Self; }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
@@ -47,10 +46,9 @@ public:
 private:
     [[nodiscard]] bool IsBeaconOn() const;
     [[nodiscard]] bool IsExternalPowerOn() const;
-    void UpdateCargoDoors();
-    void DriveCargoDoor(const char* loaderStateLVar, const char* doorModeLVar, double& lastDoorTarget) const;
-    void UpdatePaxDoors();
-    void DrivePaxDoor(const char* stairsStateLVar, const char* doorModeLVar, double& lastDoorTarget) const;
+    void AdvanceUplink();
+    void UpdateDoors();
+    void DriveDoor(bool shouldOpen, const char* doorModeLVar, double& lastDoorTarget) const;
 
     VariableGateway* variableGateway_;
     AutomationStatus* status_;
@@ -63,6 +61,8 @@ private:
     double fwdPaxDoorTarget_ = -1.0;
     double midPaxDoorTarget_ = -1.0;
     double aftPaxDoorTarget_ = -1.0;
+    double fwdCateringDoorTarget_ = -1.0;
+    double aftCateringDoorTarget_ = -1.0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H
