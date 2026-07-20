@@ -13,6 +13,7 @@ private slots:
     static void waitsWhileEnginesRunning();
     static void waitsWhileParkingBrakeNotSet();
     static void placesChocksAndGpuWhenParked();
+    static void commandsAircraftGpuWhenControlSupported();
     static void advancesWithoutToggleWhenGpuAlreadyConnected();
     static void waitsWhileGpuStatusUnknown();
     static void holdsToggleWhileMenuUnsettled();
@@ -106,6 +107,27 @@ void PlaceArrivalGroundEquipmentStateTest::placesChocksAndGpuWhenParked()
     QCOMPARE(f.aircraft.setChocksCalls, 1);
     QVERIFY(f.aircraft.chocksPlaced);
     QVERIFY(f.ctx.data.arrivalChocksPlaced);
+}
+
+void PlaceArrivalGroundEquipmentStateTest::commandsAircraftGpuWhenControlSupported()
+{
+    TurnaroundStateFixture f;
+    PlaceArrivalGroundEquipmentState state;
+
+    f.settings.callGpuOnArrival = true;
+    f.aircraft.engineRunning = false;
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.supportsGroundPowerControl = true;
+    f.aircraft.groundPowerStatus = GroundPowerStatus::Disconnected;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestDeboarding);
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 1);
+    QVERIFY(f.aircraft.groundPowerOn);
+    QVERIFY(f.ctx.data.arrivalGpuRequested);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
 }
 
 void PlaceArrivalGroundEquipmentStateTest::advancesWithoutToggleWhenGpuAlreadyConnected()

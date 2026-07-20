@@ -20,6 +20,7 @@ public:
     virtual void OnSlowTick() {}
     virtual void OnLoadingStarted() = 0;
 
+    [[nodiscard]] virtual bool RequiresEfbFlightPlan() const { return false; }
     [[nodiscard]] virtual bool IsFlightPlanLoaded() const = 0;
     [[nodiscard]] virtual double GetPlannedFuelKg() const = 0;
     [[nodiscard]] virtual double GetPlannedZfwKg() const = 0;
@@ -42,6 +43,8 @@ public:
     [[nodiscard]] virtual std::optional<GroundPowerStatus> GetGroundPowerStatus() const { return std::nullopt; }
     [[nodiscard]] virtual bool SupportsChocksControl() const { return false; }
     virtual void SetChocks(bool) {}
+    [[nodiscard]] virtual bool SupportsGroundPowerControl() const { return false; }
+    virtual void SetGroundPower(bool) {}
     virtual void CloseAllDoors() {}
     [[nodiscard]] virtual bool IsReadyToPush() const = 0 ;
     [[nodiscard]] virtual bool IsReadyToDeboard() const = 0;

@@ -218,7 +218,7 @@ ColumnLayout {
                 }
                 KeyValueRow {
                     label: qsTr("Planned")
-                    value: root.formatKg(root.integratorVm.plannedFuelKg)
+                    value: root.formatKg(root.integratorVm.targetFuelKg)
                 }
                 KeyValueRow {
                     label: qsTr("Rate")
@@ -245,13 +245,13 @@ ColumnLayout {
                     visible: !root.integratorVm.cargoAircraft
                     label: qsTr("Pax")
                     value: (root.deboarding
-                            ? Math.round(paxCard.paxProgress / 100 * root.integratorVm.plannedPax)
+                            ? Math.round(paxCard.paxProgress / 100 * root.integratorVm.targetPax)
                             : root.integratorVm.boardedPax)
-                           + " / " + root.integratorVm.plannedPax
+                           + " / " + root.integratorVm.targetPax
                 }
                 KeyValueRow {
                     label: qsTr("Planned ZFW")
-                    value: root.formatKg(root.integratorVm.plannedZfwKg)
+                    value: root.formatKg(root.integratorVm.targetZfwKg)
                 }
             }
 

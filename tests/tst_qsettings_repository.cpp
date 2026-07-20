@@ -46,7 +46,7 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     const AppSettings loaded = repository_.Load();
 
     QCOMPARE(loaded.simbriefPilotId, 0);
-    QCOMPARE(loaded.fuelRateKgs, 60.0);
+    QCOMPARE(loaded.fuelRateKgs, AutomationSettings::kDefaultFuelRateKgs);
     QCOMPARE(loaded.autoSelectGsxChoice, true);
     QCOMPARE(loaded.autoDeice, false);
     QCOMPARE(loaded.crewBoarding, 3);

@@ -128,7 +128,7 @@ Item {
                 ActionButton {
                     small: true
                     visible: root.updState === 3
-                    text: qsTr("Download && restart")
+                    text: qsTr("Download & restart")
                     onClicked: root.updateVm.downloadAndInstall()
                 }
 

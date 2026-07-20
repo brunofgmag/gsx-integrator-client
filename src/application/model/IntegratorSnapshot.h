@@ -21,6 +21,7 @@ struct IntegratorSnapshot
     bool gsxProfileConflict = false;
     bool gsxProfileFixable = false;
     bool cargoAircraft = false;
+    bool efbFlightPlan = false;
 
     std::string aircraftName;
     std::string aircraftProfileId;
@@ -35,6 +36,9 @@ struct IntegratorSnapshot
     double plannedZfwKg = 0.0;
     int plannedPax = 0;
     int boardedPax = 0;
+    double targetFuelKg = 0.0;
+    double targetZfwKg = 0.0;
+    int targetPax = 0;
     int delayTicksRemaining = 0;
 };
 
@@ -59,6 +63,7 @@ inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapsho
         lhs.gsxProfileConflict == rhs.gsxProfileConflict &&
         lhs.gsxProfileFixable == rhs.gsxProfileFixable &&
         lhs.cargoAircraft == rhs.cargoAircraft &&
+        lhs.efbFlightPlan == rhs.efbFlightPlan &&
         lhs.aircraftName == rhs.aircraftName &&
         lhs.aircraftProfileId == rhs.aircraftProfileId &&
         lhs.phase == rhs.phase &&
@@ -71,6 +76,9 @@ inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapsho
         nearlyEqual(lhs.plannedZfwKg, rhs.plannedZfwKg) &&
         lhs.plannedPax == rhs.plannedPax &&
         lhs.boardedPax == rhs.boardedPax &&
+        nearlyEqual(lhs.targetFuelKg, rhs.targetFuelKg) &&
+        nearlyEqual(lhs.targetZfwKg, rhs.targetZfwKg) &&
+        lhs.targetPax == rhs.targetPax &&
         lhs.delayTicksRemaining == rhs.delayTicksRemaining;
 }
 

@@ -14,6 +14,7 @@ private slots:
     static void boardCargoProgressively();
     static void snapsToPlannedWhenGsxCountersFallShort();
     static void rebaselinesInitialZfwWhenCapturedBeforeSimData();
+    static void clampsRebaselineToPlannedZfw();
 };
 
 void BoardingStateTest::holdsUntilGsxActive()
@@ -157,6 +158,23 @@ void BoardingStateTest::rebaselinesInitialZfwWhenCapturedBeforeSimData()
 
     QCOMPARE(f.ctx.data.initialZfwKg, 45000.0);
     QCOMPARE(f.aircraft.currentZfwKg, 55000.0);
+}
+
+void BoardingStateTest::clampsRebaselineToPlannedZfw()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    f.aircraft.boardMethod = BoardBy::Client;
+    f.aircraft.emptyZfwKg = 42000.0;
+    f.ctx.data.initialZfwKg = 0.0;
+    f.ctx.data.plannedZfwKg = 20000.0;
+    f.ctx.data.plannedPassengers = 100;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.ctx.data.initialZfwKg, 20000.0);
 }
 
 QTEST_APPLESS_MAIN(BoardingStateTest)

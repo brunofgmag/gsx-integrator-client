@@ -58,14 +58,26 @@ namespace
     constexpr double kDoorOpen = 2.0;
     constexpr double kDoorClosed = 0.0;
 
-    constexpr std::array kAllDoorModeLVars = {
-        kPaxDoorMode1LLVar, kPaxDoorMode2LLVar, kPaxDoorMode3LLVar, kPaxDoorMode4LLVar,
-        kPaxDoorMode1RLVar, kPaxDoorMode2RLVar, kPaxDoorMode3RLVar, kPaxDoorMode4RLVar,
-        kCargoDoorModeFwdLVar, kCargoDoorModeAftLVar
-    };
-
-    constexpr double kJetwayDockedValue = 5.0;
-    constexpr double kJetwayUnavailableValue = 2.0;
+    const char* DoorModeLVar(const GsxDoor door)
+    {
+        switch (door)
+        {
+        case GsxDoor::FwdPax:
+            return kPaxDoorMode1LLVar;
+        case GsxDoor::MidPax:
+            return kPaxDoorMode2LLVar;
+        case GsxDoor::AftPax:
+            return kPaxDoorMode4LLVar;
+        case GsxDoor::FwdCatering:
+            return kPaxDoorMode1RLVar;
+        case GsxDoor::AftCatering:
+            return kPaxDoorMode4RLVar;
+        case GsxDoor::FwdCargo:
+            return kCargoDoorModeFwdLVar;
+        default:
+            return kCargoDoorModeAftLVar;
+        }
+    }
 
     bool IsExternalPowerFeeding(VariableGateway* gateway,
                                 const char* pbLVar,
@@ -81,7 +93,8 @@ namespace
 TolissA340::TolissA340(VariableGateway* variableGateway, AutomationStatus* status, const bool cargoVariant)
     : variableGateway_(variableGateway),
       status_(status),
-      cargoVariant_(cargoVariant)
+      cargoVariant_(cargoVariant),
+      doors_(variableGateway)
 {
     variableGateway_->SetFastRefresh(std::string("L:") + kSmartSwitchLVar);
 
@@ -141,69 +154,24 @@ void TolissA340::OnLoadingStarted()
 
 void TolissA340::CloseAllDoors()
 {
-    for (const auto* doorModeLVar : kAllDoorModeLVars)
+    doors_.CloseAll([this](const GsxDoor door, bool)
     {
-        variableGateway_->SetLVar(doorModeLVar, kDoorClosed);
-    }
+        variableGateway_->SetLVar(DoorModeLVar(door), kDoorClosed);
+    });
 
-    fwdCargoDoorTarget_ = kDoorClosed;
-    aftCargoDoorTarget_ = kDoorClosed;
-    fwdPaxDoorTarget_ = kDoorClosed;
-    midPaxDoorTarget_ = kDoorClosed;
-    aftPaxDoorTarget_ = kDoorClosed;
-    fwdCateringDoorTarget_ = kDoorClosed;
-    aftCateringDoorTarget_ = kDoorClosed;
+    variableGateway_->SetLVar(kPaxDoorMode3LLVar, kDoorClosed);
+    variableGateway_->SetLVar(kPaxDoorMode2RLVar, kDoorClosed);
+    variableGateway_->SetLVar(kPaxDoorMode3RLVar, kDoorClosed);
 
     LOG_INFO("All doors commanded closed: door control is now manual");
 }
 
 void TolissA340::UpdateDoors()
 {
-    if (variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
+    doors_.Sync([this](const GsxDoor door, const bool open)
     {
-        return;
-    }
-
-    const auto vehicleState = [this](const char* lvar)
-    {
-        return variableGateway_->GetLVar(lvar, 0.0);
-    };
-
-    const bool jetwayDocked =
-        variableGateway_->GetLVar(gsx::lvars::kJetway, kJetwayUnavailableValue) == kJetwayDockedValue;
-
-    DriveDoor(gsx::states::IsLoaderPresent(vehicleState(gsx::lvars::kBaggageLoaderFrontState)),
-              kCargoDoorModeFwdLVar, fwdCargoDoorTarget_);
-    DriveDoor(gsx::states::IsLoaderPresent(vehicleState(gsx::lvars::kBaggageLoaderRearState)),
-              kCargoDoorModeAftLVar, aftCargoDoorTarget_);
-    DriveDoor(jetwayDocked
-                  || vehicleState(gsx::lvars::kPassengerStairsFrontState) == gsx::states::kStairsFinalPosition,
-              kPaxDoorMode1LLVar, fwdPaxDoorTarget_);
-    DriveDoor(vehicleState(gsx::lvars::kPassengerStairsMiddleState) == gsx::states::kStairsFinalPosition,
-              kPaxDoorMode2LLVar, midPaxDoorTarget_);
-    DriveDoor(vehicleState(gsx::lvars::kPassengerStairsRearState) == gsx::states::kStairsFinalPosition,
-              kPaxDoorMode4LLVar, aftPaxDoorTarget_);
-    DriveDoor(gsx::states::IsCateringAtDoor(vehicleState(gsx::lvars::kCateringFrontState)),
-              kPaxDoorMode1RLVar, fwdCateringDoorTarget_);
-    DriveDoor(gsx::states::IsCateringAtDoor(vehicleState(gsx::lvars::kCateringRearState)),
-              kPaxDoorMode4RLVar, aftCateringDoorTarget_);
-}
-
-void TolissA340::DriveDoor(const bool shouldOpen, const char* doorModeLVar, double& lastDoorTarget) const
-{
-    if (shouldOpen)
-    {
-        if (lastDoorTarget != kDoorOpen)
-        {
-            variableGateway_->SetLVar(doorModeLVar, kDoorOpen);
-            lastDoorTarget = kDoorOpen;
-        }
-    }
-    else if (lastDoorTarget == kDoorOpen)
-    {
-        variableGateway_->SetLVar(doorModeLVar, kDoorClosed);
-        lastDoorTarget = kDoorClosed;
-    }
+        variableGateway_->SetLVar(DoorModeLVar(door), open ? kDoorOpen : kDoorClosed);
+    });
 }
 
 bool TolissA340::IsFlightPlanLoaded() const

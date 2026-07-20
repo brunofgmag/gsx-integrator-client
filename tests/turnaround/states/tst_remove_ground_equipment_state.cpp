@@ -16,6 +16,8 @@ private slots:
     static void dismissesGpuStillEnRoute();
     static void dismissesWhenAircraftReportsConnected();
     static void skipsWhenAircraftReportsDisconnected();
+    static void commandsAircraftGpuOffWhenControlSupported();
+    static void timesOutAircraftGpuDismissWhenStillConnected();
     static void holdsDismissWhileMenuUnsettled();
     static void runsWhenOnlyArrivalOptionEnabled();
     static void removesChocksWhenSupported();
@@ -162,6 +164,51 @@ void RemoveGroundEquipmentStateTest::skipsWhenAircraftReportsDisconnected()
     f.aircraft.groundPowerStatus = GroundPowerStatus::Disconnected;
 
     const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+}
+
+void RemoveGroundEquipmentStateTest::commandsAircraftGpuOffWhenControlSupported()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.aircraft.supportsGroundPowerControl = true;
+    f.aircraft.groundPowerStatus = GroundPowerStatus::Connected;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 1);
+    QVERIFY(!f.aircraft.groundPowerOn);
+    QVERIFY(f.ctx.data.gpuDismissRequested);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+
+    f.aircraft.groundPowerStatus = GroundPowerStatus::Disconnected;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 1);
+}
+
+void RemoveGroundEquipmentStateTest::timesOutAircraftGpuDismissWhenStillConnected()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.aircraft.supportsGroundPowerControl = true;
+    f.aircraft.groundPowerStatus = GroundPowerStatus::Connected;
+
+    std::optional<TurnaroundTransition> transition;
+    for (int tick = 0; tick < 60 && !transition; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        transition = state.Evaluate(f.ctx);
+    }
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);

@@ -430,6 +430,11 @@ bool IntegratorRuntime::IsAircraftCargoVariant() const
     return aircraft_ && aircraft_->IsCargoVariant();
 }
 
+bool IntegratorRuntime::AircraftRequiresEfbFlightPlan() const
+{
+    return aircraft_ && aircraft_->RequiresEfbFlightPlan();
+}
+
 void IntegratorRuntime::SetAutomationEnabled(const bool enabled)
 {
     if (status_.enabled == enabled)

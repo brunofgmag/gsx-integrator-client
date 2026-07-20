@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H
 
+#include "../gsx/GsxDoorSync.h"
 #include "../../domain/ports/Aircraft.h"
 
 class VariableGateway;
@@ -48,21 +49,14 @@ private:
     [[nodiscard]] bool IsExternalPowerOn() const;
     void AdvanceUplink();
     void UpdateDoors();
-    void DriveDoor(bool shouldOpen, const char* doorModeLVar, double& lastDoorTarget) const;
 
     VariableGateway* variableGateway_;
     AutomationStatus* status_;
     bool cargoVariant_;
+    GsxDoorSync doors_;
     bool uplinkArmed_ = false;
     int uplinkStep_ = -1;
     bool smartSwitchResetPending_ = false;
-    double fwdCargoDoorTarget_ = -1.0;
-    double aftCargoDoorTarget_ = -1.0;
-    double fwdPaxDoorTarget_ = -1.0;
-    double midPaxDoorTarget_ = -1.0;
-    double aftPaxDoorTarget_ = -1.0;
-    double fwdCateringDoorTarget_ = -1.0;
-    double aftCateringDoorTarget_ = -1.0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H
