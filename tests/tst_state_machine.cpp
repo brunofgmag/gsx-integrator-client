@@ -340,6 +340,7 @@ private slots:
     static void waitsForBoardingTransitionDelay();
     static void completesReachableWorkflowAndReturnsToStart();
     static void publishesCurrentTankFuelBeforeRefuel();
+    static void publishesLoadingTargetsAfterFlightPlanCapture();
     static void debugSkipPhaseClampsToEnumRange();
 };
 
@@ -357,6 +358,17 @@ void TurnaroundStateMachineTest::publishesCurrentTankFuelBeforeRefuel()
     workflow.machine.Tick();
 
     QCOMPARE(workflow.f.status.loadedFuelKg, 5100.0);
+}
+
+void TurnaroundStateMachineTest::publishesLoadingTargetsAfterFlightPlanCapture()
+{
+    TurnaroundWorkflow workflow;
+    workflow.AttachAircraft();
+    workflow.LoadFlightPlan();
+
+    QCOMPARE(workflow.f.status.targetFuelKg, 12000.0);
+    QCOMPARE(workflow.f.status.targetZfwKg, 180000.0);
+    QCOMPARE(workflow.f.status.targetPassengers, 210);
 }
 
 void TurnaroundStateMachineTest::startsInWaitingSupportedAircraft()

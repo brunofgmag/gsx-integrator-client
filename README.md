@@ -29,20 +29,22 @@ This is a work in progress, currently in a testing phase. Expect bugs, and expec
 | TFDi Design MD-11 (passenger and freighter) | Any | Client (at once)      | Client (at once)      | INT/RAD switch | Chocks + GPU | Beta |
 | iFly 737 MAX 8                              | SP1 | GSX (progressive)     | Client (progressive)  | Push-to-talk switch | GPU only | Supported |
 | Toliss A340-600                             | Any | MCDU uplink (at once) | MCDU uplink (at once) | INT/RAD switch | GPU only (visual) | Beta |
+| Fenix A319 / A320 / A321                    | Any | Client (progressive)  | Client (progressive)  | INT/RAD switch | Chocks + GPU | Beta |
 
-Every aircraft gets the same progress bars during refueling and boarding. The Fuel and Payload columns say who actually moves the numbers behind them. On the iFly, the GSX truck pumps the native tanks at its own pace, so the rate in the fuel card reads Auto and the fuel rate setting has no effect on it. If the pump feels slow, GSX has a Fuel Time Acceleration option of its own. The iFly's payload is written by the client as passengers board. The MD-11 and the A340 load themselves: the client hands the planned figures to the MD-11's EFB or triggers the A340's SimBrief uplink through the MCDU, and the aircraft applies fuel and payload on its own (at once) while the bars follow GSX's fuel counter and boarding progress.
+Every aircraft gets the same progress bars during refueling and boarding. The Fuel and Payload columns say who actually moves the numbers behind them. On the iFly, the GSX truck pumps the native tanks at its own pace, so the rate in the fuel card reads Auto and the fuel rate setting has no effect on it. If the pump feels slow, GSX has a Fuel Time Acceleration option of its own. The iFly's payload is written by the client as passengers board. The MD-11 and the A340 load themselves: the client hands the planned figures to the MD-11's EFB or triggers the A340's SimBrief uplink through the MCDU, and the aircraft applies fuel and payload on its own (at once) while the bars follow GSX's fuel counter and boarding progress. The Fenix is the first aircraft where the client drives both sides progressively: fuel goes into the tanks at the rate set in the fuel card while the GSX hose is connected, and seats and cargo holds fill through the Fenix EFB interface as GSX boards, so the numbers on the EFB and ECAM climb in real time.
 
 The iFly needs SP1 or newer because earlier versions lack the built-in GSX integration the client depends on.
 
-The MD-11 and A340 are marked Beta because their loading paths are workarounds because the aircraft does not support external loading.
+The MD-11 and A340 are marked Beta because their loading paths are workarounds for aircraft that do not accept external loading. The Fenix is marked Beta because the EFB interface the client uses to talk to it is undocumented.
 
-The Chocks & GPU column tells you what the "Call GPU & chocks" settings do on each aircraft. When they are on, the client asks GSX for a ground power unit at the gate (and again after landing, if enabled) and sends it away before pushback. Chocks + GPU means the client also places and removes the aircraft's own chocks, which needs the aircraft to let outside software set them. GPU only means the client leaves the chocks alone and just handles the power unit. On the A340 even that is cosmetic: the GSX unit parks beside the aircraft but does not feed it power, so start the GPU from the Toliss EFB or use the APU, as the setup section below explains.
+The Chocks & GPU column tells you what the "Call GPU & chocks" settings do on each aircraft. When they are on, the client asks GSX for a ground power unit at the gate (and again after landing, if enabled) and sends it away before pushback. Chocks + GPU means the client also places and removes the aircraft's own chocks, which needs the aircraft to let outside software set them. GPU only means the client leaves the chocks alone and just handles the power unit. The Fenix brings its own GPU, so the client drives that one through the EFB instead of calling the GSX truck. On the A340 the GSX unit is cosmetic: it parks beside the aircraft but does not feed it power, so start the GPU from the Toliss EFB or use the APU, as the setup section below explains.
 
 The smart switch is the cockpit control you flip to tell the client "go ahead". It works at three moments: at "Requesting fuel" with automatic loading turned off, where it does the same thing as the Start Loading button; during pushback, to confirm the engines started fine; and after a finished turnaround, to start the next one. Where each one is:
 
 - TFDi MD-11: the INT/RAD switch on the captain's audio control panel, center pedestal.
 - iFly 737 MAX 8: the R/T-I/C push-to-talk switch on the captain's audio control panel, lower left corner of the pedestal. Flick it to either side and let go.
 - Toliss A340-600: the INT/RAD switch on the captain's audio control panel, center pedestal. Flick it to either side; RAD springs back on its own and INT gets flipped back to the middle by the client.
+- Fenix A319/A320/A321: the INT/RAD switch on the captain's audio control panel, center pedestal. Flip it down to INT and the client puts it back in the middle.
 
 More aircraft will be added over time, and the project is structured so new ones can be added without touching the rest of the app. If you fly something else, the client will connect but will not automate anything.
 
@@ -76,6 +78,7 @@ A few tips:
 
 - Let the client drive the GSX menu. If you click through GSX menus manually mid-turnaround, the two of you will fight over it.
 - Planned fuel and ZFW come from your Simbrief OFP, so dispatch before you board, not after.
+- On the Fenix, import your SimBrief plan on the EFB. The client reads the fuel and load targets from there, so the turnaround waits until the plan is in.
 - If nothing happens after you load in, check that you are flying one of the supported aircraft and that GSX itself is running normally.
 
 ## Problems and feedback

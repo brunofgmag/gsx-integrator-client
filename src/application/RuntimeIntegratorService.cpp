@@ -48,6 +48,7 @@ IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
     snapshot.refuelByGsx = runtime_->IsAircraftRefuelByGsx();
     snapshot.refuelBySelf = runtime_->IsAircraftRefuelBySelf();
     snapshot.cargoAircraft = runtime_->IsAircraftCargoVariant();
+    snapshot.efbFlightPlan = runtime_->AircraftRequiresEfbFlightPlan();
     snapshot.gsxProfileConflict = runtime_->HasGsxProfileConflict();
     snapshot.gsxProfileFixable = runtime_->CanFixGsxProfile();
     snapshot.phase = runtime_->GetPhase();
@@ -60,6 +61,9 @@ IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
     snapshot.plannedZfwKg = status.plannedZfwKg;
     snapshot.plannedPax = status.plannedPassengers;
     snapshot.boardedPax = status.boardedPassengers;
+    snapshot.targetFuelKg = status.targetFuelKg;
+    snapshot.targetZfwKg = status.targetZfwKg;
+    snapshot.targetPax = status.targetPassengers;
     snapshot.delayTicksRemaining = runtime_->GetDelayTicksRemaining();
 
     return snapshot;

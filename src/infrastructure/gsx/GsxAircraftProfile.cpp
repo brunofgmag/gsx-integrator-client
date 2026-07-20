@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
+#include "../aircraft/FenixA32x.h"
 #include "../aircraft/TolissA340.h"
 #include "../aircraft/TfdiMd11.h"
 
@@ -121,6 +122,13 @@ std::vector<std::filesystem::path> GsxAircraftProfile::ProfileRootsFor(const std
         return {airplanes / "tfdi_design_md-11"};
     }
 
+    if (aircraftName == FenixA32x::kNameA319
+        || aircraftName == FenixA32x::kNameA320
+        || aircraftName == FenixA32x::kNameA321)
+    {
+        return {airplanes / "FNX_32X"};
+    }
+
     return {};
 }
 
@@ -129,8 +137,7 @@ bool GsxAircraftProfile::FlagsMissingProfile(const std::string& aircraftName)
     return aircraftName == TolissA340::kName;
 }
 
-std::vector<std::filesystem::path> GsxAircraftProfile::FindCfgs(
-    const std::vector<std::filesystem::path>& roots)
+std::vector<std::filesystem::path> GsxAircraftProfile::FindCfgs(const std::vector<std::filesystem::path>& roots)
 {
     std::vector<std::filesystem::path> cfgs;
     for (const auto& root : roots)

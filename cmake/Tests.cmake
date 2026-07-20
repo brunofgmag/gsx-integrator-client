@@ -274,7 +274,44 @@ gsxi_add_qt_test(gsxi-toliss-a340-tests toliss-a340
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/TolissA340.cpp
         src/infrastructure/aircraft/TolissA340.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
         src/domain/model/AutomationStatus.h)
+
+gsxi_add_qt_test(gsxi-fenix-efb-client-tests fenix-efb-client
+        tests/tst_fenix_efb_client.cpp
+        src/infrastructure/fenix/FenixEfbClient.cpp
+        src/infrastructure/fenix/FenixEfbClient.h
+        src/infrastructure/fenix/FenixEfbGateway.h)
+target_link_libraries(gsxi-fenix-efb-client-tests PRIVATE Qt6::Network)
+
+add_custom_command(TARGET gsxi-fenix-efb-client-tests POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "$<TARGET_FILE:Qt6::Network>"
+        "$<TARGET_FILE_DIR:gsxi-fenix-efb-client-tests>"
+        VERBATIM)
+
+gsxi_add_qt_test(gsxi-fenix-a32x-tests fenix-a32x
+        tests/TestDoubles.h
+        tests/tst_fenix_a32x.cpp
+        src/infrastructure/aircraft/AircraftIdentity.h
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/FenixA32x.cpp
+        src/infrastructure/aircraft/FenixA32x.h
+        src/infrastructure/fenix/FenixEfbClient.cpp
+        src/infrastructure/fenix/FenixEfbClient.h
+        src/infrastructure/fenix/FenixEfbGateway.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
+        src/domain/model/AutomationStatus.h)
+target_link_libraries(gsxi-fenix-a32x-tests PRIVATE Qt6::Network)
+
+add_custom_command(TARGET gsxi-fenix-a32x-tests POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "$<TARGET_FILE:Qt6::Network>"
+        "$<TARGET_FILE_DIR:gsxi-fenix-a32x-tests>"
+        VERBATIM)
 
 gsxi_add_qt_test(gsxi-aircraft-matching-tests aircraft-matching
         tests/tst_aircraft_matching.cpp
@@ -290,14 +327,28 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/FenixA32x.cpp
+        src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/aircraft/TfdiMd11.cpp
         src/infrastructure/aircraft/TfdiMd11.h
         src/infrastructure/aircraft/TolissA340.cpp
         src/infrastructure/aircraft/TolissA340.h
+        src/infrastructure/fenix/FenixEfbClient.cpp
+        src/infrastructure/fenix/FenixEfbClient.h
+        src/infrastructure/fenix/FenixEfbGateway.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
         src/domain/model/AutomationStatus.h
         src/domain/support/Weight.h)
+target_link_libraries(gsxi-aircraft-detection-tests PRIVATE Qt6::Network)
+
+add_custom_command(TARGET gsxi-aircraft-detection-tests POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "$<TARGET_FILE:Qt6::Network>"
+        "$<TARGET_FILE_DIR:gsxi-aircraft-detection-tests>"
+        VERBATIM)
 
 gsxi_add_qt_test(gsxi-github-release-parser-tests github-release-parser
         tests/tst_github_release_parser.cpp
@@ -350,6 +401,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/AircraftFactory.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/FenixA32x.cpp
+        src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/aircraft/TfdiMd11.cpp
@@ -358,8 +411,13 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/TolissA340.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
+        src/infrastructure/fenix/FenixEfbClient.cpp
+        src/infrastructure/fenix/FenixEfbClient.h
+        src/infrastructure/fenix/FenixEfbGateway.h
         src/infrastructure/gsx/GsxAircraftProfile.cpp
         src/infrastructure/gsx/GsxAircraftProfile.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
         src/infrastructure/gsx/GsxMenuNavigator.cpp
         src/infrastructure/gsx/GsxMenuNavigator.h
         src/infrastructure/gsx/GsxRemoteApiClient.cpp

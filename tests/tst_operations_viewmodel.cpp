@@ -25,6 +25,7 @@ private slots:
     static void exposesAircraftPropertiesFromSnapshot();
     static void successfulCommandClearsPreviousError();
     static void exposesPhaseIndexCountAndTip();
+    static void flightPlanTipFollowsPlanSource();
     static void exposesGsxProfileConflictFromSnapshot();
     static void fixGsxProfileDelegatesToService();
     static void fixGsxProfileReportsRejectedCommands();
@@ -286,6 +287,24 @@ void OperationsViewModelTest::exposesPhaseIndexCountAndTip()
     QCOMPARE(viewModel.phaseLabelAt(static_cast<int>(TurnaroundPhase::Boarding)),
              QStringLiteral("Boarding"));
     QVERIFY(viewModel.phaseLabelAt(-1).isEmpty());
+}
+
+void OperationsViewModelTest::flightPlanTipFollowsPlanSource()
+{
+    FakeIntegratorService service;
+    const OperationsViewModel viewModel(&service);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingFlightPlan;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Check that SimBrief is loaded in GSX and in this app."));
+
+    service.snapshot.efbFlightPlan = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Import your SimBrief flight plan on the aircraft EFB."));
 }
 
 void OperationsViewModelTest::exposesGsxProfileConflictFromSnapshot()

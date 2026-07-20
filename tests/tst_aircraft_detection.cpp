@@ -32,6 +32,11 @@ private slots:
     static void detectsTolissA340FromPresetTitle();
     static void detectsTolissA340ByAtcModel();
     static void detectsTolissA340CargoPreset();
+    static void detectsFenixA319FromPresetTitle();
+    static void detectsFenixA320FromPresetTitle();
+    static void detectsFenixA321FromPresetTitle();
+    static void doesNotDetectFenixByGenericAirbusAtcModel();
+    static void detectionReportsFenixClientRefuel();
     static void everyDescriptorHasUniqueProfileMetadata();
     static void supportedProfilesAreSortedByShortCode();
     static void detectionReportsMatchedDescriptor();
@@ -264,6 +269,73 @@ void AircraftDetectionTest::detectsTolissA340CargoPreset()
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(aircraft->IsCargoVariant());
+}
+
+void AircraftDetectionTest::detectsFenixA319FromPresetTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "FenixA319 CFM SL HD";
+
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(QString(aircraft->GetName()), QString("Fenix A319"));
+    QVERIFY(!aircraft->IsCargoVariant());
+}
+
+void AircraftDetectionTest::detectsFenixA320FromPresetTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "FenixA320 IAE WF";
+
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(QString(aircraft->GetName()), QString("Fenix A320"));
+}
+
+void AircraftDetectionTest::detectsFenixA321FromPresetTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "FenixA321 IAE WF TC";
+
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(QString(aircraft->GetName()), QString("Fenix A321"));
+}
+
+void AircraftDetectionTest::doesNotDetectFenixByGenericAirbusAtcModel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "FlyByWire A320neo";
+    gateway.atcModel = "A320";
+
+    QVERIFY(DetectAircraft(&gateway, &status) == nullptr);
+}
+
+void AircraftDetectionTest::detectionReportsFenixClientRefuel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "FenixA320 CFM SL";
+
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, &descriptor);
+
+    QVERIFY(aircraft != nullptr);
+    QVERIFY(descriptor != nullptr);
+    QCOMPARE(std::string(descriptor->id), std::string("fenix-a320"));
+    QCOMPARE(descriptor->refuelBy, RefuelBy::Client);
 }
 
 void AircraftDetectionTest::everyDescriptorHasUniqueProfileMetadata()

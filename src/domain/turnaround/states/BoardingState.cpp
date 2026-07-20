@@ -52,7 +52,7 @@ void BoardingState::EnsureBaseline(TurnaroundContext& ctx)
     }
 
     data.boardingBaselined = true;
-    data.initialZfwKg = ctx.aircraft->GetEmptyZfwKg();
+    data.initialZfwKg = std::min(ctx.aircraft->GetEmptyZfwKg(), data.plannedZfwKg);
     if (ctx.aircraft->GetBoardMethod() == BoardBy::Self)
     {
         ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);

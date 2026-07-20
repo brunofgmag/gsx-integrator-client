@@ -6,6 +6,7 @@
 #include "doubles/FakeGsxService.h"
 #include "doubles/FakeGsxMenuGateway.h"
 #include "doubles/FakeAircraft.h"
+#include "doubles/FakeFenixEfbGateway.h"
 #include "doubles/FakeVariableGateway.h"
 #include "doubles/FakeDomainLogger.h"
 

@@ -30,7 +30,7 @@ namespace
 
     std::string ReadAll(const std::filesystem::path& path)
     {
-        std::ifstream file(path, std::ios::binary);
+        const std::ifstream file(path, std::ios::binary);
         std::ostringstream buffer;
         buffer << file.rdbuf();
 
@@ -54,6 +54,7 @@ private slots:
     static void writeFailsWhenFileMissing();
     static void profileRootsKnownForTolissA340();
     static void profileRootsKnownForTfdiMd11();
+    static void profileRootsKnownForFenixA32x();
     static void profileRootsEmptyForUnknownAircraft();
     static void flagsMissingProfileOnlyForTolissA340();
     static void findCfgsScansRootsRecursively();
@@ -180,6 +181,21 @@ void GsxAircraftProfileTest::profileRootsKnownForTfdiMd11()
     QCOMPARE(roots[0].filename().string(), std::string("tfdi_design_md-11"));
 }
 
+void GsxAircraftProfileTest::profileRootsKnownForFenixA32x()
+{
+    for (const auto* aircraftName : {"Fenix A319", "Fenix A320", "Fenix A321"})
+    {
+        const auto roots = GsxAircraftProfile::ProfileRootsFor(aircraftName);
+
+        QCOMPARE(roots.size(), static_cast<std::size_t>(1));
+
+        const std::string airplanes = (std::filesystem::path("Virtuali") / "Airplanes").string();
+
+        QVERIFY(roots[0].string().find(airplanes) != std::string::npos);
+        QCOMPARE(roots[0].filename().string(), std::string("FNX_32X"));
+    }
+}
+
 void GsxAircraftProfileTest::profileRootsEmptyForUnknownAircraft()
 {
     QVERIFY(GsxAircraftProfile::ProfileRootsFor("Unknown Aircraft").empty());
@@ -189,6 +205,7 @@ void GsxAircraftProfileTest::flagsMissingProfileOnlyForTolissA340()
 {
     QVERIFY(GsxAircraftProfile::FlagsMissingProfile("ToLiss A340-600"));
     QVERIFY(!GsxAircraftProfile::FlagsMissingProfile("TFDi MD-11"));
+    QVERIFY(!GsxAircraftProfile::FlagsMissingProfile("Fenix A320"));
     QVERIFY(!GsxAircraftProfile::FlagsMissingProfile("Unknown Aircraft"));
 }
 
