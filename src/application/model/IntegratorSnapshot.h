@@ -21,6 +21,7 @@ struct IntegratorSnapshot
     bool gsxProfileConflict = false;
     bool gsxProfileFixable = false;
     bool cargoAircraft = false;
+    bool efbFlightPlan = false;
 
     std::string aircraftName;
     std::string aircraftProfileId;
@@ -62,6 +63,7 @@ inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapsho
         lhs.gsxProfileConflict == rhs.gsxProfileConflict &&
         lhs.gsxProfileFixable == rhs.gsxProfileFixable &&
         lhs.cargoAircraft == rhs.cargoAircraft &&
+        lhs.efbFlightPlan == rhs.efbFlightPlan &&
         lhs.aircraftName == rhs.aircraftName &&
         lhs.aircraftProfileId == rhs.aircraftProfileId &&
         lhs.phase == rhs.phase &&

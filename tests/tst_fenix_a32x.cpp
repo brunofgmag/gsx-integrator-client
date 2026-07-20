@@ -198,6 +198,7 @@ void FenixA32xTest::reportsLoadMethodsAndCapabilities()
     QVERIFY(!fixture.aircraft.CompletesPushbackViaInterruptMenu());
     QVERIFY(fixture.aircraft.SupportsChocksControl());
     QVERIFY(fixture.aircraft.SupportsGroundPowerControl());
+    QVERIFY(fixture.aircraft.RequiresEfbFlightPlan());
 }
 
 void FenixA32xTest::registersSmartSwitchForFastRefresh()

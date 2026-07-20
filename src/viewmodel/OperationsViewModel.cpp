@@ -39,14 +39,16 @@ namespace
         }
     }
 
-    QString PhaseTip(const TurnaroundPhase phase)
+    QString PhaseTip(const TurnaroundPhase phase, const bool efbFlightPlan)
     {
         switch (phase)
         {
         case TurnaroundPhase::WaitingAircraftReady:
             return QCoreApplication::translate("Turnaround", "Check that the aircraft engines are shut down.");
         case TurnaroundPhase::WaitingFlightPlan:
-            return QCoreApplication::translate("Turnaround", "Check that SimBrief is loaded in GSX and in this app.");
+            return efbFlightPlan
+                       ? QCoreApplication::translate("Turnaround", "Import your SimBrief flight plan on the aircraft EFB.")
+                       : QCoreApplication::translate("Turnaround", "Check that SimBrief is loaded in GSX and in this app.");
         case TurnaroundPhase::WaitingPowerOn:
             return QCoreApplication::translate("Turnaround", "Connect the GPU and switch on the batteries so the aircraft has power.");
         case TurnaroundPhase::RequestPushback:
@@ -163,7 +165,7 @@ int OperationsViewModel::GetPhaseCount()
 
 QString OperationsViewModel::GetPhaseTip() const
 {
-    return IsAwaitingStartLoading() ? StartLoadingTip() : PhaseTip(snapshot_.phase);
+    return IsAwaitingStartLoading() ? StartLoadingTip() : PhaseTip(snapshot_.phase, snapshot_.efbFlightPlan);
 }
 
 bool OperationsViewModel::IsAwaitingStartLoading() const

@@ -48,6 +48,7 @@ IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
     snapshot.refuelByGsx = runtime_->IsAircraftRefuelByGsx();
     snapshot.refuelBySelf = runtime_->IsAircraftRefuelBySelf();
     snapshot.cargoAircraft = runtime_->IsAircraftCargoVariant();
+    snapshot.efbFlightPlan = runtime_->AircraftRequiresEfbFlightPlan();
     snapshot.gsxProfileConflict = runtime_->HasGsxProfileConflict();
     snapshot.gsxProfileFixable = runtime_->CanFixGsxProfile();
     snapshot.phase = runtime_->GetPhase();

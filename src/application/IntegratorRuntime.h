@@ -51,6 +51,7 @@ public:
     [[nodiscard]] bool IsAircraftRefuelByGsx() const;
     [[nodiscard]] bool IsAircraftRefuelBySelf() const;
     [[nodiscard]] bool IsAircraftCargoVariant() const;
+    [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
     [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfile_.conflict; }
     [[nodiscard]] bool CanFixGsxProfile() const;
     bool FixGsxProfile();

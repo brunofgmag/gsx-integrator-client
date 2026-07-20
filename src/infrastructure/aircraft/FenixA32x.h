@@ -26,6 +26,7 @@ public:
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
 
+    [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
     [[nodiscard]] double GetPlannedZfwKg() const override;
