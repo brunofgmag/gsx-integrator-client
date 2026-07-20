@@ -43,6 +43,14 @@ std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::Evaluate(T
         return std::nullopt;
     }
 
+    if (ctx.aircraft->SupportsGroundPowerControl())
+    {
+        ctx.aircraft->SetGroundPower(true);
+        ctx.data.arrivalGpuRequested = true;
+
+        return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
+    }
+
     if (!ctx.menuGateway->IsMenuSettled())
     {
         return std::nullopt;

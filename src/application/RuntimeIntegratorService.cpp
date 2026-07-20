@@ -60,6 +60,9 @@ IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
     snapshot.plannedZfwKg = status.plannedZfwKg;
     snapshot.plannedPax = status.plannedPassengers;
     snapshot.boardedPax = status.boardedPassengers;
+    snapshot.targetFuelKg = status.targetFuelKg;
+    snapshot.targetZfwKg = status.targetZfwKg;
+    snapshot.targetPax = status.targetPassengers;
     snapshot.delayTicksRemaining = runtime_->GetDelayTicksRemaining();
 
     return snapshot;

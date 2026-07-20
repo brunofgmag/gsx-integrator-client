@@ -91,6 +91,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/FenixA32x.cpp
+        src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/aircraft/TfdiMd11.cpp
@@ -99,8 +101,13 @@ set(APP_SOURCES
         src/infrastructure/aircraft/TolissA340.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
+        src/infrastructure/fenix/FenixEfbClient.cpp
+        src/infrastructure/fenix/FenixEfbClient.h
+        src/infrastructure/fenix/FenixEfbGateway.h
         src/infrastructure/gsx/GsxAircraftProfile.cpp
         src/infrastructure/gsx/GsxAircraftProfile.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
         src/infrastructure/gsx/GsxStateService.cpp
         src/infrastructure/gsx/GsxStateService.h
         src/infrastructure/gsx/GsxLVars.h

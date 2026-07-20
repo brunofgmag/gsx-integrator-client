@@ -26,6 +26,9 @@ public:
     bool supportsChocksControl = false;
     bool chocksPlaced = false;
     int setChocksCalls = 0;
+    bool supportsGroundPowerControl = false;
+    bool groundPowerOn = false;
+    int setGroundPowerCalls = 0;
     int closeAllDoorsCalls = 0;
     RefuelBy refuelMethod = RefuelBy::Self;
     BoardBy boardMethod = BoardBy::Self;
@@ -69,6 +72,14 @@ public:
     {
         ++setChocksCalls;
         chocksPlaced = placed;
+    }
+
+    [[nodiscard]] bool SupportsGroundPowerControl() const override { return supportsGroundPowerControl; }
+
+    void SetGroundPower(const bool on) override
+    {
+        ++setGroundPowerCalls;
+        groundPowerOn = on;
     }
 
     void CloseAllDoors() override { ++closeAllDoorsCalls; }

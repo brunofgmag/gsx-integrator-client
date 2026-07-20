@@ -34,6 +34,21 @@ std::optional<TurnaroundTransition> RemoveGroundEquipmentState::Evaluate(Turnaro
         return TurnaroundTransition{TurnaroundPhase::RequestPushback};
     }
 
+    if (ctx.aircraft->SupportsGroundPowerControl())
+    {
+        if (!ctx.data.gpuDismissRequested)
+        {
+            ctx.aircraft->SetGroundPower(false);
+            ctx.data.gpuDismissRequested = true;
+        }
+        else if (ctx.TickCondition(kRetryTicks))
+        {
+            return TurnaroundTransition{TurnaroundPhase::RequestPushback};
+        }
+
+        return std::nullopt;
+    }
+
     if (!ctx.data.gpuDismissRequested)
     {
         if (!ctx.menuGateway->IsMenuSettled())

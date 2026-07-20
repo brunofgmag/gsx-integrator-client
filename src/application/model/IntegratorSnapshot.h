@@ -35,6 +35,9 @@ struct IntegratorSnapshot
     double plannedZfwKg = 0.0;
     int plannedPax = 0;
     int boardedPax = 0;
+    double targetFuelKg = 0.0;
+    double targetZfwKg = 0.0;
+    int targetPax = 0;
     int delayTicksRemaining = 0;
 };
 
@@ -71,6 +74,9 @@ inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapsho
         nearlyEqual(lhs.plannedZfwKg, rhs.plannedZfwKg) &&
         lhs.plannedPax == rhs.plannedPax &&
         lhs.boardedPax == rhs.boardedPax &&
+        nearlyEqual(lhs.targetFuelKg, rhs.targetFuelKg) &&
+        nearlyEqual(lhs.targetZfwKg, rhs.targetZfwKg) &&
+        lhs.targetPax == rhs.targetPax &&
         lhs.delayTicksRemaining == rhs.delayTicksRemaining;
 }
 

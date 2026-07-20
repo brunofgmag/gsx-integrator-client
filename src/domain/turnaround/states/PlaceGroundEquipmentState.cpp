@@ -38,6 +38,14 @@ std::optional<TurnaroundTransition> PlaceGroundEquipmentState::Evaluate(Turnarou
         return std::nullopt;
     }
 
+    if (ctx.aircraft->SupportsGroundPowerControl())
+    {
+        ctx.aircraft->SetGroundPower(true);
+        ctx.data.gpuRequested = true;
+
+        return TurnaroundTransition{TurnaroundPhase::CallServices};
+    }
+
     if (!ctx.menuGateway->IsMenuSettled())
     {
         return std::nullopt;

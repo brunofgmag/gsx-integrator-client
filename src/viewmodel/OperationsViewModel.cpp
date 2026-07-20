@@ -250,6 +250,21 @@ int OperationsViewModel::GetBoardedPax() const
     return snapshot_.boardedPax;
 }
 
+double OperationsViewModel::GetTargetFuelKg() const
+{
+    return snapshot_.targetFuelKg;
+}
+
+double OperationsViewModel::GetTargetZfwKg() const
+{
+    return snapshot_.targetZfwKg;
+}
+
+int OperationsViewModel::GetTargetPax() const
+{
+    return snapshot_.targetPax;
+}
+
 bool OperationsViewModel::IsCargoAircraft() const
 {
     return snapshot_.cargoAircraft;

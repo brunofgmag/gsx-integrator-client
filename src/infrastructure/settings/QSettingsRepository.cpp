@@ -84,7 +84,7 @@ AppSettings QSettingsRepository::Load() const
 
     AppSettings result;
     result.simbriefPilotId = settings.value(kKeySimbriefPilotId, 0).toInt();
-    result.fuelRateKgs = settings.value(kKeyFuelRateKgs, 60.0).toDouble();
+    result.fuelRateKgs = settings.value(kKeyFuelRateKgs, AutomationSettings::kDefaultFuelRateKgs).toDouble();
     result.autoSelectGsxChoice = settings.value(kKeyAutoSelectGsxChoice, true).toBool();
     result.autoDeice = settings.value(kKeyAutoDeice, false).toBool();
     result.crewBoarding = settings.value(kKeyCrewBoarding, 3).toInt();
