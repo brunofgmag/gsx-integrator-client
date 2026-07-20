@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.0.0...v1.1.0) (2026-07-20)
+
+
+### Features
+
+* add fenix support ([#27](https://github.com/brunofgmag/gsx-integrator-client/issues/27)) ([0cafe1a](https://github.com/brunofgmag/gsx-integrator-client/commit/0cafe1a441ce8d85f858f07d3cebee9e8879605e))
+
 ## [1.0.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v0.11.0...v1.0.0) (2026-07-19)
 
 
