@@ -1,7 +1,6 @@
 #include "CallServicesState.h"
 
 #include "../TurnaroundContext.h"
-#include "../../model/AutomationSettings.h"
 #include "../../ports/Aircraft.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
@@ -10,8 +9,6 @@ namespace
 {
     constexpr int kRetryTicks = 20;
     constexpr int kMaxAttempts = 4;
-    constexpr int kCateringRetryTicks = 10;
-    constexpr int kMaxCateringAttempts = 3;
 }
 
 std::optional<TurnaroundTransition> CallServicesState::Evaluate(TurnaroundContext& ctx)
@@ -21,55 +18,12 @@ std::optional<TurnaroundTransition> CallServicesState::Evaluate(TurnaroundContex
         return std::nullopt;
     }
 
-    if (RequestNextGroundService(ctx))
-    {
-        return std::nullopt;
-    }
-
     if (!ctx.aircraft->SupportsStairsOrJetways())
     {
-        return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
+        return TurnaroundTransition{TurnaroundPhase::WaitingFlightPlan};
     }
 
     return ResolveJetwayOrStairs(ctx);
-}
-
-bool CallServicesState::RequestNextGroundService(TurnaroundContext& ctx)
-{
-    if (ctx.settings == nullptr)
-    {
-        return false;
-    }
-
-    if (ctx.settings->callCatering && !ctx.aircraft->IsCargoVariant() && !ctx.data.cateringRequested)
-    {
-        return DispatchCatering(ctx);
-    }
-
-    return false;
-}
-
-bool CallServicesState::DispatchCatering(TurnaroundContext& ctx)
-{
-    if (ctx.gsxGateway->IsServiceInProgress(GroundService::Catering))
-    {
-        ctx.data.cateringRequested = true;
-        return false;
-    }
-
-    if (ctx.data.cateringAttempts == 0 || ctx.TickCondition(kCateringRetryTicks))
-    {
-        if (ctx.data.cateringAttempts >= kMaxCateringAttempts)
-        {
-            ctx.data.cateringRequested = true;
-            return false;
-        }
-
-        static_cast<void>(ctx.menuGateway->RequestCatering());
-        ++ctx.data.cateringAttempts;
-    }
-
-    return true;
 }
 
 std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(TurnaroundContext& ctx)
@@ -77,7 +31,7 @@ std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(Tur
     ctx.data.jetwayOrStairsCompleted = ctx.gsxGateway->AreStairsInPlace() || ctx.gsxGateway->IsJetwayInPlace();
     if (ctx.data.jetwayOrStairsCompleted)
     {
-        return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
+        return TurnaroundTransition{TurnaroundPhase::WaitingFlightPlan};
     }
 
     if (ctx.gsxGateway->IsJetwayOrStairsOperating())
@@ -101,7 +55,7 @@ std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(Tur
     {
         if (ctx.data.jetwayOrStairsAttempts >= kMaxAttempts)
         {
-            return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
+            return TurnaroundTransition{TurnaroundPhase::WaitingFlightPlan};
         }
 
         RegisterJetwayOrStairsRequest(ctx, ctx.gsxGateway->IsJetwayAvailable()

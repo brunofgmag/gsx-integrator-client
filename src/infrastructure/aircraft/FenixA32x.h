@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FENIXA32X_H
 
 #include <memory>
+#include "SmartSwitch.h"
 #include "../fenix/FenixEfbGateway.h"
 #include "../gsx/GsxDoorSync.h"
 #include "../../domain/ports/Aircraft.h"
@@ -69,8 +70,8 @@ private:
     FenixVariant variant_;
     std::unique_ptr<FenixEfbGateway> efb_;
     GsxDoorSync doors_;
+    SmartSwitch smartSwitch_;
     bool efbInitialized_ = false;
-    bool smartSwitchResetPending_ = false;
     bool finalLoadsheetRequested_ = true;
     bool refuelSystemArmed_ = false;
     double lastFuelKg_ = -1.0;

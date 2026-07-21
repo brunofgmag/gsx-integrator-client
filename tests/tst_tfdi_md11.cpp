@@ -198,7 +198,7 @@ void TfdiMd11Test::smartSwitchRegistersFastRefresh()
     TfdiMd11 aircraft(&gateway, &status, false);
 
     QCOMPARE(gateway.fastRefreshNames.size(), static_cast<std::size_t>(1));
-    QVERIFY(gateway.fastRefreshNames.front() == std::string("L:") + kSmartSwitch);
+    QVERIFY(gateway.fastRefreshNames.front() == kSmartSwitch);
 }
 
 void TfdiMd11Test::smartSwitchReassertsResetWhileSimKeepsOldValue()

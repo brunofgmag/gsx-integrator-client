@@ -45,6 +45,7 @@ set(TURNAROUND_STATE_TESTS
         gsxi-turnaround-reposition-aircraft-state-tests turnaround-state-reposition-aircraft tests/turnaround/states/tst_reposition_aircraft_state.cpp
         gsxi-turnaround-place-ground-equipment-state-tests turnaround-state-place-ground-equipment tests/turnaround/states/tst_place_ground_equipment_state.cpp
         gsxi-turnaround-call-services-state-tests turnaround-state-call-services tests/turnaround/states/tst_call_services_state.cpp
+        gsxi-turnaround-call-catering-state-tests turnaround-state-call-catering tests/turnaround/states/tst_call_catering_state.cpp
         gsxi-turnaround-waiting-power-on-state-tests turnaround-state-waiting-power-on tests/turnaround/states/tst_waiting_power_on_state.cpp
         gsxi-turnaround-request-fuel-state-tests turnaround-state-request-fuel tests/turnaround/states/tst_request_fuel_state.cpp
         gsxi-turnaround-refueling-state-tests turnaround-state-refueling tests/turnaround/states/tst_refueling_state.cpp
@@ -243,12 +244,21 @@ if (EXISTS "${SIMCONNECT_DLL}")
             VERBATIM)
 endif ()
 
+gsxi_add_qt_test(gsxi-smart-switch-tests smart-switch
+        tests/doubles/FakeVariableGateway.h
+        tests/tst_smart_switch.cpp
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
+        src/infrastructure/simvars/VariableGateway.h)
+
 gsxi_add_qt_test(gsxi-tfdi-md11-tests tfdi-md11
         tests/TestDoubles.h
         tests/tst_tfdi_md11.cpp
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/TfdiMd11.cpp
         src/infrastructure/aircraft/TfdiMd11.h
         src/domain/model/AutomationStatus.h
@@ -262,6 +272,8 @@ gsxi_add_qt_test(gsxi-ifly-737max-tests ifly-737max
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
         src/domain/model/AutomationStatus.h)
 
 gsxi_add_qt_test(gsxi-gsx-aircraft-profile-tests gsx-aircraft-profile
@@ -275,6 +287,8 @@ gsxi_add_qt_test(gsxi-toliss-a340-tests toliss-a340
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/TolissA340.cpp
         src/infrastructure/aircraft/TolissA340.h
         src/infrastructure/gsx/GsxDoorSync.cpp
@@ -302,6 +316,8 @@ gsxi_add_qt_test(gsxi-fenix-a32x-tests fenix-a32x
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/FenixA32x.cpp
         src/infrastructure/aircraft/FenixA32x.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h
@@ -364,6 +380,8 @@ gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/Pmdg777.cpp
         src/infrastructure/aircraft/Pmdg777.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/commbus/CommBusBridgeClient.cpp
         src/infrastructure/commbus/CommBusBridgeClient.h
         src/infrastructure/commbus/CommBusBridgeGateway.h
@@ -404,6 +422,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/aircraft/Pmdg777.cpp
         src/infrastructure/aircraft/Pmdg777.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/TfdiMd11.cpp
         src/infrastructure/aircraft/TfdiMd11.h
         src/infrastructure/aircraft/TolissA340.cpp
@@ -495,6 +515,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/aircraft/Pmdg777.cpp
         src/infrastructure/aircraft/Pmdg777.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/TfdiMd11.cpp
         src/infrastructure/aircraft/TfdiMd11.h
         src/infrastructure/aircraft/TolissA340.cpp

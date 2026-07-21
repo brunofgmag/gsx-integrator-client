@@ -16,6 +16,7 @@ namespace
         case TurnaroundPhase::PlaceGroundEquipment: return QCoreApplication::translate("Turnaround", "Placing GPU & chocks");
         case TurnaroundPhase::CallServices: return QCoreApplication::translate("Turnaround", "Starting GSX services");
         case TurnaroundPhase::WaitingPowerOn: return QCoreApplication::translate("Turnaround", "Waiting for power on");
+        case TurnaroundPhase::CallCatering: return QCoreApplication::translate("Turnaround", "Requesting catering");
         case TurnaroundPhase::WaitingFlightPlan: return QCoreApplication::translate("Turnaround", "Waiting for flight plan");
         case TurnaroundPhase::RequestFuel: return QCoreApplication::translate("Turnaround", "Requesting fuel");
         case TurnaroundPhase::Refueling: return QCoreApplication::translate("Turnaround", "Refueling");

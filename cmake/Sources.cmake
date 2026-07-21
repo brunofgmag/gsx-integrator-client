@@ -38,6 +38,8 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/states/PlaceArrivalGroundEquipmentState.h
         src/domain/turnaround/states/CallServicesState.cpp
         src/domain/turnaround/states/CallServicesState.h
+        src/domain/turnaround/states/CallCateringState.cpp
+        src/domain/turnaround/states/CallCateringState.h
         src/domain/turnaround/states/RepositionAircraftState.cpp
         src/domain/turnaround/states/RepositionAircraftState.h
         src/domain/turnaround/states/WaitingDepartureState.cpp
@@ -97,6 +99,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/aircraft/Pmdg777.cpp
         src/infrastructure/aircraft/Pmdg777.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/TfdiMd11.cpp
         src/infrastructure/aircraft/TfdiMd11.h
         src/infrastructure/aircraft/TolissA340.cpp

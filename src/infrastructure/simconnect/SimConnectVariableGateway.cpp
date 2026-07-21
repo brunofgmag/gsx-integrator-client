@@ -1,5 +1,6 @@
 #include "SimConnectVariableGateway.h"
 
+#include <algorithm>
 #include <cstring>
 #include "../logging/LogMacros.h"
 
@@ -123,18 +124,19 @@ double SimConnectVariableGateway::GetLVar(const std::string& name, const double 
     return slot.received ? slot.value : defaultValue;
 }
 
-double SimConnectVariableGateway::ConsumeLVarPeak(const std::string& name)
+LVarSpan SimConnectVariableGateway::ConsumeLVarSpan(const std::string& name)
 {
     Slot& slot = EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false);
     if (!slot.received)
     {
-        return 0.0;
+        return {};
     }
 
-    const double peak = slot.peakValue;
-    slot.peakValue = slot.value;
+    const LVarSpan span{slot.spanMin, slot.spanMax, true};
+    slot.spanMin = slot.value;
+    slot.spanMax = slot.value;
 
-    return peak;
+    return span;
 }
 
 bool SimConnectVariableGateway::HasReceivedLVar(const std::string& name)
@@ -235,9 +237,15 @@ void SimConnectVariableGateway::HandleSimObjectData(const SIMCONNECT_RECV_SIMOBJ
         else
         {
             std::memcpy(&slot.value, &pData->dwData, sizeof(double));
-            if (!slot.received || slot.value > slot.peakValue)
+            if (!slot.received)
             {
-                slot.peakValue = slot.value;
+                slot.spanMin = slot.value;
+                slot.spanMax = slot.value;
+            }
+            else
+            {
+                slot.spanMin = (std::min)(slot.spanMin, slot.value);
+                slot.spanMax = (std::max)(slot.spanMax, slot.value);
             }
         }
 

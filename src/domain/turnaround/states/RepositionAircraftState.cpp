@@ -2,6 +2,7 @@
 
 #include "../TurnaroundContext.h"
 #include "../../model/AutomationSettings.h"
+#include "../../model/AutomationStatus.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
@@ -16,6 +17,12 @@ std::optional<TurnaroundTransition> RepositionAircraftState::Evaluate(Turnaround
     if (ctx.settings != nullptr && ctx.settings->skipReposition && !ctx.data.repositionRequested)
     {
         return TurnaroundTransition{TurnaroundPhase::PlaceGroundEquipment};
+    }
+
+    if (ctx.status != nullptr && !ctx.status->gsxAvailable)
+    {
+        ctx.data.stateTickCount = 0;
+        return std::nullopt;
     }
 
     bool& repositionRequested = ctx.data.repositionRequested;

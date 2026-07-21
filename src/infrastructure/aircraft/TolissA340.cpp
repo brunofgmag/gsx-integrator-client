@@ -94,9 +94,15 @@ TolissA340::TolissA340(VariableGateway* variableGateway, AutomationStatus* statu
     : variableGateway_(variableGateway),
       status_(status),
       cargoVariant_(cargoVariant),
-      doors_(variableGateway)
+      doors_(variableGateway),
+      smartSwitch_(*variableGateway, {kSmartSwitchLVar},
+                   [](const double min, const double max)
+                   {
+                       return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral;
+                   },
+                   kSmartSwitchNeutral)
 {
-    variableGateway_->SetFastRefresh(std::string("L:") + kSmartSwitchLVar);
+    smartSwitch_.Subscribe();
 
     LOG_INFO("Profile loaded: Toliss A340-600");
 }
@@ -222,25 +228,7 @@ void TolissA340::SetCurrentZfwKg(double)
 
 bool TolissA340::ConsumeSmartSwitch()
 {
-    const bool isActive =
-        variableGateway_->GetLVar(kSmartSwitchLVar, kSmartSwitchNeutral) != kSmartSwitchNeutral;
-
-    if (!isActive)
-    {
-        smartSwitchResetPending_ = false;
-        return false;
-    }
-
-    variableGateway_->SetLVar(kSmartSwitchLVar, kSmartSwitchNeutral);
-
-    if (smartSwitchResetPending_)
-    {
-        return false;
-    }
-
-    smartSwitchResetPending_ = true;
-
-    return true;
+    return smartSwitch_.Consume();
 }
 
 bool TolissA340::IsPowered() const

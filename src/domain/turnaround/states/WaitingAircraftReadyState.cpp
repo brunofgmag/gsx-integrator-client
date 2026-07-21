@@ -10,5 +10,5 @@ std::optional<TurnaroundTransition> WaitingAircraftReadyState::Evaluate(Turnarou
         return std::nullopt;
     }
 
-    return TurnaroundTransition{TurnaroundPhase::WaitingFlightPlan, 10};
+    return TurnaroundTransition{TurnaroundPhase::RepositionAircraft};
 }

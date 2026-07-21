@@ -10,11 +10,12 @@ namespace
     constexpr auto kReachableWorkflowPhases = std::array{
         TurnaroundPhase::WaitingSupportedAircraft,
         TurnaroundPhase::WaitingAircraftReady,
-        TurnaroundPhase::WaitingFlightPlan,
         TurnaroundPhase::RepositionAircraft,
         TurnaroundPhase::PlaceGroundEquipment,
         TurnaroundPhase::CallServices,
+        TurnaroundPhase::WaitingFlightPlan,
         TurnaroundPhase::WaitingPowerOn,
+        TurnaroundPhase::CallCatering,
         TurnaroundPhase::RequestFuel,
         TurnaroundPhase::Refueling,
         TurnaroundPhase::RequestBoarding,
@@ -106,8 +107,7 @@ namespace
             TickHolding(TurnaroundPhase::WaitingAircraftReady);
 
             f.aircraft.engineRunning = false;
-            TickHolding(TurnaroundPhase::WaitingAircraftReady);
-            FinishDelay(10, TurnaroundPhase::WaitingFlightPlan);
+            TickTo(TurnaroundPhase::RepositionAircraft);
         }
 
         void LoadFlightPlan()
@@ -115,7 +115,11 @@ namespace
             PrepareFlightPlan(f.aircraft);
             f.gsxService.simbriefLoaded = true;
 
-            TickTo(TurnaroundPhase::RepositionAircraft);
+            TickTo(TurnaroundPhase::WaitingPowerOn);
+
+            f.aircraft.powered = true;
+            TickTo(TurnaroundPhase::CallCatering);
+            TickTo(TurnaroundPhase::RequestFuel);
         }
 
         void CompleteReposition()
@@ -137,10 +141,7 @@ namespace
 
             f.gsxService.stairsAvailable = false;
             f.gsxService.stairsInPlace = true;
-            TickTo(TurnaroundPhase::WaitingPowerOn);
-
-            f.aircraft.powered = true;
-            TickTo(TurnaroundPhase::RequestFuel);
+            TickTo(TurnaroundPhase::WaitingFlightPlan);
         }
 
         void RequestFuel()
@@ -304,9 +305,9 @@ namespace
     void ReachRequestFuel(TurnaroundWorkflow& workflow)
     {
         workflow.AttachAircraft();
-        workflow.LoadFlightPlan();
         workflow.CompleteReposition();
         workflow.CompleteGroundServiceSetup();
+        workflow.LoadFlightPlan();
     }
 
     void ReachRefueling(TurnaroundWorkflow& workflow)
@@ -334,6 +335,7 @@ private slots:
     static void smartSwitchPressIsLoggedEveryTick();
     static void unconsumedSmartSwitchPressIsDiscarded();
     static void attachAircraftAllowsLeavingWaitingSupportedAircraft();
+    static void holdsRepositionUntilGsxAvailable();
     static void resetReturnsToWaitingSupportedAircraft();
     static void holdsAtRequestFuelUntilLoadingConfirmed();
     static void waitsForRefuelingTransitionDelay();
@@ -364,6 +366,8 @@ void TurnaroundStateMachineTest::publishesLoadingTargetsAfterFlightPlanCapture()
 {
     TurnaroundWorkflow workflow;
     workflow.AttachAircraft();
+    workflow.CompleteReposition();
+    workflow.CompleteGroundServiceSetup();
     workflow.LoadFlightPlan();
 
     QCOMPARE(workflow.f.status.targetFuelKg, 12000.0);
@@ -396,7 +400,7 @@ void TurnaroundStateMachineTest::smartSwitchPressIsLoggedEveryTick()
     workflow.f.logger.messages.clear();
     workflow.f.aircraft.smartSwitchActivated = true;
 
-    workflow.TickHolding(TurnaroundPhase::WaitingFlightPlan);
+    workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
 
     QVERIFY(workflow.f.aircraft.consumeSmartSwitchCalls > 0);
     bool logged = false;
@@ -416,14 +420,14 @@ void TurnaroundStateMachineTest::unconsumedSmartSwitchPressIsDiscarded()
     workflow.AttachAircraft();
 
     workflow.f.aircraft.smartSwitchActivated = true;
-    workflow.TickHolding(TurnaroundPhase::WaitingFlightPlan);
+    workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
 
     workflow.f.aircraft.smartSwitchActivated = false;
-    workflow.TickHolding(TurnaroundPhase::WaitingFlightPlan);
+    workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
 
-    workflow.LoadFlightPlan();
     workflow.CompleteReposition();
     workflow.CompleteGroundServiceSetup();
+    workflow.LoadFlightPlan();
     workflow.RequestFuel();
     workflow.StartRefueling();
     workflow.CompleteRefueling();
@@ -448,7 +452,24 @@ void TurnaroundStateMachineTest::attachAircraftAllowsLeavingWaitingSupportedAirc
 
     workflow.AttachAircraft();
 
-    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::WaitingFlightPlan);
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::RepositionAircraft);
+}
+
+void TurnaroundStateMachineTest::holdsRepositionUntilGsxAvailable()
+{
+    TurnaroundWorkflow workflow;
+    workflow.f.status.gsxAvailable = false;
+    workflow.AttachAircraft();
+
+    workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
+    workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
+
+    QCOMPARE(workflow.f.menuGateway.repositionCalls, 0);
+
+    workflow.f.status.gsxAvailable = true;
+    workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
+
+    QCOMPARE(workflow.f.menuGateway.repositionCalls, 1);
 }
 
 void TurnaroundStateMachineTest::resetReturnsToWaitingSupportedAircraft()

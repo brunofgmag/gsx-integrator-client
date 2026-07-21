@@ -37,7 +37,7 @@ private slots:
     static void avarReportsReceivedOnlyAfterDataArrives();
     static void lvarReportsReceivedOnlyAfterDataArrives();
     static void fastRefreshSharesSlotWithGetLVar();
-    static void consumeLVarPeakCatchesTransient();
+    static void consumeLVarSpanCatchesTransient();
 };
 
 void VariableGatewayTest::lvarReturnsDefaultUntilDataArrives()
@@ -117,16 +117,29 @@ void VariableGatewayTest::lvarReportsReceivedOnlyAfterDataArrives()
     QVERIFY(!gateway.HasReceivedLVar(kEng3N1));
 }
 
-void VariableGatewayTest::consumeLVarPeakCatchesTransient()
+void VariableGatewayTest::consumeLVarSpanCatchesTransient()
 {
     SimConnectVariableGateway gateway;
-    QCOMPARE(gateway.ConsumeLVarPeak(kEng3N1), 0.0);
+    QVERIFY(!gateway.ConsumeLVarSpan(kEng3N1).received);
 
     DeliverDouble(gateway, kFirstDefineId, 100.0);
     DeliverDouble(gateway, kFirstDefineId, 50.0);
 
-    QCOMPARE(gateway.ConsumeLVarPeak(kEng3N1), 100.0);
-    QCOMPARE(gateway.ConsumeLVarPeak(kEng3N1), 50.0);
+    const LVarSpan up = gateway.ConsumeLVarSpan(kEng3N1);
+    QCOMPARE(up.max, 100.0);
+    QCOMPARE(up.min, 50.0);
+
+    const LVarSpan rebased = gateway.ConsumeLVarSpan(kEng3N1);
+    QCOMPARE(rebased.min, 50.0);
+    QCOMPARE(rebased.max, 50.0);
+
+    gateway.GetLVar(kEng1N1, 0.0);
+    DeliverDouble(gateway, kFirstDefineId + 1, 1.0);
+    DeliverDouble(gateway, kFirstDefineId + 1, 0.0);
+
+    const LVarSpan down = gateway.ConsumeLVarSpan(kEng1N1);
+    QCOMPARE(down.min, 0.0);
+    QCOMPARE(down.max, 1.0);
 }
 
 void VariableGatewayTest::fastRefreshSharesSlotWithGetLVar()

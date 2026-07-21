@@ -205,7 +205,7 @@ void FenixA32xTest::registersSmartSwitchForFastRefresh()
 {
     const FenixFixture fixture;
 
-    QVERIFY(std::ranges::find(fixture.gateway.fastRefreshNames, std::string("L:") + kSmartSwitch)
+    QVERIFY(std::ranges::find(fixture.gateway.fastRefreshNames, std::string(kSmartSwitch))
         != fixture.gateway.fastRefreshNames.end());
 }
 
@@ -419,8 +419,8 @@ void FenixA32xTest::zfwSetterBoardsSeatsAndCargoProgressively()
     fixture.aircraft.SetCurrentZfwKg(50000.0);
 
     const std::string seatString = fixture.efb.WrittenString(kSeatOccupationString);
-    const double cargoKg = kPlannedCargoKg / 2.0;
-    const double fwdCargoKg = cargoKg * 0.4237;
+    constexpr double cargoKg = kPlannedCargoKg / 2.0;
+    constexpr double fwdCargoKg = cargoKg * 0.4237;
 
     QCOMPARE(CountSeats(seatString), kSeatCapacity);
     QCOMPARE(CountOccupiedSeats(seatString), kPlannedPassengers / 2);
@@ -537,7 +537,7 @@ void FenixA32xTest::preliminaryLoadsheetRequestedWhenLoadingStarts()
 
     fixture.aircraft.OnLoadingStarted();
 
-    QCOMPARE(fixture.efb.loadsheetRequests.size(), std::size_t(1));
+    QCOMPARE(fixture.efb.loadsheetRequests.size(), static_cast<std::size_t>(1));
     QCOMPARE(QString::fromStdString(fixture.efb.loadsheetRequests.front()), QString("Preliminary"));
 }
 
@@ -561,12 +561,12 @@ void FenixA32xTest::finalLoadsheetRequestedOnceAtPlannedZfw()
     fixture.aircraft.OnLoadingStarted();
     fixture.aircraft.SetCurrentZfwKg(50000.0);
 
-    QCOMPARE(fixture.efb.loadsheetRequests.size(), std::size_t(1));
+    QCOMPARE(fixture.efb.loadsheetRequests.size(), static_cast<std::size_t>(1));
 
     fixture.aircraft.SetCurrentZfwKg(kPlannedZfwKg);
     fixture.aircraft.SetCurrentZfwKg(kPlannedZfwKg - 10.0);
 
-    QCOMPARE(fixture.efb.loadsheetRequests.size(), std::size_t(2));
+    QCOMPARE(fixture.efb.loadsheetRequests.size(), static_cast<std::size_t>(2));
     QCOMPARE(QString::fromStdString(fixture.efb.loadsheetRequests.back()), QString("Final"));
 }
 

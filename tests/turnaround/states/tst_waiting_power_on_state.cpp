@@ -30,7 +30,7 @@ void WaitingPowerOnStateTest::advancesWhenAircraftIsPowered()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::RequestFuel);
+    QCOMPARE(transition->next, TurnaroundPhase::CallCatering);
 }
 
 QTEST_APPLESS_MAIN(WaitingPowerOnStateTest)

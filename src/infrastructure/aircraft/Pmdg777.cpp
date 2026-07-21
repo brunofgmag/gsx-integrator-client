@@ -61,7 +61,9 @@ Pmdg777::Pmdg777(VariableGateway* variableGateway,
       variant_(variant),
       data_(std::move(data)),
       tablet_(std::move(tablet)),
-      doors_(variableGateway)
+      doors_(variableGateway),
+      smartSwitch_(*variableGateway, {kSmartSwitchCaptLVar, kSmartSwitchFoLVar},
+                   [](double, const double max) { return max >= kSmartSwitchPressed; })
 {
     desiredDoor_.fill(-1);
     openedDoorIndex_.fill(-1);
@@ -123,11 +125,9 @@ void Pmdg777::OnTick()
     data_->Poll();
     tablet_->Poll();
 
-    if (!lvarsSubscribed_ && data_->HasData())
+    if (data_->HasData())
     {
-        variableGateway_->SetFastRefresh(kSmartSwitchCaptLVar);
-        variableGateway_->SetFastRefresh(kSmartSwitchFoLVar);
-        lvarsSubscribed_ = true;
+        smartSwitch_.Subscribe();
     }
 
     if (data_->HasData())
@@ -215,7 +215,7 @@ int Pmdg777::DoorIndexFor(const GsxDoor door) const
     case GsxDoor::MidPax: return 2;
     case GsxDoor::AftPax: return is300 ? 4 : 6;
     case GsxDoor::FwdCatering: return is300 ? 3 : 1;
-    case GsxDoor::AftCatering: return 7;
+    case GsxDoor::AftCatering: return is300 ? 9 : 7;
     case GsxDoor::FwdCargo: return 10;
     case GsxDoor::AftCargo: return 11;
     default: return -1;
@@ -380,29 +380,7 @@ void Pmdg777::TrimZfw()
 
 bool Pmdg777::ConsumeSmartSwitch()
 {
-    if (!lvarsSubscribed_)
-    {
-        return false;
-    }
-
-    const bool isActive =
-        variableGateway_->ConsumeLVarPeak(kSmartSwitchCaptLVar) >= kSmartSwitchPressed
-        || variableGateway_->ConsumeLVarPeak(kSmartSwitchFoLVar) >= kSmartSwitchPressed;
-
-    if (!isActive)
-    {
-        smartSwitchResetPending_ = false;
-        return false;
-    }
-
-    if (smartSwitchResetPending_)
-    {
-        return false;
-    }
-
-    smartSwitchResetPending_ = true;
-
-    return true;
+    return smartSwitch_.Consume();
 }
 
 bool Pmdg777::IsPowered() const

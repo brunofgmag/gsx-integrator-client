@@ -21,6 +21,11 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::Evaluate(TurnaroundC
         return std::nullopt;
     }
 
+    if (!ctx.menuGateway->IsMenuSettled())
+    {
+        return std::nullopt;
+    }
+
     bool& flightPlanRequested = ctx.data.flightPlanRequested;
 
     if (!ctx.gsxGateway->IsSimbriefLoaded() && !flightPlanRequested)
@@ -46,7 +51,7 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::Evaluate(TurnaroundC
 
     CaptureFlightPlan(ctx);
 
-    return TurnaroundTransition{TurnaroundPhase::RepositionAircraft};
+    return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
 }
 
 void WaitingFlightPlanState::CaptureFlightPlan(TurnaroundContext& ctx)

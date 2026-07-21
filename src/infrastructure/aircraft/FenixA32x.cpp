@@ -129,9 +129,12 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
     : variableGateway_(variableGateway),
       variant_(variant),
       efb_(std::move(efb)),
-      doors_(variableGateway)
+      doors_(variableGateway),
+      smartSwitch_(*variableGateway, {kSmartSwitchLVar},
+                   [](const double min, double) { return min <= kSmartSwitchIntercom; },
+                   kSmartSwitchNeutral)
 {
-    variableGateway_->SetFastRefresh(std::string("L:") + kSmartSwitchLVar);
+    smartSwitch_.Subscribe();
     efb_->Subscribe(kSimbriefImportedDataref);
     efb_->Subscribe(kBookedSeatsDataref);
     efb_->Subscribe(kFuelTargetDataref);
@@ -373,25 +376,7 @@ void FenixA32x::MaybeRequestFinalLoadsheet(const double zfwKg)
 
 bool FenixA32x::ConsumeSmartSwitch()
 {
-    const bool isActive =
-        variableGateway_->GetLVar(kSmartSwitchLVar, kSmartSwitchNeutral) == kSmartSwitchIntercom;
-
-    if (!isActive)
-    {
-        smartSwitchResetPending_ = false;
-        return false;
-    }
-
-    variableGateway_->SetLVar(kSmartSwitchLVar, kSmartSwitchNeutral);
-
-    if (smartSwitchResetPending_)
-    {
-        return false;
-    }
-
-    smartSwitchResetPending_ = true;
-
-    return true;
+    return smartSwitch_.Consume();
 }
 
 bool FenixA32x::IsPowered() const

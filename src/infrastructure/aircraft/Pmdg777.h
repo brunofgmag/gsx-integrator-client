@@ -4,6 +4,7 @@
 #include <array>
 #include <memory>
 #include <optional>
+#include "SmartSwitch.h"
 #include "../gsx/GsxDoorSync.h"
 #include "../pmdg/Pmdg777DataGateway.h"
 #include "../pmdg/Pmdg777TabletGateway.h"
@@ -85,8 +86,7 @@ private:
     int groundPowerAttempts_ = 0;
     int ticksSinceChocksRequest_ = 0;
     int ticksSinceGroundPowerRequest_ = 0;
-    bool smartSwitchResetPending_ = false;
-    bool lvarsSubscribed_ = false;
+    SmartSwitch smartSwitch_;
     int lastSentFuelLbs_ = -1;
     int lastSentPax_ = -1;
     int lastSentCargoLbs_ = -1;

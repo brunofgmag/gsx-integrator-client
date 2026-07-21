@@ -57,9 +57,12 @@ namespace
 }
 
 TfdiMd11::TfdiMd11(VariableGateway* variableGateway, AutomationStatus* status, const bool cargo)
-    : variableGateway_(variableGateway), status_(status), cargo_(cargo)
+    : variableGateway_(variableGateway), status_(status), cargo_(cargo),
+      smartSwitch_(*variableGateway, {kSmartSwitch},
+                   [](double, const double max) { return max > kSmartSwitchNeutral; },
+                   kSmartSwitchNeutral)
 {
-    variableGateway_->SetFastRefresh(std::string("L:") + kSmartSwitch);
+    smartSwitch_.Subscribe();
 
     LOG_INFO("Profile loaded: TFDi MD-11%s", cargo_ ? "F" : "");
 }
@@ -227,23 +230,7 @@ void TfdiMd11::SetCurrentZfwKg(const double zfwKg)
 
 bool TfdiMd11::ConsumeSmartSwitch()
 {
-    const bool isActive = variableGateway_->GetLVar(kSmartSwitch, kSmartSwitchNeutral) > kSmartSwitchNeutral;
-
-    if (!isActive)
-    {
-        smartSwitchResetPending_ = false;
-        return false;
-    }
-
-    variableGateway_->SetLVar(kSmartSwitch, kSmartSwitchNeutral);
-
-    if (smartSwitchResetPending_)
-    {
-        return false;
-    }
-
-    smartSwitchResetPending_ = true;
-    return true;
+    return smartSwitch_.Consume();
 }
 
 bool TfdiMd11::IsPowered() const
@@ -274,8 +261,8 @@ std::optional<GroundPowerStatus> TfdiMd11::GetGroundPowerStatus() const
     }
 
     return variableGateway_->GetLVar(kExtGpuLVar, 0.0) > 0.0
-        ? GroundPowerStatus::Connected
-        : GroundPowerStatus::Disconnected;
+               ? GroundPowerStatus::Connected
+               : GroundPowerStatus::Disconnected;
 }
 
 void TfdiMd11::SetChocks(const bool placed)

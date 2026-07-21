@@ -16,7 +16,7 @@ public:
 
     void SetFastRefresh(const std::string& name) override;
     double GetLVar(const std::string& name, double defaultValue) override;
-    double ConsumeLVarPeak(const std::string& name) override;
+    LVarSpan ConsumeLVarSpan(const std::string& name) override;
     [[nodiscard]] bool HasReceivedLVar(const std::string& name) override;
     void SetLVar(const std::string& name, double value) override;
     double GetAVar(const std::string& name, const std::string& unit, double defaultValue) override;
@@ -39,7 +39,8 @@ private:
         bool received = false;
         bool fast = false;
         double value = 0.0;
-        double peakValue = 0.0;
+        double spanMin = 0.0;
+        double spanMax = 0.0;
         char text[256] = {};
     };
 
