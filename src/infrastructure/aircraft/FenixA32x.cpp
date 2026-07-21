@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -44,6 +46,8 @@ namespace
 
     constexpr auto kChocksDataref = "fenix.efb.chocks";
     constexpr auto kGroundPowerDataref = "groundservice.groundpower";
+
+    constexpr auto kWeightUnitDataref = "system.config.Units.Weight";
 
     constexpr auto kFuelAmountDataref = "aircraft.fuel.total.amount.kg";
     constexpr auto kFuelTargetDataref = "aircraft.refuel.fuelTarget.kg";
@@ -139,6 +143,7 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
     efb_->Subscribe(kBookedSeatsDataref);
     efb_->Subscribe(kFuelTargetDataref);
     efb_->Subscribe(kCargoTargetDataref);
+    efb_->Subscribe(kWeightUnitDataref);
 
     LOG_INFO("Profile loaded: %s", GetName());
 }
@@ -273,6 +278,24 @@ int FenixA32x::GetPlannedPassengers() const
 double FenixA32x::GetEmptyZfwKg() const
 {
     return variableGateway_->GetAVar(kSimEmptyWeight, kKgUnit, 0.0);
+}
+
+std::optional<WeightUnit> FenixA32x::GetNativeWeightUnit() const
+{
+    std::string unit = efb_->GetString(kWeightUnitDataref, "");
+    std::ranges::transform(unit, unit.begin(),
+                           [](const unsigned char c) { return static_cast<char>(std::toupper(c)); });
+
+    if (unit == "KG")
+    {
+        return WeightUnit::Kg;
+    }
+    if (unit == "LBS" || unit == "LB")
+    {
+        return WeightUnit::Lb;
+    }
+
+    return std::nullopt;
 }
 
 double FenixA32x::GetCurrentFuelKg() const

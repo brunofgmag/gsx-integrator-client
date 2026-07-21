@@ -194,6 +194,17 @@ double FenixEfbClient::GetNumber(const std::string& name, const double defaultVa
     return it->second.toDouble(defaultValue);
 }
 
+std::string FenixEfbClient::GetString(const std::string& name, const std::string& defaultValue) const
+{
+    const auto it = values_.find(name);
+    if (it == values_.end() || !it->second.isString())
+    {
+        return defaultValue;
+    }
+
+    return it->second.toString().toStdString();
+}
+
 std::vector<bool> FenixEfbClient::GetBoolArray(const std::string& name) const
 {
     const auto it = values_.find(name);

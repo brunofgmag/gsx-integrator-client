@@ -75,6 +75,20 @@ ColumnLayout {
 
     SettingRow {
         Layout.fillWidth: true
+        title: qsTr("Weight unit")
+        caption: qsTr("Units shown for fuel and payload")
+        helpText: qsTr("In Automatic mode the unit is taken from SimBrief (when a Pilot ID is set) or from the aircraft's flight plan when the client can read it; otherwise KG.")
+
+        SegmentedControl {
+            anchors.verticalCenter: parent.verticalCenter
+            model: [qsTr("Auto"), qsTr("KG"), qsTr("LB")]
+            currentIndex: root.settingsVm.weightUnitMode
+            onActivated: index => root.settingsVm.weightUnitMode = index
+        }
+    }
+
+    SettingRow {
+        Layout.fillWidth: true
         title: qsTr("Theme")
         caption: qsTr("\"Windows\" follows the system")
 

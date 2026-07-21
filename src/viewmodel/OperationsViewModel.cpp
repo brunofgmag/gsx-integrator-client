@@ -1,5 +1,6 @@
 #include "OperationsViewModel.h"
 
+#include <cmath>
 #include <QtCore/QCoreApplication>
 #include "../domain/turnaround/TurnaroundPhase.h"
 #include "../domain/model/FlightPlan.h"
@@ -253,6 +254,11 @@ int OperationsViewModel::GetBoardedPax() const
     return snapshot_.boardedPax;
 }
 
+int OperationsViewModel::GetDeboardedPax() const
+{
+    return static_cast<int>(std::lround(snapshot_.deboardingProgress / 100.0 * snapshot_.targetPax));
+}
+
 double OperationsViewModel::GetTargetFuelKg() const
 {
     return snapshot_.targetFuelKg;
@@ -266,6 +272,11 @@ double OperationsViewModel::GetTargetZfwKg() const
 int OperationsViewModel::GetTargetPax() const
 {
     return snapshot_.targetPax;
+}
+
+int OperationsViewModel::GetAutoWeightUnit() const
+{
+    return snapshot_.autoWeightUnit;
 }
 
 bool OperationsViewModel::IsCargoAircraft() const

@@ -443,6 +443,14 @@ bool IntegratorRuntime::AircraftRequiresEfbFlightPlan() const
     return aircraft_ && aircraft_->RequiresEfbFlightPlan();
 }
 
+WeightUnit IntegratorRuntime::GetAutoWeightUnit() const
+{
+    return weight::ResolveAutoWeightUnit(settings_.simbriefPilotId > 0,
+                                         status_.flightPlanStatus == FlightPlanStatus::Ready,
+                                         status_.simbriefUnit,
+                                         aircraft_ ? aircraft_->GetNativeWeightUnit() : std::nullopt);
+}
+
 void IntegratorRuntime::SetAutomationEnabled(const bool enabled)
 {
     if (status_.enabled == enabled)

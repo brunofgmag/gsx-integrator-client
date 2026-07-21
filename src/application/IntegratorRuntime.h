@@ -53,6 +53,7 @@ public:
     [[nodiscard]] bool IsAircraftRefuelBySelf() const;
     [[nodiscard]] bool IsAircraftCargoVariant() const;
     [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
+    [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
     [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfile_.conflict; }
     [[nodiscard]] bool CanFixGsxProfile() const;
     bool FixGsxProfile();

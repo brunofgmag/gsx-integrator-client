@@ -27,6 +27,7 @@ struct AppSettings
     int themeMode = 2;
     std::string language = "system";
     int updateMode = 1;
+    int weightUnitMode = 0;
     bool closeToTray = false;
     bool minimizeToTray = true;
     bool trayTipShown = false;

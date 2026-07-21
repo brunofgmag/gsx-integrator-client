@@ -23,6 +23,7 @@ public:
     void Poll() override;
     [[nodiscard]] bool IsAvailable() const override;
     [[nodiscard]] double GetNumber(const std::string& name, double defaultValue) const override;
+    [[nodiscard]] std::string GetString(const std::string& name, const std::string& defaultValue) const override;
     [[nodiscard]] std::vector<bool> GetBoolArray(const std::string& name) const override;
     void SetFloat(const std::string& name, double value) override;
     void SetBool(const std::string& name, bool value) override;

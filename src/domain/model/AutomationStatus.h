@@ -20,6 +20,7 @@ struct AutomationStatus
     double targetZfwKg = 0.0;
     int targetPassengers = 0;
     FlightPlanStatus flightPlanStatus = FlightPlanStatus::Idle;
+    WeightUnit simbriefUnit = WeightUnit::Kg;
 
     bool operator==(const AutomationStatus&) const = default;
 

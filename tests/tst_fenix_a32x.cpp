@@ -34,6 +34,7 @@ namespace
     constexpr auto kChocksDataref = "fenix.efb.chocks";
     constexpr auto kGroundPowerDataref = "groundservice.groundpower";
 
+    constexpr auto kWeightUnitDataref = "system.config.Units.Weight";
     constexpr auto kFuelDataref = "aircraft.fuel.total.amount.kg";
     constexpr auto kFuelTargetDataref = "aircraft.refuel.fuelTarget.kg";
     constexpr auto kCargoTargetDataref = "fenix.efb.plannedCargoKg";
@@ -136,6 +137,7 @@ private slots:
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
     static void emptyZfwReadsSimEmptyWeight();
+    static void readsNativeWeightUnitFromEfb();
     static void plannedValuesComeFromEfb();
     static void flightPlanNeedsEfbImportAndFuelTarget();
     static void loadingStartArmsThirdPartyRefueling();
@@ -220,6 +222,8 @@ void FenixA32xTest::subscribesEfbPlanDatarefs()
     QVERIFY(std::ranges::find(fixture.efb.subscribed, std::string(kFuelTargetDataref))
         != fixture.efb.subscribed.end());
     QVERIFY(std::ranges::find(fixture.efb.subscribed, std::string(kCargoTargetDataref))
+        != fixture.efb.subscribed.end());
+    QVERIFY(std::ranges::find(fixture.efb.subscribed, std::string(kWeightUnitDataref))
         != fixture.efb.subscribed.end());
 }
 
@@ -316,6 +320,25 @@ void FenixA32xTest::emptyZfwReadsSimEmptyWeight()
     fixture.gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
 
     QCOMPARE(fixture.aircraft.GetEmptyZfwKg(), kEmptyWeightKg);
+}
+
+void FenixA32xTest::readsNativeWeightUnitFromEfb()
+{
+    const FenixFixture fixture;
+
+    QVERIFY(!fixture.aircraft.GetNativeWeightUnit().has_value());
+
+    fixture.efb.stringValues[kWeightUnitDataref] = "KG";
+    QVERIFY(fixture.aircraft.GetNativeWeightUnit() == WeightUnit::Kg);
+
+    fixture.efb.stringValues[kWeightUnitDataref] = "LBS";
+    QVERIFY(fixture.aircraft.GetNativeWeightUnit() == WeightUnit::Lb);
+
+    fixture.efb.stringValues[kWeightUnitDataref] = "lb";
+    QVERIFY(fixture.aircraft.GetNativeWeightUnit() == WeightUnit::Lb);
+
+    fixture.efb.stringValues[kWeightUnitDataref] = "tonnes";
+    QVERIFY(!fixture.aircraft.GetNativeWeightUnit().has_value());
 }
 
 void FenixA32xTest::plannedValuesComeFromEfb()

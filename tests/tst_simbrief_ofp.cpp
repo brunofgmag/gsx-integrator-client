@@ -33,6 +33,7 @@ void SimbriefOfpTest::parsesKilograms()
     QCOMPARE(flightPlan->fuelKg, 12000.0);
     QCOMPARE(flightPlan->zfwKg, 180000.0);
     QCOMPARE(flightPlan->passengers, 210);
+    QCOMPARE(flightPlan->unit, WeightUnit::Kg);
 }
 
 void SimbriefOfpTest::convertsPounds()
@@ -46,6 +47,7 @@ void SimbriefOfpTest::convertsPounds()
     QVERIFY(flightPlan.has_value());
     QVERIFY(qAbs(flightPlan->fuelKg - 1000.0) < 0.01);
     QVERIFY(qAbs(flightPlan->zfwKg - 2000.0) < 0.01);
+    QCOMPARE(flightPlan->unit, WeightUnit::Lb);
 }
 
 void SimbriefOfpTest::rejectsIncompletePayload()
@@ -122,6 +124,7 @@ void SimbriefOfpTest::defaultsToKilogramsWhenUnitsMissing()
     QVERIFY(plan.has_value());
     QCOMPARE(plan->fuelKg, 12000.0);
     QCOMPARE(plan->zfwKg, 180000.0);
+    QCOMPARE(plan->unit, WeightUnit::Kg);
 }
 
 void SimbriefOfpTest::ignoresUnknownUnitsAsKilograms()
@@ -133,6 +136,7 @@ void SimbriefOfpTest::ignoresUnknownUnitsAsKilograms()
 
     QVERIFY(plan.has_value());
     QCOMPARE(plan->fuelKg, 12000.0);
+    QCOMPARE(plan->unit, WeightUnit::Kg);
 }
 
 QTEST_APPLESS_MAIN(SimbriefOfpTest)

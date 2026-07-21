@@ -33,6 +33,7 @@ public:
     [[nodiscard]] double GetPlannedZfwKg() const override;
     [[nodiscard]] int GetPlannedPassengers() const override;
     [[nodiscard]] double GetEmptyZfwKg() const override;
+    [[nodiscard]] std::optional<WeightUnit> GetNativeWeightUnit() const override;
 
     [[nodiscard]] double GetCurrentFuelKg() const override;
     void SetCurrentFuelKg(double fuelKg) override;
