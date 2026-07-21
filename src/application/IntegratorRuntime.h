@@ -9,6 +9,7 @@
 #include <QtCore/QString>
 #include <QtCore/QTimer>
 #include "sim/SimVersion.h"
+#include "../infrastructure/commbus/CommBusBridgeClient.h"
 #include "../infrastructure/commbus/CommBusPluginClient.h"
 #include "../infrastructure/gsx/GsxStateService.h"
 #include "../infrastructure/simbrief/SimbriefClient.h"
@@ -108,6 +109,7 @@ private:
     static constexpr int kReconnectIntervalMs = 5000;
 
     SimConnectVariableGateway varGateway_;
+    CommBusBridgeClient bridgeClient_;
     CommBusPluginClient pluginClient_;
     GsxStateService gsxService_;
     GsxRemoteApiClient gsxRemoteClient_;

@@ -12,6 +12,7 @@ class FakeVariableGateway final : public VariableGateway
 {
 public:
     std::unordered_map<std::string, double> lvars;
+    std::unordered_map<std::string, double> lvarPeaks;
     std::unordered_map<std::string, double> avars;
     std::string aircraftName;
     bool aircraftNameAvailable = true;
@@ -30,6 +31,18 @@ public:
     {
         const auto it = lvars.find(name);
         return it != lvars.end() ? it->second : defaultValue;
+    }
+
+    double ConsumeLVarPeak(const std::string& name) override
+    {
+        if (const auto it = lvarPeaks.find(name); it != lvarPeaks.end())
+        {
+            const double peak = it->second;
+            lvarPeaks.erase(it);
+            return peak;
+        }
+
+        return GetLVar(name);
     }
 
     bool HasReceivedLVar(const std::string& name) override

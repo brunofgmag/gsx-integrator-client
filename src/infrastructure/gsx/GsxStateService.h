@@ -34,16 +34,19 @@ public:
     [[nodiscard]] bool IsJetwayInPlace() const override;
     [[nodiscard]] bool AreStairsAvailable() const override;
     [[nodiscard]] bool IsJetwayAvailable() const override;
+    [[nodiscard]] bool IsJetwayOrStairsOperating() const override;
     [[nodiscard]] bool IsAircraftOnGround() const override;
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override;
     [[nodiscard]] GroundPowerStatus GetGpuStatus() const override;
     [[nodiscard]] bool IsServiceInProgress(GroundService service) const override;
 
     void TakeOverFuelAndPayload() override;
+    void ReassertTakeovers() const;
 
     [[nodiscard]] bool IsSimbriefLoaded() const override;
 
 private:
+    bool fuelAndPayloadTakenOver_ = false;
     struct StateTrack
     {
         GsxStateStatus status = GsxStateStatus::Unavailable;

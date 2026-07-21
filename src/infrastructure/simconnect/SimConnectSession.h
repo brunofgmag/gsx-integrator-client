@@ -2,6 +2,8 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_SIMCONNECTSESSION_H
 
 #include <functional>
+#include <string>
+#include <unordered_map>
 #include <utility>
 #include <windows.h>
 #include <SimConnect.h>
@@ -16,6 +18,7 @@ public:
     using SimRunningFn = std::function<void(bool)>;
     using PauseFn = std::function<void(unsigned)>;
     using OpenFn = std::function<void(const char*)>;
+    using ClientDataFn = std::function<void(const void* data, DWORD size)>;
 
     bool Open(const char* name);
     void Close();
@@ -24,6 +27,23 @@ public:
     [[nodiscard]] HANDLE Handle() const { return hSimConnect_; }
 
     bool TransmitExternalSystemToggle(int state) const;
+    bool TransmitEvent(const char* eventName, DWORD parameter);
+
+    bool MapClientDataArea(const char* areaName,
+                           SIMCONNECT_CLIENT_DATA_ID areaId,
+                           SIMCONNECT_CLIENT_DATA_DEFINITION_ID defId,
+                           DWORD size) const;
+    bool RequestClientDataArea(const char* areaName,
+                               SIMCONNECT_CLIENT_DATA_ID areaId,
+                               SIMCONNECT_CLIENT_DATA_DEFINITION_ID defId,
+                               SIMCONNECT_DATA_REQUEST_ID requestId,
+                               DWORD size,
+                               SIMCONNECT_CLIENT_DATA_PERIOD period,
+                               SIMCONNECT_CLIENT_DATA_REQUEST_FLAG flag,
+                               ClientDataFn onData);
+    bool WriteClientData(SIMCONNECT_CLIENT_DATA_ID areaId,
+                         SIMCONNECT_CLIENT_DATA_DEFINITION_ID defId,
+                         DWORD size, const void* data) const;
 
     bool SubscribeToPause(PauseFn onPause);
     bool SubscribeToExternalSystemToggle(MenuEventFn onMenuEvent);
@@ -55,12 +75,14 @@ private:
     };
 
     static constexpr DWORD kRequestSimState = 0x0FFFFFFF;
+    static constexpr SIMCONNECT_CLIENT_EVENT_ID kDynamicEventBase = 0x1000;
 
     static void CALLBACK DispatchTrampoline(SIMCONNECT_RECV* pData, DWORD cbData, void* ctx);
     void HandleMessage(SIMCONNECT_RECV* pData, DWORD cbData);
     void HandleOpen(const SIMCONNECT_RECV* pData, DWORD cbData) const;
     void HandleEvent(const SIMCONNECT_RECV* pData, DWORD cbData) const;
     void HandleSystemState(const SIMCONNECT_RECV* pData, DWORD cbData) const;
+    void HandleClientData(const SIMCONNECT_RECV* pData, DWORD cbData) const;
 
     template <typename Fn>
     bool SubscribeSystemEvent(Fn& target, Fn fn, SIMCONNECT_CLIENT_EVENT_ID eventId, const char* name);
@@ -76,6 +98,9 @@ private:
     EventFn onSixHz_;
     EventFn onQuit_;
     SimRunningFn onSimRunning_;
+    std::unordered_map<DWORD, ClientDataFn> clientDataHandlers_;
+    std::unordered_map<std::string, SIMCONNECT_CLIENT_EVENT_ID> mappedEvents_;
+    SIMCONNECT_CLIENT_EVENT_ID nextDynamicEvent_ = kDynamicEventBase;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_SIMCONNECTSESSION_H

@@ -36,6 +36,8 @@ private slots:
     static void detachResetsReceivedState();
     static void avarReportsReceivedOnlyAfterDataArrives();
     static void lvarReportsReceivedOnlyAfterDataArrives();
+    static void fastRefreshSharesSlotWithGetLVar();
+    static void consumeLVarPeakCatchesTransient();
 };
 
 void VariableGatewayTest::lvarReturnsDefaultUntilDataArrives()
@@ -113,6 +115,30 @@ void VariableGatewayTest::lvarReportsReceivedOnlyAfterDataArrives()
     gateway.Detach();
 
     QVERIFY(!gateway.HasReceivedLVar(kEng3N1));
+}
+
+void VariableGatewayTest::consumeLVarPeakCatchesTransient()
+{
+    SimConnectVariableGateway gateway;
+    QCOMPARE(gateway.ConsumeLVarPeak(kEng3N1), 0.0);
+
+    DeliverDouble(gateway, kFirstDefineId, 100.0);
+    DeliverDouble(gateway, kFirstDefineId, 50.0);
+
+    QCOMPARE(gateway.ConsumeLVarPeak(kEng3N1), 100.0);
+    QCOMPARE(gateway.ConsumeLVarPeak(kEng3N1), 50.0);
+}
+
+void VariableGatewayTest::fastRefreshSharesSlotWithGetLVar()
+{
+    SimConnectVariableGateway gateway;
+
+    gateway.SetFastRefresh(kEng3N1);
+    QCOMPARE(gateway.GetLVar(kEng3N1, 0.0), 0.0);
+
+    DeliverDouble(gateway, kFirstDefineId, 100.0);
+
+    QCOMPARE(gateway.GetLVar(kEng3N1, 0.0), 100.0);
 }
 
 QTEST_APPLESS_MAIN(VariableGatewayTest)

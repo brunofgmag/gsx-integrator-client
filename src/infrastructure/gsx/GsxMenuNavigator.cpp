@@ -493,6 +493,12 @@ bool GsxMenuNavigator::TriggerService(const char* serviceId)
     ShowGsxToolbar();
     lastActionMs_ = nowMs_();
 
+    if (state_->menu.shown)
+    {
+        (void)client_->SendCommand("menu.close");
+        ClearMenuTracking();
+    }
+
     return client_->SendCommand("service.trigger", QJsonObject{{"service", QString::fromLatin1(serviceId)}});
 }
 

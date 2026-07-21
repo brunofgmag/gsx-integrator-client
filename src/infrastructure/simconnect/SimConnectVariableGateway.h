@@ -15,10 +15,11 @@ public:
     void Detach();
 
     void SetFastRefresh(const std::string& name) override;
-    double GetLVar(const std::string& name, double defaultValue = 0.0) override;
+    double GetLVar(const std::string& name, double defaultValue) override;
+    double ConsumeLVarPeak(const std::string& name) override;
     [[nodiscard]] bool HasReceivedLVar(const std::string& name) override;
     void SetLVar(const std::string& name, double value) override;
-    double GetAVar(const std::string& name, const std::string& unit, double defaultValue = 0.0) override;
+    double GetAVar(const std::string& name, const std::string& unit, double defaultValue) override;
     [[nodiscard]] bool HasReceivedAVar(const std::string& name, const std::string& unit) override;
     void SetAVar(const std::string& name, const std::string& unit, double value) override;
 
@@ -38,6 +39,7 @@ private:
         bool received = false;
         bool fast = false;
         double value = 0.0;
+        double peakValue = 0.0;
         char text[256] = {};
     };
 

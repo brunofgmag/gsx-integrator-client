@@ -19,7 +19,7 @@ namespace
 
 IntegratorRuntime::IntegratorRuntime(QObject* parent)
     : QObject(parent),
-      pluginClient_(&varGateway_),
+      pluginClient_(&bridgeClient_),
       gsxService_(&varGateway_, &gsxRemoteState_),
       gsxMenu_(&gsxRemoteClient_, &gsxRemoteState_, &settings_, &qtLogger_, &pluginClient_),
       stateMachine_(&status_, &settings_, &gsxService_, &gsxMenu_, &qtLogger_),
@@ -68,7 +68,7 @@ void IntegratorRuntime::Setup()
 
 bool IntegratorRuntime::IsSimOnMenu()
 {
-    return varGateway_.GetAVar("CAMERA STATE", "Number") == 12.0;
+    return varGateway_.GetAVar("CAMERA STATE", "Number", 0.0) == 12.0;
 }
 
 void IntegratorRuntime::OnSimOpen(const char* appName)
@@ -110,6 +110,7 @@ void IntegratorRuntime::TryConnect()
         return;
     }
 
+    bridgeClient_.Setup();
     pluginClient_.Setup();
 
     varGateway_.SetFastRefresh("L:FSDT_GSX_JETWAY");
@@ -179,7 +180,11 @@ void IntegratorRuntime::OnDispatchTimer()
     if (!simConnect_.Dispatch())
     {
         HandleDisconnected();
+
+        return;
     }
+
+    bridgeClient_.Poll();
 }
 
 void IntegratorRuntime::OnSimRunningChanged(const bool running)
@@ -247,6 +252,7 @@ void IntegratorRuntime::UpdateSlow()
 
     aircraft_->OnSlowTick();
 
+    gsxService_.ReassertTakeovers();
     CheckGsxProfile();
 }
 
@@ -263,6 +269,8 @@ void IntegratorRuntime::Shutdown()
     {
         pluginClient_.Shutdown();
     }
+
+    bridgeClient_.Shutdown();
 
     varGateway_.Detach();
     simConnect_.Close();
@@ -390,7 +398,7 @@ bool IntegratorRuntime::FixGsxProfile()
 
 bool IntegratorRuntime::IsSessionReady()
 {
-    const double camera = varGateway_.GetAVar("CAMERA STATE", "Number");
+    const double camera = varGateway_.GetAVar("CAMERA STATE", "Number", 0.0);
 
     if (simVersion_ != SimVersion::Msfs2024)
     {
@@ -400,8 +408,8 @@ bool IntegratorRuntime::IsSessionReady()
     return SessionReadiness::Evaluate(
         simVersion_,
         camera,
-        varGateway_.GetAVar("IS AIRCRAFT", "Number"),
-        varGateway_.GetAVar("IS AVATAR", "Number")
+        varGateway_.GetAVar("IS AIRCRAFT", "Number", 0.0),
+        varGateway_.GetAVar("IS AVATAR", "Number", 0.0)
     );
 }
 

@@ -8,8 +8,8 @@
 
 namespace
 {
-    constexpr int kRetryTicks = 120;
-    constexpr int kMaxAttempts = 2;
+    constexpr int kRetryTicks = 20;
+    constexpr int kMaxAttempts = 4;
     constexpr int kCateringRetryTicks = 10;
     constexpr int kMaxCateringAttempts = 3;
 }
@@ -80,6 +80,11 @@ std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(Tur
         return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
     }
 
+    if (ctx.gsxGateway->IsJetwayOrStairsOperating())
+    {
+        return std::nullopt;
+    }
+
     if (ctx.gsxGateway->IsJetwayAvailable() && !ctx.data.jetwayOrStairsRequested)
     {
         RegisterJetwayOrStairsRequest(ctx, ctx.menuGateway->CallJetway());
@@ -99,7 +104,9 @@ std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(Tur
             return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
         }
 
-        RegisterJetwayOrStairsRequest(ctx, ctx.menuGateway->CallStairs());
+        RegisterJetwayOrStairsRequest(ctx, ctx.gsxGateway->IsJetwayAvailable()
+                                               ? ctx.menuGateway->CallJetway()
+                                               : ctx.menuGateway->CallStairs());
     }
 
     return std::nullopt;

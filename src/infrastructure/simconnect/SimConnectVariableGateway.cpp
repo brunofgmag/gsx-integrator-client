@@ -11,7 +11,7 @@ namespace
     constexpr DWORD kFastIntervalFrames = 10;
 }
 
-void SimConnectVariableGateway::Attach(const HANDLE hSimConnect)
+void SimConnectVariableGateway::Attach(HANDLE hSimConnect)
 {
     hSimConnect_ = hSimConnect;
 
@@ -38,7 +38,7 @@ void SimConnectVariableGateway::Detach()
 
 void SimConnectVariableGateway::SetFastRefresh(const std::string& name)
 {
-    EnsureSlot(name, name, kNumberUnit, false, true);
+    EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false, true);
     if (hSimConnect_ == nullptr)
     {
         LOG_ERROR("Could not write to LVar '%s', not connected.", name.c_str());
@@ -121,6 +121,20 @@ double SimConnectVariableGateway::GetLVar(const std::string& name, const double 
 {
     const Slot& slot = EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false);
     return slot.received ? slot.value : defaultValue;
+}
+
+double SimConnectVariableGateway::ConsumeLVarPeak(const std::string& name)
+{
+    Slot& slot = EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false);
+    if (!slot.received)
+    {
+        return 0.0;
+    }
+
+    const double peak = slot.peakValue;
+    slot.peakValue = slot.value;
+
+    return peak;
 }
 
 bool SimConnectVariableGateway::HasReceivedLVar(const std::string& name)
@@ -221,6 +235,10 @@ void SimConnectVariableGateway::HandleSimObjectData(const SIMCONNECT_RECV_SIMOBJ
         else
         {
             std::memcpy(&slot.value, &pData->dwData, sizeof(double));
+            if (!slot.received || slot.value > slot.peakValue)
+            {
+                slot.peakValue = slot.value;
+            }
         }
 
         slot.received = true;

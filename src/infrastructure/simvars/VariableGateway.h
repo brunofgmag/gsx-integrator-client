@@ -10,6 +10,10 @@ public:
 
     virtual void SetFastRefresh(const std::string& name) = 0;
     virtual double GetLVar(const std::string& name, double defaultValue = 0.0) = 0;
+    virtual double ConsumeLVarPeak(const std::string& name)
+    {
+        return GetLVar(name);
+    }
     [[nodiscard]] virtual bool HasReceivedLVar(const std::string& name) = 0;
     virtual void SetLVar(const std::string& name, double value) = 0;
     virtual double GetAVar(const std::string& name, const std::string& unit, double defaultValue = 0.0) = 0;

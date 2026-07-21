@@ -12,9 +12,11 @@ private slots:
     static void advancesWhenJetwayIsAvailable();
     static void prefersJetwayWhenBothAreAvailable();
     static void callStairsWhenJetwayFailsToComplete();
+    static void retriesJetwayWhileItStaysAvailable();
     static void skipsWhenAircraftDoesNotSupportStairsOrJetways();
     static void advancesImmediatelyWhenJetwayAlreadyInPlace();
     static void givesUpAfterTwoAttempts();
+    static void holdsRetriesWhileStairsOperating();
     static void requestsCateringWhenEnabled();
     static void skipsCateringForCargoVariant();
     static void retriesCateringUntilConfirmed();
@@ -99,14 +101,34 @@ void CallServicesStateTest::callStairsWhenJetwayFailsToComplete()
     f.menuGateway.callStairsResult = true;
     f.menuGateway.callJetwayResult = true;
 
-    for (int tick = 0; tick < 121; ++tick)
+    for (int tick = 0; tick < 21; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        (void)state.Evaluate(f.ctx);
+        f.gsxService.jetwayAvailable = false;
+    }
+
+    QCOMPARE(f.menuGateway.callJetwayCalls, 1);
+    QCOMPARE(f.menuGateway.callStairsCalls, 1);
+}
+
+void CallServicesStateTest::retriesJetwayWhileItStaysAvailable()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.gsxService.jetwayAvailable = true;
+    f.gsxService.stairsAvailable = false;
+    f.menuGateway.callJetwayResult = true;
+
+    for (int tick = 0; tick < 21; ++tick)
     {
         ++f.ctx.data.stateTickCount;
         (void)state.Evaluate(f.ctx);
     }
 
-    QCOMPARE(f.menuGateway.callJetwayCalls, 1);
-    QCOMPARE(f.menuGateway.callStairsCalls, 1);
+    QCOMPARE(f.menuGateway.callJetwayCalls, 2);
+    QCOMPARE(f.menuGateway.callStairsCalls, 0);
 }
 
 void CallServicesStateTest::skipsWhenAircraftDoesNotSupportStairsOrJetways()
@@ -151,7 +173,7 @@ void CallServicesStateTest::givesUpAfterTwoAttempts()
     f.gsxService.jetwayAvailable = true;
 
     std::optional<TurnaroundTransition> transition;
-    for (int tick = 0; tick < 240 && !transition; ++tick)
+    for (int tick = 0; tick < 120 && !transition; ++tick)
     {
         ++f.ctx.data.stateTickCount;
         transition = state.Evaluate(f.ctx);
@@ -159,9 +181,40 @@ void CallServicesStateTest::givesUpAfterTwoAttempts()
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
-    QCOMPARE(f.menuGateway.callJetwayCalls, 1);
+    QCOMPARE(f.menuGateway.callJetwayCalls, 4);
+    QCOMPARE(f.menuGateway.callStairsCalls, 0);
+    QCOMPARE(f.ctx.data.jetwayOrStairsAttempts, 4);
+}
+
+void CallServicesStateTest::holdsRetriesWhileStairsOperating()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.gsxService.stairsAvailable = true;
+    f.menuGateway.callStairsResult = true;
+
+    ++f.ctx.data.stateTickCount;
+    (void)state.Evaluate(f.ctx);
+
     QCOMPARE(f.menuGateway.callStairsCalls, 1);
-    QCOMPARE(f.ctx.data.jetwayOrStairsAttempts, 2);
+
+    f.gsxService.jetwayOrStairsOperating = true;
+    for (int tick = 0; tick < 120; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.callStairsCalls, 1);
+
+    f.gsxService.jetwayOrStairsOperating = false;
+    f.gsxService.stairsInPlace = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
 }
 
 void CallServicesStateTest::requestsCateringWhenEnabled()

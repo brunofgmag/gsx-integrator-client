@@ -129,11 +129,11 @@ gsxi_add_qt_test(gsxi-automation-status-tests automation-status
         src/domain/model/FlightPlan.h)
 
 gsxi_add_qt_test(gsxi-gsx-plugin-client-tests gsx-plugin-client
-        tests/TestDoubles.h
+        tests/doubles/FakeCommBusBridgeGateway.h
         tests/tst_gsx_plugin_client.cpp
+        src/infrastructure/commbus/CommBusBridgeGateway.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
-        src/infrastructure/commbus/CommBusPluginClient.h
-        src/infrastructure/simvars/VariableGateway.h)
+        src/infrastructure/commbus/CommBusPluginClient.h)
 
 gsxi_add_qt_test(gsxi-remote-state-tests remote-state
         tests/tst_remote_state.cpp
@@ -144,6 +144,7 @@ target_compile_definitions(gsxi-remote-state-tests PRIVATE
         GSX_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures\")
 
 gsxi_add_qt_test(gsxi-gsx-menu-navigator-tests gsx-menu-navigator
+        tests/doubles/FakeCommBusBridgeGateway.h
         tests/doubles/FakeDomainLogger.h
         tests/doubles/FakeVariableGateway.h
         tests/tst_gsx_menu_navigator.cpp
@@ -152,6 +153,7 @@ gsxi_add_qt_test(gsxi-gsx-menu-navigator-tests gsx-menu-navigator
         src/infrastructure/gsx/GsxRemoteApiClient.cpp
         src/infrastructure/gsx/GsxRemoteApiClient.h
         src/infrastructure/gsx/GsxRemoteState.h
+        src/infrastructure/commbus/CommBusBridgeGateway.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
         src/infrastructure/simvars/VariableGateway.h
@@ -173,6 +175,7 @@ gsxi_add_qt_test(gsxi-gsx-interface-tests gsx-interface
         src/infrastructure/gsx/GsxStateService.cpp
         src/infrastructure/gsx/GsxStateService.h
         src/infrastructure/gsx/GsxRemoteState.h
+        src/infrastructure/commbus/CommBusBridgeGateway.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
         src/infrastructure/simvars/VariableGateway.h)
@@ -313,6 +316,72 @@ add_custom_command(TARGET gsxi-fenix-a32x-tests POST_BUILD
         "$<TARGET_FILE_DIR:gsxi-fenix-a32x-tests>"
         VERBATIM)
 
+gsxi_add_qt_test(gsxi-commbus-bridge-client-tests commbus-bridge-client
+        tests/doubles/FakeVariableGateway.h
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
+        tests/tst_commbus_bridge_client.cpp
+        src/infrastructure/commbus/CommBusBridgeClient.cpp
+        src/infrastructure/commbus/CommBusBridgeClient.h
+        src/infrastructure/commbus/CommBusBridgeGateway.h
+        src/infrastructure/simconnect/SimConnectSession.cpp
+        src/infrastructure/simconnect/SimConnectSession.h
+        src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+        src/infrastructure/simconnect/SimConnectVariableGateway.h
+        src/infrastructure/simvars/VariableGateway.h)
+target_include_directories(gsxi-commbus-bridge-client-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
+gsxi_add_qt_test(gsxi-pmdg777-data-client-tests pmdg777-data-client
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
+        tests/tst_pmdg777_data_client.cpp
+        src/infrastructure/pmdg/Pmdg777DataClient.cpp
+        src/infrastructure/pmdg/Pmdg777DataClient.h
+        src/infrastructure/pmdg/Pmdg777DataGateway.h
+        src/infrastructure/pmdg/Pmdg777SdkData.h
+        src/infrastructure/simconnect/SimConnectSession.cpp
+        src/infrastructure/simconnect/SimConnectSession.h
+        src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+        src/infrastructure/simconnect/SimConnectVariableGateway.h)
+target_include_directories(gsxi-pmdg777-data-client-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
+gsxi_add_qt_test(gsxi-pmdg777-tablet-client-tests pmdg777-tablet-client
+        tests/doubles/FakeCommBusBridgeGateway.h
+        tests/tst_pmdg777_tablet_client.cpp
+        src/infrastructure/commbus/CommBusBridgeGateway.h
+        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
+        src/infrastructure/pmdg/Pmdg777TabletClient.h
+        src/infrastructure/pmdg/Pmdg777TabletGateway.h)
+
+gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
+        tests/doubles/FakePmdg777DataGateway.h
+        tests/doubles/FakePmdg777TabletGateway.h
+        tests/doubles/FakeVariableGateway.h
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
+        tests/tst_pmdg777.cpp
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/Pmdg777.cpp
+        src/infrastructure/aircraft/Pmdg777.h
+        src/infrastructure/commbus/CommBusBridgeClient.cpp
+        src/infrastructure/commbus/CommBusBridgeClient.h
+        src/infrastructure/commbus/CommBusBridgeGateway.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
+        src/infrastructure/pmdg/Pmdg777DataClient.cpp
+        src/infrastructure/pmdg/Pmdg777DataClient.h
+        src/infrastructure/pmdg/Pmdg777DataGateway.h
+        src/infrastructure/pmdg/Pmdg777SdkData.h
+        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
+        src/infrastructure/pmdg/Pmdg777TabletClient.h
+        src/infrastructure/pmdg/Pmdg777TabletGateway.h
+        src/infrastructure/simconnect/SimConnectSession.cpp
+        src/infrastructure/simconnect/SimConnectSession.h
+        src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+        src/infrastructure/simconnect/SimConnectVariableGateway.h)
+target_include_directories(gsxi-pmdg-777-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
 gsxi_add_qt_test(gsxi-aircraft-matching-tests aircraft-matching
         tests/tst_aircraft_matching.cpp
         src/infrastructure/aircraft/AircraftIdentity.h
@@ -321,6 +390,8 @@ gsxi_add_qt_test(gsxi-aircraft-matching-tests aircraft-matching
 
 gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         tests/TestDoubles.h
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
         tests/tst_aircraft_detection.cpp
         src/infrastructure/aircraft/AircraftFactory.cpp
         src/infrastructure/aircraft/AircraftFactory.h
@@ -331,10 +402,26 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/aircraft/Pmdg777.cpp
+        src/infrastructure/aircraft/Pmdg777.h
         src/infrastructure/aircraft/TfdiMd11.cpp
         src/infrastructure/aircraft/TfdiMd11.h
         src/infrastructure/aircraft/TolissA340.cpp
         src/infrastructure/aircraft/TolissA340.h
+        src/infrastructure/commbus/CommBusBridgeClient.cpp
+        src/infrastructure/commbus/CommBusBridgeClient.h
+        src/infrastructure/commbus/CommBusBridgeGateway.h
+        src/infrastructure/pmdg/Pmdg777DataClient.cpp
+        src/infrastructure/pmdg/Pmdg777DataClient.h
+        src/infrastructure/pmdg/Pmdg777DataGateway.h
+        src/infrastructure/pmdg/Pmdg777SdkData.h
+        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
+        src/infrastructure/pmdg/Pmdg777TabletClient.h
+        src/infrastructure/pmdg/Pmdg777TabletGateway.h
+        src/infrastructure/simconnect/SimConnectSession.cpp
+        src/infrastructure/simconnect/SimConnectSession.h
+        src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+        src/infrastructure/simconnect/SimConnectVariableGateway.h
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h
@@ -343,6 +430,7 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/domain/model/AutomationStatus.h
         src/domain/support/Weight.h)
 target_link_libraries(gsxi-aircraft-detection-tests PRIVATE Qt6::Network)
+target_include_directories(gsxi-aircraft-detection-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
 add_custom_command(TARGET gsxi-aircraft-detection-tests POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different
@@ -405,12 +493,24 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/aircraft/Pmdg777.cpp
+        src/infrastructure/aircraft/Pmdg777.h
         src/infrastructure/aircraft/TfdiMd11.cpp
         src/infrastructure/aircraft/TfdiMd11.h
         src/infrastructure/aircraft/TolissA340.cpp
         src/infrastructure/aircraft/TolissA340.h
+        src/infrastructure/commbus/CommBusBridgeClient.cpp
+        src/infrastructure/commbus/CommBusBridgeClient.h
+        src/infrastructure/commbus/CommBusBridgeGateway.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
+        src/infrastructure/pmdg/Pmdg777DataClient.cpp
+        src/infrastructure/pmdg/Pmdg777DataClient.h
+        src/infrastructure/pmdg/Pmdg777DataGateway.h
+        src/infrastructure/pmdg/Pmdg777SdkData.h
+        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
+        src/infrastructure/pmdg/Pmdg777TabletClient.h
+        src/infrastructure/pmdg/Pmdg777TabletGateway.h
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h
