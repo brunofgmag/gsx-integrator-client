@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.1.0...v1.2.0) (2026-07-22)
+
+
+### Features
+
+* add PMDG 777 ([#30](https://github.com/brunofgmag/gsx-integrator-client/issues/30)) ([837b109](https://github.com/brunofgmag/gsx-integrator-client/commit/837b10923847131cda28bea636aba421b17ec14e))
+
 ## [1.1.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.0.0...v1.1.0) (2026-07-20)
 
 
