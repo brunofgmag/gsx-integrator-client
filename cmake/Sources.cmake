@@ -38,6 +38,8 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/states/PlaceArrivalGroundEquipmentState.h
         src/domain/turnaround/states/CallServicesState.cpp
         src/domain/turnaround/states/CallServicesState.h
+        src/domain/turnaround/states/CallCateringState.cpp
+        src/domain/turnaround/states/CallCateringState.h
         src/domain/turnaround/states/RepositionAircraftState.cpp
         src/domain/turnaround/states/RepositionAircraftState.h
         src/domain/turnaround/states/WaitingDepartureState.cpp
@@ -95,12 +97,26 @@ set(APP_SOURCES
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/aircraft/Pmdg777.cpp
+        src/infrastructure/aircraft/Pmdg777.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/TfdiMd11.cpp
         src/infrastructure/aircraft/TfdiMd11.h
         src/infrastructure/aircraft/TolissA340.cpp
         src/infrastructure/aircraft/TolissA340.h
+        src/infrastructure/commbus/CommBusBridgeClient.cpp
+        src/infrastructure/commbus/CommBusBridgeClient.h
+        src/infrastructure/commbus/CommBusBridgeGateway.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
+        src/infrastructure/pmdg/Pmdg777DataClient.cpp
+        src/infrastructure/pmdg/Pmdg777DataClient.h
+        src/infrastructure/pmdg/Pmdg777DataGateway.h
+        src/infrastructure/pmdg/Pmdg777SdkData.h
+        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
+        src/infrastructure/pmdg/Pmdg777TabletClient.h
+        src/infrastructure/pmdg/Pmdg777TabletGateway.h
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h

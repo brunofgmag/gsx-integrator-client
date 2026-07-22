@@ -21,6 +21,7 @@ struct TurnaroundStateFixture
 
     TurnaroundStateFixture()
     {
+        status.gsxAvailable = true;
         ctx.status = &status;
         ctx.settings = &settings;
         ctx.gsxGateway = &gsxService;

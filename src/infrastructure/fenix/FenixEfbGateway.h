@@ -13,6 +13,7 @@ public:
     virtual void Poll() = 0;
     [[nodiscard]] virtual bool IsAvailable() const = 0;
     [[nodiscard]] virtual double GetNumber(const std::string& name, double defaultValue) const = 0;
+    [[nodiscard]] virtual std::string GetString(const std::string& name, const std::string& defaultValue) const = 0;
     [[nodiscard]] virtual std::vector<bool> GetBoolArray(const std::string& name) const = 0;
     virtual void SetFloat(const std::string& name, double value) = 0;
     virtual void SetBool(const std::string& name, bool value) = 0;

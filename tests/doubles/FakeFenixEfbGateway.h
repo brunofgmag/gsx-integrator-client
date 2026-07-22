@@ -16,6 +16,7 @@ public:
     int setStringCalls = 0;
     std::vector<std::string> subscribed;
     std::unordered_map<std::string, double> numbers;
+    std::unordered_map<std::string, std::string> stringValues;
     std::unordered_map<std::string, std::vector<bool>> boolArrays;
     std::unordered_map<std::string, double> floats;
     std::unordered_map<std::string, bool> bools;
@@ -41,6 +42,12 @@ public:
     {
         const auto it = numbers.find(name);
         return it != numbers.end() ? it->second : defaultValue;
+    }
+
+    [[nodiscard]] std::string GetString(const std::string& name, const std::string& defaultValue) const override
+    {
+        const auto it = stringValues.find(name);
+        return it != stringValues.end() ? it->second : defaultValue;
     }
 
     [[nodiscard]] std::vector<bool> GetBoolArray(const std::string& name) const override

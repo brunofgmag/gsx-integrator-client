@@ -39,6 +39,7 @@ private slots:
     static void deboardedPassengersIgnoresStaleTotalBeforeDeboardingStarts();
     static void boardedPassengersDiscardsStaleTotalZeroedAfterBoardingStarts();
     static void takeOverFuelAndPayloadClearsAutomationLVars();
+    static void reassertsTakeoverAfterCouatlReset();
     static void refuelCounterComesFromFuelCounterLvar();
     static void gpuStatusFollowsStateLVar();
     static void gpuStatusConnectedWhenConnectedFlagSetDespiteState();
@@ -443,6 +444,37 @@ void GsxInterfaceTest::takeOverFuelAndPayloadClearsAutomationLVars()
 
     QCOMPARE(gateway.Written(kAutomationFuel), 0.0);
     QCOMPARE(gateway.Written(kAutomationPayload), 0.0);
+}
+
+void GsxInterfaceTest::reassertsTakeoverAfterCouatlReset()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kAutomationFuel] = 1.0;
+    gateway.lvars[kAutomationPayload] = 1.0;
+
+    gsx.ReassertTakeovers();
+
+    QCOMPARE(gateway.Written(kAutomationFuel), 1.0);
+
+    gsx.TakeOverFuelAndPayload();
+    gateway.lvars[kAutomationFuel] = 1.0;
+    gateway.lvars[kAutomationPayload] = 1.0;
+
+    gsx.ReassertTakeovers();
+
+    QCOMPARE(gateway.Written(kAutomationFuel), 0.0);
+    QCOMPARE(gateway.Written(kAutomationPayload), 0.0);
+
+    gsx.Reset();
+    gateway.lvars[kAutomationFuel] = 1.0;
+    gateway.lvars[kAutomationPayload] = 1.0;
+
+    gsx.ReassertTakeovers();
+
+    QCOMPARE(gateway.Written(kAutomationFuel), 1.0);
+    QCOMPARE(gateway.Written(kAutomationPayload), 1.0);
 }
 
 void GsxInterfaceTest::refuelCounterComesFromFuelCounterLvar()

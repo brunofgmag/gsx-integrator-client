@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -44,6 +46,8 @@ namespace
 
     constexpr auto kChocksDataref = "fenix.efb.chocks";
     constexpr auto kGroundPowerDataref = "groundservice.groundpower";
+
+    constexpr auto kWeightUnitDataref = "system.config.Units.Weight";
 
     constexpr auto kFuelAmountDataref = "aircraft.fuel.total.amount.kg";
     constexpr auto kFuelTargetDataref = "aircraft.refuel.fuelTarget.kg";
@@ -129,13 +133,17 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
     : variableGateway_(variableGateway),
       variant_(variant),
       efb_(std::move(efb)),
-      doors_(variableGateway)
+      doors_(variableGateway),
+      smartSwitch_(*variableGateway, {kSmartSwitchLVar},
+                   [](const double min, double) { return min <= kSmartSwitchIntercom; },
+                   kSmartSwitchNeutral)
 {
-    variableGateway_->SetFastRefresh(std::string("L:") + kSmartSwitchLVar);
+    smartSwitch_.Subscribe();
     efb_->Subscribe(kSimbriefImportedDataref);
     efb_->Subscribe(kBookedSeatsDataref);
     efb_->Subscribe(kFuelTargetDataref);
     efb_->Subscribe(kCargoTargetDataref);
+    efb_->Subscribe(kWeightUnitDataref);
 
     LOG_INFO("Profile loaded: %s", GetName());
 }
@@ -272,6 +280,24 @@ double FenixA32x::GetEmptyZfwKg() const
     return variableGateway_->GetAVar(kSimEmptyWeight, kKgUnit, 0.0);
 }
 
+std::optional<WeightUnit> FenixA32x::GetNativeWeightUnit() const
+{
+    std::string unit = efb_->GetString(kWeightUnitDataref, "");
+    std::ranges::transform(unit, unit.begin(),
+                           [](const unsigned char c) { return static_cast<char>(std::toupper(c)); });
+
+    if (unit == "KG")
+    {
+        return WeightUnit::Kg;
+    }
+    if (unit == "LBS" || unit == "LB")
+    {
+        return WeightUnit::Lb;
+    }
+
+    return std::nullopt;
+}
+
 double FenixA32x::GetCurrentFuelKg() const
 {
     return variableGateway_->GetAVar(kSimFuelTotalKg, kKgUnit, 0.0);
@@ -373,25 +399,7 @@ void FenixA32x::MaybeRequestFinalLoadsheet(const double zfwKg)
 
 bool FenixA32x::ConsumeSmartSwitch()
 {
-    const bool isActive =
-        variableGateway_->GetLVar(kSmartSwitchLVar, kSmartSwitchNeutral) == kSmartSwitchIntercom;
-
-    if (!isActive)
-    {
-        smartSwitchResetPending_ = false;
-        return false;
-    }
-
-    variableGateway_->SetLVar(kSmartSwitchLVar, kSmartSwitchNeutral);
-
-    if (smartSwitchResetPending_)
-    {
-        return false;
-    }
-
-    smartSwitchResetPending_ = true;
-
-    return true;
+    return smartSwitch_.Consume();
 }
 
 bool FenixA32x::IsPowered() const
@@ -488,11 +496,11 @@ namespace
         return FenixVariant::A320;
     }
 
-    std::unique_ptr<Aircraft> CreateFenixA32x(VariableGateway* variableGateway,
-                                              AutomationStatus*,
-                                              const AircraftIdentity& identity)
+    std::unique_ptr<Aircraft> CreateFenixA32x(const AircraftContext& context, const AircraftIdentity& identity)
     {
-        return std::make_unique<FenixA32x>(variableGateway, VariantFor(identity), std::make_unique<FenixEfbClient>());
+        return std::make_unique<FenixA32x>(context.variableGateway,
+                                           VariantFor(identity),
+                                           std::make_unique<FenixEfbClient>());
     }
 
     const AircraftDescriptor kFenixA319Descriptor{

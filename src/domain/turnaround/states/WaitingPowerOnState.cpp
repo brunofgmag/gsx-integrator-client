@@ -7,7 +7,7 @@ std::optional<TurnaroundTransition> WaitingPowerOnState::Evaluate(TurnaroundCont
 {
     if (ctx.aircraft->IsPowered())
     {
-        return TurnaroundTransition{TurnaroundPhase::RequestFuel};
+        return TurnaroundTransition{TurnaroundPhase::CallCatering};
     }
 
     return std::nullopt;

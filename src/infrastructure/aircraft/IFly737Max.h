@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_IFLY737MAX_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_IFLY737MAX_H
 
+#include "SmartSwitch.h"
 #include "../../domain/ports/Aircraft.h"
 
 class VariableGateway;
@@ -70,7 +71,7 @@ private:
     VariableGateway* variableGateway_;
     AutomationStatus* status_;
 
-    bool smartSwitchPressPending_ = false;
+    SmartSwitch smartSwitch_;
     double lastZfwKg_ = -1.0;
 
     CargoDoorCloser fwdCargoDoor_;

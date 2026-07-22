@@ -33,9 +33,11 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(double plannedZfwKg READ GetPlannedZfwKg NOTIFY SnapshotChanged)
     Q_PROPERTY(int plannedPax READ GetPlannedPax NOTIFY SnapshotChanged)
     Q_PROPERTY(int boardedPax READ GetBoardedPax NOTIFY SnapshotChanged)
+    Q_PROPERTY(int deboardedPax READ GetDeboardedPax NOTIFY SnapshotChanged)
     Q_PROPERTY(double targetFuelKg READ GetTargetFuelKg NOTIFY SnapshotChanged)
     Q_PROPERTY(double targetZfwKg READ GetTargetZfwKg NOTIFY SnapshotChanged)
     Q_PROPERTY(int targetPax READ GetTargetPax NOTIFY SnapshotChanged)
+    Q_PROPERTY(int autoWeightUnit READ GetAutoWeightUnit NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoAircraft READ IsCargoAircraft NOTIFY SnapshotChanged)
     Q_PROPERTY(QString simbriefStatusText READ GetSimbriefStatusText NOTIFY SnapshotChanged)
     Q_PROPERTY(bool simbriefReady READ IsSimbriefReady NOTIFY SnapshotChanged)
@@ -76,9 +78,11 @@ public:
     [[nodiscard]] double GetPlannedZfwKg() const;
     [[nodiscard]] int GetPlannedPax() const;
     [[nodiscard]] int GetBoardedPax() const;
+    [[nodiscard]] int GetDeboardedPax() const;
     [[nodiscard]] double GetTargetFuelKg() const;
     [[nodiscard]] double GetTargetZfwKg() const;
     [[nodiscard]] int GetTargetPax() const;
+    [[nodiscard]] int GetAutoWeightUnit() const;
     [[nodiscard]] bool IsCargoAircraft() const;
     [[nodiscard]] QString GetSimbriefStatusText() const;
     [[nodiscard]] bool IsSimbriefReady() const;

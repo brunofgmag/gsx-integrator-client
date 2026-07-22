@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11_H
 
+#include "SmartSwitch.h"
 #include "../../domain/ports/Aircraft.h"
 
 class VariableGateway;
@@ -69,7 +70,7 @@ private:
     AutomationStatus* status_;
 
     bool cargo_;
-    bool smartSwitchResetPending_ = false;
+    SmartSwitch smartSwitch_;
     bool pendingEfbCommit_ = false;
     EfbTarget fuelTarget_;
     EfbTarget zfwTarget_;

@@ -35,7 +35,7 @@ The turnaround workflow lives in the domain and drives everything through interf
 
 ## Adding an aircraft
 
-There are two reference implementations under `src/infrastructure/aircraft/`, and they show two different styles. `TfdiMd11.cpp` drives the airplane's own EFB: the setters store targets and `OnSlowTick` commits them to the EFB LVars. `IFly737Max.cpp` rides on top of GSX: the truck fills the native tanks on its own, and the adapter only writes payload, straight into the native stations. Read the one closer to your airplane side by side with this section.
+The `src/infrastructure/aircraft/` folder has several adapters worth reading side by side with this section, because they solve the loading problem in different ways. `TfdiMd11.cpp` drives the airplane's own EFB: the setters store targets and `OnSlowTick` commits them to the EFB LVars. `IFly737Max.cpp` rides on top of GSX, letting the truck fill the native tanks while the adapter only writes payload into the native stations. `FenixA32x.cpp` talks to the Fenix EFB over its own HTTP client, and `Pmdg777.cpp` writes fuel and payload through the PMDG tablet over the shared CommBus bridge. Read the one closest to your airplane.
 
 ### 1. Create the adapter
 
@@ -43,9 +43,9 @@ Add `YourAircraft.h` and `YourAircraft.cpp` under `src/infrastructure/aircraft/`
 
 - Planned figures: `IsFlightPlanLoaded`, `GetPlannedFuelKg`, `GetPlannedZfwKg`, `GetPlannedPassengers` and `GetEmptyZfwKg`. These report what the airplane's own systems know about the flight.
 - Current figures: `GetCurrentFuelKg`, `SetCurrentFuelKg`, `GetCurrentZfwKg` and `SetCurrentZfwKg`. The workflow calls the setters while GSX refuels and boards.
-- State and capabilities: `IsPowered`, `IsEngineRunning`, `IsParkingBrakeSet`, `IsReadyToPush`, `IsReadyToDeboard`, plus `SupportsStairsOrJetways`, `RefuelMethod` and `BoardMethod`, which tell the workflow how the airplane wants to be loaded.
+- State and capabilities: `IsPowered`, `IsEngineRunning`, `IsParkingBrakeSet`, `IsReadyToPush`, `IsReadyToDeboard`, `SupportsStairsOrJetways`, and `GetRefuelMethod`/`GetBoardMethod`, which tell the workflow how the airplane wants to be loaded. Ground equipment is optional and defaults to off: implement `SupportsChocksControl`/`SetChocks`, `SupportsGroundPowerControl`/`SetGroundPower` and `GetGroundPowerStatus` only if your airplane drives its own chocks or external power, and `CloseAllDoors` if you manage the doors yourself. Anything with a default can be left alone.
 
-`RefuelMethod` and `BoardMethod` decide who owns the fuel and the payload during the GSX service. `Self` means the airplane loads itself all at once through its own systems, like the MD-11's EFB or the A340's MCDU uplink. The client delivers the target once and the progress bar follows the counter GSX animates. `Client` means the client writes the value itself, tick by tick, at the rate from the settings. The iFly boards this way: its `SetCurrentZfwKg` is what actually fills the payload stations, so anything else would send the airplane out empty. Fuel has a third option, `Gsx`, for airplanes where the truck pumps the native tanks directly, as on the iFly. The client writes nothing, `SetCurrentFuelKg` can be a no-op, and the progress bar mirrors the real fuel quantity. There is no boarding equivalent because GSX never loads payload itself; someone always has to write the weight, either the airplane or the client.
+The refuel and board methods decide who owns the fuel and the payload during the GSX service. `Self` means the airplane loads itself all at once through its own systems, like the MD-11's EFB or the A340's MCDU uplink. The client delivers the target once and the progress bar follows the counter GSX animates. `Client` means the client writes the value itself, tick by tick, at the rate from the settings. The iFly boards this way: its `SetCurrentZfwKg` is what actually fills the payload stations, so anything else would send the airplane out empty. Fuel has a third option, `Gsx`, for airplanes where the truck pumps the native tanks directly, as on the iFly. The client writes nothing, `SetCurrentFuelKg` can be a no-op, and the progress bar mirrors the real fuel quantity. There is no boarding equivalent because GSX never loads payload itself; someone always has to write the weight, either the airplane or the client.
 
 The weight setters have the same freedom. The MD-11 turns `SetCurrentZfwKg` into an EFB target; the iFly writes the value into the native payload stations, split in proportion to the default station loads from `flight_model.cfg` so the CG lands somewhere sensible. Use whatever surface the airplane gives you, and if you believe the airplane manages its own weights, test it in the sim first.
 
@@ -66,9 +66,9 @@ Detection is self-registered; there is no central list to edit. At the bottom of
 ```cpp
 namespace
 {
-    std::unique_ptr<Aircraft> CreateYourAircraft(VariableGateway* variableGateway, AutomationStatus* status, const AircraftIdentity& identity)
+    std::unique_ptr<Aircraft> CreateYourAircraft(const AircraftContext& context, const AircraftIdentity& identity)
     {
-        return std::make_unique<YourAircraft>(variableGateway, status);
+        return std::make_unique<YourAircraft>(context.variableGateway, context.status);
     }
 
     const AircraftDescriptor kYourAircraftDescriptor{
@@ -84,11 +84,13 @@ namespace
 }
 ```
 
+The creator receives an `AircraftContext` that bundles the `VariableGateway` and `AutomationStatus` most adapters need, along with the shared CommBus bridge. Most aircraft only use the gateway. One that speaks CommBus borrows `context.commBusBridge` instead of opening its own SimConnect connection, the way `Pmdg777.cpp` reaches the PMDG tablet.
+
 Matching is case insensitive and runs against the `TITLE` and `ATC MODEL` sim vars with `Equals`, `StartsWith` and `Contains`. An ATC MODEL match scores 4 points, a title match scores 2, and the descriptor with the highest score wins. Use the factory callback to tell variants apart, the way the MD-11 detects its freighter.
 
 ### 4. Register the files in the build
 
-Add both files to `cmake/Sources.cmake`. The source list is explicit on purpose; there is no GLOB. Aircraft code compiles directly into the app target. Do not create a static library for it.
+Add both files to `cmake/Sources.cmake`. The source list is explicit on purpose; there is no GLOB. Aircraft code compiles directly into the app target. Do not create a static library for it. Detection registers itself at link time, so the aircraft also has to be listed in the test targets that exercise detection and the runtime integrator service in `cmake/Tests.cmake`, or those tests will not see it.
 
 ### 5. Test it
 
@@ -96,4 +98,4 @@ Spawn in the aircraft and check the log for the detection line, then fly a full 
 
 ## Conventions
 
-C++17. Collaborators are passed as non-owning raw pointers. The domain stays free of Qt and SimConnect. The `LOG_INFO`/`LOG_WARN`/`LOG_ERROR` macros belong to infrastructure and application code only. Commits follow Conventional Commits, enforced by the pre-commit hook.
+C++20. Collaborators are passed as non-owning raw pointers. The domain stays free of Qt and SimConnect. The `LOG_INFO`/`LOG_WARN`/`LOG_ERROR` macros belong to infrastructure and application code only. Commits follow Conventional Commits, enforced by the pre-commit hook.

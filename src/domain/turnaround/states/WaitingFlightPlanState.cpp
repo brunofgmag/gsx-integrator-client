@@ -14,7 +14,14 @@ namespace
 
 std::optional<TurnaroundTransition> WaitingFlightPlanState::Evaluate(TurnaroundContext& ctx)
 {
+    ctx.aircraft->SetCurrentZfwKg(ctx.aircraft->GetEmptyZfwKg());
+
     if (!ctx.aircraft->IsFlightPlanLoaded())
+    {
+        return std::nullopt;
+    }
+
+    if (!ctx.menuGateway->IsMenuSettled())
     {
         return std::nullopt;
     }
@@ -44,7 +51,7 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::Evaluate(TurnaroundC
 
     CaptureFlightPlan(ctx);
 
-    return TurnaroundTransition{TurnaroundPhase::RepositionAircraft};
+    return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
 }
 
 void WaitingFlightPlanState::CaptureFlightPlan(TurnaroundContext& ctx)

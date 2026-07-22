@@ -179,7 +179,7 @@ void IFly737MaxTest::smartSwitchRegistersFastRefresh()
     IFly737Max aircraft(&gateway, &status);
 
     QCOMPARE(gateway.fastRefreshNames.size(), static_cast<std::size_t>(1));
-    QVERIFY(gateway.fastRefreshNames.front() == std::string("L:") + kSmartSwitch);
+    QVERIFY(gateway.fastRefreshNames.front() == kSmartSwitch);
 }
 
 void IFly737MaxTest::smartSwitchReportsSinglePressPerActivation()

@@ -6,7 +6,7 @@
 
 namespace
 {
-    std::unique_ptr<Aircraft> NullCreator(VariableGateway*, AutomationStatus*, const AircraftIdentity&)
+    std::unique_ptr<Aircraft> NullCreator(const AircraftContext&, const AircraftIdentity&)
     {
         return nullptr;
     }
@@ -27,6 +27,8 @@ private slots:
     static void atcModelOutweighsTitle();
     static void bothFieldsBeatSingleField();
     static void tieBreaksByNameRegardlessOfOrder();
+    static void sharedIcaoIsDisambiguatedByTitleRule();
+    static void titleOnlyRuleIgnoresBareIcao();
 };
 
 void AircraftMatchingTest::equalsIsCaseInsensitive()
@@ -147,6 +149,42 @@ void AircraftMatchingTest::tieBreaksByNameRegardlessOfOrder()
     QVERIFY(secondOrder != nullptr);
     QCOMPARE(firstOrder->name, "Alpha");
     QCOMPARE(secondOrder->name, "Alpha");
+}
+
+void AircraftMatchingTest::sharedIcaoIsDisambiguatedByTitleRule()
+{
+    const AircraftDescriptor freighter{
+        "PMDG 777F",
+        {{MatchField::Title, MatchOp::StartsWith, "777F"}},
+        &NullCreator};
+    const AircraftDescriptor longRange{
+        "PMDG 777-200LR",
+        {{MatchField::Title, MatchOp::StartsWith, "777-200LR"}},
+        &NullCreator};
+
+    const AircraftIdentity freighterIdentity{"777F", "B77L"};
+    const AircraftIdentity longRangeIdentity{"777-200LR", "B77L"};
+
+    const AircraftDescriptor* freighterWinner =
+        MatchAircraft({&freighter, &longRange}, freighterIdentity);
+    const AircraftDescriptor* longRangeWinner =
+        MatchAircraft({&freighter, &longRange}, longRangeIdentity);
+
+    QVERIFY(freighterWinner != nullptr);
+    QVERIFY(longRangeWinner != nullptr);
+    QCOMPARE(freighterWinner->name, "PMDG 777F");
+    QCOMPARE(longRangeWinner->name, "PMDG 777-200LR");
+}
+
+void AircraftMatchingTest::titleOnlyRuleIgnoresBareIcao()
+{
+    const AircraftDescriptor titleOnly{
+        "PMDG 777-300ER",
+        {{MatchField::Title, MatchOp::StartsWith, "777-300ER"}},
+        &NullCreator};
+    const AircraftIdentity bareIcao{"Generic Boeing Repaint", "B77W"};
+
+    QVERIFY(MatchAircraft({&titleOnly}, bareIcao) == nullptr);
 }
 
 QTEST_APPLESS_MAIN(AircraftMatchingTest)

@@ -17,12 +17,14 @@ namespace
             return false;
         }
         lastTitle = identity.title;
+
         return true;
     }
 }
 
 std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway,
                                          AutomationStatus* status,
+                                         CommBusBridgeGateway* commBusBridge,
                                          const AircraftDescriptor** outDescriptor)
 {
     char title[64] = {};
@@ -54,8 +56,11 @@ std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway,
         *outDescriptor = descriptor;
     }
 
-    std::unique_ptr<Aircraft> aircraft = descriptor->create(variableGateway, status, identity);
+    const AircraftContext context{variableGateway, status, commBusBridge};
+    std::unique_ptr<Aircraft> aircraft = descriptor->create(context, identity);
+
     LOG_INFO("Aircraft detected: %s", aircraft->GetName());
+
     return aircraft;
 }
 
@@ -67,5 +72,6 @@ std::vector<AircraftProfileInfo> SupportedAircraftProfiles()
         infos.push_back({descriptor->id, descriptor->shortCode, descriptor->name, descriptor->refuelBy});
     }
     std::ranges::sort(infos, {}, &AircraftProfileInfo::shortCode);
+
     return infos;
 }

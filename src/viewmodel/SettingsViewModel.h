@@ -9,11 +9,11 @@
 #include <vector>
 #include "../application/model/AppSettings.h"
 #include "../application/model/AircraftProfile.h"
+#include "../application/ports/IntegratorService.h"
 
 class SettingsRepository;
-class IntegratorService;
 
-class SettingsViewModel final : public QObject
+class SettingsViewModel final : public QObject, public IntegratorServiceObserver
 {
     Q_OBJECT
 
@@ -21,6 +21,8 @@ class SettingsViewModel final : public QObject
         WRITE SetSimbriefPilotIdText NOTIFY SimbriefPilotIdTextChanged)
     Q_PROPERTY(bool streamerMode READ GetStreamerMode WRITE SetStreamerMode NOTIFY StreamerModeChanged)
     Q_PROPERTY(QString fuelRateText READ GetFuelRateText WRITE SetFuelRateText NOTIFY FuelRateTextChanged)
+    Q_PROPERTY(bool weightIsLb READ GetWeightIsLb NOTIFY WeightUnitDisplayChanged)
+    Q_PROPERTY(QString fuelRateUnitText READ GetFuelRateUnitText NOTIFY WeightUnitDisplayChanged)
     Q_PROPERTY(bool autoSelectGsxChoice READ GetAutoSelectGsxChoice
         WRITE SetAutoSelectGsxChoice NOTIFY AutoSelectGsxChoiceChanged)
     Q_PROPERTY(bool autoDeice READ GetAutoDeice WRITE SetAutoDeice NOTIFY AutoDeiceChanged)
@@ -40,6 +42,7 @@ class SettingsViewModel final : public QObject
     Q_PROPERTY(bool effectiveDark READ GetEffectiveDark NOTIFY EffectiveDarkChanged)
     Q_PROPERTY(QString language READ GetLanguage WRITE SetLanguage NOTIFY LanguageChanged)
     Q_PROPERTY(int updateMode READ GetUpdateMode WRITE SetUpdateMode NOTIFY UpdateModeChanged)
+    Q_PROPERTY(int weightUnitMode READ GetWeightUnitMode WRITE SetWeightUnitMode NOTIFY WeightUnitModeChanged)
     Q_PROPERTY(bool closeToTray READ GetCloseToTray WRITE SetCloseToTray NOTIFY CloseToTrayChanged)
     Q_PROPERTY(bool minimizeToTray READ GetMinimizeToTray WRITE SetMinimizeToTray NOTIFY MinimizeToTrayChanged)
     Q_PROPERTY(bool trayTipShown READ GetTrayTipShown WRITE SetTrayTipShown NOTIFY TrayTipShownChanged)
@@ -81,10 +84,17 @@ public:
 
     Q_ENUM(UpdateMode)
 
+    enum WeightUnitMode { AutoUnit = 0, Kilograms = 1, Pounds = 2 };
+
+    Q_ENUM(WeightUnitMode)
+
     explicit SettingsViewModel(SettingsRepository* repository,
                                IntegratorService* integratorService,
                                std::vector<AircraftProfileInfo> profileInfos = {},
                                QObject* parent = nullptr);
+    ~SettingsViewModel() override;
+
+    void OnIntegratorStateChanged() override;
 
     [[nodiscard]] QString GetSimbriefPilotIdText() const;
     void SetSimbriefPilotIdText(const QString& pilotId);
@@ -146,6 +156,12 @@ public:
 
     [[nodiscard]] int GetUpdateMode() const;
     void SetUpdateMode(int mode);
+
+    [[nodiscard]] int GetWeightUnitMode() const;
+    void SetWeightUnitMode(int mode);
+    [[nodiscard]] bool GetWeightIsLb() const;
+    [[nodiscard]] QString GetFuelRateUnitText() const;
+    [[nodiscard]] Q_INVOKABLE static double kgToLb(double kg);
 
     [[nodiscard]] bool GetCloseToTray() const;
     void SetCloseToTray(bool enabled);
@@ -224,6 +240,8 @@ signals:
     void EffectiveDarkChanged();
     void LanguageChanged();
     void UpdateModeChanged();
+    void WeightUnitModeChanged();
+    void WeightUnitDisplayChanged();
     void CloseToTrayChanged();
     void MinimizeToTrayChanged();
     void TrayTipShownChanged();
@@ -257,6 +275,9 @@ private:
     };
 
     [[nodiscard]] Draft Validate() const;
+    [[nodiscard]] bool EffectiveIsLb() const;
+    void SyncDisplayUnit();
+    void RescaleFuelRateTexts(bool fromLb, bool toLb);
     void PersistImmediateSetting();
     void SetSaveResult(QString message, bool error);
     void RefreshDetectedProfile();
@@ -290,6 +311,7 @@ private:
 
     QString simbriefPilotIdText_;
     QString fuelRateText_;
+    bool displayIsLb_ = false;
     QString saveMessage_;
     bool saveError_ = false;
 

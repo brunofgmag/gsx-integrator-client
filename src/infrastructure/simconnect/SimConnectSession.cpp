@@ -1,5 +1,6 @@
 #include "SimConnectSession.h"
 
+#include <cstddef>
 #include <utility>
 #include "SimConnectVariableGateway.h"
 #include "../logging/LogMacros.h"
@@ -36,6 +37,112 @@ void SimConnectSession::Close()
     onPause_ = nullptr;
     onMenuEvent_ = nullptr;
     onOpen_ = nullptr;
+    clientDataHandlers_.clear();
+    mappedEvents_.clear();
+    nextDynamicEvent_ = kDynamicEventBase;
+}
+
+bool SimConnectSession::TransmitEvent(const char* eventName, const DWORD parameter)
+{
+    if (!IsConnected() || eventName == nullptr)
+    {
+        return false;
+    }
+
+    SIMCONNECT_CLIENT_EVENT_ID eventId;
+    if (const auto it = mappedEvents_.find(eventName); it != mappedEvents_.end())
+    {
+        eventId = it->second;
+    }
+    else
+    {
+        eventId = nextDynamicEvent_++;
+        if (FAILED(SimConnect_MapClientEventToSimEvent(hSimConnect_, eventId, eventName)))
+        {
+            return false;
+        }
+        mappedEvents_[eventName] = eventId;
+    }
+
+    if (const HRESULT hr = SimConnect_TransmitClientEvent(hSimConnect_, SIMCONNECT_OBJECT_ID_USER, eventId,
+                                                          parameter, SIMCONNECT_GROUP_PRIORITY_HIGHEST,
+                                                          SIMCONNECT_EVENT_FLAG_GROUPID_IS_PRIORITY);
+        FAILED(hr))
+    {
+        LOG_WARN("Failed to transmit event '%s': hr=%i", eventName, static_cast<int>(hr));
+
+        return false;
+    }
+
+    return true;
+}
+
+bool SimConnectSession::MapClientDataArea(const char* areaName,
+                                          const SIMCONNECT_CLIENT_DATA_ID areaId,
+                                          const SIMCONNECT_CLIENT_DATA_DEFINITION_ID defId,
+                                          const DWORD size) const
+{
+    if (!IsConnected())
+    {
+        return false;
+    }
+
+    if (FAILED(SimConnect_MapClientDataNameToID(hSimConnect_, areaName, areaId)))
+    {
+        return false;
+    }
+
+    return SUCCEEDED(SimConnect_AddToClientDataDefinition(hSimConnect_, defId, 0, size, 0, 0));
+}
+
+bool SimConnectSession::RequestClientDataArea(const char* areaName,
+                                              const SIMCONNECT_CLIENT_DATA_ID areaId,
+                                              const SIMCONNECT_CLIENT_DATA_DEFINITION_ID defId,
+                                              const SIMCONNECT_DATA_REQUEST_ID requestId,
+                                              const DWORD size,
+                                              const SIMCONNECT_CLIENT_DATA_PERIOD period,
+                                              const SIMCONNECT_CLIENT_DATA_REQUEST_FLAG flag,
+                                              ClientDataFn onData)
+{
+    if (!IsConnected())
+    {
+        return false;
+    }
+
+    if (FAILED(SimConnect_MapClientDataNameToID(hSimConnect_, areaName, areaId)))
+    {
+        return false;
+    }
+
+    if (FAILED(SimConnect_AddToClientDataDefinition(hSimConnect_, defId, 0, size, 0, 0)))
+    {
+        return false;
+    }
+
+    if (FAILED(SimConnect_RequestClientData(hSimConnect_, areaId, requestId, defId, period, flag, 0, 0, 0)))
+    {
+        return false;
+    }
+
+    clientDataHandlers_[requestId] = std::move(onData);
+
+    return true;
+}
+
+bool SimConnectSession::WriteClientData(const SIMCONNECT_CLIENT_DATA_ID areaId,
+                                        const SIMCONNECT_CLIENT_DATA_DEFINITION_ID defId,
+                                        const DWORD size, const void* data) const
+{
+    if (!IsConnected())
+    {
+        return false;
+    }
+
+    const HRESULT hr = SimConnect_SetClientData(hSimConnect_, areaId, defId,
+                                                SIMCONNECT_CLIENT_DATA_SET_FLAG_DEFAULT, 0, size,
+                                                const_cast<void*>(data));
+
+    return SUCCEEDED(hr);
 }
 
 bool SimConnectSession::TransmitExternalSystemToggle(const int state) const
@@ -196,6 +303,10 @@ void SimConnectSession::HandleMessage(SIMCONNECT_RECV* pData, const DWORD cbData
         }
         break;
 
+    case SIMCONNECT_RECV_ID_CLIENT_DATA:
+        HandleClientData(pData, cbData);
+        break;
+
     case SIMCONNECT_RECV_ID_EXCEPTION:
         {
             const auto* ex = static_cast<const SIMCONNECT_RECV_EXCEPTION*>(pData);
@@ -262,6 +373,24 @@ void SimConnectSession::HandleEvent(const SIMCONNECT_RECV* pData, const DWORD cb
     {
         onPause_(static_cast<int>(eventData->dwData));
     }
+}
+
+void SimConnectSession::HandleClientData(const SIMCONNECT_RECV* pData, const DWORD cbData) const
+{
+    if (cbData < sizeof(SIMCONNECT_RECV_CLIENT_DATA))
+    {
+        return;
+    }
+
+    const auto* data = static_cast<const SIMCONNECT_RECV_CLIENT_DATA*>(pData);
+    const auto it = clientDataHandlers_.find(data->dwRequestID);
+    if (it == clientDataHandlers_.end() || !it->second)
+    {
+        return;
+    }
+
+    const DWORD payloadSize = cbData - offsetof(SIMCONNECT_RECV_CLIENT_DATA, dwData);
+    it->second(&data->dwData, payloadSize);
 }
 
 void SimConnectSession::HandleSystemState(const SIMCONNECT_RECV* pData, const DWORD cbData) const

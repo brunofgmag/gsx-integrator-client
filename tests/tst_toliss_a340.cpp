@@ -356,7 +356,7 @@ void TolissA340Test::registersSmartSwitchForFastRefresh()
     const TolissA340 aircraft(&gateway, &status, false);
 
     QCOMPARE(gateway.fastRefreshNames.size(), static_cast<std::size_t>(1));
-    QVERIFY(gateway.fastRefreshNames.front() == std::string("L:") + kSmartSwitch);
+    QVERIFY(gateway.fastRefreshNames.front() == kSmartSwitch);
 }
 
 void TolissA340Test::smartSwitchFiresOnceAndResetsTheSwitch()

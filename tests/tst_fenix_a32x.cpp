@@ -34,6 +34,7 @@ namespace
     constexpr auto kChocksDataref = "fenix.efb.chocks";
     constexpr auto kGroundPowerDataref = "groundservice.groundpower";
 
+    constexpr auto kWeightUnitDataref = "system.config.Units.Weight";
     constexpr auto kFuelDataref = "aircraft.fuel.total.amount.kg";
     constexpr auto kFuelTargetDataref = "aircraft.refuel.fuelTarget.kg";
     constexpr auto kCargoTargetDataref = "fenix.efb.plannedCargoKg";
@@ -136,6 +137,7 @@ private slots:
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
     static void emptyZfwReadsSimEmptyWeight();
+    static void readsNativeWeightUnitFromEfb();
     static void plannedValuesComeFromEfb();
     static void flightPlanNeedsEfbImportAndFuelTarget();
     static void loadingStartArmsThirdPartyRefueling();
@@ -205,7 +207,7 @@ void FenixA32xTest::registersSmartSwitchForFastRefresh()
 {
     const FenixFixture fixture;
 
-    QVERIFY(std::ranges::find(fixture.gateway.fastRefreshNames, std::string("L:") + kSmartSwitch)
+    QVERIFY(std::ranges::find(fixture.gateway.fastRefreshNames, std::string(kSmartSwitch))
         != fixture.gateway.fastRefreshNames.end());
 }
 
@@ -220,6 +222,8 @@ void FenixA32xTest::subscribesEfbPlanDatarefs()
     QVERIFY(std::ranges::find(fixture.efb.subscribed, std::string(kFuelTargetDataref))
         != fixture.efb.subscribed.end());
     QVERIFY(std::ranges::find(fixture.efb.subscribed, std::string(kCargoTargetDataref))
+        != fixture.efb.subscribed.end());
+    QVERIFY(std::ranges::find(fixture.efb.subscribed, std::string(kWeightUnitDataref))
         != fixture.efb.subscribed.end());
 }
 
@@ -316,6 +320,25 @@ void FenixA32xTest::emptyZfwReadsSimEmptyWeight()
     fixture.gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
 
     QCOMPARE(fixture.aircraft.GetEmptyZfwKg(), kEmptyWeightKg);
+}
+
+void FenixA32xTest::readsNativeWeightUnitFromEfb()
+{
+    const FenixFixture fixture;
+
+    QVERIFY(!fixture.aircraft.GetNativeWeightUnit().has_value());
+
+    fixture.efb.stringValues[kWeightUnitDataref] = "KG";
+    QVERIFY(fixture.aircraft.GetNativeWeightUnit() == WeightUnit::Kg);
+
+    fixture.efb.stringValues[kWeightUnitDataref] = "LBS";
+    QVERIFY(fixture.aircraft.GetNativeWeightUnit() == WeightUnit::Lb);
+
+    fixture.efb.stringValues[kWeightUnitDataref] = "lb";
+    QVERIFY(fixture.aircraft.GetNativeWeightUnit() == WeightUnit::Lb);
+
+    fixture.efb.stringValues[kWeightUnitDataref] = "tonnes";
+    QVERIFY(!fixture.aircraft.GetNativeWeightUnit().has_value());
 }
 
 void FenixA32xTest::plannedValuesComeFromEfb()
@@ -419,8 +442,8 @@ void FenixA32xTest::zfwSetterBoardsSeatsAndCargoProgressively()
     fixture.aircraft.SetCurrentZfwKg(50000.0);
 
     const std::string seatString = fixture.efb.WrittenString(kSeatOccupationString);
-    const double cargoKg = kPlannedCargoKg / 2.0;
-    const double fwdCargoKg = cargoKg * 0.4237;
+    constexpr double cargoKg = kPlannedCargoKg / 2.0;
+    constexpr double fwdCargoKg = cargoKg * 0.4237;
 
     QCOMPARE(CountSeats(seatString), kSeatCapacity);
     QCOMPARE(CountOccupiedSeats(seatString), kPlannedPassengers / 2);
@@ -537,7 +560,7 @@ void FenixA32xTest::preliminaryLoadsheetRequestedWhenLoadingStarts()
 
     fixture.aircraft.OnLoadingStarted();
 
-    QCOMPARE(fixture.efb.loadsheetRequests.size(), std::size_t(1));
+    QCOMPARE(fixture.efb.loadsheetRequests.size(), static_cast<std::size_t>(1));
     QCOMPARE(QString::fromStdString(fixture.efb.loadsheetRequests.front()), QString("Preliminary"));
 }
 
@@ -561,12 +584,12 @@ void FenixA32xTest::finalLoadsheetRequestedOnceAtPlannedZfw()
     fixture.aircraft.OnLoadingStarted();
     fixture.aircraft.SetCurrentZfwKg(50000.0);
 
-    QCOMPARE(fixture.efb.loadsheetRequests.size(), std::size_t(1));
+    QCOMPARE(fixture.efb.loadsheetRequests.size(), static_cast<std::size_t>(1));
 
     fixture.aircraft.SetCurrentZfwKg(kPlannedZfwKg);
     fixture.aircraft.SetCurrentZfwKg(kPlannedZfwKg - 10.0);
 
-    QCOMPARE(fixture.efb.loadsheetRequests.size(), std::size_t(2));
+    QCOMPARE(fixture.efb.loadsheetRequests.size(), static_cast<std::size_t>(2));
     QCOMPARE(QString::fromStdString(fixture.efb.loadsheetRequests.back()), QString("Final"));
 }
 

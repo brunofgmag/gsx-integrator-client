@@ -13,7 +13,30 @@ private slots:
     static void advancesAfterGiveUpWhenRepositioningNeverHappens();
     static void skipsRepositioningWhenSettingEnabled();
     static void completesRepositionWhenSkipEnabledMidRun();
+    static void holdsWithoutRequestingUntilGsxAvailable();
 };
+
+void RepositionAircraftStateTest::holdsWithoutRequestingUntilGsxAvailable()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.status.gsxAvailable = false;
+
+    for (int tick = 0; tick < 70; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.repositionCalls, 0);
+    QVERIFY(!f.ctx.data.repositionCompleted);
+
+    f.status.gsxAvailable = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.repositionCalls, 1);
+}
 
 void RepositionAircraftStateTest::holdsWhenRepositioningFails()
 {

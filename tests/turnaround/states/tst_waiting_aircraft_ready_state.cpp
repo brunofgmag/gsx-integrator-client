@@ -30,7 +30,8 @@ void WaitingAircraftReadyStateTest::advancesWhenEnginesOff()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::WaitingFlightPlan);
+    QCOMPARE(transition->next, TurnaroundPhase::RepositionAircraft);
+    QCOMPARE(transition->delayTicks, 0);
 }
 
 QTEST_APPLESS_MAIN(WaitingAircraftReadyStateTest)

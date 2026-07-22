@@ -69,6 +69,47 @@ bool UpdateViewModel::IsReadyToRestart() const
     return state_ == ReadyToRestart;
 }
 
+QString UpdateViewModel::GetStatusText() const
+{
+    switch (state_)
+    {
+    case Checking:
+        return tr("Checking for updates…");
+    case UpToDate:
+        return tr("Up to date");
+    case UpdateAvailable:
+        return tr("Update available — v%1").arg(latest_.version);
+    case Downloading:
+        return tr("Downloading v%1").arg(latest_.version);
+    case ReadyToRestart:
+        return tr("Update ready — restart to apply");
+    case Error:
+        return errorMessage_;
+    default:
+        return {};
+    }
+}
+
+bool UpdateViewModel::IsDownloading() const
+{
+    return state_ == Downloading;
+}
+
+bool UpdateViewModel::HasError() const
+{
+    return state_ == Error;
+}
+
+bool UpdateViewModel::CanDownload() const
+{
+    return state_ == UpdateAvailable;
+}
+
+bool UpdateViewModel::CanCheckForUpdates() const
+{
+    return updatesEnabled_ && (state_ == Idle || state_ == UpToDate || state_ == Error);
+}
+
 QString UpdateViewModel::GetCurrentVersion() const
 {
     return currentVersion_;

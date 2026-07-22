@@ -9,6 +9,7 @@
 #include "states/BoardingState.h"
 #include "states/RequestPushbackState.h"
 #include "states/CallServicesState.h"
+#include "states/CallCateringState.h"
 #include "states/OnFlightState.h"
 #include "states/RepositionAircraftState.h"
 #include "states/WaitingPushbackToStartState.h"
@@ -57,11 +58,12 @@ void TurnaroundStateMachine::RegisterStates()
 
     add(std::make_unique<WaitingSupportedAircraftState>());
     add(std::make_unique<WaitingAircraftReadyState>());
-    add(std::make_unique<WaitingFlightPlanState>());
     add(std::make_unique<RepositionAircraftState>());
     add(std::make_unique<PlaceGroundEquipmentState>());
     add(std::make_unique<CallServicesState>());
+    add(std::make_unique<WaitingFlightPlanState>());
     add(std::make_unique<WaitingPowerOnState>());
+    add(std::make_unique<CallCateringState>());
     add(std::make_unique<RequestFuelState>());
     add(std::make_unique<RefuelingState>());
     add(std::make_unique<RequestBoardingState>());

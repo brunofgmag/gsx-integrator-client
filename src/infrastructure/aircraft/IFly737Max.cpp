@@ -50,6 +50,11 @@ namespace
 
 IFly737Max::IFly737Max(VariableGateway* variableGateway, AutomationStatus* status)
     : variableGateway_(variableGateway), status_(status),
+      smartSwitch_(*variableGateway, {kSmartSwitch},
+                   [](const double min, const double max)
+                   {
+                       return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral;
+                   }),
       fwdCargoDoor_{
           "FWD", kFwdCargoAnimLVar, gsx::lvars::kAircraftCargo1Toggle,
           gsx::lvars::kBaggageLoaderFrontState
@@ -59,7 +64,7 @@ IFly737Max::IFly737Max(VariableGateway* variableGateway, AutomationStatus* statu
           gsx::lvars::kBaggageLoaderRearState
       }
 {
-    variableGateway_->SetFastRefresh(std::string("L:") + kSmartSwitch);
+    smartSwitch_.Subscribe();
 
     LOG_INFO("Profile loaded: iFly 737 MAX 8");
 }
@@ -312,23 +317,7 @@ void IFly737Max::SetCurrentZfwKg(const double zfwKg)
 
 bool IFly737Max::ConsumeSmartSwitch()
 {
-    const bool isActive =
-        variableGateway_->GetLVar(kSmartSwitch, kSmartSwitchNeutral) != kSmartSwitchNeutral;
-
-    if (!isActive)
-    {
-        smartSwitchPressPending_ = false;
-        return false;
-    }
-
-    if (smartSwitchPressPending_)
-    {
-        return false;
-    }
-
-    smartSwitchPressPending_ = true;
-
-    return true;
+    return smartSwitch_.Consume();
 }
 
 bool IFly737Max::IsPowered() const
@@ -371,11 +360,9 @@ bool IFly737Max::IsBeaconOn() const
 
 namespace
 {
-    std::unique_ptr<Aircraft> CreateIFly737Max(VariableGateway* variableGateway,
-                                               AutomationStatus* status,
-                                               const AircraftIdentity&)
+    std::unique_ptr<Aircraft> CreateIFly737Max(const AircraftContext& context, const AircraftIdentity&)
     {
-        return std::make_unique<IFly737Max>(variableGateway, status);
+        return std::make_unique<IFly737Max>(context.variableGateway, context.status);
     }
 
     const AircraftDescriptor kIFly737MaxDescriptor{

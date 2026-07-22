@@ -11,6 +11,7 @@
 #include "../src/infrastructure/gsx/GsxRemoteApiClient.h"
 #include "../src/infrastructure/gsx/GsxRemoteState.h"
 #include "../src/infrastructure/gsx/GsxMenuNavigator.h"
+#include "doubles/FakeCommBusBridgeGateway.h"
 #include "doubles/FakeDomainLogger.h"
 #include "doubles/FakeVariableGateway.h"
 
@@ -179,14 +180,13 @@ void GsxMenuNavigatorTest::inactiveGsxIconIsActivatedBeforeMenuAction()
     GsxRemoteState state;
     constexpr AutomationSettings settings;
     FakeDomainLogger logger;
-    FakeVariableGateway gateway;
-    CommBusPluginClient plugin(&gateway);
+    FakeCommBusBridgeGateway bridge;
+    CommBusPluginClient plugin(&bridge);
     GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
 
     QVERIFY(nav.RequestRefueling());
 
-    QCOMPARE(gateway.Written(IntegratorPluginCommBus::kToolbarCmdLVar),
-             static_cast<double>(IntegratorPluginCommBus::ToolbarCmd::Open));
+    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
     QCOMPARE(client.Count("service.trigger"), 1);
 }
 
@@ -196,14 +196,15 @@ void GsxMenuNavigatorTest::activeGsxIconIsNotReactivated()
     GsxRemoteState state;
     constexpr AutomationSettings settings;
     FakeDomainLogger logger;
-    FakeVariableGateway gateway;
-    gateway.lvars[IntegratorPluginCommBus::kGsxToolbarActiveLVar] = 1.0;
-    CommBusPluginClient plugin(&gateway);
+    FakeCommBusBridgeGateway bridge;
+    CommBusPluginClient plugin(&bridge);
+    plugin.Setup();
+    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
     GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
 
     QVERIFY(nav.RequestRefueling());
 
-    QCOMPARE(gateway.Written(IntegratorPluginCommBus::kToolbarCmdLVar), -1.0);
+    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 0);
     QCOMPARE(client.Count("service.trigger"), 1);
 }
 
@@ -214,13 +215,13 @@ void GsxMenuNavigatorTest::openGsxOnRequestsOffSkipsToolbar()
     AutomationSettings settings;
     settings.openGsxOnRequests = false;
     FakeDomainLogger logger;
-    FakeVariableGateway gateway;
-    CommBusPluginClient plugin(&gateway);
+    FakeCommBusBridgeGateway bridge;
+    CommBusPluginClient plugin(&bridge);
     GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
 
     QVERIFY(nav.RequestRefueling());
 
-    QCOMPARE(gateway.Written(IntegratorPluginCommBus::kToolbarCmdLVar), -1.0);
+    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 0);
     QCOMPARE(client.Count("menu.toggle"), 0);
     QCOMPARE(client.Count("service.trigger"), 1);
 }
@@ -231,14 +232,13 @@ void GsxMenuNavigatorTest::openGsxOnRequestsOnActivatesToolbar()
     GsxRemoteState state;
     AutomationSettings settings;
     FakeDomainLogger logger;
-    FakeVariableGateway gateway;
-    CommBusPluginClient plugin(&gateway);
+    FakeCommBusBridgeGateway bridge;
+    CommBusPluginClient plugin(&bridge);
     GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
 
     QVERIFY(nav.RequestRefueling());
 
-    QCOMPARE(gateway.Written(IntegratorPluginCommBus::kToolbarCmdLVar),
-             static_cast<double>(IntegratorPluginCommBus::ToolbarCmd::Open));
+    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
     QCOMPARE(client.Count("service.trigger"), 1);
 }
 
@@ -269,6 +269,7 @@ void GsxMenuNavigatorTest::triggerServiceDoesNotToggleOpenMenu()
     QVERIFY(nav.RequestRefueling());
 
     QCOMPARE(client.Count("menu.toggle"), 0);
+    QCOMPARE(client.Count("menu.close"), 1);
     QCOMPARE(client.Count("service.trigger"), 1);
 }
 

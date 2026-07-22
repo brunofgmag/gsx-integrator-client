@@ -14,6 +14,11 @@ class UpdateViewModel final : public QObject, public UpdateServiceObserver
     Q_PROPERTY(int state READ GetState NOTIFY StateChanged)
     Q_PROPERTY(bool updateAvailable READ IsUpdateAvailable NOTIFY StateChanged)
     Q_PROPERTY(bool readyToRestart READ IsReadyToRestart NOTIFY StateChanged)
+    Q_PROPERTY(QString statusText READ GetStatusText NOTIFY StateChanged)
+    Q_PROPERTY(bool downloading READ IsDownloading NOTIFY StateChanged)
+    Q_PROPERTY(bool hasError READ HasError NOTIFY StateChanged)
+    Q_PROPERTY(bool canDownload READ CanDownload NOTIFY StateChanged)
+    Q_PROPERTY(bool canCheckForUpdates READ CanCheckForUpdates NOTIFY StateChanged)
     Q_PROPERTY(QString currentVersion READ GetCurrentVersion CONSTANT)
     Q_PROPERTY(QString latestVersion READ GetLatestVersion NOTIFY StateChanged)
     Q_PROPERTY(double progress READ GetProgress NOTIFY ProgressChanged)
@@ -44,6 +49,11 @@ public:
     [[nodiscard]] int GetState() const;
     [[nodiscard]] bool IsUpdateAvailable() const;
     [[nodiscard]] bool IsReadyToRestart() const;
+    [[nodiscard]] QString GetStatusText() const;
+    [[nodiscard]] bool IsDownloading() const;
+    [[nodiscard]] bool HasError() const;
+    [[nodiscard]] bool CanDownload() const;
+    [[nodiscard]] bool CanCheckForUpdates() const;
     [[nodiscard]] QString GetCurrentVersion() const;
     [[nodiscard]] QString GetLatestVersion() const;
     [[nodiscard]] double GetProgress() const;

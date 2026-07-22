@@ -32,8 +32,13 @@ SIMCONNECTAPI SimConnect_SubscribeToSystemEvent(HANDLE, const SIMCONNECT_CLIENT_
     return S_OK;
 }
 
-SIMCONNECTAPI SimConnect_MapClientEventToSimEvent(HANDLE, SIMCONNECT_CLIENT_EVENT_ID, const char*)
+SIMCONNECTAPI SimConnect_MapClientEventToSimEvent(HANDLE, SIMCONNECT_CLIENT_EVENT_ID, const char* EventName)
 {
+    if (EventName != nullptr)
+    {
+        FakeSimConnectApi::mappedEventNames.emplace_back(EventName);
+    }
+
     return FakeSimConnectApi::subscribeSucceeds ? S_OK : E_FAIL;
 }
 
@@ -93,5 +98,41 @@ SIMCONNECTAPI SimConnect_RequestDataOnSimObject(HANDLE, SIMCONNECT_DATA_REQUEST_
 SIMCONNECTAPI SimConnect_SetDataOnSimObject(HANDLE, SIMCONNECT_DATA_DEFINITION_ID, SIMCONNECT_OBJECT_ID,
                                             SIMCONNECT_DATA_SET_FLAG, DWORD, DWORD, void*)
 {
+    return S_OK;
+}
+
+SIMCONNECTAPI SimConnect_MapClientDataNameToID(HANDLE, const char* szClientDataName, SIMCONNECT_CLIENT_DATA_ID)
+{
+    if (szClientDataName != nullptr)
+    {
+        FakeSimConnectApi::mappedClientDataAreas.emplace_back(szClientDataName);
+    }
+
+    return S_OK;
+}
+
+SIMCONNECTAPI SimConnect_AddToClientDataDefinition(HANDLE, SIMCONNECT_CLIENT_DATA_DEFINITION_ID, DWORD, DWORD,
+                                                   float, DWORD)
+{
+    return S_OK;
+}
+
+SIMCONNECTAPI SimConnect_RequestClientData(HANDLE, SIMCONNECT_CLIENT_DATA_ID, SIMCONNECT_DATA_REQUEST_ID,
+                                           SIMCONNECT_CLIENT_DATA_DEFINITION_ID, SIMCONNECT_CLIENT_DATA_PERIOD,
+                                           SIMCONNECT_CLIENT_DATA_REQUEST_FLAG, DWORD, DWORD, DWORD)
+{
+    return S_OK;
+}
+
+SIMCONNECTAPI SimConnect_SetClientData(HANDLE, SIMCONNECT_CLIENT_DATA_ID, SIMCONNECT_CLIENT_DATA_DEFINITION_ID,
+                                       SIMCONNECT_CLIENT_DATA_SET_FLAG, DWORD, DWORD dwUnitSize, void* pDataSet)
+{
+    std::vector<char> bytes(dwUnitSize);
+    if (dwUnitSize > 0 && pDataSet != nullptr)
+    {
+        std::memcpy(bytes.data(), pDataSet, dwUnitSize);
+    }
+    FakeSimConnectApi::writtenClientData.push_back(std::move(bytes));
+
     return S_OK;
 }

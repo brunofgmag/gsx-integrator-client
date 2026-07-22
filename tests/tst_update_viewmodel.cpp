@@ -32,6 +32,9 @@ private slots:
     static void switchingToAutoStartsPendingDownload();
     static void disabledViewModelIgnoresChecks();
     static void commbusComparesInstalledAndLatest();
+    static void derivedFlagsAndStatusTextFollowState();
+    static void stagedUpdateExposesRestartText();
+    static void errorStateExposesHasErrorAndMessage();
 };
 
 void UpdateViewModelTest::notifyFlowDownloadsAndRestartsOnDemand()
@@ -217,6 +220,63 @@ void UpdateViewModelTest::commbusComparesInstalledAndLatest()
 
     service.FireCommbusCheckFinished(false, {}, {});
     QVERIFY(viewModel.IsCommbusUpdateAvailable());
+}
+
+void UpdateViewModelTest::derivedFlagsAndStatusTextFollowState()
+{
+    FakeUpdateService service;
+    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
+                              UpdateViewModel::Notify, true);
+
+    QVERIFY(viewModel.CanCheckForUpdates());
+    QVERIFY(!viewModel.CanDownload());
+    QVERIFY(!viewModel.IsDownloading());
+    QVERIFY(!viewModel.HasError());
+
+    viewModel.checkForUpdates();
+
+    QVERIFY(!viewModel.CanCheckForUpdates());
+    QCOMPARE(viewModel.GetStatusText(), QStringLiteral("Checking for updates…"));
+
+    service.FireCheckFinished(true, true, MakeInfo(QStringLiteral("1.4.0")));
+
+    QVERIFY(viewModel.CanDownload());
+    QVERIFY(!viewModel.IsDownloading());
+    QCOMPARE(viewModel.GetStatusText(), QStringLiteral("Update available — v1.4.0"));
+
+    viewModel.downloadAndInstall();
+
+    QVERIFY(viewModel.IsDownloading());
+    QVERIFY(!viewModel.CanDownload());
+    QCOMPARE(viewModel.GetStatusText(), QStringLiteral("Downloading v1.4.0"));
+}
+
+void UpdateViewModelTest::stagedUpdateExposesRestartText()
+{
+    FakeUpdateService service;
+    service.staged = true;
+    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
+                              UpdateViewModel::Notify, true);
+
+    service.FireCheckFinished(true, true, MakeInfo(QStringLiteral("1.4.0")));
+
+    QVERIFY(viewModel.IsReadyToRestart());
+    QVERIFY(!viewModel.CanDownload());
+    QCOMPARE(viewModel.GetStatusText(), QStringLiteral("Update ready — restart to apply"));
+}
+
+void UpdateViewModelTest::errorStateExposesHasErrorAndMessage()
+{
+    FakeUpdateService service;
+    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
+                              UpdateViewModel::Manual, true);
+
+    viewModel.checkForUpdates();
+    service.FireCheckFinished(false, false, {}, QStringLiteral("HTTP 500"));
+
+    QVERIFY(viewModel.HasError());
+    QVERIFY(viewModel.CanCheckForUpdates());
+    QCOMPARE(viewModel.GetStatusText(), QStringLiteral("HTTP 500"));
 }
 
 QTEST_GUILESS_MAIN(UpdateViewModelTest)

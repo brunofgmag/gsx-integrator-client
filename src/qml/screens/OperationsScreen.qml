@@ -24,8 +24,11 @@ ColumnLayout {
         return names;
     }
 
-    function formatKg(value) {
-        return Number(Math.round(value)).toLocaleString(Qt.locale(), 'f', 0) + " " + qsTr("kg");
+    function formatWeight(kg) {
+        const lb = root.settingsVm.weightIsLb;
+        const value = lb ? root.settingsVm.kgToLb(kg) : kg;
+        return Number(Math.round(value)).toLocaleString(Qt.locale(), 'f', 0) + " "
+            + (lb ? qsTr("lb") : qsTr("kg"));
     }
 
     readonly property string nextPhaseLabel: integratorVm.phase + 1 < integratorVm.phaseCount
@@ -214,11 +217,11 @@ ColumnLayout {
 
                 KeyValueRow {
                     label: qsTr("Loaded")
-                    value: root.formatKg(root.integratorVm.loadedFuelKg)
+                    value: root.formatWeight(root.integratorVm.loadedFuelKg)
                 }
                 KeyValueRow {
                     label: qsTr("Planned")
-                    value: root.formatKg(root.integratorVm.targetFuelKg)
+                    value: root.formatWeight(root.integratorVm.targetFuelKg)
                 }
                 KeyValueRow {
                     label: qsTr("Rate")
@@ -226,7 +229,7 @@ ColumnLayout {
                         ? qsTr("Auto")
                         : root.integratorVm.refuelBySelf
                             ? "GSX"
-                            : root.settingsVm.fuelRateText + " " + qsTr("kg/s")
+                            : root.settingsVm.fuelRateText + " " + root.settingsVm.fuelRateUnitText
                 }
             }
 
@@ -245,13 +248,13 @@ ColumnLayout {
                     visible: !root.integratorVm.cargoAircraft
                     label: qsTr("Pax")
                     value: (root.deboarding
-                            ? Math.round(paxCard.paxProgress / 100 * root.integratorVm.targetPax)
+                            ? root.integratorVm.deboardedPax
                             : root.integratorVm.boardedPax)
                            + " / " + root.integratorVm.targetPax
                 }
                 KeyValueRow {
                     label: qsTr("Planned ZFW")
-                    value: root.formatKg(root.integratorVm.targetZfwKg)
+                    value: root.formatWeight(root.integratorVm.targetZfwKg)
                 }
             }
 
@@ -267,11 +270,11 @@ ColumnLayout {
 
                 KeyValueRow {
                     label: qsTr("Fuel")
-                    value: root.formatKg(root.integratorVm.plannedFuelKg)
+                    value: root.formatWeight(root.integratorVm.plannedFuelKg)
                 }
                 KeyValueRow {
                     label: qsTr("ZFW")
-                    value: root.formatKg(root.integratorVm.plannedZfwKg)
+                    value: root.formatWeight(root.integratorVm.plannedZfwKg)
                 }
                 KeyValueRow {
                     label: qsTr("Pax")

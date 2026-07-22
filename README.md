@@ -21,6 +21,7 @@ This is a work in progress, currently in a testing phase. Expect bugs, and expec
 - Microsoft Flight Simulator 2024 or 2020 (not tested on 2020)
 - GSX Pro v4.0.6+
 - A Simbrief account (some aircraft do not share flight plan data)
+- The CommBus plugin, which some aircraft require: the PMDG 777 needs version 0.2.0 or newer
 
 ## Supported aircraft
 
@@ -30,12 +31,13 @@ This is a work in progress, currently in a testing phase. Expect bugs, and expec
 | iFly 737 MAX 8                              | SP1 | GSX (progressive)     | Client (progressive)  | Push-to-talk switch | GPU only | Supported |
 | Toliss A340-600                             | Any | MCDU uplink (at once) | MCDU uplink (at once) | INT/RAD switch | GPU only (visual) | Beta |
 | Fenix A319 / A320 / A321                    | Any | Client (progressive)  | Client (progressive)  | INT/RAD switch | Chocks + GPU | Beta |
+| PMDG 777-300ER / F / -200ER / -200LR        | Any | Client (progressive)  | Client (progressive)  | MIC/INT switch | Chocks + GPU | Beta |
 
-Every aircraft gets the same progress bars during refueling and boarding. The Fuel and Payload columns say who actually moves the numbers behind them. On the iFly, the GSX truck pumps the native tanks at its own pace, so the rate in the fuel card reads Auto and the fuel rate setting has no effect on it. If the pump feels slow, GSX has a Fuel Time Acceleration option of its own. The iFly's payload is written by the client as passengers board. The MD-11 and the A340 load themselves: the client hands the planned figures to the MD-11's EFB or triggers the A340's SimBrief uplink through the MCDU, and the aircraft applies fuel and payload on its own (at once) while the bars follow GSX's fuel counter and boarding progress. The Fenix is the first aircraft where the client drives both sides progressively: fuel goes into the tanks at the rate set in the fuel card while the GSX hose is connected, and seats and cargo holds fill through the Fenix EFB interface as GSX boards, so the numbers on the EFB and ECAM climb in real time.
+Every aircraft gets the same progress bars during refueling and boarding. The Fuel and Payload columns say who actually moves the numbers behind them. On the iFly, the GSX truck pumps the native tanks at its own pace, so the rate in the fuel card reads Auto and the fuel rate setting has no effect on it. If the pump feels slow, GSX has a Fuel Time Acceleration option of its own. The iFly's payload is written by the client as passengers board. The MD-11 and the A340 load themselves: the client hands the planned figures to the MD-11's EFB or triggers the A340's SimBrief uplink through the MCDU, and the aircraft applies fuel and payload on its own (at once) while the bars follow GSX's fuel counter and boarding progress. The Fenix is the first aircraft where the client drives both sides progressively: fuel goes into the tanks at the rate set in the fuel card while the GSX hose is connected, and seats and cargo holds fill through the Fenix EFB interface as GSX boards, so the numbers on the EFB and ECAM climb in real time. The PMDG 777 works the same way, through the aircraft's tablet weight-and-balance channel: fuel fills at the fuel card rate, passengers and cargo follow GSX's boarding progress, and on the freighter the whole payload goes in as main-deck cargo. GSX ships its own automation for the PMDG that types fuel and payload into the FMC by itself; the client turns that off and keeps it off, so the two never fight over the numbers.
 
 The iFly needs SP1 or newer because earlier versions lack the built-in GSX integration the client depends on.
 
-The MD-11 and A340 are marked Beta because their loading paths are workarounds for aircraft that do not accept external loading. The Fenix is marked Beta because the EFB interface the client uses to talk to it is undocumented.
+The MD-11 and A340 are marked Beta because their loading paths are workarounds for aircraft that do not accept external loading. The Fenix is marked Beta because the EFB interface the client uses to talk to it is undocumented. The PMDG 777 is marked Beta for the same reason: the tablet channel it loads through is not a documented interface.
 
 The Chocks & GPU column tells you what the "Call GPU & chocks" settings do on each aircraft. When they are on, the client asks GSX for a ground power unit at the gate (and again after landing, if enabled) and sends it away before pushback. Chocks + GPU means the client also places and removes the aircraft's own chocks, which needs the aircraft to let outside software set them. GPU only means the client leaves the chocks alone and just handles the power unit. The Fenix brings its own GPU, so the client drives that one through the EFB instead of calling the GSX truck. On the A340 the GSX unit is cosmetic: it parks beside the aircraft but does not feed it power, so start the GPU from the Toliss EFB or use the APU, as the setup section below explains.
 
@@ -45,6 +47,7 @@ The smart switch is the cockpit control you flip to tell the client "go ahead". 
 - iFly 737 MAX 8: the R/T-I/C push-to-talk switch on the captain's audio control panel, lower left corner of the pedestal. Flick it to either side and let go.
 - Toliss A340-600: the INT/RAD switch on the captain's audio control panel, center pedestal. Flick it to either side; RAD springs back on its own and INT gets flipped back to the middle by the client.
 - Fenix A319/A320/A321: the INT/RAD switch on the captain's audio control panel, center pedestal. Flip it down to INT and the client puts it back in the middle.
+- PMDG 777: the MIC/INT switch on either pilot's audio control panel, center pedestal. Push it down to INT; it springs back on its own. The up position is your radio push-to-talk and the client leaves it alone, so transmitting on VATSIM never triggers anything.
 
 More aircraft will be added over time, and the project is structured so new ones can be added without touching the rest of the app. If you fly something else, the client will connect but will not automate anything.
 
@@ -62,9 +65,22 @@ The client only counts the aircraft as powered when external power is feeding or
 
 Community profiles from flightsim.to often ship with `refueling = 1` in their `gsx.cfg`, which makes the fuel truck park, pop a fuel quantity window and drive away without connecting the hose. This aircraft needs `refueling = 0`, so GSX waits for the aircraft's own fuel to move, which is what the uplink does. The profile is usually found under `%APPDATA%\Virtuali\Airplanes\aerosoft-a340-600-pro`. The client checks the `gsx.cfg` files there and shows an advisory with a Fix profile button when one is wrong. You can also edit the files yourself. Either way, GSX only picks the change up after you restart Couatl or reload the flight.
 
+## PMDG 777 setup
+
+The client reads the aircraft state through the PMDG SDK broadcast, which is off from the factory. Open `777_Options.ini` under `%APPDATA%\Microsoft Flight Simulator 2024\WASM\MSFS2024\pmdg-aircraft-<variant>\work\` (one file per installed variant: `77w`, `77f`, `77l`, `77er`) and make sure it has:
+
+```ini
+[SDK]
+EnableDataBroadcast=1
+```
+
+Edit it with the sim closed, or the aircraft rewrites the file on exit. When the flag is missing, the client logs a warning at detection and stays at "Waiting aircraft" forever.
+
+Fuel and payload go through the CommBus plugin, so on this aircraft the plugin from the section below is required rather than recommended. The turnaround waits at "Waiting for flight plan" until you import your SimBrief OFP on the tablet's flight plan page (or into the FMC, either works).
+
 ## The CommBus plugin
 
-Install the CommBus plugin (`gsx-integrator-commbus`) in your Community folder; the [`gsx-integrator-installer`](https://github.com/brunofgmag/gsx-integrator-installer) does that for you. The client runs without it, but you should use it. The plugin is a small bridge that lets the client activate the GSX menu icon on the MSFS toolbar. Without it, some of GSX's own messages may not show on screen during the turnaround, because the client cannot open the menu for you.
+Install the CommBus plugin (`gsx-integrator-commbus`) in your Community folder; the [`gsx-integrator-installer`](https://github.com/brunofgmag/gsx-integrator-installer) does that for you. The plugin is a small bridge between the client and the parts of the sim only a WASM module can reach. It lets the client activate the GSX menu icon on the MSFS toolbar, and on the PMDG 777 it also carries the fuel and payload writes. Most aircraft run without it, at the cost of GSX's own messages not showing on screen, because the client cannot open the menu for you. Some aircraft depend on it outright. The PMDG 777 is the first: without the plugin, version 0.2.0 or newer, it will not refuel or board.
 
 ## How to use it
 

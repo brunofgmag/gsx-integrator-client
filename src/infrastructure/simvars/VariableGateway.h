@@ -3,6 +3,13 @@
 
 #include <string>
 
+struct LVarSpan
+{
+    double min = 0.0;
+    double max = 0.0;
+    bool received = false;
+};
+
 class VariableGateway
 {
 public:
@@ -10,6 +17,11 @@ public:
 
     virtual void SetFastRefresh(const std::string& name) = 0;
     virtual double GetLVar(const std::string& name, double defaultValue = 0.0) = 0;
+    virtual LVarSpan ConsumeLVarSpan(const std::string& name)
+    {
+        const double value = GetLVar(name);
+        return {value, value, HasReceivedLVar(name)};
+    }
     [[nodiscard]] virtual bool HasReceivedLVar(const std::string& name) = 0;
     virtual void SetLVar(const std::string& name, double value) = 0;
     virtual double GetAVar(const std::string& name, const std::string& unit, double defaultValue = 0.0) = 0;
