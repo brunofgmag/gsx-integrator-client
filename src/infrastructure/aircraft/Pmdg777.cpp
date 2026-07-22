@@ -9,7 +9,6 @@
 #include <utility>
 #include <QtCore/QString>
 #include "AircraftRegistry.h"
-#include "../commbus/CommBusBridgeClient.h"
 #include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
 #include "../pmdg/Pmdg777DataClient.h"
@@ -544,16 +543,14 @@ namespace
         }
     }
 
-    std::unique_ptr<Aircraft> CreatePmdg777(VariableGateway* variableGateway,
-                                            AutomationStatus* status,
-                                            const AircraftIdentity& identity)
+    std::unique_ptr<Aircraft> CreatePmdg777(const AircraftContext& context, const AircraftIdentity& identity)
     {
         WarnWhenDataBroadcastDisabled(VariantFor(identity));
 
         return std::make_unique<Pmdg777>(
-            variableGateway, status, VariantFor(identity),
+            context.variableGateway, context.status, VariantFor(identity),
             std::make_unique<Pmdg777DataClient>(),
-            std::make_unique<Pmdg777TabletClient>(std::make_unique<CommBusBridgeClient>()));
+            std::make_unique<Pmdg777TabletClient>(context.commBusBridge));
     }
 
     const AircraftDescriptor kPmdg777300ErDescriptor{

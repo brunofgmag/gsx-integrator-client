@@ -274,12 +274,10 @@ bool TolissA340::IsBeaconOn() const
 
 namespace
 {
-    std::unique_ptr<Aircraft> CreateTolissA340(VariableGateway* variableGateway,
-                                               AutomationStatus* status,
-                                               const AircraftIdentity& identity)
+    std::unique_ptr<Aircraft> CreateTolissA340(const AircraftContext& context, const AircraftIdentity& identity)
     {
         const bool cargo = MatchText(identity.title, MatchOp::Contains, "cargo");
-        return std::make_unique<TolissA340>(variableGateway, status, cargo);
+        return std::make_unique<TolissA340>(context.variableGateway, context.status, cargo);
     }
 
     const AircraftDescriptor kTolissA340Descriptor{

@@ -9,9 +9,11 @@
 class VariableGateway;
 struct AutomationStatus;
 struct AircraftDescriptor;
+class CommBusBridgeGateway;
 
 [[nodiscard]] std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway,
                                                        AutomationStatus* status,
+                                                       CommBusBridgeGateway* commBusBridge = nullptr,
                                                        const AircraftDescriptor** outDescriptor = nullptr);
 
 [[nodiscard]] std::vector<AircraftProfileInfo> SupportedAircraftProfiles();

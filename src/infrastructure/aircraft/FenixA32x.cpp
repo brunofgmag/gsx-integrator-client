@@ -496,11 +496,11 @@ namespace
         return FenixVariant::A320;
     }
 
-    std::unique_ptr<Aircraft> CreateFenixA32x(VariableGateway* variableGateway,
-                                              AutomationStatus*,
-                                              const AircraftIdentity& identity)
+    std::unique_ptr<Aircraft> CreateFenixA32x(const AircraftContext& context, const AircraftIdentity& identity)
     {
-        return std::make_unique<FenixA32x>(variableGateway, VariantFor(identity), std::make_unique<FenixEfbClient>());
+        return std::make_unique<FenixA32x>(context.variableGateway,
+                                           VariantFor(identity),
+                                           std::make_unique<FenixEfbClient>());
     }
 
     const AircraftDescriptor kFenixA319Descriptor{

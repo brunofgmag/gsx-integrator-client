@@ -52,7 +52,9 @@ IFly737Max::IFly737Max(VariableGateway* variableGateway, AutomationStatus* statu
     : variableGateway_(variableGateway), status_(status),
       smartSwitch_(*variableGateway, {kSmartSwitch},
                    [](const double min, const double max)
-                   { return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral; }),
+                   {
+                       return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral;
+                   }),
       fwdCargoDoor_{
           "FWD", kFwdCargoAnimLVar, gsx::lvars::kAircraftCargo1Toggle,
           gsx::lvars::kBaggageLoaderFrontState
@@ -358,11 +360,9 @@ bool IFly737Max::IsBeaconOn() const
 
 namespace
 {
-    std::unique_ptr<Aircraft> CreateIFly737Max(VariableGateway* variableGateway,
-                                               AutomationStatus* status,
-                                               const AircraftIdentity&)
+    std::unique_ptr<Aircraft> CreateIFly737Max(const AircraftContext& context, const AircraftIdentity&)
     {
-        return std::make_unique<IFly737Max>(variableGateway, status);
+        return std::make_unique<IFly737Max>(context.variableGateway, context.status);
     }
 
     const AircraftDescriptor kIFly737MaxDescriptor{

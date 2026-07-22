@@ -12,6 +12,7 @@ class Pmdg777TabletClient final : public Pmdg777TabletGateway
 public:
     explicit Pmdg777TabletClient(CommBusBridgeGateway* bridge);
     explicit Pmdg777TabletClient(std::unique_ptr<CommBusBridgeGateway> bridge);
+    ~Pmdg777TabletClient() override;
 
     void Poll() override;
     [[nodiscard]] bool IsAvailable() const override;

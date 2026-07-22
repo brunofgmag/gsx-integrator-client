@@ -38,6 +38,14 @@ Pmdg777TabletClient::Pmdg777TabletClient(std::unique_ptr<CommBusBridgeGateway> b
 {
 }
 
+Pmdg777TabletClient::~Pmdg777TabletClient()
+{
+    if (subscribed_ && ownedBridge_ == nullptr)
+    {
+        bridge_->Unsubscribe(kChannelToTablet);
+    }
+}
+
 std::string Pmdg777TabletClient::BuildWbPayload(const std::string& field, const int value)
 {
     QJsonObject data;

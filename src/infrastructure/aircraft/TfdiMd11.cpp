@@ -336,13 +336,11 @@ void TfdiMd11::CommitEfbTargets() const
 
 namespace
 {
-    std::unique_ptr<Aircraft> CreateTfdiMd11(VariableGateway* variableGateway,
-                                             AutomationStatus* status,
-                                             const AircraftIdentity& identity)
+    std::unique_ptr<Aircraft> CreateTfdiMd11(const AircraftContext& context, const AircraftIdentity& identity)
     {
         const bool cargo = MatchText(identity.title, MatchOp::Contains, "MD-11F")
             || MatchText(identity.atcModel, MatchOp::Equals, "MD11F");
-        return std::make_unique<TfdiMd11>(variableGateway, status, cargo);
+        return std::make_unique<TfdiMd11>(context.variableGateway, context.status, cargo);
     }
 
     const AircraftDescriptor kTfdiMd11Descriptor{

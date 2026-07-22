@@ -6,7 +6,7 @@
 
 namespace
 {
-    std::unique_ptr<Aircraft> NullCreator(VariableGateway*, AutomationStatus*, const AircraftIdentity&)
+    std::unique_ptr<Aircraft> NullCreator(const AircraftContext&, const AircraftIdentity&)
     {
         return nullptr;
     }

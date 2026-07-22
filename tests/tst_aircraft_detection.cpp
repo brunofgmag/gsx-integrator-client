@@ -428,7 +428,7 @@ void AircraftDetectionTest::detectionReportsFenixClientRefuel()
     gateway.aircraftName = "FenixA320 CFM SL";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(descriptor != nullptr);
@@ -468,7 +468,7 @@ void AircraftDetectionTest::detectionReportsMatchedDescriptor()
     gateway.aircraftName = "TFDi Design MD-11";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(descriptor != nullptr);

@@ -29,6 +29,8 @@ private slots:
     static void sendsGroundConnWhenAvailable();
     static void subscribesPlaneToTabletWithJsFlag();
     static void latchesEfbPlanImportOnFetchSuccess();
+    static void unsubscribesBorrowedBridgeOnDestruction();
+    static void skipsUnsubscribeWhenNeverPolled();
 };
 
 void Pmdg777TabletClientTest::buildsWbPayloadEnvelope()
@@ -51,7 +53,7 @@ void Pmdg777TabletClientTest::buildsGroundConnEnvelope()
 void Pmdg777TabletClientTest::availabilityFollowsBridge()
 {
     FakeCommBusBridgeGateway bridge;
-    Pmdg777TabletClient client(&bridge);
+    const Pmdg777TabletClient client(&bridge);
 
     QVERIFY(client.IsAvailable());
 
@@ -110,7 +112,7 @@ void Pmdg777TabletClientTest::subscribesPlaneToTabletWithJsFlag()
     client.Poll();
     client.Poll();
 
-    QCOMPARE(bridge.subscribed.size(), std::size_t(1));
+    QCOMPARE(bridge.subscribed.size(), static_cast<std::size_t>(1));
     QCOMPARE(QString::fromStdString(bridge.subscribed.front()), QString("PlaneToTablet"));
     QCOMPARE(bridge.subscribedFlags.front(), CommBusFlag::kJs);
 }
@@ -130,6 +132,28 @@ void Pmdg777TabletClientTest::latchesEfbPlanImportOnFetchSuccess()
     bridge.Deliver("PlaneToTablet",
                    R"({"message_tag":"simbrief_fetch_result","data":{"result":200},"tablet_side":"CA"})");
     QVERIFY(client.EfbPlanImported());
+}
+
+void Pmdg777TabletClientTest::unsubscribesBorrowedBridgeOnDestruction()
+{
+    FakeCommBusBridgeGateway bridge;
+    {
+        Pmdg777TabletClient client(&bridge);
+        client.Poll();
+    }
+
+    QCOMPARE(bridge.unsubscribed.size(), static_cast<std::size_t>(1));
+    QCOMPARE(QString::fromStdString(bridge.unsubscribed.front()), QString("PlaneToTablet"));
+}
+
+void Pmdg777TabletClientTest::skipsUnsubscribeWhenNeverPolled()
+{
+    FakeCommBusBridgeGateway bridge;
+    {
+        Pmdg777TabletClient client(&bridge);
+    }
+
+    QVERIFY(bridge.unsubscribed.empty());
 }
 
 QTEST_APPLESS_MAIN(Pmdg777TabletClientTest)
