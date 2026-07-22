@@ -31,6 +31,7 @@ namespace gsx::lvars
 
     inline constexpr auto kAutomationFuel = "FSDT_GSX_AUTOMATION_FUEL";
     inline constexpr auto kAutomationPayload = "FSDT_GSX_AUTOMATION_PAYLOAD";
+    inline constexpr auto kAutomationDoors = "FSDT_GSX_AUTOMATION_DOORS";
 
     inline constexpr auto kSimbriefSuccess = "FSDT_GSX_SIMBRIEF_SUCCESS";
 

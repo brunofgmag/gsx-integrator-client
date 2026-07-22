@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H
 
+#include "SmartSwitch.h"
 #include "../gsx/GsxDoorSync.h"
 #include "../../domain/ports/Aircraft.h"
 
@@ -54,9 +55,9 @@ private:
     AutomationStatus* status_;
     bool cargoVariant_;
     GsxDoorSync doors_;
+    SmartSwitch smartSwitch_;
     bool uplinkArmed_ = false;
     int uplinkStep_ = -1;
-    bool smartSwitchResetPending_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H

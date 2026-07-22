@@ -40,6 +40,7 @@ struct IntegratorSnapshot
     double targetZfwKg = 0.0;
     int targetPax = 0;
     int delayTicksRemaining = 0;
+    int autoWeightUnit = 0;
 };
 
 inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapshot& rhs)
@@ -79,7 +80,8 @@ inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapsho
         nearlyEqual(lhs.targetFuelKg, rhs.targetFuelKg) &&
         nearlyEqual(lhs.targetZfwKg, rhs.targetZfwKg) &&
         lhs.targetPax == rhs.targetPax &&
-        lhs.delayTicksRemaining == rhs.delayTicksRemaining;
+        lhs.delayTicksRemaining == rhs.delayTicksRemaining &&
+        lhs.autoWeightUnit == rhs.autoWeightUnit;
 }
 
 #endif // GSX_INTEGRATOR_CLIENT_INTEGRATORSNAPSHOT_H

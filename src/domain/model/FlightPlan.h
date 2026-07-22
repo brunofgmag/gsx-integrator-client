@@ -1,6 +1,8 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H
 
+#include "../support/Weight.h"
+
 enum class FlightPlanStatus : int
 {
     Idle = 0,
@@ -14,6 +16,7 @@ struct FlightPlan
     double fuelKg = 0.0;
     double zfwKg = 0.0;
     int passengers = 0;
+    WeightUnit unit = WeightUnit::Kg;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H

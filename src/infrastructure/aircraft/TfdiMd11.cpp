@@ -57,9 +57,12 @@ namespace
 }
 
 TfdiMd11::TfdiMd11(VariableGateway* variableGateway, AutomationStatus* status, const bool cargo)
-    : variableGateway_(variableGateway), status_(status), cargo_(cargo)
+    : variableGateway_(variableGateway), status_(status), cargo_(cargo),
+      smartSwitch_(*variableGateway, {kSmartSwitch},
+                   [](double, const double max) { return max > kSmartSwitchNeutral; },
+                   kSmartSwitchNeutral)
 {
-    variableGateway_->SetFastRefresh(std::string("L:") + kSmartSwitch);
+    smartSwitch_.Subscribe();
 
     LOG_INFO("Profile loaded: TFDi MD-11%s", cargo_ ? "F" : "");
 }
@@ -227,23 +230,7 @@ void TfdiMd11::SetCurrentZfwKg(const double zfwKg)
 
 bool TfdiMd11::ConsumeSmartSwitch()
 {
-    const bool isActive = variableGateway_->GetLVar(kSmartSwitch, kSmartSwitchNeutral) > kSmartSwitchNeutral;
-
-    if (!isActive)
-    {
-        smartSwitchResetPending_ = false;
-        return false;
-    }
-
-    variableGateway_->SetLVar(kSmartSwitch, kSmartSwitchNeutral);
-
-    if (smartSwitchResetPending_)
-    {
-        return false;
-    }
-
-    smartSwitchResetPending_ = true;
-    return true;
+    return smartSwitch_.Consume();
 }
 
 bool TfdiMd11::IsPowered() const
@@ -274,8 +261,8 @@ std::optional<GroundPowerStatus> TfdiMd11::GetGroundPowerStatus() const
     }
 
     return variableGateway_->GetLVar(kExtGpuLVar, 0.0) > 0.0
-        ? GroundPowerStatus::Connected
-        : GroundPowerStatus::Disconnected;
+               ? GroundPowerStatus::Connected
+               : GroundPowerStatus::Disconnected;
 }
 
 void TfdiMd11::SetChocks(const bool placed)
@@ -349,13 +336,11 @@ void TfdiMd11::CommitEfbTargets() const
 
 namespace
 {
-    std::unique_ptr<Aircraft> CreateTfdiMd11(VariableGateway* variableGateway,
-                                             AutomationStatus* status,
-                                             const AircraftIdentity& identity)
+    std::unique_ptr<Aircraft> CreateTfdiMd11(const AircraftContext& context, const AircraftIdentity& identity)
     {
         const bool cargo = MatchText(identity.title, MatchOp::Contains, "MD-11F")
             || MatchText(identity.atcModel, MatchOp::Equals, "MD11F");
-        return std::make_unique<TfdiMd11>(variableGateway, status, cargo);
+        return std::make_unique<TfdiMd11>(context.variableGateway, context.status, cargo);
     }
 
     const AircraftDescriptor kTfdiMd11Descriptor{

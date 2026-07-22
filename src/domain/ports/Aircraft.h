@@ -4,6 +4,7 @@
 #include <optional>
 
 #include "../model/GroundPowerStatus.h"
+#include "../support/Weight.h"
 
 enum class RefuelBy { Gsx, Self, Client };
 enum class BoardBy { Self, Client };
@@ -26,6 +27,7 @@ public:
     [[nodiscard]] virtual double GetPlannedZfwKg() const = 0;
     [[nodiscard]] virtual int GetPlannedPassengers() const = 0;
     [[nodiscard]] virtual double GetEmptyZfwKg() const = 0;
+    [[nodiscard]] virtual std::optional<WeightUnit> GetNativeWeightUnit() const { return std::nullopt; }
 
     [[nodiscard]] virtual double GetCurrentFuelKg() const = 0;
     virtual void SetCurrentFuelKg(double fuelKg) = 0;

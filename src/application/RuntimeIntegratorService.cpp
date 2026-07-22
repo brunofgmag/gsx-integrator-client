@@ -65,6 +65,7 @@ IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
     snapshot.targetZfwKg = status.targetZfwKg;
     snapshot.targetPax = status.targetPassengers;
     snapshot.delayTicksRemaining = runtime_->GetDelayTicksRemaining();
+    snapshot.autoWeightUnit = static_cast<int>(runtime_->GetAutoWeightUnit());
 
     return snapshot;
 }

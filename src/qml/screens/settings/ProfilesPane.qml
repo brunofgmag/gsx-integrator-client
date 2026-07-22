@@ -94,10 +94,9 @@ ColumnLayout {
             horizontalAlignment: TextInput.AlignRight
             rightPadding: 10
             opacity: enabled ? 1.0 : 0.45
-            validator: DoubleValidator {
-                bottom: 0.1
-                top: 1000
-                notation: DoubleValidator.StandardNotation
+            validator: IntValidator {
+                bottom: 1
+                top: root.settingsVm.weightIsLb ? Math.round(root.settingsVm.kgToLb(1000)) : 1000
             }
             onTextEdited: root.settingsVm.profileFuelRateText = text
 
@@ -112,7 +111,7 @@ ColumnLayout {
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: root.settingsVm.profileFuelEditable
-                  ? qsTr("kg/s")
+                  ? root.settingsVm.fuelRateUnitText
                   : root.settingsVm.profileFuelBadge
             color: Theme.muted
             font.pixelSize: 10

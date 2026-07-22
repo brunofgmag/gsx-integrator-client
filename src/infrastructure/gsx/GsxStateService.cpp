@@ -56,6 +56,7 @@ void GsxStateService::Reset()
 {
     boarding_ = {};
     deboarding_ = {};
+    fuelAndPayloadTakenOver_ = false;
 
     for (auto& track : states_ | std::views::values)
     {
@@ -240,6 +241,12 @@ bool GsxStateService::IsJetwayAvailable() const
     return varManager_->GetLVar(kJetway, 2.0) != 2.0;
 }
 
+bool GsxStateService::IsJetwayOrStairsOperating() const
+{
+    return varManager_->GetLVar(kJetway) == static_cast<double>(GsxStateStatus::Requested)
+        || varManager_->GetLVar(kStairs) == static_cast<double>(GsxStateStatus::Requested);
+}
+
 bool GsxStateService::IsAircraftOnGround() const
 {
     return varManager_->GetAVar("SIM ON GROUND", "Bool", 1.0) == 1.0;
@@ -249,8 +256,25 @@ void GsxStateService::TakeOverFuelAndPayload()
 {
     varManager_->SetLVar(kAutomationFuel, 0.0);
     varManager_->SetLVar(kAutomationPayload, 0.0);
+    fuelAndPayloadTakenOver_ = true;
 
     LOG_INFO("Taking over fuel and payload insertion");
+}
+
+void GsxStateService::ReassertTakeovers() const
+{
+    if (!fuelAndPayloadTakenOver_)
+    {
+        return;
+    }
+
+    if (varManager_->GetLVar(kAutomationFuel, 1.0) != 0.0
+        || varManager_->GetLVar(kAutomationPayload, 1.0) != 0.0)
+    {
+        LOG_INFO("GSX automation flags reset by couatl; re-taking fuel and payload");
+        varManager_->SetLVar(kAutomationFuel, 0.0);
+        varManager_->SetLVar(kAutomationPayload, 0.0);
+    }
 }
 
 

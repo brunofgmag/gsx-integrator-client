@@ -6,20 +6,8 @@ Item {
     property var updateVm
     property real viewportHeight: 0
 
-    readonly property int updState: updateVm ? updateVm.state : 0
-    readonly property string updStatusText: {
-        if (!updateVm)
-            return ""
-        switch (updState) {
-        case 1: return qsTr("Checking for updates…")
-        case 2: return qsTr("Up to date")
-        case 3: return qsTr("Update available — v%1").arg(updateVm.latestVersion)
-        case 4: return qsTr("Downloading v%1").arg(updateVm.latestVersion)
-        case 5: return qsTr("Update ready — restart to apply")
-        case 6: return updateVm.errorMessage
-        default: return ""
-        }
-    }
+    readonly property bool updProminent: !!updateVm
+        && (updateVm.canDownload || updateVm.downloading || updateVm.readyToRestart)
 
     implicitHeight: Math.max(col.implicitHeight, viewportHeight - 32)
 
@@ -74,10 +62,9 @@ Item {
                 width: parent.width
                 topPadding: 4
                 horizontalAlignment: Text.AlignHCenter
-                text: root.updStatusText
-                color: root.updState === 6 ? Theme.red
-                     : (root.updState === 3 || root.updState === 4 || root.updState === 5)
-                       ? Theme.accent : Theme.muted
+                text: root.updateVm ? root.updateVm.statusText : ""
+                color: (root.updateVm && root.updateVm.hasError) ? Theme.red
+                     : root.updProminent ? Theme.accent : Theme.muted
                 font.pixelSize: 11
                 font.letterSpacing: 1.2
                 font.capitalization: Font.AllUppercase
@@ -88,7 +75,7 @@ Item {
             Column {
                 width: parent.width
                 spacing: 5
-                visible: root.updState === 4
+                visible: !!root.updateVm && root.updateVm.downloading
 
                 Rectangle {
                     width: parent.width
@@ -119,22 +106,21 @@ Item {
                 ActionButton {
                     small: true
                     secondary: true
-                    visible: !!root.updateVm && root.updateVm.checksEnabled
-                             && (root.updState === 0 || root.updState === 2 || root.updState === 6)
+                    visible: !!root.updateVm && root.updateVm.canCheckForUpdates
                     text: qsTr("Check for updates")
                     onClicked: root.updateVm.checkForUpdates()
                 }
 
                 ActionButton {
                     small: true
-                    visible: root.updState === 3
+                    visible: !!root.updateVm && root.updateVm.canDownload
                     text: qsTr("Download & restart")
                     onClicked: root.updateVm.downloadAndInstall()
                 }
 
                 ActionButton {
                     small: true
-                    visible: root.updState === 5
+                    visible: !!root.updateVm && root.updateVm.readyToRestart
                     text: qsTr("Restart now")
                     onClicked: root.updateVm.restartNow()
                 }
@@ -142,8 +128,8 @@ Item {
                 ActionButton {
                     small: true
                     secondary: true
-                    visible: (root.updState === 3 || root.updState === 5)
-                             && !!root.updateVm && root.updateVm.releaseUrl.length > 0
+                    visible: !!root.updateVm && (root.updateVm.canDownload || root.updateVm.readyToRestart)
+                             && root.updateVm.releaseUrl.length > 0
                     text: qsTr("Release notes")
                     onClicked: Qt.openUrlExternally(root.updateVm.releaseUrl)
                 }

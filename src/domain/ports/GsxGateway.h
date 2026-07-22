@@ -56,6 +56,7 @@ public:
     [[nodiscard]] virtual bool IsJetwayInPlace() const = 0;
     [[nodiscard]] virtual bool AreStairsAvailable() const = 0;
     [[nodiscard]] virtual bool IsJetwayAvailable() const = 0;
+    [[nodiscard]] virtual bool IsJetwayOrStairsOperating() const = 0;
     [[nodiscard]] virtual bool IsSimbriefLoaded() const = 0;
     [[nodiscard]] virtual bool IsAircraftOnGround() const = 0;
     [[nodiscard]] virtual bool IsGoodEngineStartConfirmationEnabled() const = 0;

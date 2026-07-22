@@ -87,8 +87,10 @@ std::optional<FlightPlan> ParseSimbriefOfp(const std::string_view xml)
         passengers = *parsedPax;
     }
 
+    auto unit = WeightUnit::Kg;
     if (const auto units = ExtractTag(xml, "units"); units && *units == "lbs")
     {
+        unit = WeightUnit::Lb;
         fuelKg = weight::LbToKg(fuelKg);
         zfwKg = weight::LbToKg(zfwKg);
     }
@@ -98,5 +100,5 @@ std::optional<FlightPlan> ParseSimbriefOfp(const std::string_view xml)
         return std::nullopt;
     }
 
-    return FlightPlan{fuelKg, zfwKg, passengers};
+    return FlightPlan{fuelKg, zfwKg, passengers, unit};
 }

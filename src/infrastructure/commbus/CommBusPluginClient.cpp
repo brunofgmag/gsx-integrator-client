@@ -4,48 +4,56 @@
 
 using namespace IntegratorPluginCommBus;
 
-CommBusPluginClient::CommBusPluginClient(VariableGateway* variableGateway)
-    : variableGateway_(variableGateway)
+CommBusPluginClient::CommBusPluginClient(CommBusBridgeGateway* bridge) : bridge_(bridge)
 {
 }
 
 void CommBusPluginClient::Setup()
 {
-    (void)variableGateway_->GetLVar(kToolbarStateLVar, 0.0);
-    (void)variableGateway_->GetLVar(kGsxToolbarActiveLVar, 0.0);
+    bridge_->Subscribe(kToolbarStateChannel, [this](const std::string& state) { OnState(state); });
 }
 
 void CommBusPluginClient::Shutdown()
 {
-    variableGateway_->SetLVar(kToolbarCmdLVar, static_cast<double>(ToolbarCmd::None));
+    bridge_->Unsubscribe(kToolbarStateChannel);
+    ready_ = false;
+    open_ = false;
 }
 
-bool CommBusPluginClient::OpenGsxToolbar()
+void CommBusPluginClient::OnState(const std::string& state)
 {
-    return SendToolbarCommand(ToolbarCmd::Open);
-}
-
-bool CommBusPluginClient::IsBridgeReady() const
-{
-    return variableGateway_->GetLVar(kToolbarStateLVar, 0.0)
-        >= static_cast<double>(ToolbarState::Ready);
-}
-
-bool CommBusPluginClient::IsGsxToolbarActive() const
-{
-    return variableGateway_->GetLVar(kGsxToolbarActiveLVar, 0.0) > 0.0;
-}
-
-bool CommBusPluginClient::SendToolbarCommand(const ToolbarCmd command)
-{
-    variableGateway_->SetLVar(kToolbarCmdLVar, static_cast<double>(command));
-
-    if (!IsBridgeReady())
+    if (state == "unavailable")
     {
-        LOG_WARN("Integrator toolbar bridge not ready; queuing command %d via LVar anyway", command);
+        ready_ = false;
+        open_ = false;
+
+        return;
+    }
+
+    ready_ = state == "ready" || state == "open" || state == "closed";
+    open_ = state == "open";
+}
+
+bool CommBusPluginClient::OpenGsxToolbar() const
+{
+    if (!bridge_->IsAvailable())
+    {
+        LOG_WARN("Integrator CommBus bridge unavailable; cannot open the GSX toolbar");
 
         return false;
     }
 
+    bridge_->Call(kToolbarCommandChannel, CommBusFlag::kJs, kCommandOpen);
+
     return true;
+}
+
+bool CommBusPluginClient::IsBridgeReady() const
+{
+    return ready_;
+}
+
+bool CommBusPluginClient::IsGsxToolbarActive() const
+{
+    return open_;
 }

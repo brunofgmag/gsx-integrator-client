@@ -1,5 +1,6 @@
 #include "OperationsViewModel.h"
 
+#include <cmath>
 #include <QtCore/QCoreApplication>
 #include "../domain/turnaround/TurnaroundPhase.h"
 #include "../domain/model/FlightPlan.h"
@@ -16,6 +17,7 @@ namespace
         case TurnaroundPhase::PlaceGroundEquipment: return QCoreApplication::translate("Turnaround", "Placing GPU & chocks");
         case TurnaroundPhase::CallServices: return QCoreApplication::translate("Turnaround", "Starting GSX services");
         case TurnaroundPhase::WaitingPowerOn: return QCoreApplication::translate("Turnaround", "Waiting for power on");
+        case TurnaroundPhase::CallCatering: return QCoreApplication::translate("Turnaround", "Requesting catering");
         case TurnaroundPhase::WaitingFlightPlan: return QCoreApplication::translate("Turnaround", "Waiting for flight plan");
         case TurnaroundPhase::RequestFuel: return QCoreApplication::translate("Turnaround", "Requesting fuel");
         case TurnaroundPhase::Refueling: return QCoreApplication::translate("Turnaround", "Refueling");
@@ -252,6 +254,11 @@ int OperationsViewModel::GetBoardedPax() const
     return snapshot_.boardedPax;
 }
 
+int OperationsViewModel::GetDeboardedPax() const
+{
+    return static_cast<int>(std::lround(snapshot_.deboardingProgress / 100.0 * snapshot_.targetPax));
+}
+
 double OperationsViewModel::GetTargetFuelKg() const
 {
     return snapshot_.targetFuelKg;
@@ -265,6 +272,11 @@ double OperationsViewModel::GetTargetZfwKg() const
 int OperationsViewModel::GetTargetPax() const
 {
     return snapshot_.targetPax;
+}
+
+int OperationsViewModel::GetAutoWeightUnit() const
+{
+    return snapshot_.autoWeightUnit;
 }
 
 bool OperationsViewModel::IsCargoAircraft() const

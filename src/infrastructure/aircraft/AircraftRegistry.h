@@ -9,6 +9,7 @@
 
 class VariableGateway;
 struct AutomationStatus;
+class CommBusBridgeGateway;
 
 enum class MatchField
 {
@@ -30,9 +31,14 @@ struct MatchRule
     const char* pattern;
 };
 
-using AircraftCreator = std::unique_ptr<Aircraft> (*)(VariableGateway* variableGateway,
-                                                      AutomationStatus* status,
-                                                      const AircraftIdentity& identity);
+struct AircraftContext
+{
+    VariableGateway* variableGateway = nullptr;
+    AutomationStatus* status = nullptr;
+    CommBusBridgeGateway* commBusBridge = nullptr;
+};
+
+using AircraftCreator = std::unique_ptr<Aircraft> (*)(const AircraftContext& context, const AircraftIdentity& identity);
 
 struct AircraftDescriptor
 {

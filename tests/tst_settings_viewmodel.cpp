@@ -3,6 +3,7 @@
 
 #include "TestDoubles.h"
 #include "../src/viewmodel/SettingsViewModel.h"
+#include "../src/domain/support/Weight.h"
 
 namespace
 {
@@ -47,6 +48,9 @@ private slots:
     static void languagePersistsImmediately();
     static void updateModeDefaultsToNotify();
     static void updateModePersistsImmediately();
+    static void weightUnitModeDefaultsToAutoAndPersists();
+    static void fuelRateFollowsWeightUnit();
+    static void autoWeightModeFollowsDetectedUnit();
     static void parsesFuelRateWithCommaDecimal();
     static void parsesFuelRateWithDotDecimal();
     static void seededFuelRateRoundTripsThroughParse();
@@ -525,6 +529,69 @@ void SettingsViewModelTest::updateModePersistsImmediately()
     QCOMPARE(repository.saveCalls, savesBefore);
 }
 
+void SettingsViewModelTest::weightUnitModeDefaultsToAutoAndPersists()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    QCOMPARE(viewModel.GetWeightUnitMode(), static_cast<int>(SettingsViewModel::AutoUnit));
+
+    viewModel.SetWeightUnitMode(SettingsViewModel::Pounds);
+
+    QCOMPARE(viewModel.GetWeightUnitMode(), static_cast<int>(SettingsViewModel::Pounds));
+    QCOMPARE(repository.saveCalls, 1);
+    QCOMPARE(repository.stored.weightUnitMode, static_cast<int>(SettingsViewModel::Pounds));
+
+    const int savesBefore = repository.saveCalls;
+    viewModel.SetWeightUnitMode(SettingsViewModel::Pounds);
+
+    QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::fuelRateFollowsWeightUnit()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    repository.stored.fuelRateKgs = 100.0;
+    SettingsViewModel viewModel(&repository, &service);
+
+    // Auto with no detected unit resolves to kilograms.
+    QVERIFY(!viewModel.GetWeightIsLb());
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("100"));
+
+    // Switching to pounds shows a whole-number rate (no long decimal tail).
+    viewModel.SetWeightUnitMode(SettingsViewModel::Pounds);
+    QVERIFY(viewModel.GetWeightIsLb());
+    QCOMPARE(viewModel.GetFuelRateUnitText(), QStringLiteral("lb/s"));
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("220"));
+    QVERIFY(viewModel.save());
+    QVERIFY(qAbs(repository.stored.fuelRateKgs - weight::LbToKg(220.0)) < 1e-9);
+
+    // Switching back to kilograms shows a whole number again.
+    viewModel.SetWeightUnitMode(SettingsViewModel::Kilograms);
+    QVERIFY(!viewModel.GetWeightIsLb());
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("100"));
+    QVERIFY(viewModel.save());
+    QCOMPARE(repository.stored.fuelRateKgs, 100.0);
+}
+
+void SettingsViewModelTest::autoWeightModeFollowsDetectedUnit()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    service.snapshot.autoWeightUnit = 1; // Lb
+    repository.stored.fuelRateKgs = 100.0;
+    SettingsViewModel viewModel(&repository, &service);
+
+    // Auto mode + detected pounds -> the rate buffer seeds in whole lb/s.
+    QVERIFY(viewModel.GetWeightIsLb());
+    QCOMPARE(viewModel.GetFuelRateUnitText(), QStringLiteral("lb/s"));
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("220"));
+    QVERIFY(viewModel.save());
+    QVERIFY(qAbs(repository.stored.fuelRateKgs - weight::LbToKg(220.0)) < 1e-9);
+}
+
 void SettingsViewModelTest::parsesFuelRateWithCommaDecimal()
 {
     const auto previous = QLocale();
@@ -561,25 +628,20 @@ void SettingsViewModelTest::parsesFuelRateWithDotDecimal()
 
 void SettingsViewModelTest::seededFuelRateRoundTripsThroughParse()
 {
-    const auto previous = QLocale();
-    QLocale::setDefault(QLocale(QLocale::Portuguese, QLocale::Brazil));
-
     FakeSettingsRepository repository;
     FakeIntegratorService service;
 
-    repository.stored.fuelRateKgs = 1234.5;
+    repository.stored.fuelRateKgs = 1234.0;
 
     SettingsViewModel viewModel(&repository, &service);
 
     const QString seeded = viewModel.GetFuelRateText();
-    QCOMPARE(seeded, QLocale().toString(1234.5, 'g', 12).remove(QLocale().groupSeparator()));
+    QCOMPARE(seeded, QStringLiteral("1234"));
 
     viewModel.SetFuelRateText(seeded);
     viewModel.SetSimbriefPilotIdText(QStringLiteral("1"));
     QVERIFY(viewModel.save());
-    QCOMPARE(repository.stored.fuelRateKgs, 1234.5);
-
-    QLocale::setDefault(previous);
+    QCOMPARE(repository.stored.fuelRateKgs, 1234.0);
 }
 
 void SettingsViewModelTest::exposesInjectedProfileModel()
@@ -684,7 +746,7 @@ void SettingsViewModelTest::profileDraftLoadsFromStoredSettings()
     FakeIntegratorService service;
     AircraftProfile stored;
     stored.useGlobal = false;
-    stored.fuelRateKgs = 12.5;
+    stored.fuelRateKgs = 12.0;
     stored.callLavatory = true;
     repository.stored.profiles.emplace("fictional-client", stored);
     SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
@@ -692,8 +754,7 @@ void SettingsViewModelTest::profileDraftLoadsFromStoredSettings()
     viewModel.SetSelectedProfileIndex(2);
 
     QVERIFY(!viewModel.GetProfileUseGlobal());
-    QCOMPARE(viewModel.GetProfileFuelRateText(),
-             QLocale().toString(12.5, 'g', 12).remove(QLocale().groupSeparator()));
+    QCOMPARE(viewModel.GetProfileFuelRateText(), QStringLiteral("12"));
     QVERIFY(viewModel.GetProfileCallLavatory());
 }
 

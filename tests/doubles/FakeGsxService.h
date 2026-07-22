@@ -19,6 +19,7 @@ public:
     bool jetwayInPlace = false;
     bool stairsAvailable = false;
     bool jetwayAvailable = false;
+    bool jetwayOrStairsOperating = false;
     GsxStateStatus deboardingState = GsxStateStatus::Unavailable;
     GsxStateStatus deiceState = GsxStateStatus::Unavailable;
     int plannedPassengers = 0;
@@ -95,6 +96,7 @@ public:
     [[nodiscard]] bool IsJetwayInPlace() const override { return jetwayInPlace; }
     [[nodiscard]] bool AreStairsAvailable() const override { return stairsAvailable; }
     [[nodiscard]] bool IsJetwayAvailable() const override { return jetwayAvailable; }
+    [[nodiscard]] bool IsJetwayOrStairsOperating() const override { return jetwayOrStairsOperating; }
     [[nodiscard]] bool IsSimbriefLoaded() const override { return simbriefLoaded; }
     [[nodiscard]] bool IsAircraftOnGround() const override { return onGround; }
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override { return goodEngineStartConfirmation; }

@@ -4,23 +4,45 @@
 #include <utility>
 #include "../application/ports/IntegratorService.h"
 #include "../application/ports/SettingsRepository.h"
+#include "../domain/support/Weight.h"
 
 namespace
 {
-    double ParseFuelRate(const QString& text, bool* ok)
+    double ParseFuelRate(const QString& text, const bool lb, bool* ok)
     {
         const QString trimmed = text.trimmed();
-        const double value = QLocale().toDouble(trimmed, ok);
-        if (*ok)
+        double value = QLocale().toDouble(trimmed, ok);
+        if (!*ok)
         {
-            return value;
+            value = QLocale::c().toDouble(trimmed, ok);
         }
-        return QLocale::c().toDouble(trimmed, ok);
+
+        if (!*ok)
+        {
+            return 0.0;
+        }
+
+        return lb ? weight::LbToKg(value) : value;
     }
 
-    QString FormatFuelRate(const double value)
+    QString FormatFuelRate(const double kgs, const bool lb)
     {
-        return QLocale().toString(value, 'g', 12).remove(QLocale().groupSeparator());
+        const double shown = lb ? weight::KgToLb(kgs) : kgs;
+
+        return QString::number(qRound64(shown));
+    }
+
+    QString ConvertRateText(const QString& text, const bool fromLb, const bool toLb)
+    {
+        if (fromLb == toLb)
+        {
+            return text;
+        }
+
+        bool ok = false;
+        const double kgs = ParseFuelRate(text, fromLb, &ok);
+
+        return ok ? FormatFuelRate(kgs, toLb) : text;
     }
 
     template <typename Dst, typename Src>
@@ -50,7 +72,8 @@ SettingsViewModel::SettingsViewModel(
     simbriefPilotIdText_ = settings_.simbriefPilotId > 0
                                ? QString::number(settings_.simbriefPilotId)
                                : QString();
-    fuelRateText_ = FormatFuelRate(settings_.fuelRateKgs);
+    displayIsLb_ = EffectiveIsLb();
+    fuelRateText_ = FormatFuelRate(settings_.fuelRateKgs, displayIsLb_);
     integratorService_->ApplySettings(settings_);
 
     for (const AircraftProfileInfo& info : profileInfos_)
@@ -60,7 +83,7 @@ SettingsViewModel::SettingsViewModel(
         if (it != settings_.profiles.end())
         {
             draft.useGlobal = it->second.useGlobal;
-            draft.fuelRateText = FormatFuelRate(it->second.fuelRateKgs);
+            draft.fuelRateText = FormatFuelRate(it->second.fuelRateKgs, displayIsLb_);
             CopyServiceFields(draft, it->second);
         }
         else
@@ -71,6 +94,18 @@ SettingsViewModel::SettingsViewModel(
     }
 
     selectDetectedProfile();
+
+    integratorService_->AddObserver(this);
+}
+
+SettingsViewModel::~SettingsViewModel()
+{
+    integratorService_->RemoveObserver(this);
+}
+
+void SettingsViewModel::OnIntegratorStateChanged()
+{
+    SyncDisplayUnit();
 }
 
 QString SettingsViewModel::GetSimbriefPilotIdText() const
@@ -311,6 +346,80 @@ void SettingsViewModel::SetUpdateMode(const int mode)
     SetPersisted(settings_.updateMode, mode, &SettingsViewModel::UpdateModeChanged);
 }
 
+int SettingsViewModel::GetWeightUnitMode() const
+{
+    return settings_.weightUnitMode;
+}
+
+void SettingsViewModel::SetWeightUnitMode(const int mode)
+{
+    if (settings_.weightUnitMode == mode)
+    {
+        return;
+    }
+
+    settings_.weightUnitMode = mode;
+    PersistImmediateSetting();
+
+    emit WeightUnitModeChanged();
+
+    SyncDisplayUnit();
+}
+
+bool SettingsViewModel::GetWeightIsLb() const
+{
+    return displayIsLb_;
+}
+
+QString SettingsViewModel::GetFuelRateUnitText() const
+{
+    return displayIsLb_ ? tr("lb/s") : tr("kg/s");
+}
+
+double SettingsViewModel::kgToLb(const double kg)
+{
+    return weight::KgToLb(kg);
+}
+
+bool SettingsViewModel::EffectiveIsLb() const
+{
+    switch (settings_.weightUnitMode)
+    {
+    case Kilograms:
+        return false;
+    case Pounds:
+        return true;
+    default:
+        return integratorService_->GetSnapshot().autoWeightUnit == static_cast<int>(WeightUnit::Lb);
+    }
+}
+
+void SettingsViewModel::SyncDisplayUnit()
+{
+    const bool nowLb = EffectiveIsLb();
+    if (nowLb == displayIsLb_)
+    {
+        return;
+    }
+
+    RescaleFuelRateTexts(displayIsLb_, nowLb);
+    displayIsLb_ = nowLb;
+
+    emit WeightUnitDisplayChanged();
+}
+
+void SettingsViewModel::RescaleFuelRateTexts(const bool fromLb, const bool toLb)
+{
+    fuelRateText_ = ConvertRateText(fuelRateText_, fromLb, toLb);
+    emit FuelRateTextChanged();
+
+    for (ProfileDraft& draft : profileDrafts_)
+    {
+        draft.fuelRateText = ConvertRateText(draft.fuelRateText, fromLb, toLb);
+    }
+    emit ProfileDraftChanged();
+}
+
 bool SettingsViewModel::GetCloseToTray() const
 {
     return settings_.closeToTray;
@@ -345,6 +454,7 @@ void SettingsViewModel::RetranslateUi()
 {
     emit ValidationChanged();
     emit ProfileSelectionChanged();
+    emit WeightUnitDisplayChanged();
 }
 
 bool SettingsViewModel::CanSave() const
@@ -723,7 +833,7 @@ SettingsViewModel::Draft SettingsViewModel::Validate() const
     }
 
     bool rateOk = false;
-    result.fuelRateKgs = ParseFuelRate(fuelRateText_, &rateOk);
+    result.fuelRateKgs = ParseFuelRate(fuelRateText_, displayIsLb_, &rateOk);
     if (!rateOk || result.fuelRateKgs <= 0.0)
     {
         result.error = tr("Enter a valid fuel rate.");
@@ -740,7 +850,7 @@ SettingsViewModel::Draft SettingsViewModel::Validate() const
         }
 
         bool profileRateOk = false;
-        const double profileRate = ParseFuelRate(draft.fuelRateText, &profileRateOk);
+        const double profileRate = ParseFuelRate(draft.fuelRateText, displayIsLb_, &profileRateOk);
         if (!profileRateOk || profileRate <= 0.0)
         {
             result.error = tr("Enter a valid fuel rate for %1.")
