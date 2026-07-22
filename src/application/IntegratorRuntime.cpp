@@ -113,8 +113,8 @@ void IntegratorRuntime::TryConnect()
     bridgeClient_.Setup();
     pluginClient_.Setup();
 
-    varGateway_.SetFastRefresh("L:FSDT_GSX_JETWAY");
-    varGateway_.SetFastRefresh("L:FSDT_GSX_STAIRS");
+    varGateway_.SetFastRefresh("FSDT_GSX_JETWAY");
+    varGateway_.SetFastRefresh("FSDT_GSX_STAIRS");
 
     LOG_INFO("GSX Integrator connected to the simulator.");
 

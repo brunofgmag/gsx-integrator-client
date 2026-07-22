@@ -9,7 +9,7 @@ namespace
     constexpr auto kTitleKey = "A:TITLE";
     constexpr auto kAtcModelKey = "A:ATC MODEL";
     constexpr auto kNumberUnit = "Number";
-    constexpr DWORD kFastIntervalFrames = 10;
+    constexpr DWORD kFastIntervalFrames = 1;
 }
 
 void SimConnectVariableGateway::Attach(HANDLE hSimConnect)
