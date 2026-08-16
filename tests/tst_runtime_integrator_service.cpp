@@ -30,6 +30,7 @@ private slots:
     static void freshSnapshotHasDisconnectedDefaults();
     static void commandsFailWhileOffline();
     static void fixGsxProfileWithoutConflictFails();
+    static void fixPmdgOptionsWithoutConflictFails();
     static void applySettingsPushesEffectiveSettings();
     static void observersAreDedupedAndNotified();
     static void automationToggleEmitsOncePerChange();
@@ -63,6 +64,8 @@ void RuntimeIntegratorServiceTest::freshSnapshotHasDisconnectedDefaults()
     QVERIFY(!snapshot.refuelBySelf);
     QVERIFY(!snapshot.gsxProfileConflict);
     QVERIFY(!snapshot.gsxProfileFixable);
+    QVERIFY(!snapshot.pmdgOptionsConflict);
+    QVERIFY(!snapshot.pmdgOptionsFixable);
     QVERIFY(!snapshot.cargoAircraft);
     QCOMPARE(snapshot.aircraftName, std::string{});
     QCOMPARE(snapshot.aircraftProfileId, std::string{});
@@ -116,6 +119,17 @@ void RuntimeIntegratorServiceTest::fixGsxProfileWithoutConflictFails()
 
     QVERIFY(!result.succeeded);
     QCOMPARE(result.message, std::string("The GSX profile does not need fixing."));
+}
+
+void RuntimeIntegratorServiceTest::fixPmdgOptionsWithoutConflictFails()
+{
+    IntegratorRuntime runtime;
+    RuntimeIntegratorService service(&runtime);
+
+    const CommandResult result = service.FixPmdgOptions();
+
+    QVERIFY(!result.succeeded);
+    QCOMPARE(result.message, std::string("The PMDG options file does not need fixing."));
 }
 
 void RuntimeIntegratorServiceTest::applySettingsPushesEffectiveSettings()
@@ -192,9 +206,13 @@ void RuntimeIntegratorServiceTest::runtimeGettersOnEmptyRuntime()
     QVERIFY(!snapshot.cargoAircraft);
     QVERIFY(!snapshot.gsxProfileConflict);
     QVERIFY(!snapshot.gsxProfileFixable);
+    QVERIFY(!snapshot.pmdgOptionsConflict);
+    QVERIFY(!snapshot.pmdgOptionsFixable);
     QCOMPARE(runtime.GetAircraftProfileId(), std::string{});
     QVERIFY(!runtime.HasGsxProfileConflict());
     QVERIFY(!runtime.FixGsxProfile());
+    QVERIFY(!runtime.HasPmdgOptionsConflict());
+    QVERIFY(!runtime.FixPmdgOptions());
     QVERIFY(!runtime.ReloadSimbrief());
 }
 

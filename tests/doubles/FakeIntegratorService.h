@@ -13,6 +13,7 @@ public:
     CommandResult startLoadingResult = CommandResult::Success();
     CommandResult restartFlowResult = CommandResult::Success();
     CommandResult fixGsxProfileResult = CommandResult::Success();
+    CommandResult fixPmdgOptionsResult = CommandResult::Success();
     AppSettings appliedSettings;
     int automationCalls = 0;
     int startLoadingCalls = 0;
@@ -20,6 +21,7 @@ public:
     int reloadCalls = 0;
     int applySettingsCalls = 0;
     int fixGsxProfileCalls = 0;
+    int fixPmdgOptionsCalls = 0;
 
     [[nodiscard]] IntegratorSnapshot GetSnapshot() const override
     {
@@ -77,6 +79,19 @@ public:
         }
 
         return fixGsxProfileResult;
+    }
+
+    [[nodiscard]] CommandResult FixPmdgOptions() override
+    {
+        ++fixPmdgOptionsCalls;
+        if (fixPmdgOptionsResult.succeeded)
+        {
+            snapshot.pmdgOptionsConflict = false;
+            snapshot.pmdgOptionsFixable = false;
+            Notify();
+        }
+
+        return fixPmdgOptionsResult;
     }
 
     void ApplySettings(const AppSettings& settings) override

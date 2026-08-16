@@ -126,6 +126,23 @@ CommandResult RuntimeIntegratorService::FixGsxProfile()
     return CommandResult::Success();
 }
 
+CommandResult RuntimeIntegratorService::FixPmdgOptions()
+{
+    if (!runtime_->HasPmdgOptionsConflict())
+    {
+        return CommandResult::Failure(
+            QCoreApplication::translate("Integrator", "The PMDG options file does not need fixing.").toStdString());
+    }
+
+    if (!runtime_->FixPmdgOptions())
+    {
+        return CommandResult::Failure(
+            QCoreApplication::translate("Integrator", "Could not update the PMDG options file.").toStdString());
+    }
+
+    return CommandResult::Success();
+}
+
 void RuntimeIntegratorService::ApplySettings(const AppSettings& settings)
 {
     appSettings_ = settings;

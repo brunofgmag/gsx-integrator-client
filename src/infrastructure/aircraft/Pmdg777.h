@@ -26,8 +26,6 @@ public:
     Pmdg777(VariableGateway* variableGateway, const AutomationStatus* status, Pmdg777Variant variant,
             std::unique_ptr<Pmdg777DataGateway> data, std::unique_ptr<Pmdg777TabletGateway> tablet);
 
-    [[nodiscard]] static bool OptionsEnableDataBroadcast(const std::string& iniText);
-
 
     [[nodiscard]] const char* GetName() const override;
     [[nodiscard]] bool IsCargoVariant() const override;

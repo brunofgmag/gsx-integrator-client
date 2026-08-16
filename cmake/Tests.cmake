@@ -361,6 +361,12 @@ gsxi_add_qt_test(gsxi-pmdg777-data-client-tests pmdg777-data-client
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_include_directories(gsxi-pmdg777-data-client-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
+gsxi_add_qt_test(gsxi-pmdg-options-tests pmdg-options
+        tests/tst_pmdg_options.cpp
+        src/infrastructure/pmdg/PmdgOptions.cpp
+        src/infrastructure/pmdg/PmdgOptions.h)
+target_include_directories(gsxi-pmdg-options-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
 gsxi_add_qt_test(gsxi-pmdg777-tablet-client-tests pmdg777-tablet-client
         tests/doubles/FakeCommBusBridgeGateway.h
         tests/tst_pmdg777_tablet_client.cpp
@@ -533,6 +539,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/pmdg/Pmdg777TabletClient.cpp
         src/infrastructure/pmdg/Pmdg777TabletClient.h
         src/infrastructure/pmdg/Pmdg777TabletGateway.h
+        src/infrastructure/pmdg/PmdgOptions.cpp
+        src/infrastructure/pmdg/PmdgOptions.h
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h

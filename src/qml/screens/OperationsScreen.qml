@@ -148,6 +148,14 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            visible: root.integratorVm.pmdgOptionsConflict
+            text: qsTr("The PMDG options file does not enable the SDK data broadcast, so the client cannot read this aircraft. Apply the fix, then reload the flight.")
+            actionText: root.integratorVm.pmdgOptionsFixable ? qsTr("Enable broadcast") : ""
+            onActionTriggered: root.integratorVm.fixPmdgOptions()
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             text: root.integratorVm.phaseTip
         }
 

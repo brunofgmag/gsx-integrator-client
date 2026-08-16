@@ -117,6 +117,8 @@ set(APP_SOURCES
         src/infrastructure/pmdg/Pmdg777TabletClient.cpp
         src/infrastructure/pmdg/Pmdg777TabletClient.h
         src/infrastructure/pmdg/Pmdg777TabletGateway.h
+        src/infrastructure/pmdg/PmdgOptions.cpp
+        src/infrastructure/pmdg/PmdgOptions.h
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h

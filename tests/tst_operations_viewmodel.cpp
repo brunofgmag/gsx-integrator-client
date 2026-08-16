@@ -29,6 +29,8 @@ private slots:
     static void exposesGsxProfileConflictFromSnapshot();
     static void fixGsxProfileDelegatesToService();
     static void fixGsxProfileReportsRejectedCommands();
+    static void fixPmdgOptionsDelegatesToService();
+    static void fixPmdgOptionsReportsRejectedCommands();
     static void restartFlowDelegatesToService();
     static void restartFlowReportsRejectedCommands();
     static void exposesInDeboardingPhaseFromSnapshot();
@@ -346,6 +348,34 @@ void OperationsViewModelTest::fixGsxProfileReportsRejectedCommands()
     const QSignalSpy errorSpy(&viewModel, &OperationsViewModel::CommandErrorChanged);
 
     viewModel.fixGsxProfile();
+
+    QCOMPARE(errorSpy.count(), 1);
+    QCOMPARE(viewModel.GetCommandError(), QStringLiteral("Rejected"));
+}
+
+void OperationsViewModelTest::fixPmdgOptionsDelegatesToService()
+{
+    FakeIntegratorService service;
+    service.snapshot.pmdgOptionsConflict = true;
+    service.snapshot.pmdgOptionsFixable = true;
+    OperationsViewModel viewModel(&service);
+
+    viewModel.fixPmdgOptions();
+
+    QCOMPARE(service.fixPmdgOptionsCalls, 1);
+    QVERIFY(viewModel.GetCommandError().isEmpty());
+    QVERIFY(!viewModel.HasPmdgOptionsConflict());
+}
+
+void OperationsViewModelTest::fixPmdgOptionsReportsRejectedCommands()
+{
+    FakeIntegratorService service;
+    service.fixPmdgOptionsResult = CommandResult::Failure("Rejected");
+
+    OperationsViewModel viewModel(&service);
+    const QSignalSpy errorSpy(&viewModel, &OperationsViewModel::CommandErrorChanged);
+
+    viewModel.fixPmdgOptions();
 
     QCOMPARE(errorSpy.count(), 1);
     QCOMPARE(viewModel.GetCommandError(), QStringLiteral("Rejected"));

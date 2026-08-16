@@ -42,6 +42,8 @@ struct IntegratorSnapshot
     bool refuelBySelf = false;
     bool gsxProfileConflict = false;
     bool gsxProfileFixable = false;
+    bool pmdgOptionsConflict = false;
+    bool pmdgOptionsFixable = false;
     bool cargoAircraft = false;
     bool efbFlightPlan = false;
 

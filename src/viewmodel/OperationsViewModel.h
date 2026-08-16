@@ -29,6 +29,8 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(bool refuelBySelf READ RefuelBySelf NOTIFY SnapshotChanged)
     Q_PROPERTY(bool gsxProfileConflict READ HasGsxProfileConflict NOTIFY SnapshotChanged)
     Q_PROPERTY(bool gsxProfileFixable READ IsGsxProfileFixable NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool pmdgOptionsConflict READ HasPmdgOptionsConflict NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool pmdgOptionsFixable READ IsPmdgOptionsFixable NOTIFY SnapshotChanged)
     Q_PROPERTY(double plannedZfwKg READ GetPlannedZfwKg NOTIFY SnapshotChanged)
     Q_PROPERTY(int plannedPax READ GetPlannedPax NOTIFY SnapshotChanged)
     Q_PROPERTY(int boardedPax READ GetBoardedPax NOTIFY SnapshotChanged)
@@ -73,6 +75,8 @@ public:
     [[nodiscard]] bool RefuelBySelf() const;
     [[nodiscard]] bool HasGsxProfileConflict() const;
     [[nodiscard]] bool IsGsxProfileFixable() const;
+    [[nodiscard]] bool HasPmdgOptionsConflict() const;
+    [[nodiscard]] bool IsPmdgOptionsFixable() const;
     [[nodiscard]] double GetPlannedZfwKg() const;
     [[nodiscard]] int GetPlannedPax() const;
     [[nodiscard]] int GetBoardedPax() const;
@@ -96,6 +100,7 @@ public:
     Q_INVOKABLE void restartFlow();
     Q_INVOKABLE void reloadSimbrief();
     Q_INVOKABLE void fixGsxProfile();
+    Q_INVOKABLE void fixPmdgOptions();
     Q_INVOKABLE void debugSkipPhase(int delta);
 
     void RetranslateUi();

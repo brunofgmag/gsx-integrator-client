@@ -4,10 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <filesystem>
-#include <fstream>
 #include <memory>
-#include <sstream>
 #include <utility>
 #include "AircraftRegistry.h"
 #include "../gsx/GsxLVars.h"
@@ -17,7 +14,6 @@
 #include "../../domain/model/AutomationStatus.h"
 #include "../../domain/model/FlightPlan.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
-#include <QtCore/QString>
 
 using namespace simvars;
 
@@ -64,35 +60,6 @@ Pmdg777::Pmdg777(VariableGateway* variableGateway,
     desiredDoor_.fill(-1);
     openedDoorIndex_.fill(-1);
     LOG_INFO("Profile loaded: %s", GetName());
-}
-
-bool Pmdg777::OptionsEnableDataBroadcast(const std::string& iniText)
-{
-    std::istringstream stream(iniText);
-    std::string line;
-    bool inSdkSection = false;
-    while (std::getline(stream, line))
-    {
-        const auto begin = line.find_first_not_of(" \t\r");
-        if (begin == std::string::npos)
-        {
-            continue;
-        }
-
-        if (line[begin] == '[')
-        {
-            inSdkSection = line.find("[SDK]", begin) == begin;
-            continue;
-        }
-
-        if (inSdkSection && line.find("EnableDataBroadcast") != std::string::npos
-            && line.find('1', line.find('=')) != std::string::npos)
-        {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 const char* Pmdg777::GetName() const
@@ -504,48 +471,8 @@ namespace
         return Pmdg777Variant::Er200;
     }
 
-    const char* PackageFor(const Pmdg777Variant variant)
-    {
-        switch (variant)
-        {
-        case Pmdg777Variant::Er300: return "pmdg-aircraft-77w";
-        case Pmdg777Variant::Freighter: return "pmdg-aircraft-77f";
-        case Pmdg777Variant::Lr200: return "pmdg-aircraft-77l";
-        default: return "pmdg-aircraft-77er";
-        }
-    }
-
-    void WarnWhenDataBroadcastDisabled(const Pmdg777Variant variant)
-    {
-        const QString appData = qEnvironmentVariable("APPDATA");
-        if (appData.isEmpty())
-        {
-            return;
-        }
-
-        const std::filesystem::path ini = std::filesystem::path(appData.toStdWString())
-            / "Microsoft Flight Simulator 2024" / "WASM" / "MSFS2024" / PackageFor(variant)
-            / "work" / "777_Options.ini";
-
-        std::error_code ec;
-        if (!std::filesystem::exists(ini, ec))
-        {
-            return;
-        }
-
-        std::ifstream file(ini);
-        const std::string text((std::istreambuf_iterator(file)), std::istreambuf_iterator<char>());
-        if (!Pmdg777::OptionsEnableDataBroadcast(text))
-        {
-            LOG_WARN("777_Options.ini has no '[SDK] EnableDataBroadcast=1'; the client cannot read the "
-                     "aircraft state. Enable it and restart the flight (%s).", ini.string().c_str());
-        }
-    }
-
     std::unique_ptr<Aircraft> CreatePmdg777(const AircraftContext& context, const AircraftIdentity& identity)
     {
-        WarnWhenDataBroadcastDisabled(VariantFor(identity));
-
         return std::make_unique<Pmdg777>(
             context.variableGateway, context.status, VariantFor(identity),
             std::make_unique<Pmdg777DataClient>(),

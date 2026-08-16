@@ -92,7 +92,6 @@ private slots:
     static void doorsHoldBeforeClientData();
     static void closeAllDoorsTogglesOpenMappedDoors();
     static void chocksReconcileWithRetryCap();
-    static void parsesOptionsDataBroadcastFlag();
     static void zfwTrimsCargoAgainstActualWeight();
     static void jetwayDoorClosesAtItsOpenedIndex();
     static void aftCateringDoorOpensFiveRightOnlyOn300();
@@ -637,15 +636,6 @@ void Pmdg777Test::groundPowerDisconnectFlow()
     }
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
-}
-
-void Pmdg777Test::parsesOptionsDataBroadcastFlag()
-{
-    QVERIFY(Pmdg777::OptionsEnableDataBroadcast("[SDK]\r\nEnableDataBroadcast=1\r\n"));
-    QVERIFY(Pmdg777::OptionsEnableDataBroadcast("[Misc]\nFoo=2\n[SDK]\nEnableDataBroadcast = 1\n"));
-    QVERIFY(!Pmdg777::OptionsEnableDataBroadcast("[SDK]\nEnableDataBroadcast=0\n"));
-    QVERIFY(!Pmdg777::OptionsEnableDataBroadcast("[Misc]\nEnableDataBroadcast=1\n"));
-    QVERIFY(!Pmdg777::OptionsEnableDataBroadcast(""));
 }
 
 void Pmdg777Test::zfwTrimsCargoAgainstActualWeight()
