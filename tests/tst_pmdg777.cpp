@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <memory>
 #include "doubles/FakePmdg777DataGateway.h"
-#include "doubles/FakePmdg777TabletGateway.h"
+#include "doubles/FakePmdgTabletGateway.h"
 #include "doubles/FakeVariableGateway.h"
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/infrastructure/aircraft/Pmdg777.h"
@@ -21,13 +21,13 @@ namespace
         FakeVariableGateway gateway;
         AutomationStatus status;
         FakePmdg777DataGateway* data = nullptr;
-        FakePmdg777TabletGateway* tablet = nullptr;
+        FakePmdgTabletGateway* tablet = nullptr;
         std::unique_ptr<Pmdg777> aircraft;
 
         explicit Pmdg777Fixture(const Pmdg777Variant variant = Pmdg777Variant::Er300)
         {
             auto dataGateway = std::make_unique<FakePmdg777DataGateway>();
-            auto tabletGateway = std::make_unique<FakePmdg777TabletGateway>();
+            auto tabletGateway = std::make_unique<FakePmdgTabletGateway>();
             data = dataGateway.get();
             tablet = tabletGateway.get();
             aircraft = std::make_unique<Pmdg777>(&gateway, &status, variant,

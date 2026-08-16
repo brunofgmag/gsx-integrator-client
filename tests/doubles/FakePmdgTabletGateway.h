@@ -1,11 +1,11 @@
-#ifndef GSX_INTEGRATOR_CLIENT_TESTS_FAKEPMDG777TABLETGATEWAY_H
-#define GSX_INTEGRATOR_CLIENT_TESTS_FAKEPMDG777TABLETGATEWAY_H
+#ifndef GSX_INTEGRATOR_CLIENT_TESTS_FAKEPMDGTABLETGATEWAY_H
+#define GSX_INTEGRATOR_CLIENT_TESTS_FAKEPMDGTABLETGATEWAY_H
 
 #include <string>
 #include <vector>
-#include "../../src/infrastructure/pmdg/Pmdg777TabletGateway.h"
+#include "../../src/infrastructure/pmdg/PmdgTabletGateway.h"
 
-class FakePmdg777TabletGateway final : public Pmdg777TabletGateway
+class FakePmdgTabletGateway final : public PmdgTabletGateway
 {
 public:
     bool available = true;
@@ -26,4 +26,4 @@ public:
     void RequestGroundConn(const std::string& key) override { groundConnRequests.push_back(key); }
 };
 
-#endif // GSX_INTEGRATOR_CLIENT_TESTS_FAKEPMDG777TABLETGATEWAY_H
+#endif // GSX_INTEGRATOR_CLIENT_TESTS_FAKEPMDGTABLETGATEWAY_H

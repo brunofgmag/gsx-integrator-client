@@ -367,17 +367,17 @@ gsxi_add_qt_test(gsxi-pmdg-options-tests pmdg-options
         src/infrastructure/pmdg/PmdgOptions.h)
 target_include_directories(gsxi-pmdg-options-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
-gsxi_add_qt_test(gsxi-pmdg777-tablet-client-tests pmdg777-tablet-client
+gsxi_add_qt_test(gsxi-pmdg-tablet-client-tests pmdg-tablet-client
         tests/doubles/FakeCommBusBridgeGateway.h
-        tests/tst_pmdg777_tablet_client.cpp
+        tests/tst_pmdg_tablet_client.cpp
         src/infrastructure/commbus/CommBusBridgeGateway.h
-        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
-        src/infrastructure/pmdg/Pmdg777TabletClient.h
-        src/infrastructure/pmdg/Pmdg777TabletGateway.h)
+        src/infrastructure/pmdg/PmdgTabletClient.cpp
+        src/infrastructure/pmdg/PmdgTabletClient.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h)
 
 gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
         tests/doubles/FakePmdg777DataGateway.h
-        tests/doubles/FakePmdg777TabletGateway.h
+        tests/doubles/FakePmdgTabletGateway.h
         tests/doubles/FakeVariableGateway.h
         tests/doubles/FakeSimConnectApi.h
         tests/doubles/FakeSimConnectApi.cpp
@@ -397,9 +397,9 @@ gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
         src/infrastructure/pmdg/Pmdg777DataClient.h
         src/infrastructure/pmdg/Pmdg777DataGateway.h
         src/infrastructure/pmdg/Pmdg777SdkData.h
-        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
-        src/infrastructure/pmdg/Pmdg777TabletClient.h
-        src/infrastructure/pmdg/Pmdg777TabletGateway.h
+        src/infrastructure/pmdg/PmdgTabletClient.cpp
+        src/infrastructure/pmdg/PmdgTabletClient.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h
         src/infrastructure/simconnect/SimConnectSession.cpp
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
@@ -441,9 +441,9 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/pmdg/Pmdg777DataClient.h
         src/infrastructure/pmdg/Pmdg777DataGateway.h
         src/infrastructure/pmdg/Pmdg777SdkData.h
-        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
-        src/infrastructure/pmdg/Pmdg777TabletClient.h
-        src/infrastructure/pmdg/Pmdg777TabletGateway.h
+        src/infrastructure/pmdg/PmdgTabletClient.cpp
+        src/infrastructure/pmdg/PmdgTabletClient.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h
         src/infrastructure/simconnect/SimConnectSession.cpp
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
@@ -536,9 +536,9 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/pmdg/Pmdg777DataClient.h
         src/infrastructure/pmdg/Pmdg777DataGateway.h
         src/infrastructure/pmdg/Pmdg777SdkData.h
-        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
-        src/infrastructure/pmdg/Pmdg777TabletClient.h
-        src/infrastructure/pmdg/Pmdg777TabletGateway.h
+        src/infrastructure/pmdg/PmdgTabletClient.cpp
+        src/infrastructure/pmdg/PmdgTabletClient.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h
         src/infrastructure/pmdg/PmdgOptions.cpp
         src/infrastructure/pmdg/PmdgOptions.h
         src/infrastructure/fenix/FenixEfbClient.cpp

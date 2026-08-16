@@ -10,7 +10,7 @@
 #include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
 #include "../pmdg/Pmdg777DataClient.h"
-#include "../pmdg/Pmdg777TabletClient.h"
+#include "../pmdg/PmdgTabletClient.h"
 #include "../../domain/model/AutomationStatus.h"
 #include "../../domain/model/FlightPlan.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
@@ -47,7 +47,7 @@ Pmdg777::Pmdg777(VariableGateway* variableGateway,
                  const AutomationStatus* status,
                  const Pmdg777Variant variant,
                  std::unique_ptr<Pmdg777DataGateway> data,
-                 std::unique_ptr<Pmdg777TabletGateway> tablet)
+                 std::unique_ptr<PmdgTabletGateway> tablet)
     : variableGateway_(variableGateway),
       status_(status),
       variant_(variant),
@@ -476,7 +476,7 @@ namespace
         return std::make_unique<Pmdg777>(
             context.variableGateway, context.status, VariantFor(identity),
             std::make_unique<Pmdg777DataClient>(),
-            std::make_unique<Pmdg777TabletClient>(context.commBusBridge));
+            std::make_unique<PmdgTabletClient>(context.commBusBridge));
     }
 
     const AircraftDescriptor kPmdg777300ErDescriptor{

@@ -1,18 +1,18 @@
-#ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777TABLETCLIENT_H
-#define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777TABLETCLIENT_H
+#ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGTABLETCLIENT_H
+#define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGTABLETCLIENT_H
 
 #include <memory>
 #include <string>
-#include "Pmdg777TabletGateway.h"
+#include "PmdgTabletGateway.h"
 
 class CommBusBridgeGateway;
 
-class Pmdg777TabletClient final : public Pmdg777TabletGateway
+class PmdgTabletClient final : public PmdgTabletGateway
 {
 public:
-    explicit Pmdg777TabletClient(CommBusBridgeGateway* bridge);
-    explicit Pmdg777TabletClient(std::unique_ptr<CommBusBridgeGateway> bridge);
-    ~Pmdg777TabletClient() override;
+    explicit PmdgTabletClient(CommBusBridgeGateway* bridge);
+    explicit PmdgTabletClient(std::unique_ptr<CommBusBridgeGateway> bridge);
+    ~PmdgTabletClient() override;
 
     void Poll() override;
     [[nodiscard]] bool IsAvailable() const override;
@@ -38,4 +38,4 @@ private:
     bool efbPlanImported_ = false;
 };
 
-#endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777TABLETCLIENT_H
+#endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGTABLETCLIENT_H

@@ -4,7 +4,7 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include "doubles/FakeCommBusBridgeGateway.h"
-#include "../src/infrastructure/pmdg/Pmdg777TabletClient.h"
+#include "../src/infrastructure/pmdg/PmdgTabletClient.h"
 
 namespace
 {
@@ -16,7 +16,7 @@ namespace
     }
 }
 
-class Pmdg777TabletClientTest final : public QObject
+class PmdgTabletClientTest final : public QObject
 {
     Q_OBJECT
 
@@ -33,27 +33,27 @@ private slots:
     static void skipsUnsubscribeWhenNeverPolled();
 };
 
-void Pmdg777TabletClientTest::buildsWbPayloadEnvelope()
+void PmdgTabletClientTest::buildsWbPayloadEnvelope()
 {
-    const QJsonObject envelope = Parse(Pmdg777TabletClient::BuildWbPayload("fuel_total_lbs", 120000));
+    const QJsonObject envelope = Parse(PmdgTabletClient::BuildWbPayload("fuel_total_lbs", 120000));
 
     QCOMPARE(envelope.value("message_tag").toString(), QString("wb_payload"));
     QCOMPARE(envelope.value("tablet_side").toString(), QString("CA"));
     QCOMPARE(envelope.value("data").toObject().value("fuel_total_lbs").toInt(), 120000);
 }
 
-void Pmdg777TabletClientTest::buildsGroundConnEnvelope()
+void PmdgTabletClientTest::buildsGroundConnEnvelope()
 {
-    const QJsonObject envelope = Parse(Pmdg777TabletClient::BuildGroundConn("wheel_chocks"));
+    const QJsonObject envelope = Parse(PmdgTabletClient::BuildGroundConn("wheel_chocks"));
 
     QCOMPARE(envelope.value("message_tag").toString(), QString("ground_conn"));
     QCOMPARE(envelope.value("data").toObject().value("wheel_chocks").toInt(), 1);
 }
 
-void Pmdg777TabletClientTest::availabilityFollowsBridge()
+void PmdgTabletClientTest::availabilityFollowsBridge()
 {
     FakeCommBusBridgeGateway bridge;
-    const Pmdg777TabletClient client(&bridge);
+    const PmdgTabletClient client(&bridge);
 
     QVERIFY(client.IsAvailable());
 
@@ -62,11 +62,11 @@ void Pmdg777TabletClientTest::availabilityFollowsBridge()
     QVERIFY(!client.IsAvailable());
 }
 
-void Pmdg777TabletClientTest::sendsSuppressedWhenUnavailable()
+void PmdgTabletClientTest::sendsSuppressedWhenUnavailable()
 {
     FakeCommBusBridgeGateway bridge;
     bridge.available = false;
-    Pmdg777TabletClient client(&bridge);
+    PmdgTabletClient client(&bridge);
     client.Poll();
 
     client.SendFuelTotalLbs(100000);
@@ -76,10 +76,10 @@ void Pmdg777TabletClientTest::sendsSuppressedWhenUnavailable()
     QCOMPARE(bridge.CallCount(kChannelToPlane), 0);
 }
 
-void Pmdg777TabletClientTest::sendsFuelWhenAvailable()
+void PmdgTabletClientTest::sendsFuelWhenAvailable()
 {
     FakeCommBusBridgeGateway bridge;
-    Pmdg777TabletClient client(&bridge);
+    PmdgTabletClient client(&bridge);
     client.Poll();
 
     client.SendFuelTotalLbs(123456);
@@ -90,10 +90,10 @@ void Pmdg777TabletClientTest::sendsFuelWhenAvailable()
     QCOMPARE(flag, CommBusFlag::kWasm);
 }
 
-void Pmdg777TabletClientTest::sendsGroundConnWhenAvailable()
+void PmdgTabletClientTest::sendsGroundConnWhenAvailable()
 {
     FakeCommBusBridgeGateway bridge;
-    Pmdg777TabletClient client(&bridge);
+    PmdgTabletClient client(&bridge);
     client.Poll();
 
     client.RequestGroundConn("wheel_chocks");
@@ -104,10 +104,10 @@ void Pmdg777TabletClientTest::sendsGroundConnWhenAvailable()
     QCOMPARE(flag, CommBusFlag::kWasm);
 }
 
-void Pmdg777TabletClientTest::subscribesPlaneToTabletWithJsFlag()
+void PmdgTabletClientTest::subscribesPlaneToTabletWithJsFlag()
 {
     FakeCommBusBridgeGateway bridge;
-    Pmdg777TabletClient client(&bridge);
+    PmdgTabletClient client(&bridge);
 
     client.Poll();
     client.Poll();
@@ -117,10 +117,10 @@ void Pmdg777TabletClientTest::subscribesPlaneToTabletWithJsFlag()
     QCOMPARE(bridge.subscribedFlags.front(), CommBusFlag::kJs);
 }
 
-void Pmdg777TabletClientTest::latchesEfbPlanImportOnFetchSuccess()
+void PmdgTabletClientTest::latchesEfbPlanImportOnFetchSuccess()
 {
     FakeCommBusBridgeGateway bridge;
-    Pmdg777TabletClient client(&bridge);
+    PmdgTabletClient client(&bridge);
     client.Poll();
 
     QVERIFY(!client.EfbPlanImported());
@@ -134,11 +134,11 @@ void Pmdg777TabletClientTest::latchesEfbPlanImportOnFetchSuccess()
     QVERIFY(client.EfbPlanImported());
 }
 
-void Pmdg777TabletClientTest::unsubscribesBorrowedBridgeOnDestruction()
+void PmdgTabletClientTest::unsubscribesBorrowedBridgeOnDestruction()
 {
     FakeCommBusBridgeGateway bridge;
     {
-        Pmdg777TabletClient client(&bridge);
+        PmdgTabletClient client(&bridge);
         client.Poll();
     }
 
@@ -146,16 +146,16 @@ void Pmdg777TabletClientTest::unsubscribesBorrowedBridgeOnDestruction()
     QCOMPARE(QString::fromStdString(bridge.unsubscribed.front()), QString("PlaneToTablet"));
 }
 
-void Pmdg777TabletClientTest::skipsUnsubscribeWhenNeverPolled()
+void PmdgTabletClientTest::skipsUnsubscribeWhenNeverPolled()
 {
     FakeCommBusBridgeGateway bridge;
     {
-        Pmdg777TabletClient client(&bridge);
+        PmdgTabletClient client(&bridge);
     }
 
     QVERIFY(bridge.unsubscribed.empty());
 }
 
-QTEST_APPLESS_MAIN(Pmdg777TabletClientTest)
+QTEST_APPLESS_MAIN(PmdgTabletClientTest)
 
-#include "tst_pmdg777_tablet_client.moc"
+#include "tst_pmdg_tablet_client.moc"

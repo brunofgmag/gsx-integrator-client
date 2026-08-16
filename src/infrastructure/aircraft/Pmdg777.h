@@ -7,7 +7,7 @@
 #include "SmartSwitch.h"
 #include "../gsx/GsxDoorSync.h"
 #include "../pmdg/Pmdg777DataGateway.h"
-#include "../pmdg/Pmdg777TabletGateway.h"
+#include "../pmdg/PmdgTabletGateway.h"
 #include "../../domain/ports/Aircraft.h"
 
 class VariableGateway;
@@ -24,7 +24,7 @@ public:
     static constexpr auto kNameFreighter = "PMDG 777F";
 
     Pmdg777(VariableGateway* variableGateway, const AutomationStatus* status, Pmdg777Variant variant,
-            std::unique_ptr<Pmdg777DataGateway> data, std::unique_ptr<Pmdg777TabletGateway> tablet);
+            std::unique_ptr<Pmdg777DataGateway> data, std::unique_ptr<PmdgTabletGateway> tablet);
 
 
     [[nodiscard]] const char* GetName() const override;
@@ -74,7 +74,7 @@ private:
     const AutomationStatus* status_;
     Pmdg777Variant variant_;
     std::unique_ptr<Pmdg777DataGateway> data_;
-    std::unique_ptr<Pmdg777TabletGateway> tablet_;
+    std::unique_ptr<PmdgTabletGateway> tablet_;
     GsxDoorSync doors_;
     std::array<int, 16> desiredDoor_{};
     std::array<int, static_cast<std::size_t>(GsxDoor::Count)> openedDoorIndex_{};
