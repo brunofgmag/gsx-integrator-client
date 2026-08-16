@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
+#include "../aircraft/Pmdg737.h"
 #include "../aircraft/Pmdg777.h"
 
 namespace
@@ -37,6 +38,12 @@ namespace
         if (aircraftName == Pmdg777::kName200Er)
         {
             return PackageFile{"pmdg-aircraft-77er", "777_Options.ini"};
+        }
+
+        if (aircraftName == Pmdg737::kNamePax800 || aircraftName == Pmdg737::kNameBcf800
+            || aircraftName == Pmdg737::kNameBdsf800 || aircraftName == Pmdg737::kNameBbj2)
+        {
+            return PackageFile{"pmdg-aircraft-738", "737_Options.ini"};
         }
 
         return std::nullopt;

@@ -1,0 +1,312 @@
+#include <QtTest/QTest>
+
+#include <algorithm>
+#include <memory>
+#include "doubles/FakePmdg737DataGateway.h"
+#include "doubles/FakePmdgTabletGateway.h"
+#include "doubles/FakeVariableGateway.h"
+#include "../src/domain/model/AutomationStatus.h"
+#include "../src/infrastructure/aircraft/Pmdg737.h"
+#include "../src/infrastructure/gsx/GsxLVars.h"
+
+namespace
+{
+    constexpr auto kChocksLVar = "NGXWheelChocks";
+    constexpr auto kSmartSwitchLVar = "switch_752_73X";
+    constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
+    constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
+    constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
+
+    struct Pmdg737Fixture
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        FakePmdg737DataGateway* data = nullptr;
+        FakePmdgTabletGateway* tablet = nullptr;
+        std::unique_ptr<Pmdg737> aircraft;
+
+        explicit Pmdg737Fixture(const Pmdg737Variant variant = Pmdg737Variant::Pax800)
+        {
+            auto dataGateway = std::make_unique<FakePmdg737DataGateway>();
+            auto tabletGateway = std::make_unique<FakePmdgTabletGateway>();
+            data = dataGateway.get();
+            tablet = tabletGateway.get();
+            aircraft = std::make_unique<Pmdg737>(&gateway, &status, variant,
+                                                 std::move(dataGateway), std::move(tabletGateway));
+        }
+
+        void SeedEnginesOff()
+        {
+            gateway.avars[kSimEng1Combustion] = 0.0;
+            gateway.avars[kSimEng2Combustion] = 0.0;
+        }
+    };
+}
+
+class Pmdg737Test final : public QObject
+{
+    Q_OBJECT
+
+private slots:
+    static void nameAndCargoFlagFollowTheVariant();
+    static void onTickPollsBothGateways();
+    static void groundPowerUnknownUntilData();
+    static void groundPowerFollowsTheSingleAnnunciator();
+    static void poweredByMainBusOrRunningEngine();
+    static void engineRunningConservativeUntilReceived();
+    static void parkingBrakeFallsBackToTheSimVar();
+    static void readyToDeboardAcceptsChocksInsteadOfBrake();
+    static void mapsOnlyTheDoorsTheSevenThirtySevenHas();
+    static void mainCargoIsCommandedOnEdgeBecauseItCannotBeRead();
+    static void paxVariantNeverTouchesMainCargo();
+    static void chocksReadFromTheLVarAndRetryWithCap();
+    static void groundPowerRequestStopsWhenAvailable();
+    static void setFuelSendsRoundedLbsOnce();
+    static void cargoVariantSendsNoPassengers();
+};
+
+void Pmdg737Test::nameAndCargoFlagFollowTheVariant()
+{
+    QCOMPARE(QString(Pmdg737Fixture(Pmdg737Variant::Pax800).aircraft->GetName()),
+             QString("PMDG 737-800"));
+    QCOMPARE(QString(Pmdg737Fixture(Pmdg737Variant::Bcf800).aircraft->GetName()),
+             QString("PMDG 737-800BCF"));
+    QCOMPARE(QString(Pmdg737Fixture(Pmdg737Variant::Bdsf800).aircraft->GetName()),
+             QString("PMDG 737-800BDSF"));
+    QCOMPARE(QString(Pmdg737Fixture(Pmdg737Variant::Bbj2).aircraft->GetName()),
+             QString("PMDG 737 BBJ2"));
+
+    QVERIFY(!Pmdg737Fixture(Pmdg737Variant::Pax800).aircraft->IsCargoVariant());
+    QVERIFY(Pmdg737Fixture(Pmdg737Variant::Bcf800).aircraft->IsCargoVariant());
+    QVERIFY(Pmdg737Fixture(Pmdg737Variant::Bdsf800).aircraft->IsCargoVariant());
+    QVERIFY(!Pmdg737Fixture(Pmdg737Variant::Bbj2).aircraft->IsCargoVariant());
+}
+
+void Pmdg737Test::onTickPollsBothGateways()
+{
+    const Pmdg737Fixture fixture;
+
+    fixture.aircraft->OnTick();
+
+    QCOMPARE(fixture.data->pollCalls, 1);
+    QCOMPARE(fixture.tablet->pollCalls, 1);
+}
+
+void Pmdg737Test::groundPowerUnknownUntilData()
+{
+    const Pmdg737Fixture fixture;
+
+    QCOMPARE(fixture.aircraft->GetGroundPowerStatus(), std::optional(GroundPowerStatus::Unknown));
+}
+
+void Pmdg737Test::groundPowerFollowsTheSingleAnnunciator()
+{
+    const Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+
+    QCOMPARE(fixture.aircraft->GetGroundPowerStatus(), std::optional(GroundPowerStatus::Disconnected));
+
+    fixture.data->groundPowerAvailable = true;
+
+    QCOMPARE(fixture.aircraft->GetGroundPowerStatus(), std::optional(GroundPowerStatus::Connected));
+}
+
+void Pmdg737Test::poweredByMainBusOrRunningEngine()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.SeedEnginesOff();
+    fixture.data->hasData = true;
+
+    QVERIFY(!fixture.aircraft->IsPowered());
+
+    fixture.data->anyMainBusPowered = true;
+    QVERIFY(fixture.aircraft->IsPowered());
+
+    fixture.data->anyMainBusPowered = false;
+    fixture.gateway.avars[kSimEng1Combustion] = 1.0;
+    QVERIFY(fixture.aircraft->IsPowered());
+}
+
+void Pmdg737Test::engineRunningConservativeUntilReceived()
+{
+    const Pmdg737Fixture fixture;
+
+    QVERIFY(fixture.aircraft->IsEngineRunning());
+}
+
+void Pmdg737Test::parkingBrakeFallsBackToTheSimVar()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+
+    QVERIFY(!fixture.aircraft->IsParkingBrakeSet());
+
+    fixture.gateway.avars[kSimParkingBrake] = 1.0;
+    QVERIFY(fixture.aircraft->IsParkingBrakeSet());
+
+    fixture.gateway.avars[kSimParkingBrake] = 0.0;
+    fixture.data->parkingBrakeOn = true;
+    QVERIFY(fixture.aircraft->IsParkingBrakeSet());
+}
+
+void Pmdg737Test::readyToDeboardAcceptsChocksInsteadOfBrake()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.SeedEnginesOff();
+    fixture.data->hasData = true;
+
+    QVERIFY(!fixture.aircraft->IsReadyToDeboard());
+
+    fixture.gateway.lvars[kChocksLVar] = 1.0;
+    QVERIFY(fixture.aircraft->IsReadyToDeboard());
+
+    fixture.data->beaconOn = true;
+    QVERIFY(!fixture.aircraft->IsReadyToDeboard());
+}
+
+void Pmdg737Test::mapsOnlyTheDoorsTheSevenThirtySevenHas()
+{
+    QCOMPARE(Pmdg737::DoorFor(GsxDoor::FwdPax), std::optional(Pmdg737Door::FwdEntry));
+    QCOMPARE(Pmdg737::DoorFor(GsxDoor::FwdCatering), std::optional(Pmdg737Door::FwdService));
+    QCOMPARE(Pmdg737::DoorFor(GsxDoor::AftPax), std::optional(Pmdg737Door::AftEntry));
+    QCOMPARE(Pmdg737::DoorFor(GsxDoor::AftCatering), std::optional(Pmdg737Door::AftService));
+    QCOMPARE(Pmdg737::DoorFor(GsxDoor::FwdCargo), std::optional(Pmdg737Door::FwdCargo));
+    QCOMPARE(Pmdg737::DoorFor(GsxDoor::AftCargo), std::optional(Pmdg737Door::AftCargo));
+
+    QCOMPARE(Pmdg737::DoorFor(GsxDoor::MidPax), std::nullopt);
+}
+
+void Pmdg737Test::mainCargoIsCommandedOnEdgeBecauseItCannotBeRead()
+{
+    Pmdg737Fixture fixture(Pmdg737Variant::Bcf800);
+
+    fixture.data->hasData = true;
+
+    const auto toggles = [&fixture] {
+        return static_cast<int>(std::ranges::count(fixture.data->toggledDoors, Pmdg737Door::MainCargo));
+    };
+    const auto tick = [&fixture](const int times) {
+        for (int i = 0; i < times; ++i)
+        {
+            fixture.aircraft->OnTick();
+        }
+    };
+
+    tick(10);
+    const int afterSettling = toggles();
+
+    fixture.gateway.lvars[gsx::lvars::kBaggageLoaderMainState] = gsx::states::kLoaderWaitingForDoor;
+    tick(1);
+    QCOMPARE(toggles(), afterSettling + 1);
+
+    tick(10);
+    QCOMPARE(toggles(), afterSettling + 1);
+
+    fixture.gateway.lvars[gsx::lvars::kBaggageLoaderMainState] = 0.0;
+    tick(1);
+    QCOMPARE(toggles(), afterSettling + 2);
+
+    tick(10);
+    QCOMPARE(toggles(), afterSettling + 2);
+}
+
+void Pmdg737Test::paxVariantNeverTouchesMainCargo()
+{
+    Pmdg737Fixture fixture(Pmdg737Variant::Pax800);
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[gsx::lvars::kBaggageLoaderMainState] = gsx::states::kLoaderWaitingForDoor;
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        fixture.aircraft->OnTick();
+    }
+
+    QVERIFY(std::ranges::find(fixture.data->toggledDoors, Pmdg737Door::MainCargo)
+        == fixture.data->toggledDoors.end());
+}
+
+void Pmdg737Test::chocksReadFromTheLVarAndRetryWithCap()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+
+    QVERIFY(fixture.aircraft->SetChocks(true));
+    fixture.aircraft->OnTick();
+
+    QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
+    QCOMPARE(QString::fromStdString(fixture.tablet->groundConnRequests[0]), QString("wheel_chocks"));
+
+    for (int tick = 0; tick < 4; ++tick)
+    {
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
+
+    fixture.aircraft->OnTick();
+    QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(2));
+
+    fixture.gateway.lvars[kChocksLVar] = 1.0;
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(2));
+}
+
+void Pmdg737Test::groundPowerRequestStopsWhenAvailable()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.aircraft->SetGroundPower(true);
+    fixture.aircraft->OnTick();
+
+    QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
+    QCOMPARE(QString::fromStdString(fixture.tablet->groundConnRequests[0]), QString("ground_power"));
+
+    fixture.data->groundPowerAvailable = true;
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
+}
+
+void Pmdg737Test::setFuelSendsRoundedLbsOnce()
+{
+    const Pmdg737Fixture fixture;
+
+    fixture.aircraft->SetCurrentFuelKg(1000.0);
+    fixture.aircraft->SetCurrentFuelKg(1000.0);
+
+    QCOMPARE(fixture.tablet->fuelSends.size(), static_cast<std::size_t>(1));
+    QCOMPARE(fixture.tablet->fuelSends[0], 2205);
+}
+
+void Pmdg737Test::cargoVariantSendsNoPassengers()
+{
+    Pmdg737Fixture fixture(Pmdg737Variant::Bcf800);
+
+    fixture.gateway.avars["EMPTY WEIGHT"] = 40000.0;
+    fixture.gateway.avars["TOTAL WEIGHT"] = 40000.0;
+    fixture.status.plannedZfwKg = 60000.0;
+    fixture.status.plannedPassengers = 100;
+
+    fixture.aircraft->SetCurrentZfwKg(50000.0);
+
+    QVERIFY(fixture.tablet->paxSends.empty());
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(1));
+}
+
+QTEST_APPLESS_MAIN(Pmdg737Test)
+
+#include "tst_pmdg737.moc"

@@ -97,6 +97,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/aircraft/Pmdg737.cpp
+        src/infrastructure/aircraft/Pmdg737.h
         src/infrastructure/aircraft/Pmdg777.cpp
         src/infrastructure/aircraft/Pmdg777.h
         src/infrastructure/aircraft/SmartSwitch.cpp
@@ -117,6 +119,10 @@ set(APP_SOURCES
         src/infrastructure/pmdg/PmdgTabletClient.cpp
         src/infrastructure/pmdg/PmdgTabletClient.h
         src/infrastructure/pmdg/PmdgTabletGateway.h
+        src/infrastructure/pmdg/Pmdg737DataClient.cpp
+        src/infrastructure/pmdg/Pmdg737DataClient.h
+        src/infrastructure/pmdg/Pmdg737DataGateway.h
+        src/infrastructure/pmdg/Pmdg737SdkData.h
         src/infrastructure/pmdg/PmdgOptions.cpp
         src/infrastructure/pmdg/PmdgOptions.h
         src/infrastructure/fenix/FenixEfbClient.cpp

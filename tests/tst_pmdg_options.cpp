@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include "../src/infrastructure/aircraft/Pmdg737.h"
 #include "../src/infrastructure/aircraft/Pmdg777.h"
 #include "../src/infrastructure/pmdg/PmdgOptions.h"
 
@@ -41,6 +42,7 @@ private slots:
     void enablesBroadcastOnDisk();
     void reportsAbsentFileOnDisk();
     void mapsEveryPmdgNameToItsPackage();
+    void mapsTheSevenThirtySevenFamilyToItsOwnPackage();
     void ignoresAircraftWithoutOptionsFile();
 };
 
@@ -148,6 +150,20 @@ void PmdgOptionsTest::mapsEveryPmdgNameToItsPackage()
     QVERIFY(pathFor(Pmdg777::kNameFreighter).ends_with("pmdg-aircraft-77f/work/777_Options.ini"));
     QVERIFY(pathFor(Pmdg777::kName200Lr).ends_with("pmdg-aircraft-77l/work/777_Options.ini"));
     QVERIFY(pathFor(Pmdg777::kName200Er).ends_with("pmdg-aircraft-77er/work/777_Options.ini"));
+}
+
+void PmdgOptionsTest::mapsTheSevenThirtySevenFamilyToItsOwnPackage()
+{
+    const auto pathFor = [](const char* name) {
+        const std::optional<std::filesystem::path> path = PmdgOptions::PathFor(name);
+        return path.has_value() ? path->generic_string() : std::string();
+    };
+
+    for (const char* name : {Pmdg737::kNamePax800, Pmdg737::kNameBcf800,
+                             Pmdg737::kNameBdsf800, Pmdg737::kNameBbj2})
+    {
+        QVERIFY2(pathFor(name).ends_with("pmdg-aircraft-738/work/737_Options.ini"), name);
+    }
 }
 
 void PmdgOptionsTest::ignoresAircraftWithoutOptionsFile()

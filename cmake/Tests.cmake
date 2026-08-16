@@ -361,6 +361,24 @@ gsxi_add_qt_test(gsxi-pmdg777-data-client-tests pmdg777-data-client
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_include_directories(gsxi-pmdg777-data-client-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
+gsxi_add_qt_test(gsxi-pmdg737-sdk-data-tests pmdg737-sdk-data
+        tests/tst_pmdg737_sdk_data.cpp
+        src/infrastructure/pmdg/Pmdg737SdkData.h)
+
+gsxi_add_qt_test(gsxi-pmdg737-data-client-tests pmdg737-data-client
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
+        tests/tst_pmdg737_data_client.cpp
+        src/infrastructure/pmdg/Pmdg737DataClient.cpp
+        src/infrastructure/pmdg/Pmdg737DataClient.h
+        src/infrastructure/pmdg/Pmdg737DataGateway.h
+        src/infrastructure/pmdg/Pmdg737SdkData.h
+        src/infrastructure/simconnect/SimConnectSession.cpp
+        src/infrastructure/simconnect/SimConnectSession.h
+        src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+        src/infrastructure/simconnect/SimConnectVariableGateway.h)
+target_include_directories(gsxi-pmdg737-data-client-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
 gsxi_add_qt_test(gsxi-pmdg-options-tests pmdg-options
         tests/tst_pmdg_options.cpp
         src/infrastructure/pmdg/PmdgOptions.cpp
@@ -406,6 +424,37 @@ gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_include_directories(gsxi-pmdg-777-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
+gsxi_add_qt_test(gsxi-pmdg-737-tests pmdg-737
+        tests/doubles/FakePmdg737DataGateway.h
+        tests/doubles/FakePmdgTabletGateway.h
+        tests/doubles/FakeVariableGateway.h
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
+        tests/tst_pmdg737.cpp
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/Pmdg737.cpp
+        src/infrastructure/aircraft/Pmdg737.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
+        src/infrastructure/commbus/CommBusBridgeClient.cpp
+        src/infrastructure/commbus/CommBusBridgeClient.h
+        src/infrastructure/commbus/CommBusBridgeGateway.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
+        src/infrastructure/pmdg/Pmdg737DataClient.cpp
+        src/infrastructure/pmdg/Pmdg737DataClient.h
+        src/infrastructure/pmdg/Pmdg737DataGateway.h
+        src/infrastructure/pmdg/Pmdg737SdkData.h
+        src/infrastructure/pmdg/PmdgTabletClient.cpp
+        src/infrastructure/pmdg/PmdgTabletClient.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h
+        src/infrastructure/simconnect/SimConnectSession.cpp
+        src/infrastructure/simconnect/SimConnectSession.h
+        src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+        src/infrastructure/simconnect/SimConnectVariableGateway.h)
+target_include_directories(gsxi-pmdg-737-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
 gsxi_add_qt_test(gsxi-aircraft-matching-tests aircraft-matching
         tests/tst_aircraft_matching.cpp
         src/infrastructure/aircraft/AircraftIdentity.h
@@ -426,6 +475,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/aircraft/Pmdg737.cpp
+        src/infrastructure/aircraft/Pmdg737.h
         src/infrastructure/aircraft/Pmdg777.cpp
         src/infrastructure/aircraft/Pmdg777.h
         src/infrastructure/aircraft/SmartSwitch.cpp
@@ -437,6 +488,10 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/commbus/CommBusBridgeClient.cpp
         src/infrastructure/commbus/CommBusBridgeClient.h
         src/infrastructure/commbus/CommBusBridgeGateway.h
+        src/infrastructure/pmdg/Pmdg737DataClient.cpp
+        src/infrastructure/pmdg/Pmdg737DataClient.h
+        src/infrastructure/pmdg/Pmdg737DataGateway.h
+        src/infrastructure/pmdg/Pmdg737SdkData.h
         src/infrastructure/pmdg/Pmdg777DataClient.cpp
         src/infrastructure/pmdg/Pmdg777DataClient.h
         src/infrastructure/pmdg/Pmdg777DataGateway.h
