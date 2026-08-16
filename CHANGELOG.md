@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.2.0...v1.3.0) (2026-08-16)
+
+
+### Features
+
+* add PMDG 737 family support ([618d71e](https://github.com/brunofgmag/gsx-integrator-client/commit/618d71e24e90e2c860e27136239c7731b9318ec1))
+* add PMDG 737 family support ([#34](https://github.com/brunofgmag/gsx-integrator-client/issues/34)) ([d47ad91](https://github.com/brunofgmag/gsx-integrator-client/commit/d47ad91d629a7185d2feb6be0a3ab4b32ec7b077))
+* offer to enable the PMDG SDK data broadcast ([9847a60](https://github.com/brunofgmag/gsx-integrator-client/commit/9847a6091e0eadc849f4f22d2a52765382f13b29))
+
 ## [1.2.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.1.0...v1.2.0) (2026-07-22)
 
 
