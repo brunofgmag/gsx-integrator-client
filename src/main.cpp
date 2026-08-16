@@ -114,6 +114,20 @@ namespace
         }
     }
 
+    enum class StartupWindow { Foreground, Minimized, Hidden };
+
+    StartupWindow ResolveStartupWindow(const bool trayArg, const AppSettings& settings)
+    {
+        if (!trayArg)
+        {
+            return StartupWindow::Foreground;
+        }
+
+        return settings.closeToTray || settings.minimizeToTray
+                   ? StartupWindow::Hidden
+                   : StartupWindow::Minimized;
+    }
+
     QIcon BuildAppIcon()
     {
         QIcon appIcon;
@@ -148,7 +162,7 @@ int main(int argc, char* argv[])
 
     QSettingsRepository settingsRepository;
     const AppSettings startupSettings = settingsRepository.Load();
-    const bool trayCapable = startupSettings.closeToTray || startupSettings.minimizeToTray;
+    const StartupWindow startupWindow = ResolveStartupWindow(trayArg, startupSettings);
 
     QTranslator translator;
     InstallAppTranslator(translator, QString::fromStdString(startupSettings.language));
@@ -211,8 +225,8 @@ int main(int argc, char* argv[])
         {QStringLiteral("integratorVm"), QVariant::fromValue(&operationsViewModel)},
         {QStringLiteral("settingsVm"), QVariant::fromValue(&settingsViewModel)},
         {QStringLiteral("updateVm"), QVariant::fromValue(&updateViewModel)},
-        {QStringLiteral("startHidden"), trayArg && trayCapable},
-        {QStringLiteral("startMinimized"), trayArg && !trayCapable},
+        {QStringLiteral("startHidden"), startupWindow == StartupWindow::Hidden},
+        {QStringLiteral("startMinimized"), startupWindow == StartupWindow::Minimized},
         {QStringLiteral("trayIconSource"), trayIconSource},
     });
 
@@ -241,7 +255,7 @@ int main(int argc, char* argv[])
         QCoreApplication::instance()->installNativeEventFilter(&showWindowFilter);
         WindowsTitleBar::Apply(rootWindow, settingsViewModel.GetEffectiveDark());
 
-        if (!trayArg)
+        if (startupWindow == StartupWindow::Foreground)
         {
             QTimer::singleShot(0, rootWindow, [rootWindow] {
                 WindowForeground::Bring(rootWindow);

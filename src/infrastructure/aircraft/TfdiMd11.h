@@ -12,7 +12,7 @@ class TfdiMd11 final : public Aircraft
 public:
     static constexpr auto kName = "TFDi MD-11";
 
-    TfdiMd11(VariableGateway* variableGateway, AutomationStatus* status, bool cargo);
+    TfdiMd11(VariableGateway* variableGateway, const AutomationStatus* status, bool cargo);
 
     [[nodiscard]] const char* GetName() const override;
     [[nodiscard]] bool IsCargoVariant() const override;
@@ -40,8 +40,7 @@ public:
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override;
-    [[nodiscard]] bool SupportsChocksControl() const override { return true; }
-    void SetChocks(bool placed) override;
+    bool SetChocks(bool placed) override;
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;
     [[nodiscard]] bool IsEngineRunning() const override;
@@ -67,7 +66,7 @@ private:
     [[nodiscard]] bool IsBeaconOn() const;
 
     VariableGateway* variableGateway_;
-    AutomationStatus* status_;
+    const AutomationStatus* status_;
 
     bool cargo_;
     SmartSwitch smartSwitch_;

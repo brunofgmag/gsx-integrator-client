@@ -25,19 +25,6 @@ namespace
         }
     }
 
-    const char* ServiceId(const GroundService service)
-    {
-        switch (service)
-        {
-        case GroundService::Catering: return "Catering";
-        case GroundService::Lavatory: return "Lavatory";
-        case GroundService::Water: return "Water";
-        case GroundService::Cleaning: return "Cleaning";
-        case GroundService::Gpu: return "GPU";
-        case GroundService::Departure: return "Departure";
-        default: return nullptr;
-        }
-    }
 }
 
 GsxStateService::GsxStateService(VariableGateway* variableGateway, const GsxRemoteState* remoteState)
@@ -215,7 +202,7 @@ bool GsxStateService::IsServiceInProgress(const GroundService service) const
         return false;
     }
 
-    const char* id = ServiceId(service);
+    const char* id = gsx::services::Id(service);
     if (id == nullptr)
     {
         return false;

@@ -46,6 +46,7 @@ private:
 
     Slot& EnsureSlot(const std::string& key, const std::string& datumName,
                      const std::string& unit, bool isString, bool fastMode = false);
+    static void StoreSample(Slot& slot, const void* payload);
     void WriteSlot(const Slot& slot, const std::string& name, double value) const;
     bool RegisterSlot(Slot& slot) const;
     bool FetchStringSlot(const char* key, const char* datumName, char* buffer, int bufferSize);

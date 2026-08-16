@@ -1,5 +1,7 @@
 #include "IFly737Max.h"
 
+#include "../simvars/SimVars.h"
+
 #include <algorithm>
 #include <array>
 #include <memory>
@@ -12,18 +14,11 @@
 #include "../../domain/ports/GsxGateway.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
 
+using namespace simvars;
+
 namespace
 {
-    constexpr auto kSimFuelTotalKg = "FUEL TOTAL QUANTITY WEIGHT";
-    constexpr auto kSimTotalWeight = "TOTAL WEIGHT";
-    constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
-    constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
     constexpr auto kSimAvionicsBusVoltage = "ELECTRICAL AVIONICS BUS VOLTAGE";
-    constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
-    constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
-    constexpr auto kSimBeaconLight = "LIGHT BEACON";
-    constexpr auto kKgUnit = "kg";
-    constexpr auto kBoolUnit = "Bool";
     constexpr auto kVoltsUnit = "Volts";
 
     constexpr auto kSmartSwitch = "VC_ACP_1_Push_to_Talk_SW_VAL";
@@ -48,7 +43,7 @@ namespace
     }
 }
 
-IFly737Max::IFly737Max(VariableGateway* variableGateway, AutomationStatus* status)
+IFly737Max::IFly737Max(VariableGateway* variableGateway, const AutomationStatus* status)
     : variableGateway_(variableGateway), status_(status),
       smartSwitch_(*variableGateway, {kSmartSwitch},
                    [](const double min, const double max)
@@ -277,10 +272,6 @@ double IFly737Max::GetEmptyZfwKg() const
 double IFly737Max::GetCurrentFuelKg() const
 {
     return variableGateway_->GetAVar(kSimFuelTotalKg, kKgUnit, 0.0);
-}
-
-void IFly737Max::SetCurrentFuelKg(double)
-{
 }
 
 double IFly737Max::GetCurrentZfwKg() const

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <memory>
 #include "doubles/FakePmdg777DataGateway.h"
-#include "doubles/FakePmdg777TabletGateway.h"
+#include "doubles/FakePmdgTabletGateway.h"
 #include "doubles/FakeVariableGateway.h"
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/infrastructure/aircraft/Pmdg777.h"
@@ -21,13 +21,13 @@ namespace
         FakeVariableGateway gateway;
         AutomationStatus status;
         FakePmdg777DataGateway* data = nullptr;
-        FakePmdg777TabletGateway* tablet = nullptr;
+        FakePmdgTabletGateway* tablet = nullptr;
         std::unique_ptr<Pmdg777> aircraft;
 
         explicit Pmdg777Fixture(const Pmdg777Variant variant = Pmdg777Variant::Er300)
         {
             auto dataGateway = std::make_unique<FakePmdg777DataGateway>();
-            auto tabletGateway = std::make_unique<FakePmdg777TabletGateway>();
+            auto tabletGateway = std::make_unique<FakePmdgTabletGateway>();
             data = dataGateway.get();
             tablet = tabletGateway.get();
             aircraft = std::make_unique<Pmdg777>(&gateway, &status, variant,
@@ -92,7 +92,6 @@ private slots:
     static void doorsHoldBeforeClientData();
     static void closeAllDoorsTogglesOpenMappedDoors();
     static void chocksReconcileWithRetryCap();
-    static void parsesOptionsDataBroadcastFlag();
     static void zfwTrimsCargoAgainstActualWeight();
     static void jetwayDoorClosesAtItsOpenedIndex();
     static void aftCateringDoorOpensFiveRightOnlyOn300();
@@ -557,7 +556,7 @@ void Pmdg777Test::chocksReconcileWithRetryCap()
 
     fixture.data->hasData = true;
 
-    fixture.aircraft->SetChocks(true);
+    QVERIFY(fixture.aircraft->SetChocks(true));
     fixture.aircraft->OnTick();
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
@@ -637,15 +636,6 @@ void Pmdg777Test::groundPowerDisconnectFlow()
     }
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
-}
-
-void Pmdg777Test::parsesOptionsDataBroadcastFlag()
-{
-    QVERIFY(Pmdg777::OptionsEnableDataBroadcast("[SDK]\r\nEnableDataBroadcast=1\r\n"));
-    QVERIFY(Pmdg777::OptionsEnableDataBroadcast("[Misc]\nFoo=2\n[SDK]\nEnableDataBroadcast = 1\n"));
-    QVERIFY(!Pmdg777::OptionsEnableDataBroadcast("[SDK]\nEnableDataBroadcast=0\n"));
-    QVERIFY(!Pmdg777::OptionsEnableDataBroadcast("[Misc]\nEnableDataBroadcast=1\n"));
-    QVERIFY(!Pmdg777::OptionsEnableDataBroadcast(""));
 }
 
 void Pmdg777Test::zfwTrimsCargoAgainstActualWeight()

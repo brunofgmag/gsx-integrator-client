@@ -1,12 +1,12 @@
-#ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777TABLETGATEWAY_H
-#define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777TABLETGATEWAY_H
+#ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGTABLETGATEWAY_H
+#define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGTABLETGATEWAY_H
 
 #include <string>
 
-class Pmdg777TabletGateway
+class PmdgTabletGateway
 {
 public:
-    virtual ~Pmdg777TabletGateway() = default;
+    virtual ~PmdgTabletGateway() = default;
 
     virtual void Poll() = 0;
     [[nodiscard]] virtual bool IsAvailable() const = 0;
@@ -18,4 +18,4 @@ public:
     virtual void RequestGroundConn(const std::string& key) = 0;
 };
 
-#endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777TABLETGATEWAY_H
+#endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGTABLETGATEWAY_H

@@ -6,6 +6,28 @@
 #include "../../domain/model/FlightPlan.h"
 #include "../../domain/turnaround/TurnaroundPhase.h"
 
+struct SnapshotDouble
+{
+    double value = 0.0;
+
+    constexpr SnapshotDouble() = default;
+    constexpr SnapshotDouble(const double initial) : value(initial) {}
+
+    constexpr operator double() const { return value; }
+
+    static constexpr double kEpsilon = 0.001;
+
+    friend constexpr bool operator==(const SnapshotDouble lhs, const SnapshotDouble rhs)
+    {
+        return lhs.value - rhs.value <= kEpsilon && rhs.value - lhs.value <= kEpsilon;
+    }
+
+    friend constexpr bool operator==(const SnapshotDouble lhs, const double rhs)
+    {
+        return lhs.value - rhs <= kEpsilon && rhs - lhs.value <= kEpsilon;
+    }
+};
+
 struct IntegratorSnapshot
 {
     bool connected = false;
@@ -20,6 +42,8 @@ struct IntegratorSnapshot
     bool refuelBySelf = false;
     bool gsxProfileConflict = false;
     bool gsxProfileFixable = false;
+    bool pmdgOptionsConflict = false;
+    bool pmdgOptionsFixable = false;
     bool cargoAircraft = false;
     bool efbFlightPlan = false;
 
@@ -28,60 +52,26 @@ struct IntegratorSnapshot
     TurnaroundPhase phase = TurnaroundPhase::WaitingFlightPlan;
     FlightPlanStatus flightPlanStatus = FlightPlanStatus::Idle;
 
-    double fuelProgress = 0.0;
-    double boardingProgress = 0.0;
-    double deboardingProgress = 0.0;
-    double plannedFuelKg = 0.0;
-    double loadedFuelKg = 0.0;
-    double plannedZfwKg = 0.0;
+    SnapshotDouble fuelProgress;
+    SnapshotDouble boardingProgress;
+    SnapshotDouble deboardingProgress;
+    SnapshotDouble plannedFuelKg;
+    SnapshotDouble loadedFuelKg;
+    SnapshotDouble plannedZfwKg;
     int plannedPax = 0;
     int boardedPax = 0;
-    double targetFuelKg = 0.0;
-    double targetZfwKg = 0.0;
+    SnapshotDouble targetFuelKg;
+    SnapshotDouble targetZfwKg;
     int targetPax = 0;
     int delayTicksRemaining = 0;
     int autoWeightUnit = 0;
+
+    bool operator==(const IntegratorSnapshot&) const = default;
 };
 
 inline bool AreEquivalent(const IntegratorSnapshot& lhs, const IntegratorSnapshot& rhs)
 {
-    const auto nearlyEqual = [](const double first, const double second)
-    {
-        constexpr double epsilon = 0.001;
-        return std::abs(first - second) <= epsilon;
-    };
-
-    return lhs.connected == rhs.connected &&
-        lhs.sessionActive == rhs.sessionActive &&
-        lhs.automationEnabled == rhs.automationEnabled &&
-        lhs.gsxAvailable == rhs.gsxAvailable &&
-        lhs.aircraftSupported == rhs.aircraftSupported &&
-        lhs.canToggleAutomation == rhs.canToggleAutomation &&
-        lhs.canStartLoading == rhs.canStartLoading &&
-        lhs.canReloadSimbrief == rhs.canReloadSimbrief &&
-        lhs.refuelByGsx == rhs.refuelByGsx &&
-        lhs.refuelBySelf == rhs.refuelBySelf &&
-        lhs.gsxProfileConflict == rhs.gsxProfileConflict &&
-        lhs.gsxProfileFixable == rhs.gsxProfileFixable &&
-        lhs.cargoAircraft == rhs.cargoAircraft &&
-        lhs.efbFlightPlan == rhs.efbFlightPlan &&
-        lhs.aircraftName == rhs.aircraftName &&
-        lhs.aircraftProfileId == rhs.aircraftProfileId &&
-        lhs.phase == rhs.phase &&
-        lhs.flightPlanStatus == rhs.flightPlanStatus &&
-        nearlyEqual(lhs.fuelProgress, rhs.fuelProgress) &&
-        nearlyEqual(lhs.boardingProgress, rhs.boardingProgress) &&
-        nearlyEqual(lhs.deboardingProgress, rhs.deboardingProgress) &&
-        nearlyEqual(lhs.plannedFuelKg, rhs.plannedFuelKg) &&
-        nearlyEqual(lhs.loadedFuelKg, rhs.loadedFuelKg) &&
-        nearlyEqual(lhs.plannedZfwKg, rhs.plannedZfwKg) &&
-        lhs.plannedPax == rhs.plannedPax &&
-        lhs.boardedPax == rhs.boardedPax &&
-        nearlyEqual(lhs.targetFuelKg, rhs.targetFuelKg) &&
-        nearlyEqual(lhs.targetZfwKg, rhs.targetZfwKg) &&
-        lhs.targetPax == rhs.targetPax &&
-        lhs.delayTicksRemaining == rhs.delayTicksRemaining &&
-        lhs.autoWeightUnit == rhs.autoWeightUnit;
+    return lhs == rhs;
 }
 
 #endif // GSX_INTEGRATOR_CLIENT_INTEGRATORSNAPSHOT_H

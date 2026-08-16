@@ -1,4 +1,4 @@
-#include "Pmdg777.h"
+#include "Pmdg737.h"
 
 #include "../simvars/SimVars.h"
 
@@ -9,7 +9,7 @@
 #include "AircraftRegistry.h"
 #include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
-#include "../pmdg/Pmdg777DataClient.h"
+#include "../pmdg/Pmdg737DataClient.h"
 #include "../pmdg/PmdgTabletClient.h"
 #include "../../domain/model/AutomationStatus.h"
 #include "../../domain/model/FlightPlan.h"
@@ -21,32 +21,29 @@ namespace
 {
     constexpr auto kSimOnGround = "SIM ON GROUND";
 
-    constexpr auto kSmartSwitchCaptLVar = "switch_554_a";
-    constexpr auto kSmartSwitchFoLVar = "switch_773_a";
-    constexpr double kSmartSwitchPressed = 100.0;
+    constexpr auto kChocksLVar = "NGXWheelChocks";
+    constexpr auto kSmartSwitchLVar = "switch_752_73X";
+
     constexpr double kLbsPerKg = 2.20462262185;
     constexpr double kPassengerWeightKg = 84.0;
 
-    constexpr int kMainDeckCargoDoor = 12;
     constexpr int kGroundConnRetryTicks = 5;
     constexpr int kGroundConnMaxAttempts = 10;
     constexpr int kZfwSettleTicks = 5;
     constexpr int kZfwTrimMaxAttempts = 5;
     constexpr double kZfwTrimToleranceKg = 50.0;
-    constexpr int kDoorStateOpen = 0;
-    constexpr int kDoorStateClosing = 3;
-    constexpr int kDoorStateOpening = 4;
 
-    constexpr auto kTitle300Er = "777-300ER";
-    constexpr auto kTitleFreighter = "777F";
-    constexpr auto kTitle200Lr = "777-200LR";
-    constexpr auto kTitle200Er = "777-200ER";
+    constexpr auto kTitlePax800 = "737-800 PAX";
+    constexpr auto kTitleBcf800 = "737-800BCF";
+    constexpr auto kTitleBdsf800 = "737-800BDSF";
+    constexpr auto kTitleBbj2Short = "737-800 BB2";
+    constexpr auto kTitleBbj2 = "737-800 BBJ2";
 }
 
-Pmdg777::Pmdg777(VariableGateway* variableGateway,
+Pmdg737::Pmdg737(VariableGateway* variableGateway,
                  const AutomationStatus* status,
-                 const Pmdg777Variant variant,
-                 std::unique_ptr<Pmdg777DataGateway> data,
+                 const Pmdg737Variant variant,
+                 std::unique_ptr<Pmdg737DataGateway> data,
                  std::unique_ptr<PmdgTabletGateway> tablet)
     : variableGateway_(variableGateway),
       status_(status),
@@ -54,35 +51,49 @@ Pmdg777::Pmdg777(VariableGateway* variableGateway,
       data_(std::move(data)),
       tablet_(std::move(tablet)),
       doors_(variableGateway),
-      smartSwitch_(*variableGateway, {kSmartSwitchCaptLVar, kSmartSwitchFoLVar},
-                   [](double, const double max) { return max >= kSmartSwitchPressed; })
+      smartSwitch_(*variableGateway, {kSmartSwitchLVar},
+                   [](double, const double max) { return max > 0.0; })
 {
     desiredDoor_.fill(-1);
-    openedDoorIndex_.fill(-1);
+    commandedDoor_.fill(-1);
     LOG_INFO("Profile loaded: %s", GetName());
 }
 
-const char* Pmdg777::GetName() const
+const char* Pmdg737::GetName() const
 {
     switch (variant_)
     {
-    case Pmdg777Variant::Er300:
-        return kName300Er;
-    case Pmdg777Variant::Freighter:
-        return kNameFreighter;
-    case Pmdg777Variant::Lr200:
-        return kName200Lr;
+    case Pmdg737Variant::Bcf800:
+        return kNameBcf800;
+    case Pmdg737Variant::Bdsf800:
+        return kNameBdsf800;
+    case Pmdg737Variant::Bbj2:
+        return kNameBbj2;
     default:
-        return kName200Er;
+        return kNamePax800;
     }
 }
 
-bool Pmdg777::IsCargoVariant() const
+bool Pmdg737::IsCargoVariant() const
 {
-    return variant_ == Pmdg777Variant::Freighter;
+    return variant_ == Pmdg737Variant::Bcf800 || variant_ == Pmdg737Variant::Bdsf800;
 }
 
-void Pmdg777::OnTick()
+std::optional<Pmdg737Door> Pmdg737::DoorFor(const GsxDoor door)
+{
+    switch (door)
+    {
+    case GsxDoor::FwdPax: return Pmdg737Door::FwdEntry;
+    case GsxDoor::FwdCatering: return Pmdg737Door::FwdService;
+    case GsxDoor::AftPax: return Pmdg737Door::AftEntry;
+    case GsxDoor::AftCatering: return Pmdg737Door::AftService;
+    case GsxDoor::FwdCargo: return Pmdg737Door::FwdCargo;
+    case GsxDoor::AftCargo: return Pmdg737Door::AftCargo;
+    default: return std::nullopt;
+    }
+}
+
+void Pmdg737::OnTick()
 {
     data_->SetInFlight(variableGateway_->GetAVar(kSimOnGround, kBoolUnit, 1.0) <= 0.0);
     data_->Poll();
@@ -91,17 +102,13 @@ void Pmdg777::OnTick()
     if (data_->HasData())
     {
         smartSwitch_.Subscribe();
-    }
-
-    if (data_->HasData())
-    {
         SyncDoors();
         ReconcileGroundConn();
         TrimZfw();
     }
 }
 
-void Pmdg777::SyncDoors()
+void Pmdg737::SyncDoors()
 {
     if (variableGateway_->GetLVar(gsx::lvars::kAutomationDoors, 1.0) != 0.0)
     {
@@ -114,26 +121,24 @@ void Pmdg777::SyncDoors()
     {
         const bool mainLoaderPresent = gsx::states::IsLoaderPresent(
             variableGateway_->GetLVar(gsx::lvars::kBaggageLoaderMainState, 0.0));
-        desiredDoor_[kMainDeckCargoDoor] = mainLoaderPresent ? 1 : 0;
+        desiredDoor_[static_cast<std::size_t>(Pmdg737Door::MainCargo)] = mainLoaderPresent ? 1 : 0;
     }
 
     ReconcileDoors();
 }
 
-void Pmdg777::SetDesiredDoor(const GsxDoor door, const bool open)
+void Pmdg737::SetDesiredDoor(const GsxDoor door, const bool open)
 {
-    int& openedIndex = openedDoorIndex_[static_cast<std::size_t>(door)];
-    const int index = !open && openedIndex >= 0 ? openedIndex : DoorIndexFor(door);
-    if (index < 0)
+    const std::optional<Pmdg737Door> target = DoorFor(door);
+    if (!target.has_value())
     {
         return;
     }
 
-    desiredDoor_[static_cast<std::size_t>(index)] = open ? 1 : 0;
-    openedIndex = open ? index : -1;
+    desiredDoor_[static_cast<std::size_t>(*target)] = open ? 1 : 0;
 }
 
-void Pmdg777::ReconcileDoors() const
+void Pmdg737::ReconcileDoors()
 {
     for (std::size_t i = 0; i < desiredDoor_.size(); ++i)
     {
@@ -142,50 +147,26 @@ void Pmdg777::ReconcileDoors() const
             continue;
         }
 
-        const int state = data_->DoorState(static_cast<int>(i));
-        if (state < 0 || state == kDoorStateClosing || state == kDoorStateOpening)
+        const auto door = static_cast<Pmdg737Door>(i);
+        if (!Pmdg737DataClient::HasAnnunciator(door))
         {
+            if (commandedDoor_[i] != desiredDoor_[i])
+            {
+                commandedDoor_[i] = desiredDoor_[i];
+                data_->ToggleDoor(door);
+            }
+
             continue;
         }
 
-        const bool isOpen = state == kDoorStateOpen;
-        if (isOpen != (desiredDoor_[i] == 1))
+        if (data_->DoorOpen(door) != (desiredDoor_[i] == 1))
         {
-            data_->ToggleDoor(static_cast<int>(i));
+            data_->ToggleDoor(door);
         }
     }
 }
 
-int Pmdg777::DoorIndexFor(const GsxDoor door) const
-{
-    if (IsCargoVariant())
-    {
-        switch (door)
-        {
-        case GsxDoor::FwdPax: return 0;
-        case GsxDoor::FwdCatering: return 1;
-        case GsxDoor::FwdCargo: return 10;
-        case GsxDoor::AftCargo: return 11;
-        default: return -1;
-        }
-    }
-
-    const bool is300 = variant_ == Pmdg777Variant::Er300;
-    switch (door)
-    {
-    case GsxDoor::FwdPax:
-        return variableGateway_->GetLVar(gsx::lvars::kJetway, 2.0) == 5.0 ? 2 : 0;
-    case GsxDoor::MidPax: return 2;
-    case GsxDoor::AftPax: return is300 ? 4 : 6;
-    case GsxDoor::FwdCatering: return is300 ? 3 : 1;
-    case GsxDoor::AftCatering: return is300 ? 9 : 7;
-    case GsxDoor::FwdCargo: return 10;
-    case GsxDoor::AftCargo: return 11;
-    default: return -1;
-    }
-}
-
-void Pmdg777::OnLoadingStarted()
+void Pmdg737::OnLoadingStarted()
 {
     lastSentFuelLbs_ = -1;
     lastSentPax_ = -1;
@@ -195,50 +176,49 @@ void Pmdg777::OnLoadingStarted()
     zfwTrims_ = 0;
 }
 
-void Pmdg777::CloseAllDoors()
+void Pmdg737::CloseAllDoors()
 {
     doors_.CloseAll([this](const GsxDoor door, const bool open) { SetDesiredDoor(door, open); });
 
     if (IsCargoVariant())
     {
-        desiredDoor_[kMainDeckCargoDoor] = 0;
+        desiredDoor_[static_cast<std::size_t>(Pmdg737Door::MainCargo)] = 0;
     }
 
     ReconcileDoors();
 }
 
-bool Pmdg777::IsFlightPlanLoaded() const
+bool Pmdg737::IsFlightPlanLoaded() const
 {
-    return status_->flightPlanStatus == FlightPlanStatus::Ready
-        && (tablet_->EfbPlanImported() || data_->HasFmcFlightPlan());
+    return status_->flightPlanStatus == FlightPlanStatus::Ready && tablet_->EfbPlanImported();
 }
 
-double Pmdg777::GetPlannedFuelKg() const
+double Pmdg737::GetPlannedFuelKg() const
 {
     return status_->plannedFuelKg;
 }
 
-double Pmdg777::GetPlannedZfwKg() const
+double Pmdg737::GetPlannedZfwKg() const
 {
     return status_->plannedZfwKg;
 }
 
-int Pmdg777::GetPlannedPassengers() const
+int Pmdg737::GetPlannedPassengers() const
 {
     return status_->plannedPassengers;
 }
 
-double Pmdg777::GetEmptyZfwKg() const
+double Pmdg737::GetEmptyZfwKg() const
 {
     return variableGateway_->GetAVar(kSimEmptyWeight, kKgUnit, 0.0);
 }
 
-double Pmdg777::GetCurrentFuelKg() const
+double Pmdg737::GetCurrentFuelKg() const
 {
     return variableGateway_->GetAVar(kSimFuelTotalKg, kKgUnit, 0.0);
 }
 
-void Pmdg777::SetCurrentFuelKg(const double fuelKg)
+void Pmdg737::SetCurrentFuelKg(const double fuelKg)
 {
     if (!tablet_->IsAvailable())
     {
@@ -255,7 +235,7 @@ void Pmdg777::SetCurrentFuelKg(const double fuelKg)
     tablet_->SendFuelTotalLbs(lbs);
 }
 
-double Pmdg777::GetCurrentZfwKg() const
+double Pmdg737::GetCurrentZfwKg() const
 {
     const double emptyZfwKg = GetEmptyZfwKg();
     const double totalWeightKg = variableGateway_->GetAVar(kSimTotalWeight, kKgUnit, emptyZfwKg);
@@ -264,7 +244,7 @@ double Pmdg777::GetCurrentZfwKg() const
     return zfwKg < emptyZfwKg ? emptyZfwKg : zfwKg;
 }
 
-void Pmdg777::SetCurrentZfwKg(const double zfwKg)
+void Pmdg737::SetCurrentZfwKg(const double zfwKg)
 {
     if (!tablet_->IsAvailable() || !variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit))
     {
@@ -308,7 +288,7 @@ void Pmdg777::SetCurrentZfwKg(const double zfwKg)
     }
 }
 
-void Pmdg777::TrimZfw()
+void Pmdg737::TrimZfw()
 {
     if (lastRequestedZfwKg_ <= 0.0 || lastSentCargoLbs_ < 0 || !tablet_->IsAvailable()
         || zfwTrims_ >= kZfwTrimMaxAttempts)
@@ -341,31 +321,36 @@ void Pmdg777::TrimZfw()
     tablet_->SendCargoTotalLbs(trimmedLbs);
 }
 
-bool Pmdg777::ConsumeSmartSwitch()
+bool Pmdg737::ConsumeSmartSwitch()
 {
     return smartSwitch_.Consume();
 }
 
-bool Pmdg777::IsPowered() const
+bool Pmdg737::ChocksSet() const
+{
+    return variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
+}
+
+bool Pmdg737::IsPowered() const
 {
     const bool isEngineCombusting =
         variableGateway_->GetAVar(kSimEng1Combustion, kBoolUnit, 0.0) > 0.0
         || variableGateway_->GetAVar(kSimEng2Combustion, kBoolUnit, 0.0) > 0.0;
 
-    return data_->ApuRunning() || data_->ExtPowerConnected() || isEngineCombusting;
+    return data_->AnyMainBusPowered() || isEngineCombusting;
 }
 
-std::optional<GroundPowerStatus> Pmdg777::GetGroundPowerStatus() const
+std::optional<GroundPowerStatus> Pmdg737::GetGroundPowerStatus() const
 {
     if (!data_->HasData())
     {
         return GroundPowerStatus::Unknown;
     }
 
-    return data_->ExtPowerConnected() ? GroundPowerStatus::Connected : GroundPowerStatus::Disconnected;
+    return data_->GroundPowerAvailable() ? GroundPowerStatus::Connected : GroundPowerStatus::Disconnected;
 }
 
-bool Pmdg777::SetChocks(const bool placed)
+bool Pmdg737::SetChocks(const bool placed)
 {
     if (desiredChocks_ != placed)
     {
@@ -377,7 +362,7 @@ bool Pmdg777::SetChocks(const bool placed)
     return true;
 }
 
-void Pmdg777::SetGroundPower(const bool on)
+void Pmdg737::SetGroundPower(const bool on)
 {
     if (desiredGroundPower_ != on)
     {
@@ -387,9 +372,9 @@ void Pmdg777::SetGroundPower(const bool on)
     }
 }
 
-void Pmdg777::ReconcileGroundConn()
+void Pmdg737::ReconcileGroundConn()
 {
-    if (desiredChocks_.has_value() && data_->WheelChocksSet() != *desiredChocks_)
+    if (desiredChocks_.has_value() && ChocksSet() != *desiredChocks_)
     {
         ++ticksSinceChocksRequest_;
         if (ticksSinceChocksRequest_ >= kGroundConnRetryTicks && chocksAttempts_ < kGroundConnMaxAttempts)
@@ -409,8 +394,7 @@ void Pmdg777::ReconcileGroundConn()
         return;
     }
 
-    const bool gpuPresent = data_->ExtPowerAvailable() || data_->ExtPowerConnected();
-    if (gpuPresent == *desiredGroundPower_)
+    if (data_->GroundPowerAvailable() == *desiredGroundPower_)
     {
         groundPowerAttempts_ = 0;
         return;
@@ -426,17 +410,17 @@ void Pmdg777::ReconcileGroundConn()
     }
 }
 
-bool Pmdg777::IsReadyToPush() const
+bool Pmdg737::IsReadyToPush() const
 {
     return IsPowered() && !IsEngineRunning() && data_->BeaconOn();
 }
 
-bool Pmdg777::IsReadyToDeboard() const
+bool Pmdg737::IsReadyToDeboard() const
 {
-    return !IsEngineRunning() && (IsParkingBrakeSet() || data_->WheelChocksSet()) && !data_->BeaconOn();
+    return !IsEngineRunning() && (IsParkingBrakeSet() || ChocksSet()) && !data_->BeaconOn();
 }
 
-bool Pmdg777::IsEngineRunning() const
+bool Pmdg737::IsEngineRunning() const
 {
     const bool isEng1Running = variableGateway_->GetAVar(kSimEng1Combustion, kBoolUnit, 1.0) > 0.0;
     const bool isEng2Running = variableGateway_->GetAVar(kSimEng2Combustion, kBoolUnit, 1.0) > 0.0;
@@ -444,75 +428,78 @@ bool Pmdg777::IsEngineRunning() const
     return isEng1Running || isEng2Running;
 }
 
-bool Pmdg777::IsParkingBrakeSet() const
+bool Pmdg737::IsParkingBrakeSet() const
 {
-    return data_->ParkingBrakeOn();
+    return data_->ParkingBrakeOn()
+        || variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0;
 }
 
 namespace
 {
-    Pmdg777Variant VariantFor(const AircraftIdentity& identity)
+    Pmdg737Variant VariantFor(const AircraftIdentity& identity)
     {
-        if (MatchText(identity.title, MatchOp::StartsWith, kTitle300Er))
+        if (MatchText(identity.title, MatchOp::StartsWith, kTitleBcf800))
         {
-            return Pmdg777Variant::Er300;
+            return Pmdg737Variant::Bcf800;
         }
 
-        if (MatchText(identity.title, MatchOp::StartsWith, kTitleFreighter))
+        if (MatchText(identity.title, MatchOp::StartsWith, kTitleBdsf800))
         {
-            return Pmdg777Variant::Freighter;
+            return Pmdg737Variant::Bdsf800;
         }
 
-        if (MatchText(identity.title, MatchOp::StartsWith, kTitle200Lr))
+        if (MatchText(identity.title, MatchOp::StartsWith, kTitleBbj2Short)
+            || MatchText(identity.title, MatchOp::StartsWith, kTitleBbj2))
         {
-            return Pmdg777Variant::Lr200;
+            return Pmdg737Variant::Bbj2;
         }
 
-        return Pmdg777Variant::Er200;
+        return Pmdg737Variant::Pax800;
     }
 
-    std::unique_ptr<Aircraft> CreatePmdg777(const AircraftContext& context, const AircraftIdentity& identity)
+    std::unique_ptr<Aircraft> CreatePmdg737(const AircraftContext& context, const AircraftIdentity& identity)
     {
-        return std::make_unique<Pmdg777>(
+        return std::make_unique<Pmdg737>(
             context.variableGateway, context.status, VariantFor(identity),
-            std::make_unique<Pmdg777DataClient>(),
+            std::make_unique<Pmdg737DataClient>(),
             std::make_unique<PmdgTabletClient>(context.commBusBridge));
     }
 
-    const AircraftDescriptor kPmdg777300ErDescriptor{
-        Pmdg777::kName300Er,
+    const AircraftDescriptor kPmdg737Pax800Descriptor{
+        Pmdg737::kNamePax800,
         {
-            {MatchField::Title, MatchOp::StartsWith, kTitle300Er}
+            {MatchField::Title, MatchOp::StartsWith, kTitlePax800}
         },
-        &CreatePmdg777, "pmdg-777-300er", "77W", RefuelBy::Client
+        &CreatePmdg737, "pmdg-737-800", "73H", RefuelBy::Client
     };
 
-    const AircraftDescriptor kPmdg777FreighterDescriptor{
-        Pmdg777::kNameFreighter,
+    const AircraftDescriptor kPmdg737Bcf800Descriptor{
+        Pmdg737::kNameBcf800,
         {
-            {MatchField::Title, MatchOp::StartsWith, kTitleFreighter}
+            {MatchField::Title, MatchOp::StartsWith, kTitleBcf800}
         },
-        &CreatePmdg777, "pmdg-777f", "77F", RefuelBy::Client
+        &CreatePmdg737, "pmdg-737-800bcf", "73BCF", RefuelBy::Client
     };
 
-    const AircraftDescriptor kPmdg777200LrDescriptor{
-        Pmdg777::kName200Lr,
+    const AircraftDescriptor kPmdg737Bdsf800Descriptor{
+        Pmdg737::kNameBdsf800,
         {
-            {MatchField::Title, MatchOp::StartsWith, kTitle200Lr}
+            {MatchField::Title, MatchOp::StartsWith, kTitleBdsf800}
         },
-        &CreatePmdg777, "pmdg-777-200lr", "77L", RefuelBy::Client
+        &CreatePmdg737, "pmdg-737-800bdsf", "73SF", RefuelBy::Client
     };
 
-    const AircraftDescriptor kPmdg777200ErDescriptor{
-        Pmdg777::kName200Er,
+    const AircraftDescriptor kPmdg737Bbj2Descriptor{
+        Pmdg737::kNameBbj2,
         {
-            {MatchField::Title, MatchOp::StartsWith, kTitle200Er}
+            {MatchField::Title, MatchOp::StartsWith, kTitleBbj2Short},
+            {MatchField::Title, MatchOp::StartsWith, kTitleBbj2}
         },
-        &CreatePmdg777, "pmdg-777-200er", "77ER", RefuelBy::Client
+        &CreatePmdg737, "pmdg-737-bbj2", "73BBJ", RefuelBy::Client
     };
 
-    [[maybe_unused]] const AircraftRegistration kPmdg777300ErRegistration{kPmdg777300ErDescriptor};
-    [[maybe_unused]] const AircraftRegistration kPmdg777FreighterRegistration{kPmdg777FreighterDescriptor};
-    [[maybe_unused]] const AircraftRegistration kPmdg777200LrRegistration{kPmdg777200LrDescriptor};
-    [[maybe_unused]] const AircraftRegistration kPmdg777200ErRegistration{kPmdg777200ErDescriptor};
+    [[maybe_unused]] const AircraftRegistration kPmdg737Pax800Registration{kPmdg737Pax800Descriptor};
+    [[maybe_unused]] const AircraftRegistration kPmdg737Bcf800Registration{kPmdg737Bcf800Descriptor};
+    [[maybe_unused]] const AircraftRegistration kPmdg737Bdsf800Registration{kPmdg737Bdsf800Descriptor};
+    [[maybe_unused]] const AircraftRegistration kPmdg737Bbj2Registration{kPmdg737Bbj2Descriptor};
 }

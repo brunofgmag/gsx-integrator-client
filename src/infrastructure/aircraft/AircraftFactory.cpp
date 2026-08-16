@@ -23,7 +23,7 @@ namespace
 }
 
 std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway,
-                                         AutomationStatus* status,
+                                         const AutomationStatus* status,
                                          CommBusBridgeGateway* commBusBridge,
                                          const AircraftDescriptor** outDescriptor)
 {

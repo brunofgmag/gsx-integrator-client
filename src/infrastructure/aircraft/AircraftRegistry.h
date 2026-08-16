@@ -34,7 +34,7 @@ struct MatchRule
 struct AircraftContext
 {
     VariableGateway* variableGateway = nullptr;
-    AutomationStatus* status = nullptr;
+    const AutomationStatus* status = nullptr;
     CommBusBridgeGateway* commBusBridge = nullptr;
 };
 

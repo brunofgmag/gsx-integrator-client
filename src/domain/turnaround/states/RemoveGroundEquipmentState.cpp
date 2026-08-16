@@ -16,9 +16,8 @@ std::optional<TurnaroundTransition> RemoveGroundEquipmentState::Evaluate(Turnaro
     const bool manageEquipment = ctx.settings != nullptr && (ctx.settings->callGpu || ctx.settings->callGpuOnArrival);
     const bool removeChocks = manageEquipment || ctx.data.chocksPlaced || ctx.data.arrivalChocksPlaced;
 
-    if (removeChocks && ctx.aircraft->SupportsChocksControl() && !ctx.data.chocksRemoved)
+    if (removeChocks && !ctx.data.chocksRemoved && ctx.aircraft->SetChocks(false))
     {
-        ctx.aircraft->SetChocks(false);
         ctx.data.chocksRemoved = true;
     }
 
@@ -27,9 +26,9 @@ std::optional<TurnaroundTransition> RemoveGroundEquipmentState::Evaluate(Turnaro
         == GroundPowerStatus::Connected;
     const bool gpuBusy = ctx.gsxGateway->IsServiceInProgress(GroundService::Gpu);
     const bool gpuGone = !connected && !gpuBusy;
-    const bool gpuUnmanaged = !manageEquipment && !ctx.data.gpuDismissRequested;
+    const bool gpuDismissUnneeded = !manageEquipment && !ctx.data.gpuDismissRequested;
 
-    if (gpuUnmanaged || gpuGone)
+    if (gpuDismissUnneeded || gpuGone)
     {
         return TurnaroundTransition{TurnaroundPhase::RequestPushback};
     }

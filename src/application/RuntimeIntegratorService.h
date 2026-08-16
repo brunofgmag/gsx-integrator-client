@@ -21,6 +21,7 @@ public:
     [[nodiscard]] CommandResult RestartFlow() override;
     [[nodiscard]] CommandResult ReloadSimbrief() override;
     [[nodiscard]] CommandResult FixGsxProfile() override;
+    [[nodiscard]] CommandResult FixPmdgOptions() override;
     void ApplySettings(const AppSettings& settings) override;
 
 #ifndef NDEBUG

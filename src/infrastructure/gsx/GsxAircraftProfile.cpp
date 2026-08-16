@@ -142,17 +142,18 @@ std::vector<std::filesystem::path> GsxAircraftProfile::FindCfgs(const std::vecto
     std::vector<std::filesystem::path> cfgs;
     for (const auto& root : roots)
     {
-        std::error_code fileError;
+        std::error_code openError;
         std::filesystem::recursive_directory_iterator entries(
-            root, std::filesystem::directory_options::skip_permission_denied, fileError);
-        if (fileError)
+            root, std::filesystem::directory_options::skip_permission_denied, openError);
+        if (openError)
         {
             continue;
         }
 
         for (const auto& entry : entries)
         {
-            if (entry.is_regular_file(fileError)
+            std::error_code entryError;
+            if (entry.is_regular_file(entryError)
                 && ToLower(entry.path().filename().string()) == "gsx.cfg")
             {
                 cfgs.push_back(entry.path());

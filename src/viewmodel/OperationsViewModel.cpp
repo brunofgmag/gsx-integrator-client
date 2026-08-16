@@ -239,6 +239,16 @@ bool OperationsViewModel::IsGsxProfileFixable() const
     return snapshot_.gsxProfileFixable;
 }
 
+bool OperationsViewModel::HasPmdgOptionsConflict() const
+{
+    return snapshot_.pmdgOptionsConflict;
+}
+
+bool OperationsViewModel::IsPmdgOptionsFixable() const
+{
+    return snapshot_.pmdgOptionsFixable;
+}
+
 double OperationsViewModel::GetPlannedZfwKg() const
 {
     return snapshot_.plannedZfwKg;
@@ -340,6 +350,11 @@ void OperationsViewModel::reloadSimbrief()
 {
     SetCommandError(service_->ReloadSimbrief());
     Refresh();
+}
+
+void OperationsViewModel::fixPmdgOptions()
+{
+    SetCommandError(service_->FixPmdgOptions());
 }
 
 void OperationsViewModel::fixGsxProfile()

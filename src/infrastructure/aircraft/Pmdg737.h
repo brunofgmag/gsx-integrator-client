@@ -1,31 +1,30 @@
-#ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777_H
-#define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777_H
+#ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG737_H
+#define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG737_H
 
 #include <array>
 #include <memory>
 #include <optional>
 #include "SmartSwitch.h"
 #include "../gsx/GsxDoorSync.h"
-#include "../pmdg/Pmdg777DataGateway.h"
+#include "../pmdg/Pmdg737DataGateway.h"
 #include "../pmdg/PmdgTabletGateway.h"
 #include "../../domain/ports/Aircraft.h"
 
 class VariableGateway;
 struct AutomationStatus;
 
-enum class Pmdg777Variant { Er200, Lr200, Freighter, Er300 };
+enum class Pmdg737Variant { Pax800, Bcf800, Bdsf800, Bbj2 };
 
-class Pmdg777 final : public Aircraft
+class Pmdg737 final : public Aircraft
 {
 public:
-    static constexpr auto kName200Er = "PMDG 777-200ER";
-    static constexpr auto kName200Lr = "PMDG 777-200LR";
-    static constexpr auto kName300Er = "PMDG 777-300ER";
-    static constexpr auto kNameFreighter = "PMDG 777F";
+    static constexpr auto kNamePax800 = "PMDG 737-800";
+    static constexpr auto kNameBcf800 = "PMDG 737-800BCF";
+    static constexpr auto kNameBdsf800 = "PMDG 737-800BDSF";
+    static constexpr auto kNameBbj2 = "PMDG 737 BBJ2";
 
-    Pmdg777(VariableGateway* variableGateway, const AutomationStatus* status, Pmdg777Variant variant,
-            std::unique_ptr<Pmdg777DataGateway> data, std::unique_ptr<PmdgTabletGateway> tablet);
-
+    Pmdg737(VariableGateway* variableGateway, const AutomationStatus* status, Pmdg737Variant variant,
+            std::unique_ptr<Pmdg737DataGateway> data, std::unique_ptr<PmdgTabletGateway> tablet);
 
     [[nodiscard]] const char* GetName() const override;
     [[nodiscard]] bool IsCargoVariant() const override;
@@ -62,22 +61,24 @@ public:
     [[nodiscard]] bool IsEngineRunning() const override;
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
+    [[nodiscard]] static std::optional<Pmdg737Door> DoorFor(GsxDoor door);
+
 private:
     void SyncDoors();
     void SetDesiredDoor(GsxDoor door, bool open);
-    void ReconcileDoors() const;
+    void ReconcileDoors();
     void ReconcileGroundConn();
     void TrimZfw();
-    [[nodiscard]] int DoorIndexFor(GsxDoor door) const;
+    [[nodiscard]] bool ChocksSet() const;
 
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;
-    Pmdg777Variant variant_;
-    std::unique_ptr<Pmdg777DataGateway> data_;
+    Pmdg737Variant variant_;
+    std::unique_ptr<Pmdg737DataGateway> data_;
     std::unique_ptr<PmdgTabletGateway> tablet_;
     GsxDoorSync doors_;
-    std::array<int, 16> desiredDoor_{};
-    std::array<int, static_cast<std::size_t>(GsxDoor::Count)> openedDoorIndex_{};
+    std::array<int, static_cast<std::size_t>(Pmdg737Door::Count)> desiredDoor_{};
+    std::array<int, static_cast<std::size_t>(Pmdg737Door::Count)> commandedDoor_{};
     std::optional<bool> desiredChocks_;
     std::optional<bool> desiredGroundPower_;
     int chocksAttempts_ = 0;
@@ -93,4 +94,4 @@ private:
     int zfwTrims_ = 0;
 };
 
-#endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777_H
+#endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG737_H

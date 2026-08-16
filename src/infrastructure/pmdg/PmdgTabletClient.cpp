@@ -1,4 +1,4 @@
-#include "Pmdg777TabletClient.h"
+#include "PmdgTabletClient.h"
 
 #include <utility>
 #include <QtCore/QByteArray>
@@ -28,17 +28,17 @@ namespace
     }
 }
 
-Pmdg777TabletClient::Pmdg777TabletClient(CommBusBridgeGateway* bridge) : bridge_(bridge)
+PmdgTabletClient::PmdgTabletClient(CommBusBridgeGateway* bridge) : bridge_(bridge)
 {
 }
 
-Pmdg777TabletClient::Pmdg777TabletClient(std::unique_ptr<CommBusBridgeGateway> bridge)
+PmdgTabletClient::PmdgTabletClient(std::unique_ptr<CommBusBridgeGateway> bridge)
     : ownedBridge_(std::move(bridge)),
       bridge_(ownedBridge_.get())
 {
 }
 
-Pmdg777TabletClient::~Pmdg777TabletClient()
+PmdgTabletClient::~PmdgTabletClient()
 {
     if (subscribed_ && ownedBridge_ == nullptr)
     {
@@ -46,7 +46,7 @@ Pmdg777TabletClient::~Pmdg777TabletClient()
     }
 }
 
-std::string Pmdg777TabletClient::BuildWbPayload(const std::string& field, const int value)
+std::string PmdgTabletClient::BuildWbPayload(const std::string& field, const int value)
 {
     QJsonObject data;
     data.insert(QString::fromStdString(field), value);
@@ -54,7 +54,7 @@ std::string Pmdg777TabletClient::BuildWbPayload(const std::string& field, const 
     return BuildEnvelope(kTagWbPayload, data);
 }
 
-std::string Pmdg777TabletClient::BuildGroundConn(const std::string& key)
+std::string PmdgTabletClient::BuildGroundConn(const std::string& key)
 {
     QJsonObject data;
     data.insert(QString::fromStdString(key), 1);
@@ -62,7 +62,7 @@ std::string Pmdg777TabletClient::BuildGroundConn(const std::string& key)
     return BuildEnvelope(kTagGroundConn, data);
 }
 
-void Pmdg777TabletClient::Poll()
+void PmdgTabletClient::Poll()
 {
     if (ownedBridge_ != nullptr)
     {
@@ -82,17 +82,17 @@ void Pmdg777TabletClient::Poll()
     }
 }
 
-bool Pmdg777TabletClient::IsAvailable() const
+bool PmdgTabletClient::IsAvailable() const
 {
     return bridge_->IsAvailable();
 }
 
-bool Pmdg777TabletClient::EfbPlanImported() const
+bool PmdgTabletClient::EfbPlanImported() const
 {
     return efbPlanImported_;
 }
 
-bool Pmdg777TabletClient::IsSimbriefFetchSuccess(const std::string& json)
+bool PmdgTabletClient::IsSimbriefFetchSuccess(const std::string& json)
 {
     const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(json));
     if (!document.isObject())
@@ -110,7 +110,7 @@ bool Pmdg777TabletClient::IsSimbriefFetchSuccess(const std::string& json)
                  .value(QStringLiteral("result")).toVariant().toString() == QLatin1String("200");
 }
 
-void Pmdg777TabletClient::OnInbound(const std::string& payload)
+void PmdgTabletClient::OnInbound(const std::string& payload)
 {
     if (IsSimbriefFetchSuccess(payload))
     {
@@ -118,7 +118,7 @@ void Pmdg777TabletClient::OnInbound(const std::string& payload)
     }
 }
 
-void Pmdg777TabletClient::SendWbPayload(const std::string& field, const int value) const
+void PmdgTabletClient::SendWbPayload(const std::string& field, const int value) const
 {
     if (!IsAvailable())
     {
@@ -128,22 +128,22 @@ void Pmdg777TabletClient::SendWbPayload(const std::string& field, const int valu
     bridge_->Call(kChannelToPlane, CommBusFlag::kWasm, BuildWbPayload(field, value));
 }
 
-void Pmdg777TabletClient::SendFuelTotalLbs(const int lbs)
+void PmdgTabletClient::SendFuelTotalLbs(const int lbs)
 {
     SendWbPayload("fuel_total_lbs", lbs);
 }
 
-void Pmdg777TabletClient::SendPaxTotal(const int count)
+void PmdgTabletClient::SendPaxTotal(const int count)
 {
     SendWbPayload("pax_count_total", count);
 }
 
-void Pmdg777TabletClient::SendCargoTotalLbs(const int lbs)
+void PmdgTabletClient::SendCargoTotalLbs(const int lbs)
 {
     SendWbPayload("cargo_weight_total", lbs);
 }
 
-void Pmdg777TabletClient::RequestGroundConn(const std::string& key)
+void PmdgTabletClient::RequestGroundConn(const std::string& key)
 {
     if (!IsAvailable())
     {

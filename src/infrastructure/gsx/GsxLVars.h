@@ -1,6 +1,25 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_GSXLVARS_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_GSXLVARS_H
 
+#include "../../domain/ports/GsxGateway.h"
+
+namespace gsx::services
+{
+    [[nodiscard]] inline const char* Id(const GroundService service)
+    {
+        switch (service)
+        {
+        case GroundService::Catering: return "Catering";
+        case GroundService::Lavatory: return "Lavatory";
+        case GroundService::Water: return "Water";
+        case GroundService::Cleaning: return "Cleaning";
+        case GroundService::Gpu: return "GPU";
+        case GroundService::Departure: return "Departure";
+        default: return nullptr;
+        }
+    }
+}
+
 namespace gsx::lvars
 {
     inline constexpr auto kCouatlStarted = "FSDT_GSX_COUATL_STARTED";

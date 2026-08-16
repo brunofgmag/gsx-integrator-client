@@ -5,6 +5,7 @@
 #include "../infrastructure/aircraft/AircraftRegistry.h"
 #include "../infrastructure/logging/LogMacros.h"
 #include "../infrastructure/gsx/GsxAircraftProfile.h"
+#include "../infrastructure/pmdg/PmdgOptions.h"
 #include "../infrastructure/gsx/GsxRemoteStateReducer.h"
 
 namespace
@@ -254,6 +255,7 @@ void IntegratorRuntime::UpdateSlow()
 
     gsxService_.ReassertTakeovers();
     CheckGsxProfile();
+    CheckPmdgOptions();
 }
 
 void IntegratorRuntime::Shutdown()
@@ -292,6 +294,7 @@ void IntegratorRuntime::ClearFlightState()
 {
     aircraft_.reset();
     gsxProfile_.Reset();
+    pmdgOptions_.Reset();
 
     ResetSession();
 }
@@ -329,7 +332,9 @@ void IntegratorRuntime::ResolveAircraft()
         status_.aircraftSupported = true;
         gsxProfile_.roots = GsxAircraftProfile::ProfileRootsFor(aircraft_->GetName());
         gsxProfile_.flagsMissing = GsxAircraftProfile::FlagsMissingProfile(aircraft_->GetName());
+        pmdgOptions_.ini = PmdgOptions::PathFor(aircraft_->GetName()).value_or(std::filesystem::path{});
         CheckGsxProfile();
+        CheckPmdgOptions();
         emit Updated();
     }
 }
@@ -345,13 +350,15 @@ void IntegratorRuntime::CheckGsxProfile()
 
     gsxProfile_.cfgs = GsxAircraftProfile::FindCfgs(gsxProfile_.roots);
 
+    const bool wasConflicting = gsxProfile_.conflict;
+
     bool conflict = gsxProfile_.cfgs.empty() && gsxProfile_.flagsMissing;
     for (const auto& cfg : gsxProfile_.cfgs)
     {
         if (NeedsRefuelingFix(cfg))
         {
             conflict = true;
-            if (!gsxProfile_.conflict)
+            if (!wasConflicting)
             {
                 LOG_WARN("GSX profile '%s' does not set 'refueling = 0'; the fuel truck will not connect.",
                          cfg.string().c_str());
@@ -360,6 +367,95 @@ void IntegratorRuntime::CheckGsxProfile()
     }
 
     gsxProfile_.conflict = conflict;
+}
+
+IntegratorSnapshot IntegratorRuntime::Snapshot() const
+{
+    IntegratorSnapshot snapshot;
+    snapshot.connected = IsConnected();
+    snapshot.sessionActive = IsSessionActive();
+    snapshot.automationEnabled = status_.enabled;
+    snapshot.gsxAvailable = status_.gsxAvailable;
+    snapshot.aircraftSupported = status_.aircraftSupported;
+    snapshot.canToggleAutomation = snapshot.connected;
+    snapshot.canStartLoading = snapshot.connected
+        && status_.enabled
+        && GetPhase() == TurnaroundPhase::RequestFuel
+        && !settings_.autoStartLoading
+        && !IsLoadingConfirmed();
+    snapshot.canReloadSimbrief = snapshot.connected
+        && snapshot.sessionActive
+        && settings_.simbriefPilotId > 0
+        && GetPhase() <= TurnaroundPhase::WaitingFlightPlan;
+    snapshot.aircraftName = GetAircraftName().toStdString();
+    snapshot.aircraftProfileId = GetAircraftProfileId();
+    snapshot.refuelByGsx = IsAircraftRefuelByGsx();
+    snapshot.refuelBySelf = IsAircraftRefuelBySelf();
+    snapshot.cargoAircraft = IsAircraftCargoVariant();
+    snapshot.efbFlightPlan = AircraftRequiresEfbFlightPlan();
+    snapshot.gsxProfileConflict = HasGsxProfileConflict();
+    snapshot.gsxProfileFixable = CanFixGsxProfile();
+    snapshot.pmdgOptionsConflict = HasPmdgOptionsConflict();
+    snapshot.pmdgOptionsFixable = CanFixPmdgOptions();
+    snapshot.phase = GetPhase();
+    snapshot.flightPlanStatus = status_.flightPlanStatus;
+    snapshot.fuelProgress = status_.fuelProgress;
+    snapshot.boardingProgress = status_.boardingProgress;
+    snapshot.deboardingProgress = status_.deboardingProgress;
+    snapshot.plannedFuelKg = status_.plannedFuelKg;
+    snapshot.loadedFuelKg = status_.loadedFuelKg;
+    snapshot.plannedZfwKg = status_.plannedZfwKg;
+    snapshot.plannedPax = status_.plannedPassengers;
+    snapshot.boardedPax = status_.boardedPassengers;
+    snapshot.targetFuelKg = status_.targetFuelKg;
+    snapshot.targetZfwKg = status_.targetZfwKg;
+    snapshot.targetPax = status_.targetPassengers;
+    snapshot.delayTicksRemaining = GetDelayTicksRemaining();
+    snapshot.autoWeightUnit = static_cast<int>(GetAutoWeightUnit());
+
+    return snapshot;
+}
+
+void IntegratorRuntime::CheckPmdgOptions()
+{
+    if (pmdgOptions_.ini.empty())
+    {
+        pmdgOptions_.conflict = false;
+        return;
+    }
+
+    const std::optional<bool> enabled = PmdgOptions::ReadDataBroadcast(pmdgOptions_.ini);
+    const bool conflict = enabled.has_value() && !*enabled;
+
+    if (conflict && !pmdgOptions_.conflict)
+    {
+        LOG_WARN("'%s' has no '[SDK] EnableDataBroadcast=1'; the client cannot read the aircraft state.",
+                 pmdgOptions_.ini.string().c_str());
+    }
+
+    pmdgOptions_.conflict = conflict;
+}
+
+bool IntegratorRuntime::CanFixPmdgOptions() const
+{
+    return pmdgOptions_.conflict && !pmdgOptions_.ini.empty();
+}
+
+bool IntegratorRuntime::FixPmdgOptions()
+{
+    if (!CanFixPmdgOptions() || !PmdgOptions::EnableDataBroadcast(pmdgOptions_.ini))
+    {
+        return false;
+    }
+
+    LOG_INFO("'%s' updated: [SDK] EnableDataBroadcast = 1. Reload the flight to apply it.",
+             pmdgOptions_.ini.string().c_str());
+
+    CheckPmdgOptions();
+
+    emit Updated();
+
+    return true;
 }
 
 bool IntegratorRuntime::CanFixGsxProfile() const

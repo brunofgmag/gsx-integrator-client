@@ -19,9 +19,8 @@ std::optional<TurnaroundTransition> PlaceGroundEquipmentState::Evaluate(Turnarou
         return TurnaroundTransition{TurnaroundPhase::CallServices};
     }
 
-    if (ctx.aircraft->SupportsChocksControl() && !ctx.data.chocksPlaced)
+    if (!ctx.data.chocksPlaced && ctx.aircraft->SetChocks(true))
     {
-        ctx.aircraft->SetChocks(true);
         ctx.data.chocksPlaced = true;
     }
 
