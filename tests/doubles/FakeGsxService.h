@@ -43,7 +43,6 @@ public:
     bool gpuInProgress = false;
     bool departureInProgress = false;
 
-    [[nodiscard]] bool IsAvailable() const override { return true; }
 
     [[nodiscard]] GsxStateStatus GetStateStatus(const GsxState state) override
     {

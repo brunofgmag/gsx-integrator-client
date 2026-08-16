@@ -23,10 +23,11 @@ public:
     static constexpr auto kName300Er = "PMDG 777-300ER";
     static constexpr auto kNameFreighter = "PMDG 777F";
 
-    Pmdg777(VariableGateway* variableGateway, AutomationStatus* status, Pmdg777Variant variant,
+    Pmdg777(VariableGateway* variableGateway, const AutomationStatus* status, Pmdg777Variant variant,
             std::unique_ptr<Pmdg777DataGateway> data, std::unique_ptr<Pmdg777TabletGateway> tablet);
 
     [[nodiscard]] static bool OptionsEnableDataBroadcast(const std::string& iniText);
+
 
     [[nodiscard]] const char* GetName() const override;
     [[nodiscard]] bool IsCargoVariant() const override;
@@ -55,8 +56,7 @@ public:
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override;
-    [[nodiscard]] bool SupportsChocksControl() const override { return true; }
-    void SetChocks(bool placed) override;
+    bool SetChocks(bool placed) override;
     [[nodiscard]] bool SupportsGroundPowerControl() const override { return true; }
     void SetGroundPower(bool on) override;
     [[nodiscard]] bool IsReadyToPush() const override;
@@ -73,7 +73,7 @@ private:
     [[nodiscard]] int DoorIndexFor(GsxDoor door) const;
 
     VariableGateway* variableGateway_;
-    AutomationStatus* status_;
+    const AutomationStatus* status_;
     Pmdg777Variant variant_;
     std::unique_ptr<Pmdg777DataGateway> data_;
     std::unique_ptr<Pmdg777TabletGateway> tablet_;

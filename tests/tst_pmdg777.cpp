@@ -557,7 +557,7 @@ void Pmdg777Test::chocksReconcileWithRetryCap()
 
     fixture.data->hasData = true;
 
-    fixture.aircraft->SetChocks(true);
+    QVERIFY(fixture.aircraft->SetChocks(true));
     fixture.aircraft->OnTick();
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));

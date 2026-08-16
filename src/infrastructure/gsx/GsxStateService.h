@@ -14,7 +14,7 @@ public:
 
     void Reset();
 
-    [[nodiscard]] bool IsAvailable() const override;
+    [[nodiscard]] bool IsAvailable() const;
 
     [[nodiscard]] GsxStateStatus GetStateStatus(GsxState gsxState) override;
     [[nodiscard]] bool WasStateCompleted(GsxState gsxState) const override;

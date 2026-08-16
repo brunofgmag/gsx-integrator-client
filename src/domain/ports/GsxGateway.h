@@ -38,7 +38,6 @@ class GsxGateway
 public:
     virtual ~GsxGateway() = default;
 
-    [[nodiscard]] virtual bool IsAvailable() const = 0;
     [[nodiscard]] virtual GsxStateStatus GetStateStatus(GsxState gsxState) = 0;
     [[nodiscard]] virtual bool WasStateCompleted(GsxState gsxState) const = 0;
     [[nodiscard]] virtual bool IsWaitingForEngines() const = 0;

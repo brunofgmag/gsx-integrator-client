@@ -75,6 +75,7 @@ private:
     bool MaybeCloseStaleMenu();
     bool HandleAutoPicks(const std::string& sig);
     bool HandlePendingCompletions();
+    [[nodiscard]] bool RepositionWalking() const;
     bool HandleRepositionFlow();
     bool HandleIntentPrompts();
 

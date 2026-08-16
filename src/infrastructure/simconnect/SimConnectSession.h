@@ -83,6 +83,7 @@ private:
     void HandleEvent(const SIMCONNECT_RECV* pData, DWORD cbData) const;
     void HandleSystemState(const SIMCONNECT_RECV* pData, DWORD cbData) const;
     void HandleClientData(const SIMCONNECT_RECV* pData, DWORD cbData) const;
+    static void HandleException(const SIMCONNECT_RECV* pData);
 
     template <typename Fn>
     bool SubscribeSystemEvent(Fn& target, Fn fn, SIMCONNECT_CLIENT_EVENT_ID eventId, const char* name);

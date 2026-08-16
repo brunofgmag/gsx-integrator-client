@@ -308,14 +308,8 @@ void SimConnectSession::HandleMessage(SIMCONNECT_RECV* pData, const DWORD cbData
         break;
 
     case SIMCONNECT_RECV_ID_EXCEPTION:
-        {
-            const auto* ex = static_cast<const SIMCONNECT_RECV_EXCEPTION*>(pData);
-            LOG_WARN("SimConnect exception %u (sendId=%u, index=%u)",
-                     static_cast<unsigned>(ex->dwException),
-                     static_cast<unsigned>(ex->dwSendID),
-                     static_cast<unsigned>(ex->dwIndex));
-            break;
-        }
+        HandleException(pData);
+        break;
 
     case SIMCONNECT_RECV_ID_QUIT:
         LOG_INFO("Simulator quit notification received.");
@@ -325,6 +319,15 @@ void SimConnectSession::HandleMessage(SIMCONNECT_RECV* pData, const DWORD cbData
     default:
         break;
     }
+}
+
+void SimConnectSession::HandleException(const SIMCONNECT_RECV* pData)
+{
+    const auto* ex = static_cast<const SIMCONNECT_RECV_EXCEPTION*>(pData);
+    LOG_WARN("SimConnect exception %u (sendId=%u, index=%u)",
+             static_cast<unsigned>(ex->dwException),
+             static_cast<unsigned>(ex->dwSendID),
+             static_cast<unsigned>(ex->dwIndex));
 }
 
 void SimConnectSession::HandleOpen(const SIMCONNECT_RECV* pData, const DWORD cbData) const

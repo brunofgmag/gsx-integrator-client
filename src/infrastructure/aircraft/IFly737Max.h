@@ -10,7 +10,7 @@ struct AutomationStatus;
 class IFly737Max final : public Aircraft
 {
 public:
-    IFly737Max(VariableGateway* variableGateway, AutomationStatus* status);
+    IFly737Max(VariableGateway* variableGateway, const AutomationStatus* status);
 
     [[nodiscard]] const char* GetName() const override;
     [[nodiscard]] bool IsCargoVariant() const override;
@@ -25,7 +25,6 @@ public:
     [[nodiscard]] double GetEmptyZfwKg() const override;
 
     [[nodiscard]] double GetCurrentFuelKg() const override;
-    void SetCurrentFuelKg(double fuelKg) override;
     [[nodiscard]] double GetCurrentZfwKg() const override;
     void SetCurrentZfwKg(double zfwKg) override;
 
@@ -69,7 +68,7 @@ private:
     [[nodiscard]] CargoDoorCloser* NextCloseableDoor();
 
     VariableGateway* variableGateway_;
-    AutomationStatus* status_;
+    const AutomationStatus* status_;
 
     SmartSwitch smartSwitch_;
     double lastZfwKg_ = -1.0;

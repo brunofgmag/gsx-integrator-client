@@ -87,8 +87,7 @@ ColumnLayout {
             visible: root.settingsVm.profileFuelEditable
             width: 70
             height: 32
-            text: root.ghost ? root.settingsVm.fuelRateText
-                             : root.settingsVm.profileFuelRateText
+            text: root.settingsVm.profileFuelRateText
             color: Theme.text
             font.pixelSize: 12
             horizontalAlignment: TextInput.AlignRight
@@ -124,8 +123,7 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Skip aircraft repositioning")
-        checked: root.ghost ? root.settingsVm.skipReposition
-                            : root.settingsVm.profileSkipReposition
+        checked: root.settingsVm.profileSkipReposition
         onToggled: checked => root.settingsVm.profileSkipReposition = checked
     }
 
@@ -133,8 +131,7 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Call GPU & chocks")
-        checked: root.ghost ? root.settingsVm.callGpu
-                            : root.settingsVm.profileCallGpu
+        checked: root.settingsVm.profileCallGpu
         onToggled: checked => root.settingsVm.profileCallGpu = checked
     }
 
@@ -142,8 +139,7 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Call GPU & chocks on arrival")
-        checked: root.ghost ? root.settingsVm.callGpuOnArrival
-                            : root.settingsVm.profileCallGpuOnArrival
+        checked: root.settingsVm.profileCallGpuOnArrival
         onToggled: checked => root.settingsVm.profileCallGpuOnArrival = checked
     }
 
@@ -152,8 +148,7 @@ ColumnLayout {
         enabled: !root.ghost
         title: qsTr("Call catering")
         helpText: qsTr("Cargo aircraft skip catering automatically, even when this is on.")
-        checked: root.ghost ? root.settingsVm.callCatering
-                            : root.settingsVm.profileCallCatering
+        checked: root.settingsVm.profileCallCatering
         onToggled: checked => root.settingsVm.profileCallCatering = checked
     }
 
@@ -161,8 +156,7 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Call lavatory service")
-        checked: root.ghost ? root.settingsVm.callLavatory
-                            : root.settingsVm.profileCallLavatory
+        checked: root.settingsVm.profileCallLavatory
         onToggled: checked => root.settingsVm.profileCallLavatory = checked
     }
 
@@ -170,8 +164,7 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Call water service")
-        checked: root.ghost ? root.settingsVm.callWater
-                            : root.settingsVm.profileCallWater
+        checked: root.settingsVm.profileCallWater
         onToggled: checked => root.settingsVm.profileCallWater = checked
     }
 
@@ -179,8 +172,7 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Call cleaning service")
-        checked: root.ghost ? root.settingsVm.callCleaning
-                            : root.settingsVm.profileCallCleaning
+        checked: root.settingsVm.profileCallCleaning
         onToggled: checked => root.settingsVm.profileCallCleaning = checked
     }
 

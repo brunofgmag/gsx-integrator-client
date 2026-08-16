@@ -198,7 +198,6 @@ void FenixA32xTest::reportsLoadMethodsAndCapabilities()
     QVERIFY(fixture.aircraft.GetBoardMethod() == BoardBy::Client);
     QVERIFY(fixture.aircraft.SupportsStairsOrJetways());
     QVERIFY(!fixture.aircraft.CompletesPushbackViaInterruptMenu());
-    QVERIFY(fixture.aircraft.SupportsChocksControl());
     QVERIFY(fixture.aircraft.SupportsGroundPowerControl());
     QVERIFY(fixture.aircraft.RequiresEfbFlightPlan());
 }
@@ -778,11 +777,11 @@ void FenixA32xTest::chocksWriteEfbDataref()
 {
     FenixFixture fixture;
 
-    fixture.aircraft.SetChocks(true);
+    QVERIFY(fixture.aircraft.SetChocks(true));
 
     QCOMPARE(fixture.efb.WrittenBool(kChocksDataref), 1);
 
-    fixture.aircraft.SetChocks(false);
+    QVERIFY(fixture.aircraft.SetChocks(false));
 
     QCOMPARE(fixture.efb.WrittenBool(kChocksDataref), 0);
 }

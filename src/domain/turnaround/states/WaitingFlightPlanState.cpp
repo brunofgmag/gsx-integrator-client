@@ -27,18 +27,19 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::Evaluate(TurnaroundC
     }
 
     bool& flightPlanRequested = ctx.data.flightPlanRequested;
+    const bool simbriefLoaded = ctx.gsxGateway->IsSimbriefLoaded();
 
-    if (!ctx.gsxGateway->IsSimbriefLoaded() && !flightPlanRequested)
+    if (!simbriefLoaded && !flightPlanRequested)
     {
         flightPlanRequested = ctx.menuGateway->RequestSimbriefLoad();
     }
 
-    if (ctx.gsxGateway->IsSimbriefLoaded())
+    if (simbriefLoaded)
     {
         flightPlanRequested = false;
     }
 
-    if (flightPlanRequested && !ctx.gsxGateway->IsSimbriefLoaded())
+    if (flightPlanRequested)
     {
         if (ctx.TickCondition(kRetryTicks))
         {

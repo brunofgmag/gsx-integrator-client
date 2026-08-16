@@ -225,32 +225,37 @@ void SimConnectVariableGateway::HandleSimObjectData(const SIMCONNECT_RECV_SIMOBJ
             continue;
         }
 
-        if (slot.isString)
-        {
-            strncpy_s(
-                slot.text,
-                sizeof(slot.text) - 1,
-                reinterpret_cast<const char*>(&pData->dwData),
-                _TRUNCATE);
-            slot.text[sizeof(slot.text) - 1] = '\0';
-        }
-        else
-        {
-            std::memcpy(&slot.value, &pData->dwData, sizeof(double));
-            if (!slot.received)
-            {
-                slot.spanMin = slot.value;
-                slot.spanMax = slot.value;
-            }
-            else
-            {
-                slot.spanMin = (std::min)(slot.spanMin, slot.value);
-                slot.spanMax = (std::max)(slot.spanMax, slot.value);
-            }
-        }
-
-        slot.received = true;
+        StoreSample(slot, &pData->dwData);
 
         return;
     }
+}
+
+void SimConnectVariableGateway::StoreSample(Slot& slot, const void* payload)
+{
+    if (slot.isString)
+    {
+        strncpy_s(
+            slot.text,
+            sizeof(slot.text) - 1,
+            static_cast<const char*>(payload),
+            _TRUNCATE);
+        slot.text[sizeof(slot.text) - 1] = '\0';
+    }
+    else
+    {
+        std::memcpy(&slot.value, payload, sizeof(double));
+        if (!slot.received)
+        {
+            slot.spanMin = slot.value;
+            slot.spanMax = slot.value;
+        }
+        else
+        {
+            slot.spanMin = (std::min)(slot.spanMin, slot.value);
+            slot.spanMax = (std::max)(slot.spanMax, slot.value);
+        }
+    }
+
+    slot.received = true;
 }

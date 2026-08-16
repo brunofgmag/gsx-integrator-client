@@ -9,6 +9,11 @@ namespace
 {
     constexpr int kRetryTicks = 20;
     constexpr int kMaxAttempts = 4;
+
+    bool CallJetwayOrStairs(const TurnaroundContext& ctx, const bool jetwayAvailable)
+    {
+        return jetwayAvailable ? ctx.menuGateway->CallJetway() : ctx.menuGateway->CallStairs();
+    }
 }
 
 std::optional<TurnaroundTransition> CallServicesState::Evaluate(TurnaroundContext& ctx)
@@ -39,15 +44,12 @@ std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(Tur
         return std::nullopt;
     }
 
-    if (ctx.gsxGateway->IsJetwayAvailable() && !ctx.data.jetwayOrStairsRequested)
-    {
-        RegisterJetwayOrStairsRequest(ctx, ctx.menuGateway->CallJetway());
-        return std::nullopt;
-    }
+    const bool jetwayAvailable = ctx.gsxGateway->IsJetwayAvailable();
 
-    if (ctx.gsxGateway->AreStairsAvailable() && !ctx.data.jetwayOrStairsRequested)
+    if (!ctx.data.jetwayOrStairsRequested
+        && (jetwayAvailable || ctx.gsxGateway->AreStairsAvailable()))
     {
-        RegisterJetwayOrStairsRequest(ctx, ctx.menuGateway->CallStairs());
+        RegisterJetwayOrStairsRequest(ctx, CallJetwayOrStairs(ctx, jetwayAvailable));
         return std::nullopt;
     }
 
@@ -58,9 +60,7 @@ std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(Tur
             return TurnaroundTransition{TurnaroundPhase::WaitingFlightPlan};
         }
 
-        RegisterJetwayOrStairsRequest(ctx, ctx.gsxGateway->IsJetwayAvailable()
-                                               ? ctx.menuGateway->CallJetway()
-                                               : ctx.menuGateway->CallStairs());
+        RegisterJetwayOrStairsRequest(ctx, CallJetwayOrStairs(ctx, jetwayAvailable));
     }
 
     return std::nullopt;

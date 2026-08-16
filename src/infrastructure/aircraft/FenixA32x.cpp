@@ -1,5 +1,7 @@
 #include "FenixA32x.h"
 
+#include "../simvars/SimVars.h"
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -18,17 +20,10 @@
 #include "../../domain/turnaround/TurnaroundMath.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
 
+using namespace simvars;
+
 namespace
 {
-    constexpr auto kSimFuelTotalKg = "FUEL TOTAL QUANTITY WEIGHT";
-    constexpr auto kSimTotalWeight = "TOTAL WEIGHT";
-    constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
-    constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
-    constexpr auto kSimBeaconLight = "LIGHT BEACON";
-    constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
-    constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
-    constexpr auto kKgUnit = "kg";
-    constexpr auto kBoolUnit = "Bool";
 
     constexpr auto kSmartSwitchLVar = "S_ASP_INTRAD";
     constexpr double kSmartSwitchNeutral = 1.0;
@@ -436,9 +431,11 @@ std::optional<GroundPowerStatus> FenixA32x::GetGroundPowerStatus() const
     return connected ? GroundPowerStatus::Connected : GroundPowerStatus::Disconnected;
 }
 
-void FenixA32x::SetChocks(const bool placed)
+bool FenixA32x::SetChocks(const bool placed)
 {
     efb_->SetBool(kChocksDataref, placed);
+
+    return true;
 }
 
 void FenixA32x::SetGroundPower(const bool on)

@@ -12,7 +12,7 @@ struct AircraftDescriptor;
 class CommBusBridgeGateway;
 
 [[nodiscard]] std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway,
-                                                       AutomationStatus* status,
+                                                       const AutomationStatus* status,
                                                        CommBusBridgeGateway* commBusBridge = nullptr,
                                                        const AircraftDescriptor** outDescriptor = nullptr);
 

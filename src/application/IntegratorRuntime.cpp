@@ -345,13 +345,15 @@ void IntegratorRuntime::CheckGsxProfile()
 
     gsxProfile_.cfgs = GsxAircraftProfile::FindCfgs(gsxProfile_.roots);
 
+    const bool wasConflicting = gsxProfile_.conflict;
+
     bool conflict = gsxProfile_.cfgs.empty() && gsxProfile_.flagsMissing;
     for (const auto& cfg : gsxProfile_.cfgs)
     {
         if (NeedsRefuelingFix(cfg))
         {
             conflict = true;
-            if (!gsxProfile_.conflict)
+            if (!wasConflicting)
             {
                 LOG_WARN("GSX profile '%s' does not set 'refueling = 0'; the fuel truck will not connect.",
                          cfg.string().c_str());
@@ -360,6 +362,51 @@ void IntegratorRuntime::CheckGsxProfile()
     }
 
     gsxProfile_.conflict = conflict;
+}
+
+IntegratorSnapshot IntegratorRuntime::Snapshot() const
+{
+    IntegratorSnapshot snapshot;
+    snapshot.connected = IsConnected();
+    snapshot.sessionActive = IsSessionActive();
+    snapshot.automationEnabled = status_.enabled;
+    snapshot.gsxAvailable = status_.gsxAvailable;
+    snapshot.aircraftSupported = status_.aircraftSupported;
+    snapshot.canToggleAutomation = snapshot.connected;
+    snapshot.canStartLoading = snapshot.connected
+        && status_.enabled
+        && GetPhase() == TurnaroundPhase::RequestFuel
+        && !settings_.autoStartLoading
+        && !IsLoadingConfirmed();
+    snapshot.canReloadSimbrief = snapshot.connected
+        && snapshot.sessionActive
+        && settings_.simbriefPilotId > 0
+        && GetPhase() <= TurnaroundPhase::WaitingFlightPlan;
+    snapshot.aircraftName = GetAircraftName().toStdString();
+    snapshot.aircraftProfileId = GetAircraftProfileId();
+    snapshot.refuelByGsx = IsAircraftRefuelByGsx();
+    snapshot.refuelBySelf = IsAircraftRefuelBySelf();
+    snapshot.cargoAircraft = IsAircraftCargoVariant();
+    snapshot.efbFlightPlan = AircraftRequiresEfbFlightPlan();
+    snapshot.gsxProfileConflict = HasGsxProfileConflict();
+    snapshot.gsxProfileFixable = CanFixGsxProfile();
+    snapshot.phase = GetPhase();
+    snapshot.flightPlanStatus = status_.flightPlanStatus;
+    snapshot.fuelProgress = status_.fuelProgress;
+    snapshot.boardingProgress = status_.boardingProgress;
+    snapshot.deboardingProgress = status_.deboardingProgress;
+    snapshot.plannedFuelKg = status_.plannedFuelKg;
+    snapshot.loadedFuelKg = status_.loadedFuelKg;
+    snapshot.plannedZfwKg = status_.plannedZfwKg;
+    snapshot.plannedPax = status_.plannedPassengers;
+    snapshot.boardedPax = status_.boardedPassengers;
+    snapshot.targetFuelKg = status_.targetFuelKg;
+    snapshot.targetZfwKg = status_.targetZfwKg;
+    snapshot.targetPax = status_.targetPassengers;
+    snapshot.delayTicksRemaining = GetDelayTicksRemaining();
+    snapshot.autoWeightUnit = static_cast<int>(GetAutoWeightUnit());
+
+    return snapshot;
 }
 
 bool IntegratorRuntime::CanFixGsxProfile() const

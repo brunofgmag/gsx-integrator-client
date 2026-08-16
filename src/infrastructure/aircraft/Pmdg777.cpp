@@ -1,5 +1,7 @@
 #include "Pmdg777.h"
 
+#include "../simvars/SimVars.h"
+
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
@@ -7,7 +9,6 @@
 #include <memory>
 #include <sstream>
 #include <utility>
-#include <QtCore/QString>
 #include "AircraftRegistry.h"
 #include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
@@ -16,17 +17,13 @@
 #include "../../domain/model/AutomationStatus.h"
 #include "../../domain/model/FlightPlan.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
+#include <QtCore/QString>
+
+using namespace simvars;
 
 namespace
 {
-    constexpr auto kSimFuelTotalKg = "FUEL TOTAL QUANTITY WEIGHT";
-    constexpr auto kSimTotalWeight = "TOTAL WEIGHT";
-    constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
     constexpr auto kSimOnGround = "SIM ON GROUND";
-    constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
-    constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
-    constexpr auto kKgUnit = "kg";
-    constexpr auto kBoolUnit = "Bool";
 
     constexpr auto kSmartSwitchCaptLVar = "switch_554_a";
     constexpr auto kSmartSwitchFoLVar = "switch_773_a";
@@ -51,7 +48,7 @@ namespace
 }
 
 Pmdg777::Pmdg777(VariableGateway* variableGateway,
-                 AutomationStatus* status,
+                 const AutomationStatus* status,
                  const Pmdg777Variant variant,
                  std::unique_ptr<Pmdg777DataGateway> data,
                  std::unique_ptr<Pmdg777TabletGateway> tablet)
@@ -401,7 +398,7 @@ std::optional<GroundPowerStatus> Pmdg777::GetGroundPowerStatus() const
     return data_->ExtPowerConnected() ? GroundPowerStatus::Connected : GroundPowerStatus::Disconnected;
 }
 
-void Pmdg777::SetChocks(const bool placed)
+bool Pmdg777::SetChocks(const bool placed)
 {
     if (desiredChocks_ != placed)
     {
@@ -409,6 +406,8 @@ void Pmdg777::SetChocks(const bool placed)
         chocksAttempts_ = 0;
         ticksSinceChocksRequest_ = kGroundConnRetryTicks;
     }
+
+    return true;
 }
 
 void Pmdg777::SetGroundPower(const bool on)

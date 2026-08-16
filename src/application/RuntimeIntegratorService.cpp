@@ -25,49 +25,7 @@ RuntimeIntegratorService::RuntimeIntegratorService(IntegratorRuntime* runtime, Q
 
 IntegratorSnapshot RuntimeIntegratorService::GetSnapshot() const
 {
-    const AutomationStatus& status = runtime_->Status();
-
-    IntegratorSnapshot snapshot;
-    snapshot.connected = runtime_->IsConnected();
-    snapshot.sessionActive = runtime_->IsSessionActive();
-    snapshot.automationEnabled = status.enabled;
-    snapshot.gsxAvailable = status.gsxAvailable;
-    snapshot.aircraftSupported = status.aircraftSupported;
-    snapshot.canToggleAutomation = snapshot.connected;
-    snapshot.canStartLoading = snapshot.connected
-        && status.enabled
-        && runtime_->GetPhase() == TurnaroundPhase::RequestFuel
-        && !runtime_->Settings().autoStartLoading
-        && !runtime_->IsLoadingConfirmed();
-    snapshot.canReloadSimbrief = snapshot.connected
-        && snapshot.sessionActive
-        && runtime_->Settings().simbriefPilotId > 0
-        && runtime_->GetPhase() <= TurnaroundPhase::WaitingFlightPlan;
-    snapshot.aircraftName = runtime_->GetAircraftName().toStdString();
-    snapshot.aircraftProfileId = runtime_->GetAircraftProfileId();
-    snapshot.refuelByGsx = runtime_->IsAircraftRefuelByGsx();
-    snapshot.refuelBySelf = runtime_->IsAircraftRefuelBySelf();
-    snapshot.cargoAircraft = runtime_->IsAircraftCargoVariant();
-    snapshot.efbFlightPlan = runtime_->AircraftRequiresEfbFlightPlan();
-    snapshot.gsxProfileConflict = runtime_->HasGsxProfileConflict();
-    snapshot.gsxProfileFixable = runtime_->CanFixGsxProfile();
-    snapshot.phase = runtime_->GetPhase();
-    snapshot.flightPlanStatus = status.flightPlanStatus;
-    snapshot.fuelProgress = status.fuelProgress;
-    snapshot.boardingProgress = status.boardingProgress;
-    snapshot.deboardingProgress = status.deboardingProgress;
-    snapshot.plannedFuelKg = status.plannedFuelKg;
-    snapshot.loadedFuelKg = status.loadedFuelKg;
-    snapshot.plannedZfwKg = status.plannedZfwKg;
-    snapshot.plannedPax = status.plannedPassengers;
-    snapshot.boardedPax = status.boardedPassengers;
-    snapshot.targetFuelKg = status.targetFuelKg;
-    snapshot.targetZfwKg = status.targetZfwKg;
-    snapshot.targetPax = status.targetPassengers;
-    snapshot.delayTicksRemaining = runtime_->GetDelayTicksRemaining();
-    snapshot.autoWeightUnit = static_cast<int>(runtime_->GetAutoWeightUnit());
-
-    return snapshot;
+    return runtime_->Snapshot();
 }
 
 CommandResult RuntimeIntegratorService::SetAutomationEnabled(const bool enabled)

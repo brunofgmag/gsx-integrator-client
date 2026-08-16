@@ -46,11 +46,6 @@ std::optional<TurnaroundTransition> RepositionAircraftState::Evaluate(Turnaround
         return std::nullopt;
     }
 
-    if (isRepositioning && !repositionCompleted)
-    {
-        return std::nullopt;
-    }
-
     if (repositionCompleted)
     {
         return TurnaroundTransition{TurnaroundPhase::PlaceGroundEquipment};

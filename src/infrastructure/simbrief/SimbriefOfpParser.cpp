@@ -73,8 +73,11 @@ std::optional<FlightPlan> ParseSimbriefOfp(const std::string_view xml)
         return std::nullopt;
     }
 
-    double fuelKg = *parsedFuel;
-    double zfwKg = *parsedZfw;
+    const auto units = ExtractTag(xml, "units");
+    const bool ofpInPounds = units && *units == "lbs";
+    const auto unit = ofpInPounds ? WeightUnit::Lb : WeightUnit::Kg;
+    const double fuelKg = ofpInPounds ? weight::LbToKg(*parsedFuel) : *parsedFuel;
+    const double zfwKg = ofpInPounds ? weight::LbToKg(*parsedZfw) : *parsedZfw;
 
     int passengers = 0;
     if (const auto passengerValue = ExtractTag(xml, "pax_count"); passengerValue)
@@ -85,14 +88,6 @@ std::optional<FlightPlan> ParseSimbriefOfp(const std::string_view xml)
             return std::nullopt;
         }
         passengers = *parsedPax;
-    }
-
-    auto unit = WeightUnit::Kg;
-    if (const auto units = ExtractTag(xml, "units"); units && *units == "lbs")
-    {
-        unit = WeightUnit::Lb;
-        fuelKg = weight::LbToKg(fuelKg);
-        zfwKg = weight::LbToKg(zfwKg);
     }
 
     if (fuelKg <= 0.0 || zfwKg <= 0.0 || passengers < 0)

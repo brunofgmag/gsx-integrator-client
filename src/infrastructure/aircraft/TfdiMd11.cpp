@@ -1,5 +1,7 @@
 #include "TfdiMd11.h"
 
+#include "../simvars/SimVars.h"
+
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -10,6 +12,8 @@
 #include "../../domain/model/FlightPlan.h"
 #include "../../domain/model/AutomationStatus.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
+
+using namespace simvars;
 
 namespace
 {
@@ -23,16 +27,6 @@ namespace
     constexpr int kEfbReadyMask = 0x1;
     constexpr double kMtowKg = 283730.0;
 
-    constexpr auto kSimFuelTotalKg = "FUEL TOTAL QUANTITY WEIGHT";
-    constexpr auto kSimTotalWeight = "TOTAL WEIGHT";
-    constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
-    constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
-    constexpr auto kSimBeaconLight = "LIGHT BEACON";
-    constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
-    constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
-    constexpr auto kSimEng3Combustion = "ENG COMBUSTION:3";
-    constexpr auto kKgUnit = "kg";
-    constexpr auto kBoolUnit = "Bool";
 
     constexpr auto kSmartSwitch = "MD11_PED_CPT_AUDIO_PNL_INT_RADIO_SW";
     constexpr double kSmartSwitchNeutral = 1.0;
@@ -56,7 +50,7 @@ namespace
     constexpr double kDoorClosed = 0.0;
 }
 
-TfdiMd11::TfdiMd11(VariableGateway* variableGateway, AutomationStatus* status, const bool cargo)
+TfdiMd11::TfdiMd11(VariableGateway* variableGateway, const AutomationStatus* status, const bool cargo)
     : variableGateway_(variableGateway), status_(status), cargo_(cargo),
       smartSwitch_(*variableGateway, {kSmartSwitch},
                    [](double, const double max) { return max > kSmartSwitchNeutral; },
@@ -265,9 +259,11 @@ std::optional<GroundPowerStatus> TfdiMd11::GetGroundPowerStatus() const
                : GroundPowerStatus::Disconnected;
 }
 
-void TfdiMd11::SetChocks(const bool placed)
+bool TfdiMd11::SetChocks(const bool placed)
 {
     variableGateway_->SetLVar(kChocksLVar, placed ? 1.0 : 0.0);
+
+    return true;
 }
 
 bool TfdiMd11::IsReadyToPush() const

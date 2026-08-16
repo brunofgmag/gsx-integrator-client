@@ -183,13 +183,17 @@ void RuntimeIntegratorServiceTest::runtimeGettersOnEmptyRuntime()
 {
     IntegratorRuntime runtime;
 
-    QVERIFY(runtime.GetAircraftName().isEmpty());
+    const IntegratorSnapshot snapshot = runtime.Snapshot();
+
+    QVERIFY(snapshot.aircraftName.empty());
+    QCOMPARE(snapshot.aircraftProfileId, std::string{});
+    QVERIFY(!snapshot.refuelByGsx);
+    QVERIFY(!snapshot.refuelBySelf);
+    QVERIFY(!snapshot.cargoAircraft);
+    QVERIFY(!snapshot.gsxProfileConflict);
+    QVERIFY(!snapshot.gsxProfileFixable);
     QCOMPARE(runtime.GetAircraftProfileId(), std::string{});
-    QVERIFY(!runtime.IsAircraftRefuelByGsx());
-    QVERIFY(!runtime.IsAircraftRefuelBySelf());
-    QVERIFY(!runtime.IsAircraftCargoVariant());
     QVERIFY(!runtime.HasGsxProfileConflict());
-    QVERIFY(!runtime.CanFixGsxProfile());
     QVERIFY(!runtime.FixGsxProfile());
     QVERIFY(!runtime.ReloadSimbrief());
 }

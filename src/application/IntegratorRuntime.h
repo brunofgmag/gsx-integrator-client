@@ -8,6 +8,7 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QTimer>
+#include "model/IntegratorSnapshot.h"
 #include "sim/SimVersion.h"
 #include "../infrastructure/commbus/CommBusBridgeClient.h"
 #include "../infrastructure/commbus/CommBusPluginClient.h"
@@ -37,25 +38,14 @@ public:
     void Setup();
     void Shutdown();
 
-    [[nodiscard]] const AutomationStatus& Status() const { return status_; }
-    [[nodiscard]] const AutomationSettings& Settings() const { return settings_; }
+    [[nodiscard]] IntegratorSnapshot Snapshot() const;
 
+    [[nodiscard]] const AutomationSettings& Settings() const { return settings_; }
     [[nodiscard]] bool IsConnected() const { return simConnect_.IsConnected(); }
     [[nodiscard]] bool IsSessionActive() const { return isSessionActive_; }
-    [[nodiscard]] bool IsSessionPaused() const { return pauseFlags_ != 0; }
-    [[nodiscard]] bool IsSessionReady();
     [[nodiscard]] TurnaroundPhase GetPhase() const { return stateMachine_.GetPhase(); }
-    [[nodiscard]] int GetDelayTicksRemaining() const { return stateMachine_.GetDelayTicksRemaining(); }
-    [[nodiscard]] bool IsLoadingConfirmed() const { return stateMachine_.IsLoadingConfirmed(); }
-    [[nodiscard]] QString GetAircraftName() const;
     [[nodiscard]] std::string GetAircraftProfileId() const;
-    [[nodiscard]] bool IsAircraftRefuelByGsx() const;
-    [[nodiscard]] bool IsAircraftRefuelBySelf() const;
-    [[nodiscard]] bool IsAircraftCargoVariant() const;
-    [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
-    [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
     [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfile_.conflict; }
-    [[nodiscard]] bool CanFixGsxProfile() const;
     bool FixGsxProfile();
     void SetAutomationEnabled(bool enabled);
     void RestartFlow();
@@ -86,6 +76,19 @@ private:
             flagsMissing = false;
         }
     };
+
+    [[nodiscard]] bool IsSessionPaused() const { return pauseFlags_ != 0; }
+    [[nodiscard]] bool IsSessionReady();
+    [[nodiscard]] const AutomationStatus& Status() const { return status_; }
+    [[nodiscard]] int GetDelayTicksRemaining() const { return stateMachine_.GetDelayTicksRemaining(); }
+    [[nodiscard]] bool IsLoadingConfirmed() const { return stateMachine_.IsLoadingConfirmed(); }
+    [[nodiscard]] QString GetAircraftName() const;
+    [[nodiscard]] bool IsAircraftRefuelByGsx() const;
+    [[nodiscard]] bool IsAircraftRefuelBySelf() const;
+    [[nodiscard]] bool IsAircraftCargoVariant() const;
+    [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
+    [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
+    [[nodiscard]] bool CanFixGsxProfile() const;
 
     bool IsSimOnMenu();
     void OnSimOpen(const char* appName);

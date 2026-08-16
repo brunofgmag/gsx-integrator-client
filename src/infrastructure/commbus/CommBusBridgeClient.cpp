@@ -116,14 +116,7 @@ void CommBusBridgeClient::Setup()
                                                    SIMCONNECT_CLIENT_DATA_REQUEST_FLAG_CHANGED,
                                                    [this](const void* data, const DWORD size)
                                                    {
-                                                       if (data == nullptr || size == 0)
-                                                       {
-                                                           return;
-                                                       }
-
-                                                       const auto* bytes = static_cast<const char*>(data);
-                                                       const std::size_t length = strnlen(bytes, size);
-                                                       OnRxMessage(std::string(bytes, length));
+                                                       OnRxData(data, size);
                                                    });
 
     const bool ready = session_.RequestClientDataArea(kReadyAreaName, kReadyAreaId, kReadyDefId, kReadyRequestId,
@@ -147,6 +140,18 @@ void CommBusBridgeClient::Setup()
     {
         SendEnvelope(BuildSubscribeEnvelope(channel, subscription.flag));
     }
+}
+
+void CommBusBridgeClient::OnRxData(const void* data, const DWORD size)
+{
+    if (data == nullptr || size == 0)
+    {
+        return;
+    }
+
+    const auto* bytes = static_cast<const char*>(data);
+    const std::size_t length = strnlen(bytes, size);
+    OnRxMessage(std::string(bytes, length));
 }
 
 void CommBusBridgeClient::Shutdown()

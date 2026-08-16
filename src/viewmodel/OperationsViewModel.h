@@ -10,7 +10,6 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_OBJECT
 
     Q_PROPERTY(bool connected READ IsConnected NOTIFY SnapshotChanged)
-    Q_PROPERTY(bool sessionActive READ IsSessionActive NOTIFY SnapshotChanged)
     Q_PROPERTY(bool enabled READ IsEnabled WRITE SetEnabled NOTIFY SnapshotChanged)
     Q_PROPERTY(bool gsxAvailable READ IsGsxAvailable NOTIFY SnapshotChanged)
     Q_PROPERTY(bool aircraftSupported READ IsAircraftSupported NOTIFY SnapshotChanged)
@@ -37,7 +36,6 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(double targetFuelKg READ GetTargetFuelKg NOTIFY SnapshotChanged)
     Q_PROPERTY(double targetZfwKg READ GetTargetZfwKg NOTIFY SnapshotChanged)
     Q_PROPERTY(int targetPax READ GetTargetPax NOTIFY SnapshotChanged)
-    Q_PROPERTY(int autoWeightUnit READ GetAutoWeightUnit NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoAircraft READ IsCargoAircraft NOTIFY SnapshotChanged)
     Q_PROPERTY(QString simbriefStatusText READ GetSimbriefStatusText NOTIFY SnapshotChanged)
     Q_PROPERTY(bool simbriefReady READ IsSimbriefReady NOTIFY SnapshotChanged)

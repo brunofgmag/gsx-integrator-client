@@ -29,7 +29,6 @@ struct TurnaroundData
     bool boardingRequested = false;
     bool deboardingRequested = false;
     bool pushbackRequested = false;
-    bool disconnectConfirmed = false;
     bool jetwayOrStairsRequested = false;
     bool jetwayOrStairsCompleted = false;
     int jetwayOrStairsAttempts = 0;

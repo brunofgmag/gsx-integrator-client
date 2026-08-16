@@ -1,5 +1,7 @@
 #include "TolissA340.h"
 
+#include "../simvars/SimVars.h"
+
 #include <algorithm>
 #include <array>
 #include <memory>
@@ -11,21 +13,16 @@
 #include "../../domain/model/AutomationStatus.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
 
+using namespace simvars;
+
 namespace
 {
-    constexpr auto kSimFuelTotalKg = "FUEL TOTAL QUANTITY WEIGHT";
-    constexpr auto kSimTotalWeight = "TOTAL WEIGHT";
-    constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
-    constexpr auto kKgUnit = "kg";
 
     constexpr std::array kMcduUplinkKeys = {"AB_MCDU3_MENU", "AB_MCDU3_LSK6L", "AB_MCDU3_LSK1R", "AB_MCDU3_LSK1L"};
 
-    constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
-    constexpr auto kSimBeaconLight = "LIGHT BEACON";
     constexpr std::array kEngineFuelFlowLvars = {
         "TLS_ENG1_FUEL_FLOW", "TLS_ENG2_FUEL_FLOW", "TLS_ENG3_FUEL_FLOW", "TLS_ENG4_FUEL_FLOW"
     };
-    constexpr auto kBoolUnit = "Bool";
 
     constexpr auto kSmartSwitchLVar = "AB_ACP_CPT_RTU_Switch";
     constexpr double kSmartSwitchNeutral = 1.0;
@@ -90,7 +87,7 @@ namespace
     }
 }
 
-TolissA340::TolissA340(VariableGateway* variableGateway, AutomationStatus* status, const bool cargoVariant)
+TolissA340::TolissA340(VariableGateway* variableGateway, const AutomationStatus* status, const bool cargoVariant)
     : variableGateway_(variableGateway),
       status_(status),
       cargoVariant_(cargoVariant),
@@ -210,20 +207,12 @@ double TolissA340::GetCurrentFuelKg() const
     return variableGateway_->GetAVar(kSimFuelTotalKg, kKgUnit, 0.0);
 }
 
-void TolissA340::SetCurrentFuelKg(double)
-{
-}
-
 double TolissA340::GetCurrentZfwKg() const
 {
     const double totalWeightKg =
         variableGateway_->GetAVar(kSimTotalWeight, kKgUnit, GetEmptyZfwKg());
 
     return std::max(totalWeightKg - GetCurrentFuelKg(), GetEmptyZfwKg());
-}
-
-void TolissA340::SetCurrentZfwKg(double)
-{
 }
 
 bool TolissA340::ConsumeSmartSwitch()

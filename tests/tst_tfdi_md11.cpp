@@ -484,13 +484,11 @@ void TfdiMd11Test::setChocksWritesChocksLVar()
     AutomationStatus status;
     TfdiMd11 aircraft(&gateway, &status, false);
 
-    QVERIFY(aircraft.SupportsChocksControl());
-
-    aircraft.SetChocks(true);
+    QVERIFY(aircraft.SetChocks(true));
 
     QCOMPARE(gateway.Written(kChocks), 1.0);
 
-    aircraft.SetChocks(false);
+    QVERIFY(aircraft.SetChocks(false));
 
     QCOMPARE(gateway.Written(kChocks), 0.0);
 }

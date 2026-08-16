@@ -6,6 +6,7 @@
 #include <QDateTime>
 #include <QJsonObject>
 #include <QString>
+#include "GsxLVars.h"
 #include "GsxRemoteApiClient.h"
 #include "../commbus/CommBusPluginClient.h"
 #include "../../domain/model/AutomationSettings.h"
@@ -114,7 +115,7 @@ bool GsxMenuNavigator::RequestDeboarding()
 
 bool GsxMenuNavigator::RequestPushback()
 {
-    return TriggerService("Departure");
+    return TriggerService(gsx::services::Id(GroundService::Departure));
 }
 
 bool GsxMenuNavigator::RequestRefueling()
@@ -124,27 +125,27 @@ bool GsxMenuNavigator::RequestRefueling()
 
 bool GsxMenuNavigator::ToggleGpu()
 {
-    return TriggerService("GPU");
+    return TriggerService(gsx::services::Id(GroundService::Gpu));
 }
 
 bool GsxMenuNavigator::RequestCatering()
 {
-    return TriggerService("Catering");
+    return TriggerService(gsx::services::Id(GroundService::Catering));
 }
 
 bool GsxMenuNavigator::RequestLavatory()
 {
-    return TriggerService("Lavatory");
+    return TriggerService(gsx::services::Id(GroundService::Lavatory));
 }
 
 bool GsxMenuNavigator::RequestWater()
 {
-    return TriggerService("Water");
+    return TriggerService(gsx::services::Id(GroundService::Water));
 }
 
 bool GsxMenuNavigator::RequestCleaning()
 {
-    return TriggerService("Cleaning");
+    return TriggerService(gsx::services::Id(GroundService::Cleaning));
 }
 
 bool GsxMenuNavigator::PickNowOrArm(const char* entry, TimedIntent& intent)
@@ -351,10 +352,7 @@ void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
 
 bool GsxMenuNavigator::MaybeCloseStaleMenu()
 {
-    const bool repositionWalking = reposition_ == Reposition::Opening
-        || reposition_ == Reposition::PickingRoot
-        || reposition_ == Reposition::AwaitingSubmenu;
-    const bool repositionLeftover = !repositionWalking && HasActiveIntent()
+    const bool repositionLeftover = !RepositionWalking() && HasActiveIntent()
         && Contains(state_->menu.title, kSelectPositionText);
     if (!repositionLeftover)
     {
@@ -371,10 +369,14 @@ bool GsxMenuNavigator::MaybeCloseStaleMenu()
 
 bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
 {
+    if (sig == lastPickedSig_)
+    {
+        return false;
+    }
+
     const auto& menu = state_->menu;
 
     if (settings_ != nullptr && settings_->autoDeice
-        && sig != lastPickedSig_
         && Contains(menu.title, kDeIceQuestion)
         && PickByContains("Yes"))
     {
@@ -382,13 +384,12 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
     }
 
     if ((settings_ == nullptr || settings_->autoSelectGsxChoice)
-        && sig != lastPickedSig_
         && (PickByContains(kGsxChoiceText) || PickByContains(kBlockFuelText)))
     {
         return true;
     }
 
-    if (sig != lastPickedSig_ && Contains(menu.title, kBoardCrewQuestion))
+    if (Contains(menu.title, kBoardCrewQuestion))
     {
         const auto choice = settings_ != nullptr ? settings_->crewBoarding : CrewBoarding::Both;
         if (PickByContains(CrewBoardingEntry(choice)))
@@ -437,11 +438,16 @@ bool GsxMenuNavigator::HandlePendingCompletions()
     return false;
 }
 
+bool GsxMenuNavigator::RepositionWalking() const
+{
+    return reposition_ == Reposition::Opening
+        || reposition_ == Reposition::PickingRoot
+        || reposition_ == Reposition::AwaitingSubmenu;
+}
+
 bool GsxMenuNavigator::HandleRepositionFlow()
 {
-    if (reposition_ != Reposition::Opening
-        && reposition_ != Reposition::PickingRoot
-        && reposition_ != Reposition::AwaitingSubmenu)
+    if (!RepositionWalking())
     {
         return false;
     }
