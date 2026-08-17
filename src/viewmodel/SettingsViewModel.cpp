@@ -179,6 +179,16 @@ void SettingsViewModel::SetAutoDeice(const bool enabled)
     SetPersisted(settings_.autoDeice, enabled, &SettingsViewModel::AutoDeiceChanged);
 }
 
+bool SettingsViewModel::GetUseAircraftStairs() const
+{
+    return settings_.useAircraftStairs;
+}
+
+void SettingsViewModel::SetUseAircraftStairs(const bool enabled)
+{
+    SetPersisted(settings_.useAircraftStairs, enabled, &SettingsViewModel::UseAircraftStairsChanged);
+}
+
 int SettingsViewModel::GetCrewBoarding() const
 {
     return settings_.crewBoarding;

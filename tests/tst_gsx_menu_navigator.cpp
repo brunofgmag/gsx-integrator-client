@@ -106,6 +106,8 @@ private slots:
     static void boardCrewMenuPicksConfiguredChoice();
     static void crewMenusPickDeclineOnBothVariantsWhenNobodyConfigured();
     static void crewMenuPickedWithoutActiveIntent();
+    static void airstairsMenuPicksAirportStairsByDefault();
+    static void airstairsMenuPicksAirplaneStairsWhenEnabled();
     static void deIceMenuPicksYesWhenEnabled();
     static void deIceMenuDeclinedByDefault();
     static void picksSimbriefBlockFuelOnRefuelingLevelMenu();
@@ -711,6 +713,45 @@ void GsxMenuNavigatorTest::crewMenuPickedWithoutActiveIntent()
 
     QVERIFY(pick != nullptr);
     QCOMPARE(pick->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::airstairsMenuPicksAirportStairsByDefault()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    ShowMenu(state, "Use airplane's own airstairs?",
+             {"Yes - Use airplane stairs", "No - Use airport stairs", "Both - Airplane stairs + airport stairs"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+
+    QCOMPARE(pick->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::airstairsMenuPicksAirplaneStairsWhenEnabled()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.useAircraftStairs = true;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    ShowMenu(state, "Use airplane's own airstairs?",
+             {"Yes - Use airplane stairs", "No - Use airport stairs", "Both - Airplane stairs + airport stairs"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+
+    QCOMPARE(pick->args.value("index").toInt(), 0);
 }
 
 void GsxMenuNavigatorTest::deIceMenuPicksYesWhenEnabled()

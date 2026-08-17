@@ -27,6 +27,7 @@ namespace
     constexpr auto kRefuelingLoadedText = "loaded";
     constexpr auto kBoardCrewQuestion = "board crew";
     constexpr auto kDeIceQuestion = "de-icing";
+    constexpr auto kAirstairsQuestion = "own airstairs";
 
     const char* CrewBoardingEntry(const CrewBoarding choice)
     {
@@ -381,6 +382,15 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
         && PickByContains("Yes"))
     {
         return true;
+    }
+
+    if (Contains(menu.title, kAirstairsQuestion))
+    {
+        const bool ownStairs = settings_ != nullptr && settings_->useAircraftStairs;
+        if (PickByContains(ownStairs ? "Yes" : "No"))
+        {
+            return true;
+        }
     }
 
     if ((settings_ == nullptr || settings_->autoSelectGsxChoice)

@@ -17,6 +17,7 @@ struct AutomationSettings
     double fuelRateKgs = kDefaultFuelRateKgs;
     bool autoSelectGsxChoice = true;
     bool autoDeice = false;
+    bool useAircraftStairs = false;
     CrewBoarding crewBoarding = CrewBoarding::Both;
     bool autoStartFlow = true;
     bool autoStartLoading = true;

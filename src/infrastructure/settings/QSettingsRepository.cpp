@@ -6,6 +6,7 @@ namespace
     constexpr auto kKeyFuelRateKgs = "fuel/rateKgs";
     constexpr auto kKeyAutoSelectGsxChoice = "gsx/autoSelectGsxChoice";
     constexpr auto kKeyAutoDeice = "gsx/autoDeice";
+    constexpr auto kKeyUseAircraftStairs = "gsx/useAircraftStairs";
     constexpr auto kKeyCrewBoarding = "gsx/crewBoarding";
     constexpr auto kKeyOpenGsxOnRequests = "gsx/openGsxOnRequests";
     constexpr auto kKeyAutoStartFlow = "automation/autoStartFlow";
@@ -88,6 +89,7 @@ AppSettings QSettingsRepository::Load() const
     result.fuelRateKgs = settings.value(kKeyFuelRateKgs, AutomationSettings::kDefaultFuelRateKgs).toDouble();
     result.autoSelectGsxChoice = settings.value(kKeyAutoSelectGsxChoice, true).toBool();
     result.autoDeice = settings.value(kKeyAutoDeice, false).toBool();
+    result.useAircraftStairs = settings.value(kKeyUseAircraftStairs, false).toBool();
     result.crewBoarding = settings.value(kKeyCrewBoarding, 3).toInt();
     result.autoStartFlow = settings.value(kKeyAutoStartFlow, false).toBool();
     result.autoStartLoading = settings.value(kKeyAutoStartLoading, true).toBool();
@@ -130,6 +132,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyFuelRateKgs, values.fuelRateKgs);
     settings.setValue(kKeyAutoSelectGsxChoice, values.autoSelectGsxChoice);
     settings.setValue(kKeyAutoDeice, values.autoDeice);
+    settings.setValue(kKeyUseAircraftStairs, values.useAircraftStairs);
     settings.setValue(kKeyCrewBoarding, values.crewBoarding);
     settings.setValue(kKeyAutoStartFlow, values.autoStartFlow);
     settings.setValue(kKeyAutoStartLoading, values.autoStartLoading);
