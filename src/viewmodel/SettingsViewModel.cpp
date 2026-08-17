@@ -358,6 +358,33 @@ void SettingsViewModel::SetLanguage(const QString& language)
     SetPersisted(settings_.language, language.toStdString(), &SettingsViewModel::LanguageChanged);
 }
 
+QString SettingsViewModel::GetRenderer() const
+{
+    return QString::fromStdString(settings_.renderer);
+}
+
+void SettingsViewModel::SetRenderer(const QString& renderer)
+{
+    SetPersisted(settings_.renderer, renderer.toStdString(), &SettingsViewModel::RendererChanged);
+}
+
+QString SettingsViewModel::GetActiveRenderer() const
+{
+    return activeRenderer_;
+}
+
+void SettingsViewModel::SetActiveRenderer(const QString& renderer)
+{
+    if (activeRenderer_ == renderer)
+    {
+        return;
+    }
+
+    activeRenderer_ = renderer;
+
+    emit ActiveRendererChanged();
+}
+
 int SettingsViewModel::GetUpdateMode() const
 {
     return settings_.updateMode;

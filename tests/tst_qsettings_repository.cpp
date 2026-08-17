@@ -62,6 +62,7 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QCOMPARE(loaded.openGsxOnRequests, true);
     QCOMPARE(loaded.themeMode, 2);
     QCOMPARE(loaded.language, std::string("system"));
+    QCOMPARE(loaded.renderer, std::string("software"));
     QCOMPARE(loaded.updateMode, 1);
     QCOMPARE(loaded.closeToTray, false);
     QCOMPARE(loaded.minimizeToTray, true);
@@ -91,6 +92,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     values.openGsxOnRequests = false;
     values.themeMode = 0;
     values.language = "pt_BR";
+    values.renderer = "opengl";
     values.updateMode = 2;
     values.closeToTray = true;
     values.minimizeToTray = false;
@@ -130,6 +132,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     QCOMPARE(loaded.openGsxOnRequests, values.openGsxOnRequests);
     QCOMPARE(loaded.themeMode, values.themeMode);
     QCOMPARE(loaded.language, values.language);
+    QCOMPARE(loaded.renderer, values.renderer);
     QCOMPARE(loaded.updateMode, values.updateMode);
     QCOMPARE(loaded.closeToTray, values.closeToTray);
     QCOMPARE(loaded.minimizeToTray, values.minimizeToTray);

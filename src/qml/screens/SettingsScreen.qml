@@ -14,7 +14,7 @@ ColumnLayout {
 
     readonly property var sections: [
         qsTr("General"), qsTr("Automation"), qsTr("Services"),
-        qsTr("Profiles"), qsTr("Window")
+        qsTr("Profiles"), qsTr("Window"), qsTr("Advanced")
     ]
 
     spacing: 10
@@ -96,6 +96,10 @@ ColumnLayout {
             }
 
             WindowPane {
+                settingsVm: root.settingsVm
+            }
+
+            AdvancedPane {
                 settingsVm: root.settingsVm
             }
         }

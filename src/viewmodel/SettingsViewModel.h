@@ -41,6 +41,8 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(int themeMode READ GetThemeMode WRITE SetThemeMode NOTIFY ThemeModeChanged)
     Q_PROPERTY(bool effectiveDark READ GetEffectiveDark NOTIFY EffectiveDarkChanged)
     Q_PROPERTY(QString language READ GetLanguage WRITE SetLanguage NOTIFY LanguageChanged)
+    Q_PROPERTY(QString renderer READ GetRenderer WRITE SetRenderer NOTIFY RendererChanged)
+    Q_PROPERTY(QString activeRenderer READ GetActiveRenderer NOTIFY ActiveRendererChanged)
     Q_PROPERTY(int updateMode READ GetUpdateMode WRITE SetUpdateMode NOTIFY UpdateModeChanged)
     Q_PROPERTY(int weightUnitMode READ GetWeightUnitMode WRITE SetWeightUnitMode NOTIFY WeightUnitModeChanged)
     Q_PROPERTY(bool closeToTray READ GetCloseToTray WRITE SetCloseToTray NOTIFY CloseToTrayChanged)
@@ -154,6 +156,12 @@ public:
     [[nodiscard]] QString GetLanguage() const;
     void SetLanguage(const QString& language);
 
+    [[nodiscard]] QString GetRenderer() const;
+    void SetRenderer(const QString& renderer);
+
+    [[nodiscard]] QString GetActiveRenderer() const;
+    void SetActiveRenderer(const QString& renderer);
+
     [[nodiscard]] int GetUpdateMode() const;
     void SetUpdateMode(int mode);
 
@@ -239,6 +247,8 @@ signals:
     void ThemeModeChanged();
     void EffectiveDarkChanged();
     void LanguageChanged();
+    void RendererChanged();
+    void ActiveRendererChanged();
     void UpdateModeChanged();
     void WeightUnitModeChanged();
     void WeightUnitDisplayChanged();
@@ -306,6 +316,8 @@ private:
     SettingsRepository* repository_;
     IntegratorService* integratorService_;
     AppSettings settings_;
+
+    QString activeRenderer_;
 
     std::function<bool()> systemDarkProvider_;
 
