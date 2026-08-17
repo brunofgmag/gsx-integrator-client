@@ -10,6 +10,7 @@
 #include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
 #include "../pmdg/Pmdg737DataClient.h"
+#include "../pmdg/PmdgRouteFile.h"
 #include "../pmdg/PmdgTabletClient.h"
 #include "../../domain/model/AutomationStatus.h"
 #include "../../domain/model/FlightPlan.h"
@@ -29,6 +30,9 @@ namespace
 
     constexpr int kGroundConnRetryTicks = 5;
     constexpr int kGroundConnMaxAttempts = 10;
+    constexpr int kDoorRetryTicks = 5;
+    constexpr int kStateQueryTicks = 3;
+    constexpr int kDoorMaxAttempts = 2;
     constexpr int kZfwSettleTicks = 5;
     constexpr int kZfwTrimMaxAttempts = 5;
     constexpr double kZfwTrimToleranceKg = 50.0;
@@ -55,7 +59,9 @@ Pmdg737::Pmdg737(VariableGateway* variableGateway,
                    [](double, const double max) { return max > 0.0; })
 {
     desiredDoor_.fill(-1);
-    commandedDoor_.fill(-1);
+    commandedDoor_.fill(0);
+    ticksSinceDoorCommand_.fill(0);
+    doorAttempts_.fill(0);
     LOG_INFO("Profile loaded: %s", GetName());
 }
 
@@ -99,6 +105,17 @@ void Pmdg737::OnTick()
     data_->Poll();
     tablet_->Poll();
 
+    if (++ticksSinceStateQuery_ >= kStateQueryTicks)
+    {
+        ticksSinceStateQuery_ = 0;
+        tablet_->RequestState();
+    }
+
+    if (!routeFileSeen_ && status_->flightPlanStatus == FlightPlanStatus::Ready)
+    {
+        routeFileSeen_ = RouteFileMatchesPlan();
+    }
+
     if (data_->HasData())
     {
         smartSwitch_.Subscribe();
@@ -106,6 +123,18 @@ void Pmdg737::OnTick()
         ReconcileGroundConn();
         TrimZfw();
     }
+}
+
+bool Pmdg737::RouteFileMatchesPlan() const
+{
+    const std::optional<std::filesystem::path> directory = PmdgRouteFile::DirectoryFor(GetName());
+    if (!directory.has_value())
+    {
+        return false;
+    }
+
+    return PmdgRouteFile::ImportedSince(*directory, status_->plannedOrigin, status_->plannedDestination,
+                                        status_->planGeneratedEpoch);
 }
 
 void Pmdg737::SyncDoors()
@@ -138,6 +167,29 @@ void Pmdg737::SetDesiredDoor(const GsxDoor door, const bool open)
     desiredDoor_[static_cast<std::size_t>(*target)] = open ? 1 : 0;
 }
 
+const char* Pmdg737::EfbDoorKey(const Pmdg737Door door)
+{
+    switch (door)
+    {
+    case Pmdg737Door::FwdEntry: return "entry1_left";
+    case Pmdg737Door::FwdService: return "entry1_right";
+    case Pmdg737Door::AftEntry: return "entry2_left";
+    case Pmdg737Door::AftService: return "entry2_right";
+    case Pmdg737Door::FwdCargo: return "fwd_cargo";
+    case Pmdg737Door::AftCargo: return "aft_cargo";
+    case Pmdg737Door::MainCargo: return "main_cargo";
+    case Pmdg737Door::EquipmentHatch: return "equipment_hatch";
+    default: return nullptr;
+    }
+}
+
+std::optional<bool> Pmdg737::DoorIsOpen(const Pmdg737Door door) const
+{
+    const char* key = EfbDoorKey(door);
+
+    return key == nullptr ? std::nullopt : tablet_->DoorOpen(key);
+}
+
 void Pmdg737::ReconcileDoors()
 {
     for (std::size_t i = 0; i < desiredDoor_.size(); ++i)
@@ -148,19 +200,36 @@ void Pmdg737::ReconcileDoors()
         }
 
         const auto door = static_cast<Pmdg737Door>(i);
-        if (!Pmdg737DataClient::HasAnnunciator(door))
+        const bool wantOpen = desiredDoor_[i] == 1;
+        const std::optional<bool> reading = DoorIsOpen(door);
+        const bool isOpen = reading.value_or(commandedDoor_[i] == 1);
+
+        if (commandedDoor_[i] != desiredDoor_[i])
         {
-            if (commandedDoor_[i] != desiredDoor_[i])
+            commandedDoor_[i] = desiredDoor_[i];
+            ticksSinceDoorCommand_[i] = 0;
+            doorAttempts_[i] = 0;
+
+            if (isOpen != wantOpen)
             {
-                commandedDoor_[i] = desiredDoor_[i];
                 data_->ToggleDoor(door);
             }
 
             continue;
         }
 
-        if (data_->DoorOpen(door) != (desiredDoor_[i] == 1))
+        if (!reading.has_value() || isOpen == wantOpen)
         {
+            doorAttempts_[i] = 0;
+
+            continue;
+        }
+
+        ++ticksSinceDoorCommand_[i];
+        if (ticksSinceDoorCommand_[i] >= kDoorRetryTicks && doorAttempts_[i] < kDoorMaxAttempts)
+        {
+            ticksSinceDoorCommand_[i] = 0;
+            ++doorAttempts_[i];
             data_->ToggleDoor(door);
         }
     }
@@ -190,7 +259,8 @@ void Pmdg737::CloseAllDoors()
 
 bool Pmdg737::IsFlightPlanLoaded() const
 {
-    return status_->flightPlanStatus == FlightPlanStatus::Ready && tablet_->EfbPlanImported();
+    return status_->flightPlanStatus == FlightPlanStatus::Ready
+        && (tablet_->EfbPlanImported() || routeFileSeen_);
 }
 
 double Pmdg737::GetPlannedFuelKg() const

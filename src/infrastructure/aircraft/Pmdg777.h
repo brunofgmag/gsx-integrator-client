@@ -66,6 +66,7 @@ private:
     void SyncDoors();
     void SetDesiredDoor(GsxDoor door, bool open);
     void ReconcileDoors() const;
+    [[nodiscard]] bool RouteFileMatchesPlan() const;
     void ReconcileGroundConn();
     void TrimZfw();
     [[nodiscard]] int DoorIndexFor(GsxDoor door) const;
@@ -91,6 +92,7 @@ private:
     double lastRequestedZfwKg_ = 0.0;
     int zfwSettledTicks_ = 0;
     int zfwTrims_ = 0;
+    bool routeFileSeen_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777_H

@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H
 
+#include <string>
 #include "../support/Weight.h"
 
 enum class FlightPlanStatus : int
@@ -17,6 +18,9 @@ struct FlightPlan
     double zfwKg = 0.0;
     int passengers = 0;
     WeightUnit unit = WeightUnit::Kg;
+    std::string origin;
+    std::string destination;
+    long long generatedEpoch = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H

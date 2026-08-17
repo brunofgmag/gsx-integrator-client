@@ -39,6 +39,41 @@ namespace
         return value;
     }
 
+    std::optional<std::string> ExtractNestedTag(const std::string_view body,
+                                                const std::string_view outer,
+                                                const std::string_view inner)
+    {
+        const std::string open = "<" + std::string(outer) + ">";
+        const std::string close = "</" + std::string(outer) + ">";
+
+        const std::size_t start = body.find(open);
+        if (start == std::string_view::npos)
+        {
+            return std::nullopt;
+        }
+
+        const std::size_t end = body.find(close, start);
+        if (end == std::string_view::npos)
+        {
+            return std::nullopt;
+        }
+
+        return ExtractTag(body.substr(start, end - start), inner);
+    }
+
+    long long ParseEpoch(const std::optional<std::string>& text)
+    {
+        if (!text)
+        {
+            return 0;
+        }
+
+        char* parseEnd = nullptr;
+        const long long value = std::strtoll(text->c_str(), &parseEnd, 10);
+
+        return parseEnd == text->c_str() ? 0 : value;
+    }
+
     std::optional<int> ParseInt(const std::string& text)
     {
         char* parseEnd = nullptr;
@@ -95,5 +130,10 @@ std::optional<FlightPlan> ParseSimbriefOfp(const std::string_view xml)
         return std::nullopt;
     }
 
-    return FlightPlan{fuelKg, zfwKg, passengers, unit};
+    FlightPlan plan{fuelKg, zfwKg, passengers, unit};
+    plan.origin = ExtractNestedTag(xml, "origin", "icao_code").value_or(std::string{});
+    plan.destination = ExtractNestedTag(xml, "destination", "icao_code").value_or(std::string{});
+    plan.generatedEpoch = ParseEpoch(ExtractNestedTag(xml, "params", "time_generated"));
+
+    return plan;
 }

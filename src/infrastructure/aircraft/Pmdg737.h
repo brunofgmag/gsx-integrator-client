@@ -62,11 +62,14 @@ public:
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
     [[nodiscard]] static std::optional<Pmdg737Door> DoorFor(GsxDoor door);
+    [[nodiscard]] static const char* EfbDoorKey(Pmdg737Door door);
 
 private:
     void SyncDoors();
     void SetDesiredDoor(GsxDoor door, bool open);
     void ReconcileDoors();
+    [[nodiscard]] std::optional<bool> DoorIsOpen(Pmdg737Door door) const;
+    [[nodiscard]] bool RouteFileMatchesPlan() const;
     void ReconcileGroundConn();
     void TrimZfw();
     [[nodiscard]] bool ChocksSet() const;
@@ -79,12 +82,16 @@ private:
     GsxDoorSync doors_;
     std::array<int, static_cast<std::size_t>(Pmdg737Door::Count)> desiredDoor_{};
     std::array<int, static_cast<std::size_t>(Pmdg737Door::Count)> commandedDoor_{};
+    std::array<int, static_cast<std::size_t>(Pmdg737Door::Count)> ticksSinceDoorCommand_{};
+    std::array<int, static_cast<std::size_t>(Pmdg737Door::Count)> doorAttempts_{};
     std::optional<bool> desiredChocks_;
     std::optional<bool> desiredGroundPower_;
     int chocksAttempts_ = 0;
     int groundPowerAttempts_ = 0;
     int ticksSinceChocksRequest_ = 0;
     int ticksSinceGroundPowerRequest_ = 0;
+    int ticksSinceStateQuery_ = 0;
+    bool routeFileSeen_ = false;
     SmartSwitch smartSwitch_;
     int lastSentFuelLbs_ = -1;
     int lastSentPax_ = -1;

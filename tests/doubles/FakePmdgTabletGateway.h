@@ -1,6 +1,8 @@
 #ifndef GSX_INTEGRATOR_CLIENT_TESTS_FAKEPMDGTABLETGATEWAY_H
 #define GSX_INTEGRATOR_CLIENT_TESTS_FAKEPMDGTABLETGATEWAY_H
 
+#include <map>
+#include <optional>
 #include <string>
 #include <vector>
 #include "../../src/infrastructure/pmdg/PmdgTabletGateway.h"
@@ -15,15 +17,25 @@ public:
     std::vector<int> paxSends;
     std::vector<int> cargoSends;
     std::vector<std::string> groundConnRequests;
+    std::map<std::string, bool> doorOpen;
+    int stateRequests = 0;
 
     void Poll() override { ++pollCalls; }
     [[nodiscard]] bool IsAvailable() const override { return available; }
     [[nodiscard]] bool EfbPlanImported() const override { return efbPlanImported; }
 
+    [[nodiscard]] std::optional<bool> DoorOpen(const std::string& key) const override
+    {
+        const auto it = doorOpen.find(key);
+
+        return it == doorOpen.end() ? std::nullopt : std::optional(it->second);
+    }
+
     void SendFuelTotalLbs(const int lbs) override { fuelSends.push_back(lbs); }
     void SendPaxTotal(const int count) override { paxSends.push_back(count); }
     void SendCargoTotalLbs(const int lbs) override { cargoSends.push_back(lbs); }
     void RequestGroundConn(const std::string& key) override { groundConnRequests.push_back(key); }
+    void RequestState() override { ++stateRequests; }
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_TESTS_FAKEPMDGTABLETGATEWAY_H

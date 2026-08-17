@@ -16,6 +16,8 @@ namespace
     constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
     constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
     constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
+    constexpr double kJetwayDocked = 5.0;
+    constexpr auto kFwdEntryKey = "entry1_left";
 
     struct Pmdg737Fixture
     {
@@ -57,6 +59,13 @@ private slots:
     static void parkingBrakeFallsBackToTheSimVar();
     static void readyToDeboardAcceptsChocksInsteadOfBrake();
     static void mapsOnlyTheDoorsTheSevenThirtySevenHas();
+    static void closingDoorsThatWereNeverOpenedCommandsNothing();
+    static void serviceDoorFollowsTheCateringVehicle();
+    static void openDoorIsLeftAloneWhenTheServiceArrives();
+    static void entryDoorIsCommandedOnceWhileTheEfbStateIsUnknown();
+    static void entryDoorRetriesWithCapWhileTheEfbStateDisagrees();
+    static void entryDoorStopsAsSoonAsTheEfbStateAgrees();
+    static void groundStateIsQueriedWhileTheAircraftRuns();
     static void mainCargoIsCommandedOnEdgeBecauseItCannotBeRead();
     static void paxVariantNeverTouchesMainCargo();
     static void chocksReadFromTheLVarAndRetryWithCap();
@@ -178,6 +187,124 @@ void Pmdg737Test::mapsOnlyTheDoorsTheSevenThirtySevenHas()
     QCOMPARE(Pmdg737::DoorFor(GsxDoor::AftCargo), std::optional(Pmdg737Door::AftCargo));
 
     QCOMPARE(Pmdg737::DoorFor(GsxDoor::MidPax), std::nullopt);
+}
+
+namespace
+{
+    int EntryToggles(const Pmdg737Fixture& fixture)
+    {
+        return static_cast<int>(std::ranges::count(fixture.data->toggledDoors, Pmdg737Door::FwdEntry));
+    }
+
+    void DockJetway(Pmdg737Fixture& fixture)
+    {
+        fixture.data->hasData = true;
+        fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+        fixture.gateway.lvars[gsx::lvars::kJetway] = kJetwayDocked;
+    }
+
+    void Tick(const Pmdg737Fixture& fixture, const int times)
+    {
+        for (int i = 0; i < times; ++i)
+        {
+            fixture.aircraft->OnTick();
+        }
+    }
+}
+
+void Pmdg737Test::closingDoorsThatWereNeverOpenedCommandsNothing()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+
+    fixture.aircraft->CloseAllDoors();
+    Tick(fixture, 10);
+
+    QCOMPARE(static_cast<int>(fixture.data->toggledDoors.size()), 0);
+}
+
+void Pmdg737Test::serviceDoorFollowsTheCateringVehicle()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+
+    fixture.aircraft->CloseAllDoors();
+    Tick(fixture, 10);
+
+    const auto serviceToggles = [&fixture] {
+        return static_cast<int>(std::ranges::count(fixture.data->toggledDoors, Pmdg737Door::FwdService));
+    };
+
+    QCOMPARE(serviceToggles(), 0);
+
+    fixture.gateway.lvars[gsx::lvars::kCateringFrontState] = gsx::states::kCateringWaitingForDoor;
+    Tick(fixture, 10);
+
+    QCOMPARE(serviceToggles(), 1);
+
+    fixture.gateway.lvars[gsx::lvars::kCateringFrontState] = 0.0;
+    Tick(fixture, 10);
+
+    QCOMPARE(serviceToggles(), 2);
+}
+
+void Pmdg737Test::openDoorIsLeftAloneWhenTheServiceArrives()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->doorOpen[kFwdEntryKey] = true;
+
+    Tick(fixture, 20);
+
+    QCOMPARE(EntryToggles(fixture), 0);
+}
+
+void Pmdg737Test::entryDoorIsCommandedOnceWhileTheEfbStateIsUnknown()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+
+    Tick(fixture, 20);
+
+    QCOMPARE(EntryToggles(fixture), 1);
+}
+
+void Pmdg737Test::entryDoorRetriesWithCapWhileTheEfbStateDisagrees()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->doorOpen[kFwdEntryKey] = false;
+
+    Tick(fixture, 60);
+
+    QCOMPARE(EntryToggles(fixture), 3);
+}
+
+void Pmdg737Test::entryDoorStopsAsSoonAsTheEfbStateAgrees()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->doorOpen[kFwdEntryKey] = false;
+
+    Tick(fixture, 1);
+    fixture.tablet->doorOpen[kFwdEntryKey] = true;
+    Tick(fixture, 20);
+
+    QCOMPARE(EntryToggles(fixture), 1);
+}
+
+void Pmdg737Test::groundStateIsQueriedWhileTheAircraftRuns()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+
+    Tick(fixture, 9);
+
+    QCOMPARE(fixture.tablet->stateRequests, 3);
 }
 
 void Pmdg737Test::mainCargoIsCommandedOnEdgeBecauseItCannotBeRead()

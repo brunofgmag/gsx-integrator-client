@@ -10,6 +10,7 @@
 #include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
 #include "../pmdg/Pmdg777DataClient.h"
+#include "../pmdg/PmdgRouteFile.h"
 #include "../pmdg/PmdgTabletClient.h"
 #include "../../domain/model/AutomationStatus.h"
 #include "../../domain/model/FlightPlan.h"
@@ -91,6 +92,11 @@ void Pmdg777::OnTick()
     if (data_->HasData())
     {
         smartSwitch_.Subscribe();
+    }
+
+    if (!routeFileSeen_ && status_->flightPlanStatus == FlightPlanStatus::Ready)
+    {
+        routeFileSeen_ = RouteFileMatchesPlan();
     }
 
     if (data_->HasData())
@@ -210,7 +216,19 @@ void Pmdg777::CloseAllDoors()
 bool Pmdg777::IsFlightPlanLoaded() const
 {
     return status_->flightPlanStatus == FlightPlanStatus::Ready
-        && (tablet_->EfbPlanImported() || data_->HasFmcFlightPlan());
+        && (tablet_->EfbPlanImported() || routeFileSeen_ || data_->HasFmcFlightPlan());
+}
+
+bool Pmdg777::RouteFileMatchesPlan() const
+{
+    const std::optional<std::filesystem::path> directory = PmdgRouteFile::DirectoryFor(GetName());
+    if (!directory.has_value())
+    {
+        return false;
+    }
+
+    return PmdgRouteFile::ImportedSince(*directory, status_->plannedOrigin, status_->plannedDestination,
+                                        status_->planGeneratedEpoch);
 }
 
 double Pmdg777::GetPlannedFuelKg() const

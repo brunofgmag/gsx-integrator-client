@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_AUTOMATIONSTATUS_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_AUTOMATIONSTATUS_H
 
+#include <string>
 #include "FlightPlan.h"
 
 struct AutomationStatus
@@ -20,6 +21,9 @@ struct AutomationStatus
     double targetZfwKg = 0.0;
     int targetPassengers = 0;
     FlightPlanStatus flightPlanStatus = FlightPlanStatus::Idle;
+    std::string plannedOrigin;
+    std::string plannedDestination;
+    long long planGeneratedEpoch = 0;
     WeightUnit simbriefUnit = WeightUnit::Kg;
 
     bool operator==(const AutomationStatus&) const = default;

@@ -31,7 +31,6 @@ public:
     [[nodiscard]] virtual bool ParkingBrakeOn() const = 0;
     [[nodiscard]] virtual bool IrsAligned() const = 0;
     [[nodiscard]] virtual double TotalFuelLbs() const = 0;
-    [[nodiscard]] virtual bool DoorOpen(Pmdg737Door door) const = 0;
 
     virtual void ToggleDoor(Pmdg737Door door) = 0;
     virtual void SetInFlight(bool inFlight) = 0;

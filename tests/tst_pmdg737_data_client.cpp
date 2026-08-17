@@ -21,8 +21,6 @@ namespace
         data.FUEL_QtyLeft = 8000.0f;
         data.FUEL_QtyRight = 8000.0f;
         data.FUEL_QtyCenter = 2000.0f;
-        data.DOOR_annunFWD_ENTRY = true;
-        data.DOOR_annunAFT_CARGO = true;
 
         return data;
     }
@@ -47,7 +45,6 @@ private slots:
     static void invalidPacketDoesNotLatchData();
     static void pollNeverTransmitsAnEvent();
     static void doorEventsSkipTheTwoNumbersTheSdkReserves();
-    static void mainCargoHasNoAnnunciatorToReadBack();
     static void groundPowerSeparatesAvailableFromPowered();
 };
 
@@ -100,9 +97,6 @@ void Pmdg737DataClientTest::exposesTypedFields()
     QVERIFY(client.ParkingBrakeOn());
     QVERIFY(client.IrsAligned());
     QCOMPARE(client.TotalFuelLbs(), 18000.0);
-    QVERIFY(client.DoorOpen(Pmdg737Door::FwdEntry));
-    QVERIFY(client.DoorOpen(Pmdg737Door::AftCargo));
-    QVERIFY(!client.DoorOpen(Pmdg737Door::AftEntry));
 }
 
 void Pmdg737DataClientTest::invalidPacketDoesNotLatchData()
@@ -149,12 +143,7 @@ void Pmdg737DataClientTest::doorEventsSkipTheTwoNumbersTheSdkReserves()
 
     client.ToggleDoor(Pmdg737Door::Airstair);
     QVERIFY(MappedEvent("#83649"));
-}
 
-void Pmdg737DataClientTest::mainCargoHasNoAnnunciatorToReadBack()
-{
-    QVERIFY(Pmdg737DataClient::HasAnnunciator(Pmdg737Door::FwdCargo));
-    QVERIFY(!Pmdg737DataClient::HasAnnunciator(Pmdg737Door::MainCargo));
     QCOMPARE(Pmdg737DataClient::DoorEventOffsetFor(Pmdg737Door::MainCargo), 14015u);
 }
 
