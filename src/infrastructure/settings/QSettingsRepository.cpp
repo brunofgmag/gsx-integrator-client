@@ -20,6 +20,7 @@ namespace
     constexpr auto kKeyThemeMode = "ui/themeMode";
     constexpr auto kKeyDarkThemeLegacy = "ui/darkTheme";
     constexpr auto kKeyLanguage = "ui/language";
+    constexpr auto kKeyRenderer = "ui/renderer";
     constexpr auto kKeyWeightUnitMode = "ui/weightUnit";
     constexpr auto kKeyUpdateMode = "updates/mode";
     constexpr auto kKeyCloseToTray = "ui/closeToTray";
@@ -103,6 +104,7 @@ AppSettings QSettingsRepository::Load() const
     result.themeMode = ResolveThemeMode(settings);
 
     result.language = settings.value(kKeyLanguage, "system").toString().toStdString();
+    result.renderer = settings.value(kKeyRenderer, "software").toString().toStdString();
     result.weightUnitMode = settings.value(kKeyWeightUnitMode, 0).toInt();
     result.updateMode = settings.value(kKeyUpdateMode, 1).toInt();
     result.closeToTray = settings.value(kKeyCloseToTray, false).toBool();
@@ -143,6 +145,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyOpenGsxOnRequests, values.openGsxOnRequests);
     settings.setValue(kKeyThemeMode, values.themeMode);
     settings.setValue(kKeyLanguage, QString::fromStdString(values.language));
+    settings.setValue(kKeyRenderer, QString::fromStdString(values.renderer));
     settings.setValue(kKeyWeightUnitMode, values.weightUnitMode);
     settings.setValue(kKeyUpdateMode, values.updateMode);
     settings.setValue(kKeyCloseToTray, values.closeToTray);

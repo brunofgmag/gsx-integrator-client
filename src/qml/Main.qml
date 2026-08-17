@@ -76,7 +76,7 @@ ApplicationWindow {
     }
 
     Behavior on height {
-        enabled: window.heightReady
+        enabled: window.heightReady && window.settingsVm.activeRenderer !== "software"
         NumberAnimation {
             duration: 140
             easing.type: Easing.OutCubic
