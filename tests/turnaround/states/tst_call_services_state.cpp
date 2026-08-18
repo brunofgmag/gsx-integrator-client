@@ -94,7 +94,7 @@ void CallServicesStateTest::callStairsWhenJetwayFailsToComplete()
     f.menuGateway.callStairsResult = true;
     f.menuGateway.callJetwayResult = true;
 
-    for (int tick = 0; tick < 21; ++tick)
+    for (int tick = 0; tick < 61; ++tick)
     {
         ++f.ctx.data.stateTickCount;
         (void)state.Evaluate(f.ctx);
@@ -114,7 +114,7 @@ void CallServicesStateTest::retriesJetwayWhileItStaysAvailable()
     f.gsxService.stairsAvailable = false;
     f.menuGateway.callJetwayResult = true;
 
-    for (int tick = 0; tick < 21; ++tick)
+    for (int tick = 0; tick < 61; ++tick)
     {
         ++f.ctx.data.stateTickCount;
         (void)state.Evaluate(f.ctx);
@@ -166,7 +166,7 @@ void CallServicesStateTest::givesUpAfterTwoAttempts()
     f.gsxService.jetwayAvailable = true;
 
     std::optional<TurnaroundTransition> transition;
-    for (int tick = 0; tick < 120 && !transition; ++tick)
+    for (int tick = 0; tick < 300 && !transition; ++tick)
     {
         ++f.ctx.data.stateTickCount;
         transition = state.Evaluate(f.ctx);

@@ -509,11 +509,15 @@ bool GsxMenuNavigator::TriggerService(const char* serviceId)
     ShowGsxToolbar();
     lastActionMs_ = nowMs_();
 
-    if (state_->menu.shown)
+    const bool closedMenu = state_->menu.shown;
+    if (closedMenu)
     {
         (void)client_->SendCommand("menu.close");
         ClearMenuTracking();
     }
+
+    logger_->LogInfo(std::format("RemoteAPI service.trigger '{}'{}", serviceId,
+                                 closedMenu ? " (closed open menu first)" : ""));
 
     return client_->SendCommand("service.trigger", QJsonObject{{"service", QString::fromLatin1(serviceId)}});
 }
@@ -522,6 +526,7 @@ void GsxMenuNavigator::ShowGsxToolbar() const
 {
     if (settings_->openGsxOnRequests && pluginClient_ != nullptr && !pluginClient_->IsGsxToolbarActive())
     {
+        logger_->LogInfo("RemoteAPI opening the GSX toolbar");
         (void)pluginClient_->OpenGsxToolbar();
     }
 }

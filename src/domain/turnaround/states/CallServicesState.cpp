@@ -7,7 +7,7 @@
 
 namespace
 {
-    constexpr int kRetryTicks = 20;
+    constexpr int kRetryTicks = 60;
     constexpr int kMaxAttempts = 4;
 
     bool CallJetwayOrStairs(const TurnaroundContext& ctx, const bool jetwayAvailable)
