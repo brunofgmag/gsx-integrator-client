@@ -672,3 +672,17 @@ add_custom_command(TARGET gsxi-runtime-integrator-service-tests POST_BUILD
         "$<TARGET_FILE:Qt6::Network>"
         "$<TARGET_FILE_DIR:gsxi-runtime-integrator-service-tests>"
         VERBATIM)
+
+set(GSXI_GUARD_CHECKS
+        check-domain-port-uncalled
+        check-turnaround-data-field-unread
+        check-viewmodel-property-unbound
+        check-infra-gateway-uncalled
+        check-state-predicate-lvar-default)
+
+foreach (GSXI_GUARD_CHECK ${GSXI_GUARD_CHECKS})
+    add_test(NAME ${GSXI_GUARD_CHECK}
+            COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+            -File "${CMAKE_SOURCE_DIR}/tools/${GSXI_GUARD_CHECK}.ps1"
+            "${CMAKE_SOURCE_DIR}")
+endforeach ()
