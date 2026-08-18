@@ -136,7 +136,7 @@ void TfdiMd11::DriveStairsDoor(const char* stairsStateLVar, const char* doorCmdL
 
 void TfdiMd11::OnSlowTick()
 {
-    if (!pendingEfbCommit_)
+    if (!pendingEfbCommit_ || !variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit))
     {
         return;
     }
@@ -154,7 +154,8 @@ void TfdiMd11::SeedTargetsIfNeeded()
         fuelTarget_.seeded = true;
     }
 
-    if (!zfwTarget_.seeded && variableGateway_->HasReceivedAVar(kSimTotalWeight, kKgUnit))
+    if (!zfwTarget_.seeded && variableGateway_->HasReceivedAVar(kSimTotalWeight, kKgUnit)
+        && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit))
     {
         zfwTarget_.target = std::max(GetCurrentZfwKg(), GetEmptyZfwKg());
         zfwTarget_.seeded = true;
@@ -211,6 +212,11 @@ void TfdiMd11::UpdateTarget(EfbTarget& efbTarget, const double valueKg)
 
 double TfdiMd11::GetCurrentZfwKg() const
 {
+    if (!variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit))
+    {
+        return 0.0;
+    }
+
     const double totalWeightKg =
         variableGateway_->GetAVar(kSimTotalWeight, kKgUnit, GetEmptyZfwKg());
 

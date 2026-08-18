@@ -209,6 +209,11 @@ double TolissA340::GetCurrentFuelKg() const
 
 double TolissA340::GetCurrentZfwKg() const
 {
+    if (!variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit))
+    {
+        return 0.0;
+    }
+
     const double totalWeightKg =
         variableGateway_->GetAVar(kSimTotalWeight, kKgUnit, GetEmptyZfwKg());
 

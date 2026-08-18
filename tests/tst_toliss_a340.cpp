@@ -63,6 +63,7 @@ private slots:
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
+    static void currentZfwHoldsAtZeroUntilEmptyWeightArrives();
     static void emptyZfwReadsSimEmptyWeight();
     static void plannedValuesComeFromSession();
     static void flightPlanLoadedWhenSessionReady();
@@ -149,6 +150,22 @@ void TolissA340Test::currentZfwDoesNotDropBelowEmptyWeight()
     gateway.avars[kSimFuelTotalKg] = 40000.0;
 
     QCOMPARE(aircraft.GetCurrentZfwKg(), kEmptyWeightKg);
+}
+
+void TolissA340Test::currentZfwHoldsAtZeroUntilEmptyWeightArrives()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TolissA340 aircraft(&gateway, &status, false);
+
+    gateway.avars[kSimTotalWeight] = 260000.0;
+    gateway.avars[kSimFuelTotalKg] = 40000.0;
+
+    QCOMPARE(aircraft.GetCurrentZfwKg(), 0.0);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
+
+    QCOMPARE(aircraft.GetCurrentZfwKg(), 220000.0);
 }
 
 void TolissA340Test::emptyZfwReadsSimEmptyWeight()
