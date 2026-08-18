@@ -111,9 +111,10 @@ void Pmdg737::OnTick()
         tablet_->RequestState();
     }
 
-    if (!routeFileSeen_ && status_->flightPlanStatus == FlightPlanStatus::Ready)
+    if (status_->flightPlanStatus == FlightPlanStatus::Ready)
     {
-        routeFileSeen_ = RouteFileMatchesPlan();
+        routeImport_.Observe(PmdgRouteFile::DirectoryFor(GetName()), status_->plannedOrigin,
+                             status_->plannedDestination, status_->planGeneratedEpoch);
     }
 
     if (data_->HasData())
@@ -123,18 +124,6 @@ void Pmdg737::OnTick()
         ReconcileGroundConn();
         TrimZfw();
     }
-}
-
-bool Pmdg737::RouteFileMatchesPlan() const
-{
-    const std::optional<std::filesystem::path> directory = PmdgRouteFile::DirectoryFor(GetName());
-    if (!directory.has_value())
-    {
-        return false;
-    }
-
-    return PmdgRouteFile::ImportedSince(*directory, status_->plannedOrigin, status_->plannedDestination,
-                                        status_->planGeneratedEpoch);
 }
 
 void Pmdg737::SyncDoors()
@@ -266,7 +255,7 @@ void Pmdg737::CloseAllDoors()
 bool Pmdg737::IsFlightPlanLoaded() const
 {
     return status_->flightPlanStatus == FlightPlanStatus::Ready
-        && (tablet_->EfbPlanImported() || routeFileSeen_);
+        && (tablet_->EfbPlanImported() || routeImport_.Seen());
 }
 
 double Pmdg737::GetPlannedFuelKg() const

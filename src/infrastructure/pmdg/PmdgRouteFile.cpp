@@ -63,17 +63,17 @@ bool PmdgRouteFile::NamesPlan(const std::filesystem::path& file,
     return Lowered(file.stem().string()).starts_with(Lowered(origin + destination));
 }
 
-bool PmdgRouteFile::ImportedSince(const std::filesystem::path& directory,
-                                  const std::string& origin,
-                                  const std::string& destination,
-                                  const long long epochSeconds)
+long long PmdgRouteFile::LatestWrite(const std::filesystem::path& directory,
+                                     const std::string& origin,
+                                     const std::string& destination)
 {
     std::error_code error;
     if (!std::filesystem::is_directory(directory, error))
     {
-        return false;
+        return 0;
     }
 
+    long long latest = 0;
     for (const auto& entry : std::filesystem::directory_iterator(directory, error))
     {
         if (!entry.is_regular_file() || !NamesPlan(entry.path(), origin, destination))
@@ -81,11 +81,36 @@ bool PmdgRouteFile::ImportedSince(const std::filesystem::path& directory,
             continue;
         }
 
-        if (EpochSecondsOf(entry) >= epochSeconds)
-        {
-            return true;
-        }
+        latest = std::max(latest, EpochSecondsOf(entry));
     }
 
-    return false;
+    return latest;
+}
+
+void PmdgRouteImport::Observe(const std::optional<std::filesystem::path>& directory,
+                              const std::string& origin,
+                              const std::string& destination,
+                              const long long planEpoch)
+{
+    if (planEpoch != planEpoch_)
+    {
+        planEpoch_ = planEpoch;
+        baseline_.reset();
+        seen_ = false;
+    }
+
+    if (seen_ || !directory.has_value())
+    {
+        return;
+    }
+
+    const long long latest = PmdgRouteFile::LatestWrite(*directory, origin, destination);
+    if (!baseline_.has_value())
+    {
+        baseline_ = latest;
+
+        return;
+    }
+
+    seen_ = latest > *baseline_;
 }

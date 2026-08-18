@@ -6,6 +6,7 @@
 #include <optional>
 #include "SmartSwitch.h"
 #include "../gsx/GsxDoorSync.h"
+#include "../pmdg/PmdgRouteFile.h"
 #include "../pmdg/Pmdg777DataGateway.h"
 #include "../pmdg/PmdgTabletGateway.h"
 #include "../../domain/ports/Aircraft.h"
@@ -92,7 +93,7 @@ private:
     double lastRequestedZfwKg_ = 0.0;
     int zfwSettledTicks_ = 0;
     int zfwTrims_ = 0;
-    bool routeFileSeen_ = false;
+    PmdgRouteImport routeImport_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777_H

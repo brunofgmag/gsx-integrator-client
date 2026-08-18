@@ -6,6 +6,7 @@
 #include <optional>
 #include "SmartSwitch.h"
 #include "../gsx/GsxDoorSync.h"
+#include "../pmdg/PmdgRouteFile.h"
 #include "../pmdg/Pmdg737DataGateway.h"
 #include "../pmdg/PmdgTabletGateway.h"
 #include "../../domain/ports/Aircraft.h"
@@ -69,7 +70,6 @@ private:
     void SetDesiredDoor(GsxDoor door, bool open);
     void ReconcileDoors();
     [[nodiscard]] std::optional<bool> DoorIsOpen(Pmdg737Door door) const;
-    [[nodiscard]] bool RouteFileMatchesPlan() const;
     void ReconcileGroundConn();
     void TrimZfw();
     [[nodiscard]] bool ChocksSet() const;
@@ -91,7 +91,7 @@ private:
     int ticksSinceChocksRequest_ = 0;
     int ticksSinceGroundPowerRequest_ = 0;
     int ticksSinceStateQuery_ = 0;
-    bool routeFileSeen_ = false;
+    PmdgRouteImport routeImport_;
     SmartSwitch smartSwitch_;
     int lastSentFuelLbs_ = -1;
     int lastSentPax_ = -1;

@@ -23,6 +23,13 @@ namespace
         file.close();
     }
 
+    void Restamp(const QTemporaryDir& dir, const QString& name, const long long epochSeconds)
+    {
+        const std::filesystem::path file(dir.filePath(name).toStdWString());
+        const auto stamp = std::chrono::system_clock::time_point(std::chrono::seconds(epochSeconds));
+        std::filesystem::last_write_time(file, std::chrono::clock_cast<std::chrono::file_clock>(stamp));
+    }
+
     std::filesystem::path PathOf(const QTemporaryDir& dir)
     {
         return std::filesystem::path(dir.path().toStdWString());
@@ -38,9 +45,11 @@ private slots:
     static void unknownAircraftHasNoDirectory();
     static void acceptsThePlainAndTheNumberedNames();
     static void rejectsAnotherPairAndAnotherExtension();
-    static void findsTheRouteWrittenAfterThePlan();
-    static void ignoresARouteOlderThanThePlan();
-    static void missingDirectoryIsNotAnImport();
+    static void reportsTheNewestMatchingWrite();
+    static void missingDirectoryHasNoWrite();
+    static void ignoresARouteThatWasAlreadyThere();
+    static void seesARouteWrittenAfterTheBaseline();
+    static void rearmsWhenThePlanChanges();
 };
 
 void PmdgRouteFileTest::directorySitsBesideTheOptionsFile()
@@ -73,28 +82,76 @@ void PmdgRouteFileTest::rejectsAnotherPairAndAnotherExtension()
     QVERIFY(!PmdgRouteFile::NamesPlan("SBFZSBTE.rte", "", "SBTE"));
 }
 
-void PmdgRouteFileTest::findsTheRouteWrittenAfterThePlan()
+void PmdgRouteFileTest::reportsTheNewestMatchingWrite()
 {
     const QTemporaryDir dir;
     WriteFile(dir, "SBFZSBTE.rte");
+    Restamp(dir, "SBFZSBTE.rte", NowEpoch() - 600);
+    WriteFile(dir, "SBFZSBTE01.rte");
+    Restamp(dir, "SBFZSBTE01.rte", NowEpoch() - 60);
 
-    QVERIFY(PmdgRouteFile::ImportedSince(PathOf(dir), "SBFZ", "SBTE", NowEpoch() - 60));
-    QVERIFY(!PmdgRouteFile::ImportedSince(PathOf(dir), "SBGR", "SBSP", NowEpoch() - 60));
+    QCOMPARE(PmdgRouteFile::LatestWrite(PathOf(dir), "SBFZ", "SBTE"), NowEpoch() - 60);
+    QCOMPARE(PmdgRouteFile::LatestWrite(PathOf(dir), "SBGR", "SBSP"), 0LL);
 }
 
-void PmdgRouteFileTest::ignoresARouteOlderThanThePlan()
+void PmdgRouteFileTest::missingDirectoryHasNoWrite()
+{
+    const QTemporaryDir dir;
+
+    QCOMPARE(PmdgRouteFile::LatestWrite(PathOf(dir) / "Flightplans", "SBFZ", "SBTE"), 0LL);
+}
+
+void PmdgRouteFileTest::ignoresARouteThatWasAlreadyThere()
 {
     const QTemporaryDir dir;
     WriteFile(dir, "SBFZSBTE.rte");
+    Restamp(dir, "SBFZSBTE.rte", NowEpoch() - 60);
 
-    QVERIFY(!PmdgRouteFile::ImportedSince(PathOf(dir), "SBFZ", "SBTE", NowEpoch() + 3600));
+    PmdgRouteImport watch;
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 1000);
+
+    QVERIFY(!watch.Seen());
+
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 1000);
+
+    QVERIFY(!watch.Seen());
 }
 
-void PmdgRouteFileTest::missingDirectoryIsNotAnImport()
+void PmdgRouteFileTest::seesARouteWrittenAfterTheBaseline()
 {
     const QTemporaryDir dir;
+    WriteFile(dir, "SBFZSBTE.rte");
+    Restamp(dir, "SBFZSBTE.rte", NowEpoch() - 60);
 
-    QVERIFY(!PmdgRouteFile::ImportedSince(PathOf(dir) / "Flightplans", "SBFZ", "SBTE", 0));
+    PmdgRouteImport watch;
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 1000);
+
+    Restamp(dir, "SBFZSBTE.rte", NowEpoch());
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 1000);
+
+    QVERIFY(watch.Seen());
+}
+
+void PmdgRouteFileTest::rearmsWhenThePlanChanges()
+{
+    const QTemporaryDir dir;
+    WriteFile(dir, "SBFZSBTE.rte");
+    Restamp(dir, "SBFZSBTE.rte", NowEpoch() - 60);
+
+    PmdgRouteImport watch;
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 1000);
+    Restamp(dir, "SBFZSBTE.rte", NowEpoch());
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 1000);
+
+    QVERIFY(watch.Seen());
+
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 2000);
+
+    QVERIFY(!watch.Seen());
+
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 2000);
+
+    QVERIFY(!watch.Seen());
 }
 
 QTEST_APPLESS_MAIN(PmdgRouteFileTest)

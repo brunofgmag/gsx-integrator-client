@@ -94,9 +94,10 @@ void Pmdg777::OnTick()
         smartSwitch_.Subscribe();
     }
 
-    if (!routeFileSeen_ && status_->flightPlanStatus == FlightPlanStatus::Ready)
+    if (status_->flightPlanStatus == FlightPlanStatus::Ready)
     {
-        routeFileSeen_ = RouteFileMatchesPlan();
+        routeImport_.Observe(PmdgRouteFile::DirectoryFor(GetName()), status_->plannedOrigin,
+                             status_->plannedDestination, status_->planGeneratedEpoch);
     }
 
     if (data_->HasData())
@@ -216,19 +217,7 @@ void Pmdg777::CloseAllDoors()
 bool Pmdg777::IsFlightPlanLoaded() const
 {
     return status_->flightPlanStatus == FlightPlanStatus::Ready
-        && (tablet_->EfbPlanImported() || routeFileSeen_ || data_->HasFmcFlightPlan());
-}
-
-bool Pmdg777::RouteFileMatchesPlan() const
-{
-    const std::optional<std::filesystem::path> directory = PmdgRouteFile::DirectoryFor(GetName());
-    if (!directory.has_value())
-    {
-        return false;
-    }
-
-    return PmdgRouteFile::ImportedSince(*directory, status_->plannedOrigin, status_->plannedDestination,
-                                        status_->planGeneratedEpoch);
+        && (tablet_->EfbPlanImported() || routeImport_.Seen() || data_->HasFmcFlightPlan());
 }
 
 double Pmdg777::GetPlannedFuelKg() const
