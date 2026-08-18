@@ -507,6 +507,7 @@ void IFly737MaxTest::reportsLoadMethods()
     QVERIFY(aircraft.GetRefuelMethod() == RefuelBy::Gsx);
     QVERIFY(aircraft.GetBoardMethod() == BoardBy::Client);
     QVERIFY(aircraft.SupportsStairsOrJetways());
+    QVERIFY(aircraft.RequiresEfbFlightPlan());
 }
 
 void IFly737MaxTest::closesEachCargoDoorAsItsLoaderFinishes()

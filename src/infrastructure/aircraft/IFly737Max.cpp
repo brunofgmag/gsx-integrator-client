@@ -74,6 +74,11 @@ void IFly737Max::OnTick()
     CloseCargoDoorsAfterUnloading();
 }
 
+void IFly737Max::OnSlowTick()
+{
+    planImport_.Observe(IFlyPlanFile::DirectoryFor(), status_->planGeneratedEpoch);
+}
+
 void IFly737Max::CloseCargoDoorsAfterUnloading()
 {
     const double deboarding = variableGateway_->GetLVar(gsx::lvars::kDeboardingState, 0.0);
@@ -246,7 +251,8 @@ bool IFly737Max::IsCargoVariant() const
 
 bool IFly737Max::IsFlightPlanLoaded() const
 {
-    return status_->flightPlanStatus == FlightPlanStatus::Ready;
+    return status_->flightPlanStatus == FlightPlanStatus::Ready
+        && (planImport_.Seen() || planImport_.Blind());
 }
 
 double IFly737Max::GetPlannedFuelKg() const

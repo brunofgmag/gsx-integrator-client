@@ -97,6 +97,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/ifly/IFlyPlanFile.cpp
+        src/infrastructure/ifly/IFlyPlanFile.h
         src/infrastructure/aircraft/Pmdg737.cpp
         src/infrastructure/aircraft/Pmdg737.h
         src/infrastructure/aircraft/Pmdg777.cpp

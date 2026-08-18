@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_IFLY737MAX_H
 
 #include "SmartSwitch.h"
+#include "../ifly/IFlyPlanFile.h"
 #include "../../domain/ports/Aircraft.h"
 
 class VariableGateway;
@@ -16,6 +17,7 @@ public:
     [[nodiscard]] bool IsCargoVariant() const override;
 
     void OnTick() override;
+    void OnSlowTick() override;
     void OnLoadingStarted() override {}
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -29,6 +31,7 @@ public:
     void SetCurrentZfwKg(double zfwKg) override;
 
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
+    [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
     [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Gsx; }
     [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Client; }
@@ -71,6 +74,7 @@ private:
     const AutomationStatus* status_;
 
     SmartSwitch smartSwitch_;
+    IFlyPlanImport planImport_;
     double lastZfwKg_ = -1.0;
 
     CargoDoorCloser fwdCargoDoor_;

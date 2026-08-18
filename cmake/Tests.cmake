@@ -274,7 +274,18 @@ gsxi_add_qt_test(gsxi-ifly-737max-tests ifly-737max
         src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
+        src/infrastructure/ifly/IFlyPlanFile.cpp
+        src/infrastructure/ifly/IFlyPlanFile.h
+        src/infrastructure/simbrief/SimbriefOfpParser.cpp
+        src/infrastructure/simbrief/SimbriefOfpParser.h
         src/domain/model/AutomationStatus.h)
+
+gsxi_add_qt_test(gsxi-ifly-plan-file-tests ifly-plan-file
+        tests/tst_ifly_plan_file.cpp
+        src/infrastructure/ifly/IFlyPlanFile.cpp
+        src/infrastructure/ifly/IFlyPlanFile.h
+        src/infrastructure/simbrief/SimbriefOfpParser.cpp
+        src/infrastructure/simbrief/SimbriefOfpParser.h)
 
 gsxi_add_qt_test(gsxi-gsx-aircraft-profile-tests gsx-aircraft-profile
         tests/tst_gsx_aircraft_profile.cpp
@@ -491,6 +502,10 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/ifly/IFlyPlanFile.cpp
+        src/infrastructure/ifly/IFlyPlanFile.h
+        src/infrastructure/simbrief/SimbriefOfpParser.cpp
+        src/infrastructure/simbrief/SimbriefOfpParser.h
         src/infrastructure/aircraft/Pmdg737.cpp
         src/infrastructure/aircraft/Pmdg737.h
         src/infrastructure/aircraft/Pmdg777.cpp
@@ -594,6 +609,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/ifly/IFlyPlanFile.cpp
+        src/infrastructure/ifly/IFlyPlanFile.h
         src/infrastructure/aircraft/Pmdg777.cpp
         src/infrastructure/aircraft/Pmdg777.h
         src/infrastructure/aircraft/SmartSwitch.cpp

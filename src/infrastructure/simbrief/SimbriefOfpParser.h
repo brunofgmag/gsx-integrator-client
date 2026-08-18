@@ -6,5 +6,6 @@
 #include "../../domain/model/FlightPlan.h"
 
 [[nodiscard]] std::optional<FlightPlan> ParseSimbriefOfp(std::string_view xml);
+[[nodiscard]] long long ParseSimbriefPlanEpoch(std::string_view xml);
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_SIMBRIEFOFPPARSER_H
