@@ -96,7 +96,7 @@ void TfdiMd11::UpdateCargoDoors()
 void TfdiMd11::DriveLoaderDoor(const char* loaderStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const
 {
     const double loaderState = variableGateway_->GetLVar(loaderStateLVar, 0.0);
-    const double doorTarget = gsx::states::IsLoaderPresent(loaderState) ? kDoorOpen : kDoorClosed;
+    const double doorTarget = gsx::states::IsLoaderAtDoor(loaderState) ? kDoorOpen : kDoorClosed;
 
     if (doorTarget != lastDoorTarget)
     {

@@ -148,7 +148,7 @@ void Pmdg737::SyncDoors()
 
     if (IsCargoVariant())
     {
-        const bool mainLoaderPresent = gsx::states::IsLoaderPresent(
+        const bool mainLoaderPresent = gsx::states::IsLoaderAtDoor(
             variableGateway_->GetLVar(gsx::lvars::kBaggageLoaderMainState, 0.0));
         desiredDoor_[static_cast<std::size_t>(Pmdg737Door::MainCargo)] = mainLoaderPresent ? 1 : 0;
     }

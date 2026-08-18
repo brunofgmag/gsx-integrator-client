@@ -615,13 +615,11 @@ void TfdiMd11Test::cargoDoorsOpenPerLoaderAndCloseWhenDone()
     const int callsAfterOpen = gateway.setLVarCalls;
     gateway.lvars[kGsxLoaderFront] = 9.0;
     aircraft.OnTick();
-    gateway.lvars[kGsxLoaderFront] = 4.0;
-    aircraft.OnTick();
 
     QCOMPARE(gateway.setLVarCalls, callsAfterOpen);
     QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
 
-    gateway.lvars[kGsxLoaderFront] = 1.0;
+    gateway.lvars[kGsxLoaderFront] = 4.0;
     aircraft.OnTick();
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);

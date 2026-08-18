@@ -65,6 +65,7 @@ private slots:
     static void entryDoorIsCommandedOnceWhileTheEfbStateIsUnknown();
     static void entryDoorRetriesWithCapWhileTheEfbStateDisagrees();
     static void entryDoorStopsAsSoonAsTheEfbStateAgrees();
+    static void mainCargoDoorClosesWhenTheLoaderLeavesThePosition();
     static void groundStateIsQueriedWhileTheAircraftRuns();
     static void mainCargoIsCommandedOnEdgeBecauseItCannotBeRead();
     static void paxVariantNeverTouchesMainCargo();
@@ -294,6 +295,28 @@ void Pmdg737Test::entryDoorStopsAsSoonAsTheEfbStateAgrees()
     Tick(fixture, 20);
 
     QCOMPARE(EntryToggles(fixture), 1);
+}
+
+void Pmdg737Test::mainCargoDoorClosesWhenTheLoaderLeavesThePosition()
+{
+    Pmdg737Fixture fixture(Pmdg737Variant::Bcf800);
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+
+    const auto mainToggles = [&fixture] {
+        return static_cast<int>(std::ranges::count(fixture.data->toggledDoors, Pmdg737Door::MainCargo));
+    };
+
+    fixture.gateway.lvars[gsx::lvars::kBaggageLoaderMainState] = gsx::states::kLoaderLoading;
+    Tick(fixture, 10);
+
+    QCOMPARE(mainToggles(), 1);
+
+    fixture.gateway.lvars[gsx::lvars::kBaggageLoaderMainState] = gsx::states::kLoaderRetracting;
+    Tick(fixture, 10);
+
+    QCOMPARE(mainToggles(), 2);
 }
 
 void Pmdg737Test::groundStateIsQueriedWhileTheAircraftRuns()
