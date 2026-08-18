@@ -29,6 +29,8 @@ namespace
     constexpr double kPassengerWeightKg = 84.0;
 
     constexpr int kMainDeckCargoDoor = 12;
+    constexpr int kDoorRetryTicks = 5;
+    constexpr int kDoorMaxAttempts = 2;
     constexpr int kGroundConnRetryTicks = 5;
     constexpr int kGroundConnMaxAttempts = 10;
     constexpr int kZfwSettleTicks = 5;
@@ -59,6 +61,7 @@ Pmdg777::Pmdg777(VariableGateway* variableGateway,
                    [](double, const double max) { return max >= kSmartSwitchPressed; })
 {
     desiredDoor_.fill(-1);
+    commandedDoor_.fill(-1);
     openedDoorIndex_.fill(-1);
     LOG_INFO("Profile loaded: %s", GetName());
 }
@@ -140,7 +143,7 @@ void Pmdg777::SetDesiredDoor(const GsxDoor door, const bool open)
     openedIndex = open ? index : -1;
 }
 
-void Pmdg777::ReconcileDoors() const
+void Pmdg777::ReconcileDoors()
 {
     for (std::size_t i = 0; i < desiredDoor_.size(); ++i)
     {
@@ -155,9 +158,35 @@ void Pmdg777::ReconcileDoors() const
             continue;
         }
 
+        const bool wantOpen = desiredDoor_[i] == 1;
         const bool isOpen = state == kDoorStateOpen;
-        if (isOpen != (desiredDoor_[i] == 1))
+
+        if (commandedDoor_[i] != desiredDoor_[i])
         {
+            commandedDoor_[i] = desiredDoor_[i];
+            ticksSinceDoorCommand_[i] = 0;
+            doorAttempts_[i] = 0;
+
+            if (isOpen != wantOpen)
+            {
+                data_->ToggleDoor(static_cast<int>(i));
+            }
+
+            continue;
+        }
+
+        if (isOpen == wantOpen)
+        {
+            doorAttempts_[i] = 0;
+
+            continue;
+        }
+
+        ++ticksSinceDoorCommand_[i];
+        if (ticksSinceDoorCommand_[i] >= kDoorRetryTicks && doorAttempts_[i] < kDoorMaxAttempts)
+        {
+            ticksSinceDoorCommand_[i] = 0;
+            ++doorAttempts_[i];
             data_->ToggleDoor(static_cast<int>(i));
         }
     }

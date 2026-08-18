@@ -66,8 +66,7 @@ public:
 private:
     void SyncDoors();
     void SetDesiredDoor(GsxDoor door, bool open);
-    void ReconcileDoors() const;
-    [[nodiscard]] bool RouteFileMatchesPlan() const;
+    void ReconcileDoors();
     void ReconcileGroundConn();
     void TrimZfw();
     [[nodiscard]] int DoorIndexFor(GsxDoor door) const;
@@ -79,6 +78,9 @@ private:
     std::unique_ptr<PmdgTabletGateway> tablet_;
     GsxDoorSync doors_;
     std::array<int, 16> desiredDoor_{};
+    std::array<int, 16> commandedDoor_{};
+    std::array<int, 16> ticksSinceDoorCommand_{};
+    std::array<int, 16> doorAttempts_{};
     std::array<int, static_cast<std::size_t>(GsxDoor::Count)> openedDoorIndex_{};
     std::optional<bool> desiredChocks_;
     std::optional<bool> desiredGroundPower_;

@@ -90,6 +90,7 @@ private slots:
     static void doorsTakeOverGsxDoorAutomation();
     static void doorsSkipTogglesWhileMoving();
     static void doorsHoldBeforeClientData();
+    static void doorThatIgnoresTheCommandStopsAfterTwoRetries();
     static void closeAllDoorsTogglesOpenMappedDoors();
     static void chocksReconcileWithRetryCap();
     static void zfwTrimsCargoAgainstActualWeight();
@@ -532,6 +533,24 @@ void Pmdg777Test::doorsHoldBeforeClientData()
     fixture.aircraft->OnTick();
 
     QVERIFY(fixture.data->toggledDoors.empty());
+}
+
+void Pmdg777Test::doorThatIgnoresTheCommandStopsAfterTwoRetries()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    fixture.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        fixture.aircraft->OnTick();
+    }
+
+    const auto toggles = std::ranges::count(fixture.data->toggledDoors, 12);
+
+    QCOMPARE(toggles, 3);
 }
 
 void Pmdg777Test::closeAllDoorsTogglesOpenMappedDoors()
