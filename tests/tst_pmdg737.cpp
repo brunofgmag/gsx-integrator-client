@@ -74,6 +74,7 @@ private slots:
     static void groundPowerRequestStopsWhenAvailable();
     static void setFuelSendsRoundedLbsOnce();
     static void cargoVariantSendsNoPassengers();
+    static void progressiveWriterDoesNotUndoTheTrim();
 };
 
 void Pmdg737Test::nameAndCargoFlagFollowTheVariant()
@@ -473,6 +474,40 @@ void Pmdg737Test::cargoVariantSendsNoPassengers()
 
     QVERIFY(fixture.tablet->paxSends.empty());
     QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(1));
+}
+
+void Pmdg737Test::progressiveWriterDoesNotUndoTheTrim()
+{
+    Pmdg737Fixture fixture(Pmdg737Variant::Bcf800);
+
+    fixture.data->hasData = true;
+    fixture.gateway.avars["EMPTY WEIGHT"] = 40000.0;
+    fixture.gateway.avars["TOTAL WEIGHT"] = 61200.0;
+    fixture.gateway.avars["FUEL TOTAL QUANTITY WEIGHT"] = 0.0;
+    fixture.status.plannedZfwKg = 60000.0;
+
+    fixture.aircraft->SetCurrentZfwKg(60000.0);
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(1));
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        fixture.aircraft->SetCurrentZfwKg(60000.0);
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
+
+    const int trimmedCargo = fixture.tablet->cargoSends[1];
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        fixture.aircraft->SetCurrentZfwKg(60000.0);
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
+    QCOMPARE(fixture.tablet->cargoSends.back(), trimmedCargo);
 }
 
 QTEST_APPLESS_MAIN(Pmdg737Test)

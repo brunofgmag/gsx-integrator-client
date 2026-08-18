@@ -94,6 +94,7 @@ private slots:
     static void closeAllDoorsTogglesOpenMappedDoors();
     static void chocksReconcileWithRetryCap();
     static void zfwTrimsCargoAgainstActualWeight();
+    static void progressiveWriterDoesNotUndoTheTrim();
     static void jetwayDoorClosesAtItsOpenedIndex();
     static void aftCateringDoorOpensFiveRightOnlyOn300();
     static void groundPowerConnectFlow();
@@ -689,6 +690,39 @@ void Pmdg777Test::zfwTrimsCargoAgainstActualWeight()
         fixture.aircraft->OnTick();
     }
     QVERIFY(fixture.tablet->cargoSends.size() <= static_cast<std::size_t>(6));
+}
+
+void Pmdg777Test::progressiveWriterDoesNotUndoTheTrim()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Er300);
+
+    fixture.data->hasData = true;
+    fixture.SeedWeights(160000.0, 200000.0, 300);
+    fixture.gateway.avars["FUEL TOTAL QUANTITY WEIGHT"] = 0.0;
+    fixture.gateway.avars["TOTAL WEIGHT"] = 201200.0;
+
+    fixture.aircraft->SetCurrentZfwKg(200000.0);
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(1));
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        fixture.aircraft->SetCurrentZfwKg(200000.0);
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
+
+    const int trimmedCargo = fixture.tablet->cargoSends[1];
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        fixture.aircraft->SetCurrentZfwKg(200000.0);
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
+    QCOMPARE(fixture.tablet->cargoSends.back(), trimmedCargo);
 }
 
 void Pmdg777Test::jetwayDoorClosesAtItsOpenedIndex()

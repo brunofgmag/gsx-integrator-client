@@ -92,6 +92,7 @@ private:
     int lastSentFuelLbs_ = -1;
     int lastSentPax_ = -1;
     int lastSentCargoLbs_ = -1;
+    int lastProgressiveCargoLbs_ = -1;
     double lastRequestedZfwKg_ = 0.0;
     int zfwSettledTicks_ = 0;
     int zfwTrims_ = 0;

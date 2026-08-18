@@ -226,6 +226,7 @@ void Pmdg777::OnLoadingStarted()
     lastSentFuelLbs_ = -1;
     lastSentPax_ = -1;
     lastSentCargoLbs_ = -1;
+    lastProgressiveCargoLbs_ = -1;
     lastRequestedZfwKg_ = 0.0;
     zfwSettledTicks_ = 0;
     zfwTrims_ = 0;
@@ -330,8 +331,9 @@ void Pmdg777::SetCurrentZfwKg(const double zfwKg)
     }
 
     const int cargoLbs = static_cast<int>(std::lround(progress * plannedCargoKg * kLbsPerKg));
-    if (cargoLbs != lastSentCargoLbs_)
+    if (cargoLbs != lastProgressiveCargoLbs_)
     {
+        lastProgressiveCargoLbs_ = cargoLbs;
         lastSentCargoLbs_ = cargoLbs;
         tablet_->SendCargoTotalLbs(cargoLbs);
     }
