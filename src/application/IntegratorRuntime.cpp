@@ -347,9 +347,9 @@ void IntegratorRuntime::ResolveAircraft()
     if (aircraft_)
     {
         status_.aircraftSupported = true;
-        gsxProfile_.roots = GsxAircraftProfile::ProfileRootsFor(aircraft_->GetName());
-        gsxProfile_.flagsMissing = GsxAircraftProfile::FlagsMissingProfile(aircraft_->GetName());
-        pmdgOptions_.ini = PmdgOptions::PathFor(aircraft_->GetName()).value_or(std::filesystem::path{});
+        gsxProfile_.roots = GsxAircraftProfile::ProfileRootsFor(aircraftDescriptor_->name);
+        gsxProfile_.flagsMissing = GsxAircraftProfile::FlagsMissingProfile(aircraftDescriptor_->name);
+        pmdgOptions_.ini = PmdgOptions::PathFor(aircraftDescriptor_->name).value_or(std::filesystem::path{});
         CheckGsxProfile();
         CheckPmdgOptions();
         emit Updated();
@@ -529,7 +529,7 @@ bool IntegratorRuntime::IsSessionReady()
 
 QString IntegratorRuntime::GetAircraftName() const
 {
-    return aircraft_ ? QString::fromUtf8(aircraft_->GetName()) : QString();
+    return aircraftDescriptor_ ? QString::fromUtf8(aircraftDescriptor_->name) : QString();
 }
 
 std::string IntegratorRuntime::GetAircraftProfileId() const

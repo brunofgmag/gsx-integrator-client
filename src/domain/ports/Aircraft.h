@@ -14,7 +14,6 @@ class Aircraft
 public:
     virtual ~Aircraft() = default;
 
-    [[nodiscard]] virtual const char* GetName() const = 0;
     [[nodiscard]] virtual bool IsCargoVariant() const = 0;
 
     virtual void OnTick() {}

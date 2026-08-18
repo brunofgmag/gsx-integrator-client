@@ -15,17 +15,13 @@ public:
     void Poll() override;
     [[nodiscard]] bool HasData() const override;
 
-    [[nodiscard]] int AircraftModel() const override;
     [[nodiscard]] bool ExtPowerConnected() const override;
     [[nodiscard]] bool ExtPowerAvailable() const override;
     [[nodiscard]] bool BeaconOn() const override;
     [[nodiscard]] bool ParkingBrakeOn() const override;
     [[nodiscard]] bool ApuRunning() const override;
     [[nodiscard]] bool WheelChocksSet() const override;
-    [[nodiscard]] bool GroundConnAvailable() const override;
-    [[nodiscard]] bool IrsAligned() const override;
     [[nodiscard]] bool HasFmcFlightPlan() const override;
-    [[nodiscard]] double TotalFuelLbs() const override;
     [[nodiscard]] int DoorState(int index) const override;
 
     void ToggleDoor(int index) override;

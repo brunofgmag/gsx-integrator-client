@@ -36,7 +36,6 @@ public:
     int consumeSmartSwitchCalls = 0;
     int onLoadingStartedCalls = 0;
 
-    [[nodiscard]] const char* GetName() const override { return "Fake Aircraft"; }
     [[nodiscard]] bool IsCargoVariant() const override { return cargo; }
 
     void OnLoadingStarted() override

@@ -28,7 +28,7 @@ public:
             std::unique_ptr<Pmdg777DataGateway> data, std::unique_ptr<PmdgTabletGateway> tablet);
 
 
-    [[nodiscard]] const char* GetName() const override;
+    [[nodiscard]] const char* GetName() const;
     [[nodiscard]] bool IsCargoVariant() const override;
 
     void OnTick() override;

@@ -189,7 +189,6 @@ int main(int argc, char* argv[])
                 "https://api.github.com/repos/brunofgmag/gsx-integrator-commbus/releases/latest")),
         QGuiApplication::applicationVersion());
     UpdateViewModel updateViewModel(&updateService,
-                                    QGuiApplication::applicationVersion(),
                                     startupSettings.updateMode,
                                     UpdatesEnabled());
 

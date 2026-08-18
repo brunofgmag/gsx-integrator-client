@@ -100,11 +100,6 @@ bool Pmdg737DataClient::HasData() const
     return hasData_;
 }
 
-int Pmdg737DataClient::AircraftModel() const
-{
-    return hasData_ ? static_cast<int>(data_.AircraftModel) : 0;
-}
-
 bool Pmdg737DataClient::GroundPowerAvailable() const
 {
     return hasData_ && data_.ELEC_annunGRD_POWER_AVAILABLE;
@@ -115,11 +110,6 @@ bool Pmdg737DataClient::AnyMainBusPowered() const
     return hasData_ && (data_.ELEC_BusPowered[kAcMain1Bus] || data_.ELEC_BusPowered[kAcMain2Bus]);
 }
 
-bool Pmdg737DataClient::GroundConnAvailable() const
-{
-    return hasData_ && data_.GroundConnAvailable;
-}
-
 bool Pmdg737DataClient::BeaconOn() const
 {
     return hasData_ && data_.LTS_AntiCollisionSw;
@@ -128,21 +118,6 @@ bool Pmdg737DataClient::BeaconOn() const
 bool Pmdg737DataClient::ParkingBrakeOn() const
 {
     return hasData_ && data_.PED_annunParkingBrake;
-}
-
-bool Pmdg737DataClient::IrsAligned() const
-{
-    return hasData_ && data_.IRS_aligned;
-}
-
-double Pmdg737DataClient::TotalFuelLbs() const
-{
-    if (!hasData_)
-    {
-        return 0.0;
-    }
-
-    return static_cast<double>(data_.FUEL_QtyCenter) + data_.FUEL_QtyLeft + data_.FUEL_QtyRight;
 }
 
 void Pmdg737DataClient::ToggleDoor(const Pmdg737Door door)
