@@ -535,7 +535,7 @@
 <context>
     <name>OperationsScreen</name>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="310"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="316"/>
         <source>Start Flow</source>
         <translation>Start Flow</translation>
     </message>
@@ -585,7 +585,7 @@
     <message>
         <location filename="../src/qml/screens/OperationsScreen.qml" line="76"/>
         <location filename="../src/qml/screens/OperationsScreen.qml" line="83"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="237"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="243"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
@@ -638,23 +638,28 @@
         <translation>Enable broadcast</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="222"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="280"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="160"/>
+        <source>A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.</source>
+        <translation>A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="228"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="286"/>
         <source>Fuel</source>
         <translation>Fuel</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="227"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="233"/>
         <source>Loaded</source>
         <translation>Loaded</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="231"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="237"/>
         <source>Planned</source>
         <translation>Planned</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="235"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="241"/>
         <source>Rate</source>
         <translation>Rate</translation>
     </message>
@@ -663,43 +668,43 @@
         <translation type="vanished">kg/s</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="251"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="257"/>
         <source>Boarding</source>
         <translation>Boarding</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="257"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="288"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="263"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="294"/>
         <source>Pax</source>
         <translation>Pax</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="284"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="290"/>
         <source>ZFW</source>
         <translation>ZFW</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="330"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="336"/>
         <source>Confirm restart</source>
         <translation>Confirm restart</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="330"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="336"/>
         <source>Restart Flow</source>
         <translation>Restart Flow</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="264"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="270"/>
         <source>Planned ZFW</source>
         <translation>Planned ZFW</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="272"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="278"/>
         <source>SimBrief OFP</source>
         <translation>SimBrief OFP</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="190"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="196"/>
         <source>Error</source>
         <translation>Error</translation>
     </message>
@@ -756,17 +761,17 @@
         <translation>Loading</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="251"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="257"/>
         <source>Deboarding</source>
         <translation>Deboarding</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="297"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="303"/>
         <source>Reload SimBrief</source>
         <translation>Reload SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="317"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="323"/>
         <source>Start Loading</source>
         <translation>Start Loading</translation>
     </message>

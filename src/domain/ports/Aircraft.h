@@ -47,6 +47,7 @@ public:
     [[nodiscard]] virtual bool SupportsGroundPowerControl() const { return false; }
     virtual void SetGroundPower(bool) {}
     virtual void CloseAllDoors() {}
+    [[nodiscard]] virtual bool IsMainDeckCargoDoorStuck() const { return false; }
     [[nodiscard]] virtual bool IsReadyToPush() const = 0 ;
     [[nodiscard]] virtual bool IsReadyToDeboard() const = 0;
     [[nodiscard]] virtual bool IsEngineRunning() const = 0;

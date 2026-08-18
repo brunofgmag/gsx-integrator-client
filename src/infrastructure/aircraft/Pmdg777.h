@@ -34,6 +34,7 @@ public:
     void OnTick() override;
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
+    [[nodiscard]] bool IsMainDeckCargoDoorStuck() const override;
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override;

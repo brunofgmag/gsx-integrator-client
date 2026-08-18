@@ -18,6 +18,7 @@ namespace
     constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
     constexpr double kJetwayDocked = 5.0;
     constexpr auto kFwdEntryKey = "entry1_left";
+    constexpr auto kMainCargoKey = "main_cargo";
 
     struct Pmdg737Fixture
     {
@@ -70,6 +71,7 @@ private slots:
     static void groundStateIsQueriedWhileTheAircraftRuns();
     static void mainCargoIsCommandedOnEdgeBecauseItCannotBeRead();
     static void paxVariantNeverTouchesMainCargo();
+    static void mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses();
     static void chocksReadFromTheLVarAndRetryWithCap();
     static void groundPowerRequestStopsWhenAvailable();
     static void setFuelSendsRoundedLbsOnce();
@@ -397,6 +399,39 @@ void Pmdg737Test::paxVariantNeverTouchesMainCargo()
 
     QVERIFY(std::ranges::find(fixture.data->toggledDoors, Pmdg737Door::MainCargo)
         == fixture.data->toggledDoors.end());
+}
+
+void Pmdg737Test::mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses()
+{
+    Pmdg737Fixture cargo(Pmdg737Variant::Bcf800);
+
+    cargo.data->hasData = true;
+    cargo.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    cargo.tablet->doorOpen[kMainCargoKey] = false;
+    cargo.gateway.lvars[gsx::lvars::kBaggageLoaderMainState] = gsx::states::kLoaderWaitingForDoor;
+
+    Tick(cargo, 1);
+
+    QVERIFY(!cargo.aircraft->IsMainDeckCargoDoorStuck());
+
+    Tick(cargo, 12);
+
+    QVERIFY(cargo.aircraft->IsMainDeckCargoDoorStuck());
+
+    cargo.tablet->doorOpen[kMainCargoKey] = true;
+    Tick(cargo, 1);
+
+    QVERIFY(!cargo.aircraft->IsMainDeckCargoDoorStuck());
+
+    Pmdg737Fixture pax(Pmdg737Variant::Pax800);
+
+    pax.data->hasData = true;
+    pax.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    pax.gateway.lvars[gsx::lvars::kBaggageLoaderMainState] = gsx::states::kLoaderWaitingForDoor;
+
+    Tick(pax, 30);
+
+    QVERIFY(!pax.aircraft->IsMainDeckCargoDoorStuck());
 }
 
 void Pmdg737Test::chocksReadFromTheLVarAndRetryWithCap()

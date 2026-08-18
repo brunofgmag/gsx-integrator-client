@@ -156,6 +156,12 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            visible: root.integratorVm.cargoDoorStuck
+            text: qsTr("A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.")
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             text: root.integratorVm.phaseTip
         }
 

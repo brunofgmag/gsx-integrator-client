@@ -50,6 +50,7 @@ public:
     bool FixGsxProfile();
     [[nodiscard]] bool HasPmdgOptionsConflict() const { return pmdgOptions_.conflict; }
     bool FixPmdgOptions();
+    [[nodiscard]] bool IsCargoDoorStuck() const;
     void SetAutomationEnabled(bool enabled);
     void RestartFlow();
 #ifndef NDEBUG
@@ -101,6 +102,7 @@ private:
     [[nodiscard]] bool IsAircraftRefuelByGsx() const;
     [[nodiscard]] bool IsAircraftRefuelBySelf() const;
     [[nodiscard]] bool IsAircraftCargoVariant() const;
+    [[nodiscard]] bool IsLoadingCargoPhase() const;
     [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
     [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
     [[nodiscard]] bool CanFixGsxProfile() const;

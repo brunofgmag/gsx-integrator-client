@@ -230,6 +230,13 @@ void Pmdg737::ReconcileDoors()
     }
 }
 
+bool Pmdg737::IsMainDeckCargoDoorStuck() const
+{
+    constexpr auto index = static_cast<std::size_t>(Pmdg737Door::MainCargo);
+
+    return IsCargoVariant() && desiredDoor_[index] == 1 && doorAttempts_[index] >= kDoorMaxAttempts;
+}
+
 void Pmdg737::OnLoadingStarted()
 {
     lastSentFuelLbs_ = -1;

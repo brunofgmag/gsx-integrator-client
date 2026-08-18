@@ -221,6 +221,12 @@ int Pmdg777::DoorIndexFor(const GsxDoor door) const
     }
 }
 
+bool Pmdg777::IsMainDeckCargoDoorStuck() const
+{
+    return IsCargoVariant() && desiredDoor_[kMainDeckCargoDoor] == 1
+        && doorAttempts_[kMainDeckCargoDoor] >= kDoorMaxAttempts;
+}
+
 void Pmdg777::OnLoadingStarted()
 {
     lastSentFuelLbs_ = -1;

@@ -246,6 +246,21 @@ void IntegratorRuntime::Update()
     aircraft_->OnTick();
 }
 
+bool IntegratorRuntime::IsLoadingCargoPhase() const
+{
+    const TurnaroundPhase phase = GetPhase();
+
+    return phase == TurnaroundPhase::RequestBoarding
+        || phase == TurnaroundPhase::Boarding
+        || phase == TurnaroundPhase::RequestDeboarding
+        || phase == TurnaroundPhase::Deboarding;
+}
+
+bool IntegratorRuntime::IsCargoDoorStuck() const
+{
+    return aircraft_ && IsLoadingCargoPhase() && aircraft_->IsMainDeckCargoDoorStuck();
+}
+
 void IntegratorRuntime::UpdateSlow()
 {
     if (!IsSessionActive() || !aircraft_ || !status_.enabled || !IsSessionReady() || IsSessionPaused())
@@ -399,6 +414,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.gsxProfileFixable = CanFixGsxProfile();
     snapshot.pmdgOptionsConflict = HasPmdgOptionsConflict();
     snapshot.pmdgOptionsFixable = CanFixPmdgOptions();
+    snapshot.cargoDoorStuck = IsCargoDoorStuck();
     snapshot.phase = GetPhase();
     snapshot.flightPlanStatus = status_.flightPlanStatus;
     snapshot.fuelProgress = status_.fuelProgress;
