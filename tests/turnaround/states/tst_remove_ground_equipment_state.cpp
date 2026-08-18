@@ -18,7 +18,6 @@ private slots:
     static void skipsWhenAircraftReportsDisconnected();
     static void commandsAircraftGpuOffWhenControlSupported();
     static void timesOutAircraftGpuDismissWhenStillConnected();
-    static void holdsDismissWhileMenuUnsettled();
     static void runsWhenOnlyArrivalOptionEnabled();
     static void removesChocksWhenSupported();
     static void removesChocksOnlyOnce();
@@ -213,22 +212,6 @@ void RemoveGroundEquipmentStateTest::timesOutAircraftGpuDismissWhenStillConnecte
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
     QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
-}
-
-void RemoveGroundEquipmentStateTest::holdsDismissWhileMenuUnsettled()
-{
-    TurnaroundStateFixture f;
-    RemoveGroundEquipmentState state;
-
-    f.settings.callGpu = true;
-    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
-    f.menuGateway.menuSettled = false;
-
-    const auto transition = state.Evaluate(f.ctx);
-
-    QVERIFY(!transition.has_value());
-    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
-    QVERIFY(!f.ctx.data.gpuDismissRequested);
 }
 
 void RemoveGroundEquipmentStateTest::runsWhenOnlyArrivalOptionEnabled()

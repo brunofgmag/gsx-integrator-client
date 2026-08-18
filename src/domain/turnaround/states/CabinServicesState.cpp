@@ -8,8 +8,7 @@
 namespace
 {
     constexpr int kExitDelayTicks = 60;
-    constexpr int kMaxTriggerAttempts = 3;
-    constexpr int kTriggerRetryTicks = 10;
+    constexpr int kServiceGiveUpTicks = 30;
     constexpr int kWaitTicks = 30;
     constexpr int kMaxWaitIntervals = 10;
 }
@@ -49,29 +48,29 @@ bool CabinServicesState::DispatchNextService(TurnaroundContext& ctx)
 {
     return DispatchService(ctx,
                            ctx.settings->callLavatory,
+                           ctx.data.lavatoryAsked,
                            ctx.data.lavatoryRequested,
                            ctx.data.lavatoryActiveSeen,
-                           ctx.data.lavatoryTriggerAttempts,
                            GroundService::Lavatory)
         || DispatchService(ctx,
                            ctx.settings->callWater,
+                           ctx.data.waterAsked,
                            ctx.data.waterRequested,
                            ctx.data.waterActiveSeen,
-                           ctx.data.waterTriggerAttempts,
                            GroundService::Water)
         || DispatchService(ctx,
                            ctx.settings->callCleaning,
+                           ctx.data.cleaningAsked,
                            ctx.data.cleaningRequested,
                            ctx.data.cleaningActiveSeen,
-                           ctx.data.cleaningTriggerAttempts,
                            GroundService::Cleaning);
 }
 
 bool CabinServicesState::DispatchService(const TurnaroundContext& ctx,
                                          const bool enabled,
+                                         bool& asked,
                                          bool& requested,
                                          bool& activeSeen,
-                                         int& attempts,
                                          const GroundService service)
 {
     if (!enabled || requested)
@@ -87,33 +86,37 @@ bool CabinServicesState::DispatchService(const TurnaroundContext& ctx,
         return true;
     }
 
-    if (attempts == 0 || ctx.TickCondition(kTriggerRetryTicks))
+    if (!asked)
     {
-        if (attempts >= kMaxTriggerAttempts)
-        {
-            requested = true;
-            return true;
-        }
+        SendServiceTrigger(ctx, service);
+        asked = true;
 
-        static_cast<void>(SendServiceTrigger(ctx, service));
-        ++attempts;
+        return true;
+    }
+
+    if (ctx.TickCondition(kServiceGiveUpTicks))
+    {
+        requested = true;
     }
 
     return true;
 }
 
-bool CabinServicesState::SendServiceTrigger(const TurnaroundContext& ctx, const GroundService service)
+void CabinServicesState::SendServiceTrigger(const TurnaroundContext& ctx, const GroundService service)
 {
     switch (service)
     {
     case GroundService::Lavatory:
-        return ctx.menuGateway->RequestLavatory();
+        ctx.menuGateway->RequestLavatory();
+        break;
     case GroundService::Water:
-        return ctx.menuGateway->RequestWater();
+        ctx.menuGateway->RequestWater();
+        break;
     case GroundService::Cleaning:
-        return ctx.menuGateway->RequestCleaning();
+        ctx.menuGateway->RequestCleaning();
+        break;
     default:
-        return false;
+        break;
     }
 }
 

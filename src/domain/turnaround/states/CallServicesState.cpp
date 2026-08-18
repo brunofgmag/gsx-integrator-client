@@ -8,21 +8,23 @@
 namespace
 {
     constexpr int kRetryTicks = 60;
-    constexpr int kMaxAttempts = 4;
+    constexpr int kGiveUpTicks = 240;
 
-    bool CallJetwayOrStairs(const TurnaroundContext& ctx, const bool jetwayAvailable)
+    void CallJetwayOrStairs(const TurnaroundContext& ctx, const bool jetwayAvailable)
     {
-        return jetwayAvailable ? ctx.menuGateway->CallJetway() : ctx.menuGateway->CallStairs();
+        if (jetwayAvailable)
+        {
+            ctx.menuGateway->CallJetway();
+
+            return;
+        }
+
+        ctx.menuGateway->CallStairs();
     }
 }
 
 std::optional<TurnaroundTransition> CallServicesState::Evaluate(TurnaroundContext& ctx)
 {
-    if (!ctx.menuGateway->IsMenuSettled())
-    {
-        return std::nullopt;
-    }
-
     if (!ctx.aircraft->SupportsStairsOrJetways())
     {
         return TurnaroundTransition{TurnaroundPhase::WaitingFlightPlan};
@@ -49,28 +51,21 @@ std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(Tur
     if (!ctx.data.jetwayOrStairsRequested
         && (jetwayAvailable || ctx.gsxGateway->AreStairsAvailable()))
     {
-        RegisterJetwayOrStairsRequest(ctx, CallJetwayOrStairs(ctx, jetwayAvailable));
+        CallJetwayOrStairs(ctx, jetwayAvailable);
+        ctx.data.jetwayOrStairsRequested = true;
+
         return std::nullopt;
     }
 
     if (ctx.TickCondition(kRetryTicks))
     {
-        if (ctx.data.jetwayOrStairsAttempts >= kMaxAttempts)
+        if (ctx.data.stateTickCount >= kGiveUpTicks)
         {
             return TurnaroundTransition{TurnaroundPhase::WaitingFlightPlan};
         }
 
-        RegisterJetwayOrStairsRequest(ctx, CallJetwayOrStairs(ctx, jetwayAvailable));
+        CallJetwayOrStairs(ctx, jetwayAvailable);
     }
 
     return std::nullopt;
-}
-
-void CallServicesState::RegisterJetwayOrStairsRequest(TurnaroundContext& ctx, const bool requested)
-{
-    ctx.data.jetwayOrStairsRequested = requested;
-    if (requested)
-    {
-        ++ctx.data.jetwayOrStairsAttempts;
-    }
 }

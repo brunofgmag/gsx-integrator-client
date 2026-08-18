@@ -77,76 +77,76 @@ GsxMenuNavigator::GsxMenuNavigator(GsxRemoteApiClient* client,
             });
 }
 
-bool GsxMenuNavigator::CallJetway()
+void GsxMenuNavigator::CallJetway()
 {
-    return TriggerService("OperateJetways");
+    TriggerService("OperateJetways");
 }
 
-bool GsxMenuNavigator::CallStairs()
+void GsxMenuNavigator::CallStairs()
 {
-    return TriggerService("OperateStairs");
+    TriggerService("OperateStairs");
 }
 
-bool GsxMenuNavigator::RepositionAircraft()
+void GsxMenuNavigator::RepositionAircraft()
 {
-    if (reposition_ == Reposition::Idle)
+    if (reposition_ != Reposition::Idle)
     {
-        OpenIntent(Intent::Reposition);
-        reposition_ = Reposition::Opening;
-        OpenMenu();
+        return;
     }
 
-    return true;
+    OpenIntent(Intent::Reposition);
+    reposition_ = Reposition::Opening;
+    OpenMenu();
 }
 
-bool GsxMenuNavigator::RequestSimbriefLoad()
+void GsxMenuNavigator::RequestSimbriefLoad()
 {
-    return client_->SendCommand("command.run", QJsonObject{{"command", "RELOAD_SIMBRIEF"}});
+    ArmRequest("command.run", QJsonObject{{"command", "RELOAD_SIMBRIEF"}}, "RELOAD_SIMBRIEF", {});
 }
 
-bool GsxMenuNavigator::RequestBoarding()
+void GsxMenuNavigator::RequestBoarding()
 {
-    return TriggerService("Boarding");
+    TriggerService("Boarding");
 }
 
-bool GsxMenuNavigator::RequestDeboarding()
+void GsxMenuNavigator::RequestDeboarding()
 {
-    return TriggerService("Deboarding");
+    TriggerService("Deboarding");
 }
 
-bool GsxMenuNavigator::RequestPushback()
+void GsxMenuNavigator::RequestPushback()
 {
-    return TriggerService(gsx::services::Id(GroundService::Departure));
+    TriggerService(gsx::services::Id(GroundService::Departure));
 }
 
-bool GsxMenuNavigator::RequestRefueling()
+void GsxMenuNavigator::RequestRefueling()
 {
-    return TriggerService("Refueling");
+    TriggerService("Refueling");
 }
 
-bool GsxMenuNavigator::ToggleGpu()
+void GsxMenuNavigator::ToggleGpu()
 {
-    return TriggerService(gsx::services::Id(GroundService::Gpu));
+    TriggerService(gsx::services::Id(GroundService::Gpu));
 }
 
-bool GsxMenuNavigator::RequestCatering()
+void GsxMenuNavigator::RequestCatering()
 {
-    return TriggerService(gsx::services::Id(GroundService::Catering));
+    TriggerService(gsx::services::Id(GroundService::Catering));
 }
 
-bool GsxMenuNavigator::RequestLavatory()
+void GsxMenuNavigator::RequestLavatory()
 {
-    return TriggerService(gsx::services::Id(GroundService::Lavatory));
+    TriggerService(gsx::services::Id(GroundService::Lavatory));
 }
 
-bool GsxMenuNavigator::RequestWater()
+void GsxMenuNavigator::RequestWater()
 {
-    return TriggerService(gsx::services::Id(GroundService::Water));
+    TriggerService(gsx::services::Id(GroundService::Water));
 }
 
-bool GsxMenuNavigator::RequestCleaning()
+void GsxMenuNavigator::RequestCleaning()
 {
-    return TriggerService(gsx::services::Id(GroundService::Cleaning));
+    TriggerService(gsx::services::Id(GroundService::Cleaning));
 }
 
 bool GsxMenuNavigator::PickNowOrArm(const char* entry, TimedIntent& intent)
@@ -176,14 +176,12 @@ bool GsxMenuNavigator::CompletePushback()
     return PickNowOrArm(kCompletePushbackText, completingPushback_);
 }
 
-bool GsxMenuNavigator::CompleteRefuel()
+void GsxMenuNavigator::CompleteRefuel()
 {
     completingRefuel_ = {true, nowMs_()};
 
     OpenIntent(Intent::Service);
     OpenMenu();
-
-    return true;
 }
 
 void GsxMenuNavigator::DisableGsxMenu()
@@ -208,6 +206,7 @@ void GsxMenuNavigator::Reset()
     resyncCount_ = 0;
     resyncPending_ = false;
     lastActionMs_ = 0;
+    pending_.clear();
 }
 
 void GsxMenuNavigator::OnSnapshot()
@@ -225,6 +224,12 @@ void GsxMenuNavigator::OnSnapshot()
 }
 
 void GsxMenuNavigator::OnMenuChanged()
+{
+    HandleMenu();
+    PumpRequests();
+}
+
+void GsxMenuNavigator::HandleMenu()
 {
     ExpireTimedIntents();
 
@@ -503,12 +508,77 @@ bool GsxMenuNavigator::HandleIntentPrompts()
     return false;
 }
 
-bool GsxMenuNavigator::TriggerService(const char* serviceId)
+void GsxMenuNavigator::TriggerService(const char* serviceId)
 {
     OpenIntent(Intent::Service);
     ShowGsxToolbar();
-    lastActionMs_ = nowMs_();
 
+    ArmRequest("service.trigger",
+               QJsonObject{{"service", QString::fromLatin1(serviceId)}},
+               serviceId,
+               serviceId);
+}
+
+void GsxMenuNavigator::ArmRequest(QString verb, QJsonObject args, std::string label, std::string confirmId)
+{
+    const auto same = std::ranges::find_if(pending_, [&](const PendingRequest& request)
+    {
+        return request.verb == verb && request.label == label;
+    });
+
+    if (same != pending_.end())
+    {
+        pending_.erase(same);
+    }
+
+    pending_.push_back({std::move(verb), std::move(args), std::move(label), std::move(confirmId)});
+
+    PumpRequests();
+}
+
+void GsxMenuNavigator::PumpRequests()
+{
+    for (auto it = pending_.begin(); it != pending_.end();)
+    {
+        if (WasTaken(*it))
+        {
+            it = pending_.erase(it);
+
+            continue;
+        }
+
+        if (it->attempts >= kMaxTriggerAttempts)
+        {
+            logger_->LogInfo(std::format("RemoteAPI '{}' never taken by GSX after {} attempts",
+                                         it->label, it->attempts));
+            it = pending_.erase(it);
+
+            continue;
+        }
+
+        ++it;
+    }
+
+    if (!IsMenuSettled())
+    {
+        return;
+    }
+
+    for (PendingRequest& request : pending_)
+    {
+        if (request.attempts > 0 && (nowMs_() - request.lastSentMs) < kTriggerRetryMs)
+        {
+            continue;
+        }
+
+        SendRequest(request);
+
+        return;
+    }
+}
+
+void GsxMenuNavigator::SendRequest(PendingRequest& request)
+{
     const bool closedMenu = state_->menu.shown;
     if (closedMenu)
     {
@@ -516,10 +586,44 @@ bool GsxMenuNavigator::TriggerService(const char* serviceId)
         ClearMenuTracking();
     }
 
-    logger_->LogInfo(std::format("RemoteAPI service.trigger '{}'{}", serviceId,
-                                 closedMenu ? " (closed open menu first)" : ""));
+    lastActionMs_ = nowMs_();
+    request.lastSentMs = lastActionMs_;
+    ++request.attempts;
 
-    return client_->SendCommand("service.trigger", QJsonObject{{"service", QString::fromLatin1(serviceId)}});
+    std::string note;
+    if (request.attempts > 1)
+    {
+        note = std::format(" (attempt {} of {})", request.attempts, kMaxTriggerAttempts);
+    }
+    else if (closedMenu)
+    {
+        note = " (closed open menu first)";
+    }
+
+    logger_->LogInfo(std::format("RemoteAPI {} '{}'{}", request.verb.toStdString(), request.label, note));
+
+    (void)client_->SendCommand(request.verb, request.args);
+}
+
+bool GsxMenuNavigator::WasTaken(const PendingRequest& request) const
+{
+    if (request.attempts == 0)
+    {
+        return false;
+    }
+
+    if (request.confirmId.empty())
+    {
+        return true;
+    }
+
+    const GsxRemoteService* service = FindService(*state_, request.confirmId);
+    if (service == nullptr)
+    {
+        return false;
+    }
+
+    return service->stateRaw != static_cast<int>(GsxStateStatus::Callable) || !service->canTrigger;
 }
 
 void GsxMenuNavigator::ShowGsxToolbar() const

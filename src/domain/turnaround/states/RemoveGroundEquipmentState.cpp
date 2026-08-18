@@ -50,12 +50,7 @@ std::optional<TurnaroundTransition> RemoveGroundEquipmentState::Evaluate(Turnaro
 
     if (!ctx.data.gpuDismissRequested)
     {
-        if (!ctx.menuGateway->IsMenuSettled())
-        {
-            return std::nullopt;
-        }
-
-        static_cast<void>(ctx.menuGateway->ToggleGpu());
+        ctx.menuGateway->ToggleGpu();
         ctx.data.gpuDismissRequested = true;
 
         return std::nullopt;

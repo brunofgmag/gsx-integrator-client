@@ -73,6 +73,41 @@ namespace
         state.menu.entries = std::move(entries);
         state.menu.disabled = std::move(disabled);
     }
+
+    void OfferService(GsxRemoteState& state, const std::string& id)
+    {
+        state.services.push_back(GsxRemoteService{id, "available", 1, true});
+    }
+
+    void MarkServiceTaken(GsxRemoteState& state, const std::string& id)
+    {
+        for (GsxRemoteService& service : state.services)
+        {
+            if (service.id == id)
+            {
+                service.state = "performing";
+                service.stateRaw = 5;
+                service.canTrigger = false;
+
+                return;
+            }
+        }
+
+        state.services.push_back(GsxRemoteService{id, "performing", 5, false});
+    }
+
+    bool Logged(const FakeDomainLogger& logger, const std::string& needle)
+    {
+        for (const std::string& message : logger.messages)
+        {
+            if (message.find(needle) != std::string::npos)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 class GsxMenuNavigatorTest final : public QObject
@@ -130,6 +165,9 @@ private slots:
     static void groundServiceTriggersUseCanonicalVerbs();
     static void menuSettlesAfterQuietPeriod();
     static void pendingResyncKeepsMenuUnsettled();
+    static void triggerWaitsForTheMenuToSettle();
+    static void triggerRetriesWhileGsxStillOffersTheService();
+    static void triggerStopsRetryingOnceGsxTakesIt();
 };
 
 void GsxMenuNavigatorTest::serviceTriggersUseCanonicalVerbs()
@@ -140,13 +178,41 @@ void GsxMenuNavigatorTest::serviceTriggersUseCanonicalVerbs()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestRefueling());
-    QVERIFY(nav.RequestBoarding());
-    QVERIFY(nav.RequestDeboarding());
-    QVERIFY(nav.RequestPushback());
-    QVERIFY(nav.CallJetway());
-    QVERIFY(nav.CallStairs());
-    QVERIFY(nav.RequestSimbriefLoad());
+    long long fakeNow = 0;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    const auto settle = [&fakeNow, &nav]
+    {
+        fakeNow += 1500;
+        nav.OnMenuChanged();
+    };
+
+    nav.RequestRefueling();
+    settle();
+    MarkServiceTaken(state, "Refueling");
+
+    nav.RequestBoarding();
+    settle();
+    MarkServiceTaken(state, "Boarding");
+
+    nav.RequestDeboarding();
+    settle();
+    MarkServiceTaken(state, "Deboarding");
+
+    nav.RequestPushback();
+    settle();
+    MarkServiceTaken(state, "Departure");
+
+    nav.CallJetway();
+    settle();
+    MarkServiceTaken(state, "OperateJetways");
+
+    nav.CallStairs();
+    settle();
+    MarkServiceTaken(state, "OperateStairs");
+
+    nav.RequestSimbriefLoad();
+    settle();
 
     std::vector<QString> services;
     QString simbriefCommand;
@@ -186,7 +252,7 @@ void GsxMenuNavigatorTest::inactiveGsxIconIsActivatedBeforeMenuAction()
     CommBusPluginClient plugin(&bridge);
     GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
     QCOMPARE(client.Count("service.trigger"), 1);
@@ -204,7 +270,7 @@ void GsxMenuNavigatorTest::activeGsxIconIsNotReactivated()
     bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
     GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 0);
     QCOMPARE(client.Count("service.trigger"), 1);
@@ -221,7 +287,7 @@ void GsxMenuNavigatorTest::openGsxOnRequestsOffSkipsToolbar()
     CommBusPluginClient plugin(&bridge);
     GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 0);
     QCOMPARE(client.Count("menu.toggle"), 0);
@@ -238,7 +304,7 @@ void GsxMenuNavigatorTest::openGsxOnRequestsOnActivatesToolbar()
     CommBusPluginClient plugin(&bridge);
     GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
     QCOMPARE(client.Count("service.trigger"), 1);
@@ -252,7 +318,7 @@ void GsxMenuNavigatorTest::triggerServiceDoesNotOpenClosedMenu()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     QCOMPARE(client.sent.size(), static_cast<std::size_t>(1));
     QCOMPARE(client.sent[0].verb, QString("service.trigger"));
@@ -268,7 +334,7 @@ void GsxMenuNavigatorTest::triggerServiceDoesNotToggleOpenMenu()
 
     ShowMenu(state, "Activate Services at ZZZZ/Test Airport", {"Request Refueling"});
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     QCOMPARE(client.Count("menu.toggle"), 0);
     QCOMPARE(client.Count("menu.close"), 1);
@@ -384,7 +450,7 @@ void GsxMenuNavigatorTest::completeRefuelPicksCompleteNowViaServiceMenu()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.CompleteRefuel());
+    nav.CompleteRefuel();
 
     QCOMPARE(client.Count("menu.toggle"), 1);
 
@@ -417,7 +483,7 @@ void GsxMenuNavigatorTest::completeRefuelIntentExpiresAfterTtl()
     long long fakeNow = 0;
     nav.SetClockForTest([&fakeNow] { return fakeNow; });
 
-    QVERIFY(nav.CompleteRefuel());
+    nav.CompleteRefuel();
 
     fakeNow = 25000;
     ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
@@ -434,7 +500,7 @@ void GsxMenuNavigatorTest::completeRefuelMatchesLbsLoadedEntry()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.CompleteRefuel());
+    nav.CompleteRefuel();
 
     ShowMenu(state, "Activate Services at ZZZZ",
              {"Request Deboarding", "Refueling: 23724 lbs loaded", "Request Boarding"});
@@ -474,8 +540,8 @@ void GsxMenuNavigatorTest::staleRepositionClearedByServiceIntent()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RepositionAircraft());
-    QVERIFY(nav.RequestBoarding());
+    nav.RepositionAircraft();
+    nav.RequestBoarding();
 
     ShowMenu(state, "Activate Services at ZZZZ",
              {"Request Deboarding", "Request Boarding", "Reposition Aircraft"});
@@ -492,7 +558,7 @@ void GsxMenuNavigatorTest::picksGsxChoiceDuringServiceIntent()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B", "Back"});
     nav.OnMenuChanged();
@@ -515,7 +581,7 @@ void GsxMenuNavigatorTest::gsxChoiceSurvivesDispatchDelay()
     long long fakeNow = 0;
     nav.SetClockForTest([&fakeNow] { return fakeNow; });
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     fakeNow = 30000;
     ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
@@ -536,7 +602,7 @@ void GsxMenuNavigatorTest::gsxChoiceSurvivesTransientMenuClose()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     ShowMenu(state, "Activate Services at ZZZZ/Test Airport", {"Request Refueling", "Request Boarding"});
     nav.OnMenuChanged();
@@ -566,7 +632,7 @@ void GsxMenuNavigatorTest::resolverDoesNotRepickSameMenu()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
 
@@ -588,7 +654,7 @@ void GsxMenuNavigatorTest::gsxChoicePickedEvenAfterIntentTtl()
     long long fakeNow = 0;
     nav.SetClockForTest([&fakeNow] { return fakeNow; });
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     fakeNow = 120000;
     ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
@@ -610,7 +676,7 @@ void GsxMenuNavigatorTest::gsxChoiceNotPickedWhenFlagOff()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
     nav.OnMenuChanged();
@@ -626,7 +692,7 @@ void GsxMenuNavigatorTest::boardCrewMenuPicksBothByDefault()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestBoarding());
+    nav.RequestBoarding();
 
     ShowMenu(state, "Do you want to board crew?", {"Nobody", "Crew", "Pilots", "Both"});
     nav.OnMenuChanged();
@@ -647,7 +713,7 @@ void GsxMenuNavigatorTest::boardCrewMenuPicksConfiguredChoice()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestBoarding());
+    nav.RequestBoarding();
 
     ShowMenu(state, "Do you want to board crew?", {"Nobody", "Crew", "Pilots", "Both"});
     nav.OnMenuChanged();
@@ -668,7 +734,7 @@ void GsxMenuNavigatorTest::crewMenusPickDeclineOnBothVariantsWhenNobodyConfigure
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestBoarding());
+    nav.RequestBoarding();
 
     ShowMenu(state, "Do you want to board crew?", {"Nobody", "Crew", "Pilots", "Both"});
     nav.OnMenuChanged();
@@ -678,7 +744,7 @@ void GsxMenuNavigatorTest::crewMenusPickDeclineOnBothVariantsWhenNobodyConfigure
     QVERIFY(boardPick != nullptr);
     QCOMPARE(boardPick->args.value("index").toInt(), 0);
 
-    QVERIFY(nav.RequestDeboarding());
+    nav.RequestDeboarding();
 
     ShowMenu(state, "Do you want to deboard crew?", {"No", "Crew", "Pilots", "Both"});
     nav.OnMenuChanged();
@@ -703,7 +769,7 @@ void GsxMenuNavigatorTest::crewMenuPickedWithoutActiveIntent()
     long long fakeNow = 0;
     nav.SetClockForTest([&fakeNow] { return fakeNow; });
 
-    QVERIFY(nav.RequestDeboarding());
+    nav.RequestDeboarding();
 
     fakeNow = 90000;
     ShowMenu(state, "Do you want to deboard crew?", {"No", "Crew", "Pilots", "Both"});
@@ -799,7 +865,7 @@ void GsxMenuNavigatorTest::picksSimbriefBlockFuelOnRefuelingLevelMenu()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
     ShowMenu(state, "Select refueling level",
              {
                  "25% - 1705 USGAL / 5182 kg",
@@ -830,7 +896,7 @@ void GsxMenuNavigatorTest::blockFuelNotPickedWhenFlagOff()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     ShowMenu(state, "Select refueling level",
              {
@@ -900,7 +966,7 @@ void GsxMenuNavigatorTest::skipsDisabledEntryAndPicksEnabled()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestBoarding());
+    nav.RequestBoarding();
 
     ShowMenu(state, "Select handling operator",
              {"Operator A [GSX choice]", "Operator B [GSX choice]"}, {true, false});
@@ -921,7 +987,7 @@ void GsxMenuNavigatorTest::repositionWalksRootThenSubmenu()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RepositionAircraft());
+    nav.RepositionAircraft();
 
     QVERIFY(client.Last("menu.toggle") != nullptr);
 
@@ -951,7 +1017,7 @@ void GsxMenuNavigatorTest::repositionSurvivesTransientCloseAndRootReshow()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RepositionAircraft());
+    nav.RepositionAircraft();
 
     ShowMenu(state, "Activate Services at ZZZZ/Test Airport",
              {"Request Refueling", "Reposition Aircraft"});
@@ -991,7 +1057,7 @@ void GsxMenuNavigatorTest::staleSelectPositionMenuClosedAfterReposition()
     long long fakeNow = 0;
     nav.SetClockForTest([&fakeNow] { return fakeNow; });
 
-    QVERIFY(nav.RepositionAircraft());
+    nav.RepositionAircraft();
     QCOMPARE(client.Count("menu.toggle"), 1);
 
     ShowMenu(state, "Select Position at ZZZZ/Test Airport",
@@ -1035,7 +1101,7 @@ void GsxMenuNavigatorTest::staleSelectPositionMenuClosedAfterServiceIntentReplac
     long long fakeNow = 0;
     nav.SetClockForTest([&fakeNow] { return fakeNow; });
 
-    QVERIFY(nav.RepositionAircraft());
+    nav.RepositionAircraft();
 
     ShowMenu(state, "Select Position at ZZZZ/Test Airport",
              {"Reposition here [Gate 1]", "Cancel"});
@@ -1048,7 +1114,10 @@ void GsxMenuNavigatorTest::staleSelectPositionMenuClosedAfterServiceIntentReplac
     state.menu.entries.clear();
     nav.OnMenuChanged();
 
-    QVERIFY(nav.RequestCatering());
+    nav.RequestCatering();
+
+    fakeNow = 2000;
+    nav.OnMenuChanged();
 
     fakeNow = 5000;
     ShowMenu(state, "Select Position at ZZZZ/Test Airport",
@@ -1075,7 +1144,7 @@ void GsxMenuNavigatorTest::staleSelectPositionMenuIgnoredAfterIntentTtl()
     long long fakeNow = 0;
     nav.SetClockForTest([&fakeNow] { return fakeNow; });
 
-    QVERIFY(nav.RepositionAircraft());
+    nav.RepositionAircraft();
 
     ShowMenu(state, "Select Position at ZZZZ/Test Airport",
              {"Reposition here [Gate 1]", "Cancel"});
@@ -1107,7 +1176,7 @@ void GsxMenuNavigatorTest::rejectedPickAllowsRepick()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
 
@@ -1133,7 +1202,7 @@ void GsxMenuNavigatorTest::resetAllowsRepickingSameMenu()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     ShowMenu(state, "Select fueltruck operator", {"Operator A [GSX choice]", "Operator B"});
     nav.OnMenuChanged();
@@ -1157,7 +1226,7 @@ void GsxMenuNavigatorTest::staleRefuelingLevelMenuResyncsAndPicksBlockFuel()
     long long fakeNow = 0;
     nav.SetClockForTest([&fakeNow] { return fakeNow; });
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     ShowMenu(state, "Select refueling level",
              {"Request Deboarding", "Request Catering service", "Request Refueling", "Request Boarding"});
@@ -1197,7 +1266,7 @@ void GsxMenuNavigatorTest::swallowedRepositionPickRetriesAfterResyncSnapshot()
     long long fakeNow = 0;
     nav.SetClockForTest([&fakeNow] { return fakeNow; });
 
-    QVERIFY(nav.RepositionAircraft());
+    nav.RepositionAircraft();
 
     ShowMenu(state, "Activate Services at ZZZZ/Test Airport",
              {"Request Refueling", "Reposition Aircraft"});
@@ -1265,7 +1334,7 @@ void GsxMenuNavigatorTest::stalledMenuResyncIsBounded()
     long long fakeNow = 0;
     nav.SetClockForTest([&fakeNow] { return fakeNow; });
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     ShowMenu(state, "Select refueling level", {"Request Deboarding"});
     nav.OnMenuChanged();
@@ -1287,19 +1356,37 @@ void GsxMenuNavigatorTest::groundServiceTriggersUseCanonicalVerbs()
     FakeDomainLogger logger;
     GsxMenuNavigator navigator(&client, &state, &settings, &logger);
 
-    QVERIFY(navigator.ToggleGpu());
+    long long fakeNow = 0;
+    navigator.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    const auto settle = [&fakeNow, &navigator]
+    {
+        fakeNow += 1500;
+        navigator.OnMenuChanged();
+    };
+
+    navigator.ToggleGpu();
+    settle();
     QCOMPARE(client.Last("service.trigger")->args.value("service").toString(), QStringLiteral("GPU"));
+    MarkServiceTaken(state, "GPU");
 
-    QVERIFY(navigator.RequestCatering());
+    navigator.RequestCatering();
+    settle();
     QCOMPARE(client.Last("service.trigger")->args.value("service").toString(), QStringLiteral("Catering"));
+    MarkServiceTaken(state, "Catering");
 
-    QVERIFY(navigator.RequestLavatory());
+    navigator.RequestLavatory();
+    settle();
     QCOMPARE(client.Last("service.trigger")->args.value("service").toString(), QStringLiteral("Lavatory"));
+    MarkServiceTaken(state, "Lavatory");
 
-    QVERIFY(navigator.RequestWater());
+    navigator.RequestWater();
+    settle();
     QCOMPARE(client.Last("service.trigger")->args.value("service").toString(), QStringLiteral("Water"));
+    MarkServiceTaken(state, "Water");
 
-    QVERIFY(navigator.RequestCleaning());
+    navigator.RequestCleaning();
+    settle();
     QCOMPARE(client.Last("service.trigger")->args.value("service").toString(), QStringLiteral("Cleaning"));
 }
 
@@ -1316,7 +1403,7 @@ void GsxMenuNavigatorTest::menuSettlesAfterQuietPeriod()
 
     QVERIFY(nav.IsMenuSettled());
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
     QVERIFY(!nav.IsMenuSettled());
 
     fakeNow = 6499;
@@ -1339,7 +1426,7 @@ void GsxMenuNavigatorTest::pendingResyncKeepsMenuUnsettled()
     long long fakeNow = 0;
     nav.SetClockForTest([&fakeNow] { return fakeNow; });
 
-    QVERIFY(nav.RequestRefueling());
+    nav.RequestRefueling();
 
     ShowMenu(state, "Select refueling level", {"Request Refueling"});
     nav.OnMenuChanged();
@@ -1352,6 +1439,112 @@ void GsxMenuNavigatorTest::pendingResyncKeepsMenuUnsettled()
     fakeNow = 4000;
 
     QVERIFY(!nav.IsMenuSettled());
+}
+
+void GsxMenuNavigatorTest::triggerWaitsForTheMenuToSettle()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    ShowMenu(state, "Select refueling level", {"GSX choice"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 1);
+
+    state.menu.shown = false;
+    state.menu.title.clear();
+    state.menu.entries.clear();
+    nav.OnMenuChanged();
+
+    nav.RequestBoarding();
+
+    QCOMPARE(client.Count("service.trigger"), 0);
+
+    fakeNow = 6499;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 0);
+
+    fakeNow = 6500;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+}
+
+void GsxMenuNavigatorTest::triggerRetriesWhileGsxStillOffersTheService()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Boarding");
+
+    nav.RequestBoarding();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    fakeNow = 14999;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    fakeNow = 15000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 2);
+
+    fakeNow = 25000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 3);
+
+    fakeNow = 35000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 3);
+    QVERIFY(Logged(logger, "never taken by GSX"));
+}
+
+void GsxMenuNavigatorTest::triggerStopsRetryingOnceGsxTakesIt()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Boarding");
+
+    nav.RequestBoarding();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    MarkServiceTaken(state, "Boarding");
+
+    fakeNow = 15000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    fakeNow = 25000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "never taken by GSX"));
 }
 
 QTEST_GUILESS_MAIN(GsxMenuNavigatorTest)

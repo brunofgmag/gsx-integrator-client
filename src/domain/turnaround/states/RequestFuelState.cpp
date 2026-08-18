@@ -23,11 +23,11 @@ std::optional<TurnaroundTransition> RequestFuelState::Evaluate(TurnaroundContext
     const bool loadingAllowed = ctx.settings == nullptr || ctx.settings->autoStartLoading || data.loadingConfirmed;
 
     const GsxStateStatus refuelingState = ctx.gsxGateway->GetStateStatus(GsxState::Refueling);
-    if (loadingAllowed && refuelingState == GsxStateStatus::Callable && !data.refuelingRequested
-        && ctx.menuGateway->IsMenuSettled())
+    if (loadingAllowed && refuelingState == GsxStateStatus::Callable && !data.refuelingRequested)
     {
         ctx.gsxGateway->TakeOverFuelAndPayload();
-        data.refuelingRequested = ctx.menuGateway->RequestRefueling();
+        ctx.menuGateway->RequestRefueling();
+        data.refuelingRequested = true;
     }
 
     if (ctx.gsxGateway->IsFuelHoseConnected() && refuelingState == GsxStateStatus::Active)

@@ -4,7 +4,10 @@
 #include <functional>
 #include <string>
 #include <utility>
+#include <vector>
+#include <QJsonObject>
 #include <QObject>
+#include <QString>
 #include "GsxRemoteState.h"
 #include "../../domain/ports/GsxMenuGateway.h"
 
@@ -25,24 +28,25 @@ public:
                      CommBusPluginClient* pluginClient = nullptr,
                      QObject* parent = nullptr);
 
-    [[nodiscard]] bool CallJetway() override;
-    [[nodiscard]] bool CallStairs() override;
-    [[nodiscard]] bool RepositionAircraft() override;
-    [[nodiscard]] bool RequestSimbriefLoad() override;
-    [[nodiscard]] bool RequestBoarding() override;
-    [[nodiscard]] bool RequestDeboarding() override;
-    [[nodiscard]] bool RequestPushback() override;
-    [[nodiscard]] bool RequestRefueling() override;
+    void CallJetway() override;
+    void CallStairs() override;
+    void RepositionAircraft() override;
+    void RequestSimbriefLoad() override;
+    void RequestBoarding() override;
+    void RequestDeboarding() override;
+    void RequestPushback() override;
+    void RequestRefueling() override;
+    void CompleteRefuel() override;
+    void ToggleGpu() override;
+    void RequestCatering() override;
+    void RequestLavatory() override;
+    void RequestWater() override;
+    void RequestCleaning() override;
+
     [[nodiscard]] bool ConfirmGoodEngines() override;
     [[nodiscard]] bool CompletePushback() override;
-    [[nodiscard]] bool CompleteRefuel() override;
-    [[nodiscard]] bool ToggleGpu() override;
-    [[nodiscard]] bool RequestCatering() override;
-    [[nodiscard]] bool RequestLavatory() override;
-    [[nodiscard]] bool RequestWater() override;
-    [[nodiscard]] bool RequestCleaning() override;
 
-    [[nodiscard]] bool IsMenuSettled() const override;
+    [[nodiscard]] bool IsMenuSettled() const;
 
     void OpenMenu() const;
     void ShowGsxToolbar() const;
@@ -61,7 +65,22 @@ private:
         long long sinceMs = 0;
     };
 
-    bool TriggerService(const char* serviceId);
+    struct PendingRequest
+    {
+        QString verb;
+        QJsonObject args;
+        std::string label;
+        std::string confirmId;
+        long long lastSentMs = 0;
+        int attempts = 0;
+    };
+
+    void TriggerService(const char* serviceId);
+    void ArmRequest(QString verb, QJsonObject args, std::string label, std::string confirmId);
+    void PumpRequests();
+    void SendRequest(PendingRequest& request);
+    [[nodiscard]] bool WasTaken(const PendingRequest& request) const;
+    void HandleMenu();
     bool PickByContains(const std::string& needle);
     bool PickNowOrArm(const char* entry, TimedIntent& intent);
     [[nodiscard]] std::string MenuSignature() const;
@@ -100,6 +119,7 @@ private:
 
     Intent intent_ = Intent::None;
     long long intentSinceMs_ = 0;
+    std::vector<PendingRequest> pending_;
     std::function<long long()> nowMs_;
     std::string lastPickedSig_;
     std::string lastDiagSig_;
@@ -115,6 +135,8 @@ private:
     static constexpr long long kResyncDelayMs = 1500;
     static constexpr int kMaxResyncs = 3;
     static constexpr long long kMenuSettleMs = 1500;
+    static constexpr long long kTriggerRetryMs = 10000;
+    static constexpr int kMaxTriggerAttempts = 3;
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_GSXMENUNAVIGATOR_H

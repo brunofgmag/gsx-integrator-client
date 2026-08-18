@@ -14,25 +14,7 @@ private slots:
     static void usesGsxPassengersWhenAircraftPlanHasNone();
     static void shouldRetryWhenFlightPlanFailsToLoad();
     static void unloadsPayloadWhileWaiting();
-    static void holdsWhileMenuIsNotSettled();
 };
-
-void WaitingFlightPlanStateTest::holdsWhileMenuIsNotSettled()
-{
-    TurnaroundStateFixture f;
-    WaitingFlightPlanState state;
-
-    f.aircraft.flightPlanLoaded = true;
-    f.gsxService.simbriefLoaded = true;
-    f.menuGateway.menuSettled = false;
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QCOMPARE(f.menuGateway.simbriefLoadCalls, 0);
-
-    f.menuGateway.menuSettled = true;
-
-    QVERIFY(state.Evaluate(f.ctx).has_value());
-}
 
 void WaitingFlightPlanStateTest::holdsWithoutAircraftFlightPlan()
 {

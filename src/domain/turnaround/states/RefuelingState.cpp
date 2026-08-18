@@ -151,7 +151,7 @@ void RefuelingState::MaybeForceCompletion(TurnaroundContext& ctx)
     else if (++data.refuelStallTicks >= kRefuelStallTicks)
     {
         data.refuelCompletionForced = true;
-        (void)ctx.menuGateway->CompleteRefuel();
+        ctx.menuGateway->CompleteRefuel();
     }
 }
 
