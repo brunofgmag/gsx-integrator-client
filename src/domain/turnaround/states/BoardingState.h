@@ -14,6 +14,7 @@ public:
     [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
 
 private:
+    [[nodiscard]] static bool IsCargoPending(const TurnaroundContext& ctx);
     static void EnsureBaseline(TurnaroundContext& ctx);
     static void FinishBoarding(TurnaroundContext& ctx);
     static void AdvanceBoardingBar(TurnaroundContext& ctx);

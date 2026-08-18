@@ -45,6 +45,7 @@ namespace gsx::lvars
     inline constexpr auto kMaxPassengers = "FSDT_GSX_MAX_NUMPASSENGERS";
     inline constexpr auto kNumPassengersBoardingTotal = "FSDT_GSX_NUMPASSENGERS_BOARDING_TOTAL";
     inline constexpr auto kNumPassengersDeboardingTotal = "FSDT_GSX_NUMPASSENGERS_DEBOARDING_TOTAL";
+    inline constexpr auto kBoardingCargo = "FSDT_GSX_BOARDING_CARGO";
     inline constexpr auto kBoardingCargoPercent = "FSDT_GSX_BOARDING_CARGO_PERCENT";
     inline constexpr auto kDeboardingCargoPercent = "FSDT_GSX_DEBOARDING_CARGO_PERCENT";
 

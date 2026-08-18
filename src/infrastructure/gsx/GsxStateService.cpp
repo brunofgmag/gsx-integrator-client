@@ -166,6 +166,24 @@ double GsxStateService::GetBoardingCargoPercent() const
     return varManager_->GetLVar(kBoardingCargoPercent);
 }
 
+bool GsxStateService::IsLoadingCargo() const
+{
+    return varManager_->GetLVar(kBoardingCargo) == 1.0;
+}
+
+bool GsxStateService::IsLoaderWaitingForDoor() const
+{
+    for (const char* state : {kBaggageLoaderFrontState, kBaggageLoaderRearState, kBaggageLoaderMainState})
+    {
+        if (varManager_->GetLVar(state) == gsx::states::kLoaderWaitingForDoor)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 double GsxStateService::GetDeboardingCargoPercent() const
 {
     return varManager_->GetLVar(kDeboardingCargoPercent);
