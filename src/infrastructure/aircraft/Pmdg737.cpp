@@ -200,6 +200,12 @@ void Pmdg737::ReconcileDoors()
         }
 
         const auto door = static_cast<Pmdg737Door>(i);
+        const char* key = EfbDoorKey(door);
+        if (key != nullptr && tablet_->DoorMoving(key))
+        {
+            continue;
+        }
+
         const bool wantOpen = desiredDoor_[i] == 1;
         const std::optional<bool> reading = DoorIsOpen(door);
         const bool isOpen = reading.value_or(commandedDoor_[i] == 1);

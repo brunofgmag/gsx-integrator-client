@@ -1,5 +1,7 @@
 #include "PmdgTabletClient.h"
 
+#include <algorithm>
+#include <array>
 #include <utility>
 #include <QtCore/QByteArray>
 #include <QtCore/QJsonDocument>
@@ -19,6 +21,7 @@ namespace
     constexpr auto kTagQueryState = "query_state";
     constexpr auto kTagStateReply = "state_reply";
     constexpr auto kDoorActionClose = "CLOSE";
+    constexpr std::array kDoorMoving = {"OPENING", "CLOSING"};
 
     std::string BuildEnvelope(const char* tag, const QJsonObject& data)
     {
@@ -95,7 +98,7 @@ bool PmdgTabletClient::EfbPlanImported() const
     return efbPlanImported_;
 }
 
-std::map<std::string, bool> PmdgTabletClient::ParseDoorStates(const std::string& json)
+PmdgTabletClient::DoorSnapshot PmdgTabletClient::ParseDoorStates(const std::string& json)
 {
     const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(json));
     if (!document.isObject())
@@ -112,8 +115,8 @@ std::map<std::string, bool> PmdgTabletClient::ParseDoorStates(const std::string&
     const QJsonObject doors = object.value(QStringLiteral("doors")).toObject()
                                     .value(QStringLiteral("individual_doors")).toObject();
 
-    std::map<std::string, bool> states;
-    const auto collect = [&states](const QJsonObject& source)
+    DoorSnapshot snapshot;
+    const auto collect = [&snapshot](const QJsonObject& source)
     {
         for (auto it = source.constBegin(); it != source.constEnd(); ++it)
         {
@@ -122,14 +125,23 @@ std::map<std::string, bool> PmdgTabletClient::ParseDoorStates(const std::string&
                 continue;
             }
 
-            states.emplace(it.key().toStdString(), it.value().toString() == QLatin1String(kDoorActionClose));
+            const QString action = it.value().toString();
+            if (std::ranges::any_of(kDoorMoving, [&action](const char* moving)
+                                    { return action == QLatin1String(moving); }))
+            {
+                snapshot.moving.emplace(it.key().toStdString());
+
+                continue;
+            }
+
+            snapshot.settled.emplace(it.key().toStdString(), action == QLatin1String(kDoorActionClose));
         }
     };
 
     collect(doors);
     collect(doors.value(QStringLiteral("other_doors")).toObject());
 
-    return states;
+    return snapshot;
 }
 
 bool PmdgTabletClient::IsSimbriefFetchSuccess(const std::string& json)
@@ -157,10 +169,16 @@ void PmdgTabletClient::OnInbound(const std::string& payload)
         efbPlanImported_ = true;
     }
 
-    if (auto doors = ParseDoorStates(payload); !doors.empty())
+    if (auto doors = ParseDoorStates(payload); !doors.settled.empty() || !doors.moving.empty())
     {
-        doorOpen_ = std::move(doors);
+        doorOpen_ = std::move(doors.settled);
+        doorMoving_ = std::move(doors.moving);
     }
+}
+
+bool PmdgTabletClient::DoorMoving(const std::string& key) const
+{
+    return doorMoving_.contains(key);
 }
 
 std::optional<bool> PmdgTabletClient::DoorOpen(const std::string& key) const

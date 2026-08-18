@@ -66,6 +66,7 @@ private slots:
     static void entryDoorRetriesWithCapWhileTheEfbStateDisagrees();
     static void entryDoorStopsAsSoonAsTheEfbStateAgrees();
     static void mainCargoDoorClosesWhenTheLoaderLeavesThePosition();
+    static void doorInMotionIsNotCommanded();
     static void groundStateIsQueriedWhileTheAircraftRuns();
     static void mainCargoIsCommandedOnEdgeBecauseItCannotBeRead();
     static void paxVariantNeverTouchesMainCargo();
@@ -317,6 +318,23 @@ void Pmdg737Test::mainCargoDoorClosesWhenTheLoaderLeavesThePosition()
     Tick(fixture, 10);
 
     QCOMPARE(mainToggles(), 2);
+}
+
+void Pmdg737Test::doorInMotionIsNotCommanded()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->moving.emplace(kFwdEntryKey);
+
+    Tick(fixture, 30);
+
+    QCOMPARE(EntryToggles(fixture), 0);
+
+    fixture.tablet->moving.clear();
+    fixture.tablet->doorOpen[kFwdEntryKey] = false;
+    Tick(fixture, 1);
+
+    QCOMPARE(EntryToggles(fixture), 1);
 }
 
 void Pmdg737Test::groundStateIsQueriedWhileTheAircraftRuns()

@@ -35,6 +35,7 @@ private slots:
     static void subscribesPlaneToTabletWithJsFlag();
     static void latchesEfbPlanImportOnFetchSuccess();
     static void readsDoorStatesFromStateReply();
+    static void doorInMotionHasNoState();
     static void requestStateAsksThePlaneForGroundState();
     static void unsubscribesBorrowedBridgeOnDestruction();
     static void skipsUnsubscribeWhenNeverPolled();
@@ -156,6 +157,23 @@ void PmdgTabletClientTest::readsDoorStatesFromStateReply()
     QCOMPARE(client.DoorOpen("fwd_cargo"), std::optional(true));
     QCOMPARE(client.DoorOpen("main_cargo"), std::optional(false));
     QVERIFY(!client.DoorOpen("airstair").has_value());
+}
+
+void PmdgTabletClientTest::doorInMotionHasNoState()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+    client.Poll();
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO","doors":{"individual_doors":)"
+                   R"({"entry1_left":"OPENING","entry1_right":"CLOSE",)"
+                   R"("other_doors":{"main_cargo":"CLOSING","fwd_cargo":"OPEN"}}}})");
+
+    QVERIFY(!client.DoorOpen("entry1_left").has_value());
+    QVERIFY(!client.DoorOpen("main_cargo").has_value());
+    QCOMPARE(client.DoorOpen("entry1_right"), std::optional(true));
+    QCOMPARE(client.DoorOpen("fwd_cargo"), std::optional(false));
 }
 
 void PmdgTabletClientTest::requestStateAsksThePlaneForGroundState()

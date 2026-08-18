@@ -3,6 +3,7 @@
 
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 #include "../../src/infrastructure/pmdg/PmdgTabletGateway.h"
@@ -18,11 +19,17 @@ public:
     std::vector<int> cargoSends;
     std::vector<std::string> groundConnRequests;
     std::map<std::string, bool> doorOpen;
+    std::set<std::string> moving;
     int stateRequests = 0;
 
     void Poll() override { ++pollCalls; }
     [[nodiscard]] bool IsAvailable() const override { return available; }
     [[nodiscard]] bool EfbPlanImported() const override { return efbPlanImported; }
+
+    [[nodiscard]] bool DoorMoving(const std::string& key) const override
+    {
+        return moving.contains(key);
+    }
 
     [[nodiscard]] std::optional<bool> DoorOpen(const std::string& key) const override
     {
