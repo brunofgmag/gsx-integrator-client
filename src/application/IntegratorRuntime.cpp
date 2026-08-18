@@ -166,6 +166,8 @@ void IntegratorRuntime::HandleDisconnected()
 
     OnSessionEnd();
 
+    reconnectTimer_.start();
+
     emit Updated();
 
     emit SimulatorQuit();

@@ -38,6 +38,8 @@ private slots:
     static void setupConnectsThroughFakeSimConnect();
     static void connectedCommandsFollowGuardOrder();
     static void subscribeFailureDisconnects();
+    static void subscribeFailureKeepsRetrying();
+    static void simulatorQuitRearmsTheReconnect();
 };
 
 void RuntimeIntegratorServiceTest::init()
@@ -266,6 +268,35 @@ void RuntimeIntegratorServiceTest::subscribeFailureDisconnects()
     runtime.Setup();
 
     QVERIFY(!runtime.IsConnected());
+}
+
+void RuntimeIntegratorServiceTest::subscribeFailureKeepsRetrying()
+{
+    FakeSimConnectApi::subscribeSucceeds = false;
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QVERIFY(!runtime.IsConnected());
+    QVERIFY(runtime.IsReconnectPending());
+}
+
+void RuntimeIntegratorServiceTest::simulatorQuitRearmsTheReconnect()
+{
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QVERIFY(runtime.IsConnected());
+    QVERIFY(!runtime.IsReconnectPending());
+
+    QSignalSpy quits(&runtime, &IntegratorRuntime::SimulatorQuit);
+
+    constexpr SIMCONNECT_RECV quit{};
+    FakeSimConnectApi::Push(quit, SIMCONNECT_RECV_ID_QUIT);
+
+    QVERIFY(quits.wait(2000));
+    QVERIFY(!runtime.IsConnected());
+    QVERIFY(runtime.IsReconnectPending());
 }
 
 QTEST_GUILESS_MAIN(RuntimeIntegratorServiceTest)

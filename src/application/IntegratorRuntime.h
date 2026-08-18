@@ -42,6 +42,7 @@ public:
 
     [[nodiscard]] const AutomationSettings& Settings() const { return settings_; }
     [[nodiscard]] bool IsConnected() const { return simConnect_.IsConnected(); }
+    [[nodiscard]] bool IsReconnectPending() const { return reconnectTimer_.isActive(); }
     [[nodiscard]] bool IsSessionActive() const { return isSessionActive_; }
     [[nodiscard]] TurnaroundPhase GetPhase() const { return stateMachine_.GetPhase(); }
     [[nodiscard]] std::string GetAircraftProfileId() const;
