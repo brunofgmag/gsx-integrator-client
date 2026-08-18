@@ -59,7 +59,7 @@ std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway,
     const AircraftContext context{variableGateway, status, commBusBridge};
     std::unique_ptr<Aircraft> aircraft = descriptor->create(context, identity);
 
-    LOG_INFO("Aircraft detected: %s", aircraft->GetName());
+    LOG_INFO("Aircraft detected: %s", descriptor->name);
 
     return aircraft;
 }

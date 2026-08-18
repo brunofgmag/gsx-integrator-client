@@ -15,14 +15,10 @@ public:
     void Poll() override;
     [[nodiscard]] bool HasData() const override;
 
-    [[nodiscard]] int AircraftModel() const override;
     [[nodiscard]] bool GroundPowerAvailable() const override;
     [[nodiscard]] bool AnyMainBusPowered() const override;
-    [[nodiscard]] bool GroundConnAvailable() const override;
     [[nodiscard]] bool BeaconOn() const override;
     [[nodiscard]] bool ParkingBrakeOn() const override;
-    [[nodiscard]] bool IrsAligned() const override;
-    [[nodiscard]] double TotalFuelLbs() const override;
 
     void ToggleDoor(Pmdg737Door door) override;
     void SetInFlight(bool inFlight) override;

@@ -20,7 +20,7 @@ public:
 
     FenixA32x(VariableGateway* variableGateway, FenixVariant variant, std::unique_ptr<FenixEfbGateway> efb);
 
-    [[nodiscard]] const char* GetName() const override;
+    [[nodiscard]] const char* GetName() const;
     [[nodiscard]] bool IsCargoVariant() const override;
 
     void OnTick() override;

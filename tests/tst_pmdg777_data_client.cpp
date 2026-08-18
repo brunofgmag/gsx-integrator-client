@@ -62,7 +62,6 @@ void Pmdg777DataClientTest::noDataBeforeFirstPacket()
     const Pmdg777DataClient client;
 
     QVERIFY(!client.HasData());
-    QCOMPARE(client.AircraftModel(), 0);
 }
 
 void Pmdg777DataClientTest::receivesClientDataThroughSession()
@@ -96,13 +95,11 @@ void Pmdg777DataClientTest::exposesTypedFields()
     FakeSimConnectApi::PushClientData(PMDG_777X_DATA_DEFINITION, &sample, sizeof(sample));
     client.Poll();
 
-    QCOMPARE(client.AircraftModel(), 6);
     QVERIFY(client.ExtPowerConnected());
     QVERIFY(client.BeaconOn());
     QVERIFY(client.ParkingBrakeOn());
     QVERIFY(client.ApuRunning());
     QVERIFY(client.WheelChocksSet());
-    QCOMPARE(client.TotalFuelLbs(), 50000.0);
     QCOMPARE(client.DoorState(0), 0);
 }
 

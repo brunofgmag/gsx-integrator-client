@@ -58,8 +58,6 @@ void Pmdg737DataClientTest::noDataBeforeFirstPacket()
     const Pmdg737DataClient client;
 
     QVERIFY(!client.HasData());
-    QCOMPARE(client.AircraftModel(), 0);
-    QCOMPARE(client.TotalFuelLbs(), 0.0);
 }
 
 void Pmdg737DataClientTest::receivesClientDataThroughSession()
@@ -89,14 +87,10 @@ void Pmdg737DataClientTest::exposesTypedFields()
     FakeSimConnectApi::PushClientData(PMDG_NG3_DATA_DEFINITION, &sample, sizeof(sample));
     client.Poll();
 
-    QCOMPARE(client.AircraftModel(), 5);
     QVERIFY(client.GroundPowerAvailable());
     QVERIFY(client.AnyMainBusPowered());
-    QVERIFY(client.GroundConnAvailable());
     QVERIFY(client.BeaconOn());
     QVERIFY(client.ParkingBrakeOn());
-    QVERIFY(client.IrsAligned());
-    QCOMPARE(client.TotalFuelLbs(), 18000.0);
 }
 
 void Pmdg737DataClientTest::invalidPacketDoesNotLatchData()

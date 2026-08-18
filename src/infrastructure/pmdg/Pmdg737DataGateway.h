@@ -23,14 +23,10 @@ public:
     virtual void Poll() = 0;
     [[nodiscard]] virtual bool HasData() const = 0;
 
-    [[nodiscard]] virtual int AircraftModel() const = 0;
     [[nodiscard]] virtual bool GroundPowerAvailable() const = 0;
     [[nodiscard]] virtual bool AnyMainBusPowered() const = 0;
-    [[nodiscard]] virtual bool GroundConnAvailable() const = 0;
     [[nodiscard]] virtual bool BeaconOn() const = 0;
     [[nodiscard]] virtual bool ParkingBrakeOn() const = 0;
-    [[nodiscard]] virtual bool IrsAligned() const = 0;
-    [[nodiscard]] virtual double TotalFuelLbs() const = 0;
 
     virtual void ToggleDoor(Pmdg737Door door) = 0;
     virtual void SetInFlight(bool inFlight) = 0;

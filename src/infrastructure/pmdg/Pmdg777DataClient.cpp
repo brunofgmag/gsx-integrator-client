@@ -117,11 +117,6 @@ bool Pmdg777DataClient::HasData() const
     return hasData_;
 }
 
-int Pmdg777DataClient::AircraftModel() const
-{
-    return hasData_ ? static_cast<int>(data_.AircraftModel) : 0;
-}
-
 bool Pmdg777DataClient::ExtPowerConnected() const
 {
     return hasData_ && (data_.ELEC_annunExtPowr_ON[0] || data_.ELEC_annunExtPowr_ON[1]);
@@ -152,30 +147,9 @@ bool Pmdg777DataClient::WheelChocksSet() const
     return hasData_ && data_.WheelChocksSet;
 }
 
-bool Pmdg777DataClient::GroundConnAvailable() const
-{
-    return hasData_ && data_.GroundConnAvailable;
-}
-
-bool Pmdg777DataClient::IrsAligned() const
-{
-    return hasData_ && data_.IRS_aligned;
-}
-
 bool Pmdg777DataClient::HasFmcFlightPlan() const
 {
     return hasData_ && (data_.FMC_CruiseAlt > 0 || data_.FMC_flightNumber[0] != '\0');
-}
-
-double Pmdg777DataClient::TotalFuelLbs() const
-{
-    if (!hasData_)
-    {
-        return 0.0;
-    }
-
-    return static_cast<double>(data_.FUEL_QtyCenter) + data_.FUEL_QtyLeft
-        + data_.FUEL_QtyRight + data_.FUEL_QtyAux;
 }
 
 int Pmdg777DataClient::DoorState(const int index) const
