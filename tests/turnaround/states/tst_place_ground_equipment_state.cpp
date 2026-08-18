@@ -15,8 +15,6 @@ private slots:
     static void waitsWhileGpuStatusUnknown();
     static void prefersAircraftGroundPowerStatus();
     static void togglesWhenAircraftReportsDisconnected();
-    static void holdsToggleWhileMenuUnsettled();
-    static void retriesWhenToggleRejected();
     static void commandsAircraftGpuWhenControlSupported();
     static void leavesAircraftGpuAloneWhenAlreadyConnected();
     static void placesChocksWhenSupported();
@@ -132,44 +130,6 @@ void PlaceGroundEquipmentStateTest::togglesWhenAircraftReportsDisconnected()
 
     QVERIFY(transition.has_value());
     QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
-    QVERIFY(f.ctx.data.gpuRequested);
-}
-
-void PlaceGroundEquipmentStateTest::holdsToggleWhileMenuUnsettled()
-{
-    TurnaroundStateFixture f;
-    PlaceGroundEquipmentState state;
-
-    f.settings.callGpu = true;
-    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
-    f.menuGateway.menuSettled = false;
-
-    const auto transition = state.Evaluate(f.ctx);
-
-    QVERIFY(!transition.has_value());
-    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
-    QVERIFY(!f.ctx.data.gpuRequested);
-}
-
-void PlaceGroundEquipmentStateTest::retriesWhenToggleRejected()
-{
-    TurnaroundStateFixture f;
-    PlaceGroundEquipmentState state;
-
-    f.settings.callGpu = true;
-    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
-    f.menuGateway.toggleGpuResult = false;
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
-    QVERIFY(!f.ctx.data.gpuRequested);
-
-    f.menuGateway.toggleGpuResult = true;
-
-    const auto transition = state.Evaluate(f.ctx);
-
-    QVERIFY(transition.has_value());
-    QCOMPARE(f.menuGateway.toggleGpuCalls, 2);
     QVERIFY(f.ctx.data.gpuRequested);
 }
 

@@ -12,7 +12,7 @@ private slots:
     static void skipsCabinServicesWhenSettingsAreNull();
     static void confirmsEachServiceThenWaitsForCompletion();
     static void waitsForActiveServiceWhenDisabledMidRun();
-    static void retriesTriggerUntilServiceInProgress();
+    static void asksServiceOnceAndWaits();
     static void givesUpWhenServiceNeverStarts();
 };
 
@@ -118,7 +118,7 @@ void CabinServicesStateTest::waitsForActiveServiceWhenDisabledMidRun()
     QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);
 }
 
-void CabinServicesStateTest::retriesTriggerUntilServiceInProgress()
+void CabinServicesStateTest::asksServiceOnceAndWaits()
 {
     TurnaroundStateFixture f;
     CabinServicesState state;
@@ -129,13 +129,13 @@ void CabinServicesStateTest::retriesTriggerUntilServiceInProgress()
     QCOMPARE(f.menuGateway.requestLavatoryCalls, 1);
     QVERIFY(!f.ctx.data.lavatoryRequested);
 
-    for (int tick = 0; tick < 10; ++tick)
+    for (int tick = 0; tick < 20; ++tick)
     {
         ++f.ctx.data.stateTickCount;
         (void)state.Evaluate(f.ctx);
     }
 
-    QVERIFY(f.menuGateway.requestLavatoryCalls >= 2);
+    QCOMPARE(f.menuGateway.requestLavatoryCalls, 1);
     QVERIFY(!f.ctx.data.lavatoryRequested);
 
     f.gsxService.lavatoryInProgress = true;

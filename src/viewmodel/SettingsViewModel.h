@@ -26,6 +26,8 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(bool autoSelectGsxChoice READ GetAutoSelectGsxChoice
         WRITE SetAutoSelectGsxChoice NOTIFY AutoSelectGsxChoiceChanged)
     Q_PROPERTY(bool autoDeice READ GetAutoDeice WRITE SetAutoDeice NOTIFY AutoDeiceChanged)
+    Q_PROPERTY(bool useAircraftStairs READ GetUseAircraftStairs
+        WRITE SetUseAircraftStairs NOTIFY UseAircraftStairsChanged)
     Q_PROPERTY(int crewBoarding READ GetCrewBoarding WRITE SetCrewBoarding NOTIFY CrewBoardingChanged)
     Q_PROPERTY(bool autoStartFlow READ GetAutoStartFlow WRITE SetAutoStartFlow NOTIFY AutoStartFlowChanged)
     Q_PROPERTY(bool autoStartLoading READ GetAutoStartLoading WRITE SetAutoStartLoading NOTIFY AutoStartLoadingChanged)
@@ -112,6 +114,9 @@ public:
 
     [[nodiscard]] bool GetAutoDeice() const;
     void SetAutoDeice(bool enabled);
+
+    [[nodiscard]] bool GetUseAircraftStairs() const;
+    void SetUseAircraftStairs(bool enabled);
 
     [[nodiscard]] int GetCrewBoarding() const;
     void SetCrewBoarding(int choice);
@@ -233,6 +238,7 @@ signals:
     void FuelRateTextChanged();
     void AutoSelectGsxChoiceChanged();
     void AutoDeiceChanged();
+    void UseAircraftStairsChanged();
     void CrewBoardingChanged();
     void AutoStartFlowChanged();
     void AutoStartLoadingChanged();

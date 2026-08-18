@@ -63,6 +63,9 @@ void SimbriefClient::ApplyFlightPlan(const FlightPlan& flightPlan)
     automationStatus_->plannedZfwKg = flightPlan.zfwKg;
     automationStatus_->plannedPassengers = flightPlan.passengers;
     automationStatus_->simbriefUnit = flightPlan.unit;
+    automationStatus_->plannedOrigin = flightPlan.origin;
+    automationStatus_->plannedDestination = flightPlan.destination;
+    automationStatus_->planGeneratedEpoch = flightPlan.generatedEpoch;
 
     LOG_INFO("SimBrief OFP loaded: fuel=%.0fkg zfw=%.0fkg pax=%d",
              flightPlan.fuelKg, flightPlan.zfwKg, flightPlan.passengers);

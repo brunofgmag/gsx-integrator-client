@@ -90,9 +90,12 @@ private slots:
     static void doorsTakeOverGsxDoorAutomation();
     static void doorsSkipTogglesWhileMoving();
     static void doorsHoldBeforeClientData();
+    static void doorThatIgnoresTheCommandStopsAfterTwoRetries();
+    static void mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses();
     static void closeAllDoorsTogglesOpenMappedDoors();
     static void chocksReconcileWithRetryCap();
     static void zfwTrimsCargoAgainstActualWeight();
+    static void progressiveWriterDoesNotUndoTheTrim();
     static void jetwayDoorClosesAtItsOpenedIndex();
     static void aftCateringDoorOpensFiveRightOnlyOn300();
     static void groundPowerConnectFlow();
@@ -534,6 +537,62 @@ void Pmdg777Test::doorsHoldBeforeClientData()
     QVERIFY(fixture.data->toggledDoors.empty());
 }
 
+void Pmdg777Test::doorThatIgnoresTheCommandStopsAfterTwoRetries()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    fixture.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        fixture.aircraft->OnTick();
+    }
+
+    const auto toggles = std::ranges::count(fixture.data->toggledDoors, 12);
+
+    QCOMPARE(toggles, 3);
+}
+
+void Pmdg777Test::mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses()
+{
+    Pmdg777Fixture freighter(Pmdg777Variant::Freighter);
+
+    freighter.data->hasData = true;
+    freighter.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    freighter.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
+
+    freighter.aircraft->OnTick();
+
+    QVERIFY(!freighter.aircraft->IsMainDeckCargoDoorStuck());
+
+    for (int tick = 0; tick < 12; ++tick)
+    {
+        freighter.aircraft->OnTick();
+    }
+
+    QVERIFY(freighter.aircraft->IsMainDeckCargoDoorStuck());
+
+    freighter.data->doorStates[12] = 0;
+    freighter.aircraft->OnTick();
+
+    QVERIFY(!freighter.aircraft->IsMainDeckCargoDoorStuck());
+
+    Pmdg777Fixture passenger(Pmdg777Variant::Er200);
+
+    passenger.data->hasData = true;
+    passenger.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    passenger.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        passenger.aircraft->OnTick();
+    }
+
+    QVERIFY(!passenger.aircraft->IsMainDeckCargoDoorStuck());
+}
+
 void Pmdg777Test::closeAllDoorsTogglesOpenMappedDoors()
 {
     const Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
@@ -670,6 +729,39 @@ void Pmdg777Test::zfwTrimsCargoAgainstActualWeight()
         fixture.aircraft->OnTick();
     }
     QVERIFY(fixture.tablet->cargoSends.size() <= static_cast<std::size_t>(6));
+}
+
+void Pmdg777Test::progressiveWriterDoesNotUndoTheTrim()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Er300);
+
+    fixture.data->hasData = true;
+    fixture.SeedWeights(160000.0, 200000.0, 300);
+    fixture.gateway.avars["FUEL TOTAL QUANTITY WEIGHT"] = 0.0;
+    fixture.gateway.avars["TOTAL WEIGHT"] = 201200.0;
+
+    fixture.aircraft->SetCurrentZfwKg(200000.0);
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(1));
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        fixture.aircraft->SetCurrentZfwKg(200000.0);
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
+
+    const int trimmedCargo = fixture.tablet->cargoSends[1];
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        fixture.aircraft->SetCurrentZfwKg(200000.0);
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
+    QCOMPARE(fixture.tablet->cargoSends.back(), trimmedCargo);
 }
 
 void Pmdg777Test::jetwayDoorClosesAtItsOpenedIndex()

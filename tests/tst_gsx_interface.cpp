@@ -29,6 +29,7 @@ private slots:
     static void detectsPushbackFinished();
     static void detectsRepositioning();
     static void cargoPercentReadsLVars();
+    static void cargoLoadingReadsLVars();
     static void jetwayAndStairsAvailability();
     static void jetwayAndStairsUnavailableUntilLVarsReceived();
     static void goodEngineStartAssumedEnabledUntilLVarReceived();
@@ -243,6 +244,29 @@ void GsxInterfaceTest::cargoPercentReadsLVars()
 
     QCOMPARE(gsx.GetBoardingCargoPercent(), 42.5);
     QCOMPARE(gsx.GetDeboardingCargoPercent(), 17.0);
+}
+
+void GsxInterfaceTest::cargoLoadingReadsLVars()
+{
+    FakeVariableGateway gateway;
+    const GsxStateService gsx(&gateway);
+
+    QVERIFY(!gsx.IsLoadingCargo());
+    QVERIFY(!gsx.IsLoaderWaitingForDoor());
+
+    gateway.lvars[kBoardingCargo] = 1.0;
+    gateway.lvars[kBaggageLoaderMainState] = gsx::states::kLoaderWaitingForDoor;
+
+    QVERIFY(gsx.IsLoadingCargo());
+    QVERIFY(gsx.IsLoaderWaitingForDoor());
+
+    gateway.lvars[kBaggageLoaderMainState] = gsx::states::kLoaderRetracting;
+
+    QVERIFY(!gsx.IsLoaderWaitingForDoor());
+
+    gateway.lvars[kBaggageLoaderFrontState] = gsx::states::kLoaderWaitingForDoor;
+
+    QVERIFY(gsx.IsLoaderWaitingForDoor());
 }
 
 void GsxInterfaceTest::jetwayAndStairsAvailability()
@@ -528,10 +552,10 @@ void GsxInterfaceTest::serviceInProgressFollowsRemoteStateRaw()
 {
     FakeVariableGateway gateway;
     GsxRemoteState remote;
-    remote.services.push_back(GsxRemoteService{"Catering", "", "", 5, "", "", "", false, false});
-    remote.services.push_back(GsxRemoteService{"Water", "", "", 4, "", "", "", false, false});
-    remote.services.push_back(GsxRemoteService{"Lavatory", "", "", 1, "", "", "", true, false});
-    remote.services.push_back(GsxRemoteService{"Cleaning", "", "", 6, "", "", "", false, false});
+    remote.services.push_back(GsxRemoteService{"Catering", "", 5, false});
+    remote.services.push_back(GsxRemoteService{"Water", "", 4, false});
+    remote.services.push_back(GsxRemoteService{"Lavatory", "", 1, true});
+    remote.services.push_back(GsxRemoteService{"Cleaning", "", 6, false});
 
     const GsxStateService gsx(&gateway, &remote);
 
@@ -545,7 +569,7 @@ void GsxInterfaceTest::serviceInProgressFalseWhenAbsentOrNoRemote()
 {
     FakeVariableGateway gateway;
     GsxRemoteState remote;
-    remote.services.push_back(GsxRemoteService{"Catering", "", "", 5, "", "", "", false, false});
+    remote.services.push_back(GsxRemoteService{"Catering", "", 5, false});
 
     const GsxStateService withRemote(&gateway, &remote);
 

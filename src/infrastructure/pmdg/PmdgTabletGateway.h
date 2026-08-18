@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGTABLETGATEWAY_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGTABLETGATEWAY_H
 
+#include <optional>
 #include <string>
 
 class PmdgTabletGateway
@@ -11,11 +12,14 @@ public:
     virtual void Poll() = 0;
     [[nodiscard]] virtual bool IsAvailable() const = 0;
     [[nodiscard]] virtual bool EfbPlanImported() const = 0;
+    [[nodiscard]] virtual std::optional<bool> DoorOpen(const std::string& key) const = 0;
+    [[nodiscard]] virtual bool DoorMoving(const std::string& key) const = 0;
 
     virtual void SendFuelTotalLbs(int lbs) = 0;
     virtual void SendPaxTotal(int count) = 0;
     virtual void SendCargoTotalLbs(int lbs) = 0;
     virtual void RequestGroundConn(const std::string& key) = 0;
+    virtual void RequestState() = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGTABLETGATEWAY_H

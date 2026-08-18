@@ -10,6 +10,7 @@
 #include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
 #include "../pmdg/Pmdg777DataClient.h"
+#include "../pmdg/PmdgRouteFile.h"
 #include "../pmdg/PmdgTabletClient.h"
 #include "../../domain/model/AutomationStatus.h"
 #include "../../domain/model/FlightPlan.h"
@@ -28,6 +29,8 @@ namespace
     constexpr double kPassengerWeightKg = 84.0;
 
     constexpr int kMainDeckCargoDoor = 12;
+    constexpr int kDoorRetryTicks = 5;
+    constexpr int kDoorMaxAttempts = 2;
     constexpr int kGroundConnRetryTicks = 5;
     constexpr int kGroundConnMaxAttempts = 10;
     constexpr int kZfwSettleTicks = 5;
@@ -58,6 +61,7 @@ Pmdg777::Pmdg777(VariableGateway* variableGateway,
                    [](double, const double max) { return max >= kSmartSwitchPressed; })
 {
     desiredDoor_.fill(-1);
+    commandedDoor_.fill(-1);
     openedDoorIndex_.fill(-1);
     LOG_INFO("Profile loaded: %s", GetName());
 }
@@ -93,6 +97,12 @@ void Pmdg777::OnTick()
         smartSwitch_.Subscribe();
     }
 
+    if (status_->flightPlanStatus == FlightPlanStatus::Ready)
+    {
+        routeImport_.Observe(PmdgRouteFile::DirectoryFor(GetName()), status_->plannedOrigin,
+                             status_->plannedDestination, status_->planGeneratedEpoch);
+    }
+
     if (data_->HasData())
     {
         SyncDoors();
@@ -112,7 +122,7 @@ void Pmdg777::SyncDoors()
 
     if (IsCargoVariant())
     {
-        const bool mainLoaderPresent = gsx::states::IsLoaderPresent(
+        const bool mainLoaderPresent = gsx::states::IsLoaderAtDoor(
             variableGateway_->GetLVar(gsx::lvars::kBaggageLoaderMainState, 0.0));
         desiredDoor_[kMainDeckCargoDoor] = mainLoaderPresent ? 1 : 0;
     }
@@ -133,7 +143,7 @@ void Pmdg777::SetDesiredDoor(const GsxDoor door, const bool open)
     openedIndex = open ? index : -1;
 }
 
-void Pmdg777::ReconcileDoors() const
+void Pmdg777::ReconcileDoors()
 {
     for (std::size_t i = 0; i < desiredDoor_.size(); ++i)
     {
@@ -148,9 +158,35 @@ void Pmdg777::ReconcileDoors() const
             continue;
         }
 
+        const bool wantOpen = desiredDoor_[i] == 1;
         const bool isOpen = state == kDoorStateOpen;
-        if (isOpen != (desiredDoor_[i] == 1))
+
+        if (commandedDoor_[i] != desiredDoor_[i])
         {
+            commandedDoor_[i] = desiredDoor_[i];
+            ticksSinceDoorCommand_[i] = 0;
+            doorAttempts_[i] = 0;
+
+            if (isOpen != wantOpen)
+            {
+                data_->ToggleDoor(static_cast<int>(i));
+            }
+
+            continue;
+        }
+
+        if (isOpen == wantOpen)
+        {
+            doorAttempts_[i] = 0;
+
+            continue;
+        }
+
+        ++ticksSinceDoorCommand_[i];
+        if (ticksSinceDoorCommand_[i] >= kDoorRetryTicks && doorAttempts_[i] < kDoorMaxAttempts)
+        {
+            ticksSinceDoorCommand_[i] = 0;
+            ++doorAttempts_[i];
             data_->ToggleDoor(static_cast<int>(i));
         }
     }
@@ -185,11 +221,18 @@ int Pmdg777::DoorIndexFor(const GsxDoor door) const
     }
 }
 
+bool Pmdg777::IsMainDeckCargoDoorStuck() const
+{
+    return IsCargoVariant() && desiredDoor_[kMainDeckCargoDoor] == 1
+        && doorAttempts_[kMainDeckCargoDoor] >= kDoorMaxAttempts;
+}
+
 void Pmdg777::OnLoadingStarted()
 {
     lastSentFuelLbs_ = -1;
     lastSentPax_ = -1;
     lastSentCargoLbs_ = -1;
+    lastProgressiveCargoLbs_ = -1;
     lastRequestedZfwKg_ = 0.0;
     zfwSettledTicks_ = 0;
     zfwTrims_ = 0;
@@ -210,7 +253,7 @@ void Pmdg777::CloseAllDoors()
 bool Pmdg777::IsFlightPlanLoaded() const
 {
     return status_->flightPlanStatus == FlightPlanStatus::Ready
-        && (tablet_->EfbPlanImported() || data_->HasFmcFlightPlan());
+        && (tablet_->EfbPlanImported() || routeImport_.Seen() || data_->HasFmcFlightPlan());
 }
 
 double Pmdg777::GetPlannedFuelKg() const
@@ -294,8 +337,9 @@ void Pmdg777::SetCurrentZfwKg(const double zfwKg)
     }
 
     const int cargoLbs = static_cast<int>(std::lround(progress * plannedCargoKg * kLbsPerKg));
-    if (cargoLbs != lastSentCargoLbs_)
+    if (cargoLbs != lastProgressiveCargoLbs_)
     {
+        lastProgressiveCargoLbs_ = cargoLbs;
         lastSentCargoLbs_ = cargoLbs;
         tablet_->SendCargoTotalLbs(cargoLbs);
     }

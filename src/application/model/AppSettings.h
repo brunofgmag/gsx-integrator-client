@@ -13,6 +13,7 @@ struct AppSettings
     double fuelRateKgs = AutomationSettings::kDefaultFuelRateKgs;
     bool autoSelectGsxChoice = true;
     bool autoDeice = false;
+    bool useAircraftStairs = false;
     int crewBoarding = 3;
     bool autoStartFlow = true;
     bool autoStartLoading = true;

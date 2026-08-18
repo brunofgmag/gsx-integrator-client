@@ -16,6 +16,9 @@ namespace
     constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
     constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
     constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
+    constexpr double kJetwayDocked = 5.0;
+    constexpr auto kFwdEntryKey = "entry1_left";
+    constexpr auto kMainCargoKey = "main_cargo";
 
     struct Pmdg737Fixture
     {
@@ -57,12 +60,23 @@ private slots:
     static void parkingBrakeFallsBackToTheSimVar();
     static void readyToDeboardAcceptsChocksInsteadOfBrake();
     static void mapsOnlyTheDoorsTheSevenThirtySevenHas();
+    static void closingDoorsThatWereNeverOpenedCommandsNothing();
+    static void serviceDoorFollowsTheCateringVehicle();
+    static void openDoorIsLeftAloneWhenTheServiceArrives();
+    static void entryDoorIsCommandedOnceWhileTheEfbStateIsUnknown();
+    static void entryDoorRetriesWithCapWhileTheEfbStateDisagrees();
+    static void entryDoorStopsAsSoonAsTheEfbStateAgrees();
+    static void mainCargoDoorClosesWhenTheLoaderLeavesThePosition();
+    static void doorInMotionIsNotCommanded();
+    static void groundStateIsQueriedWhileTheAircraftRuns();
     static void mainCargoIsCommandedOnEdgeBecauseItCannotBeRead();
     static void paxVariantNeverTouchesMainCargo();
+    static void mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses();
     static void chocksReadFromTheLVarAndRetryWithCap();
     static void groundPowerRequestStopsWhenAvailable();
     static void setFuelSendsRoundedLbsOnce();
     static void cargoVariantSendsNoPassengers();
+    static void progressiveWriterDoesNotUndoTheTrim();
 };
 
 void Pmdg737Test::nameAndCargoFlagFollowTheVariant()
@@ -180,6 +194,163 @@ void Pmdg737Test::mapsOnlyTheDoorsTheSevenThirtySevenHas()
     QCOMPARE(Pmdg737::DoorFor(GsxDoor::MidPax), std::nullopt);
 }
 
+namespace
+{
+    int EntryToggles(const Pmdg737Fixture& fixture)
+    {
+        return static_cast<int>(std::ranges::count(fixture.data->toggledDoors, Pmdg737Door::FwdEntry));
+    }
+
+    void DockJetway(Pmdg737Fixture& fixture)
+    {
+        fixture.data->hasData = true;
+        fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+        fixture.gateway.lvars[gsx::lvars::kJetway] = kJetwayDocked;
+    }
+
+    void Tick(const Pmdg737Fixture& fixture, const int times)
+    {
+        for (int i = 0; i < times; ++i)
+        {
+            fixture.aircraft->OnTick();
+        }
+    }
+}
+
+void Pmdg737Test::closingDoorsThatWereNeverOpenedCommandsNothing()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+
+    fixture.aircraft->CloseAllDoors();
+    Tick(fixture, 10);
+
+    QCOMPARE(static_cast<int>(fixture.data->toggledDoors.size()), 0);
+}
+
+void Pmdg737Test::serviceDoorFollowsTheCateringVehicle()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+
+    fixture.aircraft->CloseAllDoors();
+    Tick(fixture, 10);
+
+    const auto serviceToggles = [&fixture] {
+        return static_cast<int>(std::ranges::count(fixture.data->toggledDoors, Pmdg737Door::FwdService));
+    };
+
+    QCOMPARE(serviceToggles(), 0);
+
+    fixture.gateway.lvars[gsx::lvars::kCateringFrontState] = gsx::states::kCateringWaitingForDoor;
+    Tick(fixture, 10);
+
+    QCOMPARE(serviceToggles(), 1);
+
+    fixture.gateway.lvars[gsx::lvars::kCateringFrontState] = 0.0;
+    Tick(fixture, 10);
+
+    QCOMPARE(serviceToggles(), 2);
+}
+
+void Pmdg737Test::openDoorIsLeftAloneWhenTheServiceArrives()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->doorOpen[kFwdEntryKey] = true;
+
+    Tick(fixture, 20);
+
+    QCOMPARE(EntryToggles(fixture), 0);
+}
+
+void Pmdg737Test::entryDoorIsCommandedOnceWhileTheEfbStateIsUnknown()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+
+    Tick(fixture, 20);
+
+    QCOMPARE(EntryToggles(fixture), 1);
+}
+
+void Pmdg737Test::entryDoorRetriesWithCapWhileTheEfbStateDisagrees()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->doorOpen[kFwdEntryKey] = false;
+
+    Tick(fixture, 60);
+
+    QCOMPARE(EntryToggles(fixture), 3);
+}
+
+void Pmdg737Test::entryDoorStopsAsSoonAsTheEfbStateAgrees()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->doorOpen[kFwdEntryKey] = false;
+
+    Tick(fixture, 1);
+    fixture.tablet->doorOpen[kFwdEntryKey] = true;
+    Tick(fixture, 20);
+
+    QCOMPARE(EntryToggles(fixture), 1);
+}
+
+void Pmdg737Test::mainCargoDoorClosesWhenTheLoaderLeavesThePosition()
+{
+    Pmdg737Fixture fixture(Pmdg737Variant::Bcf800);
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+
+    const auto mainToggles = [&fixture] {
+        return static_cast<int>(std::ranges::count(fixture.data->toggledDoors, Pmdg737Door::MainCargo));
+    };
+
+    fixture.gateway.lvars[gsx::lvars::kBaggageLoaderMainState] = gsx::states::kLoaderLoading;
+    Tick(fixture, 10);
+
+    QCOMPARE(mainToggles(), 1);
+
+    fixture.gateway.lvars[gsx::lvars::kBaggageLoaderMainState] = gsx::states::kLoaderRetracting;
+    Tick(fixture, 10);
+
+    QCOMPARE(mainToggles(), 2);
+}
+
+void Pmdg737Test::doorInMotionIsNotCommanded()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->moving.emplace(kFwdEntryKey);
+
+    Tick(fixture, 30);
+
+    QCOMPARE(EntryToggles(fixture), 0);
+
+    fixture.tablet->moving.clear();
+    fixture.tablet->doorOpen[kFwdEntryKey] = false;
+    Tick(fixture, 1);
+
+    QCOMPARE(EntryToggles(fixture), 1);
+}
+
+void Pmdg737Test::groundStateIsQueriedWhileTheAircraftRuns()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+
+    Tick(fixture, 9);
+
+    QCOMPARE(fixture.tablet->stateRequests, 3);
+}
+
 void Pmdg737Test::mainCargoIsCommandedOnEdgeBecauseItCannotBeRead()
 {
     Pmdg737Fixture fixture(Pmdg737Variant::Bcf800);
@@ -228,6 +399,39 @@ void Pmdg737Test::paxVariantNeverTouchesMainCargo()
 
     QVERIFY(std::ranges::find(fixture.data->toggledDoors, Pmdg737Door::MainCargo)
         == fixture.data->toggledDoors.end());
+}
+
+void Pmdg737Test::mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses()
+{
+    Pmdg737Fixture cargo(Pmdg737Variant::Bcf800);
+
+    cargo.data->hasData = true;
+    cargo.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    cargo.tablet->doorOpen[kMainCargoKey] = false;
+    cargo.gateway.lvars[gsx::lvars::kBaggageLoaderMainState] = gsx::states::kLoaderWaitingForDoor;
+
+    Tick(cargo, 1);
+
+    QVERIFY(!cargo.aircraft->IsMainDeckCargoDoorStuck());
+
+    Tick(cargo, 12);
+
+    QVERIFY(cargo.aircraft->IsMainDeckCargoDoorStuck());
+
+    cargo.tablet->doorOpen[kMainCargoKey] = true;
+    Tick(cargo, 1);
+
+    QVERIFY(!cargo.aircraft->IsMainDeckCargoDoorStuck());
+
+    Pmdg737Fixture pax(Pmdg737Variant::Pax800);
+
+    pax.data->hasData = true;
+    pax.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    pax.gateway.lvars[gsx::lvars::kBaggageLoaderMainState] = gsx::states::kLoaderWaitingForDoor;
+
+    Tick(pax, 30);
+
+    QVERIFY(!pax.aircraft->IsMainDeckCargoDoorStuck());
 }
 
 void Pmdg737Test::chocksReadFromTheLVarAndRetryWithCap()
@@ -305,6 +509,40 @@ void Pmdg737Test::cargoVariantSendsNoPassengers()
 
     QVERIFY(fixture.tablet->paxSends.empty());
     QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(1));
+}
+
+void Pmdg737Test::progressiveWriterDoesNotUndoTheTrim()
+{
+    Pmdg737Fixture fixture(Pmdg737Variant::Bcf800);
+
+    fixture.data->hasData = true;
+    fixture.gateway.avars["EMPTY WEIGHT"] = 40000.0;
+    fixture.gateway.avars["TOTAL WEIGHT"] = 61200.0;
+    fixture.gateway.avars["FUEL TOTAL QUANTITY WEIGHT"] = 0.0;
+    fixture.status.plannedZfwKg = 60000.0;
+
+    fixture.aircraft->SetCurrentZfwKg(60000.0);
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(1));
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        fixture.aircraft->SetCurrentZfwKg(60000.0);
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
+
+    const int trimmedCargo = fixture.tablet->cargoSends[1];
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        fixture.aircraft->SetCurrentZfwKg(60000.0);
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
+    QCOMPARE(fixture.tablet->cargoSends.back(), trimmedCargo);
 }
 
 QTEST_APPLESS_MAIN(Pmdg737Test)

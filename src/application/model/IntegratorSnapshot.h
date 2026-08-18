@@ -44,6 +44,7 @@ struct IntegratorSnapshot
     bool gsxProfileFixable = false;
     bool pmdgOptionsConflict = false;
     bool pmdgOptionsFixable = false;
+    bool cargoDoorStuck = false;
     bool cargoAircraft = false;
     bool efbFlightPlan = false;
 

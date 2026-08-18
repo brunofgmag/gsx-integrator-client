@@ -42,6 +42,7 @@ public:
 
     [[nodiscard]] const AutomationSettings& Settings() const { return settings_; }
     [[nodiscard]] bool IsConnected() const { return simConnect_.IsConnected(); }
+    [[nodiscard]] bool IsReconnectPending() const { return reconnectTimer_.isActive(); }
     [[nodiscard]] bool IsSessionActive() const { return isSessionActive_; }
     [[nodiscard]] TurnaroundPhase GetPhase() const { return stateMachine_.GetPhase(); }
     [[nodiscard]] std::string GetAircraftProfileId() const;
@@ -49,6 +50,7 @@ public:
     bool FixGsxProfile();
     [[nodiscard]] bool HasPmdgOptionsConflict() const { return pmdgOptions_.conflict; }
     bool FixPmdgOptions();
+    [[nodiscard]] bool IsCargoDoorStuck() const;
     void SetAutomationEnabled(bool enabled);
     void RestartFlow();
 #ifndef NDEBUG
@@ -100,6 +102,7 @@ private:
     [[nodiscard]] bool IsAircraftRefuelByGsx() const;
     [[nodiscard]] bool IsAircraftRefuelBySelf() const;
     [[nodiscard]] bool IsAircraftCargoVariant() const;
+    [[nodiscard]] bool IsLoadingCargoPhase() const;
     [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
     [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
     [[nodiscard]] bool CanFixGsxProfile() const;

@@ -23,13 +23,11 @@ public:
     [[nodiscard]] bool ParkingBrakeOn() const override;
     [[nodiscard]] bool IrsAligned() const override;
     [[nodiscard]] double TotalFuelLbs() const override;
-    [[nodiscard]] bool DoorOpen(Pmdg737Door door) const override;
 
     void ToggleDoor(Pmdg737Door door) override;
     void SetInFlight(bool inFlight) override;
 
     [[nodiscard]] static unsigned DoorEventOffsetFor(Pmdg737Door door);
-    [[nodiscard]] static bool HasAnnunciator(Pmdg737Door door);
     [[nodiscard]] SimConnectSession& SessionForTest() { return session_; }
 
 private:

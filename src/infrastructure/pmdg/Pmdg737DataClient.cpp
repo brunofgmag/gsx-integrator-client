@@ -45,11 +45,6 @@ unsigned Pmdg737DataClient::DoorEventOffsetFor(const Pmdg737Door door)
     }
 }
 
-bool Pmdg737DataClient::HasAnnunciator(const Pmdg737Door door)
-{
-    return door != Pmdg737Door::MainCargo && door != Pmdg737Door::Count;
-}
-
 void Pmdg737DataClient::EnsureConnected()
 {
     if (connected_)
@@ -148,27 +143,6 @@ double Pmdg737DataClient::TotalFuelLbs() const
     }
 
     return static_cast<double>(data_.FUEL_QtyCenter) + data_.FUEL_QtyLeft + data_.FUEL_QtyRight;
-}
-
-bool Pmdg737DataClient::DoorOpen(const Pmdg737Door door) const
-{
-    if (!hasData_ || !HasAnnunciator(door))
-    {
-        return false;
-    }
-
-    switch (door)
-    {
-    case Pmdg737Door::FwdEntry: return data_.DOOR_annunFWD_ENTRY;
-    case Pmdg737Door::FwdService: return data_.DOOR_annunFWD_SERVICE;
-    case Pmdg737Door::Airstair: return data_.DOOR_annunAIRSTAIR;
-    case Pmdg737Door::FwdCargo: return data_.DOOR_annunFWD_CARGO;
-    case Pmdg737Door::AftCargo: return data_.DOOR_annunAFT_CARGO;
-    case Pmdg737Door::EquipmentHatch: return data_.DOOR_annunEQUIP;
-    case Pmdg737Door::AftEntry: return data_.DOOR_annunAFT_ENTRY;
-    case Pmdg737Door::AftService: return data_.DOOR_annunAFT_SERVICE;
-    default: return false;
-    }
 }
 
 void Pmdg737DataClient::ToggleDoor(const Pmdg737Door door)

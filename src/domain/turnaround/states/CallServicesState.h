@@ -15,7 +15,6 @@ public:
 
 private:
     static std::optional<TurnaroundTransition> ResolveJetwayOrStairs(TurnaroundContext& ctx);
-    static void RegisterJetwayOrStairsRequest(TurnaroundContext& ctx, bool requested);
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_CALLSERVICESSTATE_H

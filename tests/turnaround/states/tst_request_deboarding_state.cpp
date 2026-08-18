@@ -18,7 +18,6 @@ private slots:
     static void holdsUntilGsxActive();
     static void retriesWhenBoardingDoesNotStart();
     static void retriesForPassengersWhenDeboardingDoesNotStart();
-    static void holdsRequestWhileMenuUnsettled();
 };
 
 void RequestDeboardingStateTest::callsMenuWhenCallable()
@@ -175,21 +174,6 @@ void RequestDeboardingStateTest::retriesForPassengersWhenDeboardingDoesNotStart(
 
     QCOMPARE(f.menuGateway.deboardingCalls, 2);
     QVERIFY(f.ctx.data.deboardingRequested);
-}
-
-void RequestDeboardingStateTest::holdsRequestWhileMenuUnsettled()
-{
-    TurnaroundStateFixture f;
-    RequestDeboardingState state;
-
-    f.aircraft.readyToDeboard = true;
-    f.gsxService.deboardingState = GsxStateStatus::Callable;
-    f.menuGateway.menuSettled = false;
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-
-    QCOMPARE(f.menuGateway.deboardingCalls, 0);
-    QVERIFY(!f.ctx.data.deboardingRequested);
 }
 
 QTEST_APPLESS_MAIN(RequestDeboardingStateTest)

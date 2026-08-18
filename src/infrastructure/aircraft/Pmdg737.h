@@ -6,6 +6,7 @@
 #include <optional>
 #include "SmartSwitch.h"
 #include "../gsx/GsxDoorSync.h"
+#include "../pmdg/PmdgRouteFile.h"
 #include "../pmdg/Pmdg737DataGateway.h"
 #include "../pmdg/PmdgTabletGateway.h"
 #include "../../domain/ports/Aircraft.h"
@@ -32,6 +33,7 @@ public:
     void OnTick() override;
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
+    [[nodiscard]] bool IsMainDeckCargoDoorStuck() const override;
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -62,11 +64,13 @@ public:
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
     [[nodiscard]] static std::optional<Pmdg737Door> DoorFor(GsxDoor door);
+    [[nodiscard]] static const char* EfbDoorKey(Pmdg737Door door);
 
 private:
     void SyncDoors();
     void SetDesiredDoor(GsxDoor door, bool open);
     void ReconcileDoors();
+    [[nodiscard]] std::optional<bool> DoorIsOpen(Pmdg737Door door) const;
     void ReconcileGroundConn();
     void TrimZfw();
     [[nodiscard]] bool ChocksSet() const;
@@ -79,16 +83,21 @@ private:
     GsxDoorSync doors_;
     std::array<int, static_cast<std::size_t>(Pmdg737Door::Count)> desiredDoor_{};
     std::array<int, static_cast<std::size_t>(Pmdg737Door::Count)> commandedDoor_{};
+    std::array<int, static_cast<std::size_t>(Pmdg737Door::Count)> ticksSinceDoorCommand_{};
+    std::array<int, static_cast<std::size_t>(Pmdg737Door::Count)> doorAttempts_{};
     std::optional<bool> desiredChocks_;
     std::optional<bool> desiredGroundPower_;
     int chocksAttempts_ = 0;
     int groundPowerAttempts_ = 0;
     int ticksSinceChocksRequest_ = 0;
     int ticksSinceGroundPowerRequest_ = 0;
+    int ticksSinceStateQuery_ = 0;
+    PmdgRouteImport routeImport_;
     SmartSwitch smartSwitch_;
     int lastSentFuelLbs_ = -1;
     int lastSentPax_ = -1;
     int lastSentCargoLbs_ = -1;
+    int lastProgressiveCargoLbs_ = -1;
     double lastRequestedZfwKg_ = 0.0;
     int zfwSettledTicks_ = 0;
     int zfwTrims_ = 0;

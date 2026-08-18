@@ -68,6 +68,8 @@ private slots:
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
+    static void currentZfwHoldsAtZeroUntilEmptyWeightArrives();
+    static void commitWaitsForEmptyWeightToArrive();
     static void plannedValuesComeFromSession();
     static void flightPlanLoadedWhenSessionReady();
     static void smartSwitchConsumesAndClearsLVar();
@@ -146,6 +148,42 @@ void TfdiMd11Test::currentZfwDoesNotDropBelowEmptyWeight()
     gateway.avars[kSimTotalWeight] = 100000.0;
 
     QCOMPARE(aircraft.GetCurrentZfwKg(), kEmptyOperatingZfwKg);
+}
+
+void TfdiMd11Test::currentZfwHoldsAtZeroUntilEmptyWeightArrives()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.avars[kSimTotalWeight] = 200000.0;
+    gateway.avars[kSimFuelTotalKg] = 20000.0;
+
+    QCOMPARE(aircraft.GetCurrentZfwKg(), 0.0);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+
+    QCOMPARE(aircraft.GetCurrentZfwKg(), 180000.0);
+}
+
+void TfdiMd11Test::commitWaitsForEmptyWeightToArrive()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    aircraft.SetCurrentFuelKg(20000.0);
+    aircraft.SetCurrentZfwKg(160000.0);
+    aircraft.OnSlowTick();
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+    aircraft.OnSlowTick();
+
+    constexpr double payload = 160000.0 - kEmptyOperatingZfwKg;
+
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbPayload), weight::KgToLb(payload)));
 }
 
 void TfdiMd11Test::plannedValuesComeFromSession()
@@ -388,6 +426,7 @@ void TfdiMd11Test::commitSetsReadReadyMask()
     AutomationStatus status;
     TfdiMd11 aircraft(&gateway, &status, false);
 
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     gateway.lvars[kEfbReadReady] = 2.0;
     aircraft.SetCurrentFuelKg(15000.0);
     aircraft.OnSlowTick();
@@ -615,13 +654,11 @@ void TfdiMd11Test::cargoDoorsOpenPerLoaderAndCloseWhenDone()
     const int callsAfterOpen = gateway.setLVarCalls;
     gateway.lvars[kGsxLoaderFront] = 9.0;
     aircraft.OnTick();
-    gateway.lvars[kGsxLoaderFront] = 4.0;
-    aircraft.OnTick();
 
     QCOMPARE(gateway.setLVarCalls, callsAfterOpen);
     QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
 
-    gateway.lvars[kGsxLoaderFront] = 1.0;
+    gateway.lvars[kGsxLoaderFront] = 4.0;
     aircraft.OnTick();
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);

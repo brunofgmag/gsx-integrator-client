@@ -15,7 +15,6 @@ private slots:
     static void advancesWhenDepartureRequestedRemotely();
     static void retryWhenPushbackStaysCallable();
     static void advancesWhenPushbackAlreadyCompleted();
-    static void holdsRequestWhileMenuUnsettled();
     static void holdsWhileDeiceRequested();
     static void holdsWhileDeiceActive();
     static void doesNotRetryWhileDeiceActive();
@@ -119,20 +118,6 @@ void RequestPushbackStateTest::advancesWhenPushbackAlreadyCompleted()
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingPushbackToStart);
     QCOMPARE(f.menuGateway.pushbackCalls, 0);
-}
-
-void RequestPushbackStateTest::holdsRequestWhileMenuUnsettled()
-{
-    TurnaroundStateFixture f;
-    RequestPushbackState state;
-
-    f.gsxService.departureState = GsxStateStatus::Callable;
-    f.menuGateway.menuSettled = false;
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-
-    QCOMPARE(f.menuGateway.pushbackCalls, 0);
-    QVERIFY(!f.ctx.data.pushbackRequested);
 }
 
 void RequestPushbackStateTest::holdsWhileDeiceRequested()

@@ -11,9 +11,8 @@ private slots:
     static void requestsCateringWhenEnabled();
     static void advancesWhenCateringDisabled();
     static void skipsCateringForCargoVariant();
-    static void retriesCateringUntilConfirmed();
+    static void asksCateringOnceAndWaits();
     static void advancesWhenCateringNeverStarts();
-    static void holdsWhileMenuUnsettled();
     static void skipsCateringWhenSettingsAreNull();
 };
 
@@ -67,7 +66,7 @@ void CallCateringStateTest::skipsCateringForCargoVariant()
     QVERIFY(!f.ctx.data.cateringRequested);
 }
 
-void CallCateringStateTest::retriesCateringUntilConfirmed()
+void CallCateringStateTest::asksCateringOnceAndWaits()
 {
     TurnaroundStateFixture f;
     CallCateringState state;
@@ -78,13 +77,13 @@ void CallCateringStateTest::retriesCateringUntilConfirmed()
     QCOMPARE(f.menuGateway.requestCateringCalls, 1);
     QVERIFY(!f.ctx.data.cateringRequested);
 
-    for (int tick = 0; tick < 10; ++tick)
+    for (int tick = 0; tick < 20; ++tick)
     {
         ++f.ctx.data.stateTickCount;
         (void)state.Evaluate(f.ctx);
     }
 
-    QVERIFY(f.menuGateway.requestCateringCalls >= 2);
+    QCOMPARE(f.menuGateway.requestCateringCalls, 1);
     QVERIFY(!f.ctx.data.cateringRequested);
 
     f.gsxService.cateringInProgress = true;
@@ -113,20 +112,6 @@ void CallCateringStateTest::advancesWhenCateringNeverStarts()
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::RequestFuel);
     QVERIFY(f.ctx.data.cateringRequested);
-}
-
-void CallCateringStateTest::holdsWhileMenuUnsettled()
-{
-    TurnaroundStateFixture f;
-    CallCateringState state;
-
-    f.settings.callCatering = true;
-    f.menuGateway.menuSettled = false;
-
-    const auto transition = state.Evaluate(f.ctx);
-
-    QVERIFY(!transition.has_value());
-    QCOMPARE(f.menuGateway.requestCateringCalls, 0);
 }
 
 void CallCateringStateTest::skipsCateringWhenSettingsAreNull()

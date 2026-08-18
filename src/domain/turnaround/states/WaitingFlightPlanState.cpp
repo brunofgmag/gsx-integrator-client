@@ -21,17 +21,13 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::Evaluate(TurnaroundC
         return std::nullopt;
     }
 
-    if (!ctx.menuGateway->IsMenuSettled())
-    {
-        return std::nullopt;
-    }
-
     bool& flightPlanRequested = ctx.data.flightPlanRequested;
     const bool simbriefLoaded = ctx.gsxGateway->IsSimbriefLoaded();
 
     if (!simbriefLoaded && !flightPlanRequested)
     {
-        flightPlanRequested = ctx.menuGateway->RequestSimbriefLoad();
+        ctx.menuGateway->RequestSimbriefLoad();
+        flightPlanRequested = true;
     }
 
     if (simbriefLoaded)

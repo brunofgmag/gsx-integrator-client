@@ -19,7 +19,6 @@ public:
     bool irsAligned = false;
     double totalFuelLbs = 0.0;
     bool inFlight = false;
-    std::array<bool, static_cast<std::size_t>(Pmdg737Door::Count)> doorOpen{};
     std::vector<Pmdg737Door> toggledDoors;
 
     void Poll() override { ++pollCalls; }
@@ -33,16 +32,6 @@ public:
     [[nodiscard]] bool ParkingBrakeOn() const override { return hasData && parkingBrakeOn; }
     [[nodiscard]] bool IrsAligned() const override { return hasData && irsAligned; }
     [[nodiscard]] double TotalFuelLbs() const override { return hasData ? totalFuelLbs : 0.0; }
-
-    [[nodiscard]] bool DoorOpen(const Pmdg737Door door) const override
-    {
-        if (!hasData || door == Pmdg737Door::Count || door == Pmdg737Door::MainCargo)
-        {
-            return false;
-        }
-
-        return doorOpen[static_cast<std::size_t>(door)];
-    }
 
     void ToggleDoor(const Pmdg737Door door) override { toggledDoors.push_back(door); }
     void SetInFlight(const bool value) override { inFlight = value; }

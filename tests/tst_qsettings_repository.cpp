@@ -49,6 +49,7 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QCOMPARE(loaded.fuelRateKgs, AutomationSettings::kDefaultFuelRateKgs);
     QCOMPARE(loaded.autoSelectGsxChoice, true);
     QCOMPARE(loaded.autoDeice, false);
+    QCOMPARE(loaded.useAircraftStairs, false);
     QCOMPARE(loaded.crewBoarding, 3);
     QCOMPARE(loaded.autoStartFlow, false);
     QCOMPARE(loaded.autoStartLoading, true);
@@ -79,6 +80,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     values.fuelRateKgs = 42.5;
     values.autoSelectGsxChoice = false;
     values.autoDeice = true;
+    values.useAircraftStairs = true;
     values.crewBoarding = 1;
     values.autoStartFlow = true;
     values.autoStartLoading = false;
@@ -119,6 +121,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     QCOMPARE(loaded.fuelRateKgs, values.fuelRateKgs);
     QCOMPARE(loaded.autoSelectGsxChoice, values.autoSelectGsxChoice);
     QCOMPARE(loaded.autoDeice, values.autoDeice);
+    QCOMPARE(loaded.useAircraftStairs, values.useAircraftStairs);
     QCOMPARE(loaded.crewBoarding, values.crewBoarding);
     QCOMPARE(loaded.autoStartFlow, values.autoStartFlow);
     QCOMPARE(loaded.autoStartLoading, values.autoStartLoading);

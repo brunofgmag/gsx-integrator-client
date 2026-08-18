@@ -6,6 +6,7 @@
 #include <optional>
 #include "SmartSwitch.h"
 #include "../gsx/GsxDoorSync.h"
+#include "../pmdg/PmdgRouteFile.h"
 #include "../pmdg/Pmdg777DataGateway.h"
 #include "../pmdg/PmdgTabletGateway.h"
 #include "../../domain/ports/Aircraft.h"
@@ -33,6 +34,7 @@ public:
     void OnTick() override;
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
+    [[nodiscard]] bool IsMainDeckCargoDoorStuck() const override;
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -65,7 +67,7 @@ public:
 private:
     void SyncDoors();
     void SetDesiredDoor(GsxDoor door, bool open);
-    void ReconcileDoors() const;
+    void ReconcileDoors();
     void ReconcileGroundConn();
     void TrimZfw();
     [[nodiscard]] int DoorIndexFor(GsxDoor door) const;
@@ -77,6 +79,9 @@ private:
     std::unique_ptr<PmdgTabletGateway> tablet_;
     GsxDoorSync doors_;
     std::array<int, 16> desiredDoor_{};
+    std::array<int, 16> commandedDoor_{};
+    std::array<int, 16> ticksSinceDoorCommand_{};
+    std::array<int, 16> doorAttempts_{};
     std::array<int, static_cast<std::size_t>(GsxDoor::Count)> openedDoorIndex_{};
     std::optional<bool> desiredChocks_;
     std::optional<bool> desiredGroundPower_;
@@ -88,9 +93,11 @@ private:
     int lastSentFuelLbs_ = -1;
     int lastSentPax_ = -1;
     int lastSentCargoLbs_ = -1;
+    int lastProgressiveCargoLbs_ = -1;
     double lastRequestedZfwKg_ = 0.0;
     int zfwSettledTicks_ = 0;
     int zfwTrims_ = 0;
+    PmdgRouteImport routeImport_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777_H

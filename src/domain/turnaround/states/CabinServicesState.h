@@ -17,11 +17,11 @@ public:
 private:
     static bool DispatchNextService(TurnaroundContext& ctx);
     static bool DispatchService(const TurnaroundContext& ctx, bool enabled,
+                                bool& asked,
                                 bool& requested,
                                 bool& activeSeen,
-                                int& attempts,
                                 GroundService service);
-    static bool SendServiceTrigger(const TurnaroundContext& ctx, GroundService service);
+    static void SendServiceTrigger(const TurnaroundContext& ctx, GroundService service);
     static void UpdateActiveSeen(TurnaroundContext& ctx);
     static bool AllEnabledCompleted(const TurnaroundContext& ctx);
     static bool IsServiceDone(const TurnaroundContext& ctx, bool activeSeen, GroundService service);

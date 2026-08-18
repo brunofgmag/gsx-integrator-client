@@ -10,6 +10,11 @@ namespace
 {
     constexpr auto kChannelToPlane = "TabletToPlane";
 
+    constexpr auto kStateReply =
+        R"({"message_tag":"state_reply","tablet_side":"FO","doors":{"abilities":{"close_all_enabled":true},)"
+        R"("individual_doors":{"entry1_left":"CLOSE","entry1_right":"OPEN","entry2_left":"DISARM",)"
+        R"("other_doors":{"fwd_cargo":"CLOSE","main_cargo":"OPEN"}}}})";
+
     QJsonObject Parse(const std::string& json)
     {
         return QJsonDocument::fromJson(QByteArray::fromStdString(json)).object();
@@ -29,6 +34,9 @@ private slots:
     static void sendsGroundConnWhenAvailable();
     static void subscribesPlaneToTabletWithJsFlag();
     static void latchesEfbPlanImportOnFetchSuccess();
+    static void readsDoorStatesFromStateReply();
+    static void doorInMotionHasNoState();
+    static void requestStateAsksThePlaneForGroundState();
     static void unsubscribesBorrowedBridgeOnDestruction();
     static void skipsUnsubscribeWhenNeverPolled();
 };
@@ -132,6 +140,60 @@ void PmdgTabletClientTest::latchesEfbPlanImportOnFetchSuccess()
     bridge.Deliver("PlaneToTablet",
                    R"({"message_tag":"simbrief_fetch_result","data":{"result":200},"tablet_side":"CA"})");
     QVERIFY(client.EfbPlanImported());
+}
+
+void PmdgTabletClientTest::readsDoorStatesFromStateReply()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+    client.Poll();
+
+    QVERIFY(!client.DoorOpen("entry1_left").has_value());
+
+    bridge.Deliver("PlaneToTablet", kStateReply);
+
+    QCOMPARE(client.DoorOpen("entry1_left"), std::optional(true));
+    QCOMPARE(client.DoorOpen("entry1_right"), std::optional(false));
+    QCOMPARE(client.DoorOpen("fwd_cargo"), std::optional(true));
+    QCOMPARE(client.DoorOpen("main_cargo"), std::optional(false));
+    QVERIFY(!client.DoorOpen("airstair").has_value());
+}
+
+void PmdgTabletClientTest::doorInMotionHasNoState()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+    client.Poll();
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO","doors":{"individual_doors":)"
+                   R"({"entry1_left":"OPENING","entry1_right":"CLOSE",)"
+                   R"("other_doors":{"main_cargo":"CLOSING","fwd_cargo":"OPEN"}}}})");
+
+    QVERIFY(!client.DoorOpen("entry1_left").has_value());
+    QVERIFY(!client.DoorOpen("main_cargo").has_value());
+    QCOMPARE(client.DoorOpen("entry1_right"), std::optional(true));
+    QCOMPARE(client.DoorOpen("fwd_cargo"), std::optional(false));
+}
+
+void PmdgTabletClientTest::requestStateAsksThePlaneForGroundState()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+
+    client.RequestState();
+
+    QCOMPARE(bridge.calls.size(), static_cast<std::size_t>(1));
+
+    const auto& [channel, flag, payload] = bridge.calls.front();
+
+    QCOMPARE(QString::fromStdString(channel), QString(kChannelToPlane));
+    QCOMPARE(flag, CommBusFlag::kWasm);
+
+    const QJsonObject envelope = Parse(payload);
+
+    QCOMPARE(envelope.value("message_tag").toString(), QString("query_state"));
+    QCOMPARE(envelope.value("data").toObject().value("request").toString(), QString("yes"));
 }
 
 void PmdgTabletClientTest::unsubscribesBorrowedBridgeOnDestruction()

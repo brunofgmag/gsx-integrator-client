@@ -340,6 +340,7 @@ private slots:
     static void holdsAtRequestFuelUntilLoadingConfirmed();
     static void waitsForRefuelingTransitionDelay();
     static void waitsForBoardingTransitionDelay();
+    static void holdsBoardingWhileCargoIsPending();
     static void completesReachableWorkflowAndReturnsToStart();
     static void publishesCurrentTankFuelBeforeRefuel();
     static void publishesLoadingTargetsAfterFlightPlanCapture();
@@ -535,6 +536,30 @@ void TurnaroundStateMachineTest::waitsForBoardingTransitionDelay()
     workflow.BeginBoardingDelay();
     workflow.FinishDelay(59, TurnaroundPhase::Boarding);
     workflow.TickTo(TurnaroundPhase::WaitingReadyToPush);
+}
+
+void TurnaroundStateMachineTest::holdsBoardingWhileCargoIsPending()
+{
+    TurnaroundWorkflow workflow;
+    ReachBoarding(workflow);
+
+    workflow.f.gsxService.loaderWaitingForDoor = true;
+    workflow.f.gsxService.cargoPercent = 67.0;
+    workflow.f.gsxService.boardingState = GsxStateStatus::Completed;
+
+    workflow.TickHolding(TurnaroundPhase::Boarding);
+    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 0);
+
+    workflow.f.gsxService.loaderWaitingForDoor = false;
+    workflow.f.gsxService.loadingCargo = true;
+
+    workflow.TickHolding(TurnaroundPhase::Boarding);
+    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 0);
+
+    workflow.f.gsxService.loadingCargo = false;
+    workflow.f.gsxService.cargoPercent = 100.0;
+
+    workflow.CompleteBoarding();
 }
 
 void TurnaroundStateMachineTest::completesReachableWorkflowAndReturnsToStart()

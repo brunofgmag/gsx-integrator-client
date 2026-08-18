@@ -35,7 +35,8 @@ std::optional<TurnaroundTransition> RepositionAircraftState::Evaluate(Turnaround
 
     if (!repositionRequested && !repositionCompleted)
     {
-        repositionRequested = ctx.menuGateway->RepositionAircraft();
+        ctx.menuGateway->RepositionAircraft();
+        repositionRequested = true;
         return std::nullopt;
     }
 

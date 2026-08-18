@@ -95,6 +95,7 @@ A few tips:
 - Let the client drive the GSX menu. If you click through GSX menus manually mid-turnaround, the two of you will fight over it.
 - Planned fuel and ZFW come from your Simbrief OFP, so dispatch before you board, not after.
 - On the Fenix, import your SimBrief plan on the EFB. The client reads the fuel and load targets from there, so the turnaround waits until the plan is in.
+- On the iFly, open the Balance & Payload page in the EFB and load your SimBrief plan there. You only need the flight plan, not the weights (the client writes those during boarding). The turnaround holds at "Waiting for flight plan" until the B&P import is done.
 - If nothing happens after you load in, check that you are flying one of the supported aircraft and that GSX itself is running normally.
 
 ## Problems and feedback

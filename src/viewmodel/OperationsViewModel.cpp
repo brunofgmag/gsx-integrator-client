@@ -244,6 +244,11 @@ bool OperationsViewModel::HasPmdgOptionsConflict() const
     return snapshot_.pmdgOptionsConflict;
 }
 
+bool OperationsViewModel::IsCargoDoorStuck() const
+{
+    return snapshot_.cargoDoorStuck;
+}
+
 bool OperationsViewModel::IsPmdgOptionsFixable() const
 {
     return snapshot_.pmdgOptionsFixable;
