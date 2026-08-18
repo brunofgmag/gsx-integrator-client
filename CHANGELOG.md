@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.3.0...v1.4.0) (2026-08-17)
+
+
+### Features
+
+* let the user choose the graphics backend ([#36](https://github.com/brunofgmag/gsx-integrator-client/issues/36)) ([1d866e3](https://github.com/brunofgmag/gsx-integrator-client/commit/1d866e37e031b7c8cfc34b7ba73ca22fb0082162))
+
 ## [1.3.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.2.0...v1.3.0) (2026-08-16)
 
 

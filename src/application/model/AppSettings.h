@@ -27,6 +27,7 @@ struct AppSettings
     bool openGsxOnRequests = true;
     int themeMode = 2;
     std::string language = "system";
+    std::string renderer = "software";
     int updateMode = 1;
     int weightUnitMode = 0;
     bool closeToTray = false;

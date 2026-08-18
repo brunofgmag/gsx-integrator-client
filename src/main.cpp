@@ -16,6 +16,7 @@
 #include "application/RuntimeIntegratorService.h"
 #include "infrastructure/aircraft/AircraftFactory.h"
 #include "infrastructure/settings/QSettingsRepository.h"
+#include "infrastructure/platform/GraphicsBackend.h"
 #include "infrastructure/platform/ShowWindowMessageFilter.h"
 #include "infrastructure/platform/WindowForeground.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
@@ -164,6 +165,8 @@ int main(int argc, char* argv[])
     const AppSettings startupSettings = settingsRepository.Load();
     const StartupWindow startupWindow = ResolveStartupWindow(trayArg, startupSettings);
 
+    GraphicsBackend::Apply(QString::fromStdString(startupSettings.renderer));
+
     QTranslator translator;
     InstallAppTranslator(translator, QString::fromStdString(startupSettings.language));
 
@@ -254,6 +257,22 @@ int main(int argc, char* argv[])
     {
         QCoreApplication::instance()->installNativeEventFilter(&showWindowFilter);
         WindowsTitleBar::Apply(rootWindow, settingsViewModel.GetEffectiveDark());
+
+        if (auto* quickWindow = qobject_cast<QQuickWindow*>(rootWindow))
+        {
+            const auto publishActiveRenderer = [quickWindow, &settingsViewModel]
+            {
+                if (const auto* renderer = quickWindow->rendererInterface())
+                {
+                    settingsViewModel.SetActiveRenderer(
+                        GraphicsBackend::ToName(renderer->graphicsApi()));
+                }
+            };
+
+            publishActiveRenderer();
+            QObject::connect(quickWindow, &QQuickWindow::sceneGraphInitialized, quickWindow,
+                             publishActiveRenderer);
+        }
 
         if (startupWindow == StartupWindow::Foreground)
         {

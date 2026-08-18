@@ -90,6 +90,45 @@
     </message>
 </context>
 <context>
+    <name>AdvancedPane</name>
+    <message>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="25"/>
+        <source>Renderer</source>
+        <translation>Renderer</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="26"/>
+        <source>Graphics Backend</source>
+        <translation>Graphics Backend</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="27"/>
+        <source>Software is the default because it uses the least RAM and VRAM. D3D12 draws on the graphics card; OpenGL is there for drivers that misbehave.</source>
+        <translation>Software is the default because it uses the least RAM and VRAM. D3D12 draws on the graphics card; OpenGL is there for drivers that misbehave.</translation>
+    </message>
+    <message>
+        <source>D3D12 is the default and hands the drawing to the graphics card. Software draws on the processor instead, at a steadier cost and with less memory, but the window can fail to repaint when it shrinks. OpenGL is there for drivers that misbehave.</source>
+        <translation type="vanished">D3D12 is the default and hands the drawing to the graphics card. Software draws on the processor instead, at a steadier cost and with less memory, but the window can fail to repaint when it shrinks. OpenGL is there for drivers that misbehave.</translation>
+    </message>
+    <message>
+        <source>Software is the default: it draws on the processor, at a steady cost, with the least memory and the smoothest window dragging. D3D12 hands the drawing to the graphics card, which costs less processor on some setups and more on others. OpenGL is there for drivers that misbehave.</source>
+        <translation type="vanished">Software is the default: it draws on the processor, at a steady cost, with the least memory and the smoothest window dragging. D3D12 hands the drawing to the graphics card, which costs less processor on some setups and more on others. OpenGL is there for drivers that misbehave.</translation>
+    </message>
+    <message>
+        <source>Graphics backend that draws the window</source>
+        <translation type="vanished">Graphics backend that draws the window</translation>
+    </message>
+    <message>
+        <source>D3D12 is the default and keeps the drawing on the graphics card. Software draws on the processor instead: window dragging gets smoother, but it burns a core whenever something on screen animates, competing with the simulator. OpenGL and Vulkan are there for drivers that misbehave.</source>
+        <translation type="vanished">D3D12 is the default and keeps the drawing on the graphics card. Software draws on the processor instead: window dragging gets smoother, but it burns a core whenever something on screen animates, competing with the simulator. OpenGL and Vulkan are there for drivers that misbehave.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="40"/>
+        <source>Restart GSX Integrator to draw with %1. It is still using %2.</source>
+        <translation>Restart GSX Integrator to draw with %1. It is still using %2.</translation>
+    </message>
+</context>
+<context>
     <name>Advisory</name>
     <message>
         <location filename="../src/qml/components/Advisory.qml" line="42"/>
@@ -1035,6 +1074,11 @@
         <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
         <source>Profiles</source>
         <translation>Profiles</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <source>Advanced</source>
+        <translation>Advanced</translation>
     </message>
     <message>
         <source>Application</source>

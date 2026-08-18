@@ -200,6 +200,7 @@ set(APP_QML_FILES
         src/qml/screens/ConnectingPanel.qml
         src/qml/screens/OperationsScreen.qml
         src/qml/screens/SettingsScreen.qml
+        src/qml/screens/settings/AdvancedPane.qml
         src/qml/screens/settings/AutomationPane.qml
         src/qml/screens/settings/GeneralPane.qml
         src/qml/screens/settings/ProfilesPane.qml
