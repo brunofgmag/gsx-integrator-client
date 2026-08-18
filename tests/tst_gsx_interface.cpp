@@ -552,10 +552,10 @@ void GsxInterfaceTest::serviceInProgressFollowsRemoteStateRaw()
 {
     FakeVariableGateway gateway;
     GsxRemoteState remote;
-    remote.services.push_back(GsxRemoteService{"Catering", "", "", 5, "", "", "", false, false});
-    remote.services.push_back(GsxRemoteService{"Water", "", "", 4, "", "", "", false, false});
-    remote.services.push_back(GsxRemoteService{"Lavatory", "", "", 1, "", "", "", true, false});
-    remote.services.push_back(GsxRemoteService{"Cleaning", "", "", 6, "", "", "", false, false});
+    remote.services.push_back(GsxRemoteService{"Catering", "", 5, false});
+    remote.services.push_back(GsxRemoteService{"Water", "", 4, false});
+    remote.services.push_back(GsxRemoteService{"Lavatory", "", 1, true});
+    remote.services.push_back(GsxRemoteService{"Cleaning", "", 6, false});
 
     const GsxStateService gsx(&gateway, &remote);
 
@@ -569,7 +569,7 @@ void GsxInterfaceTest::serviceInProgressFalseWhenAbsentOrNoRemote()
 {
     FakeVariableGateway gateway;
     GsxRemoteState remote;
-    remote.services.push_back(GsxRemoteService{"Catering", "", "", 5, "", "", "", false, false});
+    remote.services.push_back(GsxRemoteService{"Catering", "", 5, false});
 
     const GsxStateService withRemote(&gateway, &remote);
 
