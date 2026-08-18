@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.4.0...v1.5.0) (2026-08-18)
+
+
+### Features
+
+* iFly plan gate, GSX menu retry rework e correções de porta de carga do 737 ([#38](https://github.com/brunofgmag/gsx-integrator-client/issues/38)) ([55a5700](https://github.com/brunofgmag/gsx-integrator-client/commit/55a570054bd3bca35fb97e8cb7728b989a3ab9bb))
+
 ## [1.4.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.3.0...v1.4.0) (2026-08-17)
 
 
