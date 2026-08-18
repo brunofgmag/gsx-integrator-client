@@ -77,12 +77,14 @@ namespace
             {MatchField::Title, MatchOp::Contains, "Vendor Type"},
             {MatchField::AtcModel, MatchOp::Equals, "TYPE"}
         },
-        &CreateYourAircraft
+        &CreateYourAircraft, "vendor-type", "TYPE", RefuelBy::Gsx
     };
 
     [[maybe_unused]] const AircraftRegistration kYourAircraftRegistration{kYourAircraftDescriptor};
 }
 ```
+
+The last three arguments are easy to leave out, because they have defaults and the code compiles without them. It fails in a test instead: the identifier and the short code have to be non-empty and unique across the whole registry, and the short code is also what sorts the aircraft in the settings list. `refuelBy` says who moves the fuel. `Gsx` lets the truck fill the tanks, `Self` means the airplane loads on its own, and `Client` means this adapter writes the fuel progressively. The screen reads it to decide whether that profile gets a fuel rate control.
 
 The creator receives an `AircraftContext` that bundles the `VariableGateway` and `AutomationStatus` most adapters need, along with the shared CommBus bridge. Most aircraft only use the gateway. One that speaks CommBus borrows `context.commBusBridge` instead of opening its own SimConnect connection, the way `Pmdg777.cpp` reaches the PMDG tablet.
 
