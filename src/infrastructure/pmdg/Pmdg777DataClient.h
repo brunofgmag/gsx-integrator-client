@@ -4,13 +4,12 @@
 #include <functional>
 #include "Pmdg777DataGateway.h"
 #include "Pmdg777SdkData.h"
-#include "../simconnect/SimConnectSession.h"
+#include "PmdgClientDataChannel.h"
 
 class Pmdg777DataClient final : public Pmdg777DataGateway
 {
 public:
     Pmdg777DataClient();
-    ~Pmdg777DataClient() override;
 
     void Poll() override;
     [[nodiscard]] bool HasData() const override;
@@ -29,19 +28,11 @@ public:
     void SetInFlight(bool inFlight) override;
 
     void SetClockForTest(std::function<long long()> clock) { nowMs_ = std::move(clock); }
-    [[nodiscard]] SimConnectSession& SessionForTest() { return session_; }
 
 private:
-    void EnsureConnected();
-    void OnClientData(const void* data, DWORD size);
-
     static constexpr long long kKickIntervalMs = 5000;
 
-    SimConnectSession session_;
-    PMDG_777X_Data data_{};
-    bool hasData_ = false;
-    bool connected_ = false;
-    bool inFlight_ = false;
+    PmdgClientDataChannel<PMDG_777X_Data> channel_;
     bool pendingKickRelease_ = false;
     long long lastKickMs_ = -kKickIntervalMs;
     std::function<long long()> nowMs_;

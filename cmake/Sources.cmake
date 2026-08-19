@@ -99,6 +99,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/ifly/IFlyPlanFile.cpp
         src/infrastructure/ifly/IFlyPlanFile.h
+        src/infrastructure/aircraft/PmdgAircraft.cpp
+        src/infrastructure/aircraft/PmdgAircraft.h
         src/infrastructure/aircraft/Pmdg737.cpp
         src/infrastructure/aircraft/Pmdg737.h
         src/infrastructure/aircraft/Pmdg777.cpp
@@ -125,6 +127,16 @@ set(APP_SOURCES
         src/infrastructure/pmdg/Pmdg737DataClient.h
         src/infrastructure/pmdg/Pmdg737DataGateway.h
         src/infrastructure/pmdg/Pmdg737SdkData.h
+        src/infrastructure/pmdg/PmdgClientDataChannel.h
+        src/infrastructure/pmdg/PmdgDataGateway.h
+        src/infrastructure/pmdg/PmdgDoorReconciler.cpp
+        src/infrastructure/pmdg/PmdgDoorReconciler.h
+        src/infrastructure/pmdg/PmdgDoorSource.h
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.cpp
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.h
+        src/infrastructure/pmdg/PmdgGroundSource.h
+        src/infrastructure/pmdg/PmdgPayloadWriter.cpp
+        src/infrastructure/pmdg/PmdgPayloadWriter.h
         src/infrastructure/pmdg/PmdgOptions.cpp
         src/infrastructure/pmdg/PmdgOptions.h
         src/infrastructure/pmdg/PmdgRouteFile.cpp

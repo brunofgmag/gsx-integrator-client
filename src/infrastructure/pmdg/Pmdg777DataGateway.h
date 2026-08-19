@@ -1,18 +1,13 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777DATAGATEWAY_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777DATAGATEWAY_H
 
-class Pmdg777DataGateway
+#include "PmdgDataGateway.h"
+
+class Pmdg777DataGateway : public PmdgDataGateway
 {
 public:
-    virtual ~Pmdg777DataGateway() = default;
-
-    virtual void Poll() = 0;
-    [[nodiscard]] virtual bool HasData() const = 0;
-
     [[nodiscard]] virtual bool ExtPowerConnected() const = 0;
     [[nodiscard]] virtual bool ExtPowerAvailable() const = 0;
-    [[nodiscard]] virtual bool BeaconOn() const = 0;
-    [[nodiscard]] virtual bool ParkingBrakeOn() const = 0;
     [[nodiscard]] virtual bool ApuRunning() const = 0;
     [[nodiscard]] virtual bool WheelChocksSet() const = 0;
     [[nodiscard]] virtual bool HasFmcFlightPlan() const = 0;
@@ -20,7 +15,6 @@ public:
 
     virtual void ToggleDoor(int index) = 0;
     virtual void KickDataRefresh() = 0;
-    virtual void SetInFlight(bool inFlight) = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777DATAGATEWAY_H

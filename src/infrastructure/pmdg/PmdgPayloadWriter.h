@@ -1,0 +1,33 @@
+#ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGPAYLOADWRITER_H
+#define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGPAYLOADWRITER_H
+
+class PmdgTabletGateway;
+class VariableGateway;
+struct AutomationStatus;
+
+class PmdgPayloadWriter
+{
+public:
+    PmdgPayloadWriter(PmdgTabletGateway& tablet, VariableGateway& variables,
+                      const AutomationStatus* status, bool cargoVariant);
+
+    void Reset();
+    void SetFuelKg(double fuelKg);
+    void SetZfwKg(double zfwKg);
+    void Trim();
+
+private:
+    PmdgTabletGateway& tablet_;
+    VariableGateway& variables_;
+    const AutomationStatus* status_;
+    bool cargoVariant_;
+    int lastSentFuelLbs_ = -1;
+    int lastSentPax_ = -1;
+    int lastSentCargoLbs_ = -1;
+    int lastProgressiveCargoLbs_ = -1;
+    double lastRequestedZfwKg_ = 0.0;
+    int zfwSettledTicks_ = 0;
+    int zfwTrims_ = 0;
+};
+
+#endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGPAYLOADWRITER_H
