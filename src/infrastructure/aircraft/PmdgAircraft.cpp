@@ -1,6 +1,7 @@
 #include "PmdgAircraft.h"
 
 #include <utility>
+#include "DoorReading.h"
 #include "../gsx/GsxLVars.h"
 #include "../pmdg/PmdgDataGateway.h"
 #include "../simvars/SimVars.h"
@@ -27,6 +28,7 @@ PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationSta
       data_(data),
       tablet_(std::move(tablet)),
       cargoVariant_(spec.cargoVariant),
+      doorSlots_(spec.doorSlots),
       mainDeckDoorSlot_(spec.mainDeckDoorSlot),
       doors_(variableGateway),
       doorReconciler_(*this, spec.doorSlots, spec.doorBaseline),
@@ -98,6 +100,18 @@ void PmdgAircraft::CloseAllDoors()
     }
 
     doorReconciler_.Reconcile();
+}
+
+DoorStatus PmdgAircraft::GetDoorStatus() const
+{
+    DoorStatus status = doors::kNoDoorsSeen;
+
+    for (int slot = 0; slot < doorSlots_; ++slot)
+    {
+        status = doors::Combine(status, DoorOpenAt(slot));
+    }
+
+    return status;
 }
 
 bool PmdgAircraft::IsMainDeckCargoDoorStuck() const
@@ -202,4 +216,17 @@ bool PmdgAircraft::IsEngineRunning() const
 bool PmdgAircraft::IsParkingBrakeSet() const
 {
     return data_->ParkingBrakeOn();
+}
+
+std::optional<bool> PmdgAircraft::DoorOpenAt(const int slot) const
+{
+    switch (ObserveDoor(slot))
+    {
+    case DoorObservation::Open:
+        return true;
+    case DoorObservation::Closed:
+        return false;
+    default:
+        return std::nullopt;
+    }
 }

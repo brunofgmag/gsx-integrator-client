@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include "AircraftRegistry.h"
+#include "DoorReading.h"
 #include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
 #include "../../domain/model/FlightPlan.h"
@@ -37,6 +38,8 @@ namespace
     constexpr auto kFwdCargoAnimLVar = "Animation_FWD_Cargo_VAL";
     constexpr auto kAftCargoAnimLVar = "Animation_AFT_Cargo_VAL";
     constexpr double kCargoDoorOpenThreshold = 90.0;
+    constexpr std::array kCargoDoorAnimLVars = {kFwdCargoAnimLVar, kAftCargoAnimLVar};
+    constexpr DoorStatus kPaxDoorsUnreadable = DoorStatus::Unknown;
     constexpr int kPulseSettleTicks = 5;
     constexpr int kMaxDoorPulseAttempts = 3;
 
@@ -315,6 +318,18 @@ void IFly737Max::SetCurrentZfwKg(const double zfwKg)
 bool IFly737Max::ConsumeSmartSwitch()
 {
     return smartSwitch_.Consume();
+}
+
+DoorStatus IFly737Max::GetDoorStatus() const
+{
+    DoorStatus status = kPaxDoorsUnreadable;
+
+    for (const char* animLVar : kCargoDoorAnimLVars)
+    {
+        status = doors::Combine(status, doors::OpenAboveZero(*variableGateway_, animLVar));
+    }
+
+    return status;
 }
 
 bool IFly737Max::IsPowered() const

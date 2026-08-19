@@ -5,7 +5,9 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <array>
 #include "AircraftRegistry.h"
+#include "DoorReading.h"
 #include "../gsx/GsxLVars.h"
 #include "../../domain/support/Weight.h"
 #include "../logging/LogMacros.h"
@@ -49,6 +51,9 @@ namespace
     constexpr auto kCargoDoor1RLVar = "MD11_EXT_DOOR_CMD_CARGO1R";
     constexpr auto kCargoDoor2RLVar = "MD11_EXT_DOOR_CMD_CARGO2R";
     constexpr auto kCargoDoorMainLVar = "MD11_EXT_DOOR_CMD_CARGO_MAIN";
+    constexpr std::array kDoorStateLVars =
+        {"MD11_EXT_DOOR_PAX_1L", "MD11_EXT_DOOR_PAX_2L", "MD11_EXT_DOOR_PAX_4L",
+         "MD11_EXT_DOOR_CARGO1R", "MD11_EXT_DOOR_CARGO2R", "MD11_EXT_DOOR_CARGO_MAIN"};
     constexpr double kDoorOpen = 100.0;
     constexpr double kDoorClosed = 0.0;
 }
@@ -226,6 +231,18 @@ double TfdiMd11::GetCurrentZfwKg() const
 void TfdiMd11::SetCurrentZfwKg(const double zfwKg)
 {
     UpdateTarget(zfwTarget_, zfwKg);
+}
+
+DoorStatus TfdiMd11::GetDoorStatus() const
+{
+    DoorStatus status = doors::kNoDoorsSeen;
+
+    for (const char* stateLVar : kDoorStateLVars)
+    {
+        status = doors::Combine(status, doors::OpenAboveZero(*variableGateway_, stateLVar));
+    }
+
+    return status;
 }
 
 bool TfdiMd11::ConsumeSmartSwitch()

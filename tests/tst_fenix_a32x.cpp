@@ -127,6 +127,7 @@ class FenixA32xTest final : public QObject
 private slots:
     static void reportsNamePerVariant();
     static void reportsLoadMethodsAndCapabilities();
+    static void doorStatusStaysUnknownEvenWithDoorDatarefsReadingOpen();
     static void registersSmartSwitchForFastRefresh();
     static void subscribesEfbPlanDatarefs();
     static void pollsEfbEveryTick();
@@ -914,6 +915,19 @@ void FenixA32xTest::readyToDeboardFollowsSafetyState()
     fixture.gateway.avars[kSimBeaconLight] = 1.0;
 
     QVERIFY(!fixture.aircraft.IsReadyToDeboard());
+}
+
+void FenixA32xTest::doorStatusStaysUnknownEvenWithDoorDatarefsReadingOpen()
+{
+    const FenixFixture fixture;
+
+    for (const char* doorDataref : {kFwdPaxDoor, kMidPaxDoor, kAftPaxDoor, kFwdCateringDoor,
+                                    kAftCateringDoor, kFwdCargoDoor, kAftCargoDoor})
+    {
+        fixture.efb.numbers[doorDataref] = 1.0;
+    }
+
+    QVERIFY(fixture.aircraft.GetDoorStatus() == DoorStatus::Unknown);
 }
 
 QTEST_APPLESS_MAIN(FenixA32xTest)

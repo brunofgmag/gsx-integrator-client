@@ -6,7 +6,9 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <optional>
 #include "AircraftRegistry.h"
+#include "DoorReading.h"
 #include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
 #include "../../domain/model/FlightPlan.h"
@@ -54,6 +56,27 @@ namespace
     constexpr auto kPaxDoorMode4RLVar = "TLS_PAX_DOOR_MODE_4R";
     constexpr double kDoorOpen = 2.0;
     constexpr double kDoorClosed = 0.0;
+
+    constexpr std::array kDoorModeLVars =
+        {kCargoDoorModeFwdLVar, kCargoDoorModeAftLVar,
+         kPaxDoorMode1LLVar, kPaxDoorMode2LLVar, kPaxDoorMode3LLVar, kPaxDoorMode4LLVar,
+         kPaxDoorMode1RLVar, kPaxDoorMode2RLVar, kPaxDoorMode3RLVar, kPaxDoorMode4RLVar};
+
+    std::optional<bool> DoorOpenByMode(VariableGateway& variables, const char* modeLVar)
+    {
+        if (!variables.HasReceivedLVar(modeLVar))
+        {
+            return std::nullopt;
+        }
+
+        const double mode = variables.GetLVar(modeLVar, kDoorOpen);
+        if (mode == kDoorClosed)
+        {
+            return false;
+        }
+
+        return mode == kDoorOpen ? std::optional{true} : std::nullopt;
+    }
 
     const char* DoorModeLVar(const GsxDoor door)
     {
@@ -153,6 +176,18 @@ void TolissA340::OnLoadingStarted()
     uplinkStep_ = -1;
 
     LOG_INFO("SimBrief uplink armed: waiting for the MCDU to be available");
+}
+
+DoorStatus TolissA340::GetDoorStatus() const
+{
+    DoorStatus status = doors::kNoDoorsSeen;
+
+    for (const char* modeLVar : kDoorModeLVars)
+    {
+        status = doors::Combine(status, DoorOpenByMode(*variableGateway_, modeLVar));
+    }
+
+    return status;
 }
 
 void TolissA340::CloseAllDoors()

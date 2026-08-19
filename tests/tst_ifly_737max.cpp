@@ -64,6 +64,9 @@ private slots:
     static void readyToPushFollowsPowerBeaconAndEngines();
     static void engineRunningDetectsAnyCombustion();
     static void engineAssumedRunningUntilCombustionDataArrives();
+    static void doorStatusOpenWhenACargoDoorAnimationReadsOpen();
+    static void doorStatusUnknownUntilCargoDoorDataArrives();
+    static void doorStatusNeverAllClosedWhilePaxDoorsAreUnreadable();
     static void reportsLoadMethods();
     static void closesEachCargoDoorAsItsLoaderFinishes();
     static void waitsWhileLoadersUnloadCargo();
@@ -751,6 +754,39 @@ void IFly737MaxTest::ignoresStaleLoaderStateFromPreviousTurnaround()
 
     QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo1Toggle), 1.0);
     QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo2Toggle), -1.0);
+}
+
+void IFly737MaxTest::doorStatusOpenWhenACargoDoorAnimationReadsOpen()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[kFwdCargoAnim] = 100.0;
+    gateway.lvars[kAftCargoAnim] = 0.0;
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void IFly737MaxTest::doorStatusUnknownUntilCargoDoorDataArrives()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const IFly737Max aircraft(&gateway, &status);
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::Unknown);
+}
+
+void IFly737MaxTest::doorStatusNeverAllClosedWhilePaxDoorsAreUnreadable()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[kFwdCargoAnim] = 0.0;
+    gateway.lvars[kAftCargoAnim] = 0.0;
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::Unknown);
 }
 
 QTEST_APPLESS_MAIN(IFly737MaxTest)
