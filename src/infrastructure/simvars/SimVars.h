@@ -1,6 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_SIMVARS_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_SIMVARS_H
 
+#include <array>
+#include <cstddef>
+
 #include "VariableGateway.h"
 
 namespace simvars
@@ -39,10 +42,21 @@ namespace simvars
         return zfwKg < emptyZfwKg ? emptyZfwKg : zfwKg;
     }
 
-    inline bool AnyEngineCombusting(VariableGateway& variables, const double defaultValue)
+    inline bool AnyEngineCombusting(VariableGateway& variables, const double defaultValue,
+                                    const int engineCount)
     {
-        return variables.GetAVar(kSimEng1Combustion, kBoolUnit, defaultValue) > 0.0
-            || variables.GetAVar(kSimEng2Combustion, kBoolUnit, defaultValue) > 0.0;
+        constexpr std::array kEngineCombustion =
+            {kSimEng1Combustion, kSimEng2Combustion, kSimEng3Combustion, kSimEng4Combustion};
+
+        for (std::size_t engine = 0; engine < static_cast<std::size_t>(engineCount); ++engine)
+        {
+            if (variables.GetAVar(kEngineCombustion[engine], kBoolUnit, defaultValue) > 0.0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

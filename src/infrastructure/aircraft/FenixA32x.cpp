@@ -29,6 +29,9 @@ namespace
     constexpr double kSmartSwitchNeutral = 1.0;
     constexpr double kSmartSwitchIntercom = 0.0;
 
+    constexpr int kEngineCount = 2;
+    constexpr double kEngineRunningDefault = 1.0;
+
     constexpr auto kParkingBrakeLVar = "S_MIP_PARKING_BRAKE";
     constexpr auto kDcEssBusPoweredLVar = "B_ELEC_BUS_POWER_DC_ESS";
     constexpr auto kBattery1LVar = "S_OH_ELEC_BAT1";
@@ -272,7 +275,7 @@ int FenixA32x::GetPlannedPassengers() const
 
 double FenixA32x::GetEmptyZfwKg() const
 {
-    return variableGateway_->GetAVar(kSimEmptyWeight, kKgUnit, 0.0);
+    return EmptyZfwKg(*variableGateway_);
 }
 
 std::optional<WeightUnit> FenixA32x::GetNativeWeightUnit() const
@@ -295,7 +298,7 @@ std::optional<WeightUnit> FenixA32x::GetNativeWeightUnit() const
 
 double FenixA32x::GetCurrentFuelKg() const
 {
-    return variableGateway_->GetAVar(kSimFuelTotalKg, kKgUnit, 0.0);
+    return CurrentFuelKg(*variableGateway_);
 }
 
 void FenixA32x::SetCurrentFuelKg(const double fuelKg)
@@ -311,10 +314,7 @@ void FenixA32x::SetCurrentFuelKg(const double fuelKg)
 
 double FenixA32x::GetCurrentZfwKg() const
 {
-    const double totalWeightKg =
-        variableGateway_->GetAVar(kSimTotalWeight, kKgUnit, GetEmptyZfwKg());
-
-    return std::max(totalWeightKg - GetCurrentFuelKg(), GetEmptyZfwKg());
+    return CurrentZfwKg(*variableGateway_);
 }
 
 void FenixA32x::SetCurrentZfwKg(const double zfwKg)
@@ -457,10 +457,7 @@ bool FenixA32x::IsReadyToDeboard() const
 
 bool FenixA32x::IsEngineRunning() const
 {
-    const bool isEng1Running = variableGateway_->GetAVar(kSimEng1Combustion, kBoolUnit, 1.0) > 0.0;
-    const bool isEng2Running = variableGateway_->GetAVar(kSimEng2Combustion, kBoolUnit, 1.0) > 0.0;
-
-    return isEng1Running || isEng2Running;
+    return AnyEngineCombusting(*variableGateway_, kEngineRunningDefault, kEngineCount);
 }
 
 bool FenixA32x::IsParkingBrakeSet() const

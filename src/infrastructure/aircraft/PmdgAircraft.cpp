@@ -13,6 +13,8 @@ namespace
 {
     constexpr auto kSimOnGround = "SIM ON GROUND";
 
+    constexpr int kEngineCount = 2;
+
     constexpr double kEngineRunningDefault = 1.0;
     constexpr double kEngineCombustionDefault = 0.0;
 }
@@ -157,7 +159,7 @@ bool PmdgAircraft::ConsumeSmartSwitch()
 bool PmdgAircraft::IsPowered() const
 {
     return HasAircraftPower()
-        || AnyEngineCombusting(*variableGateway_, kEngineCombustionDefault);
+        || AnyEngineCombusting(*variableGateway_, kEngineCombustionDefault, kEngineCount);
 }
 
 std::optional<GroundPowerStatus> PmdgAircraft::GetGroundPowerStatus() const
@@ -194,7 +196,7 @@ bool PmdgAircraft::IsReadyToDeboard() const
 
 bool PmdgAircraft::IsEngineRunning() const
 {
-    return AnyEngineCombusting(*variableGateway_, kEngineRunningDefault);
+    return AnyEngineCombusting(*variableGateway_, kEngineRunningDefault, kEngineCount);
 }
 
 bool PmdgAircraft::IsParkingBrakeSet() const

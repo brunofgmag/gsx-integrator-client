@@ -199,12 +199,12 @@ int TolissA340::GetPlannedPassengers() const
 
 double TolissA340::GetEmptyZfwKg() const
 {
-    return variableGateway_->GetAVar(kSimEmptyWeight, kKgUnit, 0.0);
+    return EmptyZfwKg(*variableGateway_);
 }
 
 double TolissA340::GetCurrentFuelKg() const
 {
-    return variableGateway_->GetAVar(kSimFuelTotalKg, kKgUnit, 0.0);
+    return CurrentFuelKg(*variableGateway_);
 }
 
 double TolissA340::GetCurrentZfwKg() const
@@ -214,10 +214,7 @@ double TolissA340::GetCurrentZfwKg() const
         return 0.0;
     }
 
-    const double totalWeightKg =
-        variableGateway_->GetAVar(kSimTotalWeight, kKgUnit, GetEmptyZfwKg());
-
-    return std::max(totalWeightKg - GetCurrentFuelKg(), GetEmptyZfwKg());
+    return CurrentZfwKg(*variableGateway_);
 }
 
 bool TolissA340::ConsumeSmartSwitch()
