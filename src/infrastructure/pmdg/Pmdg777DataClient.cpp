@@ -1,6 +1,9 @@
 #include "Pmdg777DataClient.h"
 
 #include <chrono>
+#include <QtCore/QString>
+#include <QtCore/QStringList>
+#include "../probe/ProbeLog.h"
 
 namespace
 {
@@ -43,6 +46,7 @@ Pmdg777DataClient::Pmdg777DataClient()
 void Pmdg777DataClient::Poll()
 {
     channel_.Poll();
+    ReportProbe();
 
     if (pendingKickRelease_)
     {
@@ -134,4 +138,25 @@ void Pmdg777DataClient::KickDataRefresh()
 void Pmdg777DataClient::SetInFlight(const bool inFlight)
 {
     channel_.SetInFlight(inFlight);
+}
+
+void Pmdg777DataClient::ReportProbe() const
+{
+    if (!probe::IsOn() || !channel_.HasData())
+    {
+        return;
+    }
+
+    QStringList states;
+    for (int index = 0; index < kDoorCount; ++index)
+    {
+        states.append(QString::number(channel_.Data().DOOR_state[index]));
+    }
+
+    probe::Change("pmdg777.doors",
+                  QStringLiteral("sdk   pmdg-777 DOOR_state=[%1] cockpit=%2 chocks=%3 brake=%4")
+                  .arg(states.join(QLatin1Char(',')))
+                  .arg(channel_.Data().DOOR_CockpitDoorOpen)
+                  .arg(channel_.Data().WheelChocksSet)
+                  .arg(ParkingBrakeOn()));
 }

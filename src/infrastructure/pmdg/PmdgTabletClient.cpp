@@ -9,6 +9,7 @@
 #include <QtCore/QString>
 #include <QtCore/QVariant>
 #include "../commbus/CommBusBridgeGateway.h"
+#include "../probe/ProbeLog.h"
 
 namespace
 {
@@ -20,6 +21,7 @@ namespace
     constexpr auto kTagSimbriefFetchResult = "simbrief_fetch_result";
     constexpr auto kTagQueryState = "query_state";
     constexpr auto kTagStateReply = "state_reply";
+    constexpr auto kTagPing = "ping";
     constexpr auto kDoorActionClose = "CLOSE";
     constexpr std::array kDoorMoving = {"OPENING", "CLOSING"};
 
@@ -162,8 +164,28 @@ bool PmdgTabletClient::IsSimbriefFetchSuccess(const std::string& json)
                  .value(QStringLiteral("result")).toVariant().toString() == QLatin1String("200");
 }
 
+void PmdgTabletClient::ReportProbe(const std::string& payload)
+{
+    if (!probe::IsOn())
+    {
+        return;
+    }
+
+    const QString tag = QJsonDocument::fromJson(QByteArray::fromStdString(payload))
+                        .object().value(QStringLiteral("message_tag")).toString();
+    if (tag.isEmpty() || tag == QLatin1String(kTagPing))
+    {
+        return;
+    }
+
+    probe::Change("efb." + tag.toStdString(),
+                  QStringLiteral("efb   %1").arg(QString::fromStdString(payload)));
+}
+
 void PmdgTabletClient::OnInbound(const std::string& payload)
 {
+    ReportProbe(payload);
+
     if (IsSimbriefFetchSuccess(payload))
     {
         efbPlanImported_ = true;

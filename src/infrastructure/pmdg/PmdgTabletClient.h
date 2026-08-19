@@ -43,6 +43,7 @@ public:
 private:
     void SendWbPayload(const std::string& field, int value) const;
     void OnInbound(const std::string& payload);
+    static void ReportProbe(const std::string& payload);
 
     std::unique_ptr<CommBusBridgeGateway> ownedBridge_;
     CommBusBridgeGateway* bridge_;

@@ -1,5 +1,6 @@
 #include "IntegratorRuntime.h"
 
+#include "../infrastructure/probe/ProbeLog.h"
 #include "sim/SessionReadiness.h"
 #include "../infrastructure/aircraft/AircraftFactory.h"
 #include "../infrastructure/aircraft/AircraftRegistry.h"
@@ -41,6 +42,12 @@ IntegratorRuntime::~IntegratorRuntime()
 void IntegratorRuntime::Setup()
 {
     LOG_INFO("Setting up GSX Integrator...");
+
+    if (probe::IsOn())
+    {
+        LOG_INFO("Probe mode is on: readings go to %s",
+                 qUtf8Printable(probe::Location()));
+    }
 
     TryConnect();
 
@@ -204,7 +211,33 @@ void IntegratorRuntime::OnSimRunningChanged(const bool running)
 
 void IntegratorRuntime::OnPauseChanged(const unsigned flag)
 {
+    ++pauseEvents_;
     pauseFlags_ = flag;
+}
+
+void IntegratorRuntime::ProbeGates()
+{
+    if (!probe::IsOn())
+    {
+        return;
+    }
+
+    char title[256] = {};
+    varGateway_.FetchAircraftName(title, sizeof title);
+
+    probe::Change("gates",
+                  QStringLiteral("gate  ready=%1 pauseFlags=%2 pauseEvents=%3 camera=%4 isAircraft=%5 "
+                                 "isAvatar=%6 sessionActive=%7 sim=%8 aircraft=%9 title='%10'")
+                  .arg(IsSessionReady() ? 1 : 0)
+                  .arg(pauseFlags_)
+                  .arg(pauseEvents_)
+                  .arg(varGateway_.GetAVar("CAMERA STATE", "Number", -1.0))
+                  .arg(varGateway_.GetAVar("IS AIRCRAFT", "Number", -1.0))
+                  .arg(varGateway_.GetAVar("IS AVATAR", "Number", -1.0))
+                  .arg(isSessionActive_ ? 1 : 0)
+                  .arg(static_cast<int>(simVersion_))
+                  .arg(aircraft_ ? 1 : 0)
+                  .arg(QString::fromLatin1(title)));
 }
 
 void IntegratorRuntime::Update()
@@ -218,6 +251,8 @@ void IntegratorRuntime::Update()
 
     const auto emitOnExit = qScopeGuard([this] { emit Updated(); });
 
+    ProbeGates();
+
     if (!IsSessionReady() || IsSessionPaused())
     {
         return;
@@ -228,7 +263,8 @@ void IntegratorRuntime::Update()
     const bool gsxOk = gsxService_.IsAvailable();
     status_.gsxAvailable = gsxOk;
 
-    if (!status_.enabled || !gsxOk)
+    const bool driving = status_.enabled && gsxOk;
+    if (!driving && !probe::IsOn())
     {
         return;
     }
@@ -240,10 +276,15 @@ void IntegratorRuntime::Update()
         return;
     }
 
-    stateMachine_.AttachAircraft(aircraft_.get());
-    gsxMenu_.OnMenuChanged();
-    stateMachine_.Tick();
+    if (driving)
+    {
+        stateMachine_.AttachAircraft(aircraft_.get());
+        gsxMenu_.OnMenuChanged();
+        stateMachine_.Tick();
+    }
+
     aircraft_->OnTick();
+    probe_.Observe(*aircraft_, varGateway_, GetAircraftProfileId());
 }
 
 bool IntegratorRuntime::IsLoadingCargoPhase() const

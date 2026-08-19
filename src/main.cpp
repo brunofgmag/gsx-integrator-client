@@ -17,6 +17,7 @@
 #include "infrastructure/aircraft/AircraftFactory.h"
 #include "infrastructure/settings/QSettingsRepository.h"
 #include "infrastructure/platform/GraphicsBackend.h"
+#include "infrastructure/probe/ProbeLog.h"
 #include "infrastructure/platform/ShowWindowMessageFilter.h"
 #include "infrastructure/platform/WindowForeground.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
@@ -65,6 +66,7 @@ namespace
         {
             return;
         }
+        probe::Sink(message);
         defaultMessageHandler(type, context, message);
     }
 

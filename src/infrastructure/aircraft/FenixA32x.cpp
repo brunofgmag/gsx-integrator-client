@@ -12,6 +12,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <QtCore/QStringList>
 #include "AircraftRegistry.h"
 #include "../fenix/FenixEfbClient.h"
 #include "../gsx/GsxLVars.h"
@@ -19,6 +20,7 @@
 #include "../../domain/ports/GsxGateway.h"
 #include "../../domain/turnaround/TurnaroundMath.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
+#include "../probe/ProbeLog.h"
 
 using namespace simvars;
 
@@ -64,6 +66,12 @@ namespace
     constexpr auto kAftCateringDoorDataref = "doors.entry.d4r";
     constexpr auto kFwdCargoDoorDataref = "doors.cargo.forward";
     constexpr auto kAftCargoDoorDataref = "doors.cargo.aft";
+
+    constexpr std::array kProbeDoorDatarefs = {
+        kFwdPaxDoorDataref, kMidPaxDoorDataref, kAftPaxDoorDataref,
+        kFwdCateringDoorDataref, kAftCateringDoorDataref,
+        kFwdCargoDoorDataref, kAftCargoDoorDataref
+    };
 
     const char* DoorDataref(const GsxDoor door)
     {
@@ -143,6 +151,14 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
     efb_->Subscribe(kCargoTargetDataref);
     efb_->Subscribe(kWeightUnitDataref);
 
+    if (probe::IsOn())
+    {
+        for (const char* dataref : kProbeDoorDatarefs)
+        {
+            efb_->Subscribe(dataref);
+        }
+    }
+
     LOG_INFO("Profile loaded: %s", GetName());
 }
 
@@ -170,6 +186,26 @@ void FenixA32x::OnTick()
     EnsureEfbInitialized();
     UpdateDoors();
     DisarmRefuelSystemWhenDone();
+    ReportProbe();
+}
+
+void FenixA32x::ReportProbe() const
+{
+    if (!probe::IsOn())
+    {
+        return;
+    }
+
+    QStringList doors;
+    for (const char* dataref : kProbeDoorDatarefs)
+    {
+        doors.append(QStringLiteral("%1=%2").arg(QLatin1String(dataref))
+                     .arg(efb_->GetNumber(dataref, -1.0), 0, 'f', 3));
+    }
+
+    probe::Change("fenix.doors", QStringLiteral("efb   fenix available=%1 %2")
+                  .arg(efb_->IsAvailable() ? 1 : 0)
+                  .arg(doors.join(QLatin1Char(' '))));
 }
 
 void FenixA32x::EnsureEfbInitialized()

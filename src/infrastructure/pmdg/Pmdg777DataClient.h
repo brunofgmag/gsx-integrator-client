@@ -30,6 +30,8 @@ public:
     void SetClockForTest(std::function<long long()> clock) { nowMs_ = std::move(clock); }
 
 private:
+    void ReportProbe() const;
+
     static constexpr long long kKickIntervalMs = 5000;
 
     PmdgClientDataChannel<PMDG_777X_Data> channel_;
