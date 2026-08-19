@@ -46,14 +46,14 @@ namespace
     constexpr auto kPaxDoor1L = "MD11_EXT_DOOR_CMD_PAX_1L";
     constexpr auto kPaxDoor2L = "MD11_EXT_DOOR_CMD_PAX_2L";
     constexpr auto kPaxDoor4L = "MD11_EXT_DOOR_CMD_PAX_4L";
-    constexpr auto kCargoDoor1R = "MD11_EXT_DOOR_CMD_CARGO1R";
-    constexpr auto kCargoDoor2R = "MD11_EXT_DOOR_CMD_CARGO2R";
+    constexpr auto kCargoDoor1R = "MD11_EXT_DOOR_CMD_CARGO_1R";
+    constexpr auto kCargoDoor2R = "MD11_EXT_DOOR_CMD_CARGO_2R";
     constexpr auto kCargoDoorMain = "MD11_EXT_DOOR_CMD_CARGO_MAIN";
     constexpr auto kPaxDoor1LState = "MD11_EXT_DOOR_PAX_1L";
     constexpr auto kPaxDoor2LState = "MD11_EXT_DOOR_PAX_2L";
     constexpr auto kPaxDoor4LState = "MD11_EXT_DOOR_PAX_4L";
-    constexpr auto kCargoDoor1RState = "MD11_EXT_DOOR_CARGO1R";
-    constexpr auto kCargoDoor2RState = "MD11_EXT_DOOR_CARGO2R";
+    constexpr auto kCargoDoor1RState = "MD11_EXT_DOOR_CARGO_1R";
+    constexpr auto kCargoDoor2RState = "MD11_EXT_DOOR_CARGO_2R";
     constexpr auto kCargoDoorMainState = "MD11_EXT_DOOR_CARGO_MAIN";
 
     constexpr std::array kDoorStateLVars =
