@@ -4,13 +4,12 @@
 #include <cstddef>
 #include "Pmdg737DataGateway.h"
 #include "Pmdg737SdkData.h"
-#include "../simconnect/SimConnectSession.h"
+#include "PmdgClientDataChannel.h"
 
 class Pmdg737DataClient final : public Pmdg737DataGateway
 {
 public:
     Pmdg737DataClient();
-    ~Pmdg737DataClient() override;
 
     void Poll() override;
     [[nodiscard]] bool HasData() const override;
@@ -24,20 +23,12 @@ public:
     void SetInFlight(bool inFlight) override;
 
     [[nodiscard]] static unsigned DoorEventOffsetFor(Pmdg737Door door);
-    [[nodiscard]] SimConnectSession& SessionForTest() { return session_; }
 
 private:
-    void EnsureConnected();
-    void OnClientData(const void* data, DWORD size);
-
     static constexpr std::size_t kAcMain1Bus = 11;
     static constexpr std::size_t kAcMain2Bus = 12;
 
-    SimConnectSession session_;
-    PMDG_NG3_Data data_{};
-    bool hasData_ = false;
-    bool connected_ = false;
-    bool inFlight_ = false;
+    PmdgClientDataChannel<PMDG_NG3_Data> channel_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG737DATACLIENT_H
