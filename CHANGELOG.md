@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.5.0...v1.6.0) (2026-08-19)
+
+
+### Features
+
+* **aircraft:** let every aircraft report whether a door is open ([#43](https://github.com/brunofgmag/gsx-integrator-client/issues/43)) ([f648ce7](https://github.com/brunofgmag/gsx-integrator-client/commit/f648ce7e5b187de4d0ab0bc4a1f453778dd9219c))
+
 ## [1.5.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.4.0...v1.5.0) (2026-08-18)
 
 
