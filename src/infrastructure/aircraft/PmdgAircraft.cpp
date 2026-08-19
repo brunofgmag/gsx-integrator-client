@@ -215,7 +215,8 @@ bool PmdgAircraft::IsEngineRunning() const
 
 bool PmdgAircraft::IsParkingBrakeSet() const
 {
-    return data_->ParkingBrakeOn();
+    return data_->ParkingBrakeOn()
+        || variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0;
 }
 
 std::optional<bool> PmdgAircraft::DoorOpenAt(const int slot) const

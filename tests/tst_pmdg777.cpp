@@ -15,6 +15,7 @@ namespace
     constexpr auto kSmartSwitchFoLVar = "switch_773_a";
     constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
     constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
+    constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
 
     constexpr int kDoorStateOpen = 0;
     constexpr int kDoorStateClosed = 1;
@@ -74,6 +75,7 @@ private slots:
     static void poweredByRunningEngine();
     static void engineRunningConservativeUntilReceived();
     static void parkingBrakeRequiresClientData();
+    static void parkingBrakeAcceptsTheSimVariableWithoutTheSdkBlock();
     static void doorStatusUnknownUntilClientDataArrives();
     static void doorStatusOpenWhenASdkDoorReadsOpen();
     static void doorStatusUnknownWhileADoorIsMoving();
@@ -211,6 +213,17 @@ void Pmdg777Test::parkingBrakeRequiresClientData()
     QVERIFY(!fixture.aircraft->IsParkingBrakeSet());
 
     fixture.data->hasData = true;
+
+    QVERIFY(fixture.aircraft->IsParkingBrakeSet());
+}
+
+void Pmdg777Test::parkingBrakeAcceptsTheSimVariableWithoutTheSdkBlock()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->parkingBrakeOn = false;
+    fixture.gateway.avars[kSimParkingBrake] = 1.0;
 
     QVERIFY(fixture.aircraft->IsParkingBrakeSet());
 }
