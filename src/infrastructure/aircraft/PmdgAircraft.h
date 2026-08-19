@@ -44,6 +44,7 @@ public:
     void OnTick() override;
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
+    [[nodiscard]] DoorStatus GetDoorStatus() const override;
     [[nodiscard]] bool IsMainDeckCargoDoorStuck() const override;
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
@@ -84,8 +85,10 @@ protected:
 
 private:
     void SyncDoors();
+    [[nodiscard]] std::optional<bool> DoorOpenAt(int slot) const;
 
     bool cargoVariant_;
+    int doorSlots_;
     int mainDeckDoorSlot_;
     GsxDoorSync doors_;
     PmdgDoorReconciler doorReconciler_;

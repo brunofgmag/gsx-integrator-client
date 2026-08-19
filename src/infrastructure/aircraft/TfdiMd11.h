@@ -37,6 +37,8 @@ public:
     [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Self; }
     [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Self; }
 
+    [[nodiscard]] DoorStatus GetDoorStatus() const override;
+
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override;

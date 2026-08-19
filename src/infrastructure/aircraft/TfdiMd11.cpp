@@ -5,7 +5,9 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <array>
 #include "AircraftRegistry.h"
+#include "DoorReading.h"
 #include "../gsx/GsxLVars.h"
 #include "../../domain/support/Weight.h"
 #include "../logging/LogMacros.h"
@@ -36,6 +38,9 @@ namespace
     constexpr auto kApuOnLVar = "MD11_OVHD_ELEC_APU_PWR_ON_LT";
     constexpr auto kExtPowerOnLightLVar = "MD11_OVHD_ELEC_EXT_PWR_ON_LT";
 
+    constexpr int kEngineCount = 3;
+    constexpr double kEngineRunningDefault = 1.0;
+
     constexpr auto kParkingBrakeLVar = "MD11_THR_PARK_LVR";
     constexpr auto kChocksLVar = "MD11_EXT_CHOCKS";
     constexpr auto kExtGpuLVar = "MD11_EXT_GPU";
@@ -46,6 +51,9 @@ namespace
     constexpr auto kCargoDoor1RLVar = "MD11_EXT_DOOR_CMD_CARGO1R";
     constexpr auto kCargoDoor2RLVar = "MD11_EXT_DOOR_CMD_CARGO2R";
     constexpr auto kCargoDoorMainLVar = "MD11_EXT_DOOR_CMD_CARGO_MAIN";
+    constexpr std::array kDoorStateLVars =
+        {"MD11_EXT_DOOR_PAX_1L", "MD11_EXT_DOOR_PAX_2L", "MD11_EXT_DOOR_PAX_4L",
+         "MD11_EXT_DOOR_CARGO1R", "MD11_EXT_DOOR_CARGO2R", "MD11_EXT_DOOR_CARGO_MAIN"};
     constexpr double kDoorOpen = 100.0;
     constexpr double kDoorClosed = 0.0;
 }
@@ -184,12 +192,12 @@ int TfdiMd11::GetPlannedPassengers() const
 
 double TfdiMd11::GetEmptyZfwKg() const
 {
-    return variableGateway_->GetAVar(kSimEmptyWeight, kKgUnit, 0.0);
+    return EmptyZfwKg(*variableGateway_);
 }
 
 double TfdiMd11::GetCurrentFuelKg() const
 {
-    return variableGateway_->GetAVar(kSimFuelTotalKg, kKgUnit, 0.0);
+    return CurrentFuelKg(*variableGateway_);
 }
 
 void TfdiMd11::SetCurrentFuelKg(const double fuelKg)
@@ -217,15 +225,24 @@ double TfdiMd11::GetCurrentZfwKg() const
         return 0.0;
     }
 
-    const double totalWeightKg =
-        variableGateway_->GetAVar(kSimTotalWeight, kKgUnit, GetEmptyZfwKg());
-
-    return std::max(totalWeightKg - GetCurrentFuelKg(), GetEmptyZfwKg());
+    return CurrentZfwKg(*variableGateway_);
 }
 
 void TfdiMd11::SetCurrentZfwKg(const double zfwKg)
 {
     UpdateTarget(zfwTarget_, zfwKg);
+}
+
+DoorStatus TfdiMd11::GetDoorStatus() const
+{
+    DoorStatus status = doors::kNoDoorsSeen;
+
+    for (const char* stateLVar : kDoorStateLVars)
+    {
+        status = doors::Combine(status, doors::OpenAboveZero(*variableGateway_, stateLVar));
+    }
+
+    return status;
 }
 
 bool TfdiMd11::ConsumeSmartSwitch()
@@ -286,11 +303,7 @@ bool TfdiMd11::IsReadyToDeboard() const
 
 bool TfdiMd11::IsEngineRunning() const
 {
-    const bool isEng1Running = variableGateway_->GetAVar(kSimEng1Combustion, kBoolUnit, 1.0) > 0.0;
-    const bool isEng2Running = variableGateway_->GetAVar(kSimEng2Combustion, kBoolUnit, 1.0) > 0.0;
-    const bool isEng3Running = variableGateway_->GetAVar(kSimEng3Combustion, kBoolUnit, 1.0) > 0.0;
-
-    return isEng1Running || isEng2Running || isEng3Running;
+    return AnyEngineCombusting(*variableGateway_, kEngineRunningDefault, kEngineCount);
 }
 
 bool TfdiMd11::IsParkingBrakeSet() const

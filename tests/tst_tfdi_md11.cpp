@@ -49,6 +49,16 @@ namespace
     constexpr auto kCargoDoor1R = "MD11_EXT_DOOR_CMD_CARGO1R";
     constexpr auto kCargoDoor2R = "MD11_EXT_DOOR_CMD_CARGO2R";
     constexpr auto kCargoDoorMain = "MD11_EXT_DOOR_CMD_CARGO_MAIN";
+    constexpr auto kPaxDoor1LState = "MD11_EXT_DOOR_PAX_1L";
+    constexpr auto kPaxDoor2LState = "MD11_EXT_DOOR_PAX_2L";
+    constexpr auto kPaxDoor4LState = "MD11_EXT_DOOR_PAX_4L";
+    constexpr auto kCargoDoor1RState = "MD11_EXT_DOOR_CARGO1R";
+    constexpr auto kCargoDoor2RState = "MD11_EXT_DOOR_CARGO2R";
+    constexpr auto kCargoDoorMainState = "MD11_EXT_DOOR_CARGO_MAIN";
+
+    constexpr std::array kDoorStateLVars =
+        {kPaxDoor1LState, kPaxDoor2LState, kPaxDoor4LState,
+         kCargoDoor1RState, kCargoDoor2RState, kCargoDoorMainState};
 
     constexpr double kEmptyOperatingZfwKg = 130000.0;
     constexpr double kMtowKg = 283730.0;
@@ -98,6 +108,9 @@ private slots:
     static void paxDoorsOpenPerStairsAndCloseWhenGone();
     static void paxDoorsOpenOnlyAtFinalPosition();
     static void paxDoorsUntouchedWithoutGsx();
+    static void doorStatusReadsStateFamilyAndNotTheCommandEcho();
+    static void doorStatusUnknownUntilDoorDataArrives();
+    static void doorStatusAllClosedWhenEveryStateReadsClosed();
     static void reportsLoadMethods();
 };
 
@@ -780,6 +793,46 @@ void TfdiMd11Test::reportsLoadMethods()
 
     QVERIFY(aircraft.GetRefuelMethod() == RefuelBy::Self);
     QVERIFY(aircraft.GetBoardMethod() == BoardBy::Self);
+}
+
+void TfdiMd11Test::doorStatusReadsStateFamilyAndNotTheCommandEcho()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    for (const char* stateLVar : kDoorStateLVars)
+    {
+        gateway.lvars[stateLVar] = 0.0;
+    }
+
+    gateway.lvars[kPaxDoor1LState] = 100.0;
+    gateway.lvars[kPaxDoor1L] = 0.0;
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void TfdiMd11Test::doorStatusUnknownUntilDoorDataArrives()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::Unknown);
+}
+
+void TfdiMd11Test::doorStatusAllClosedWhenEveryStateReadsClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    for (const char* stateLVar : kDoorStateLVars)
+    {
+        gateway.lvars[stateLVar] = 0.0;
+    }
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AllClosed);
 }
 
 QTEST_APPLESS_MAIN(TfdiMd11Test)

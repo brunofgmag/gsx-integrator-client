@@ -15,6 +15,11 @@ namespace
     constexpr auto kSmartSwitchFoLVar = "switch_773_a";
     constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
     constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
+    constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
+
+    constexpr int kDoorStateOpen = 0;
+    constexpr int kDoorStateClosed = 1;
+    constexpr int kDoorStateClosing = 3;
 
     struct Pmdg777Fixture
     {
@@ -70,6 +75,11 @@ private slots:
     static void poweredByRunningEngine();
     static void engineRunningConservativeUntilReceived();
     static void parkingBrakeRequiresClientData();
+    static void parkingBrakeAcceptsTheSimVariableWithoutTheSdkBlock();
+    static void doorStatusUnknownUntilClientDataArrives();
+    static void doorStatusOpenWhenASdkDoorReadsOpen();
+    static void doorStatusUnknownWhileADoorIsMoving();
+    static void doorStatusAllClosedWhenEverySdkDoorReadsClosed();
     static void smartSwitchEdgesOncePerPress();
     static void smartSwitchWorksFromBothSeats();
     static void smartSwitchCatchesTransientPress();
@@ -205,6 +215,54 @@ void Pmdg777Test::parkingBrakeRequiresClientData()
     fixture.data->hasData = true;
 
     QVERIFY(fixture.aircraft->IsParkingBrakeSet());
+}
+
+void Pmdg777Test::parkingBrakeAcceptsTheSimVariableWithoutTheSdkBlock()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->parkingBrakeOn = false;
+    fixture.gateway.avars[kSimParkingBrake] = 1.0;
+
+    QVERIFY(fixture.aircraft->IsParkingBrakeSet());
+}
+
+void Pmdg777Test::doorStatusUnknownUntilClientDataArrives()
+{
+    const Pmdg777Fixture fixture;
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
+}
+
+void Pmdg777Test::doorStatusOpenWhenASdkDoorReadsOpen()
+{
+    const Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->doorStates[3] = kDoorStateOpen;
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void Pmdg777Test::doorStatusUnknownWhileADoorIsMoving()
+{
+    const Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->doorStates[2] = kDoorStateClosing;
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
+}
+
+void Pmdg777Test::doorStatusAllClosedWhenEverySdkDoorReadsClosed()
+{
+    const Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->doorStates.fill(kDoorStateClosed);
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::AllClosed);
 }
 
 void Pmdg777Test::smartSwitchEdgesOncePerPress()

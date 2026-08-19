@@ -159,12 +159,6 @@ bool Pmdg737::ChocksSet() const
     return variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
 }
 
-bool Pmdg737::IsParkingBrakeSet() const
-{
-    return ownedData_->ParkingBrakeOn()
-        || variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0;
-}
-
 namespace
 {
     Pmdg737Variant VariantFor(const AircraftIdentity& identity)

@@ -1,6 +1,7 @@
 #include <QtTest/QTest>
 
 #include <algorithm>
+#include <array>
 #include <memory>
 #include "doubles/FakePmdg737DataGateway.h"
 #include "doubles/FakePmdgTabletGateway.h"
@@ -19,6 +20,10 @@ namespace
     constexpr double kJetwayDocked = 5.0;
     constexpr auto kFwdEntryKey = "entry1_left";
     constexpr auto kMainCargoKey = "main_cargo";
+
+    constexpr std::array kEfbDoorKeys =
+        {"entry1_left", "entry1_right", "entry2_left", "entry2_right",
+         "fwd_cargo", "aft_cargo", "main_cargo", "equipment_hatch"};
 
     struct Pmdg737Fixture
     {
@@ -58,6 +63,9 @@ private slots:
     static void poweredByMainBusOrRunningEngine();
     static void engineRunningConservativeUntilReceived();
     static void parkingBrakeFallsBackToTheSimVar();
+    static void doorStatusUnknownUntilTheEfbAnswers();
+    static void doorStatusOpenWhenTheEfbReportsADoorOpen();
+    static void doorStatusUnknownWhileTheAirstairHasNoEfbReading();
     static void readyToDeboardAcceptsChocksInsteadOfBrake();
     static void mapsOnlyTheDoorsTheSevenThirtySevenHas();
     static void closingDoorsThatWereNeverOpenedCommandsNothing();
@@ -148,6 +156,39 @@ void Pmdg737Test::engineRunningConservativeUntilReceived()
     const Pmdg737Fixture fixture;
 
     QVERIFY(fixture.aircraft->IsEngineRunning());
+}
+
+void Pmdg737Test::doorStatusUnknownUntilTheEfbAnswers()
+{
+    const Pmdg737Fixture fixture;
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
+}
+
+void Pmdg737Test::doorStatusOpenWhenTheEfbReportsADoorOpen()
+{
+    const Pmdg737Fixture fixture;
+
+    for (const char* doorKey : kEfbDoorKeys)
+    {
+        fixture.tablet->doorOpen[doorKey] = false;
+    }
+
+    fixture.tablet->doorOpen[kFwdEntryKey] = true;
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void Pmdg737Test::doorStatusUnknownWhileTheAirstairHasNoEfbReading()
+{
+    const Pmdg737Fixture fixture;
+
+    for (const char* doorKey : kEfbDoorKeys)
+    {
+        fixture.tablet->doorOpen[doorKey] = false;
+    }
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
 }
 
 void Pmdg737Test::parkingBrakeFallsBackToTheSimVar()

@@ -38,6 +38,7 @@ public:
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
+    [[nodiscard]] DoorStatus GetDoorStatus() const override;
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;
     [[nodiscard]] bool IsEngineRunning() const override;

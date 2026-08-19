@@ -3,6 +3,7 @@
 
 #include <optional>
 
+#include "../model/DoorStatus.h"
 #include "../model/GroundPowerStatus.h"
 #include "../support/Weight.h"
 
@@ -46,6 +47,7 @@ public:
     [[nodiscard]] virtual bool SupportsGroundPowerControl() const { return false; }
     virtual void SetGroundPower(bool) {}
     virtual void CloseAllDoors() {}
+    [[nodiscard]] virtual DoorStatus GetDoorStatus() const { return DoorStatus::Unknown; }
     [[nodiscard]] virtual bool IsMainDeckCargoDoorStuck() const { return false; }
     [[nodiscard]] virtual bool IsReadyToPush() const = 0 ;
     [[nodiscard]] virtual bool IsReadyToDeboard() const = 0;

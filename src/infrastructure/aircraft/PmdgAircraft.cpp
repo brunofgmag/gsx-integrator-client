@@ -1,6 +1,7 @@
 #include "PmdgAircraft.h"
 
 #include <utility>
+#include "DoorReading.h"
 #include "../gsx/GsxLVars.h"
 #include "../pmdg/PmdgDataGateway.h"
 #include "../simvars/SimVars.h"
@@ -12,6 +13,8 @@ using namespace simvars;
 namespace
 {
     constexpr auto kSimOnGround = "SIM ON GROUND";
+
+    constexpr int kEngineCount = 2;
 
     constexpr double kEngineRunningDefault = 1.0;
     constexpr double kEngineCombustionDefault = 0.0;
@@ -25,6 +28,7 @@ PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationSta
       data_(data),
       tablet_(std::move(tablet)),
       cargoVariant_(spec.cargoVariant),
+      doorSlots_(spec.doorSlots),
       mainDeckDoorSlot_(spec.mainDeckDoorSlot),
       doors_(variableGateway),
       doorReconciler_(*this, spec.doorSlots, spec.doorBaseline),
@@ -98,6 +102,18 @@ void PmdgAircraft::CloseAllDoors()
     doorReconciler_.Reconcile();
 }
 
+DoorStatus PmdgAircraft::GetDoorStatus() const
+{
+    DoorStatus status = doors::kNoDoorsSeen;
+
+    for (int slot = 0; slot < doorSlots_; ++slot)
+    {
+        status = doors::Combine(status, DoorOpenAt(slot));
+    }
+
+    return status;
+}
+
 bool PmdgAircraft::IsMainDeckCargoDoorStuck() const
 {
     return cargoVariant_ && doorReconciler_.IsStuck(mainDeckDoorSlot_);
@@ -157,7 +173,7 @@ bool PmdgAircraft::ConsumeSmartSwitch()
 bool PmdgAircraft::IsPowered() const
 {
     return HasAircraftPower()
-        || AnyEngineCombusting(*variableGateway_, kEngineCombustionDefault);
+        || AnyEngineCombusting(*variableGateway_, kEngineCombustionDefault, kEngineCount);
 }
 
 std::optional<GroundPowerStatus> PmdgAircraft::GetGroundPowerStatus() const
@@ -194,10 +210,24 @@ bool PmdgAircraft::IsReadyToDeboard() const
 
 bool PmdgAircraft::IsEngineRunning() const
 {
-    return AnyEngineCombusting(*variableGateway_, kEngineRunningDefault);
+    return AnyEngineCombusting(*variableGateway_, kEngineRunningDefault, kEngineCount);
 }
 
 bool PmdgAircraft::IsParkingBrakeSet() const
 {
-    return data_->ParkingBrakeOn();
+    return data_->ParkingBrakeOn()
+        || variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0;
+}
+
+std::optional<bool> PmdgAircraft::DoorOpenAt(const int slot) const
+{
+    switch (ObserveDoor(slot))
+    {
+    case DoorObservation::Open:
+        return true;
+    case DoorObservation::Closed:
+        return false;
+    default:
+        return std::nullopt;
+    }
 }

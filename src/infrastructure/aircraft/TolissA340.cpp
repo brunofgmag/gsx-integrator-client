@@ -6,7 +6,9 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <optional>
 #include "AircraftRegistry.h"
+#include "DoorReading.h"
 #include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
 #include "../../domain/model/FlightPlan.h"
@@ -54,6 +56,27 @@ namespace
     constexpr auto kPaxDoorMode4RLVar = "TLS_PAX_DOOR_MODE_4R";
     constexpr double kDoorOpen = 2.0;
     constexpr double kDoorClosed = 0.0;
+
+    constexpr std::array kDoorModeLVars =
+        {kCargoDoorModeFwdLVar, kCargoDoorModeAftLVar,
+         kPaxDoorMode1LLVar, kPaxDoorMode2LLVar, kPaxDoorMode3LLVar, kPaxDoorMode4LLVar,
+         kPaxDoorMode1RLVar, kPaxDoorMode2RLVar, kPaxDoorMode3RLVar, kPaxDoorMode4RLVar};
+
+    std::optional<bool> DoorOpenByMode(VariableGateway& variables, const char* modeLVar)
+    {
+        if (!variables.HasReceivedLVar(modeLVar))
+        {
+            return std::nullopt;
+        }
+
+        const double mode = variables.GetLVar(modeLVar, kDoorOpen);
+        if (mode == kDoorClosed)
+        {
+            return false;
+        }
+
+        return mode == kDoorOpen ? std::optional{true} : std::nullopt;
+    }
 
     const char* DoorModeLVar(const GsxDoor door)
     {
@@ -155,6 +178,18 @@ void TolissA340::OnLoadingStarted()
     LOG_INFO("SimBrief uplink armed: waiting for the MCDU to be available");
 }
 
+DoorStatus TolissA340::GetDoorStatus() const
+{
+    DoorStatus status = doors::kNoDoorsSeen;
+
+    for (const char* modeLVar : kDoorModeLVars)
+    {
+        status = doors::Combine(status, DoorOpenByMode(*variableGateway_, modeLVar));
+    }
+
+    return status;
+}
+
 void TolissA340::CloseAllDoors()
 {
     doors_.CloseAll([this](const GsxDoor door, bool)
@@ -199,12 +234,12 @@ int TolissA340::GetPlannedPassengers() const
 
 double TolissA340::GetEmptyZfwKg() const
 {
-    return variableGateway_->GetAVar(kSimEmptyWeight, kKgUnit, 0.0);
+    return EmptyZfwKg(*variableGateway_);
 }
 
 double TolissA340::GetCurrentFuelKg() const
 {
-    return variableGateway_->GetAVar(kSimFuelTotalKg, kKgUnit, 0.0);
+    return CurrentFuelKg(*variableGateway_);
 }
 
 double TolissA340::GetCurrentZfwKg() const
@@ -214,10 +249,7 @@ double TolissA340::GetCurrentZfwKg() const
         return 0.0;
     }
 
-    const double totalWeightKg =
-        variableGateway_->GetAVar(kSimTotalWeight, kKgUnit, GetEmptyZfwKg());
-
-    return std::max(totalWeightKg - GetCurrentFuelKg(), GetEmptyZfwKg());
+    return CurrentZfwKg(*variableGateway_);
 }
 
 bool TolissA340::ConsumeSmartSwitch()
