@@ -63,7 +63,17 @@ namespace
         ProbeVar{"pax1R", "TLS_PAX_DOOR_MODE_1R"},
         ProbeVar{"pax2R", "TLS_PAX_DOOR_MODE_2R"},
         ProbeVar{"pax3R", "TLS_PAX_DOOR_MODE_3R"},
-        ProbeVar{"pax4R", "TLS_PAX_DOOR_MODE_4R"}
+        ProbeVar{"pax4R", "TLS_PAX_DOOR_MODE_4R"},
+        ProbeVar{"cargoFwdRatio", "TLS_CARGO_DOOR_OPEN_RATIO_FWD"},
+        ProbeVar{"cargoAftRatio", "TLS_CARGO_DOOR_OPEN_RATIO_AFT"},
+        ProbeVar{"pax1LRatio", "TLS_PAX_DOOR_OPEN_RATIO_1L"},
+        ProbeVar{"pax2LRatio", "TLS_PAX_DOOR_OPEN_RATIO_2L"},
+        ProbeVar{"pax3LRatio", "TLS_PAX_DOOR_OPEN_RATIO_3L"},
+        ProbeVar{"pax4LRatio", "TLS_PAX_DOOR_OPEN_RATIO_4L"},
+        ProbeVar{"pax1RRatio", "TLS_PAX_DOOR_OPEN_RATIO_1R"},
+        ProbeVar{"pax2RRatio", "TLS_PAX_DOOR_OPEN_RATIO_2R"},
+        ProbeVar{"pax3RRatio", "TLS_PAX_DOOR_OPEN_RATIO_3R"},
+        ProbeVar{"pax4RRatio", "TLS_PAX_DOOR_OPEN_RATIO_4R"}
     };
 
     constexpr std::array kIflyDoors = {
