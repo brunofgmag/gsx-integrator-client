@@ -23,7 +23,7 @@ namespace
         case TurnaroundPhase::Refueling: return QCoreApplication::translate("Turnaround", "Refueling");
         case TurnaroundPhase::RequestBoarding: return QCoreApplication::translate("Turnaround", "Requesting boarding");
         case TurnaroundPhase::Boarding: return QCoreApplication::translate("Turnaround", "Boarding");
-        case TurnaroundPhase::WaitingReadyToPush: return QCoreApplication::translate("Turnaround", "Preparing for pushback");
+        case TurnaroundPhase::WaitingReadyToPush: return QCoreApplication::translate("Turnaround", "Waiting for beacon");
         case TurnaroundPhase::WaitCatering: return QCoreApplication::translate("Turnaround", "Waiting for catering");
         case TurnaroundPhase::RemoveGroundEquipment: return QCoreApplication::translate("Turnaround", "Removing GPU & chocks");
         case TurnaroundPhase::RequestPushback: return QCoreApplication::translate("Turnaround", "Requesting pushback");
