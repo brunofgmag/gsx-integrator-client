@@ -47,6 +47,7 @@ void Pmdg777DataClient::Poll()
 {
     channel_.Poll();
     ReportProbe();
+    MaybeProbeToggle();
 
     if (pendingKickRelease_)
     {
@@ -138,6 +139,33 @@ void Pmdg777DataClient::KickDataRefresh()
 void Pmdg777DataClient::SetInFlight(const bool inFlight)
 {
     channel_.SetInFlight(inFlight);
+}
+
+void Pmdg777DataClient::MaybeProbeToggle()
+{
+    if (probeToggleSent_ || !probe::IsOn() || !channel_.HasData())
+    {
+        return;
+    }
+
+    if (!ExtPowerConnected() && !ApuRunning())
+    {
+        return;
+    }
+
+    bool ok = false;
+    const int slot = qEnvironmentVariableIntValue("GSXI_PROBE_DOOR", &ok);
+    if (!ok || slot < 0 || slot >= kDoorCount)
+    {
+        return;
+    }
+
+    probeToggleSent_ = true;
+    probe::Line(QStringLiteral("probe pmdg-777 toggling door slot=%1 event=%2 was=%3")
+                .arg(slot)
+                .arg(DoorEventOffset(slot))
+                .arg(DoorState(slot)));
+    ToggleDoor(slot);
 }
 
 void Pmdg777DataClient::ReportProbe() const

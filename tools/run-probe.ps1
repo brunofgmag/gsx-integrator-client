@@ -1,7 +1,8 @@
 param(
     [ValidateSet('Debug', 'Release')]
     [string]$Config = 'Release',
-    [int]$ToggleEvent = 0
+    [int]$ToggleEvent = 0,
+    [int]$ToggleDoor = -1
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,6 +21,14 @@ if ($ToggleEvent -gt 0) {
 }
 else {
     Remove-Item Env:\GSXI_PROBE_TOGGLE -ErrorAction SilentlyContinue
+}
+
+if ($ToggleDoor -ge 0) {
+    $env:GSXI_PROBE_DOOR = "$ToggleDoor"
+    Write-Host "Will toggle PMDG 777 door slot $ToggleDoor once, after the aircraft is powered"
+}
+else {
+    Remove-Item Env:\GSXI_PROBE_DOOR -ErrorAction SilentlyContinue
 }
 
 $folder = Join-Path $env:LOCALAPPDATA 'brunofgmag\gsx-integrator-client\probe'

@@ -31,11 +31,13 @@ public:
 
 private:
     void ReportProbe() const;
+    void MaybeProbeToggle();
 
     static constexpr long long kKickIntervalMs = 5000;
 
     PmdgClientDataChannel<PMDG_777X_Data> channel_;
     bool pendingKickRelease_ = false;
+    bool probeToggleSent_ = false;
     long long lastKickMs_ = -kKickIntervalMs;
     std::function<long long()> nowMs_;
 };
