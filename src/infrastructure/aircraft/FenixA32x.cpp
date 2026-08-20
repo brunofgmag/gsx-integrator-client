@@ -67,10 +67,17 @@ namespace
     constexpr auto kFwdCargoDoorDataref = "doors.cargo.forward";
     constexpr auto kAftCargoDoorDataref = "doors.cargo.aft";
 
+    constexpr auto kThirdLeftDoorCandidate = "doors.entry.d3l";
+    constexpr auto kSecondRightDoorCandidate = "doors.entry.d2r";
+    constexpr auto kThirdRightDoorCandidate = "doors.entry.d3r";
+    constexpr auto kBulkCargoDoorCandidate = "doors.cargo.bulk";
+
     constexpr std::array kProbeDoorDatarefs = {
         kFwdPaxDoorDataref, kMidPaxDoorDataref, kAftPaxDoorDataref,
         kFwdCateringDoorDataref, kAftCateringDoorDataref,
-        kFwdCargoDoorDataref, kAftCargoDoorDataref
+        kFwdCargoDoorDataref, kAftCargoDoorDataref,
+        kThirdLeftDoorCandidate, kSecondRightDoorCandidate,
+        kThirdRightDoorCandidate, kBulkCargoDoorCandidate
     };
 
     const char* DoorDataref(const GsxDoor door)
