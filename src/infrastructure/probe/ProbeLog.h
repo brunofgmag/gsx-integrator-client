@@ -18,9 +18,13 @@ namespace probe
 
     inline bool IsOn()
     {
+#ifdef NDEBUG
+        return false;
+#else
         static const bool on = qEnvironmentVariableIsSet("GSXI_PROBE");
 
         return on;
+#endif
     }
 
     namespace detail

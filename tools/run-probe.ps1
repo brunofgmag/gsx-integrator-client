@@ -1,15 +1,13 @@
 param(
-    [ValidateSet('Debug', 'Release')]
-    [string]$Config = 'Release',
     [int]$ToggleEvent = 0,
     [int]$ToggleDoor = -1
 )
 
 $ErrorActionPreference = 'Stop'
 
-$exe = Join-Path $PSScriptRoot "..\build\$($Config.ToLowerInvariant())\bin\gsx-integrator-client.exe"
+$exe = Join-Path $PSScriptRoot '..\build\debug\bin\gsx-integrator-client.exe'
 if (-not (Test-Path -LiteralPath $exe)) {
-    throw "Build it first: .\build.ps1 -Config $Config"
+    throw "Build it first: .\build.ps1 -Config Debug. The probe only exists in a Debug build: probe::IsOn() returns false wherever NDEBUG is defined, which is every configuration except Debug."
 }
 
 $env:GSXI_PROBE = '1'
