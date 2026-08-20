@@ -106,6 +106,29 @@ void GsxDoorSync::ReportProbe() const
                       .arg(IsDesiredOpen(door) ? 1 : 0));
     }
 
+    static constexpr std::array kUnknownToTheClient = {
+        "FSDT_GSX_LOADER_EXIT_0",
+        "FSDT_GSX_LOADER_EXIT_1",
+        "FSDT_GSX_LOADER_EXIT_2",
+        "FSDT_GSX_OPERATESTAIRS_STATE",
+        "FSDT_GSX_OPERATEJETWAYS_STATE",
+        "FSDT_GSX_STAIRS",
+        "FSDT_GSX_JETWAY_AIR",
+        "FSDT_GSX_JETWAY_POWER",
+        "FSDT_GSX_SET_LOADERS_STAY_UNTIL_DEPARTURE",
+        "FSDT_GSX_SET_AUTO_STAIRS",
+        "FSDT_GSX_SET_DISABLE_REAR_STAIRS"
+    };
+
+    QStringList candidates;
+    for (const char* name : kUnknownToTheClient)
+    {
+        candidates.append(QStringLiteral("%1=%2").arg(QLatin1String(name))
+                          .arg(variableGateway_->GetLVar(name, -1.0), 0, 'f', 1));
+    }
+
+    probe::Change("gsx.candidates", QStringLiteral("gsxc  %1").arg(candidates.join(QLatin1Char(' '))));
+
     probe::Change("gsx.doorsync", QStringLiteral("dsync %1 | %2")
                   .arg(values.join(QLatin1Char(' ')), wanted.join(QLatin1Char(' '))));
 }
