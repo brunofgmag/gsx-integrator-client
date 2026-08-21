@@ -1,6 +1,8 @@
 param(
     [int]$ToggleEvent = 0,
-    [int]$ToggleDoor = -1
+    [int]$ToggleDoor = -1,
+    [string]$PressGroundConn = '',
+    [string]$PressGroundVehicle = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,6 +29,23 @@ if ($ToggleDoor -ge 0) {
 }
 else {
     Remove-Item Env:\GSXI_PROBE_DOOR -ErrorAction SilentlyContinue
+}
+
+if ($PressGroundConn -and $PressGroundVehicle) {
+    throw "Press one button per run: the whole point is to see what the first press does before the second one muddies it."
+}
+
+Remove-Item Env:\GSXI_PROBE_GROUND_CONN -ErrorAction SilentlyContinue
+Remove-Item Env:\GSXI_PROBE_GROUND_VEHICLE -ErrorAction SilentlyContinue
+
+if ($PressGroundConn) {
+    $env:GSXI_PROBE_GROUND_CONN = $PressGroundConn
+    Write-Host "Will press the PMDG tablet ground_conn button '$PressGroundConn' once, as soon as the tablet answers"
+}
+
+if ($PressGroundVehicle) {
+    $env:GSXI_PROBE_GROUND_VEHICLE = $PressGroundVehicle
+    Write-Host "Will press the PMDG tablet ground_vehicles button '$PressGroundVehicle' once, as soon as the tablet answers"
 }
 
 $folder = Join-Path $env:LOCALAPPDATA 'brunofgmag\gsx-integrator-client\probe'

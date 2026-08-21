@@ -28,6 +28,7 @@ class PmdgTabletClientTest final : public QObject
 private slots:
     static void buildsWbPayloadEnvelope();
     static void buildsGroundConnEnvelope();
+    static void buildsGroundVehicleEnvelope();
     static void availabilityFollowsBridge();
     static void sendsSuppressedWhenUnavailable();
     static void sendsFuelWhenAvailable();
@@ -56,6 +57,14 @@ void PmdgTabletClientTest::buildsGroundConnEnvelope()
 
     QCOMPARE(envelope.value("message_tag").toString(), QString("ground_conn"));
     QCOMPARE(envelope.value("data").toObject().value("wheel_chocks").toInt(), 1);
+}
+
+void PmdgTabletClientTest::buildsGroundVehicleEnvelope()
+{
+    const QJsonObject envelope = Parse(PmdgTabletClient::BuildGroundVehicle("stairs_1l"));
+
+    QCOMPARE(envelope.value("message_tag").toString(), QString("ground_vehicles"));
+    QCOMPARE(envelope.value("data").toObject().value("stairs_1l").toInt(), 1);
 }
 
 void PmdgTabletClientTest::availabilityFollowsBridge()
