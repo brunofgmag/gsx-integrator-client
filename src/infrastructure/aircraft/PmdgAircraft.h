@@ -30,6 +30,13 @@ struct PmdgAircraftSpec
     SmartSwitch::Predicate smartSwitchPressed;
 };
 
+enum class MainDeckTarget
+{
+    Unknown,
+    Open,
+    Closed
+};
+
 class PmdgAircraft : public Aircraft, protected PmdgDoorSource, protected PmdgGroundSource
 {
 public:
@@ -41,6 +48,7 @@ public:
 
     [[nodiscard]] bool IsCargoVariant() const override;
 
+    void Observe() override;
     void OnTick() override;
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
@@ -86,11 +94,13 @@ protected:
 
 private:
     void SyncDoors();
+    void SyncMainDeckDoor();
     [[nodiscard]] std::optional<bool> DoorOpenAt(int slot) const;
 
     bool cargoVariant_;
     int doorSlots_;
     int mainDeckDoorSlot_;
+    MainDeckTarget mainDeckTarget_ = MainDeckTarget::Unknown;
     GsxDoorSync doors_;
     PmdgDoorReconciler doorReconciler_;
     PmdgGroundConnReconciler groundConn_;

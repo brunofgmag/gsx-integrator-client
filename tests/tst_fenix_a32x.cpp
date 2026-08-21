@@ -53,6 +53,12 @@ namespace
     constexpr auto kFwdCargoDoor = "doors.cargo.forward";
     constexpr auto kAftCargoDoor = "doors.cargo.aft";
 
+    constexpr std::array kA320DoorDatarefs = {
+        kFwdPaxDoor, kAftPaxDoor, kFwdCateringDoor, kAftCateringDoor,
+        kFwdCargoDoor, kAftCargoDoor,
+        "doors.entry.d3l", "doors.entry.d2r", "doors.entry.d3r", "doors.cargo.bulk"
+    };
+
     constexpr double kEmptyWeightKg = 40000.0;
     constexpr double kPlannedZfwKg = 60000.0;
     constexpr double kPlannedFuelKg = 9500.0;
@@ -127,7 +133,13 @@ class FenixA32xTest final : public QObject
 private slots:
     static void reportsNamePerVariant();
     static void reportsLoadMethodsAndCapabilities();
-    static void doorStatusStaysUnknownEvenWithDoorDatarefsReadingOpen();
+    static void observationTickWritesNothing();
+    static void drivingTickWritesWhatObservationHeldBack();
+    static void doorStatusUnknownUntilTheEfbAnswers();
+    static void doorStatusAllClosedOnceEveryDoorReadsShut();
+    static void doorStatusOpenWhenADoorReadsOpen();
+    static void theSecondLeftDoorOnlyCountsOnTheA321();
+    static void subscribesEveryDoorDatarefSoItCanRead();
     static void registersSmartSwitchForFastRefresh();
     static void subscribesEfbPlanDatarefs();
     static void pollsEfbEveryTick();
@@ -917,17 +929,96 @@ void FenixA32xTest::readyToDeboardFollowsSafetyState()
     QVERIFY(!fixture.aircraft.IsReadyToDeboard());
 }
 
-void FenixA32xTest::doorStatusStaysUnknownEvenWithDoorDatarefsReadingOpen()
+void FenixA32xTest::doorStatusUnknownUntilTheEfbAnswers()
 {
     const FenixFixture fixture;
 
-    for (const char* doorDataref : {kFwdPaxDoor, kMidPaxDoor, kAftPaxDoor, kFwdCateringDoor,
-                                    kAftCateringDoor, kFwdCargoDoor, kAftCargoDoor})
+    QVERIFY(fixture.aircraft.GetDoorStatus() == DoorStatus::Unknown);
+}
+
+void FenixA32xTest::doorStatusAllClosedOnceEveryDoorReadsShut()
+{
+    const FenixFixture fixture;
+
+    for (const char* doorDataref : kA320DoorDatarefs)
     {
-        fixture.efb.numbers[doorDataref] = 1.0;
+        fixture.efb.numbers[doorDataref] = 0.0;
     }
 
-    QVERIFY(fixture.aircraft.GetDoorStatus() == DoorStatus::Unknown);
+    QVERIFY(fixture.aircraft.GetDoorStatus() == DoorStatus::AllClosed);
+}
+
+void FenixA32xTest::doorStatusOpenWhenADoorReadsOpen()
+{
+    const FenixFixture fixture;
+
+    for (const char* doorDataref : kA320DoorDatarefs)
+    {
+        fixture.efb.numbers[doorDataref] = 0.0;
+    }
+    fixture.efb.numbers[kFwdCargoDoor] = 1.0;
+
+    QVERIFY(fixture.aircraft.GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void FenixA32xTest::theSecondLeftDoorOnlyCountsOnTheA321()
+{
+    const FenixFixture a320(FenixVariant::A320);
+    const FenixFixture a321(FenixVariant::A321);
+
+    for (const char* doorDataref : kA320DoorDatarefs)
+    {
+        a320.efb.numbers[doorDataref] = 0.0;
+        a321.efb.numbers[doorDataref] = 0.0;
+    }
+
+    QVERIFY(a320.aircraft.GetDoorStatus() == DoorStatus::AllClosed);
+    QVERIFY(a321.aircraft.GetDoorStatus() == DoorStatus::Unknown);
+
+    a321.efb.numbers[kMidPaxDoor] = 0.0;
+
+    QVERIFY(a321.aircraft.GetDoorStatus() == DoorStatus::AllClosed);
+}
+
+void FenixA32xTest::subscribesEveryDoorDatarefSoItCanRead()
+{
+    const FenixFixture fixture;
+
+    for (const char* doorDataref : kA320DoorDatarefs)
+    {
+        QVERIFY2(std::ranges::find(fixture.efb.subscribed, std::string(doorDataref))
+                 != fixture.efb.subscribed.end(), doorDataref);
+    }
+}
+
+void FenixA32xTest::observationTickWritesNothing()
+{
+    FenixFixture f;
+
+    const int lvarWrites = f.gateway.setLVarCalls;
+    const int boolWrites = f.efb.setBoolCalls;
+    const int floatWrites = f.efb.setFloatCalls;
+    const int stringWrites = f.efb.setStringCalls;
+
+    f.aircraft.Observe();
+
+    QCOMPARE(f.gateway.setLVarCalls, lvarWrites);
+    QCOMPARE(f.efb.setBoolCalls, boolWrites);
+    QCOMPARE(f.efb.setFloatCalls, floatWrites);
+    QCOMPARE(f.efb.setStringCalls, stringWrites);
+    QVERIFY(f.efb.pollCalls > 0);
+}
+
+void FenixA32xTest::drivingTickWritesWhatObservationHeldBack()
+{
+    FenixFixture f;
+
+    f.aircraft.Observe();
+    const int afterObservation = f.efb.setBoolCalls;
+
+    f.aircraft.OnTick();
+
+    QVERIFY(f.efb.setBoolCalls > afterObservation);
 }
 
 QTEST_APPLESS_MAIN(FenixA32xTest)

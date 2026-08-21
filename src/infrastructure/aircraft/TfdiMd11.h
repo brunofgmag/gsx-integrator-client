@@ -14,7 +14,6 @@ public:
 
     TfdiMd11(VariableGateway* variableGateway, const AutomationStatus* status, bool cargo);
 
-    [[nodiscard]] const char* GetName() const;
     [[nodiscard]] bool IsCargoVariant() const override;
 
     void OnTick() override;

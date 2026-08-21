@@ -1,5 +1,6 @@
 #include "FenixA32x.h"
 
+#include "DoorReading.h"
 #include "../simvars/SimVars.h"
 
 #include <algorithm>
@@ -71,6 +72,16 @@ namespace
     constexpr auto kSecondRightDoorCandidate = "doors.entry.d2r";
     constexpr auto kThirdRightDoorCandidate = "doors.entry.d3r";
     constexpr auto kBulkCargoDoorCandidate = "doors.cargo.bulk";
+
+    constexpr std::array kSharedDoorDatarefs = {
+        kFwdPaxDoorDataref, kAftPaxDoorDataref,
+        kFwdCateringDoorDataref, kAftCateringDoorDataref,
+        kFwdCargoDoorDataref, kAftCargoDoorDataref,
+        kThirdLeftDoorCandidate, kSecondRightDoorCandidate,
+        kThirdRightDoorCandidate, kBulkCargoDoorCandidate
+    };
+
+    constexpr double kDoorUnanswered = -1.0;
 
     constexpr std::array kProbeDoorDatarefs = {
         kFwdPaxDoorDataref, kMidPaxDoorDataref, kAftPaxDoorDataref,
@@ -158,12 +169,14 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
     efb_->Subscribe(kCargoTargetDataref);
     efb_->Subscribe(kWeightUnitDataref);
 
-    if (probe::IsOn())
+    for (const char* dataref : kSharedDoorDatarefs)
     {
-        for (const char* dataref : kProbeDoorDatarefs)
-        {
-            efb_->Subscribe(dataref);
-        }
+        efb_->Subscribe(dataref);
+    }
+
+    if (variant_ == FenixVariant::A321)
+    {
+        efb_->Subscribe(kMidPaxDoorDataref);
     }
 
     LOG_INFO("Profile loaded: %s", GetName());
@@ -187,13 +200,18 @@ bool FenixA32x::IsCargoVariant() const
     return false;
 }
 
-void FenixA32x::OnTick()
+void FenixA32x::Observe()
 {
     efb_->Poll();
+    ReportProbe();
+}
+
+void FenixA32x::OnTick()
+{
+    Observe();
     EnsureEfbInitialized();
     UpdateDoors();
     DisarmRefuelSystemWhenDone();
-    ReportProbe();
 }
 
 void FenixA32x::ReportProbe() const
@@ -272,6 +290,30 @@ void FenixA32x::CloseAllDoors()
     });
 
     LOG_INFO("All doors commanded closed: door control is now manual");
+}
+
+DoorStatus FenixA32x::GetDoorStatus() const
+{
+    DoorStatus status = doors::kNoDoorsSeen;
+
+    for (const char* dataref : kSharedDoorDatarefs)
+    {
+        status = doors::Combine(status, DoorOpen(dataref));
+    }
+
+    if (variant_ == FenixVariant::A321)
+    {
+        status = doors::Combine(status, DoorOpen(kMidPaxDoorDataref));
+    }
+
+    return status;
+}
+
+std::optional<bool> FenixA32x::DoorOpen(const char* dataref) const
+{
+    const double reading = efb_->GetNumber(dataref, kDoorUnanswered);
+
+    return reading < 0.0 ? std::nullopt : std::optional{reading > 0.0};
 }
 
 void FenixA32x::UpdateDoors()

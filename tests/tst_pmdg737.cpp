@@ -62,6 +62,8 @@ class Pmdg737Test final : public QObject
 private slots:
     static void nameAndCargoFlagFollowTheVariant();
     static void onTickPollsBothGateways();
+    static void observationTickWritesNothing();
+    static void drivingTickWritesWhatObservationHeldBack();
     static void groundPowerUnknownUntilData();
     static void groundPowerFollowsTheSingleAnnunciator();
     static void poweredByMainBusOrRunningEngine();
@@ -70,6 +72,8 @@ private slots:
     static void doorStatusUnknownUntilTheEfbAnswers();
     static void doorStatusOpenWhenTheEfbReportsADoorOpen();
     static void doorStatusUnknownWhileTheAirstairHasNoEfbReading();
+    static void airstairReadsTheAnnunciatorOnceTheBusIsLive();
+    static void airstairSaysNothingWhileTheBusIsDead();
     static void readyToDeboardAcceptsChocksInsteadOfBrake();
     static void mapsOnlyTheDoorsTheSevenThirtySevenHas();
     static void closingDoorsThatWereNeverOpenedCommandsNothing();
@@ -658,6 +662,71 @@ void Pmdg737Test::ownStairsAreClearedByTakingTheEntryMethodToJetway()
     Tick(fixture, 20);
 
     QCOMPARE(PassengerEntryRequests(fixture), 1);
+}
+
+void Pmdg737Test::observationTickWritesNothing()
+{
+    Pmdg737Fixture f;
+    f.data->hasData = true;
+    f.gateway.lvars[kSmartSwitchLVar] = kSmartSwitchNeutral;
+
+    const int lvarWrites = f.gateway.setLVarCalls;
+    const int avarWrites = f.gateway.setAVarCalls;
+
+    f.aircraft->Observe();
+
+    QCOMPARE(f.gateway.setLVarCalls, lvarWrites);
+    QCOMPARE(f.gateway.setAVarCalls, avarWrites);
+    QVERIFY(f.data->toggledDoors.empty());
+    QVERIFY(f.tablet->groundConnRequests.empty());
+    QVERIFY(f.tablet->fuelSends.empty());
+    QVERIFY(f.tablet->paxSends.empty());
+    QVERIFY(f.tablet->cargoSends.empty());
+}
+
+void Pmdg737Test::drivingTickWritesWhatObservationHeldBack()
+{
+    Pmdg737Fixture f;
+    f.data->hasData = true;
+
+    f.aircraft->Observe();
+    const int afterObservation = f.gateway.setLVarCalls;
+
+    f.aircraft->OnTick();
+
+    QVERIFY(f.gateway.setLVarCalls > afterObservation);
+}
+
+void Pmdg737Test::airstairReadsTheAnnunciatorOnceTheBusIsLive()
+{
+    Pmdg737Fixture f;
+
+    f.data->hasData = true;
+    f.data->anyMainBusPowered = true;
+    for (const char* key : kEfbDoorKeys)
+    {
+        f.tablet->doorOpen[key] = false;
+    }
+
+    QVERIFY(f.aircraft->GetDoorStatus() == DoorStatus::AllClosed);
+
+    f.data->airstairAnnunciator = true;
+
+    QVERIFY(f.aircraft->GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void Pmdg737Test::airstairSaysNothingWhileTheBusIsDead()
+{
+    Pmdg737Fixture f;
+
+    f.data->hasData = true;
+    f.data->anyMainBusPowered = false;
+    for (const char* key : kEfbDoorKeys)
+    {
+        f.tablet->doorOpen[key] = false;
+    }
+
+    QVERIFY(f.aircraft->GetDoorStatus() == DoorStatus::Unknown);
 }
 
 QTEST_APPLESS_MAIN(Pmdg737Test)

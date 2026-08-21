@@ -17,6 +17,7 @@ public:
 
     [[nodiscard]] virtual bool IsCargoVariant() const = 0;
 
+    virtual void Observe() {}
     virtual void OnTick() {}
     virtual void OnSlowTick() {}
     virtual void OnLoadingStarted() = 0;

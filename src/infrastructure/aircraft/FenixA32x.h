@@ -23,6 +23,8 @@ public:
     [[nodiscard]] const char* GetName() const;
     [[nodiscard]] bool IsCargoVariant() const override;
 
+    void Observe() override;
+    [[nodiscard]] DoorStatus GetDoorStatus() const override;
     void OnTick() override;
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
@@ -60,6 +62,7 @@ private:
     [[nodiscard]] bool IsBeaconOn() const;
     void EnsureEfbInitialized();
     void UpdateDoors();
+    [[nodiscard]] std::optional<bool> DoorOpen(const char* dataref) const;
     void ReportProbe() const;
     void DisarmRefuelSystemWhenDone();
     void SyncPassengersAndCargo(double zfwKg);

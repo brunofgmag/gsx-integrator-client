@@ -44,7 +44,7 @@ bool PmdgAircraft::IsCargoVariant() const
     return cargoVariant_;
 }
 
-void PmdgAircraft::OnTick()
+void PmdgAircraft::Observe()
 {
     data_->SetInFlight(variableGateway_->GetAVar(kSimOnGround, kBoolUnit, 1.0) <= 0.0);
     data_->Poll();
@@ -60,6 +60,15 @@ void PmdgAircraft::OnTick()
     if (data_->HasData())
     {
         smartSwitch_.Subscribe();
+    }
+}
+
+void PmdgAircraft::OnTick()
+{
+    Observe();
+
+    if (data_->HasData())
+    {
         SyncDoors();
         groundConn_.Reconcile();
         payload_.Trim();
@@ -77,12 +86,27 @@ void PmdgAircraft::SyncDoors()
 
     if (cargoVariant_)
     {
-        const bool mainLoaderPresent = gsx::states::IsLoaderAtDoor(
-            variableGateway_->GetLVar(gsx::lvars::kBaggageLoaderMainState, 0.0));
-        doorReconciler_.SetSlotDesired(mainDeckDoorSlot_, mainLoaderPresent);
+        SyncMainDeckDoor();
     }
 
     doorReconciler_.Reconcile();
+}
+
+void PmdgAircraft::SyncMainDeckDoor()
+{
+    const bool loaderPresent = gsx::states::IsLoaderAtDoor(
+        variableGateway_->GetLVar(gsx::lvars::kBaggageLoaderMainState, 0.0));
+
+    if (loaderPresent && mainDeckTarget_ != MainDeckTarget::Open)
+    {
+        doorReconciler_.SetSlotDesired(mainDeckDoorSlot_, true);
+        mainDeckTarget_ = MainDeckTarget::Open;
+    }
+    else if (!loaderPresent && mainDeckTarget_ == MainDeckTarget::Open)
+    {
+        doorReconciler_.SetSlotDesired(mainDeckDoorSlot_, false);
+        mainDeckTarget_ = MainDeckTarget::Closed;
+    }
 }
 
 void PmdgAircraft::OnLoadingStarted()
@@ -97,6 +121,7 @@ void PmdgAircraft::CloseAllDoors()
     if (cargoVariant_)
     {
         doorReconciler_.SetSlotDesired(mainDeckDoorSlot_, false);
+        mainDeckTarget_ = MainDeckTarget::Closed;
     }
 
     doorReconciler_.Reconcile();

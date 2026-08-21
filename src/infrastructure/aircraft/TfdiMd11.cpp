@@ -69,11 +69,6 @@ TfdiMd11::TfdiMd11(VariableGateway* variableGateway, const AutomationStatus* sta
     LOG_INFO("Profile loaded: TFDi MD-11%s", cargo_ ? "F" : "");
 }
 
-const char* TfdiMd11::GetName() const
-{
-    return kName;
-}
-
 bool TfdiMd11::IsCargoVariant() const
 {
     return cargo_;

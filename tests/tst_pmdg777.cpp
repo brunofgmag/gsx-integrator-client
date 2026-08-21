@@ -72,6 +72,8 @@ private slots:
     static void groundPowerUnknownUntilData();
     static void groundPowerFollowsExtPowerAnnunciator();
     static void onTickPollsGateways();
+    static void observationTickWritesNothing();
+    static void drivingTickWritesWhatObservationHeldBack();
     static void notPoweredWhileNothingReceived();
     static void notPoweredByTabletLvarWhileDark();
     static void poweredByApuOrExtPower();
@@ -106,6 +108,8 @@ private slots:
     static void doorsHoldBeforeClientData();
     static void doorThatIgnoresTheCommandStopsAfterTwoRetries();
     static void mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses();
+    static void mainDeckDoorOpenedByHandIsLeftAloneWithoutALoader();
+    static void mainDeckDoorStillClosesWhenTheLoaderLeavesAfterOpeningIt();
     static void closeAllDoorsTogglesOpenMappedDoors();
     static void chocksReconcileWithRetryCap();
     static void zfwTrimsCargoAgainstActualWeight();
@@ -911,6 +915,79 @@ void Pmdg777Test::aftCateringDoorOpensFiveRightOnlyOn300()
 
     QVERIFY(std::ranges::find(er200.data->toggledDoors, 7) != er200.data->toggledDoors.end());
     QVERIFY(std::ranges::find(er200.data->toggledDoors, 9) == er200.data->toggledDoors.end());
+}
+
+void Pmdg777Test::observationTickWritesNothing()
+{
+    Pmdg777Fixture f;
+    f.data->hasData = true;
+
+    const int lvarWrites = f.gateway.setLVarCalls;
+    const int avarWrites = f.gateway.setAVarCalls;
+
+    f.aircraft->Observe();
+
+    QCOMPARE(f.gateway.setLVarCalls, lvarWrites);
+    QCOMPARE(f.gateway.setAVarCalls, avarWrites);
+    QVERIFY(f.tablet->groundConnRequests.empty());
+    QVERIFY(f.tablet->fuelSends.empty());
+    QVERIFY(f.tablet->paxSends.empty());
+    QVERIFY(f.tablet->cargoSends.empty());
+}
+
+void Pmdg777Test::drivingTickWritesWhatObservationHeldBack()
+{
+    Pmdg777Fixture f;
+    f.data->hasData = true;
+
+    f.aircraft->Observe();
+    const int afterObservation = f.gateway.setLVarCalls;
+
+    f.aircraft->OnTick();
+
+    QVERIFY(f.gateway.setLVarCalls > afterObservation);
+}
+
+void Pmdg777Test::mainDeckDoorOpenedByHandIsLeftAloneWithoutALoader()
+{
+    Pmdg777Fixture freighter(Pmdg777Variant::Freighter);
+
+    freighter.data->hasData = true;
+    freighter.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        freighter.aircraft->OnTick();
+    }
+
+    freighter.data->doorStates[12] = 0;
+    freighter.data->toggledDoors.clear();
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        freighter.aircraft->OnTick();
+    }
+
+    QVERIFY(freighter.data->toggledDoors.empty());
+}
+
+void Pmdg777Test::mainDeckDoorStillClosesWhenTheLoaderLeavesAfterOpeningIt()
+{
+    Pmdg777Fixture freighter(Pmdg777Variant::Freighter);
+
+    freighter.data->hasData = true;
+    freighter.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    freighter.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
+
+    freighter.aircraft->OnTick();
+    freighter.data->doorStates[12] = 0;
+    freighter.aircraft->OnTick();
+    freighter.data->toggledDoors.clear();
+
+    freighter.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 0.0;
+    freighter.aircraft->OnTick();
+
+    QCOMPARE(static_cast<int>(std::ranges::count(freighter.data->toggledDoors, 12)), 1);
 }
 
 QTEST_APPLESS_MAIN(Pmdg777Test)

@@ -13,7 +13,6 @@ class IFly737Max final : public Aircraft
 public:
     IFly737Max(VariableGateway* variableGateway, const AutomationStatus* status);
 
-    [[nodiscard]] const char* GetName() const;
     [[nodiscard]] bool IsCargoVariant() const override;
 
     void OnTick() override;

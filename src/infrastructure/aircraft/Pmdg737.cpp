@@ -112,7 +112,13 @@ int Pmdg737::DoorSlotFor(const GsxDoor door) const
 
 DoorObservation Pmdg737::ObserveDoor(const int slot) const
 {
-    const char* key = EfbDoorKey(static_cast<Pmdg737Door>(slot));
+    const auto door = static_cast<Pmdg737Door>(slot);
+    if (door == Pmdg737Door::Airstair)
+    {
+        return ObserveAirstair();
+    }
+
+    const char* key = EfbDoorKey(door);
     if (key == nullptr)
     {
         return DoorObservation::Unknown;
@@ -130,6 +136,16 @@ DoorObservation Pmdg737::ObserveDoor(const int slot) const
     }
 
     return *reading ? DoorObservation::Open : DoorObservation::Closed;
+}
+
+DoorObservation Pmdg737::ObserveAirstair() const
+{
+    if (!ownedData_->AnyMainBusPowered())
+    {
+        return DoorObservation::Unknown;
+    }
+
+    return ownedData_->AirstairAnnunciator() ? DoorObservation::Open : DoorObservation::Closed;
 }
 
 void Pmdg737::ToggleDoor(const int slot)

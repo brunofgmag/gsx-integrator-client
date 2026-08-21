@@ -74,7 +74,7 @@ class TfdiMd11Test final : public QObject
     Q_OBJECT
 
 private slots:
-    static void reportsNameAndVariant();
+    static void reportsCargoVariant();
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
@@ -114,7 +114,7 @@ private slots:
     static void reportsLoadMethods();
 };
 
-void TfdiMd11Test::reportsNameAndVariant()
+void TfdiMd11Test::reportsCargoVariant()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -122,7 +122,6 @@ void TfdiMd11Test::reportsNameAndVariant()
     const TfdiMd11 passenger(&gateway, &status, false);
     const TfdiMd11 freighter(&gateway, &status, true);
 
-    QCOMPARE(QString(passenger.GetName()), QString("TFDi MD-11"));
     QVERIFY(!passenger.IsCargoVariant());
     QVERIFY(freighter.IsCargoVariant());
 }

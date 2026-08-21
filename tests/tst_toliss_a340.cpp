@@ -63,11 +63,29 @@ namespace
     constexpr double kDoorModeAuto = 1.0;
     constexpr double kDoorModeOpen = 2.0;
 
+    constexpr auto kCargoDoorRatioFwd = "TLS_CARGO_DOOR_OPEN_RATIO_FWD";
+    constexpr auto kCargoDoorRatioAft = "TLS_CARGO_DOOR_OPEN_RATIO_AFT";
+
+    constexpr std::array kDoorRatioLVars =
+        {kCargoDoorRatioFwd, kCargoDoorRatioAft,
+         "TLS_PAX_DOOR_OPEN_RATIO_1L", "TLS_PAX_DOOR_OPEN_RATIO_2L",
+         "TLS_PAX_DOOR_OPEN_RATIO_3L", "TLS_PAX_DOOR_OPEN_RATIO_4L",
+         "TLS_PAX_DOOR_OPEN_RATIO_1R", "TLS_PAX_DOOR_OPEN_RATIO_2R",
+         "TLS_PAX_DOOR_OPEN_RATIO_3R", "TLS_PAX_DOOR_OPEN_RATIO_4R"};
+
     void AllDoorModesClosed(FakeVariableGateway& gateway)
     {
         for (const char* modeLVar : kDoorModeLVars)
         {
             gateway.lvars[modeLVar] = kDoorModeClosed;
+        }
+    }
+
+    void AllDoorRatiosClosed(FakeVariableGateway& gateway)
+    {
+        for (const char* ratioLVar : kDoorRatioLVars)
+        {
+            gateway.lvars[ratioLVar] = 0.0;
         }
     }
 }
@@ -77,7 +95,7 @@ class TolissA340Test final : public QObject
     Q_OBJECT
 
 private slots:
-    static void reportsNameAndVariant();
+    static void reportsCargoVariant();
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
@@ -122,17 +140,19 @@ private slots:
     static void doorStatusUnknownUntilDoorModesArrive();
     static void doorStatusUnknownWhileADoorSitsInAutoMode();
     static void doorStatusAllClosedWhenEveryModeReadsClosed();
+    static void doorStillMovingIsNotReportedClosed();
+    static void positionBeatsTheCommandOnceItArrives();
+    static void doorStatusFallsBackToTheModeUntilThePositionArrives();
     static void reportsLoadMethods();
 };
 
-void TolissA340Test::reportsNameAndVariant()
+void TolissA340Test::reportsCargoVariant()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
     const TolissA340 passenger(&gateway, &status, false);
     const TolissA340 freighter(&gateway, &status, true);
 
-    QCOMPARE(QString(passenger.GetName()), QString("ToLiss A340-600"));
     QVERIFY(!passenger.IsCargoVariant());
     QVERIFY(freighter.IsCargoVariant());
 }
@@ -958,6 +978,43 @@ void TolissA340Test::doorStatusUnknownWhileADoorSitsInAutoMode()
 }
 
 void TolissA340Test::doorStatusAllClosedWhenEveryModeReadsClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TolissA340 aircraft(&gateway, &status, false);
+
+    AllDoorModesClosed(gateway);
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AllClosed);
+}
+
+void TolissA340Test::doorStillMovingIsNotReportedClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TolissA340 aircraft(&gateway, &status, false);
+
+    AllDoorModesClosed(gateway);
+    AllDoorRatiosClosed(gateway);
+    gateway.lvars[kCargoDoorRatioFwd] = 0.920;
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void TolissA340Test::positionBeatsTheCommandOnceItArrives()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TolissA340 aircraft(&gateway, &status, false);
+
+    AllDoorModesClosed(gateway);
+    gateway.lvars[kPaxDoorMode2R] = kDoorModeAuto;
+    AllDoorRatiosClosed(gateway);
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AllClosed);
+}
+
+void TolissA340Test::doorStatusFallsBackToTheModeUntilThePositionArrives()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;

@@ -22,6 +22,7 @@ class Pmdg737DataGateway : public PmdgDataGateway
 public:
     [[nodiscard]] virtual bool GroundPowerAvailable() const = 0;
     [[nodiscard]] virtual bool AnyMainBusPowered() const = 0;
+    [[nodiscard]] virtual bool AirstairAnnunciator() const = 0;
 
     virtual void ToggleDoor(Pmdg737Door door) = 0;
 };

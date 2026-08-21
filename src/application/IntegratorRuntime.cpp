@@ -302,9 +302,13 @@ void IntegratorRuntime::Update()
         stateMachine_.AttachAircraft(aircraft_.get());
         gsxMenu_.OnMenuChanged();
         stateMachine_.Tick();
+        aircraft_->OnTick();
+    }
+    else
+    {
+        aircraft_->Observe();
     }
 
-    aircraft_->OnTick();
     probe_.Observe(*aircraft_, varGateway_, GetAircraftProfileId());
 }
 

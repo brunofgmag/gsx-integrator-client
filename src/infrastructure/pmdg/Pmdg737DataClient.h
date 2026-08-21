@@ -19,6 +19,7 @@ public:
     [[nodiscard]] bool GroundPowerAvailable() const override;
     [[nodiscard]] bool AnyMainBusPowered() const override;
     [[nodiscard]] bool BeaconOn() const override;
+    [[nodiscard]] bool AirstairAnnunciator() const override;
     [[nodiscard]] bool ParkingBrakeOn() const override;
 
     void ToggleDoor(Pmdg737Door door) override;
