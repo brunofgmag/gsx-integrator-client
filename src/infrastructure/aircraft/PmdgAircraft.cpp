@@ -262,3 +262,8 @@ std::optional<bool> PmdgAircraft::DoorOpenAt(const int slot) const
         return std::nullopt;
     }
 }
+
+void PmdgAircraft::HoldDoorsClosed(const bool hold)
+{
+    doors_.HoldClosedForDeparture(hold);
+}

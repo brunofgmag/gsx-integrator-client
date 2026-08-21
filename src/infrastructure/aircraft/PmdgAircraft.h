@@ -51,7 +51,9 @@ public:
     void Observe() override;
     void OnTick() override;
     void OnLoadingStarted() override;
-    void CloseAllDoors() override;    void ClearOwnGroundEquipment() override;
+    void CloseAllDoors() override;
+    void HoldDoorsClosed(bool hold) override;
+    void ClearOwnGroundEquipment() override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
     [[nodiscard]] bool IsMainDeckCargoDoorStuck() const override;
 

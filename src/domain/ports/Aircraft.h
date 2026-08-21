@@ -48,6 +48,7 @@ public:
     [[nodiscard]] virtual bool SupportsGroundPowerControl() const { return false; }
     virtual void SetGroundPower(bool) {}
     virtual void CloseAllDoors() {}
+    virtual void HoldDoorsClosed(bool) {}
     virtual void ClearOwnGroundEquipment() {}
     [[nodiscard]] virtual DoorStatus GetDoorStatus() const { return DoorStatus::Unknown; }
     [[nodiscard]] virtual bool IsMainDeckCargoDoorStuck() const { return false; }

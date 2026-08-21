@@ -337,3 +337,8 @@ namespace
 
     [[maybe_unused]] const AircraftRegistration kTolissA340Registration{kTolissA340Descriptor};
 }
+
+void TolissA340::HoldDoorsClosed(const bool hold)
+{
+    doors_.HoldClosedForDeparture(hold);
+}

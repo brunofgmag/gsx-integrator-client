@@ -4,6 +4,7 @@
 #include "../probe/ProbeLog.h"
 #include "../simvars/VariableGateway.h"
 
+#include <algorithm>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
@@ -21,6 +22,16 @@ namespace
         GsxDoor::FwdCatering, GsxDoor::AftCatering,
         GsxDoor::FwdCargo, GsxDoor::AftCargo
     };
+
+    constexpr std::array kDoorsHeldForDeparture = {
+        GsxDoor::FwdPax, GsxDoor::MidPax, GsxDoor::AftPax,
+        GsxDoor::FwdCargo, GsxDoor::AftCargo
+    };
+
+    bool IsHeldForDeparture(const GsxDoor door)
+    {
+        return std::ranges::find(kDoorsHeldForDeparture, door) != kDoorsHeldForDeparture.end();
+    }
 
     const char* DoorName(const GsxDoor door)
     {
@@ -143,8 +154,18 @@ void GsxDoorSync::CloseAll(const DoorWriter& write)
     }
 }
 
+void GsxDoorSync::HoldClosedForDeparture(const bool hold)
+{
+    heldForDeparture_ = hold;
+}
+
 bool GsxDoorSync::IsDesiredOpen(const GsxDoor door) const
 {
+    if (heldForDeparture_ && IsHeldForDeparture(door))
+    {
+        return false;
+    }
+
     const auto vehicleState = [this](const char* lVar)
     {
         return variableGateway_->GetLVar(lVar, 0.0);

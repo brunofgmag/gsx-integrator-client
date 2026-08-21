@@ -123,7 +123,9 @@ private slots:
     static void parkingBrakeReadsTheLeverAndIgnoresTheSimVar();
     static void heldInPlaceFollowsTheLeverWithoutAChocksSource();
     static void readyToPushFollowsPowerBeaconAndEngines();
-    static void readyToDeboardFollowsSafetyState();    static void doorsUntouchedByDefaultWhenGsxAvailable();
+    static void readyToDeboardFollowsSafetyState();
+    static void holdForDepartureClosesPaxAndCargoButNotCatering();
+    static void doorsUntouchedByDefaultWhenGsxAvailable();
     static void cargoDoorsOpenPerLoaderAndCloseWhenDone();
     static void cargoDoorsUntouchedWithoutGsx();
     static void paxDoorsOpenPerStairsAndCloseWhenGone();
@@ -656,6 +658,36 @@ void TolissA340Test::readyToDeboardFollowsSafetyState()
     QVERIFY(!aircraft.IsReadyToDeboard());
 }
 
+
+void TolissA340Test::holdForDepartureClosesPaxAndCargoButNotCatering()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kGsxJetway] = 5.0;
+    gateway.lvars[kGsxLoaderFront] = 8.0;
+    gateway.lvars[kGsxCateringFront] = 7.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeOpen);
+    QCOMPARE(gateway.Written(kCargoDoorModeFwd), kDoorModeOpen);
+    QCOMPARE(gateway.Written(kPaxDoorMode1R), kDoorModeOpen);
+
+    aircraft.HoldDoorsClosed(true);
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeClosed);
+    QCOMPARE(gateway.Written(kCargoDoorModeFwd), kDoorModeClosed);
+    QCOMPARE(gateway.Written(kPaxDoorMode1R), kDoorModeOpen);
+
+    aircraft.HoldDoorsClosed(false);
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeOpen);
+    QCOMPARE(gateway.Written(kCargoDoorModeFwd), kDoorModeOpen);
+}
 
 void TolissA340Test::doorsUntouchedByDefaultWhenGsxAvailable()
 {

@@ -19,7 +19,9 @@ public:
 
     void OnTick() override;
     void OnLoadingStarted() override;
-    void CloseAllDoors() override;    [[nodiscard]] DoorStatus GetDoorStatus() const override;
+    void CloseAllDoors() override;
+    void HoldDoorsClosed(bool hold) override;
+    [[nodiscard]] DoorStatus GetDoorStatus() const override;
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;

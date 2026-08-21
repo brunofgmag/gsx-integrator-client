@@ -23,6 +23,7 @@ private slots:
     static void placesChocksEvenWhileGpuUnknown();
     static void closesAllDoorsEvenWhenCallGpuDisabled();
     static void closesAllDoorsOnlyOnce();
+    static void releasesTheDepartureDoorHoldOnANewTurnaround();
     static void clearsTheGroundEquipmentTheAircraftPlacedItself();
     static void clearsTheAircraftGroundEquipmentOnlyOnce();
 };
@@ -230,6 +231,18 @@ void PlaceGroundEquipmentStateTest::placesChocksEvenWhileGpuUnknown()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.aircraft.setChocksCalls, 1);
     QVERIFY(f.aircraft.chocksPlaced);
+}
+
+void PlaceGroundEquipmentStateTest::releasesTheDepartureDoorHoldOnANewTurnaround()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.aircraft.doorsHeldClosed = true;
+    f.settings.callGpu = false;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.aircraft.doorsHeldClosed);
 }
 
 void PlaceGroundEquipmentStateTest::closesAllDoorsEvenWhenCallGpuDisabled()

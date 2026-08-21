@@ -27,6 +27,7 @@ public:
 
     void Sync(const DoorWriter& write);
     void CloseAll(const DoorWriter& write);
+    void HoldClosedForDeparture(bool hold);
 
 private:
     [[nodiscard]] bool IsDesiredOpen(GsxDoor door) const;
@@ -34,6 +35,7 @@ private:
 
     VariableGateway* variableGateway_;
     std::array<double, static_cast<std::size_t>(GsxDoor::Count)> lastTargets_{};
+    bool heldForDeparture_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_GSXDOORSYNC_H

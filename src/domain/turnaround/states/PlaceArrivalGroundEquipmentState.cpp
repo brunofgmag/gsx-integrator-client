@@ -9,7 +9,9 @@
 std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::Evaluate(TurnaroundContext& ctx)
 {
     if (!ctx.data.arrivalDoorsClosed)
-    {        ctx.aircraft->CloseAllDoors();
+    {
+        ctx.aircraft->HoldDoorsClosed(false);
+        ctx.aircraft->CloseAllDoors();
         ctx.data.arrivalDoorsClosed = true;
     }
 

@@ -19,7 +19,9 @@ private slots:
     static void waitsWhileGpuStatusUnknown();
     static void skipsChocksWhenUnsupported();
     static void closesAllDoorsEvenWhenOptionDisabled();
-    static void closesAllDoorsOnlyOnce();};
+    static void closesAllDoorsOnlyOnce();
+    static void releasesTheDepartureDoorHoldOnArrival();
+};
 
 void PlaceArrivalGroundEquipmentStateTest::skipsWhenOptionDisabled()
 {
@@ -209,6 +211,18 @@ void PlaceArrivalGroundEquipmentStateTest::closesAllDoorsEvenWhenOptionDisabled(
     QCOMPARE(transition->next, TurnaroundPhase::RequestDeboarding);
     QCOMPARE(f.aircraft.closeAllDoorsCalls, 1);
     QVERIFY(f.ctx.data.arrivalDoorsClosed);
+}
+
+void PlaceArrivalGroundEquipmentStateTest::releasesTheDepartureDoorHoldOnArrival()
+{
+    TurnaroundStateFixture f;
+    PlaceArrivalGroundEquipmentState state;
+
+    f.aircraft.doorsHeldClosed = true;
+    f.settings.callGpuOnArrival = false;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.aircraft.doorsHeldClosed);
 }
 
 void PlaceArrivalGroundEquipmentStateTest::closesAllDoorsOnlyOnce()

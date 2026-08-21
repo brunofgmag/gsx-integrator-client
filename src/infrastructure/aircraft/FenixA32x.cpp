@@ -622,3 +622,8 @@ namespace
     [[maybe_unused]] const AircraftRegistration kFenixA320Registration{kFenixA320Descriptor};
     [[maybe_unused]] const AircraftRegistration kFenixA321Registration{kFenixA321Descriptor};
 }
+
+void FenixA32x::HoldDoorsClosed(const bool hold)
+{
+    doors_.HoldClosedForDeparture(hold);
+}
