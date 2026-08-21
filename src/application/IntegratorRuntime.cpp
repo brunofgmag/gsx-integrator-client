@@ -17,6 +17,23 @@ namespace
 
         return !refueling.has_value() || *refueling != 0;
     }
+
+    enum class TickMode
+    {
+        Idle,
+        ObserveOnly,
+        Driving
+    };
+
+    TickMode ResolveTickMode(const bool automationEnabled, const bool gsxAvailable)
+    {
+        if (automationEnabled && gsxAvailable)
+        {
+            return TickMode::Driving;
+        }
+
+        return probe::IsOn() ? TickMode::ObserveOnly : TickMode::Idle;
+    }
 }
 
 IntegratorRuntime::IntegratorRuntime(QObject* parent)
@@ -263,8 +280,8 @@ void IntegratorRuntime::Update()
     const bool gsxOk = gsxService_.IsAvailable();
     status_.gsxAvailable = gsxOk;
 
-    const bool driving = status_.enabled && gsxOk;
-    if (!driving && !probe::IsOn())
+    const TickMode mode = ResolveTickMode(status_.enabled, gsxOk);
+    if (mode == TickMode::Idle)
     {
         return;
     }
@@ -276,7 +293,7 @@ void IntegratorRuntime::Update()
         return;
     }
 
-    if (driving)
+    if (mode == TickMode::Driving)
     {
         stateMachine_.AttachAircraft(aircraft_.get());
         gsxMenu_.OnMenuChanged();
