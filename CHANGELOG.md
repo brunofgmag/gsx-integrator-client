@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.8.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.7.0...v1.8.0) (2026-08-21)
+
+
+* pay the debts that only needed code or a decision ([#48](https://github.com/brunofgmag/gsx-integrator-client/issues/48)) ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+
+
+### Features
+
+* **aircraft:** clear the ground equipment an aircraft parks by itself ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **aircraft:** read the doors the fleet could not answer ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **gsx:** observe the state once a tick and report what GSX refuses ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* let the probe watch new variables and put the QML components under test ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **turnaround:** hold the doors closed once the boarding ends ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+
+
+### Bug Fixes
+
+* **aircraft:** tell "held in place" from "the pilot set the brake" ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **ci:** resume, retry and cache the MSFS SDK download ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **fenix:** believe a closed door only when the reading settles ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **gsx:** confer the GSX profile of the PMDG family too ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **pmdg:** describe the smart switch press as deviation from the named neutral ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **pmdg:** hold the payload trim while the progressive ramp is moving ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **pmdg:** stop reading a door jammed mid-travel as unknown ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **pmdg:** tell a live SDK block from a frozen one ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+
 ## [1.7.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.6.0...v1.7.0) (2026-08-21)
 
 
