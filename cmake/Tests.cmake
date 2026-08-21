@@ -231,18 +231,12 @@ gsxi_add_qt_test(gsxi-simconnect-session-tests simconnect-session
 target_include_directories(gsxi-simconnect-session-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
 gsxi_add_qt_test(gsxi-variable-gateway-tests variable-gateway
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
         tests/tst_variable_gateway.cpp
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_include_directories(gsxi-variable-gateway-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
-target_link_libraries(gsxi-variable-gateway-tests PRIVATE "${SIMCONNECT_IMPORT_LIB}")
-if (EXISTS "${SIMCONNECT_DLL}")
-    add_custom_command(TARGET gsxi-variable-gateway-tests POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-            "${SIMCONNECT_DLL}"
-            "$<TARGET_FILE_DIR:gsxi-variable-gateway-tests>"
-            VERBATIM)
-endif ()
 
 gsxi_add_qt_test(gsxi-smart-switch-tests smart-switch
         tests/doubles/FakeVariableGateway.h

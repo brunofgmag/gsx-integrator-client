@@ -4,6 +4,7 @@
 #include <vector>
 #include <windows.h>
 #include <SimConnect.h>
+#include "doubles/FakeSimConnectApi.h"
 #include "../src/infrastructure/simconnect/SimConnectVariableGateway.h"
 
 namespace
@@ -37,6 +38,8 @@ private slots:
     static void avarReportsReceivedOnlyAfterDataArrives();
     static void lvarReportsReceivedOnlyAfterDataArrives();
     static void fastRefreshSharesSlotWithGetLVar();
+    static void fastRefreshPromotesAlreadyReadSlotToFrameRate();
+    static void fastRefreshKeepsFrameRateWhenAskedTwice();
     static void consumeLVarSpanCatchesTransient();
 };
 
@@ -152,6 +155,40 @@ void VariableGatewayTest::fastRefreshSharesSlotWithGetLVar()
     DeliverDouble(gateway, kFirstDefineId, 100.0);
 
     QCOMPARE(gateway.GetLVar(kEng3N1, 0.0), 100.0);
+}
+
+void VariableGatewayTest::fastRefreshPromotesAlreadyReadSlotToFrameRate()
+{
+    FakeSimConnectApi::Reset();
+    SimConnectVariableGateway gateway;
+    gateway.Attach(reinterpret_cast<HANDLE>(0x5150));
+
+    gateway.GetLVar(kEng3N1, 0.0);
+
+    QCOMPARE(FakeSimConnectApi::dataRequests.size(), std::size_t{1});
+    QCOMPARE(FakeSimConnectApi::dataRequests.back().period, SIMCONNECT_PERIOD_SECOND);
+
+    gateway.SetFastRefresh(kEng3N1);
+
+    QCOMPARE(FakeSimConnectApi::dataRequests.size(), std::size_t{2});
+    QCOMPARE(FakeSimConnectApi::dataRequests.back().defineId, kFirstDefineId);
+    QCOMPARE(FakeSimConnectApi::dataRequests.back().period, SIMCONNECT_PERIOD_SIM_FRAME);
+    QCOMPARE(FakeSimConnectApi::dataRequests.back().interval, DWORD{1});
+}
+
+void VariableGatewayTest::fastRefreshKeepsFrameRateWhenAskedTwice()
+{
+    FakeSimConnectApi::Reset();
+    SimConnectVariableGateway gateway;
+    gateway.Attach(reinterpret_cast<HANDLE>(0x5150));
+
+    gateway.SetFastRefresh(kEng3N1);
+    const std::size_t afterFirst = FakeSimConnectApi::dataRequests.size();
+
+    gateway.SetFastRefresh(kEng3N1);
+
+    QCOMPARE(FakeSimConnectApi::dataRequests.size(), afterFirst);
+    QCOMPARE(FakeSimConnectApi::dataRequests.back().period, SIMCONNECT_PERIOD_SIM_FRAME);
 }
 
 QTEST_APPLESS_MAIN(VariableGatewayTest)
