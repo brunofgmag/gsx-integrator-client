@@ -3,6 +3,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <QtCore/QString>
 
 class Aircraft;
 class VariableGateway;
@@ -21,6 +22,7 @@ private:
     };
 
     const Track& Follow(VariableGateway& variables, const char* name);
+    void ReportWatchList(VariableGateway& variables, const QString& id);
 
     std::unordered_map<std::string, Track> tracks_;
     long long lastObservedMs_ = 0;

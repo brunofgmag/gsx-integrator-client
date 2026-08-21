@@ -1,6 +1,7 @@
 #include "FenixA32x.h"
 
 #include "DoorReading.h"
+#include "../probe/ProbeWatchList.h"
 #include "../simvars/SimVars.h"
 
 #include <algorithm>
@@ -231,6 +232,19 @@ void FenixA32x::ReportProbe() const
     probe::Change("fenix.doors", QStringLiteral("efb   fenix available=%1 %2")
                   .arg(efb_->IsAvailable() ? 1 : 0)
                   .arg(doors.join(QLatin1Char(' '))));
+
+    for (const probe::WatchedVariable& watched : probe::WatchList())
+    {
+        if (watched.kind != probe::WatchKind::Dataref)
+        {
+            continue;
+        }
+
+        probe::Change("watch." + watched.name,
+                      QStringLiteral("watch fenix %1=%2")
+                      .arg(QString::fromStdString(watched.name))
+                      .arg(efb_->GetNumber(watched.name, -1.0), 0, 'f', 3));
+    }
 }
 
 void FenixA32x::EnsureEfbInitialized()
