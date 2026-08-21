@@ -1,7 +1,11 @@
 #include "GsxDoorSync.h"
 
 #include "GsxLVars.h"
+#include "../probe/ProbeLog.h"
 #include "../simvars/VariableGateway.h"
+
+#include <QtCore/QString>
+#include <QtCore/QStringList>
 
 namespace
 {
@@ -17,6 +21,20 @@ namespace
         GsxDoor::FwdCatering, GsxDoor::AftCatering,
         GsxDoor::FwdCargo, GsxDoor::AftCargo
     };
+
+    const char* DoorName(const GsxDoor door)
+    {
+        switch (door)
+        {
+        case GsxDoor::FwdPax: return "FwdPax";
+        case GsxDoor::MidPax: return "MidPax";
+        case GsxDoor::AftPax: return "AftPax";
+        case GsxDoor::FwdCatering: return "FwdCatering";
+        case GsxDoor::AftCatering: return "AftCatering";
+        case GsxDoor::FwdCargo: return "FwdCargo";
+        default: return "AftCargo";
+        }
+    }
 }
 
 GsxDoorSync::GsxDoorSync(VariableGateway* variableGateway) : variableGateway_(variableGateway)
@@ -26,6 +44,8 @@ GsxDoorSync::GsxDoorSync(VariableGateway* variableGateway) : variableGateway_(va
 
 void GsxDoorSync::Sync(const DoorWriter& write)
 {
+    ReportProbe();
+
     if (variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
     {
         return;
@@ -38,22 +58,86 @@ void GsxDoorSync::Sync(const DoorWriter& write)
         {
             if (lastTarget != kDoorOpen)
             {
+                probe::Line(QStringLiteral("write sync  %1 open=1").arg(QLatin1String(DoorName(door))));
                 write(door, true);
                 lastTarget = kDoorOpen;
             }
         }
         else if (lastTarget == kDoorOpen)
         {
+            probe::Line(QStringLiteral("write sync  %1 open=0").arg(QLatin1String(DoorName(door))));
             write(door, false);
             lastTarget = kDoorClosed;
         }
     }
 }
 
+void GsxDoorSync::ReportProbe() const
+{
+    if (!probe::IsOn())
+    {
+        return;
+    }
+
+    static constexpr std::array kInputs = {
+        gsx::lvars::kCouatlStarted,
+        gsx::lvars::kJetway,
+        gsx::lvars::kPassengerStairsFrontState,
+        gsx::lvars::kPassengerStairsMiddleState,
+        gsx::lvars::kPassengerStairsRearState,
+        gsx::lvars::kCateringFrontState,
+        gsx::lvars::kCateringRearState,
+        gsx::lvars::kBaggageLoaderFrontState,
+        gsx::lvars::kBaggageLoaderRearState,
+        gsx::lvars::kBaggageLoaderMainState
+    };
+
+    QStringList values;
+    for (const char* name : kInputs)
+    {
+        values.append(QStringLiteral("%1=%2").arg(QLatin1String(name))
+                      .arg(variableGateway_->GetLVar(name, -1.0), 0, 'f', 1));
+    }
+
+    QStringList wanted;
+    for (const GsxDoor door : kAllDoors)
+    {
+        wanted.append(QStringLiteral("%1=%2").arg(QLatin1String(DoorName(door)))
+                      .arg(IsDesiredOpen(door) ? 1 : 0));
+    }
+
+    static constexpr std::array kUnknownToTheClient = {
+        "FSDT_GSX_LOADER_EXIT_0",
+        "FSDT_GSX_LOADER_EXIT_1",
+        "FSDT_GSX_LOADER_EXIT_2",
+        "FSDT_GSX_OPERATESTAIRS_STATE",
+        "FSDT_GSX_OPERATEJETWAYS_STATE",
+        "FSDT_GSX_STAIRS",
+        "FSDT_GSX_JETWAY_AIR",
+        "FSDT_GSX_JETWAY_POWER",
+        "FSDT_GSX_SET_LOADERS_STAY_UNTIL_DEPARTURE",
+        "FSDT_GSX_SET_AUTO_STAIRS",
+        "FSDT_GSX_SET_DISABLE_REAR_STAIRS"
+    };
+
+    QStringList candidates;
+    for (const char* name : kUnknownToTheClient)
+    {
+        candidates.append(QStringLiteral("%1=%2").arg(QLatin1String(name))
+                          .arg(variableGateway_->GetLVar(name, -1.0), 0, 'f', 1));
+    }
+
+    probe::Change("gsx.candidates", QStringLiteral("gsxc  %1").arg(candidates.join(QLatin1Char(' '))));
+
+    probe::Change("gsx.doorsync", QStringLiteral("dsync %1 | %2")
+                  .arg(values.join(QLatin1Char(' ')), wanted.join(QLatin1Char(' '))));
+}
+
 void GsxDoorSync::CloseAll(const DoorWriter& write)
 {
     for (const GsxDoor door : kAllDoors)
     {
+        probe::Line(QStringLiteral("write close %1 open=0").arg(QLatin1String(DoorName(door))));
         write(door, false);
         lastTargets_[static_cast<std::size_t>(door)] = kDoorClosed;
     }

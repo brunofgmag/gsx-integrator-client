@@ -25,10 +25,14 @@ public:
     [[nodiscard]] static unsigned DoorEventOffsetFor(Pmdg737Door door);
 
 private:
+    void ReportProbe() const;
+    void MaybeProbeToggle();
+
     static constexpr std::size_t kAcMain1Bus = 11;
     static constexpr std::size_t kAcMain2Bus = 12;
 
     PmdgClientDataChannel<PMDG_NG3_Data> channel_;
+    bool probeToggleSent_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG737DATACLIENT_H

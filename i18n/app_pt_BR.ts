@@ -1362,8 +1362,8 @@
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="26"/>
-        <source>Preparing for pushback</source>
-        <translation>Preparando para o pushback</translation>
+        <source>Waiting for beacon</source>
+        <translation>Aguardando beacon</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="27"/>

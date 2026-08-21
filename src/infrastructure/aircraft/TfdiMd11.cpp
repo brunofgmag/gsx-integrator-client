@@ -48,12 +48,12 @@ namespace
     constexpr auto kPaxDoor1LLVar = "MD11_EXT_DOOR_CMD_PAX_1L";
     constexpr auto kPaxDoor2LLVar = "MD11_EXT_DOOR_CMD_PAX_2L";
     constexpr auto kPaxDoor4LLVar = "MD11_EXT_DOOR_CMD_PAX_4L";
-    constexpr auto kCargoDoor1RLVar = "MD11_EXT_DOOR_CMD_CARGO1R";
-    constexpr auto kCargoDoor2RLVar = "MD11_EXT_DOOR_CMD_CARGO2R";
+    constexpr auto kCargoDoor1RLVar = "MD11_EXT_DOOR_CMD_CARGO_1R";
+    constexpr auto kCargoDoor2RLVar = "MD11_EXT_DOOR_CMD_CARGO_2R";
     constexpr auto kCargoDoorMainLVar = "MD11_EXT_DOOR_CMD_CARGO_MAIN";
     constexpr std::array kDoorStateLVars =
         {"MD11_EXT_DOOR_PAX_1L", "MD11_EXT_DOOR_PAX_2L", "MD11_EXT_DOOR_PAX_4L",
-         "MD11_EXT_DOOR_CARGO1R", "MD11_EXT_DOOR_CARGO2R", "MD11_EXT_DOOR_CARGO_MAIN"};
+         "MD11_EXT_DOOR_CARGO_1R", "MD11_EXT_DOOR_CARGO_2R", "MD11_EXT_DOOR_CARGO_MAIN"};
     constexpr double kDoorOpen = 100.0;
     constexpr double kDoorClosed = 0.0;
 }

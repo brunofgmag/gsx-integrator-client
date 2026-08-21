@@ -658,6 +658,9 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         tests/tst_runtime_integrator_service.cpp
         src/application/IntegratorRuntime.cpp
         src/application/IntegratorRuntime.h
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeObserver.cpp
+        src/infrastructure/probe/ProbeObserver.h
         src/application/RuntimeIntegratorService.cpp
         src/application/RuntimeIntegratorService.h
         src/domain/turnaround/TurnaroundStateMachine.cpp

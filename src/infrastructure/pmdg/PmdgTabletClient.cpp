@@ -9,6 +9,7 @@
 #include <QtCore/QString>
 #include <QtCore/QVariant>
 #include "../commbus/CommBusBridgeGateway.h"
+#include "../probe/ProbeLog.h"
 
 namespace
 {
@@ -20,6 +21,7 @@ namespace
     constexpr auto kTagSimbriefFetchResult = "simbrief_fetch_result";
     constexpr auto kTagQueryState = "query_state";
     constexpr auto kTagStateReply = "state_reply";
+    constexpr auto kTagPing = "ping";
     constexpr auto kDoorActionClose = "CLOSE";
     constexpr std::array kDoorMoving = {"OPENING", "CLOSING"};
 
@@ -86,6 +88,26 @@ void PmdgTabletClient::Poll()
                            [this](const std::string& payload) { OnInbound(payload); });
         subscribed_ = true;
     }
+
+    MaybeProbePress();
+}
+
+void PmdgTabletClient::MaybeProbePress()
+{
+    if (probePressSent_ || !probe::IsOn() || !IsAvailable())
+    {
+        return;
+    }
+
+    const QString conn = qEnvironmentVariable("GSXI_PROBE_GROUND_CONN");
+    if (conn.isEmpty())
+    {
+        return;
+    }
+
+    probePressSent_ = true;
+    probe::Line(QStringLiteral("probe pmdg tablet pressing %1").arg(conn));
+    SendToPlane(BuildGroundConn(conn.toStdString()));
 }
 
 bool PmdgTabletClient::IsAvailable() const
@@ -162,8 +184,28 @@ bool PmdgTabletClient::IsSimbriefFetchSuccess(const std::string& json)
                  .value(QStringLiteral("result")).toVariant().toString() == QLatin1String("200");
 }
 
+void PmdgTabletClient::ReportProbe(const std::string& payload)
+{
+    if (!probe::IsOn())
+    {
+        return;
+    }
+
+    const QString tag = QJsonDocument::fromJson(QByteArray::fromStdString(payload))
+                        .object().value(QStringLiteral("message_tag")).toString();
+    if (tag.isEmpty() || tag == QLatin1String(kTagPing))
+    {
+        return;
+    }
+
+    probe::Change("efb." + tag.toStdString(),
+                  QStringLiteral("efb   %1").arg(QString::fromStdString(payload)));
+}
+
 void PmdgTabletClient::OnInbound(const std::string& payload)
 {
+    ReportProbe(payload);
+
     if (IsSimbriefFetchSuccess(payload))
     {
         efbPlanImported_ = true;
@@ -198,7 +240,22 @@ void PmdgTabletClient::RequestState()
     QJsonObject data;
     data.insert(QStringLiteral("request"), QStringLiteral("yes"));
 
-    bridge_->Call(kChannelToPlane, CommBusFlag::kWasm, BuildEnvelope(kTagQueryState, data));
+    SendToPlane(BuildEnvelope(kTagQueryState, data));
+}
+
+void PmdgTabletClient::SendToPlane(const std::string& payload) const
+{
+    if (probe::IsOn())
+    {
+        const QString tag = QJsonDocument::fromJson(QByteArray::fromStdString(payload))
+                            .object().value(QStringLiteral("message_tag")).toString();
+        if (tag != QLatin1String(kTagQueryState))
+        {
+            probe::Line(QStringLiteral("write efb   %1").arg(QString::fromStdString(payload)));
+        }
+    }
+
+    bridge_->Call(kChannelToPlane, CommBusFlag::kWasm, payload);
 }
 
 void PmdgTabletClient::SendWbPayload(const std::string& field, const int value) const
@@ -208,7 +265,7 @@ void PmdgTabletClient::SendWbPayload(const std::string& field, const int value) 
         return;
     }
 
-    bridge_->Call(kChannelToPlane, CommBusFlag::kWasm, BuildWbPayload(field, value));
+    SendToPlane(BuildWbPayload(field, value));
 }
 
 void PmdgTabletClient::SendFuelTotalLbs(const int lbs)
@@ -233,5 +290,5 @@ void PmdgTabletClient::RequestGroundConn(const std::string& key)
         return;
     }
 
-    bridge_->Call(kChannelToPlane, CommBusFlag::kWasm, BuildGroundConn(key));
+    SendToPlane(BuildGroundConn(key));
 }

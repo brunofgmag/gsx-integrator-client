@@ -21,6 +21,7 @@
 #include "../domain/turnaround/TurnaroundStateMachine.h"
 #include "../infrastructure/gsx/GsxMenuNavigator.h"
 #include "../infrastructure/logging/QtDomainLogger.h"
+#include "../infrastructure/probe/ProbeObserver.h"
 #include "../infrastructure/gsx/GsxRemoteApiClient.h"
 #include "../infrastructure/gsx/GsxRemoteState.h"
 
@@ -117,6 +118,7 @@ private:
     void OnSimRunningChanged(bool running);
     void OnPauseChanged(unsigned flag);
 
+    void ProbeGates();
     void Update();
     void UpdateSlow();
     void MaybeAutoStart();
@@ -149,10 +151,12 @@ private:
     QTimer dispatchTimer_;
     QTimer reconnectTimer_;
     QtDomainLogger qtLogger_;
+    ProbeObserver probe_;
 
     SimVersion simVersion_ = SimVersion::Unknown;
     bool isSessionActive_ = false;
     unsigned pauseFlags_ = 1;
+    unsigned pauseEvents_ = 0;
     GsxProfileState gsxProfile_;
     PmdgOptionsState pmdgOptions_;
 };

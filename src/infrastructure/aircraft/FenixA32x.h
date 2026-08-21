@@ -60,6 +60,7 @@ private:
     [[nodiscard]] bool IsBeaconOn() const;
     void EnsureEfbInitialized();
     void UpdateDoors();
+    void ReportProbe() const;
     void DisarmRefuelSystemWhenDone();
     void SyncPassengersAndCargo(double zfwKg);
     void WriteSeatOccupation(int passengersOnBoard);

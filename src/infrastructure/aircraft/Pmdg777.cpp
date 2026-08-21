@@ -96,7 +96,7 @@ int Pmdg777::DoorSlotFor(const GsxDoor door) const
     case GsxDoor::FwdPax:
         return variableGateway_->GetLVar(gsx::lvars::kJetway, 2.0) == 5.0 ? 2 : 0;
     case GsxDoor::MidPax: return 2;
-    case GsxDoor::AftPax: return is300 ? 4 : 6;
+    case GsxDoor::AftPax: return is300 ? 8 : 6;
     case GsxDoor::FwdCatering: return is300 ? 3 : 1;
     case GsxDoor::AftCatering: return is300 ? 9 : 7;
     case GsxDoor::FwdCargo: return 10;

@@ -108,6 +108,7 @@ private slots:
     static void progressiveWriterDoesNotUndoTheTrim();
     static void jetwayDoorClosesAtItsOpenedIndex();
     static void aftCateringDoorOpensFiveRightOnlyOn300();
+    static void aftPaxDoorOpensFiveLeftOnlyOn300();
     static void groundPowerConnectFlow();
     static void groundPowerDisconnectFlow();
 };
@@ -839,6 +840,29 @@ void Pmdg777Test::jetwayDoorClosesAtItsOpenedIndex()
     fixture.aircraft->OnTick();
 
     QCOMPARE(fixture.data->toggledDoors, (std::vector{2, 2}));
+}
+
+void Pmdg777Test::aftPaxDoorOpensFiveLeftOnlyOn300()
+{
+    Pmdg777Fixture er300(Pmdg777Variant::Er300);
+    er300.data->hasData = true;
+    er300.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    er300.gateway.lvars["FSDT_GSX_VEHICLE_PASSENGERSTAIRSREAR_STATE"] = 3.0;
+
+    er300.aircraft->OnTick();
+
+    QVERIFY(std::ranges::find(er300.data->toggledDoors, 8) != er300.data->toggledDoors.end());
+    QVERIFY(std::ranges::find(er300.data->toggledDoors, 4) == er300.data->toggledDoors.end());
+
+    Pmdg777Fixture er200(Pmdg777Variant::Er200);
+    er200.data->hasData = true;
+    er200.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    er200.gateway.lvars["FSDT_GSX_VEHICLE_PASSENGERSTAIRSREAR_STATE"] = 3.0;
+
+    er200.aircraft->OnTick();
+
+    QVERIFY(std::ranges::find(er200.data->toggledDoors, 6) != er200.data->toggledDoors.end());
+    QVERIFY(std::ranges::find(er200.data->toggledDoors, 8) == er200.data->toggledDoors.end());
 }
 
 void Pmdg777Test::aftCateringDoorOpensFiveRightOnlyOn300()

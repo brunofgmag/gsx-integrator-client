@@ -1,6 +1,9 @@
 #include "Pmdg777DataClient.h"
 
 #include <chrono>
+#include <QtCore/QString>
+#include <QtCore/QStringList>
+#include "../probe/ProbeLog.h"
 
 namespace
 {
@@ -43,6 +46,8 @@ Pmdg777DataClient::Pmdg777DataClient()
 void Pmdg777DataClient::Poll()
 {
     channel_.Poll();
+    ReportProbe();
+    MaybeProbeToggle();
 
     if (pendingKickRelease_)
     {
@@ -134,4 +139,52 @@ void Pmdg777DataClient::KickDataRefresh()
 void Pmdg777DataClient::SetInFlight(const bool inFlight)
 {
     channel_.SetInFlight(inFlight);
+}
+
+void Pmdg777DataClient::MaybeProbeToggle()
+{
+    if (probeToggleSent_ || !probe::IsOn() || !channel_.HasData())
+    {
+        return;
+    }
+
+    if (!ExtPowerConnected() && !ApuRunning())
+    {
+        return;
+    }
+
+    bool ok = false;
+    const int slot = qEnvironmentVariableIntValue("GSXI_PROBE_DOOR", &ok);
+    if (!ok || slot < 0 || slot >= kDoorCount)
+    {
+        return;
+    }
+
+    probeToggleSent_ = true;
+    probe::Line(QStringLiteral("probe pmdg-777 toggling door slot=%1 event=%2 was=%3")
+                .arg(slot)
+                .arg(DoorEventOffset(slot))
+                .arg(DoorState(slot)));
+    ToggleDoor(slot);
+}
+
+void Pmdg777DataClient::ReportProbe() const
+{
+    if (!probe::IsOn() || !channel_.HasData())
+    {
+        return;
+    }
+
+    QStringList states;
+    for (int index = 0; index < kDoorCount; ++index)
+    {
+        states.append(QString::number(channel_.Data().DOOR_state[index]));
+    }
+
+    probe::Change("pmdg777.doors",
+                  QStringLiteral("sdk   pmdg-777 DOOR_state=[%1] cockpit=%2 chocks=%3 brake=%4")
+                  .arg(states.join(QLatin1Char(',')))
+                  .arg(channel_.Data().DOOR_CockpitDoorOpen)
+                  .arg(channel_.Data().WheelChocksSet)
+                  .arg(ParkingBrakeOn()));
 }

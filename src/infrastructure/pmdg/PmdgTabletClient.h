@@ -41,13 +41,17 @@ public:
     [[nodiscard]] static DoorSnapshot ParseDoorStates(const std::string& json);
 
 private:
+    void SendToPlane(const std::string& payload) const;
     void SendWbPayload(const std::string& field, int value) const;
     void OnInbound(const std::string& payload);
+    void MaybeProbePress();
+    static void ReportProbe(const std::string& payload);
 
     std::unique_ptr<CommBusBridgeGateway> ownedBridge_;
     CommBusBridgeGateway* bridge_;
     bool bridgeSetup_ = false;
     bool subscribed_ = false;
+    bool probePressSent_ = false;
     bool efbPlanImported_ = false;
     std::map<std::string, bool> doorOpen_;
     std::set<std::string> doorMoving_;

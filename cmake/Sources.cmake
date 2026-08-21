@@ -152,6 +152,9 @@ set(APP_SOURCES
         src/infrastructure/gsx/GsxStateService.h
         src/infrastructure/gsx/GsxLVars.h
         src/infrastructure/logging/LogMacros.h
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeObserver.cpp
+        src/infrastructure/probe/ProbeObserver.h
         src/infrastructure/simbrief/SimbriefClient.cpp
         src/infrastructure/simbrief/SimbriefClient.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp
