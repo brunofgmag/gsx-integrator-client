@@ -1,11 +1,14 @@
 #include "GsxAircraftProfile.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
 #include "../aircraft/FenixA32x.h"
+#include "../aircraft/Pmdg737.h"
+#include "../aircraft/Pmdg777.h"
 #include "../aircraft/TolissA340.h"
 #include "../aircraft/TfdiMd11.h"
 
@@ -13,6 +16,29 @@ namespace
 {
     constexpr auto kAircraftSection = "aircraft";
     constexpr auto kRefuelingKey = "refueling";
+
+    struct ProfileFolder
+    {
+        const char* aircraftName;
+        const char* folder;
+    };
+
+    constexpr std::array kProfileFolders = {
+        ProfileFolder{TolissA340::kName, "airbus-a346-pro"},
+        ProfileFolder{TolissA340::kName, "aerosoft-a340-600-pro"},
+        ProfileFolder{TfdiMd11::kName, "tfdi_design_md-11"},
+        ProfileFolder{FenixA32x::kNameA319, "FNX_32X"},
+        ProfileFolder{FenixA32x::kNameA320, "FNX_32X"},
+        ProfileFolder{FenixA32x::kNameA321, "FNX_32X"},
+        ProfileFolder{Pmdg777::kName200Er, "PMDG 777-200ER"},
+        ProfileFolder{Pmdg777::kName200Lr, "PMDG 777-200LR"},
+        ProfileFolder{Pmdg777::kName300Er, "PMDG 777-300ER"},
+        ProfileFolder{Pmdg777::kNameFreighter, "PMDG 777F"},
+        ProfileFolder{Pmdg737::kNamePax800, "PMDG 737-800"},
+        ProfileFolder{Pmdg737::kNameBcf800, "PMDG 737-800"},
+        ProfileFolder{Pmdg737::kNameBdsf800, "PMDG 737-800"},
+        ProfileFolder{Pmdg737::kNameBbj2, "PMDG 737-800"}
+    };
 
     std::string Trim(const std::string& text)
     {
@@ -112,24 +138,16 @@ std::vector<std::filesystem::path> GsxAircraftProfile::ProfileRootsFor(const std
 
     std::free(appData);
 
-    if (aircraftName == TolissA340::kName)
+    std::vector<std::filesystem::path> roots;
+    for (const auto& [name, folder] : kProfileFolders)
     {
-        return {airplanes / "airbus-a346-pro", airplanes / "aerosoft-a340-600-pro"};
+        if (aircraftName == name)
+        {
+            roots.push_back(airplanes / folder);
+        }
     }
 
-    if (aircraftName == TfdiMd11::kName)
-    {
-        return {airplanes / "tfdi_design_md-11"};
-    }
-
-    if (aircraftName == FenixA32x::kNameA319
-        || aircraftName == FenixA32x::kNameA320
-        || aircraftName == FenixA32x::kNameA321)
-    {
-        return {airplanes / "FNX_32X"};
-    }
-
-    return {};
+    return roots;
 }
 
 bool GsxAircraftProfile::FlagsMissingProfile(const std::string& aircraftName)
