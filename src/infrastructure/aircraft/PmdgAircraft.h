@@ -96,11 +96,16 @@ protected:
 
 private:
     void SyncDoors();
-    void SyncMainDeckDoor();    [[nodiscard]] std::optional<bool> DoorOpenAt(int slot) const;
+    void SyncMainDeckDoor();
+    void AdvanceMovingDoors();
+    [[nodiscard]] int MovingDoorLimitTicks(int slot) const;
+    [[nodiscard]] std::optional<bool> DoorOpenAt(int slot) const;
 
     bool cargoVariant_;
     int doorSlots_;
-    int mainDeckDoorSlot_;    MainDeckTarget mainDeckTarget_ = MainDeckTarget::Unknown;
+    int mainDeckDoorSlot_;
+    std::vector<int> movingTicks_;
+    MainDeckTarget mainDeckTarget_ = MainDeckTarget::Unknown;
     GsxDoorSync doors_;
     PmdgDoorReconciler doorReconciler_;
     PmdgGroundConnReconciler groundConn_;

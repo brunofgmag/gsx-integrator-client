@@ -84,7 +84,11 @@ private slots:
     static void heldInPlaceAcceptsChocksWithoutTheBrake();
     static void doorStatusUnknownUntilClientDataArrives();
     static void doorStatusOpenWhenASdkDoorReadsOpen();
-    static void doorStatusUnknownWhileADoorIsMoving();    static void doorStatusAllClosedWhenEverySdkDoorReadsClosed();
+    static void doorStatusUnknownWhileADoorIsMoving();
+    static void aDoorThatKeepsMovingEventuallyReadsOpen();
+    static void aDoorThatFinishesMovingNeverReadsOpen();
+    static void theMainDeckDoorGetsALongerMovingBudget();
+    static void doorStatusAllClosedWhenEverySdkDoorReadsClosed();
     static void smartSwitchEdgesOncePerPress();
     static void smartSwitchWorksFromBothSeats();
     static void smartSwitchCatchesTransientPress();
@@ -277,6 +281,68 @@ void Pmdg777Test::doorStatusUnknownWhileADoorIsMoving()
     fixture.data->doorStates[2] = kDoorStateClosing;
 
     QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
+}
+
+void Pmdg777Test::aDoorThatKeepsMovingEventuallyReadsOpen()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->doorStates.fill(kDoorStateClosed);
+    fixture.data->doorStates[2] = kDoorStateClosing;
+
+    for (int tick = 0; tick < 14; ++tick)
+    {
+        fixture.aircraft->Observe();
+        QVERIFY2(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown,
+                 qPrintable(QStringLiteral("tick %1").arg(tick)));
+    }
+
+    fixture.aircraft->Observe();
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void Pmdg777Test::aDoorThatFinishesMovingNeverReadsOpen()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->doorStates.fill(kDoorStateClosed);
+    fixture.data->doorStates[2] = kDoorStateClosing;
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        fixture.aircraft->Observe();
+    }
+
+    fixture.data->doorStates[2] = kDoorStateClosed;
+    fixture.aircraft->Observe();
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::AllClosed);
+}
+
+void Pmdg777Test::theMainDeckDoorGetsALongerMovingBudget()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+
+    fixture.data->hasData = true;
+    fixture.data->doorStates.fill(kDoorStateClosed);
+    fixture.data->doorStates[12] = kDoorStateClosing;
+
+    for (int tick = 0; tick < 100; ++tick)
+    {
+        fixture.aircraft->Observe();
+    }
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
+
+    for (int tick = 0; tick < 21; ++tick)
+    {
+        fixture.aircraft->Observe();
+    }
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::AnyOpen);
 }
 
 void Pmdg777Test::doorStatusAllClosedWhenEverySdkDoorReadsClosed()

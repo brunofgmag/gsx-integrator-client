@@ -18,6 +18,10 @@ namespace
 
     constexpr double kEngineRunningDefault = 1.0;
     constexpr double kEngineCombustionDefault = 0.0;
+
+    constexpr int kPaxDoorMovingLimitTicks = 15;
+    constexpr int kCargoDoorMovingLimitTicks = 60;
+    constexpr int kMainDeckDoorMovingLimitTicks = 120;
 }
 
 PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationStatus* status,
@@ -29,7 +33,9 @@ PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationSta
       tablet_(std::move(tablet)),
       cargoVariant_(spec.cargoVariant),
       doorSlots_(spec.doorSlots),
-      mainDeckDoorSlot_(spec.mainDeckDoorSlot),      doors_(variableGateway),
+      mainDeckDoorSlot_(spec.mainDeckDoorSlot),
+      movingTicks_(static_cast<std::size_t>(spec.doorSlots), 0),
+      doors_(variableGateway),
       doorReconciler_(*this, spec.doorSlots, spec.doorBaseline),
       groundConn_(*this, *tablet_),
       payload_(*tablet_, *variableGateway, status, spec.cargoVariant),
@@ -49,6 +55,8 @@ void PmdgAircraft::Observe()
     data_->Poll();
     tablet_->Poll();
     RefreshDoors();
+    AdvanceMovingDoors();
+
     if (status_->flightPlanStatus == FlightPlanStatus::Ready)
     {
         routeImport_.Observe(PmdgRouteFile::DirectoryFor(GetName()), status_->plannedOrigin,
@@ -251,6 +259,30 @@ bool PmdgAircraft::IsParkingBrakeSet() const
     return data_->ParkingBrakeOn();
 }
 
+void PmdgAircraft::AdvanceMovingDoors()
+{
+    for (int slot = 0; slot < doorSlots_; ++slot)
+    {
+        int& ticks = movingTicks_[static_cast<std::size_t>(slot)];
+        ticks = ObserveDoor(slot) == DoorObservation::Moving ? ticks + 1 : 0;
+    }
+}
+
+int PmdgAircraft::MovingDoorLimitTicks(const int slot) const
+{
+    if (cargoVariant_ && slot == mainDeckDoorSlot_)
+    {
+        return kMainDeckDoorMovingLimitTicks;
+    }
+
+    if (slot == DoorSlotFor(GsxDoor::FwdCargo) || slot == DoorSlotFor(GsxDoor::AftCargo))
+    {
+        return kCargoDoorMovingLimitTicks;
+    }
+
+    return kPaxDoorMovingLimitTicks;
+}
+
 std::optional<bool> PmdgAircraft::DoorOpenAt(const int slot) const
 {
     switch (ObserveDoor(slot))
@@ -258,7 +290,12 @@ std::optional<bool> PmdgAircraft::DoorOpenAt(const int slot) const
     case DoorObservation::Open:
         return true;
     case DoorObservation::Closed:
-        return false;    default:
+        return false;
+    case DoorObservation::Moving:
+        return movingTicks_[static_cast<std::size_t>(slot)] >= MovingDoorLimitTicks(slot)
+                   ? std::optional{true}
+                   : std::nullopt;
+    default:
         return std::nullopt;
     }
 }
