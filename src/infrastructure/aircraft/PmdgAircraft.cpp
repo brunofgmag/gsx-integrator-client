@@ -102,6 +102,11 @@ void PmdgAircraft::CloseAllDoors()
     doorReconciler_.Reconcile();
 }
 
+void PmdgAircraft::ClearOwnGroundEquipment()
+{
+    groundConn_.SetPassengerEntryJetway();
+}
+
 DoorStatus PmdgAircraft::GetDoorStatus() const
 {
     DoorStatus status = doors::kNoDoorsSeen;

@@ -8,6 +8,12 @@
 
 std::optional<TurnaroundTransition> PlaceGroundEquipmentState::Evaluate(TurnaroundContext& ctx)
 {
+    if (!ctx.data.ownGroundEquipmentCleared)
+    {
+        ctx.aircraft->ClearOwnGroundEquipment();
+        ctx.data.ownGroundEquipmentCleared = true;
+    }
+
     if (!ctx.data.doorsClosed)
     {
         ctx.aircraft->CloseAllDoors();

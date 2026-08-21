@@ -17,6 +17,7 @@ namespace
     constexpr double kSmartSwitchNeutral = 50.0;
     constexpr double kSmartSwitchDown = 0.0;
     constexpr double kSmartSwitchUp = 100.0;
+    constexpr auto kPassengerEntryRequest = "pax_entree";
     constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
     constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
     constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
@@ -90,6 +91,8 @@ private slots:
     static void progressiveWriterDoesNotUndoTheTrim();
     static void smartSwitchAtRestIsNotAPress();
     static void smartSwitchAnswersEveryPressOfTheSession();
+    static void entryMethodIsLeftAloneUntilTheTabletReportsIt();
+    static void ownStairsAreClearedByTakingTheEntryMethodToJetway();
 };
 
 void Pmdg737Test::nameAndCargoFlagFollowTheVariant()
@@ -252,6 +255,12 @@ namespace
         fixture.data->hasData = true;
         fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
         fixture.gateway.lvars[gsx::lvars::kJetway] = kJetwayDocked;
+    }
+
+    int PassengerEntryRequests(const Pmdg737Fixture& fixture)
+    {
+        return static_cast<int>(
+            std::ranges::count(fixture.tablet->groundConnRequests, kPassengerEntryRequest));
     }
 
     void Tick(const Pmdg737Fixture& fixture, const int times)
@@ -619,6 +628,36 @@ void Pmdg737Test::smartSwitchAnswersEveryPressOfTheSession()
 
     fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchNeutral, kSmartSwitchUp, true};
     QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
+}
+
+void Pmdg737Test::entryMethodIsLeftAloneUntilTheTabletReportsIt()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.aircraft->ClearOwnGroundEquipment();
+
+    Tick(fixture, 20);
+
+    QVERIFY(fixture.tablet->groundConnRequests.empty());
+}
+
+void Pmdg737Test::ownStairsAreClearedByTakingTheEntryMethodToJetway()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.tablet->passengerEntryJetway = false;
+    fixture.aircraft->ClearOwnGroundEquipment();
+
+    Tick(fixture, 1);
+
+    QCOMPARE(PassengerEntryRequests(fixture), 1);
+
+    fixture.tablet->passengerEntryJetway = true;
+    Tick(fixture, 20);
+
+    QCOMPARE(PassengerEntryRequests(fixture), 1);
 }
 
 QTEST_APPLESS_MAIN(Pmdg737Test)

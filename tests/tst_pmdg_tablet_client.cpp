@@ -36,6 +36,7 @@ private slots:
     static void latchesEfbPlanImportOnFetchSuccess();
     static void readsDoorStatesFromStateReply();
     static void doorInMotionHasNoState();
+    static void readsThePassengerEntryMethodFromStateReply();
     static void requestStateAsksThePlaneForGroundState();
     static void unsubscribesBorrowedBridgeOnDestruction();
     static void skipsUnsubscribeWhenNeverPolled();
@@ -174,6 +175,27 @@ void PmdgTabletClientTest::doorInMotionHasNoState()
     QVERIFY(!client.DoorOpen("main_cargo").has_value());
     QCOMPARE(client.DoorOpen("entry1_right"), std::optional(true));
     QCOMPARE(client.DoorOpen("fwd_cargo"), std::optional(false));
+}
+
+void PmdgTabletClientTest::readsThePassengerEntryMethodFromStateReply()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+    client.Poll();
+
+    QVERIFY(!client.PassengerEntryViaJetway().has_value());
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("ground_conn":{"jetway":"INHIBITED","passenger_entry":"STAIRS"}})");
+
+    QCOMPARE(client.PassengerEntryViaJetway(), std::optional(false));
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("ground_conn":{"jetway":"REQ/REL","passenger_entry":"JETWAY"}})");
+
+    QCOMPARE(client.PassengerEntryViaJetway(), std::optional(true));
 }
 
 void PmdgTabletClientTest::requestStateAsksThePlaneForGroundState()

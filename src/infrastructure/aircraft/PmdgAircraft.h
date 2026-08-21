@@ -44,6 +44,7 @@ public:
     void OnTick() override;
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
+    void ClearOwnGroundEquipment() override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
     [[nodiscard]] bool IsMainDeckCargoDoorStuck() const override;
 

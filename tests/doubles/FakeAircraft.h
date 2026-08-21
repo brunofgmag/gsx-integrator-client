@@ -31,6 +31,7 @@ public:
     bool groundPowerOn = false;
     int setGroundPowerCalls = 0;
     int closeAllDoorsCalls = 0;
+    int clearOwnGroundEquipmentCalls = 0;
     RefuelBy refuelMethod = RefuelBy::Self;
     BoardBy boardMethod = BoardBy::Self;
     int consumeSmartSwitchCalls = 0;
@@ -89,6 +90,7 @@ public:
     }
 
     void CloseAllDoors() override { ++closeAllDoorsCalls; }
+    void ClearOwnGroundEquipment() override { ++clearOwnGroundEquipmentCalls; }
     [[nodiscard]] bool IsReadyToPush() const override { return readyToPush; }
     [[nodiscard]] bool IsReadyToDeboard() const override { return readyToDeboard; }
     [[nodiscard]] bool IsEngineRunning() const override { return engineRunning; }

@@ -23,6 +23,8 @@ private slots:
     static void placesChocksEvenWhileGpuUnknown();
     static void closesAllDoorsEvenWhenCallGpuDisabled();
     static void closesAllDoorsOnlyOnce();
+    static void clearsTheGroundEquipmentTheAircraftPlacedItself();
+    static void clearsTheAircraftGroundEquipmentOnlyOnce();
 };
 
 void PlaceGroundEquipmentStateTest::skipsWhenCallGpuDisabled()
@@ -257,6 +259,34 @@ void PlaceGroundEquipmentStateTest::closesAllDoorsOnlyOnce()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 
     QCOMPARE(f.aircraft.closeAllDoorsCalls, 1);
+}
+
+void PlaceGroundEquipmentStateTest::clearsTheGroundEquipmentTheAircraftPlacedItself()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(f.aircraft.clearOwnGroundEquipmentCalls, 1);
+    QVERIFY(f.ctx.data.ownGroundEquipmentCleared);
+}
+
+void PlaceGroundEquipmentStateTest::clearsTheAircraftGroundEquipmentOnlyOnce()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Unknown;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.aircraft.clearOwnGroundEquipmentCalls, 1);
 }
 
 QTEST_APPLESS_MAIN(PlaceGroundEquipmentStateTest)

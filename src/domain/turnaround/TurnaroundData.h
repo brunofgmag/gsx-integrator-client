@@ -35,6 +35,7 @@ struct TurnaroundData
     bool chocksPlaced = false;
     bool chocksRemoved = false;
     bool doorsClosed = false;
+    bool ownGroundEquipmentCleared = false;
     bool arrivalGpuRequested = false;
     bool arrivalChocksPlaced = false;
     bool arrivalDoorsClosed = false;

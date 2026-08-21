@@ -22,6 +22,7 @@ public:
     [[nodiscard]] bool EfbPlanImported() const override;
     [[nodiscard]] std::optional<bool> DoorOpen(const std::string& key) const override;
     [[nodiscard]] bool DoorMoving(const std::string& key) const override;
+    [[nodiscard]] std::optional<bool> PassengerEntryViaJetway() const override;
 
     void SendFuelTotalLbs(int lbs) override;
     void SendPaxTotal(int count) override;
@@ -39,6 +40,7 @@ public:
     };
 
     [[nodiscard]] static DoorSnapshot ParseDoorStates(const std::string& json);
+    [[nodiscard]] static std::optional<bool> ParsePassengerEntry(const std::string& json);
 
 private:
     void SendToPlane(const std::string& payload) const;
@@ -55,6 +57,7 @@ private:
     bool efbPlanImported_ = false;
     std::map<std::string, bool> doorOpen_;
     std::set<std::string> doorMoving_;
+    std::optional<bool> passengerEntryJetway_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGTABLETCLIENT_H
