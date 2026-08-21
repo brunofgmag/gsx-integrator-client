@@ -31,7 +31,6 @@ public:
 
     [[nodiscard]] static std::string BuildWbPayload(const std::string& field, int value);
     [[nodiscard]] static std::string BuildGroundConn(const std::string& key);
-    [[nodiscard]] static std::string BuildGroundVehicle(const std::string& key);
     [[nodiscard]] static bool IsSimbriefFetchSuccess(const std::string& json);
     struct DoorSnapshot
     {

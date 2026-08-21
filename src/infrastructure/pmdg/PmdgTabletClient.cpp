@@ -18,7 +18,6 @@ namespace
 
     constexpr auto kTagWbPayload = "wb_payload";
     constexpr auto kTagGroundConn = "ground_conn";
-    constexpr auto kTagGroundVehicles = "ground_vehicles";
     constexpr auto kTagSimbriefFetchResult = "simbrief_fetch_result";
     constexpr auto kTagQueryState = "query_state";
     constexpr auto kTagStateReply = "state_reply";
@@ -71,14 +70,6 @@ std::string PmdgTabletClient::BuildGroundConn(const std::string& key)
     return BuildEnvelope(kTagGroundConn, data);
 }
 
-std::string PmdgTabletClient::BuildGroundVehicle(const std::string& key)
-{
-    QJsonObject data;
-    data.insert(QString::fromStdString(key), 1);
-
-    return BuildEnvelope(kTagGroundVehicles, data);
-}
-
 void PmdgTabletClient::Poll()
 {
     if (ownedBridge_ != nullptr)
@@ -109,18 +100,14 @@ void PmdgTabletClient::MaybeProbePress()
     }
 
     const QString conn = qEnvironmentVariable("GSXI_PROBE_GROUND_CONN");
-    const QString vehicle = qEnvironmentVariable("GSXI_PROBE_GROUND_VEHICLE");
-    if (conn.isEmpty() == vehicle.isEmpty())
+    if (conn.isEmpty())
     {
         return;
     }
 
     probePressSent_ = true;
-    const std::string payload = conn.isEmpty()
-                                    ? BuildGroundVehicle(vehicle.toStdString())
-                                    : BuildGroundConn(conn.toStdString());
-    probe::Line(QStringLiteral("probe pmdg tablet pressing %1").arg(conn.isEmpty() ? vehicle : conn));
-    SendToPlane(payload);
+    probe::Line(QStringLiteral("probe pmdg tablet pressing %1").arg(conn));
+    SendToPlane(BuildGroundConn(conn.toStdString()));
 }
 
 bool PmdgTabletClient::IsAvailable() const
