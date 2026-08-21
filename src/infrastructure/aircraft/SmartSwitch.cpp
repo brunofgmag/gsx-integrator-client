@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "../simvars/VariableGateway.h"
+#include "../probe/ProbeLog.h"
 
 SmartSwitch::SmartSwitch(VariableGateway& gateway, std::vector<std::string> lvars, Predicate pressed,
                          const std::optional<double> resetTo)
@@ -39,6 +40,15 @@ bool SmartSwitch::Consume()
     for (const auto& lvar : lvars_)
     {
         const LVarSpan span = gateway_.ConsumeLVarSpan(lvar);
+        probe::Change("swtch." + lvar,
+                      QStringLiteral("swtch %1 recv=%2 span=[%3..%4] pressed=%5 pending=%6")
+                      .arg(QString::fromStdString(lvar))
+                      .arg(span.received)
+                      .arg(span.min, 0, 'f', 3)
+                      .arg(span.max, 0, 'f', 3)
+                      .arg(span.received && pressed_(span.min, span.max))
+                      .arg(pending_));
+
         if (span.received && pressed_(span.min, span.max))
         {
             active = true;
