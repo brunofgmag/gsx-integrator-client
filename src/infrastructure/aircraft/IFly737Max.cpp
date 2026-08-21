@@ -350,9 +350,12 @@ bool IFly737Max::IsReadyToPush() const
 
 bool IFly737Max::IsReadyToDeboard() const
 {
-    const bool isChocksOn = variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
+    return !IsEngineRunning() && IsHeldInPlace() && !IsBeaconOn();
+}
 
-    return !IsEngineRunning() && (IsParkingBrakeSet() || isChocksOn) && !IsBeaconOn();
+bool IFly737Max::IsHeldInPlace() const
+{
+    return IsParkingBrakeSet() || variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
 }
 
 bool IFly737Max::IsEngineRunning() const
@@ -362,10 +365,7 @@ bool IFly737Max::IsEngineRunning() const
 
 bool IFly737Max::IsParkingBrakeSet() const
 {
-    const bool isParkingBrakeOn = variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) > 0.0;
-    const bool isSimParkingBrakeOn = variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0;
-
-    return isParkingBrakeOn && isSimParkingBrakeOn;
+    return variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) > 0.0;
 }
 
 bool IFly737Max::IsBeaconOn() const

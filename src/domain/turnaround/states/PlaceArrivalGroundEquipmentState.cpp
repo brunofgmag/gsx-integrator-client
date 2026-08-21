@@ -9,8 +9,7 @@
 std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::Evaluate(TurnaroundContext& ctx)
 {
     if (!ctx.data.arrivalDoorsClosed)
-    {
-        ctx.aircraft->CloseAllDoors();
+    {        ctx.aircraft->CloseAllDoors();
         ctx.data.arrivalDoorsClosed = true;
     }
 
@@ -19,7 +18,7 @@ std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::Evaluate(T
         return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
     }
 
-    if (ctx.aircraft->IsEngineRunning() || !ctx.aircraft->IsParkingBrakeSet())
+    if (ctx.aircraft->IsEngineRunning() || !ctx.aircraft->IsHeldInPlace())
     {
         return std::nullopt;
     }

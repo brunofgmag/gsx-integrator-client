@@ -12,6 +12,7 @@ private slots:
     static void holdsWhenGsxAsksWithoutSmartSwitch();
     static void holdsWhenGsxNotWaitingEvenWithEverythingElse();
     static void holdsWhenParkingBrakeReleased();
+    static void holdsWhenOnlyChocksHoldTheAircraft();
     static void holdsWhenConfirmPickFails();
     static void proceedsAfterDeferredConfirmationCompletes();
     static void confirmsAndProceedsWhenAllConditionsMet();
@@ -81,6 +82,19 @@ void WaitingEnginesStateTest::holdsWhenParkingBrakeReleased()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 0);
     QVERIFY(f.ctx.smartSwitchPressed);
+}
+
+void WaitingEnginesStateTest::holdsWhenOnlyChocksHoldTheAircraft()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    ArmConfirmationScenario(f);
+    f.aircraft.parkingBrakeSet = false;
+    f.aircraft.heldInPlace = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 0);
 }
 
 void WaitingEnginesStateTest::holdsWhenConfirmPickFails()

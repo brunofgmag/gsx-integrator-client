@@ -290,7 +290,12 @@ bool TolissA340::IsReadyToPush() const
 
 bool TolissA340::IsReadyToDeboard() const
 {
-    return !IsEngineRunning() && IsParkingBrakeSet() && !IsBeaconOn();
+    return !IsEngineRunning() && IsHeldInPlace() && !IsBeaconOn();
+}
+
+bool TolissA340::IsHeldInPlace() const
+{
+    return IsParkingBrakeSet();
 }
 
 bool TolissA340::IsEngineRunning() const
@@ -304,8 +309,7 @@ bool TolissA340::IsEngineRunning() const
 
 bool TolissA340::IsParkingBrakeSet() const
 {
-    return variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0
-        || variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) >= kParkingBrakeSetLVarValue;
+    return variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) >= kParkingBrakeSetLVarValue;
 }
 
 bool TolissA340::IsBeaconOn() const

@@ -137,8 +137,7 @@ private slots:
     static void drivingTickWritesWhatObservationHeldBack();
     static void doorStatusUnknownUntilTheEfbAnswers();
     static void doorStatusAllClosedOnceEveryDoorReadsShut();
-    static void doorStatusOpenWhenADoorReadsOpen();
-    static void theSecondLeftDoorOnlyCountsOnTheA321();
+    static void doorStatusOpenWhenADoorReadsOpen();    static void theSecondLeftDoorOnlyCountsOnTheA321();
     static void subscribesEveryDoorDatarefSoItCanRead();
     static void registersSmartSwitchForFastRefresh();
     static void subscribesEfbPlanDatarefs();
@@ -186,7 +185,8 @@ private slots:
     static void powerRequiresBatteryPlusExternalOrApu();
     static void engineAssumedRunningUntilDataArrives();
     static void engineRunningDetectsEitherEngine();
-    static void parkingBrakeRequiresBothSources();
+    static void parkingBrakeReadsTheLeverAndIgnoresTheSimVar();
+    static void heldInPlaceAcceptsChocksWithoutTheLever();
     static void readyToPushFollowsPowerBeaconAndEngines();
     static void readyToDeboardFollowsSafetyState();
 };
@@ -879,17 +879,38 @@ void FenixA32xTest::engineRunningDetectsEitherEngine()
     QVERIFY(fixture.aircraft.IsEngineRunning());
 }
 
-void FenixA32xTest::parkingBrakeRequiresBothSources()
+void FenixA32xTest::parkingBrakeReadsTheLeverAndIgnoresTheSimVar()
 {
     FenixFixture fixture;
 
-    fixture.gateway.lvars[kParkingBrakeLvar] = 1.0;
+    fixture.gateway.avars[kSimParkingBrake] = 1.0;
 
     QVERIFY(!fixture.aircraft.IsParkingBrakeSet());
 
-    fixture.gateway.avars[kSimParkingBrake] = 1.0;
+    fixture.gateway.lvars[kParkingBrakeLvar] = 1.0;
 
     QVERIFY(fixture.aircraft.IsParkingBrakeSet());
+
+    fixture.gateway.lvars[kParkingBrakeLvar] = 0.0;
+
+    QVERIFY(!fixture.aircraft.IsParkingBrakeSet());
+}
+
+void FenixA32xTest::heldInPlaceAcceptsChocksWithoutTheLever()
+{
+    FenixFixture fixture;
+
+    QVERIFY(!fixture.aircraft.IsHeldInPlace());
+
+    fixture.gateway.lvars[kChocks] = 1.0;
+
+    QVERIFY(fixture.aircraft.IsHeldInPlace());
+    QVERIFY(!fixture.aircraft.IsParkingBrakeSet());
+
+    fixture.gateway.lvars[kChocks] = 0.0;
+    fixture.gateway.lvars[kParkingBrakeLvar] = 1.0;
+
+    QVERIFY(fixture.aircraft.IsHeldInPlace());
 }
 
 void FenixA32xTest::readyToPushFollowsPowerBeaconAndEngines()

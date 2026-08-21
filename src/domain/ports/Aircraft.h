@@ -54,6 +54,7 @@ public:
     [[nodiscard]] virtual bool IsReadyToPush() const = 0 ;
     [[nodiscard]] virtual bool IsReadyToDeboard() const = 0;
     [[nodiscard]] virtual bool IsEngineRunning() const = 0;
+    [[nodiscard]] virtual bool IsHeldInPlace() const = 0;
     [[nodiscard]] virtual bool IsParkingBrakeSet() const = 0;
 };
 

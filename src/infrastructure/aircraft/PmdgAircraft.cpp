@@ -29,8 +29,7 @@ PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationSta
       tablet_(std::move(tablet)),
       cargoVariant_(spec.cargoVariant),
       doorSlots_(spec.doorSlots),
-      mainDeckDoorSlot_(spec.mainDeckDoorSlot),
-      doors_(variableGateway),
+      mainDeckDoorSlot_(spec.mainDeckDoorSlot),      doors_(variableGateway),
       doorReconciler_(*this, spec.doorSlots, spec.doorBaseline),
       groundConn_(*this, *tablet_),
       payload_(*tablet_, *variableGateway, status, spec.cargoVariant),
@@ -50,7 +49,6 @@ void PmdgAircraft::Observe()
     data_->Poll();
     tablet_->Poll();
     RefreshDoors();
-
     if (status_->flightPlanStatus == FlightPlanStatus::Ready)
     {
         routeImport_.Observe(PmdgRouteFile::DirectoryFor(GetName()), status_->plannedOrigin,
@@ -235,7 +233,12 @@ bool PmdgAircraft::IsReadyToPush() const
 
 bool PmdgAircraft::IsReadyToDeboard() const
 {
-    return !IsEngineRunning() && (IsParkingBrakeSet() || ChocksSet()) && !data_->BeaconOn();
+    return !IsEngineRunning() && IsHeldInPlace() && !data_->BeaconOn();
+}
+
+bool PmdgAircraft::IsHeldInPlace() const
+{
+    return IsParkingBrakeSet() || ChocksSet();
 }
 
 bool PmdgAircraft::IsEngineRunning() const
@@ -245,8 +248,7 @@ bool PmdgAircraft::IsEngineRunning() const
 
 bool PmdgAircraft::IsParkingBrakeSet() const
 {
-    return data_->ParkingBrakeOn()
-        || variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0;
+    return data_->ParkingBrakeOn();
 }
 
 std::optional<bool> PmdgAircraft::DoorOpenAt(const int slot) const
@@ -256,8 +258,7 @@ std::optional<bool> PmdgAircraft::DoorOpenAt(const int slot) const
     case DoorObservation::Open:
         return true;
     case DoorObservation::Closed:
-        return false;
-    default:
+        return false;    default:
         return std::nullopt;
     }
 }

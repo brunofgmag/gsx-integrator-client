@@ -28,7 +28,6 @@ public:
     void OnTick() override;
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
-
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
@@ -56,14 +55,14 @@ public:
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;
     [[nodiscard]] bool IsEngineRunning() const override;
+    [[nodiscard]] bool IsHeldInPlace() const override;
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
 private:
     [[nodiscard]] bool IsBeaconOn() const;
     void EnsureEfbInitialized();
     void UpdateDoors();
-    [[nodiscard]] std::optional<bool> DoorOpen(const char* dataref) const;
-    void ReportProbe() const;
+    [[nodiscard]] std::optional<bool> DoorOpen(const char* dataref) const;    void ReportProbe() const;
     void DisarmRefuelSystemWhenDone();
     void SyncPassengersAndCargo(double zfwKg);
     void WriteSeatOccupation(int passengersOnBoard);
@@ -72,8 +71,7 @@ private:
 
     VariableGateway* variableGateway_;
     FenixVariant variant_;
-    std::unique_ptr<FenixEfbGateway> efb_;
-    GsxDoorSync doors_;
+    std::unique_ptr<FenixEfbGateway> efb_;    GsxDoorSync doors_;
     SmartSwitch smartSwitch_;
     bool efbInitialized_ = false;
     bool finalLoadsheetRequested_ = true;

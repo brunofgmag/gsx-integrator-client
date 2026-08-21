@@ -11,15 +11,15 @@ private slots:
     static void skipsWhenOptionDisabled();
     static void skipsWhenSettingsAreNull();
     static void waitsWhileEnginesRunning();
-    static void waitsWhileParkingBrakeNotSet();
+    static void waitsWhileAircraftNotHeldInPlace();
+    static void chocksAloneHoldTheAircraftEnough();
     static void placesChocksAndGpuWhenParked();
     static void commandsAircraftGpuWhenControlSupported();
     static void advancesWithoutToggleWhenGpuAlreadyConnected();
     static void waitsWhileGpuStatusUnknown();
     static void skipsChocksWhenUnsupported();
     static void closesAllDoorsEvenWhenOptionDisabled();
-    static void closesAllDoorsOnlyOnce();
-};
+    static void closesAllDoorsOnlyOnce();};
 
 void PlaceArrivalGroundEquipmentStateTest::skipsWhenOptionDisabled()
 {
@@ -68,7 +68,7 @@ void PlaceArrivalGroundEquipmentStateTest::waitsWhileEnginesRunning()
     QCOMPARE(f.aircraft.setChocksCalls, 0);
 }
 
-void PlaceArrivalGroundEquipmentStateTest::waitsWhileParkingBrakeNotSet()
+void PlaceArrivalGroundEquipmentStateTest::waitsWhileAircraftNotHeldInPlace()
 {
     TurnaroundStateFixture f;
     PlaceArrivalGroundEquipmentState state;
@@ -76,6 +76,7 @@ void PlaceArrivalGroundEquipmentStateTest::waitsWhileParkingBrakeNotSet()
     f.settings.callGpuOnArrival = true;
     f.aircraft.engineRunning = false;
     f.aircraft.parkingBrakeSet = false;
+    f.aircraft.heldInPlace = false;
     f.aircraft.supportsChocksControl = true;
     f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
 
@@ -84,6 +85,26 @@ void PlaceArrivalGroundEquipmentStateTest::waitsWhileParkingBrakeNotSet()
     QVERIFY(!transition.has_value());
     QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
     QCOMPARE(f.aircraft.setChocksCalls, 0);
+}
+
+void PlaceArrivalGroundEquipmentStateTest::chocksAloneHoldTheAircraftEnough()
+{
+    TurnaroundStateFixture f;
+    PlaceArrivalGroundEquipmentState state;
+
+    f.settings.callGpuOnArrival = true;
+    f.aircraft.engineRunning = false;
+    f.aircraft.parkingBrakeSet = false;
+    f.aircraft.heldInPlace = true;
+    f.aircraft.supportsChocksControl = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestDeboarding);
+    QCOMPARE(f.aircraft.setChocksCalls, 1);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
 }
 
 void PlaceArrivalGroundEquipmentStateTest::placesChocksAndGpuWhenParked()

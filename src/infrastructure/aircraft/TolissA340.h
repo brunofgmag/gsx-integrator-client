@@ -19,8 +19,7 @@ public:
 
     void OnTick() override;
     void OnLoadingStarted() override;
-    void CloseAllDoors() override;
-    [[nodiscard]] DoorStatus GetDoorStatus() const override;
+    void CloseAllDoors() override;    [[nodiscard]] DoorStatus GetDoorStatus() const override;
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
@@ -41,6 +40,7 @@ public:
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;
     [[nodiscard]] bool IsEngineRunning() const override;
+    [[nodiscard]] bool IsHeldInPlace() const override;
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
 private:

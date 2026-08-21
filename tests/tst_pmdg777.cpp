@@ -80,11 +80,11 @@ private slots:
     static void poweredByRunningEngine();
     static void engineRunningConservativeUntilReceived();
     static void parkingBrakeRequiresClientData();
-    static void parkingBrakeAcceptsTheSimVariableWithoutTheSdkBlock();
+    static void parkingBrakeIgnoresTheSimVariable();
+    static void heldInPlaceAcceptsChocksWithoutTheBrake();
     static void doorStatusUnknownUntilClientDataArrives();
     static void doorStatusOpenWhenASdkDoorReadsOpen();
-    static void doorStatusUnknownWhileADoorIsMoving();
-    static void doorStatusAllClosedWhenEverySdkDoorReadsClosed();
+    static void doorStatusUnknownWhileADoorIsMoving();    static void doorStatusAllClosedWhenEverySdkDoorReadsClosed();
     static void smartSwitchEdgesOncePerPress();
     static void smartSwitchWorksFromBothSeats();
     static void smartSwitchCatchesTransientPress();
@@ -226,7 +226,7 @@ void Pmdg777Test::parkingBrakeRequiresClientData()
     QVERIFY(fixture.aircraft->IsParkingBrakeSet());
 }
 
-void Pmdg777Test::parkingBrakeAcceptsTheSimVariableWithoutTheSdkBlock()
+void Pmdg777Test::parkingBrakeIgnoresTheSimVariable()
 {
     Pmdg777Fixture fixture;
 
@@ -234,7 +234,22 @@ void Pmdg777Test::parkingBrakeAcceptsTheSimVariableWithoutTheSdkBlock()
     fixture.data->parkingBrakeOn = false;
     fixture.gateway.avars[kSimParkingBrake] = 1.0;
 
-    QVERIFY(fixture.aircraft->IsParkingBrakeSet());
+    QVERIFY(!fixture.aircraft->IsParkingBrakeSet());
+}
+
+void Pmdg777Test::heldInPlaceAcceptsChocksWithoutTheBrake()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->parkingBrakeOn = false;
+
+    QVERIFY(!fixture.aircraft->IsHeldInPlace());
+
+    fixture.data->wheelChocksSet = true;
+
+    QVERIFY(fixture.aircraft->IsHeldInPlace());
+    QVERIFY(!fixture.aircraft->IsParkingBrakeSet());
 }
 
 void Pmdg777Test::doorStatusUnknownUntilClientDataArrives()

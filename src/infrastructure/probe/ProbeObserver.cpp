@@ -258,9 +258,10 @@ void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables
     probe::Change("identity", QStringLiteral("plane %1 title='%2' atcModel='%3'")
                   .arg(id, QString::fromLatin1(title), QString::fromLatin1(atcModel)));
 
-    probe::Change("door", QStringLiteral("door  %1 GetDoorStatus=%2 IsParkingBrakeSet=%3")
+    probe::Change("door", QStringLiteral("door  %1 GetDoorStatus=%2 IsParkingBrakeSet=%3 IsHeldInPlace=%4")
                   .arg(id, QLatin1String(StatusText(aircraft.GetDoorStatus())))
-                  .arg(aircraft.IsParkingBrakeSet() ? 1 : 0));
+                  .arg(aircraft.IsParkingBrakeSet() ? 1 : 0)
+                  .arg(aircraft.IsHeldInPlace() ? 1 : 0));
 
     if (profile.brakeLVar != nullptr)
     {

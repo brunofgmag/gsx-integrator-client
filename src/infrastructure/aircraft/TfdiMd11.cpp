@@ -291,9 +291,12 @@ bool TfdiMd11::IsReadyToPush() const
 
 bool TfdiMd11::IsReadyToDeboard() const
 {
-    const bool isChocksOn = variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
+    return !IsEngineRunning() && IsHeldInPlace() && !IsBeaconOn();
+}
 
-    return !IsEngineRunning() && (IsParkingBrakeSet() || isChocksOn) && !IsBeaconOn();
+bool TfdiMd11::IsHeldInPlace() const
+{
+    return IsParkingBrakeSet() || variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
 }
 
 bool TfdiMd11::IsEngineRunning() const
@@ -303,10 +306,7 @@ bool TfdiMd11::IsEngineRunning() const
 
 bool TfdiMd11::IsParkingBrakeSet() const
 {
-    const bool isParkingBrakeOn = variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) > 0.0;
-    const bool isSimParkingBrakeOn = variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0;
-
-    return isParkingBrakeOn && isSimParkingBrakeOn;
+    return variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) > 0.0;
 }
 
 bool TfdiMd11::IsBeaconOn() const

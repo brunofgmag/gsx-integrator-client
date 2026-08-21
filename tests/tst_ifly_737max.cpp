@@ -68,7 +68,8 @@ private slots:
     static void zfwSetterHoldsUntilEmptyWeightArrives();
     static void zfwSetterClampsPayloadAtZero();
     static void zfwSetterSkipsRepeatedValue();
-    static void parkingBrakeRequiresSwitchAndSimBrake();
+    static void parkingBrakeReadsTheSwitchAndIgnoresTheSimVar();
+    static void heldInPlaceAcceptsChocksWithoutTheSwitch();
     static void readyToDeboardFollowsSafetyState();
     static void aircraftPowerFollowsAvionicsBus();
     static void readyToPushFollowsPowerBeaconAndEngines();
@@ -335,7 +336,7 @@ void IFly737MaxTest::zfwSetterSkipsRepeatedValue()
     QCOMPARE(gateway.setAVarCalls, 18);
 }
 
-void IFly737MaxTest::parkingBrakeRequiresSwitchAndSimBrake()
+void IFly737MaxTest::parkingBrakeReadsTheSwitchAndIgnoresTheSimVar()
 {
     struct TestCase
     {
@@ -347,8 +348,8 @@ void IFly737MaxTest::parkingBrakeRequiresSwitchAndSimBrake()
 
     constexpr auto cases = std::array{
         TestCase{"released", 0.0, 0.0, false},
-        TestCase{"switch only", 1.0, 0.0, false},
-        TestCase{"sim brake only", 0.0, 1.0, false},
+        TestCase{"switch only", 1.0, 0.0, true},
+        TestCase{"cold sim brake lies", 0.0, 1.0, false},
         TestCase{"both", 1.0, 1.0, true},
     };
 
@@ -362,6 +363,36 @@ void IFly737MaxTest::parkingBrakeRequiresSwitchAndSimBrake()
         gateway.avars[kSimParkingBrake] = testCase.simBrake;
 
         QVERIFY2(aircraft.IsParkingBrakeSet() == testCase.expected, testCase.name);
+    }
+}
+
+void IFly737MaxTest::heldInPlaceAcceptsChocksWithoutTheSwitch()
+{
+    struct TestCase
+    {
+        const char* name;
+        double lever;
+        double chocks;
+        bool expected;
+    };
+
+    constexpr auto cases = std::array{
+        TestCase{"rolling", 0.0, 0.0, false},
+        TestCase{"switch only", 1.0, 0.0, true},
+        TestCase{"chocks only", 0.0, 1.0, true},
+        TestCase{"both", 1.0, 1.0, true},
+    };
+
+    for (const auto& testCase : cases)
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        IFly737Max aircraft(&gateway, &status);
+
+        gateway.lvars[kParkingBrake] = testCase.lever;
+        gateway.lvars[kChocks] = testCase.chocks;
+
+        QVERIFY2(aircraft.IsHeldInPlace() == testCase.expected, testCase.name);
     }
 }
 

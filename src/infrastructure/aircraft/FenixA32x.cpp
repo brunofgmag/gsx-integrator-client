@@ -83,7 +83,6 @@ namespace
     };
 
     constexpr double kDoorUnanswered = -1.0;
-
     constexpr std::array kProbeDoorDatarefs = {
         kFwdPaxDoorDataref, kMidPaxDoorDataref, kAftPaxDoorDataref,
         kFwdCateringDoorDataref, kAftCateringDoorDataref,
@@ -203,8 +202,7 @@ bool FenixA32x::IsCargoVariant() const
 
 void FenixA32x::Observe()
 {
-    efb_->Poll();
-    ReportProbe();
+    efb_->Poll();    ReportProbe();
 }
 
 void FenixA32x::OnTick()
@@ -549,9 +547,12 @@ bool FenixA32x::IsReadyToPush() const
 
 bool FenixA32x::IsReadyToDeboard() const
 {
-    const bool isChocksOn = variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
+    return !IsEngineRunning() && IsHeldInPlace() && !IsBeaconOn();
+}
 
-    return !IsEngineRunning() && (IsParkingBrakeSet() || isChocksOn) && !IsBeaconOn();
+bool FenixA32x::IsHeldInPlace() const
+{
+    return IsParkingBrakeSet() || variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
 }
 
 bool FenixA32x::IsEngineRunning() const
@@ -561,10 +562,7 @@ bool FenixA32x::IsEngineRunning() const
 
 bool FenixA32x::IsParkingBrakeSet() const
 {
-    const bool isParkingBrakeOn = variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) > 0.0;
-    const bool isSimParkingBrakeOn = variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0;
-
-    return isParkingBrakeOn && isSimParkingBrakeOn;
+    return variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) > 0.0;
 }
 
 bool FenixA32x::IsBeaconOn() const

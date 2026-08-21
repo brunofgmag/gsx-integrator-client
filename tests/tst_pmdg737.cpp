@@ -68,7 +68,7 @@ private slots:
     static void groundPowerFollowsTheSingleAnnunciator();
     static void poweredByMainBusOrRunningEngine();
     static void engineRunningConservativeUntilReceived();
-    static void parkingBrakeFallsBackToTheSimVar();
+    static void parkingBrakeReadsTheSdkBlockAndIgnoresTheSimVar();
     static void doorStatusUnknownUntilTheEfbAnswers();
     static void doorStatusOpenWhenTheEfbReportsADoorOpen();
     static void doorStatusUnknownWhileTheAirstairHasNoEfbReading();
@@ -203,7 +203,7 @@ void Pmdg737Test::doorStatusUnknownWhileTheAirstairHasNoEfbReading()
     QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
 }
 
-void Pmdg737Test::parkingBrakeFallsBackToTheSimVar()
+void Pmdg737Test::parkingBrakeReadsTheSdkBlockAndIgnoresTheSimVar()
 {
     Pmdg737Fixture fixture;
 
@@ -212,7 +212,7 @@ void Pmdg737Test::parkingBrakeFallsBackToTheSimVar()
     QVERIFY(!fixture.aircraft->IsParkingBrakeSet());
 
     fixture.gateway.avars[kSimParkingBrake] = 1.0;
-    QVERIFY(fixture.aircraft->IsParkingBrakeSet());
+    QVERIFY(!fixture.aircraft->IsParkingBrakeSet());
 
     fixture.gateway.avars[kSimParkingBrake] = 0.0;
     fixture.data->parkingBrakeOn = true;

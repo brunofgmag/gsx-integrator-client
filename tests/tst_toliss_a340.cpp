@@ -120,10 +120,10 @@ private slots:
     static void powerFollowsExternalOnAnnunciator();
     static void engineRunningDetectsAnyOfFourEngines();
     static void engineAssumedRunningUntilFuelFlowDataArrives();
-    static void parkingBrakeFollowsEitherSource();
+    static void parkingBrakeReadsTheLeverAndIgnoresTheSimVar();
+    static void heldInPlaceFollowsTheLeverWithoutAChocksSource();
     static void readyToPushFollowsPowerBeaconAndEngines();
-    static void readyToDeboardFollowsSafetyState();
-    static void doorsUntouchedByDefaultWhenGsxAvailable();
+    static void readyToDeboardFollowsSafetyState();    static void doorsUntouchedByDefaultWhenGsxAvailable();
     static void cargoDoorsOpenPerLoaderAndCloseWhenDone();
     static void cargoDoorsUntouchedWithoutGsx();
     static void paxDoorsOpenPerStairsAndCloseWhenGone();
@@ -562,7 +562,7 @@ void TolissA340Test::engineAssumedRunningUntilFuelFlowDataArrives()
     QVERIFY(aircraft.IsEngineRunning());
 }
 
-void TolissA340Test::parkingBrakeFollowsEitherSource()
+void TolissA340Test::parkingBrakeReadsTheLeverAndIgnoresTheSimVar()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -572,9 +572,8 @@ void TolissA340Test::parkingBrakeFollowsEitherSource()
 
     gateway.avars[kSimParkingBrake] = 1.0;
 
-    QVERIFY(aircraft.IsParkingBrakeSet());
+    QVERIFY(!aircraft.IsParkingBrakeSet());
 
-    gateway.avars[kSimParkingBrake] = 0.0;
     gateway.lvars[kParkingBrakeLvar] = 100.0;
 
     QVERIFY(aircraft.IsParkingBrakeSet());
@@ -582,6 +581,19 @@ void TolissA340Test::parkingBrakeFollowsEitherSource()
     gateway.lvars[kParkingBrakeLvar] = 0.0;
 
     QVERIFY(!aircraft.IsParkingBrakeSet());
+}
+
+void TolissA340Test::heldInPlaceFollowsTheLeverWithoutAChocksSource()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TolissA340 aircraft(&gateway, &status, false);
+
+    QVERIFY(!aircraft.IsHeldInPlace());
+
+    gateway.lvars[kParkingBrakeLvar] = 100.0;
+
+    QVERIFY(aircraft.IsHeldInPlace());
 }
 
 void TolissA340Test::readyToPushFollowsPowerBeaconAndEngines()
@@ -624,7 +636,7 @@ void TolissA340Test::readyToDeboardFollowsSafetyState()
     {
         gateway.lvars["TLS_ENG" + std::to_string(engine) + "_FUEL_FLOW"] = 0.0;
     }
-    gateway.avars[kSimParkingBrake] = 1.0;
+    gateway.lvars[kParkingBrakeLvar] = 100.0;
     gateway.avars[kSimBeaconLight] = 0.0;
 
     QVERIFY(aircraft.IsReadyToDeboard());
@@ -634,15 +646,16 @@ void TolissA340Test::readyToDeboardFollowsSafetyState()
     QVERIFY(!aircraft.IsReadyToDeboard());
 
     gateway.avars[kSimBeaconLight] = 0.0;
-    gateway.avars[kSimParkingBrake] = 0.0;
+    gateway.lvars[kParkingBrakeLvar] = 0.0;
 
     QVERIFY(!aircraft.IsReadyToDeboard());
 
-    gateway.avars[kSimParkingBrake] = 1.0;
+    gateway.lvars[kParkingBrakeLvar] = 100.0;
     gateway.lvars["TLS_ENG2_FUEL_FLOW"] = 1.0;
 
     QVERIFY(!aircraft.IsReadyToDeboard());
 }
+
 
 void TolissA340Test::doorsUntouchedByDefaultWhenGsxAvailable()
 {

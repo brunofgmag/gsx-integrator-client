@@ -41,6 +41,7 @@ public:
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;
     [[nodiscard]] bool IsEngineRunning() const override;
+    [[nodiscard]] bool IsHeldInPlace() const override;
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
 private:

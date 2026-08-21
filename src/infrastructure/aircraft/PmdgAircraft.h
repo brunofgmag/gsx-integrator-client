@@ -51,8 +51,7 @@ public:
     void Observe() override;
     void OnTick() override;
     void OnLoadingStarted() override;
-    void CloseAllDoors() override;
-    void ClearOwnGroundEquipment() override;
+    void CloseAllDoors() override;    void ClearOwnGroundEquipment() override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
     [[nodiscard]] bool IsMainDeckCargoDoorStuck() const override;
 
@@ -82,6 +81,7 @@ public:
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;
     [[nodiscard]] bool IsEngineRunning() const override;
+    [[nodiscard]] bool IsHeldInPlace() const override;
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
 protected:
@@ -94,13 +94,11 @@ protected:
 
 private:
     void SyncDoors();
-    void SyncMainDeckDoor();
-    [[nodiscard]] std::optional<bool> DoorOpenAt(int slot) const;
+    void SyncMainDeckDoor();    [[nodiscard]] std::optional<bool> DoorOpenAt(int slot) const;
 
     bool cargoVariant_;
     int doorSlots_;
-    int mainDeckDoorSlot_;
-    MainDeckTarget mainDeckTarget_ = MainDeckTarget::Unknown;
+    int mainDeckDoorSlot_;    MainDeckTarget mainDeckTarget_ = MainDeckTarget::Unknown;
     GsxDoorSync doors_;
     PmdgDoorReconciler doorReconciler_;
     PmdgGroundConnReconciler groundConn_;
