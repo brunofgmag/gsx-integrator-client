@@ -63,7 +63,7 @@ void CabinServicesStateTest::confirmsEachServiceThenWaitsForCompletion()
 
     f.gsxService.lavatoryInProgress = true;
     QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QVERIFY(f.ctx.data.lavatoryRequested);
+    QVERIFY(f.ctx.data.lavatory.requested);
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.requestWaterCalls, 1);
@@ -104,7 +104,7 @@ void CabinServicesStateTest::waitsForActiveServiceWhenDisabledMidRun()
     f.gsxService.lavatoryInProgress = true;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QVERIFY(f.ctx.data.lavatoryActiveSeen);
+    QVERIFY(f.ctx.data.lavatory.activeSeen);
 
     f.settings.callLavatory = false;
 
@@ -127,7 +127,7 @@ void CabinServicesStateTest::asksServiceOnceAndWaits()
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.requestLavatoryCalls, 1);
-    QVERIFY(!f.ctx.data.lavatoryRequested);
+    QVERIFY(!f.ctx.data.lavatory.requested);
 
     for (int tick = 0; tick < 20; ++tick)
     {
@@ -136,11 +136,11 @@ void CabinServicesStateTest::asksServiceOnceAndWaits()
     }
 
     QCOMPARE(f.menuGateway.requestLavatoryCalls, 1);
-    QVERIFY(!f.ctx.data.lavatoryRequested);
+    QVERIFY(!f.ctx.data.lavatory.requested);
 
     f.gsxService.lavatoryInProgress = true;
     QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QVERIFY(f.ctx.data.lavatoryRequested);
+    QVERIFY(f.ctx.data.lavatory.requested);
 }
 
 void CabinServicesStateTest::givesUpWhenServiceNeverStarts()

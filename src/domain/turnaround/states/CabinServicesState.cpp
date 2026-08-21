@@ -46,57 +46,40 @@ std::optional<TurnaroundTransition> CabinServicesState::Evaluate(TurnaroundConte
 
 bool CabinServicesState::DispatchNextService(TurnaroundContext& ctx)
 {
-    return DispatchService(ctx,
-                           ctx.settings->callLavatory,
-                           ctx.data.lavatoryAsked,
-                           ctx.data.lavatoryRequested,
-                           ctx.data.lavatoryActiveSeen,
-                           GroundService::Lavatory)
-        || DispatchService(ctx,
-                           ctx.settings->callWater,
-                           ctx.data.waterAsked,
-                           ctx.data.waterRequested,
-                           ctx.data.waterActiveSeen,
-                           GroundService::Water)
-        || DispatchService(ctx,
-                           ctx.settings->callCleaning,
-                           ctx.data.cleaningAsked,
-                           ctx.data.cleaningRequested,
-                           ctx.data.cleaningActiveSeen,
-                           GroundService::Cleaning);
+    return DispatchService(ctx, ctx.settings->callLavatory, ctx.data.lavatory, GroundService::Lavatory)
+        || DispatchService(ctx, ctx.settings->callWater, ctx.data.water, GroundService::Water)
+        || DispatchService(ctx, ctx.settings->callCleaning, ctx.data.cleaning, GroundService::Cleaning);
 }
 
 bool CabinServicesState::DispatchService(const TurnaroundContext& ctx,
                                          const bool enabled,
-                                         bool& asked,
-                                         bool& requested,
-                                         bool& activeSeen,
+                                         CabinServiceProgress& progress,
                                          const GroundService service)
 {
-    if (!enabled || requested)
+    if (!enabled || progress.requested)
     {
         return false;
     }
 
     if (ctx.gsxGateway->IsServiceInProgress(service))
     {
-        activeSeen = true;
-        requested = true;
+        progress.activeSeen = true;
+        progress.requested = true;
 
         return true;
     }
 
-    if (!asked)
+    if (!progress.asked)
     {
         SendServiceTrigger(ctx, service);
-        asked = true;
+        progress.asked = true;
 
         return true;
     }
 
     if (ctx.TickCondition(kServiceGiveUpTicks))
     {
-        requested = true;
+        progress.requested = true;
     }
 
     return true;
@@ -124,31 +107,31 @@ void CabinServicesState::UpdateActiveSeen(TurnaroundContext& ctx)
 {
     if (ctx.gsxGateway->IsServiceInProgress(GroundService::Lavatory))
     {
-        ctx.data.lavatoryActiveSeen = true;
+        ctx.data.lavatory.activeSeen = true;
     }
 
     if (ctx.gsxGateway->IsServiceInProgress(GroundService::Water))
     {
-        ctx.data.waterActiveSeen = true;
+        ctx.data.water.activeSeen = true;
     }
 
     if (ctx.gsxGateway->IsServiceInProgress(GroundService::Cleaning))
     {
-        ctx.data.cleaningActiveSeen = true;
+        ctx.data.cleaning.activeSeen = true;
     }
 }
 
 bool CabinServicesState::AllEnabledCompleted(const TurnaroundContext& ctx)
 {
-    return IsServiceDone(ctx, ctx.data.lavatoryActiveSeen, GroundService::Lavatory)
-        && IsServiceDone(ctx, ctx.data.waterActiveSeen, GroundService::Water)
-        && IsServiceDone(ctx, ctx.data.cleaningActiveSeen, GroundService::Cleaning);
+    return IsServiceDone(ctx, ctx.data.lavatory, GroundService::Lavatory)
+        && IsServiceDone(ctx, ctx.data.water, GroundService::Water)
+        && IsServiceDone(ctx, ctx.data.cleaning, GroundService::Cleaning);
 }
 
 bool CabinServicesState::IsServiceDone(const TurnaroundContext& ctx,
-                                       const bool activeSeen, const GroundService service)
+                                       const CabinServiceProgress& progress, const GroundService service)
 {
-    if (activeSeen)
+    if (progress.activeSeen)
     {
         return !ctx.gsxGateway->IsServiceInProgress(service);
     }
