@@ -13,6 +13,9 @@ namespace
     constexpr auto kAvionicsPoweredLVar = "PowerOn";
     constexpr auto kSmartSwitchCaptLVar = "switch_554_a";
     constexpr auto kSmartSwitchFoLVar = "switch_773_a";
+    constexpr double kSmartSwitchNeutral = 50.0;
+    constexpr double kSmartSwitchDown = 0.0;
+    constexpr double kSmartSwitchUp = 100.0;
     constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
     constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
     constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
@@ -83,6 +86,7 @@ private slots:
     static void smartSwitchEdgesOncePerPress();
     static void smartSwitchWorksFromBothSeats();
     static void smartSwitchCatchesTransientPress();
+    static void smartSwitchAnswersTheDownwardFlick();
     static void smartSwitchLVarsGetFastRefresh();
     static void readyToPushMatrix();
     static void readyToDeboardMatrix();
@@ -275,16 +279,20 @@ void Pmdg777Test::smartSwitchEdgesOncePerPress()
 
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
 
-    fixture.gateway.lvars[kSmartSwitchCaptLVar] = 100.0;
+    fixture.gateway.lvars[kSmartSwitchCaptLVar] = kSmartSwitchNeutral;
+
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvars[kSmartSwitchCaptLVar] = kSmartSwitchUp;
 
     QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
 
-    fixture.gateway.lvars[kSmartSwitchCaptLVar] = 0.0;
+    fixture.gateway.lvars[kSmartSwitchCaptLVar] = kSmartSwitchNeutral;
 
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
 
-    fixture.gateway.lvars[kSmartSwitchCaptLVar] = 100.0;
+    fixture.gateway.lvars[kSmartSwitchCaptLVar] = kSmartSwitchUp;
 
     QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
 }
@@ -309,6 +317,23 @@ void Pmdg777Test::smartSwitchCatchesTransientPress()
     fixture.aircraft->OnTick();
     fixture.gateway.lvars[kSmartSwitchCaptLVar] = 50.0;
     fixture.gateway.lvarSpans[kSmartSwitchCaptLVar] = LVarSpan{50.0, 100.0, true};
+
+    QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+}
+
+void Pmdg777Test::smartSwitchAnswersTheDownwardFlick()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.aircraft->OnTick();
+    fixture.gateway.lvars[kSmartSwitchCaptLVar] = kSmartSwitchNeutral;
+
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvarSpans[kSmartSwitchCaptLVar] =
+        LVarSpan{kSmartSwitchDown, kSmartSwitchNeutral, true};
 
     QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());

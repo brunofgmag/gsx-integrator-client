@@ -14,6 +14,9 @@ namespace
 {
     constexpr auto kChocksLVar = "NGXWheelChocks";
     constexpr auto kSmartSwitchLVar = "switch_752_73X";
+    constexpr double kSmartSwitchNeutral = 50.0;
+    constexpr double kSmartSwitchDown = 0.0;
+    constexpr double kSmartSwitchUp = 100.0;
     constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
     constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
     constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
@@ -85,6 +88,8 @@ private slots:
     static void setFuelSendsRoundedLbsOnce();
     static void cargoVariantSendsNoPassengers();
     static void progressiveWriterDoesNotUndoTheTrim();
+    static void smartSwitchAtRestIsNotAPress();
+    static void smartSwitchAnswersEveryPressOfTheSession();
 };
 
 void Pmdg737Test::nameAndCargoFlagFollowTheVariant()
@@ -584,6 +589,36 @@ void Pmdg737Test::progressiveWriterDoesNotUndoTheTrim()
 
     QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
     QCOMPARE(fixture.tablet->cargoSends.back(), trimmedCargo);
+}
+
+void Pmdg737Test::smartSwitchAtRestIsNotAPress()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[kSmartSwitchLVar] = kSmartSwitchNeutral;
+    fixture.aircraft->OnTick();
+
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+}
+
+void Pmdg737Test::smartSwitchAnswersEveryPressOfTheSession()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[kSmartSwitchLVar] = kSmartSwitchNeutral;
+    fixture.aircraft->OnTick();
+
+    fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchDown, kSmartSwitchNeutral, true};
+    QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchNeutral, kSmartSwitchNeutral, true};
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchNeutral, kSmartSwitchUp, true};
+    QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
 }
 
 QTEST_APPLESS_MAIN(Pmdg737Test)

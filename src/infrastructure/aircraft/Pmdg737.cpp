@@ -17,6 +17,7 @@ namespace
 {
     constexpr auto kChocksLVar = "NGXWheelChocks";
     constexpr auto kSmartSwitchLVar = "switch_752_73X";
+    constexpr double kSmartSwitchNeutral = 50.0;
 
     constexpr int kStateQueryTicks = 3;
 
@@ -55,7 +56,8 @@ namespace
             IsCargo(variant),
             DoorBaseline::Closed,
             {kSmartSwitchLVar},
-            [](double, const double max) { return max > 0.0; }
+            [](const double min, const double max)
+            { return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral; }
         };
     }
 }
