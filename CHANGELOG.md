@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.8.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.8.0...v1.8.1) (2026-08-21)
+
+
+* publish the release from main with its assets ([#50](https://github.com/brunofgmag/gsx-integrator-client/issues/50)) ([a652ffc](https://github.com/brunofgmag/gsx-integrator-client/commit/a652ffc99d46106ced0446219f9fb62c3d2acf51))
+
 ## [1.8.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.7.0...v1.8.0) (2026-08-21)
 
 
