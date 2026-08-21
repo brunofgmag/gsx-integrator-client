@@ -16,6 +16,8 @@
 #include "application/RuntimeIntegratorService.h"
 #include "infrastructure/aircraft/AircraftFactory.h"
 #include "infrastructure/settings/QSettingsRepository.h"
+#include "infrastructure/platform/GraphicsBackend.h"
+#include "infrastructure/probe/ProbeLog.h"
 #include "infrastructure/platform/ShowWindowMessageFilter.h"
 #include "infrastructure/platform/WindowForeground.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
@@ -64,6 +66,7 @@ namespace
         {
             return;
         }
+        probe::Sink(message);
         defaultMessageHandler(type, context, message);
     }
 
@@ -114,6 +117,20 @@ namespace
         }
     }
 
+    enum class StartupWindow { Foreground, Minimized, Hidden };
+
+    StartupWindow ResolveStartupWindow(const bool trayArg, const AppSettings& settings)
+    {
+        if (!trayArg)
+        {
+            return StartupWindow::Foreground;
+        }
+
+        return settings.closeToTray || settings.minimizeToTray
+                   ? StartupWindow::Hidden
+                   : StartupWindow::Minimized;
+    }
+
     QIcon BuildAppIcon()
     {
         QIcon appIcon;
@@ -148,7 +165,9 @@ int main(int argc, char* argv[])
 
     QSettingsRepository settingsRepository;
     const AppSettings startupSettings = settingsRepository.Load();
-    const bool trayCapable = startupSettings.closeToTray || startupSettings.minimizeToTray;
+    const StartupWindow startupWindow = ResolveStartupWindow(trayArg, startupSettings);
+
+    GraphicsBackend::Apply(QString::fromStdString(startupSettings.renderer));
 
     QTranslator translator;
     InstallAppTranslator(translator, QString::fromStdString(startupSettings.language));
@@ -172,7 +191,6 @@ int main(int argc, char* argv[])
                 "https://api.github.com/repos/brunofgmag/gsx-integrator-commbus/releases/latest")),
         QGuiApplication::applicationVersion());
     UpdateViewModel updateViewModel(&updateService,
-                                    QGuiApplication::applicationVersion(),
                                     startupSettings.updateMode,
                                     UpdatesEnabled());
 
@@ -211,8 +229,8 @@ int main(int argc, char* argv[])
         {QStringLiteral("integratorVm"), QVariant::fromValue(&operationsViewModel)},
         {QStringLiteral("settingsVm"), QVariant::fromValue(&settingsViewModel)},
         {QStringLiteral("updateVm"), QVariant::fromValue(&updateViewModel)},
-        {QStringLiteral("startHidden"), trayArg && trayCapable},
-        {QStringLiteral("startMinimized"), trayArg && !trayCapable},
+        {QStringLiteral("startHidden"), startupWindow == StartupWindow::Hidden},
+        {QStringLiteral("startMinimized"), startupWindow == StartupWindow::Minimized},
         {QStringLiteral("trayIconSource"), trayIconSource},
     });
 
@@ -241,7 +259,23 @@ int main(int argc, char* argv[])
         QCoreApplication::instance()->installNativeEventFilter(&showWindowFilter);
         WindowsTitleBar::Apply(rootWindow, settingsViewModel.GetEffectiveDark());
 
-        if (!trayArg)
+        if (auto* quickWindow = qobject_cast<QQuickWindow*>(rootWindow))
+        {
+            const auto publishActiveRenderer = [quickWindow, &settingsViewModel]
+            {
+                if (const auto* renderer = quickWindow->rendererInterface())
+                {
+                    settingsViewModel.SetActiveRenderer(
+                        GraphicsBackend::ToName(renderer->graphicsApi()));
+                }
+            };
+
+            publishActiveRenderer();
+            QObject::connect(quickWindow, &QQuickWindow::sceneGraphInitialized, quickWindow,
+                             publishActiveRenderer);
+        }
+
+        if (startupWindow == StartupWindow::Foreground)
         {
             QTimer::singleShot(0, rootWindow, [rootWindow] {
                 WindowForeground::Bring(rootWindow);

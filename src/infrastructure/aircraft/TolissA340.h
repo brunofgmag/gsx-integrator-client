@@ -13,14 +13,15 @@ class TolissA340 final : public Aircraft
 public:
     static constexpr auto kName = "ToLiss A340-600";
 
-    TolissA340(VariableGateway* variableGateway, AutomationStatus* status, bool cargoVariant);
+    TolissA340(VariableGateway* variableGateway, const AutomationStatus* status, bool cargoVariant);
 
-    [[nodiscard]] const char* GetName() const override;
+    [[nodiscard]] const char* GetName() const;
     [[nodiscard]] bool IsCargoVariant() const override;
 
     void OnTick() override;
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
+    [[nodiscard]] DoorStatus GetDoorStatus() const override;
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
@@ -29,9 +30,7 @@ public:
     [[nodiscard]] double GetEmptyZfwKg() const override;
 
     [[nodiscard]] double GetCurrentFuelKg() const override;
-    void SetCurrentFuelKg(double fuelKg) override;
     [[nodiscard]] double GetCurrentZfwKg() const override;
-    void SetCurrentZfwKg(double zfwKg) override;
 
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return true; }
@@ -52,7 +51,7 @@ private:
     void UpdateDoors();
 
     VariableGateway* variableGateway_;
-    AutomationStatus* status_;
+    const AutomationStatus* status_;
     bool cargoVariant_;
     GsxDoorSync doors_;
     SmartSwitch smartSwitch_;

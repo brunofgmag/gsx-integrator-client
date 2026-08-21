@@ -24,9 +24,8 @@ std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::Evaluate(T
         return std::nullopt;
     }
 
-    if (ctx.aircraft->SupportsChocksControl() && !ctx.data.arrivalChocksPlaced)
+    if (!ctx.data.arrivalChocksPlaced && ctx.aircraft->SetChocks(true))
     {
-        ctx.aircraft->SetChocks(true);
         ctx.data.arrivalChocksPlaced = true;
     }
 
@@ -51,16 +50,8 @@ std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::Evaluate(T
         return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
     }
 
-    if (!ctx.menuGateway->IsMenuSettled())
-    {
-        return std::nullopt;
-    }
+    ctx.menuGateway->ToggleGpu();
+    ctx.data.arrivalGpuRequested = true;
 
-    if (ctx.menuGateway->ToggleGpu())
-    {
-        ctx.data.arrivalGpuRequested = true;
-        return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
-    }
-
-    return std::nullopt;
+    return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
 }

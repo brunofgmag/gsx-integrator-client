@@ -19,12 +19,9 @@ class UpdateViewModel final : public QObject, public UpdateServiceObserver
     Q_PROPERTY(bool hasError READ HasError NOTIFY StateChanged)
     Q_PROPERTY(bool canDownload READ CanDownload NOTIFY StateChanged)
     Q_PROPERTY(bool canCheckForUpdates READ CanCheckForUpdates NOTIFY StateChanged)
-    Q_PROPERTY(QString currentVersion READ GetCurrentVersion CONSTANT)
     Q_PROPERTY(QString latestVersion READ GetLatestVersion NOTIFY StateChanged)
     Q_PROPERTY(double progress READ GetProgress NOTIFY ProgressChanged)
-    Q_PROPERTY(QString errorMessage READ GetErrorMessage NOTIFY StateChanged)
     Q_PROPERTY(QString releaseUrl READ GetReleaseUrl NOTIFY StateChanged)
-    Q_PROPERTY(bool checksEnabled READ AreChecksEnabled CONSTANT)
     Q_PROPERTY(bool commbusUpdateAvailable READ IsCommbusUpdateAvailable NOTIFY CommbusChanged)
     Q_PROPERTY(QString commbusInstalledVersion READ GetCommbusInstalledVersion NOTIFY CommbusChanged)
     Q_PROPERTY(QString commbusLatestVersion READ GetCommbusLatestVersion NOTIFY CommbusChanged)
@@ -40,7 +37,6 @@ public:
     Q_ENUM(Mode)
 
     UpdateViewModel(UpdateService* service,
-                    QString currentVersion,
                     int initialMode,
                     bool updatesEnabled,
                     QObject* parent = nullptr);
@@ -54,7 +50,6 @@ public:
     [[nodiscard]] bool HasError() const;
     [[nodiscard]] bool CanDownload() const;
     [[nodiscard]] bool CanCheckForUpdates() const;
-    [[nodiscard]] QString GetCurrentVersion() const;
     [[nodiscard]] QString GetLatestVersion() const;
     [[nodiscard]] double GetProgress() const;
     [[nodiscard]] QString GetErrorMessage() const;
@@ -91,7 +86,6 @@ private:
     void SetState(State state);
 
     UpdateService* service_;
-    QString currentVersion_;
     int mode_;
     bool updatesEnabled_;
 

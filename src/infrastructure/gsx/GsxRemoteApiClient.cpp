@@ -1,4 +1,5 @@
 ﻿#include "GsxRemoteApiClient.h"
+#include "../probe/ProbeLog.h"
 
 #include <algorithm>
 
@@ -125,6 +126,8 @@ bool GsxRemoteApiClient::SendCommand(const QString& verb, const QJsonObject& arg
 
 void GsxRemoteApiClient::OnTextMessage(const QString& text)
 {
+    probe::Wire(text);
+
     const QJsonDocument doc = QJsonDocument::fromJson(text.toUtf8());
     if (!doc.isObject())
     {

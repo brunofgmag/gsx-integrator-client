@@ -36,7 +36,6 @@ public:
     int consumeSmartSwitchCalls = 0;
     int onLoadingStartedCalls = 0;
 
-    [[nodiscard]] const char* GetName() const override { return "Fake Aircraft"; }
     [[nodiscard]] bool IsCargoVariant() const override { return cargo; }
 
     void OnLoadingStarted() override
@@ -68,12 +67,17 @@ public:
     [[nodiscard]] bool IsPowered() const override { return powered; }
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override { return groundPowerStatus; }
 
-    [[nodiscard]] bool SupportsChocksControl() const override { return supportsChocksControl; }
-
-    void SetChocks(const bool placed) override
+    bool SetChocks(const bool placed) override
     {
+        if (!supportsChocksControl)
+        {
+            return false;
+        }
+
         ++setChocksCalls;
         chocksPlaced = placed;
+
+        return true;
     }
 
     [[nodiscard]] bool SupportsGroundPowerControl() const override { return supportsGroundPowerControl; }

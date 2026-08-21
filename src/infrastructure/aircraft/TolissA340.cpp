@@ -1,31 +1,30 @@
 #include "TolissA340.h"
 
+#include "../simvars/SimVars.h"
+
 #include <algorithm>
 #include <array>
 #include <memory>
 #include <string>
+#include <optional>
 #include "AircraftRegistry.h"
+#include "DoorReading.h"
 #include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
 #include "../../domain/model/FlightPlan.h"
 #include "../../domain/model/AutomationStatus.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
 
+using namespace simvars;
+
 namespace
 {
-    constexpr auto kSimFuelTotalKg = "FUEL TOTAL QUANTITY WEIGHT";
-    constexpr auto kSimTotalWeight = "TOTAL WEIGHT";
-    constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
-    constexpr auto kKgUnit = "kg";
 
     constexpr std::array kMcduUplinkKeys = {"AB_MCDU3_MENU", "AB_MCDU3_LSK6L", "AB_MCDU3_LSK1R", "AB_MCDU3_LSK1L"};
 
-    constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
-    constexpr auto kSimBeaconLight = "LIGHT BEACON";
     constexpr std::array kEngineFuelFlowLvars = {
         "TLS_ENG1_FUEL_FLOW", "TLS_ENG2_FUEL_FLOW", "TLS_ENG3_FUEL_FLOW", "TLS_ENG4_FUEL_FLOW"
     };
-    constexpr auto kBoolUnit = "Bool";
 
     constexpr auto kSmartSwitchLVar = "AB_ACP_CPT_RTU_Switch";
     constexpr double kSmartSwitchNeutral = 1.0;
@@ -57,6 +56,27 @@ namespace
     constexpr auto kPaxDoorMode4RLVar = "TLS_PAX_DOOR_MODE_4R";
     constexpr double kDoorOpen = 2.0;
     constexpr double kDoorClosed = 0.0;
+
+    constexpr std::array kDoorModeLVars =
+        {kCargoDoorModeFwdLVar, kCargoDoorModeAftLVar,
+         kPaxDoorMode1LLVar, kPaxDoorMode2LLVar, kPaxDoorMode3LLVar, kPaxDoorMode4LLVar,
+         kPaxDoorMode1RLVar, kPaxDoorMode2RLVar, kPaxDoorMode3RLVar, kPaxDoorMode4RLVar};
+
+    std::optional<bool> DoorOpenByMode(VariableGateway& variables, const char* modeLVar)
+    {
+        if (!variables.HasReceivedLVar(modeLVar))
+        {
+            return std::nullopt;
+        }
+
+        const double mode = variables.GetLVar(modeLVar, kDoorOpen);
+        if (mode == kDoorClosed)
+        {
+            return false;
+        }
+
+        return mode == kDoorOpen ? std::optional{true} : std::nullopt;
+    }
 
     const char* DoorModeLVar(const GsxDoor door)
     {
@@ -90,7 +110,7 @@ namespace
     }
 }
 
-TolissA340::TolissA340(VariableGateway* variableGateway, AutomationStatus* status, const bool cargoVariant)
+TolissA340::TolissA340(VariableGateway* variableGateway, const AutomationStatus* status, const bool cargoVariant)
     : variableGateway_(variableGateway),
       status_(status),
       cargoVariant_(cargoVariant),
@@ -158,6 +178,18 @@ void TolissA340::OnLoadingStarted()
     LOG_INFO("SimBrief uplink armed: waiting for the MCDU to be available");
 }
 
+DoorStatus TolissA340::GetDoorStatus() const
+{
+    DoorStatus status = doors::kNoDoorsSeen;
+
+    for (const char* modeLVar : kDoorModeLVars)
+    {
+        status = doors::Combine(status, DoorOpenByMode(*variableGateway_, modeLVar));
+    }
+
+    return status;
+}
+
 void TolissA340::CloseAllDoors()
 {
     doors_.CloseAll([this](const GsxDoor door, bool)
@@ -202,28 +234,22 @@ int TolissA340::GetPlannedPassengers() const
 
 double TolissA340::GetEmptyZfwKg() const
 {
-    return variableGateway_->GetAVar(kSimEmptyWeight, kKgUnit, 0.0);
+    return EmptyZfwKg(*variableGateway_);
 }
 
 double TolissA340::GetCurrentFuelKg() const
 {
-    return variableGateway_->GetAVar(kSimFuelTotalKg, kKgUnit, 0.0);
-}
-
-void TolissA340::SetCurrentFuelKg(double)
-{
+    return CurrentFuelKg(*variableGateway_);
 }
 
 double TolissA340::GetCurrentZfwKg() const
 {
-    const double totalWeightKg =
-        variableGateway_->GetAVar(kSimTotalWeight, kKgUnit, GetEmptyZfwKg());
+    if (!variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit))
+    {
+        return 0.0;
+    }
 
-    return std::max(totalWeightKg - GetCurrentFuelKg(), GetEmptyZfwKg());
-}
-
-void TolissA340::SetCurrentZfwKg(double)
-{
+    return CurrentZfwKg(*variableGateway_);
 }
 
 bool TolissA340::ConsumeSmartSwitch()

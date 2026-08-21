@@ -12,6 +12,7 @@ inline AutomationSettings ResolveAutomationSettings(const AppSettings& settings,
     result.fuelRateKgs = settings.fuelRateKgs;
     result.autoSelectGsxChoice = settings.autoSelectGsxChoice;
     result.autoDeice = settings.autoDeice;
+    result.useAircraftStairs = settings.useAircraftStairs;
     result.crewBoarding = static_cast<CrewBoarding>(settings.crewBoarding);
     result.autoStartFlow = settings.autoStartFlow;
     result.autoStartLoading = settings.autoStartLoading;

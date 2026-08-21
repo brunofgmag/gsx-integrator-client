@@ -1,4 +1,5 @@
 #include <QtCore/QLocale>
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 #include "TestDoubles.h"
@@ -46,6 +47,8 @@ private slots:
     static void settingSameThemeModeIsNoOp();
     static void systemThemeUsesInjectedProvider();
     static void languagePersistsImmediately();
+    static void rendererDefaultsToSoftwareAndPersists();
+    static void activeRendererStaysEmptyUntilReported();
     static void updateModeDefaultsToNotify();
     static void updateModePersistsImmediately();
     static void weightUnitModeDefaultsToAutoAndPersists();
@@ -501,6 +504,39 @@ void SettingsViewModelTest::languagePersistsImmediately()
     QVERIFY(repository.stored.language == "pt_BR");
     QVERIFY(service.appliedSettings.language == "pt_BR");
     QCOMPARE(viewModel.GetLanguage(), QStringLiteral("pt_BR"));
+}
+
+void SettingsViewModelTest::rendererDefaultsToSoftwareAndPersists()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    QCOMPARE(viewModel.GetRenderer(), QStringLiteral("software"));
+
+    viewModel.SetRenderer(QStringLiteral("d3d12"));
+
+    QVERIFY(repository.stored.renderer == "d3d12");
+    QCOMPARE(viewModel.GetRenderer(), QStringLiteral("d3d12"));
+}
+
+void SettingsViewModelTest::activeRendererStaysEmptyUntilReported()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(viewModel.GetActiveRenderer().isEmpty());
+
+    const QSignalSpy spy(&viewModel, &SettingsViewModel::ActiveRendererChanged);
+    viewModel.SetActiveRenderer(QStringLiteral("opengl"));
+
+    QCOMPARE(viewModel.GetActiveRenderer(), QStringLiteral("opengl"));
+    QCOMPARE(spy.count(), 1);
+
+    viewModel.SetActiveRenderer(QStringLiteral("opengl"));
+
+    QCOMPARE(spy.count(), 1);
 }
 
 void SettingsViewModelTest::updateModeDefaultsToNotify()

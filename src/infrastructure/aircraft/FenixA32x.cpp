@@ -1,5 +1,7 @@
 #include "FenixA32x.h"
 
+#include "../simvars/SimVars.h"
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -10,6 +12,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <QtCore/QStringList>
 #include "AircraftRegistry.h"
 #include "../fenix/FenixEfbClient.h"
 #include "../gsx/GsxLVars.h"
@@ -17,22 +20,19 @@
 #include "../../domain/ports/GsxGateway.h"
 #include "../../domain/turnaround/TurnaroundMath.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
+#include "../probe/ProbeLog.h"
+
+using namespace simvars;
 
 namespace
 {
-    constexpr auto kSimFuelTotalKg = "FUEL TOTAL QUANTITY WEIGHT";
-    constexpr auto kSimTotalWeight = "TOTAL WEIGHT";
-    constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
-    constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
-    constexpr auto kSimBeaconLight = "LIGHT BEACON";
-    constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
-    constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
-    constexpr auto kKgUnit = "kg";
-    constexpr auto kBoolUnit = "Bool";
 
     constexpr auto kSmartSwitchLVar = "S_ASP_INTRAD";
     constexpr double kSmartSwitchNeutral = 1.0;
     constexpr double kSmartSwitchIntercom = 0.0;
+
+    constexpr int kEngineCount = 2;
+    constexpr double kEngineRunningDefault = 1.0;
 
     constexpr auto kParkingBrakeLVar = "S_MIP_PARKING_BRAKE";
     constexpr auto kDcEssBusPoweredLVar = "B_ELEC_BUS_POWER_DC_ESS";
@@ -66,6 +66,19 @@ namespace
     constexpr auto kAftCateringDoorDataref = "doors.entry.d4r";
     constexpr auto kFwdCargoDoorDataref = "doors.cargo.forward";
     constexpr auto kAftCargoDoorDataref = "doors.cargo.aft";
+
+    constexpr auto kThirdLeftDoorCandidate = "doors.entry.d3l";
+    constexpr auto kSecondRightDoorCandidate = "doors.entry.d2r";
+    constexpr auto kThirdRightDoorCandidate = "doors.entry.d3r";
+    constexpr auto kBulkCargoDoorCandidate = "doors.cargo.bulk";
+
+    constexpr std::array kProbeDoorDatarefs = {
+        kFwdPaxDoorDataref, kMidPaxDoorDataref, kAftPaxDoorDataref,
+        kFwdCateringDoorDataref, kAftCateringDoorDataref,
+        kFwdCargoDoorDataref, kAftCargoDoorDataref,
+        kThirdLeftDoorCandidate, kSecondRightDoorCandidate,
+        kThirdRightDoorCandidate, kBulkCargoDoorCandidate
+    };
 
     const char* DoorDataref(const GsxDoor door)
     {
@@ -145,6 +158,14 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
     efb_->Subscribe(kCargoTargetDataref);
     efb_->Subscribe(kWeightUnitDataref);
 
+    if (probe::IsOn())
+    {
+        for (const char* dataref : kProbeDoorDatarefs)
+        {
+            efb_->Subscribe(dataref);
+        }
+    }
+
     LOG_INFO("Profile loaded: %s", GetName());
 }
 
@@ -172,6 +193,26 @@ void FenixA32x::OnTick()
     EnsureEfbInitialized();
     UpdateDoors();
     DisarmRefuelSystemWhenDone();
+    ReportProbe();
+}
+
+void FenixA32x::ReportProbe() const
+{
+    if (!probe::IsOn())
+    {
+        return;
+    }
+
+    QStringList doors;
+    for (const char* dataref : kProbeDoorDatarefs)
+    {
+        doors.append(QStringLiteral("%1=%2").arg(QLatin1String(dataref))
+                     .arg(efb_->GetNumber(dataref, -1.0), 0, 'f', 3));
+    }
+
+    probe::Change("fenix.doors", QStringLiteral("efb   fenix available=%1 %2")
+                  .arg(efb_->IsAvailable() ? 1 : 0)
+                  .arg(doors.join(QLatin1Char(' '))));
 }
 
 void FenixA32x::EnsureEfbInitialized()
@@ -277,7 +318,7 @@ int FenixA32x::GetPlannedPassengers() const
 
 double FenixA32x::GetEmptyZfwKg() const
 {
-    return variableGateway_->GetAVar(kSimEmptyWeight, kKgUnit, 0.0);
+    return EmptyZfwKg(*variableGateway_);
 }
 
 std::optional<WeightUnit> FenixA32x::GetNativeWeightUnit() const
@@ -300,7 +341,7 @@ std::optional<WeightUnit> FenixA32x::GetNativeWeightUnit() const
 
 double FenixA32x::GetCurrentFuelKg() const
 {
-    return variableGateway_->GetAVar(kSimFuelTotalKg, kKgUnit, 0.0);
+    return CurrentFuelKg(*variableGateway_);
 }
 
 void FenixA32x::SetCurrentFuelKg(const double fuelKg)
@@ -316,10 +357,7 @@ void FenixA32x::SetCurrentFuelKg(const double fuelKg)
 
 double FenixA32x::GetCurrentZfwKg() const
 {
-    const double totalWeightKg =
-        variableGateway_->GetAVar(kSimTotalWeight, kKgUnit, GetEmptyZfwKg());
-
-    return std::max(totalWeightKg - GetCurrentFuelKg(), GetEmptyZfwKg());
+    return CurrentZfwKg(*variableGateway_);
 }
 
 void FenixA32x::SetCurrentZfwKg(const double zfwKg)
@@ -436,9 +474,11 @@ std::optional<GroundPowerStatus> FenixA32x::GetGroundPowerStatus() const
     return connected ? GroundPowerStatus::Connected : GroundPowerStatus::Disconnected;
 }
 
-void FenixA32x::SetChocks(const bool placed)
+bool FenixA32x::SetChocks(const bool placed)
 {
     efb_->SetBool(kChocksDataref, placed);
+
+    return true;
 }
 
 void FenixA32x::SetGroundPower(const bool on)
@@ -460,10 +500,7 @@ bool FenixA32x::IsReadyToDeboard() const
 
 bool FenixA32x::IsEngineRunning() const
 {
-    const bool isEng1Running = variableGateway_->GetAVar(kSimEng1Combustion, kBoolUnit, 1.0) > 0.0;
-    const bool isEng2Running = variableGateway_->GetAVar(kSimEng2Combustion, kBoolUnit, 1.0) > 0.0;
-
-    return isEng1Running || isEng2Running;
+    return AnyEngineCombusting(*variableGateway_, kEngineRunningDefault, kEngineCount);
 }
 
 bool FenixA32x::IsParkingBrakeSet() const

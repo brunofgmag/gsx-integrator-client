@@ -49,6 +49,7 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QCOMPARE(loaded.fuelRateKgs, AutomationSettings::kDefaultFuelRateKgs);
     QCOMPARE(loaded.autoSelectGsxChoice, true);
     QCOMPARE(loaded.autoDeice, false);
+    QCOMPARE(loaded.useAircraftStairs, false);
     QCOMPARE(loaded.crewBoarding, 3);
     QCOMPARE(loaded.autoStartFlow, false);
     QCOMPARE(loaded.autoStartLoading, true);
@@ -62,6 +63,7 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QCOMPARE(loaded.openGsxOnRequests, true);
     QCOMPARE(loaded.themeMode, 2);
     QCOMPARE(loaded.language, std::string("system"));
+    QCOMPARE(loaded.renderer, std::string("software"));
     QCOMPARE(loaded.updateMode, 1);
     QCOMPARE(loaded.closeToTray, false);
     QCOMPARE(loaded.minimizeToTray, true);
@@ -78,6 +80,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     values.fuelRateKgs = 42.5;
     values.autoSelectGsxChoice = false;
     values.autoDeice = true;
+    values.useAircraftStairs = true;
     values.crewBoarding = 1;
     values.autoStartFlow = true;
     values.autoStartLoading = false;
@@ -91,6 +94,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     values.openGsxOnRequests = false;
     values.themeMode = 0;
     values.language = "pt_BR";
+    values.renderer = "opengl";
     values.updateMode = 2;
     values.closeToTray = true;
     values.minimizeToTray = false;
@@ -117,6 +121,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     QCOMPARE(loaded.fuelRateKgs, values.fuelRateKgs);
     QCOMPARE(loaded.autoSelectGsxChoice, values.autoSelectGsxChoice);
     QCOMPARE(loaded.autoDeice, values.autoDeice);
+    QCOMPARE(loaded.useAircraftStairs, values.useAircraftStairs);
     QCOMPARE(loaded.crewBoarding, values.crewBoarding);
     QCOMPARE(loaded.autoStartFlow, values.autoStartFlow);
     QCOMPARE(loaded.autoStartLoading, values.autoStartLoading);
@@ -130,6 +135,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     QCOMPARE(loaded.openGsxOnRequests, values.openGsxOnRequests);
     QCOMPARE(loaded.themeMode, values.themeMode);
     QCOMPARE(loaded.language, values.language);
+    QCOMPARE(loaded.renderer, values.renderer);
     QCOMPARE(loaded.updateMode, values.updateMode);
     QCOMPARE(loaded.closeToTray, values.closeToTray);
     QCOMPARE(loaded.minimizeToTray, values.minimizeToTray);

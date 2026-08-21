@@ -26,6 +26,8 @@ public:
     int boardedPassengers = 0;
     int deboardedPassengers = 0;
     double cargoPercent = 0.0;
+    bool loadingCargo = false;
+    bool loaderWaitingForDoor = false;
     double deboardingCargoPercent = 0.0;
     bool refuelingCompleted = false;
     bool boardingCompleted = false;
@@ -43,7 +45,6 @@ public:
     bool gpuInProgress = false;
     bool departureInProgress = false;
 
-    [[nodiscard]] bool IsAvailable() const override { return true; }
 
     [[nodiscard]] GsxStateStatus GetStateStatus(const GsxState state) override
     {
@@ -91,6 +92,8 @@ public:
     [[nodiscard]] int GetBoardedPassengers() override { return boardedPassengers; }
     [[nodiscard]] int GetDeboardedPassengers() override { return deboardedPassengers; }
     [[nodiscard]] double GetBoardingCargoPercent() const override { return cargoPercent; }
+    [[nodiscard]] bool IsLoadingCargo() const override { return loadingCargo; }
+    [[nodiscard]] bool IsLoaderWaitingForDoor() const override { return loaderWaitingForDoor; }
     [[nodiscard]] double GetDeboardingCargoPercent() const override { return deboardingCargoPercent; }
     [[nodiscard]] bool AreStairsInPlace() const override { return stairsInPlace; }
     [[nodiscard]] bool IsJetwayInPlace() const override { return jetwayInPlace; }

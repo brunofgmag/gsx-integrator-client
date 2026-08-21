@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <memory>
 #include "doubles/FakePmdg777DataGateway.h"
-#include "doubles/FakePmdg777TabletGateway.h"
+#include "doubles/FakePmdgTabletGateway.h"
 #include "doubles/FakeVariableGateway.h"
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/infrastructure/aircraft/Pmdg777.h"
@@ -15,19 +15,24 @@ namespace
     constexpr auto kSmartSwitchFoLVar = "switch_773_a";
     constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
     constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
+    constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
+
+    constexpr int kDoorStateOpen = 0;
+    constexpr int kDoorStateClosed = 1;
+    constexpr int kDoorStateClosing = 3;
 
     struct Pmdg777Fixture
     {
         FakeVariableGateway gateway;
         AutomationStatus status;
         FakePmdg777DataGateway* data = nullptr;
-        FakePmdg777TabletGateway* tablet = nullptr;
+        FakePmdgTabletGateway* tablet = nullptr;
         std::unique_ptr<Pmdg777> aircraft;
 
         explicit Pmdg777Fixture(const Pmdg777Variant variant = Pmdg777Variant::Er300)
         {
             auto dataGateway = std::make_unique<FakePmdg777DataGateway>();
-            auto tabletGateway = std::make_unique<FakePmdg777TabletGateway>();
+            auto tabletGateway = std::make_unique<FakePmdgTabletGateway>();
             data = dataGateway.get();
             tablet = tabletGateway.get();
             aircraft = std::make_unique<Pmdg777>(&gateway, &status, variant,
@@ -70,6 +75,11 @@ private slots:
     static void poweredByRunningEngine();
     static void engineRunningConservativeUntilReceived();
     static void parkingBrakeRequiresClientData();
+    static void parkingBrakeAcceptsTheSimVariableWithoutTheSdkBlock();
+    static void doorStatusUnknownUntilClientDataArrives();
+    static void doorStatusOpenWhenASdkDoorReadsOpen();
+    static void doorStatusUnknownWhileADoorIsMoving();
+    static void doorStatusAllClosedWhenEverySdkDoorReadsClosed();
     static void smartSwitchEdgesOncePerPress();
     static void smartSwitchWorksFromBothSeats();
     static void smartSwitchCatchesTransientPress();
@@ -90,12 +100,15 @@ private slots:
     static void doorsTakeOverGsxDoorAutomation();
     static void doorsSkipTogglesWhileMoving();
     static void doorsHoldBeforeClientData();
+    static void doorThatIgnoresTheCommandStopsAfterTwoRetries();
+    static void mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses();
     static void closeAllDoorsTogglesOpenMappedDoors();
     static void chocksReconcileWithRetryCap();
-    static void parsesOptionsDataBroadcastFlag();
     static void zfwTrimsCargoAgainstActualWeight();
+    static void progressiveWriterDoesNotUndoTheTrim();
     static void jetwayDoorClosesAtItsOpenedIndex();
     static void aftCateringDoorOpensFiveRightOnlyOn300();
+    static void aftPaxDoorOpensFiveLeftOnlyOn300();
     static void groundPowerConnectFlow();
     static void groundPowerDisconnectFlow();
 };
@@ -203,6 +216,54 @@ void Pmdg777Test::parkingBrakeRequiresClientData()
     fixture.data->hasData = true;
 
     QVERIFY(fixture.aircraft->IsParkingBrakeSet());
+}
+
+void Pmdg777Test::parkingBrakeAcceptsTheSimVariableWithoutTheSdkBlock()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->parkingBrakeOn = false;
+    fixture.gateway.avars[kSimParkingBrake] = 1.0;
+
+    QVERIFY(fixture.aircraft->IsParkingBrakeSet());
+}
+
+void Pmdg777Test::doorStatusUnknownUntilClientDataArrives()
+{
+    const Pmdg777Fixture fixture;
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
+}
+
+void Pmdg777Test::doorStatusOpenWhenASdkDoorReadsOpen()
+{
+    const Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->doorStates[3] = kDoorStateOpen;
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void Pmdg777Test::doorStatusUnknownWhileADoorIsMoving()
+{
+    const Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->doorStates[2] = kDoorStateClosing;
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
+}
+
+void Pmdg777Test::doorStatusAllClosedWhenEverySdkDoorReadsClosed()
+{
+    const Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->doorStates.fill(kDoorStateClosed);
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::AllClosed);
 }
 
 void Pmdg777Test::smartSwitchEdgesOncePerPress()
@@ -535,6 +596,62 @@ void Pmdg777Test::doorsHoldBeforeClientData()
     QVERIFY(fixture.data->toggledDoors.empty());
 }
 
+void Pmdg777Test::doorThatIgnoresTheCommandStopsAfterTwoRetries()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    fixture.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        fixture.aircraft->OnTick();
+    }
+
+    const auto toggles = std::ranges::count(fixture.data->toggledDoors, 12);
+
+    QCOMPARE(toggles, 3);
+}
+
+void Pmdg777Test::mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses()
+{
+    Pmdg777Fixture freighter(Pmdg777Variant::Freighter);
+
+    freighter.data->hasData = true;
+    freighter.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    freighter.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
+
+    freighter.aircraft->OnTick();
+
+    QVERIFY(!freighter.aircraft->IsMainDeckCargoDoorStuck());
+
+    for (int tick = 0; tick < 12; ++tick)
+    {
+        freighter.aircraft->OnTick();
+    }
+
+    QVERIFY(freighter.aircraft->IsMainDeckCargoDoorStuck());
+
+    freighter.data->doorStates[12] = 0;
+    freighter.aircraft->OnTick();
+
+    QVERIFY(!freighter.aircraft->IsMainDeckCargoDoorStuck());
+
+    Pmdg777Fixture passenger(Pmdg777Variant::Er200);
+
+    passenger.data->hasData = true;
+    passenger.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    passenger.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        passenger.aircraft->OnTick();
+    }
+
+    QVERIFY(!passenger.aircraft->IsMainDeckCargoDoorStuck());
+}
+
 void Pmdg777Test::closeAllDoorsTogglesOpenMappedDoors()
 {
     const Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
@@ -557,7 +674,7 @@ void Pmdg777Test::chocksReconcileWithRetryCap()
 
     fixture.data->hasData = true;
 
-    fixture.aircraft->SetChocks(true);
+    QVERIFY(fixture.aircraft->SetChocks(true));
     fixture.aircraft->OnTick();
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
@@ -639,15 +756,6 @@ void Pmdg777Test::groundPowerDisconnectFlow()
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
 }
 
-void Pmdg777Test::parsesOptionsDataBroadcastFlag()
-{
-    QVERIFY(Pmdg777::OptionsEnableDataBroadcast("[SDK]\r\nEnableDataBroadcast=1\r\n"));
-    QVERIFY(Pmdg777::OptionsEnableDataBroadcast("[Misc]\nFoo=2\n[SDK]\nEnableDataBroadcast = 1\n"));
-    QVERIFY(!Pmdg777::OptionsEnableDataBroadcast("[SDK]\nEnableDataBroadcast=0\n"));
-    QVERIFY(!Pmdg777::OptionsEnableDataBroadcast("[Misc]\nEnableDataBroadcast=1\n"));
-    QVERIFY(!Pmdg777::OptionsEnableDataBroadcast(""));
-}
-
 void Pmdg777Test::zfwTrimsCargoAgainstActualWeight()
 {
     Pmdg777Fixture fixture(Pmdg777Variant::Er300);
@@ -682,6 +790,39 @@ void Pmdg777Test::zfwTrimsCargoAgainstActualWeight()
     QVERIFY(fixture.tablet->cargoSends.size() <= static_cast<std::size_t>(6));
 }
 
+void Pmdg777Test::progressiveWriterDoesNotUndoTheTrim()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Er300);
+
+    fixture.data->hasData = true;
+    fixture.SeedWeights(160000.0, 200000.0, 300);
+    fixture.gateway.avars["FUEL TOTAL QUANTITY WEIGHT"] = 0.0;
+    fixture.gateway.avars["TOTAL WEIGHT"] = 201200.0;
+
+    fixture.aircraft->SetCurrentZfwKg(200000.0);
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(1));
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        fixture.aircraft->SetCurrentZfwKg(200000.0);
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
+
+    const int trimmedCargo = fixture.tablet->cargoSends[1];
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        fixture.aircraft->SetCurrentZfwKg(200000.0);
+        fixture.aircraft->OnTick();
+    }
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
+    QCOMPARE(fixture.tablet->cargoSends.back(), trimmedCargo);
+}
+
 void Pmdg777Test::jetwayDoorClosesAtItsOpenedIndex()
 {
     Pmdg777Fixture fixture(Pmdg777Variant::Er300);
@@ -699,6 +840,29 @@ void Pmdg777Test::jetwayDoorClosesAtItsOpenedIndex()
     fixture.aircraft->OnTick();
 
     QCOMPARE(fixture.data->toggledDoors, (std::vector{2, 2}));
+}
+
+void Pmdg777Test::aftPaxDoorOpensFiveLeftOnlyOn300()
+{
+    Pmdg777Fixture er300(Pmdg777Variant::Er300);
+    er300.data->hasData = true;
+    er300.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    er300.gateway.lvars["FSDT_GSX_VEHICLE_PASSENGERSTAIRSREAR_STATE"] = 3.0;
+
+    er300.aircraft->OnTick();
+
+    QVERIFY(std::ranges::find(er300.data->toggledDoors, 8) != er300.data->toggledDoors.end());
+    QVERIFY(std::ranges::find(er300.data->toggledDoors, 4) == er300.data->toggledDoors.end());
+
+    Pmdg777Fixture er200(Pmdg777Variant::Er200);
+    er200.data->hasData = true;
+    er200.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    er200.gateway.lvars["FSDT_GSX_VEHICLE_PASSENGERSTAIRSREAR_STATE"] = 3.0;
+
+    er200.aircraft->OnTick();
+
+    QVERIFY(std::ranges::find(er200.data->toggledDoors, 6) != er200.data->toggledDoors.end());
+    QVERIFY(std::ranges::find(er200.data->toggledDoors, 8) == er200.data->toggledDoors.end());
 }
 
 void Pmdg777Test::aftCateringDoorOpensFiveRightOnlyOn300()

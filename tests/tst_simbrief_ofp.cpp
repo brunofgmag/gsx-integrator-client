@@ -8,6 +8,7 @@ class SimbriefOfpTest final : public QObject
 
 private slots:
     static void parsesKilograms();
+    static void readsTheAirportPairAndTheGenerationTime();
     static void convertsPounds();
     static void rejectsIncompletePayload();
     static void rejectsEmptyPayload();
@@ -34,6 +35,23 @@ void SimbriefOfpTest::parsesKilograms()
     QCOMPARE(flightPlan->zfwKg, 180000.0);
     QCOMPARE(flightPlan->passengers, 210);
     QCOMPARE(flightPlan->unit, WeightUnit::Kg);
+}
+
+void SimbriefOfpTest::readsTheAirportPairAndTheGenerationTime()
+{
+    constexpr char payload[] =
+        "<params><time_generated>1786922025</time_generated><units>kgs</units></params>"
+        "<plan_ramp>7444</plan_ramp><est_zfw>57770</est_zfw>"
+        "<origin><icao_code>SBFZ</icao_code><iata_code>FOR</iata_code></origin>"
+        "<destination><icao_code>SBTE</icao_code><iata_code>THE</iata_code></destination>"
+        "<alternate><icao_code>SBSL</icao_code></alternate>";
+
+    const auto flightPlan = ParseSimbriefOfp(payload);
+
+    QVERIFY(flightPlan.has_value());
+    QCOMPARE(flightPlan->origin, std::string("SBFZ"));
+    QCOMPARE(flightPlan->destination, std::string("SBTE"));
+    QCOMPARE(flightPlan->generatedEpoch, 1786922025LL);
 }
 
 void SimbriefOfpTest::convertsPounds()

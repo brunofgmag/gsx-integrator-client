@@ -16,7 +16,6 @@ private slots:
     static void commandsAircraftGpuWhenControlSupported();
     static void advancesWithoutToggleWhenGpuAlreadyConnected();
     static void waitsWhileGpuStatusUnknown();
-    static void holdsToggleWhileMenuUnsettled();
     static void skipsChocksWhenUnsupported();
     static void closesAllDoorsEvenWhenOptionDisabled();
     static void closesAllDoorsOnlyOnce();
@@ -159,23 +158,6 @@ void PlaceArrivalGroundEquipmentStateTest::waitsWhileGpuStatusUnknown()
 
     QVERIFY(!transition.has_value());
     QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
-}
-
-void PlaceArrivalGroundEquipmentStateTest::holdsToggleWhileMenuUnsettled()
-{
-    TurnaroundStateFixture f;
-    PlaceArrivalGroundEquipmentState state;
-
-    f.settings.callGpuOnArrival = true;
-    f.aircraft.parkingBrakeSet = true;
-    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
-    f.menuGateway.menuSettled = false;
-
-    const auto transition = state.Evaluate(f.ctx);
-
-    QVERIFY(!transition.has_value());
-    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
-    QVERIFY(!f.ctx.data.arrivalGpuRequested);
 }
 
 void PlaceArrivalGroundEquipmentStateTest::skipsChocksWhenUnsupported()

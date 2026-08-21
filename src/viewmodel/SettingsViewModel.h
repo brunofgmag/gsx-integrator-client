@@ -26,6 +26,8 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(bool autoSelectGsxChoice READ GetAutoSelectGsxChoice
         WRITE SetAutoSelectGsxChoice NOTIFY AutoSelectGsxChoiceChanged)
     Q_PROPERTY(bool autoDeice READ GetAutoDeice WRITE SetAutoDeice NOTIFY AutoDeiceChanged)
+    Q_PROPERTY(bool useAircraftStairs READ GetUseAircraftStairs
+        WRITE SetUseAircraftStairs NOTIFY UseAircraftStairsChanged)
     Q_PROPERTY(int crewBoarding READ GetCrewBoarding WRITE SetCrewBoarding NOTIFY CrewBoardingChanged)
     Q_PROPERTY(bool autoStartFlow READ GetAutoStartFlow WRITE SetAutoStartFlow NOTIFY AutoStartFlowChanged)
     Q_PROPERTY(bool autoStartLoading READ GetAutoStartLoading WRITE SetAutoStartLoading NOTIFY AutoStartLoadingChanged)
@@ -41,6 +43,8 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(int themeMode READ GetThemeMode WRITE SetThemeMode NOTIFY ThemeModeChanged)
     Q_PROPERTY(bool effectiveDark READ GetEffectiveDark NOTIFY EffectiveDarkChanged)
     Q_PROPERTY(QString language READ GetLanguage WRITE SetLanguage NOTIFY LanguageChanged)
+    Q_PROPERTY(QString renderer READ GetRenderer WRITE SetRenderer NOTIFY RendererChanged)
+    Q_PROPERTY(QString activeRenderer READ GetActiveRenderer NOTIFY ActiveRendererChanged)
     Q_PROPERTY(int updateMode READ GetUpdateMode WRITE SetUpdateMode NOTIFY UpdateModeChanged)
     Q_PROPERTY(int weightUnitMode READ GetWeightUnitMode WRITE SetWeightUnitMode NOTIFY WeightUnitModeChanged)
     Q_PROPERTY(bool closeToTray READ GetCloseToTray WRITE SetCloseToTray NOTIFY CloseToTrayChanged)
@@ -111,6 +115,9 @@ public:
     [[nodiscard]] bool GetAutoDeice() const;
     void SetAutoDeice(bool enabled);
 
+    [[nodiscard]] bool GetUseAircraftStairs() const;
+    void SetUseAircraftStairs(bool enabled);
+
     [[nodiscard]] int GetCrewBoarding() const;
     void SetCrewBoarding(int choice);
 
@@ -153,6 +160,12 @@ public:
 
     [[nodiscard]] QString GetLanguage() const;
     void SetLanguage(const QString& language);
+
+    [[nodiscard]] QString GetRenderer() const;
+    void SetRenderer(const QString& renderer);
+
+    [[nodiscard]] QString GetActiveRenderer() const;
+    void SetActiveRenderer(const QString& renderer);
 
     [[nodiscard]] int GetUpdateMode() const;
     void SetUpdateMode(int mode);
@@ -225,6 +238,7 @@ signals:
     void FuelRateTextChanged();
     void AutoSelectGsxChoiceChanged();
     void AutoDeiceChanged();
+    void UseAircraftStairsChanged();
     void CrewBoardingChanged();
     void AutoStartFlowChanged();
     void AutoStartLoadingChanged();
@@ -239,6 +253,8 @@ signals:
     void ThemeModeChanged();
     void EffectiveDarkChanged();
     void LanguageChanged();
+    void RendererChanged();
+    void ActiveRendererChanged();
     void UpdateModeChanged();
     void WeightUnitModeChanged();
     void WeightUnitDisplayChanged();
@@ -306,6 +322,8 @@ private:
     SettingsRepository* repository_;
     IntegratorService* integratorService_;
     AppSettings settings_;
+
+    QString activeRenderer_;
 
     std::function<bool()> systemDarkProvider_;
 

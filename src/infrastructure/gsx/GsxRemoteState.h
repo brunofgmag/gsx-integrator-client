@@ -7,21 +7,14 @@
 struct GsxRemoteService
 {
     std::string id;
-    std::string displayName;
     std::string state;
     int stateRaw = 0;
-    std::string stateText;
-    std::string statusText;
-    std::string progressText;
     bool canTrigger = false;
-    bool canBypass = false;
 };
 
 struct GsxRemoteMenu
 {
     std::string title;
-    std::string subtitle;
-    std::string header;
     std::vector<std::string> entries;
     std::vector<bool> disabled;
     bool shown = false;

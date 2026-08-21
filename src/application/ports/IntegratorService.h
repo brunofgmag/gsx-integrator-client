@@ -24,6 +24,7 @@ public:
     [[nodiscard]] virtual CommandResult RestartFlow() = 0;
     [[nodiscard]] virtual CommandResult ReloadSimbrief() = 0;
     [[nodiscard]] virtual CommandResult FixGsxProfile() = 0;
+    [[nodiscard]] virtual CommandResult FixPmdgOptions() = 0;
 
     virtual void ApplySettings(const AppSettings& settings) = 0;
 

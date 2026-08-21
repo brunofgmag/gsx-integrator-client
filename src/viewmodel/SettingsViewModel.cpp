@@ -155,6 +155,7 @@ void SettingsViewModel::SetFuelRateText(const QString& rate)
     SetSaveResult({}, false);
 
     emit FuelRateTextChanged();
+    emit ProfileDraftChanged();
     emit ValidationChanged();
 }
 
@@ -176,6 +177,16 @@ bool SettingsViewModel::GetAutoDeice() const
 void SettingsViewModel::SetAutoDeice(const bool enabled)
 {
     SetPersisted(settings_.autoDeice, enabled, &SettingsViewModel::AutoDeiceChanged);
+}
+
+bool SettingsViewModel::GetUseAircraftStairs() const
+{
+    return settings_.useAircraftStairs;
+}
+
+void SettingsViewModel::SetUseAircraftStairs(const bool enabled)
+{
+    SetPersisted(settings_.useAircraftStairs, enabled, &SettingsViewModel::UseAircraftStairsChanged);
 }
 
 int SettingsViewModel::GetCrewBoarding() const
@@ -215,7 +226,10 @@ bool SettingsViewModel::GetSkipReposition() const
 
 void SettingsViewModel::SetSkipReposition(const bool enabled)
 {
-    SetPersisted(settings_.skipReposition, enabled, &SettingsViewModel::SkipRepositionChanged);
+    if (SetPersisted(settings_.skipReposition, enabled, &SettingsViewModel::SkipRepositionChanged))
+    {
+        emit ProfileDraftChanged();
+    }
 }
 
 bool SettingsViewModel::GetCallGpu() const
@@ -225,7 +239,10 @@ bool SettingsViewModel::GetCallGpu() const
 
 void SettingsViewModel::SetCallGpu(const bool enabled)
 {
-    SetPersisted(settings_.callGpu, enabled, &SettingsViewModel::CallGpuChanged);
+    if (SetPersisted(settings_.callGpu, enabled, &SettingsViewModel::CallGpuChanged))
+    {
+        emit ProfileDraftChanged();
+    }
 }
 
 bool SettingsViewModel::GetCallGpuOnArrival() const
@@ -235,7 +252,10 @@ bool SettingsViewModel::GetCallGpuOnArrival() const
 
 void SettingsViewModel::SetCallGpuOnArrival(const bool enabled)
 {
-    SetPersisted(settings_.callGpuOnArrival, enabled, &SettingsViewModel::CallGpuOnArrivalChanged);
+    if (SetPersisted(settings_.callGpuOnArrival, enabled, &SettingsViewModel::CallGpuOnArrivalChanged))
+    {
+        emit ProfileDraftChanged();
+    }
 }
 
 bool SettingsViewModel::GetCallCatering() const
@@ -245,7 +265,10 @@ bool SettingsViewModel::GetCallCatering() const
 
 void SettingsViewModel::SetCallCatering(const bool enabled)
 {
-    SetPersisted(settings_.callCatering, enabled, &SettingsViewModel::CallCateringChanged);
+    if (SetPersisted(settings_.callCatering, enabled, &SettingsViewModel::CallCateringChanged))
+    {
+        emit ProfileDraftChanged();
+    }
 }
 
 bool SettingsViewModel::GetCallLavatory() const
@@ -255,7 +278,10 @@ bool SettingsViewModel::GetCallLavatory() const
 
 void SettingsViewModel::SetCallLavatory(const bool enabled)
 {
-    SetPersisted(settings_.callLavatory, enabled, &SettingsViewModel::CallLavatoryChanged);
+    if (SetPersisted(settings_.callLavatory, enabled, &SettingsViewModel::CallLavatoryChanged))
+    {
+        emit ProfileDraftChanged();
+    }
 }
 
 bool SettingsViewModel::GetCallWater() const
@@ -265,7 +291,10 @@ bool SettingsViewModel::GetCallWater() const
 
 void SettingsViewModel::SetCallWater(const bool enabled)
 {
-    SetPersisted(settings_.callWater, enabled, &SettingsViewModel::CallWaterChanged);
+    if (SetPersisted(settings_.callWater, enabled, &SettingsViewModel::CallWaterChanged))
+    {
+        emit ProfileDraftChanged();
+    }
 }
 
 bool SettingsViewModel::GetCallCleaning() const
@@ -275,7 +304,10 @@ bool SettingsViewModel::GetCallCleaning() const
 
 void SettingsViewModel::SetCallCleaning(const bool enabled)
 {
-    SetPersisted(settings_.callCleaning, enabled, &SettingsViewModel::CallCleaningChanged);
+    if (SetPersisted(settings_.callCleaning, enabled, &SettingsViewModel::CallCleaningChanged))
+    {
+        emit ProfileDraftChanged();
+    }
 }
 
 bool SettingsViewModel::GetOpenGsxOnRequests() const
@@ -334,6 +366,33 @@ QString SettingsViewModel::GetLanguage() const
 void SettingsViewModel::SetLanguage(const QString& language)
 {
     SetPersisted(settings_.language, language.toStdString(), &SettingsViewModel::LanguageChanged);
+}
+
+QString SettingsViewModel::GetRenderer() const
+{
+    return QString::fromStdString(settings_.renderer);
+}
+
+void SettingsViewModel::SetRenderer(const QString& renderer)
+{
+    SetPersisted(settings_.renderer, renderer.toStdString(), &SettingsViewModel::RendererChanged);
+}
+
+QString SettingsViewModel::GetActiveRenderer() const
+{
+    return activeRenderer_;
+}
+
+void SettingsViewModel::SetActiveRenderer(const QString& renderer)
+{
+    if (activeRenderer_ == renderer)
+    {
+        return;
+    }
+
+    activeRenderer_ = renderer;
+
+    emit ActiveRendererChanged();
 }
 
 int SettingsViewModel::GetUpdateMode() const
@@ -712,7 +771,7 @@ void SettingsViewModel::SetProfileUseGlobal(const bool useGlobal)
 
 QString SettingsViewModel::GetProfileFuelRateText() const
 {
-    return SelectedDraft().fuelRateText;
+    return SelectedDraft().useGlobal ? fuelRateText_ : SelectedDraft().fuelRateText;
 }
 
 void SettingsViewModel::SetProfileFuelRateText(const QString& rate)
@@ -729,7 +788,7 @@ void SettingsViewModel::SetProfileFuelRateText(const QString& rate)
 
 bool SettingsViewModel::GetProfileSkipReposition() const
 {
-    return SelectedDraft().skipReposition;
+    return SelectedDraft().useGlobal ? settings_.skipReposition : SelectedDraft().skipReposition;
 }
 
 void SettingsViewModel::SetProfileSkipReposition(const bool enabled)
@@ -739,7 +798,7 @@ void SettingsViewModel::SetProfileSkipReposition(const bool enabled)
 
 bool SettingsViewModel::GetProfileCallGpu() const
 {
-    return SelectedDraft().callGpu;
+    return SelectedDraft().useGlobal ? settings_.callGpu : SelectedDraft().callGpu;
 }
 
 void SettingsViewModel::SetProfileCallGpu(const bool enabled)
@@ -749,7 +808,7 @@ void SettingsViewModel::SetProfileCallGpu(const bool enabled)
 
 bool SettingsViewModel::GetProfileCallGpuOnArrival() const
 {
-    return SelectedDraft().callGpuOnArrival;
+    return SelectedDraft().useGlobal ? settings_.callGpuOnArrival : SelectedDraft().callGpuOnArrival;
 }
 
 void SettingsViewModel::SetProfileCallGpuOnArrival(const bool enabled)
@@ -759,7 +818,7 @@ void SettingsViewModel::SetProfileCallGpuOnArrival(const bool enabled)
 
 bool SettingsViewModel::GetProfileCallCatering() const
 {
-    return SelectedDraft().callCatering;
+    return SelectedDraft().useGlobal ? settings_.callCatering : SelectedDraft().callCatering;
 }
 
 void SettingsViewModel::SetProfileCallCatering(const bool enabled)
@@ -769,7 +828,7 @@ void SettingsViewModel::SetProfileCallCatering(const bool enabled)
 
 bool SettingsViewModel::GetProfileCallLavatory() const
 {
-    return SelectedDraft().callLavatory;
+    return SelectedDraft().useGlobal ? settings_.callLavatory : SelectedDraft().callLavatory;
 }
 
 void SettingsViewModel::SetProfileCallLavatory(const bool enabled)
@@ -779,7 +838,7 @@ void SettingsViewModel::SetProfileCallLavatory(const bool enabled)
 
 bool SettingsViewModel::GetProfileCallWater() const
 {
-    return SelectedDraft().callWater;
+    return SelectedDraft().useGlobal ? settings_.callWater : SelectedDraft().callWater;
 }
 
 void SettingsViewModel::SetProfileCallWater(const bool enabled)
@@ -789,7 +848,7 @@ void SettingsViewModel::SetProfileCallWater(const bool enabled)
 
 bool SettingsViewModel::GetProfileCallCleaning() const
 {
-    return SelectedDraft().callCleaning;
+    return SelectedDraft().useGlobal ? settings_.callCleaning : SelectedDraft().callCleaning;
 }
 
 void SettingsViewModel::SetProfileCallCleaning(const bool enabled)

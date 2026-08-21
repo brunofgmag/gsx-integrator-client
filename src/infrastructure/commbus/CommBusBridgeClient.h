@@ -41,6 +41,7 @@ private:
         Handler handler;
     };
 
+    void OnRxData(const void* data, DWORD size);
     void SendEnvelope(const std::string& envelope) const;
 
     SimConnectSession session_;

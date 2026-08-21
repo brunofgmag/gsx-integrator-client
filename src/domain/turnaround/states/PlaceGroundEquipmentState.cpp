@@ -19,9 +19,8 @@ std::optional<TurnaroundTransition> PlaceGroundEquipmentState::Evaluate(Turnarou
         return TurnaroundTransition{TurnaroundPhase::CallServices};
     }
 
-    if (ctx.aircraft->SupportsChocksControl() && !ctx.data.chocksPlaced)
+    if (!ctx.data.chocksPlaced && ctx.aircraft->SetChocks(true))
     {
-        ctx.aircraft->SetChocks(true);
         ctx.data.chocksPlaced = true;
     }
 
@@ -46,16 +45,8 @@ std::optional<TurnaroundTransition> PlaceGroundEquipmentState::Evaluate(Turnarou
         return TurnaroundTransition{TurnaroundPhase::CallServices};
     }
 
-    if (!ctx.menuGateway->IsMenuSettled())
-    {
-        return std::nullopt;
-    }
+    ctx.menuGateway->ToggleGpu();
+    ctx.data.gpuRequested = true;
 
-    if (ctx.menuGateway->ToggleGpu())
-    {
-        ctx.data.gpuRequested = true;
-        return TurnaroundTransition{TurnaroundPhase::CallServices};
-    }
-
-    return std::nullopt;
+    return TurnaroundTransition{TurnaroundPhase::CallServices};
 }

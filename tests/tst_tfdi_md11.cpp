@@ -46,9 +46,19 @@ namespace
     constexpr auto kPaxDoor1L = "MD11_EXT_DOOR_CMD_PAX_1L";
     constexpr auto kPaxDoor2L = "MD11_EXT_DOOR_CMD_PAX_2L";
     constexpr auto kPaxDoor4L = "MD11_EXT_DOOR_CMD_PAX_4L";
-    constexpr auto kCargoDoor1R = "MD11_EXT_DOOR_CMD_CARGO1R";
-    constexpr auto kCargoDoor2R = "MD11_EXT_DOOR_CMD_CARGO2R";
+    constexpr auto kCargoDoor1R = "MD11_EXT_DOOR_CMD_CARGO_1R";
+    constexpr auto kCargoDoor2R = "MD11_EXT_DOOR_CMD_CARGO_2R";
     constexpr auto kCargoDoorMain = "MD11_EXT_DOOR_CMD_CARGO_MAIN";
+    constexpr auto kPaxDoor1LState = "MD11_EXT_DOOR_PAX_1L";
+    constexpr auto kPaxDoor2LState = "MD11_EXT_DOOR_PAX_2L";
+    constexpr auto kPaxDoor4LState = "MD11_EXT_DOOR_PAX_4L";
+    constexpr auto kCargoDoor1RState = "MD11_EXT_DOOR_CARGO_1R";
+    constexpr auto kCargoDoor2RState = "MD11_EXT_DOOR_CARGO_2R";
+    constexpr auto kCargoDoorMainState = "MD11_EXT_DOOR_CARGO_MAIN";
+
+    constexpr std::array kDoorStateLVars =
+        {kPaxDoor1LState, kPaxDoor2LState, kPaxDoor4LState,
+         kCargoDoor1RState, kCargoDoor2RState, kCargoDoorMainState};
 
     constexpr double kEmptyOperatingZfwKg = 130000.0;
     constexpr double kMtowKg = 283730.0;
@@ -68,6 +78,8 @@ private slots:
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
+    static void currentZfwHoldsAtZeroUntilEmptyWeightArrives();
+    static void commitWaitsForEmptyWeightToArrive();
     static void plannedValuesComeFromSession();
     static void flightPlanLoadedWhenSessionReady();
     static void smartSwitchConsumesAndClearsLVar();
@@ -96,6 +108,9 @@ private slots:
     static void paxDoorsOpenPerStairsAndCloseWhenGone();
     static void paxDoorsOpenOnlyAtFinalPosition();
     static void paxDoorsUntouchedWithoutGsx();
+    static void doorStatusReadsStateFamilyAndNotTheCommandEcho();
+    static void doorStatusUnknownUntilDoorDataArrives();
+    static void doorStatusAllClosedWhenEveryStateReadsClosed();
     static void reportsLoadMethods();
 };
 
@@ -146,6 +161,42 @@ void TfdiMd11Test::currentZfwDoesNotDropBelowEmptyWeight()
     gateway.avars[kSimTotalWeight] = 100000.0;
 
     QCOMPARE(aircraft.GetCurrentZfwKg(), kEmptyOperatingZfwKg);
+}
+
+void TfdiMd11Test::currentZfwHoldsAtZeroUntilEmptyWeightArrives()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.avars[kSimTotalWeight] = 200000.0;
+    gateway.avars[kSimFuelTotalKg] = 20000.0;
+
+    QCOMPARE(aircraft.GetCurrentZfwKg(), 0.0);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+
+    QCOMPARE(aircraft.GetCurrentZfwKg(), 180000.0);
+}
+
+void TfdiMd11Test::commitWaitsForEmptyWeightToArrive()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    aircraft.SetCurrentFuelKg(20000.0);
+    aircraft.SetCurrentZfwKg(160000.0);
+    aircraft.OnSlowTick();
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+    aircraft.OnSlowTick();
+
+    constexpr double payload = 160000.0 - kEmptyOperatingZfwKg;
+
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbPayload), weight::KgToLb(payload)));
 }
 
 void TfdiMd11Test::plannedValuesComeFromSession()
@@ -388,6 +439,7 @@ void TfdiMd11Test::commitSetsReadReadyMask()
     AutomationStatus status;
     TfdiMd11 aircraft(&gateway, &status, false);
 
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     gateway.lvars[kEfbReadReady] = 2.0;
     aircraft.SetCurrentFuelKg(15000.0);
     aircraft.OnSlowTick();
@@ -484,13 +536,11 @@ void TfdiMd11Test::setChocksWritesChocksLVar()
     AutomationStatus status;
     TfdiMd11 aircraft(&gateway, &status, false);
 
-    QVERIFY(aircraft.SupportsChocksControl());
-
-    aircraft.SetChocks(true);
+    QVERIFY(aircraft.SetChocks(true));
 
     QCOMPARE(gateway.Written(kChocks), 1.0);
 
-    aircraft.SetChocks(false);
+    QVERIFY(aircraft.SetChocks(false));
 
     QCOMPARE(gateway.Written(kChocks), 0.0);
 }
@@ -617,13 +667,11 @@ void TfdiMd11Test::cargoDoorsOpenPerLoaderAndCloseWhenDone()
     const int callsAfterOpen = gateway.setLVarCalls;
     gateway.lvars[kGsxLoaderFront] = 9.0;
     aircraft.OnTick();
-    gateway.lvars[kGsxLoaderFront] = 4.0;
-    aircraft.OnTick();
 
     QCOMPARE(gateway.setLVarCalls, callsAfterOpen);
     QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
 
-    gateway.lvars[kGsxLoaderFront] = 1.0;
+    gateway.lvars[kGsxLoaderFront] = 4.0;
     aircraft.OnTick();
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
@@ -745,6 +793,46 @@ void TfdiMd11Test::reportsLoadMethods()
 
     QVERIFY(aircraft.GetRefuelMethod() == RefuelBy::Self);
     QVERIFY(aircraft.GetBoardMethod() == BoardBy::Self);
+}
+
+void TfdiMd11Test::doorStatusReadsStateFamilyAndNotTheCommandEcho()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    for (const char* stateLVar : kDoorStateLVars)
+    {
+        gateway.lvars[stateLVar] = 0.0;
+    }
+
+    gateway.lvars[kPaxDoor1LState] = 100.0;
+    gateway.lvars[kPaxDoor1L] = 0.0;
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void TfdiMd11Test::doorStatusUnknownUntilDoorDataArrives()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::Unknown);
+}
+
+void TfdiMd11Test::doorStatusAllClosedWhenEveryStateReadsClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    for (const char* stateLVar : kDoorStateLVars)
+    {
+        gateway.lvars[stateLVar] = 0.0;
+    }
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AllClosed);
 }
 
 QTEST_APPLESS_MAIN(TfdiMd11Test)

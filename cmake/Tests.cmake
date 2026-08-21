@@ -274,7 +274,18 @@ gsxi_add_qt_test(gsxi-ifly-737max-tests ifly-737max
         src/infrastructure/aircraft/IFly737Max.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
+        src/infrastructure/ifly/IFlyPlanFile.cpp
+        src/infrastructure/ifly/IFlyPlanFile.h
+        src/infrastructure/simbrief/SimbriefOfpParser.cpp
+        src/infrastructure/simbrief/SimbriefOfpParser.h
         src/domain/model/AutomationStatus.h)
+
+gsxi_add_qt_test(gsxi-ifly-plan-file-tests ifly-plan-file
+        tests/tst_ifly_plan_file.cpp
+        src/infrastructure/ifly/IFlyPlanFile.cpp
+        src/infrastructure/ifly/IFlyPlanFile.h
+        src/infrastructure/simbrief/SimbriefOfpParser.cpp
+        src/infrastructure/simbrief/SimbriefOfpParser.h)
 
 gsxi_add_qt_test(gsxi-gsx-aircraft-profile-tests gsx-aircraft-profile
         tests/tst_gsx_aircraft_profile.cpp
@@ -353,6 +364,7 @@ gsxi_add_qt_test(gsxi-pmdg777-data-client-tests pmdg777-data-client
         tests/tst_pmdg777_data_client.cpp
         src/infrastructure/pmdg/Pmdg777DataClient.cpp
         src/infrastructure/pmdg/Pmdg777DataClient.h
+        src/infrastructure/pmdg/PmdgClientDataChannel.h
         src/infrastructure/pmdg/Pmdg777DataGateway.h
         src/infrastructure/pmdg/Pmdg777SdkData.h
         src/infrastructure/simconnect/SimConnectSession.cpp
@@ -361,17 +373,80 @@ gsxi_add_qt_test(gsxi-pmdg777-data-client-tests pmdg777-data-client
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_include_directories(gsxi-pmdg777-data-client-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
-gsxi_add_qt_test(gsxi-pmdg777-tablet-client-tests pmdg777-tablet-client
+gsxi_add_qt_test(gsxi-pmdg737-sdk-data-tests pmdg737-sdk-data
+        tests/tst_pmdg737_sdk_data.cpp
+        src/infrastructure/pmdg/Pmdg737SdkData.h)
+
+gsxi_add_qt_test(gsxi-pmdg737-data-client-tests pmdg737-data-client
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
+        tests/tst_pmdg737_data_client.cpp
+        src/infrastructure/pmdg/Pmdg737DataClient.cpp
+        src/infrastructure/pmdg/Pmdg737DataClient.h
+        src/infrastructure/pmdg/PmdgClientDataChannel.h
+        src/infrastructure/pmdg/Pmdg737DataGateway.h
+        src/infrastructure/pmdg/Pmdg737SdkData.h
+        src/infrastructure/simconnect/SimConnectSession.cpp
+        src/infrastructure/simconnect/SimConnectSession.h
+        src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+        src/infrastructure/simconnect/SimConnectVariableGateway.h)
+target_include_directories(gsxi-pmdg737-data-client-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
+gsxi_add_qt_test(gsxi-pmdg-options-tests pmdg-options
+        tests/tst_pmdg_options.cpp
+        src/infrastructure/pmdg/PmdgOptions.cpp
+        src/infrastructure/pmdg/PmdgOptions.h)
+target_include_directories(gsxi-pmdg-options-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
+gsxi_add_qt_test(gsxi-pmdg-route-file-tests pmdg-route-file
+        tests/tst_pmdg_route_file.cpp
+        src/infrastructure/pmdg/PmdgRouteFile.cpp
+        src/infrastructure/pmdg/PmdgRouteFile.h
+        src/infrastructure/pmdg/PmdgOptions.cpp
+        src/infrastructure/pmdg/PmdgOptions.h)
+target_include_directories(gsxi-pmdg-route-file-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
+gsxi_add_qt_test(gsxi-pmdg-tablet-client-tests pmdg-tablet-client
         tests/doubles/FakeCommBusBridgeGateway.h
-        tests/tst_pmdg777_tablet_client.cpp
+        tests/tst_pmdg_tablet_client.cpp
         src/infrastructure/commbus/CommBusBridgeGateway.h
-        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
-        src/infrastructure/pmdg/Pmdg777TabletClient.h
-        src/infrastructure/pmdg/Pmdg777TabletGateway.h)
+        src/infrastructure/pmdg/PmdgTabletClient.cpp
+        src/infrastructure/pmdg/PmdgTabletClient.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h)
+
+gsxi_add_qt_test(gsxi-pmdg-door-reconciler-tests pmdg-door-reconciler
+        tests/doubles/FakePmdgDoorSource.h
+        tests/tst_pmdg_door_reconciler.cpp
+        src/infrastructure/pmdg/PmdgDoorReconciler.cpp
+        src/infrastructure/pmdg/PmdgDoorReconciler.h
+        src/infrastructure/pmdg/PmdgDoorSource.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h)
+target_include_directories(gsxi-pmdg-door-reconciler-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
+gsxi_add_qt_test(gsxi-pmdg-ground-conn-reconciler-tests pmdg-ground-conn-reconciler
+        tests/doubles/FakePmdgTabletGateway.h
+        tests/tst_pmdg_ground_conn_reconciler.cpp
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.cpp
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.h
+        src/infrastructure/pmdg/PmdgGroundSource.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h)
+
+gsxi_add_qt_test(gsxi-pmdg-payload-writer-tests pmdg-payload-writer
+        tests/doubles/FakePmdgTabletGateway.h
+        tests/doubles/FakeVariableGateway.h
+        tests/tst_pmdg_payload_writer.cpp
+        src/infrastructure/pmdg/PmdgPayloadWriter.cpp
+        src/infrastructure/pmdg/PmdgPayloadWriter.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h)
 
 gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
+        src/infrastructure/pmdg/PmdgOptions.cpp
+        src/infrastructure/pmdg/PmdgOptions.h
+        src/infrastructure/pmdg/PmdgRouteFile.cpp
+        src/infrastructure/pmdg/PmdgRouteFile.h
         tests/doubles/FakePmdg777DataGateway.h
-        tests/doubles/FakePmdg777TabletGateway.h
+        tests/doubles/FakePmdgTabletGateway.h
         tests/doubles/FakeVariableGateway.h
         tests/doubles/FakeSimConnectApi.h
         tests/doubles/FakeSimConnectApi.cpp
@@ -380,6 +455,16 @@ gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/Pmdg777.cpp
         src/infrastructure/aircraft/Pmdg777.h
+        src/infrastructure/aircraft/PmdgAircraft.cpp
+        src/infrastructure/aircraft/PmdgAircraft.h
+        src/infrastructure/pmdg/PmdgPayloadWriter.cpp
+        src/infrastructure/pmdg/PmdgPayloadWriter.h
+        src/infrastructure/pmdg/PmdgDoorReconciler.cpp
+        src/infrastructure/pmdg/PmdgDoorReconciler.h
+        src/infrastructure/pmdg/PmdgDoorSource.h
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.cpp
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.h
+        src/infrastructure/pmdg/PmdgGroundSource.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/commbus/CommBusBridgeClient.cpp
@@ -389,16 +474,63 @@ gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
         src/infrastructure/gsx/GsxDoorSync.h
         src/infrastructure/pmdg/Pmdg777DataClient.cpp
         src/infrastructure/pmdg/Pmdg777DataClient.h
+        src/infrastructure/pmdg/PmdgClientDataChannel.h
         src/infrastructure/pmdg/Pmdg777DataGateway.h
         src/infrastructure/pmdg/Pmdg777SdkData.h
-        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
-        src/infrastructure/pmdg/Pmdg777TabletClient.h
-        src/infrastructure/pmdg/Pmdg777TabletGateway.h
+        src/infrastructure/pmdg/PmdgTabletClient.cpp
+        src/infrastructure/pmdg/PmdgTabletClient.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h
         src/infrastructure/simconnect/SimConnectSession.cpp
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_include_directories(gsxi-pmdg-777-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
+gsxi_add_qt_test(gsxi-pmdg-737-tests pmdg-737
+        tests/doubles/FakePmdg737DataGateway.h
+        tests/doubles/FakePmdgTabletGateway.h
+        tests/doubles/FakeVariableGateway.h
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
+        tests/tst_pmdg737.cpp
+        src/infrastructure/pmdg/PmdgOptions.cpp
+        src/infrastructure/pmdg/PmdgOptions.h
+        src/infrastructure/pmdg/PmdgRouteFile.cpp
+        src/infrastructure/pmdg/PmdgRouteFile.h
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/Pmdg737.cpp
+        src/infrastructure/aircraft/Pmdg737.h
+        src/infrastructure/aircraft/PmdgAircraft.cpp
+        src/infrastructure/aircraft/PmdgAircraft.h
+        src/infrastructure/pmdg/PmdgPayloadWriter.cpp
+        src/infrastructure/pmdg/PmdgPayloadWriter.h
+        src/infrastructure/pmdg/PmdgDoorReconciler.cpp
+        src/infrastructure/pmdg/PmdgDoorReconciler.h
+        src/infrastructure/pmdg/PmdgDoorSource.h
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.cpp
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.h
+        src/infrastructure/pmdg/PmdgGroundSource.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
+        src/infrastructure/commbus/CommBusBridgeClient.cpp
+        src/infrastructure/commbus/CommBusBridgeClient.h
+        src/infrastructure/commbus/CommBusBridgeGateway.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
+        src/infrastructure/pmdg/Pmdg737DataClient.cpp
+        src/infrastructure/pmdg/Pmdg737DataClient.h
+        src/infrastructure/pmdg/PmdgClientDataChannel.h
+        src/infrastructure/pmdg/Pmdg737DataGateway.h
+        src/infrastructure/pmdg/Pmdg737SdkData.h
+        src/infrastructure/pmdg/PmdgTabletClient.cpp
+        src/infrastructure/pmdg/PmdgTabletClient.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h
+        src/infrastructure/simconnect/SimConnectSession.cpp
+        src/infrastructure/simconnect/SimConnectSession.h
+        src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+        src/infrastructure/simconnect/SimConnectVariableGateway.h)
+target_include_directories(gsxi-pmdg-737-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
 gsxi_add_qt_test(gsxi-aircraft-matching-tests aircraft-matching
         tests/tst_aircraft_matching.cpp
@@ -420,8 +552,24 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/ifly/IFlyPlanFile.cpp
+        src/infrastructure/ifly/IFlyPlanFile.h
+        src/infrastructure/simbrief/SimbriefOfpParser.cpp
+        src/infrastructure/simbrief/SimbriefOfpParser.h
+        src/infrastructure/aircraft/Pmdg737.cpp
+        src/infrastructure/aircraft/Pmdg737.h
         src/infrastructure/aircraft/Pmdg777.cpp
         src/infrastructure/aircraft/Pmdg777.h
+        src/infrastructure/aircraft/PmdgAircraft.cpp
+        src/infrastructure/aircraft/PmdgAircraft.h
+        src/infrastructure/pmdg/PmdgPayloadWriter.cpp
+        src/infrastructure/pmdg/PmdgPayloadWriter.h
+        src/infrastructure/pmdg/PmdgDoorReconciler.cpp
+        src/infrastructure/pmdg/PmdgDoorReconciler.h
+        src/infrastructure/pmdg/PmdgDoorSource.h
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.cpp
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.h
+        src/infrastructure/pmdg/PmdgGroundSource.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/TfdiMd11.cpp
@@ -431,13 +579,22 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/commbus/CommBusBridgeClient.cpp
         src/infrastructure/commbus/CommBusBridgeClient.h
         src/infrastructure/commbus/CommBusBridgeGateway.h
+        src/infrastructure/pmdg/Pmdg737DataClient.cpp
+        src/infrastructure/pmdg/Pmdg737DataClient.h
+        src/infrastructure/pmdg/PmdgClientDataChannel.h
+        src/infrastructure/pmdg/Pmdg737DataGateway.h
+        src/infrastructure/pmdg/Pmdg737SdkData.h
         src/infrastructure/pmdg/Pmdg777DataClient.cpp
         src/infrastructure/pmdg/Pmdg777DataClient.h
         src/infrastructure/pmdg/Pmdg777DataGateway.h
         src/infrastructure/pmdg/Pmdg777SdkData.h
-        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
-        src/infrastructure/pmdg/Pmdg777TabletClient.h
-        src/infrastructure/pmdg/Pmdg777TabletGateway.h
+        src/infrastructure/pmdg/PmdgTabletClient.cpp
+        src/infrastructure/pmdg/PmdgTabletClient.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h
+        src/infrastructure/pmdg/PmdgOptions.cpp
+        src/infrastructure/pmdg/PmdgOptions.h
+        src/infrastructure/pmdg/PmdgRouteFile.cpp
+        src/infrastructure/pmdg/PmdgRouteFile.h
         src/infrastructure/simconnect/SimConnectSession.cpp
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
@@ -501,6 +658,9 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         tests/tst_runtime_integrator_service.cpp
         src/application/IntegratorRuntime.cpp
         src/application/IntegratorRuntime.h
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeObserver.cpp
+        src/infrastructure/probe/ProbeObserver.h
         src/application/RuntimeIntegratorService.cpp
         src/application/RuntimeIntegratorService.h
         src/domain/turnaround/TurnaroundStateMachine.cpp
@@ -513,8 +673,20 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/ifly/IFlyPlanFile.cpp
+        src/infrastructure/ifly/IFlyPlanFile.h
         src/infrastructure/aircraft/Pmdg777.cpp
         src/infrastructure/aircraft/Pmdg777.h
+        src/infrastructure/aircraft/PmdgAircraft.cpp
+        src/infrastructure/aircraft/PmdgAircraft.h
+        src/infrastructure/pmdg/PmdgPayloadWriter.cpp
+        src/infrastructure/pmdg/PmdgPayloadWriter.h
+        src/infrastructure/pmdg/PmdgDoorReconciler.cpp
+        src/infrastructure/pmdg/PmdgDoorReconciler.h
+        src/infrastructure/pmdg/PmdgDoorSource.h
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.cpp
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.h
+        src/infrastructure/pmdg/PmdgGroundSource.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/TfdiMd11.cpp
@@ -528,11 +700,16 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/commbus/CommBusPluginClient.h
         src/infrastructure/pmdg/Pmdg777DataClient.cpp
         src/infrastructure/pmdg/Pmdg777DataClient.h
+        src/infrastructure/pmdg/PmdgClientDataChannel.h
         src/infrastructure/pmdg/Pmdg777DataGateway.h
         src/infrastructure/pmdg/Pmdg777SdkData.h
-        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
-        src/infrastructure/pmdg/Pmdg777TabletClient.h
-        src/infrastructure/pmdg/Pmdg777TabletGateway.h
+        src/infrastructure/pmdg/PmdgTabletClient.cpp
+        src/infrastructure/pmdg/PmdgTabletClient.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h
+        src/infrastructure/pmdg/PmdgOptions.cpp
+        src/infrastructure/pmdg/PmdgOptions.h
+        src/infrastructure/pmdg/PmdgRouteFile.cpp
+        src/infrastructure/pmdg/PmdgRouteFile.h
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h
@@ -570,3 +747,17 @@ add_custom_command(TARGET gsxi-runtime-integrator-service-tests POST_BUILD
         "$<TARGET_FILE:Qt6::Network>"
         "$<TARGET_FILE_DIR:gsxi-runtime-integrator-service-tests>"
         VERBATIM)
+
+set(GSXI_GUARD_CHECKS
+        check-domain-port-uncalled
+        check-turnaround-data-field-unread
+        check-viewmodel-property-unbound
+        check-infra-gateway-uncalled
+        check-state-predicate-lvar-default)
+
+foreach (GSXI_GUARD_CHECK ${GSXI_GUARD_CHECKS})
+    add_test(NAME ${GSXI_GUARD_CHECK}
+            COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+            -File "${CMAKE_SOURCE_DIR}/tools/${GSXI_GUARD_CHECK}.ps1"
+            "${CMAKE_SOURCE_DIR}")
+endforeach ()

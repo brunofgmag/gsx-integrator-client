@@ -30,6 +30,7 @@ public:
 
 private:
     [[nodiscard]] bool IsDesiredOpen(GsxDoor door) const;
+    void ReportProbe() const;
 
     VariableGateway* variableGateway_;
     std::array<double, static_cast<std::size_t>(GsxDoor::Count)> lastTargets_{};

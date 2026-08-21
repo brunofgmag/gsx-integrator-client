@@ -13,29 +13,27 @@ namespace
 {
     constexpr int kRefuelStallTicks = 60;
 
+    bool IsGsxRefuelDone(const TurnaroundContext& ctx, const GsxStateStatus refuelingState)
+    {
+        return refuelingState == GsxStateStatus::Completed
+            || ctx.gsxGateway->WasStateCompleted(GsxState::Refueling);
+    }
+
     bool IsGsxRefuelReady(const TurnaroundContext& ctx, const GsxStateStatus refuelingState)
     {
         return ctx.gsxGateway->IsFuelHoseConnected()
             || refuelingState == GsxStateStatus::Active
-            || refuelingState == GsxStateStatus::Completed
-            || ctx.gsxGateway->WasStateCompleted(GsxState::Refueling);
+            || IsGsxRefuelDone(ctx, refuelingState);
     }
 
     bool IsWeightDone(const TurnaroundContext& ctx, const GsxStateStatus refuelingState)
     {
         if (ctx.aircraft->GetRefuelMethod() != RefuelBy::Client)
         {
-            return refuelingState == GsxStateStatus::Completed
-                || ctx.gsxGateway->WasStateCompleted(GsxState::Refueling);
+            return IsGsxRefuelDone(ctx, refuelingState);
         }
 
         return std::abs(ctx.data.plannedFuelKg - ctx.data.loadedFuelKg) <= turnaround::kWeightEpsilonKg;
-    }
-
-    bool IsRefuelCompleted(const TurnaroundContext& ctx)
-    {
-        return ctx.gsxGateway->GetStateStatus(GsxState::Refueling) == GsxStateStatus::Completed
-            || ctx.gsxGateway->WasStateCompleted(GsxState::Refueling);
     }
 
     double ApplyPumpedFuel(const double initialKg, const double plannedKg, const double pumpedKg)
@@ -76,7 +74,7 @@ std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& 
     SnapToPlanned(ctx);
     data.fuelProgress = 100.0;
 
-    if (IsRefuelCompleted(ctx))
+    if (IsGsxRefuelDone(ctx, refuelingState))
     {
         return TurnaroundTransition{TurnaroundPhase::RequestBoarding, 30};
     }
@@ -153,7 +151,7 @@ void RefuelingState::MaybeForceCompletion(TurnaroundContext& ctx)
     else if (++data.refuelStallTicks >= kRefuelStallTicks)
     {
         data.refuelCompletionForced = true;
-        (void)ctx.menuGateway->CompleteRefuel();
+        ctx.menuGateway->CompleteRefuel();
     }
 }
 

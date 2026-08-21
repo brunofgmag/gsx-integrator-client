@@ -6,6 +6,7 @@ namespace
     constexpr auto kKeyFuelRateKgs = "fuel/rateKgs";
     constexpr auto kKeyAutoSelectGsxChoice = "gsx/autoSelectGsxChoice";
     constexpr auto kKeyAutoDeice = "gsx/autoDeice";
+    constexpr auto kKeyUseAircraftStairs = "gsx/useAircraftStairs";
     constexpr auto kKeyCrewBoarding = "gsx/crewBoarding";
     constexpr auto kKeyOpenGsxOnRequests = "gsx/openGsxOnRequests";
     constexpr auto kKeyAutoStartFlow = "automation/autoStartFlow";
@@ -20,6 +21,7 @@ namespace
     constexpr auto kKeyThemeMode = "ui/themeMode";
     constexpr auto kKeyDarkThemeLegacy = "ui/darkTheme";
     constexpr auto kKeyLanguage = "ui/language";
+    constexpr auto kKeyRenderer = "ui/renderer";
     constexpr auto kKeyWeightUnitMode = "ui/weightUnit";
     constexpr auto kKeyUpdateMode = "updates/mode";
     constexpr auto kKeyCloseToTray = "ui/closeToTray";
@@ -88,6 +90,7 @@ AppSettings QSettingsRepository::Load() const
     result.fuelRateKgs = settings.value(kKeyFuelRateKgs, AutomationSettings::kDefaultFuelRateKgs).toDouble();
     result.autoSelectGsxChoice = settings.value(kKeyAutoSelectGsxChoice, true).toBool();
     result.autoDeice = settings.value(kKeyAutoDeice, false).toBool();
+    result.useAircraftStairs = settings.value(kKeyUseAircraftStairs, false).toBool();
     result.crewBoarding = settings.value(kKeyCrewBoarding, 3).toInt();
     result.autoStartFlow = settings.value(kKeyAutoStartFlow, false).toBool();
     result.autoStartLoading = settings.value(kKeyAutoStartLoading, true).toBool();
@@ -103,6 +106,7 @@ AppSettings QSettingsRepository::Load() const
     result.themeMode = ResolveThemeMode(settings);
 
     result.language = settings.value(kKeyLanguage, "system").toString().toStdString();
+    result.renderer = settings.value(kKeyRenderer, "software").toString().toStdString();
     result.weightUnitMode = settings.value(kKeyWeightUnitMode, 0).toInt();
     result.updateMode = settings.value(kKeyUpdateMode, 1).toInt();
     result.closeToTray = settings.value(kKeyCloseToTray, false).toBool();
@@ -130,6 +134,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyFuelRateKgs, values.fuelRateKgs);
     settings.setValue(kKeyAutoSelectGsxChoice, values.autoSelectGsxChoice);
     settings.setValue(kKeyAutoDeice, values.autoDeice);
+    settings.setValue(kKeyUseAircraftStairs, values.useAircraftStairs);
     settings.setValue(kKeyCrewBoarding, values.crewBoarding);
     settings.setValue(kKeyAutoStartFlow, values.autoStartFlow);
     settings.setValue(kKeyAutoStartLoading, values.autoStartLoading);
@@ -143,6 +148,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyOpenGsxOnRequests, values.openGsxOnRequests);
     settings.setValue(kKeyThemeMode, values.themeMode);
     settings.setValue(kKeyLanguage, QString::fromStdString(values.language));
+    settings.setValue(kKeyRenderer, QString::fromStdString(values.renderer));
     settings.setValue(kKeyWeightUnitMode, values.weightUnitMode);
     settings.setValue(kKeyUpdateMode, values.updateMode);
     settings.setValue(kKeyCloseToTray, values.closeToTray);

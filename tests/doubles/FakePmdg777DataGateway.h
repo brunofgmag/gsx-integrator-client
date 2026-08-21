@@ -10,17 +10,13 @@ class FakePmdg777DataGateway final : public Pmdg777DataGateway
 public:
     bool hasData = false;
     int pollCalls = 0;
-    int aircraftModel = 0;
     bool extPowerConnected = false;
     bool extPowerAvailable = false;
     bool beaconOn = false;
     bool parkingBrakeOn = false;
     bool apuRunning = false;
     bool wheelChocksSet = false;
-    bool groundConnAvailable = false;
-    bool irsAligned = false;
     bool hasFmcFlightPlan = false;
-    double totalFuelLbs = 0.0;
     bool inFlight = false;
     int kickCalls = 0;
     std::array<int, 16> doorStates{};
@@ -34,17 +30,13 @@ public:
     void Poll() override { ++pollCalls; }
     [[nodiscard]] bool HasData() const override { return hasData; }
 
-    [[nodiscard]] int AircraftModel() const override { return hasData ? aircraftModel : 0; }
     [[nodiscard]] bool ExtPowerConnected() const override { return hasData && extPowerConnected; }
     [[nodiscard]] bool ExtPowerAvailable() const override { return hasData && extPowerAvailable; }
     [[nodiscard]] bool BeaconOn() const override { return hasData && beaconOn; }
     [[nodiscard]] bool ParkingBrakeOn() const override { return hasData && parkingBrakeOn; }
     [[nodiscard]] bool ApuRunning() const override { return hasData && apuRunning; }
     [[nodiscard]] bool WheelChocksSet() const override { return hasData && wheelChocksSet; }
-    [[nodiscard]] bool GroundConnAvailable() const override { return hasData && groundConnAvailable; }
-    [[nodiscard]] bool IrsAligned() const override { return hasData && irsAligned; }
     [[nodiscard]] bool HasFmcFlightPlan() const override { return hasData && hasFmcFlightPlan; }
-    [[nodiscard]] double TotalFuelLbs() const override { return hasData ? totalFuelLbs : 0.0; }
 
     [[nodiscard]] int DoorState(const int index) const override
     {

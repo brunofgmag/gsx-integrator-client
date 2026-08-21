@@ -8,6 +8,7 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QTimer>
+#include "model/IntegratorSnapshot.h"
 #include "sim/SimVersion.h"
 #include "../infrastructure/commbus/CommBusBridgeClient.h"
 #include "../infrastructure/commbus/CommBusPluginClient.h"
@@ -20,6 +21,7 @@
 #include "../domain/turnaround/TurnaroundStateMachine.h"
 #include "../infrastructure/gsx/GsxMenuNavigator.h"
 #include "../infrastructure/logging/QtDomainLogger.h"
+#include "../infrastructure/probe/ProbeObserver.h"
 #include "../infrastructure/gsx/GsxRemoteApiClient.h"
 #include "../infrastructure/gsx/GsxRemoteState.h"
 
@@ -37,26 +39,19 @@ public:
     void Setup();
     void Shutdown();
 
-    [[nodiscard]] const AutomationStatus& Status() const { return status_; }
-    [[nodiscard]] const AutomationSettings& Settings() const { return settings_; }
+    [[nodiscard]] IntegratorSnapshot Snapshot() const;
 
+    [[nodiscard]] const AutomationSettings& Settings() const { return settings_; }
     [[nodiscard]] bool IsConnected() const { return simConnect_.IsConnected(); }
+    [[nodiscard]] bool IsReconnectPending() const { return reconnectTimer_.isActive(); }
     [[nodiscard]] bool IsSessionActive() const { return isSessionActive_; }
-    [[nodiscard]] bool IsSessionPaused() const { return pauseFlags_ != 0; }
-    [[nodiscard]] bool IsSessionReady();
     [[nodiscard]] TurnaroundPhase GetPhase() const { return stateMachine_.GetPhase(); }
-    [[nodiscard]] int GetDelayTicksRemaining() const { return stateMachine_.GetDelayTicksRemaining(); }
-    [[nodiscard]] bool IsLoadingConfirmed() const { return stateMachine_.IsLoadingConfirmed(); }
-    [[nodiscard]] QString GetAircraftName() const;
     [[nodiscard]] std::string GetAircraftProfileId() const;
-    [[nodiscard]] bool IsAircraftRefuelByGsx() const;
-    [[nodiscard]] bool IsAircraftRefuelBySelf() const;
-    [[nodiscard]] bool IsAircraftCargoVariant() const;
-    [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
-    [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
     [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfile_.conflict; }
-    [[nodiscard]] bool CanFixGsxProfile() const;
     bool FixGsxProfile();
+    [[nodiscard]] bool HasPmdgOptionsConflict() const { return pmdgOptions_.conflict; }
+    bool FixPmdgOptions();
+    [[nodiscard]] bool IsCargoDoorStuck() const;
     void SetAutomationEnabled(bool enabled);
     void RestartFlow();
 #ifndef NDEBUG
@@ -87,6 +82,33 @@ private:
         }
     };
 
+    struct PmdgOptionsState
+    {
+        std::filesystem::path ini;
+        bool conflict = false;
+
+        void Reset()
+        {
+            ini.clear();
+            conflict = false;
+        }
+    };
+
+    [[nodiscard]] bool IsSessionPaused() const { return pauseFlags_ != 0; }
+    [[nodiscard]] bool IsSessionReady();
+    [[nodiscard]] const AutomationStatus& Status() const { return status_; }
+    [[nodiscard]] int GetDelayTicksRemaining() const { return stateMachine_.GetDelayTicksRemaining(); }
+    [[nodiscard]] bool IsLoadingConfirmed() const { return stateMachine_.IsLoadingConfirmed(); }
+    [[nodiscard]] QString GetAircraftName() const;
+    [[nodiscard]] bool IsAircraftRefuelByGsx() const;
+    [[nodiscard]] bool IsAircraftRefuelBySelf() const;
+    [[nodiscard]] bool IsAircraftCargoVariant() const;
+    [[nodiscard]] bool IsLoadingCargoPhase() const;
+    [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
+    [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
+    [[nodiscard]] bool CanFixGsxProfile() const;
+    [[nodiscard]] bool CanFixPmdgOptions() const;
+
     bool IsSimOnMenu();
     void OnSimOpen(const char* appName);
     void TryConnect();
@@ -96,6 +118,7 @@ private:
     void OnSimRunningChanged(bool running);
     void OnPauseChanged(unsigned flag);
 
+    void ProbeGates();
     void Update();
     void UpdateSlow();
     void MaybeAutoStart();
@@ -105,6 +128,7 @@ private:
     void OnSessionEnd();
     void ResolveAircraft();
     void CheckGsxProfile();
+    void CheckPmdgOptions();
 
     static constexpr int kDispatchIntervalMs = 80;
     static constexpr int kReconnectIntervalMs = 5000;
@@ -127,11 +151,14 @@ private:
     QTimer dispatchTimer_;
     QTimer reconnectTimer_;
     QtDomainLogger qtLogger_;
+    ProbeObserver probe_;
 
     SimVersion simVersion_ = SimVersion::Unknown;
     bool isSessionActive_ = false;
     unsigned pauseFlags_ = 1;
+    unsigned pauseEvents_ = 0;
     GsxProfileState gsxProfile_;
+    PmdgOptionsState pmdgOptions_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INTEGRATORRUNTIME_H

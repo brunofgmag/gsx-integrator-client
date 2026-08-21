@@ -20,7 +20,7 @@ public:
 
     FenixA32x(VariableGateway* variableGateway, FenixVariant variant, std::unique_ptr<FenixEfbGateway> efb);
 
-    [[nodiscard]] const char* GetName() const override;
+    [[nodiscard]] const char* GetName() const;
     [[nodiscard]] bool IsCargoVariant() const override;
 
     void OnTick() override;
@@ -48,8 +48,7 @@ public:
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override;
-    [[nodiscard]] bool SupportsChocksControl() const override { return true; }
-    void SetChocks(bool placed) override;
+    bool SetChocks(bool placed) override;
     [[nodiscard]] bool SupportsGroundPowerControl() const override { return true; }
     void SetGroundPower(bool on) override;
     [[nodiscard]] bool IsReadyToPush() const override;
@@ -61,6 +60,7 @@ private:
     [[nodiscard]] bool IsBeaconOn() const;
     void EnsureEfbInitialized();
     void UpdateDoors();
+    void ReportProbe() const;
     void DisarmRefuelSystemWhenDone();
     void SyncPassengersAndCargo(double zfwKg);
     void WriteSeatOccupation(int passengersOnBoard);

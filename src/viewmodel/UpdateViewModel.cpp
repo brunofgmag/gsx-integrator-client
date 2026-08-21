@@ -22,13 +22,11 @@ namespace
 }
 
 UpdateViewModel::UpdateViewModel(UpdateService* service,
-                                 QString currentVersion,
                                  const int initialMode,
                                  const bool updatesEnabled,
                                  QObject* parent)
     : QObject(parent),
       service_(service),
-      currentVersion_(std::move(currentVersion)),
       mode_(initialMode),
       updatesEnabled_(updatesEnabled)
 {
@@ -108,11 +106,6 @@ bool UpdateViewModel::CanDownload() const
 bool UpdateViewModel::CanCheckForUpdates() const
 {
     return updatesEnabled_ && (state_ == Idle || state_ == UpToDate || state_ == Error);
-}
-
-QString UpdateViewModel::GetCurrentVersion() const
-{
-    return currentVersion_;
 }
 
 QString UpdateViewModel::GetLatestVersion() const

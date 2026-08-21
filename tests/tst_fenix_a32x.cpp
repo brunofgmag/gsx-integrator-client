@@ -127,6 +127,7 @@ class FenixA32xTest final : public QObject
 private slots:
     static void reportsNamePerVariant();
     static void reportsLoadMethodsAndCapabilities();
+    static void doorStatusStaysUnknownEvenWithDoorDatarefsReadingOpen();
     static void registersSmartSwitchForFastRefresh();
     static void subscribesEfbPlanDatarefs();
     static void pollsEfbEveryTick();
@@ -198,7 +199,6 @@ void FenixA32xTest::reportsLoadMethodsAndCapabilities()
     QVERIFY(fixture.aircraft.GetBoardMethod() == BoardBy::Client);
     QVERIFY(fixture.aircraft.SupportsStairsOrJetways());
     QVERIFY(!fixture.aircraft.CompletesPushbackViaInterruptMenu());
-    QVERIFY(fixture.aircraft.SupportsChocksControl());
     QVERIFY(fixture.aircraft.SupportsGroundPowerControl());
     QVERIFY(fixture.aircraft.RequiresEfbFlightPlan());
 }
@@ -778,11 +778,11 @@ void FenixA32xTest::chocksWriteEfbDataref()
 {
     FenixFixture fixture;
 
-    fixture.aircraft.SetChocks(true);
+    QVERIFY(fixture.aircraft.SetChocks(true));
 
     QCOMPARE(fixture.efb.WrittenBool(kChocksDataref), 1);
 
-    fixture.aircraft.SetChocks(false);
+    QVERIFY(fixture.aircraft.SetChocks(false));
 
     QCOMPARE(fixture.efb.WrittenBool(kChocksDataref), 0);
 }
@@ -915,6 +915,19 @@ void FenixA32xTest::readyToDeboardFollowsSafetyState()
     fixture.gateway.avars[kSimBeaconLight] = 1.0;
 
     QVERIFY(!fixture.aircraft.IsReadyToDeboard());
+}
+
+void FenixA32xTest::doorStatusStaysUnknownEvenWithDoorDatarefsReadingOpen()
+{
+    const FenixFixture fixture;
+
+    for (const char* doorDataref : {kFwdPaxDoor, kMidPaxDoor, kAftPaxDoor, kFwdCateringDoor,
+                                    kAftCateringDoor, kFwdCargoDoor, kAftCargoDoor})
+    {
+        fixture.efb.numbers[doorDataref] = 1.0;
+    }
+
+    QVERIFY(fixture.aircraft.GetDoorStatus() == DoorStatus::Unknown);
 }
 
 QTEST_APPLESS_MAIN(FenixA32xTest)

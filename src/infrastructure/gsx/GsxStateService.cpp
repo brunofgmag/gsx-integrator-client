@@ -25,19 +25,6 @@ namespace
         }
     }
 
-    const char* ServiceId(const GroundService service)
-    {
-        switch (service)
-        {
-        case GroundService::Catering: return "Catering";
-        case GroundService::Lavatory: return "Lavatory";
-        case GroundService::Water: return "Water";
-        case GroundService::Cleaning: return "Cleaning";
-        case GroundService::Gpu: return "GPU";
-        case GroundService::Departure: return "Departure";
-        default: return nullptr;
-        }
-    }
 }
 
 GsxStateService::GsxStateService(VariableGateway* variableGateway, const GsxRemoteState* remoteState)
@@ -179,6 +166,24 @@ double GsxStateService::GetBoardingCargoPercent() const
     return varManager_->GetLVar(kBoardingCargoPercent);
 }
 
+bool GsxStateService::IsLoadingCargo() const
+{
+    return varManager_->GetLVar(kBoardingCargo) == 1.0;
+}
+
+bool GsxStateService::IsLoaderWaitingForDoor() const
+{
+    for (const char* state : {kBaggageLoaderFrontState, kBaggageLoaderRearState, kBaggageLoaderMainState})
+    {
+        if (varManager_->GetLVar(state) == gsx::states::kLoaderWaitingForDoor)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 double GsxStateService::GetDeboardingCargoPercent() const
 {
     return varManager_->GetLVar(kDeboardingCargoPercent);
@@ -215,7 +220,7 @@ bool GsxStateService::IsServiceInProgress(const GroundService service) const
         return false;
     }
 
-    const char* id = ServiceId(service);
+    const char* id = gsx::services::Id(service);
     if (id == nullptr)
     {
         return false;

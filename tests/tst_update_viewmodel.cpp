@@ -40,8 +40,7 @@ private slots:
 void UpdateViewModelTest::notifyFlowDownloadsAndRestartsOnDemand()
 {
     FakeUpdateService service;
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Notify, true);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true);
 
     viewModel.checkForUpdates();
 
@@ -73,8 +72,7 @@ void UpdateViewModelTest::notifyFlowDownloadsAndRestartsOnDemand()
 void UpdateViewModelTest::autoModeDownloadsSilentlyAndAppliesOnExit()
 {
     FakeUpdateService service;
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Auto, true);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Auto, true);
 
     service.FireCheckFinished(true, true, MakeInfo(QStringLiteral("1.4.0")));
 
@@ -92,8 +90,7 @@ void UpdateViewModelTest::autoModeDownloadsSilentlyAndAppliesOnExit()
 void UpdateViewModelTest::silentCheckFailureStaysQuiet()
 {
     FakeUpdateService service;
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Notify, true);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true);
 
     service.FireCheckFinished(false, false, {}, QStringLiteral("HTTP 403"));
 
@@ -105,8 +102,7 @@ void UpdateViewModelTest::silentCheckFailureStaysQuiet()
 void UpdateViewModelTest::explicitCheckFailureShowsError()
 {
     FakeUpdateService service;
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Manual, true);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Manual, true);
 
     viewModel.checkForUpdates();
     service.FireCheckFinished(false, false, {}, QStringLiteral("HTTP 404"));
@@ -118,8 +114,7 @@ void UpdateViewModelTest::explicitCheckFailureShowsError()
 void UpdateViewModelTest::stageFailureShowsErrorAndKeepsUpdateKnown()
 {
     FakeUpdateService service;
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Notify, true);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true);
 
     service.FireCheckFinished(true, true, MakeInfo(QStringLiteral("1.4.0")));
     viewModel.downloadAndInstall();
@@ -134,8 +129,7 @@ void UpdateViewModelTest::stageFailureShowsErrorAndKeepsUpdateKnown()
 void UpdateViewModelTest::newerReleaseAfterStagingGoesBackToAvailable()
 {
     FakeUpdateService service;
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Notify, true);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true);
 
     service.FireCheckFinished(true, true, MakeInfo(QStringLiteral("1.4.0")));
     viewModel.downloadAndInstall();
@@ -155,8 +149,7 @@ void UpdateViewModelTest::stagedUpdateFoundOnCheckIsReadyToRestart()
     FakeUpdateService service;
     service.staged = true;
 
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Notify, true);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true);
     service.FireCheckFinished(true, true, MakeInfo(QStringLiteral("1.4.0")));
 
     QCOMPARE(viewModel.GetState(), static_cast<int>(UpdateViewModel::ReadyToRestart));
@@ -166,8 +159,7 @@ void UpdateViewModelTest::stagedUpdateFoundOnCheckIsReadyToRestart()
 void UpdateViewModelTest::switchingToAutoStartsPendingDownload()
 {
     FakeUpdateService service;
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Notify, true);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true);
 
     service.FireCheckFinished(true, true, MakeInfo(QStringLiteral("1.4.0")));
 
@@ -182,8 +174,7 @@ void UpdateViewModelTest::switchingToAutoStartsPendingDownload()
 void UpdateViewModelTest::disabledViewModelIgnoresChecks()
 {
     FakeUpdateService service;
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Notify, false);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, false);
 
     viewModel.checkForUpdates();
 
@@ -195,8 +186,7 @@ void UpdateViewModelTest::disabledViewModelIgnoresChecks()
 void UpdateViewModelTest::commbusComparesInstalledAndLatest()
 {
     FakeUpdateService service;
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Notify, true);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true);
 
     service.FireCommbusCheckFinished(true, QStringLiteral("0.2.1"),
                                      QStringLiteral("0.3.0"),
@@ -225,8 +215,7 @@ void UpdateViewModelTest::commbusComparesInstalledAndLatest()
 void UpdateViewModelTest::derivedFlagsAndStatusTextFollowState()
 {
     FakeUpdateService service;
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Notify, true);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true);
 
     QVERIFY(viewModel.CanCheckForUpdates());
     QVERIFY(!viewModel.CanDownload());
@@ -255,8 +244,7 @@ void UpdateViewModelTest::stagedUpdateExposesRestartText()
 {
     FakeUpdateService service;
     service.staged = true;
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Notify, true);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true);
 
     service.FireCheckFinished(true, true, MakeInfo(QStringLiteral("1.4.0")));
 
@@ -268,8 +256,7 @@ void UpdateViewModelTest::stagedUpdateExposesRestartText()
 void UpdateViewModelTest::errorStateExposesHasErrorAndMessage()
 {
     FakeUpdateService service;
-    UpdateViewModel viewModel(&service, QStringLiteral("1.3.0"),
-                              UpdateViewModel::Manual, true);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Manual, true);
 
     viewModel.checkForUpdates();
     service.FireCheckFinished(false, false, {}, QStringLiteral("HTTP 500"));

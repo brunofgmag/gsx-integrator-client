@@ -30,6 +30,7 @@ private slots:
     static void freshSnapshotHasDisconnectedDefaults();
     static void commandsFailWhileOffline();
     static void fixGsxProfileWithoutConflictFails();
+    static void fixPmdgOptionsWithoutConflictFails();
     static void applySettingsPushesEffectiveSettings();
     static void observersAreDedupedAndNotified();
     static void automationToggleEmitsOncePerChange();
@@ -37,6 +38,8 @@ private slots:
     static void setupConnectsThroughFakeSimConnect();
     static void connectedCommandsFollowGuardOrder();
     static void subscribeFailureDisconnects();
+    static void subscribeFailureKeepsRetrying();
+    static void simulatorQuitRearmsTheReconnect();
 };
 
 void RuntimeIntegratorServiceTest::init()
@@ -63,6 +66,8 @@ void RuntimeIntegratorServiceTest::freshSnapshotHasDisconnectedDefaults()
     QVERIFY(!snapshot.refuelBySelf);
     QVERIFY(!snapshot.gsxProfileConflict);
     QVERIFY(!snapshot.gsxProfileFixable);
+    QVERIFY(!snapshot.pmdgOptionsConflict);
+    QVERIFY(!snapshot.pmdgOptionsFixable);
     QVERIFY(!snapshot.cargoAircraft);
     QCOMPARE(snapshot.aircraftName, std::string{});
     QCOMPARE(snapshot.aircraftProfileId, std::string{});
@@ -116,6 +121,17 @@ void RuntimeIntegratorServiceTest::fixGsxProfileWithoutConflictFails()
 
     QVERIFY(!result.succeeded);
     QCOMPARE(result.message, std::string("The GSX profile does not need fixing."));
+}
+
+void RuntimeIntegratorServiceTest::fixPmdgOptionsWithoutConflictFails()
+{
+    IntegratorRuntime runtime;
+    RuntimeIntegratorService service(&runtime);
+
+    const CommandResult result = service.FixPmdgOptions();
+
+    QVERIFY(!result.succeeded);
+    QCOMPARE(result.message, std::string("The PMDG options file does not need fixing."));
 }
 
 void RuntimeIntegratorServiceTest::applySettingsPushesEffectiveSettings()
@@ -183,14 +199,22 @@ void RuntimeIntegratorServiceTest::runtimeGettersOnEmptyRuntime()
 {
     IntegratorRuntime runtime;
 
-    QVERIFY(runtime.GetAircraftName().isEmpty());
+    const IntegratorSnapshot snapshot = runtime.Snapshot();
+
+    QVERIFY(snapshot.aircraftName.empty());
+    QCOMPARE(snapshot.aircraftProfileId, std::string{});
+    QVERIFY(!snapshot.refuelByGsx);
+    QVERIFY(!snapshot.refuelBySelf);
+    QVERIFY(!snapshot.cargoAircraft);
+    QVERIFY(!snapshot.gsxProfileConflict);
+    QVERIFY(!snapshot.gsxProfileFixable);
+    QVERIFY(!snapshot.pmdgOptionsConflict);
+    QVERIFY(!snapshot.pmdgOptionsFixable);
     QCOMPARE(runtime.GetAircraftProfileId(), std::string{});
-    QVERIFY(!runtime.IsAircraftRefuelByGsx());
-    QVERIFY(!runtime.IsAircraftRefuelBySelf());
-    QVERIFY(!runtime.IsAircraftCargoVariant());
     QVERIFY(!runtime.HasGsxProfileConflict());
-    QVERIFY(!runtime.CanFixGsxProfile());
     QVERIFY(!runtime.FixGsxProfile());
+    QVERIFY(!runtime.HasPmdgOptionsConflict());
+    QVERIFY(!runtime.FixPmdgOptions());
     QVERIFY(!runtime.ReloadSimbrief());
 }
 
@@ -244,6 +268,35 @@ void RuntimeIntegratorServiceTest::subscribeFailureDisconnects()
     runtime.Setup();
 
     QVERIFY(!runtime.IsConnected());
+}
+
+void RuntimeIntegratorServiceTest::subscribeFailureKeepsRetrying()
+{
+    FakeSimConnectApi::subscribeSucceeds = false;
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QVERIFY(!runtime.IsConnected());
+    QVERIFY(runtime.IsReconnectPending());
+}
+
+void RuntimeIntegratorServiceTest::simulatorQuitRearmsTheReconnect()
+{
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QVERIFY(runtime.IsConnected());
+    QVERIFY(!runtime.IsReconnectPending());
+
+    QSignalSpy quits(&runtime, &IntegratorRuntime::SimulatorQuit);
+
+    constexpr SIMCONNECT_RECV quit{};
+    FakeSimConnectApi::Push(quit, SIMCONNECT_RECV_ID_QUIT);
+
+    QVERIFY(quits.wait(2000));
+    QVERIFY(!runtime.IsConnected());
+    QVERIFY(runtime.IsReconnectPending());
 }
 
 QTEST_GUILESS_MAIN(RuntimeIntegratorServiceTest)

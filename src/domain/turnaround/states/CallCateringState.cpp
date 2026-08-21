@@ -8,17 +8,11 @@
 
 namespace
 {
-    constexpr int kCateringRetryTicks = 10;
-    constexpr int kMaxCateringAttempts = 3;
+    constexpr int kCateringGiveUpTicks = 30;
 }
 
 std::optional<TurnaroundTransition> CallCateringState::Evaluate(TurnaroundContext& ctx)
 {
-    if (!ctx.menuGateway->IsMenuSettled())
-    {
-        return std::nullopt;
-    }
-
     if (RequestNextGroundService(ctx))
     {
         return std::nullopt;
@@ -50,16 +44,18 @@ bool CallCateringState::DispatchCatering(TurnaroundContext& ctx)
         return false;
     }
 
-    if (ctx.data.cateringAttempts == 0 || ctx.TickCondition(kCateringRetryTicks))
+    if (!ctx.data.cateringAsked)
     {
-        if (ctx.data.cateringAttempts >= kMaxCateringAttempts)
-        {
-            ctx.data.cateringRequested = true;
-            return false;
-        }
+        ctx.menuGateway->RequestCatering();
+        ctx.data.cateringAsked = true;
 
-        static_cast<void>(ctx.menuGateway->RequestCatering());
-        ++ctx.data.cateringAttempts;
+        return true;
+    }
+
+    if (ctx.TickCondition(kCateringGiveUpTicks))
+    {
+        ctx.data.cateringRequested = true;
+        return false;
     }
 
     return true;

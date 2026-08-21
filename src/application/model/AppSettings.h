@@ -13,6 +13,7 @@ struct AppSettings
     double fuelRateKgs = AutomationSettings::kDefaultFuelRateKgs;
     bool autoSelectGsxChoice = true;
     bool autoDeice = false;
+    bool useAircraftStairs = false;
     int crewBoarding = 3;
     bool autoStartFlow = true;
     bool autoStartLoading = true;
@@ -26,6 +27,7 @@ struct AppSettings
     bool openGsxOnRequests = true;
     int themeMode = 2;
     std::string language = "system";
+    std::string renderer = "software";
     int updateMode = 1;
     int weightUnitMode = 0;
     bool closeToTray = false;

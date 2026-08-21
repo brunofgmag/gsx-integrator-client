@@ -97,6 +97,12 @@ set(APP_SOURCES
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/ifly/IFlyPlanFile.cpp
+        src/infrastructure/ifly/IFlyPlanFile.h
+        src/infrastructure/aircraft/PmdgAircraft.cpp
+        src/infrastructure/aircraft/PmdgAircraft.h
+        src/infrastructure/aircraft/Pmdg737.cpp
+        src/infrastructure/aircraft/Pmdg737.h
         src/infrastructure/aircraft/Pmdg777.cpp
         src/infrastructure/aircraft/Pmdg777.h
         src/infrastructure/aircraft/SmartSwitch.cpp
@@ -114,9 +120,27 @@ set(APP_SOURCES
         src/infrastructure/pmdg/Pmdg777DataClient.h
         src/infrastructure/pmdg/Pmdg777DataGateway.h
         src/infrastructure/pmdg/Pmdg777SdkData.h
-        src/infrastructure/pmdg/Pmdg777TabletClient.cpp
-        src/infrastructure/pmdg/Pmdg777TabletClient.h
-        src/infrastructure/pmdg/Pmdg777TabletGateway.h
+        src/infrastructure/pmdg/PmdgTabletClient.cpp
+        src/infrastructure/pmdg/PmdgTabletClient.h
+        src/infrastructure/pmdg/PmdgTabletGateway.h
+        src/infrastructure/pmdg/Pmdg737DataClient.cpp
+        src/infrastructure/pmdg/Pmdg737DataClient.h
+        src/infrastructure/pmdg/Pmdg737DataGateway.h
+        src/infrastructure/pmdg/Pmdg737SdkData.h
+        src/infrastructure/pmdg/PmdgClientDataChannel.h
+        src/infrastructure/pmdg/PmdgDataGateway.h
+        src/infrastructure/pmdg/PmdgDoorReconciler.cpp
+        src/infrastructure/pmdg/PmdgDoorReconciler.h
+        src/infrastructure/pmdg/PmdgDoorSource.h
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.cpp
+        src/infrastructure/pmdg/PmdgGroundConnReconciler.h
+        src/infrastructure/pmdg/PmdgGroundSource.h
+        src/infrastructure/pmdg/PmdgPayloadWriter.cpp
+        src/infrastructure/pmdg/PmdgPayloadWriter.h
+        src/infrastructure/pmdg/PmdgOptions.cpp
+        src/infrastructure/pmdg/PmdgOptions.h
+        src/infrastructure/pmdg/PmdgRouteFile.cpp
+        src/infrastructure/pmdg/PmdgRouteFile.h
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h
@@ -128,6 +152,9 @@ set(APP_SOURCES
         src/infrastructure/gsx/GsxStateService.h
         src/infrastructure/gsx/GsxLVars.h
         src/infrastructure/logging/LogMacros.h
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeObserver.cpp
+        src/infrastructure/probe/ProbeObserver.h
         src/infrastructure/simbrief/SimbriefClient.cpp
         src/infrastructure/simbrief/SimbriefClient.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp
@@ -188,6 +215,7 @@ set(APP_QML_FILES
         src/qml/screens/ConnectingPanel.qml
         src/qml/screens/OperationsScreen.qml
         src/qml/screens/SettingsScreen.qml
+        src/qml/screens/settings/AdvancedPane.qml
         src/qml/screens/settings/AutomationPane.qml
         src/qml/screens/settings/GeneralPane.qml
         src/qml/screens/settings/ProfilesPane.qml

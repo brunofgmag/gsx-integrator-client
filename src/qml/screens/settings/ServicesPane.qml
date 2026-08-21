@@ -77,6 +77,15 @@ ColumnLayout {
 
     SwitchRow {
         Layout.fillWidth: true
+        title: qsTr("Always use aircraft stairs")
+        caption: qsTr("Answer \"Yes\" when GSX offers the airplane's own airstairs")
+        helpText: qsTr("GSX only asks this on aircraft that have their own airstairs. When off, the integrator answers with the airport stairs.")
+        checked: root.settingsVm.useAircraftStairs
+        onToggled: checked => root.settingsVm.useAircraftStairs = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
         title: qsTr("Accept de-ice requests")
         caption: qsTr("Answer \"Yes\" when GSX offers de-icing treatment")
         helpText: qsTr("Overrides the GSX choice for the ice-warning popup, which otherwise declines de-icing.")

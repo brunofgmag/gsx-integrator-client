@@ -1,10 +1,13 @@
 #include "IFly737Max.h"
 
+#include "../simvars/SimVars.h"
+
 #include <algorithm>
 #include <array>
 #include <memory>
 #include <string>
 #include "AircraftRegistry.h"
+#include "DoorReading.h"
 #include "../gsx/GsxLVars.h"
 #include "../logging/LogMacros.h"
 #include "../../domain/model/FlightPlan.h"
@@ -12,22 +15,18 @@
 #include "../../domain/ports/GsxGateway.h"
 #include "../../infrastructure/simvars/VariableGateway.h"
 
+using namespace simvars;
+
 namespace
 {
-    constexpr auto kSimFuelTotalKg = "FUEL TOTAL QUANTITY WEIGHT";
-    constexpr auto kSimTotalWeight = "TOTAL WEIGHT";
-    constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
-    constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
     constexpr auto kSimAvionicsBusVoltage = "ELECTRICAL AVIONICS BUS VOLTAGE";
-    constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
-    constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
-    constexpr auto kSimBeaconLight = "LIGHT BEACON";
-    constexpr auto kKgUnit = "kg";
-    constexpr auto kBoolUnit = "Bool";
     constexpr auto kVoltsUnit = "Volts";
 
     constexpr auto kSmartSwitch = "VC_ACP_1_Push_to_Talk_SW_VAL";
     constexpr double kSmartSwitchNeutral = 10.0;
+
+    constexpr int kEngineCount = 2;
+    constexpr double kEngineRunningDefault = 1.0;
 
     constexpr auto kParkingBrakeLVar = "VC_Parking_Brake_SW_VAL";
     constexpr auto kChocksLVar = "iFly_NLG_Chock_Display_VAL";
@@ -39,6 +38,8 @@ namespace
     constexpr auto kFwdCargoAnimLVar = "Animation_FWD_Cargo_VAL";
     constexpr auto kAftCargoAnimLVar = "Animation_AFT_Cargo_VAL";
     constexpr double kCargoDoorOpenThreshold = 90.0;
+    constexpr std::array kCargoDoorAnimLVars = {kFwdCargoAnimLVar, kAftCargoAnimLVar};
+    constexpr DoorStatus kPaxDoorsUnreadable = DoorStatus::Unknown;
     constexpr int kPulseSettleTicks = 5;
     constexpr int kMaxDoorPulseAttempts = 3;
 
@@ -48,7 +49,7 @@ namespace
     }
 }
 
-IFly737Max::IFly737Max(VariableGateway* variableGateway, AutomationStatus* status)
+IFly737Max::IFly737Max(VariableGateway* variableGateway, const AutomationStatus* status)
     : variableGateway_(variableGateway), status_(status),
       smartSwitch_(*variableGateway, {kSmartSwitch},
                    [](const double min, const double max)
@@ -77,6 +78,11 @@ const char* IFly737Max::GetName() const
 void IFly737Max::OnTick()
 {
     CloseCargoDoorsAfterUnloading();
+}
+
+void IFly737Max::OnSlowTick()
+{
+    planImport_.Observe(IFlyPlanFile::DirectoryFor(), status_->planGeneratedEpoch);
 }
 
 void IFly737Max::CloseCargoDoorsAfterUnloading()
@@ -251,7 +257,8 @@ bool IFly737Max::IsCargoVariant() const
 
 bool IFly737Max::IsFlightPlanLoaded() const
 {
-    return status_->flightPlanStatus == FlightPlanStatus::Ready;
+    return status_->flightPlanStatus == FlightPlanStatus::Ready
+        && (planImport_.Seen() || planImport_.Blind());
 }
 
 double IFly737Max::GetPlannedFuelKg() const
@@ -271,24 +278,17 @@ int IFly737Max::GetPlannedPassengers() const
 
 double IFly737Max::GetEmptyZfwKg() const
 {
-    return variableGateway_->GetAVar(kSimEmptyWeight, kKgUnit, 0.0);
+    return EmptyZfwKg(*variableGateway_);
 }
 
 double IFly737Max::GetCurrentFuelKg() const
 {
-    return variableGateway_->GetAVar(kSimFuelTotalKg, kKgUnit, 0.0);
-}
-
-void IFly737Max::SetCurrentFuelKg(double)
-{
+    return CurrentFuelKg(*variableGateway_);
 }
 
 double IFly737Max::GetCurrentZfwKg() const
 {
-    const double totalWeightKg =
-        variableGateway_->GetAVar(kSimTotalWeight, kKgUnit, GetEmptyZfwKg());
-
-    return std::max(totalWeightKg - GetCurrentFuelKg(), GetEmptyZfwKg());
+    return CurrentZfwKg(*variableGateway_);
 }
 
 void IFly737Max::SetCurrentZfwKg(const double zfwKg)
@@ -320,6 +320,18 @@ bool IFly737Max::ConsumeSmartSwitch()
     return smartSwitch_.Consume();
 }
 
+DoorStatus IFly737Max::GetDoorStatus() const
+{
+    DoorStatus status = kPaxDoorsUnreadable;
+
+    for (const char* animLVar : kCargoDoorAnimLVars)
+    {
+        status = doors::Combine(status, doors::OpenAboveZero(*variableGateway_, animLVar));
+    }
+
+    return status;
+}
+
 bool IFly737Max::IsPowered() const
 {
     return variableGateway_->GetAVar(kSimAvionicsBusVoltage, kVoltsUnit, 0.0) > 0.0;
@@ -339,10 +351,7 @@ bool IFly737Max::IsReadyToDeboard() const
 
 bool IFly737Max::IsEngineRunning() const
 {
-    const bool isEng1Running = variableGateway_->GetAVar(kSimEng1Combustion, kBoolUnit, 1.0) > 0.0;
-    const bool isEng2Running = variableGateway_->GetAVar(kSimEng2Combustion, kBoolUnit, 1.0) > 0.0;
-
-    return isEng1Running || isEng2Running;
+    return AnyEngineCombusting(*variableGateway_, kEngineRunningDefault, kEngineCount);
 }
 
 bool IFly737Max::IsParkingBrakeSet() const

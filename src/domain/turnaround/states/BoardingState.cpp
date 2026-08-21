@@ -21,7 +21,7 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
 
     EnsureBaseline(ctx);
 
-    if (isCompleted)
+    if (isCompleted && !IsCargoPending(ctx))
     {
         FinishBoarding(ctx);
         return TurnaroundTransition{TurnaroundPhase::WaitingReadyToPush, 60};
@@ -41,6 +41,11 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
         data.plannedZfwKg);
 
     return std::nullopt;
+}
+
+bool BoardingState::IsCargoPending(const TurnaroundContext& ctx)
+{
+    return ctx.gsxGateway->IsLoadingCargo() || ctx.gsxGateway->IsLoaderWaitingForDoor();
 }
 
 void BoardingState::EnsureBaseline(TurnaroundContext& ctx)

@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_IFLY737MAX_H
 
 #include "SmartSwitch.h"
+#include "../ifly/IFlyPlanFile.h"
 #include "../../domain/ports/Aircraft.h"
 
 class VariableGateway;
@@ -10,12 +11,13 @@ struct AutomationStatus;
 class IFly737Max final : public Aircraft
 {
 public:
-    IFly737Max(VariableGateway* variableGateway, AutomationStatus* status);
+    IFly737Max(VariableGateway* variableGateway, const AutomationStatus* status);
 
-    [[nodiscard]] const char* GetName() const override;
+    [[nodiscard]] const char* GetName() const;
     [[nodiscard]] bool IsCargoVariant() const override;
 
     void OnTick() override;
+    void OnSlowTick() override;
     void OnLoadingStarted() override {}
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -25,17 +27,18 @@ public:
     [[nodiscard]] double GetEmptyZfwKg() const override;
 
     [[nodiscard]] double GetCurrentFuelKg() const override;
-    void SetCurrentFuelKg(double fuelKg) override;
     [[nodiscard]] double GetCurrentZfwKg() const override;
     void SetCurrentZfwKg(double zfwKg) override;
 
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
+    [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
     [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Gsx; }
     [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Client; }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
+    [[nodiscard]] DoorStatus GetDoorStatus() const override;
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;
     [[nodiscard]] bool IsEngineRunning() const override;
@@ -69,9 +72,10 @@ private:
     [[nodiscard]] CargoDoorCloser* NextCloseableDoor();
 
     VariableGateway* variableGateway_;
-    AutomationStatus* status_;
+    const AutomationStatus* status_;
 
     SmartSwitch smartSwitch_;
+    IFlyPlanImport planImport_;
     double lastZfwKg_ = -1.0;
 
     CargoDoorCloser fwdCargoDoor_;

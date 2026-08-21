@@ -6,16 +6,8 @@
 class FakeGsxMenuGateway final : public GsxMenuGateway
 {
 public:
-    bool callJetwayResult = true;
-    bool callStairsResult = true;
     bool confirmGoodEnginesResult = true;
     bool completePushbackResult = true;
-    bool completeRefuelResult = true;
-    bool requestLavatoryResult = true;
-    bool requestWaterResult = true;
-    bool requestCleaningResult = true;
-    bool toggleGpuResult = true;
-    bool menuSettled = true;
 
     int callJetwayCalls = 0;
     int callStairsCalls = 0;
@@ -34,53 +26,33 @@ public:
     int requestWaterCalls = 0;
     int requestCleaningCalls = 0;
 
-    [[nodiscard]] bool CallJetway() override
-    {
-        ++callJetwayCalls;
-        return callJetwayResult;
-    }
+    void CallJetway() override { ++callJetwayCalls; }
 
-    [[nodiscard]] bool CallStairs() override
-    {
-        ++callStairsCalls;
-        return callStairsResult;
-    }
+    void CallStairs() override { ++callStairsCalls; }
 
-    [[nodiscard]] bool RepositionAircraft() override
-    {
-        ++repositionCalls;
-        return true;
-    }
+    void RepositionAircraft() override { ++repositionCalls; }
 
-    [[nodiscard]] bool RequestSimbriefLoad() override
-    {
-        ++simbriefLoadCalls;
-        return true;
-    }
+    void RequestSimbriefLoad() override { ++simbriefLoadCalls; }
 
-    [[nodiscard]] bool RequestBoarding() override
-    {
-        ++boardingCalls;
-        return true;
-    }
+    void RequestBoarding() override { ++boardingCalls; }
 
-    [[nodiscard]] bool RequestDeboarding() override
-    {
-        ++deboardingCalls;
-        return true;
-    }
+    void RequestDeboarding() override { ++deboardingCalls; }
 
-    [[nodiscard]] bool RequestPushback() override
-    {
-        ++pushbackCalls;
-        return true;
-    }
+    void RequestPushback() override { ++pushbackCalls; }
 
-    [[nodiscard]] bool RequestRefueling() override
-    {
-        ++refuelingCalls;
-        return true;
-    }
+    void RequestRefueling() override { ++refuelingCalls; }
+
+    void CompleteRefuel() override { ++completeRefuelCalls; }
+
+    void ToggleGpu() override { ++toggleGpuCalls; }
+
+    void RequestCatering() override { ++requestCateringCalls; }
+
+    void RequestLavatory() override { ++requestLavatoryCalls; }
+
+    void RequestWater() override { ++requestWaterCalls; }
+
+    void RequestCleaning() override { ++requestCleaningCalls; }
 
     [[nodiscard]] bool ConfirmGoodEngines() override
     {
@@ -93,44 +65,6 @@ public:
         ++completePushbackCalls;
         return completePushbackResult;
     }
-
-    [[nodiscard]] bool CompleteRefuel() override
-    {
-        ++completeRefuelCalls;
-        return completeRefuelResult;
-    }
-
-    [[nodiscard]] bool ToggleGpu() override
-    {
-        ++toggleGpuCalls;
-        return toggleGpuResult;
-    }
-
-    [[nodiscard]] bool RequestCatering() override
-    {
-        ++requestCateringCalls;
-        return true;
-    }
-
-    [[nodiscard]] bool RequestLavatory() override
-    {
-        ++requestLavatoryCalls;
-        return requestLavatoryResult;
-    }
-
-    [[nodiscard]] bool RequestWater() override
-    {
-        ++requestWaterCalls;
-        return requestWaterResult;
-    }
-
-    [[nodiscard]] bool RequestCleaning() override
-    {
-        ++requestCleaningCalls;
-        return requestCleaningResult;
-    }
-
-    [[nodiscard]] bool IsMenuSettled() const override { return menuSettled; }
 
     void DisableGsxMenu() override {}
 };

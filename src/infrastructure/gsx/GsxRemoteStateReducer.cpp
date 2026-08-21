@@ -18,14 +18,9 @@ namespace
 
             GsxRemoteService svc;
             svc.id = Str(o.value("id"));
-            svc.displayName = Str(o.value("displayName"));
             svc.state = Str(o.value("state"));
             svc.stateRaw = o.value("stateRaw").toInt();
-            svc.stateText = Str(o.value("stateText"));
-            svc.statusText = Str(o.value("statusText"));
-            svc.progressText = Str(o.value("progressText"));
             svc.canTrigger = o.value("canTrigger").toBool();
-            svc.canBypass = o.value("canBypass").toBool();
 
             state.services.push_back(std::move(svc));
         }
@@ -36,8 +31,6 @@ namespace
         const QJsonObject& o = value.toObject();
 
         state.menu.title = Str(o.value("title"));
-        state.menu.subtitle = Str(o.value("subtitle"));
-        state.menu.header = Str(o.value("header"));
 
         state.menu.entries.clear();
         for (const QJsonValue& v : o.value("entries").toArray())

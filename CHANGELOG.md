@@ -1,5 +1,42 @@
 # Changelog
 
+## [1.7.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.6.0...v1.7.0) (2026-08-21)
+
+
+### Features
+
+* **probe:** instrument the client to answer what only the simulator can ([#45](https://github.com/brunofgmag/gsx-integrator-client/issues/45)) ([a7ba758](https://github.com/brunofgmag/gsx-integrator-client/commit/a7ba75811937961eb2f02e295b18a4189126632b))
+
+## [1.6.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.5.0...v1.6.0) (2026-08-19)
+
+
+### Features
+
+* **aircraft:** let every aircraft report whether a door is open ([#43](https://github.com/brunofgmag/gsx-integrator-client/issues/43)) ([f648ce7](https://github.com/brunofgmag/gsx-integrator-client/commit/f648ce7e5b187de4d0ab0bc4a1f453778dd9219c))
+
+## [1.5.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.4.0...v1.5.0) (2026-08-18)
+
+
+### Features
+
+* iFly plan gate, GSX menu retry rework e correções de porta de carga do 737 ([#38](https://github.com/brunofgmag/gsx-integrator-client/issues/38)) ([55a5700](https://github.com/brunofgmag/gsx-integrator-client/commit/55a570054bd3bca35fb97e8cb7728b989a3ab9bb))
+
+## [1.4.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.3.0...v1.4.0) (2026-08-17)
+
+
+### Features
+
+* let the user choose the graphics backend ([#36](https://github.com/brunofgmag/gsx-integrator-client/issues/36)) ([1d866e3](https://github.com/brunofgmag/gsx-integrator-client/commit/1d866e37e031b7c8cfc34b7ba73ca22fb0082162))
+
+## [1.3.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.2.0...v1.3.0) (2026-08-16)
+
+
+### Features
+
+* add PMDG 737 family support ([618d71e](https://github.com/brunofgmag/gsx-integrator-client/commit/618d71e24e90e2c860e27136239c7731b9318ec1))
+* add PMDG 737 family support ([#34](https://github.com/brunofgmag/gsx-integrator-client/issues/34)) ([d47ad91](https://github.com/brunofgmag/gsx-integrator-client/commit/d47ad91d629a7185d2feb6be0a3ab4b32ec7b077))
+* offer to enable the PMDG SDK data broadcast ([9847a60](https://github.com/brunofgmag/gsx-integrator-client/commit/9847a6091e0eadc849f4f22d2a52765382f13b29))
+
 ## [1.2.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.1.0...v1.2.0) (2026-07-22)
 
 

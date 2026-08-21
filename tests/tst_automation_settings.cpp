@@ -111,6 +111,7 @@ void AutomationSettingsTest::customProfileKeepsPilotIdAndAutoFlags()
     settings.simbriefPilotId = 42;
     settings.autoSelectGsxChoice = false;
     settings.autoDeice = true;
+    settings.useAircraftStairs = true;
     settings.crewBoarding = 1;
     settings.autoStartFlow = true;
     settings.autoStartLoading = false;
@@ -123,6 +124,7 @@ void AutomationSettingsTest::customProfileKeepsPilotIdAndAutoFlags()
     QCOMPARE(resolved.simbriefPilotId, 42);
     QVERIFY(!resolved.autoSelectGsxChoice);
     QVERIFY(resolved.autoDeice);
+    QVERIFY(resolved.useAircraftStairs);
     QCOMPARE(resolved.crewBoarding, CrewBoarding::Crew);
     QVERIFY(resolved.autoStartFlow);
     QVERIFY(!resolved.autoStartLoading);

@@ -14,7 +14,7 @@ public:
 
     void Reset();
 
-    [[nodiscard]] bool IsAvailable() const override;
+    [[nodiscard]] bool IsAvailable() const;
 
     [[nodiscard]] GsxStateStatus GetStateStatus(GsxState gsxState) override;
     [[nodiscard]] bool WasStateCompleted(GsxState gsxState) const override;
@@ -29,6 +29,8 @@ public:
     [[nodiscard]] int GetBoardedPassengers() override;
     [[nodiscard]] int GetDeboardedPassengers() override;
     [[nodiscard]] double GetBoardingCargoPercent() const override;
+    [[nodiscard]] bool IsLoadingCargo() const override;
+    [[nodiscard]] bool IsLoaderWaitingForDoor() const override;
     [[nodiscard]] double GetDeboardingCargoPercent() const override;
     [[nodiscard]] bool AreStairsInPlace() const override;
     [[nodiscard]] bool IsJetwayInPlace() const override;

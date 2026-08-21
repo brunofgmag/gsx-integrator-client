@@ -15,9 +15,10 @@ std::optional<TurnaroundTransition> RequestBoardingState::Evaluate(TurnaroundCon
     auto& data = ctx.data;
 
     const GsxStateStatus boardingState = ctx.gsxGateway->GetStateStatus(GsxState::Boarding);
-    if (boardingState == GsxStateStatus::Callable && !data.boardingRequested && ctx.menuGateway->IsMenuSettled())
+    if (boardingState == GsxStateStatus::Callable && !data.boardingRequested)
     {
-        data.boardingRequested = ctx.menuGateway->RequestBoarding();
+        ctx.menuGateway->RequestBoarding();
+        data.boardingRequested = true;
     }
 
     const bool hasPassengersBoarding = ctx.gsxGateway->GetBoardedPassengers() > 0;

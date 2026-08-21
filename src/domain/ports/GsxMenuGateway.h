@@ -6,24 +6,23 @@ class GsxMenuGateway
 public:
     virtual ~GsxMenuGateway() = default;
 
-    [[nodiscard]] virtual bool CallJetway() = 0;
-    [[nodiscard]] virtual bool CallStairs() = 0;
-    [[nodiscard]] virtual bool RepositionAircraft() = 0;
-    [[nodiscard]] virtual bool RequestSimbriefLoad() = 0;
-    [[nodiscard]] virtual bool RequestBoarding() = 0;
-    [[nodiscard]] virtual bool RequestDeboarding() = 0;
-    [[nodiscard]] virtual bool RequestPushback() = 0;
-    [[nodiscard]] virtual bool RequestRefueling() = 0;
+    virtual void CallJetway() = 0;
+    virtual void CallStairs() = 0;
+    virtual void RepositionAircraft() = 0;
+    virtual void RequestSimbriefLoad() = 0;
+    virtual void RequestBoarding() = 0;
+    virtual void RequestDeboarding() = 0;
+    virtual void RequestPushback() = 0;
+    virtual void RequestRefueling() = 0;
+    virtual void CompleteRefuel() = 0;
+    virtual void ToggleGpu() = 0;
+    virtual void RequestCatering() = 0;
+    virtual void RequestLavatory() = 0;
+    virtual void RequestWater() = 0;
+    virtual void RequestCleaning() = 0;
+
     [[nodiscard]] virtual bool ConfirmGoodEngines() = 0;
     [[nodiscard]] virtual bool CompletePushback() = 0;
-    [[nodiscard]] virtual bool CompleteRefuel() = 0;
-    [[nodiscard]] virtual bool ToggleGpu() = 0;
-    [[nodiscard]] virtual bool RequestCatering() = 0;
-    [[nodiscard]] virtual bool RequestLavatory() = 0;
-    [[nodiscard]] virtual bool RequestWater() = 0;
-    [[nodiscard]] virtual bool RequestCleaning() = 0;
-
-    [[nodiscard]] virtual bool IsMenuSettled() const = 0;
 
     virtual void DisableGsxMenu() = 0;
 };

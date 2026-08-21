@@ -21,24 +21,21 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::Evaluate(TurnaroundC
         return std::nullopt;
     }
 
-    if (!ctx.menuGateway->IsMenuSettled())
-    {
-        return std::nullopt;
-    }
-
     bool& flightPlanRequested = ctx.data.flightPlanRequested;
+    const bool simbriefLoaded = ctx.gsxGateway->IsSimbriefLoaded();
 
-    if (!ctx.gsxGateway->IsSimbriefLoaded() && !flightPlanRequested)
+    if (!simbriefLoaded && !flightPlanRequested)
     {
-        flightPlanRequested = ctx.menuGateway->RequestSimbriefLoad();
+        ctx.menuGateway->RequestSimbriefLoad();
+        flightPlanRequested = true;
     }
 
-    if (ctx.gsxGateway->IsSimbriefLoaded())
+    if (simbriefLoaded)
     {
         flightPlanRequested = false;
     }
 
-    if (flightPlanRequested && !ctx.gsxGateway->IsSimbriefLoaded())
+    if (flightPlanRequested)
     {
         if (ctx.TickCondition(kRetryTicks))
         {

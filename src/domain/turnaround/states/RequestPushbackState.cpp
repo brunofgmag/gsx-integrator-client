@@ -26,9 +26,10 @@ std::optional<TurnaroundTransition> RequestPushbackState::Evaluate(TurnaroundCon
         return TurnaroundTransition{TurnaroundPhase::WaitingPushbackToStart};
     }
 
-    if (departureState == GsxStateStatus::Callable && !data.pushbackRequested && ctx.menuGateway->IsMenuSettled())
+    if (departureState == GsxStateStatus::Callable && !data.pushbackRequested)
     {
-        data.pushbackRequested = ctx.menuGateway->RequestPushback();
+        ctx.menuGateway->RequestPushback();
+        data.pushbackRequested = true;
     }
 
     if (departureState == GsxStateStatus::Completed || ctx.gsxGateway->WasStateCompleted(GsxState::Pushback))

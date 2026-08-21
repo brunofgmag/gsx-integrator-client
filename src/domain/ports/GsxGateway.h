@@ -38,7 +38,6 @@ class GsxGateway
 public:
     virtual ~GsxGateway() = default;
 
-    [[nodiscard]] virtual bool IsAvailable() const = 0;
     [[nodiscard]] virtual GsxStateStatus GetStateStatus(GsxState gsxState) = 0;
     [[nodiscard]] virtual bool WasStateCompleted(GsxState gsxState) const = 0;
     [[nodiscard]] virtual bool IsWaitingForEngines() const = 0;
@@ -51,6 +50,8 @@ public:
     [[nodiscard]] virtual int GetBoardedPassengers() = 0;
     [[nodiscard]] virtual int GetDeboardedPassengers() = 0;
     [[nodiscard]] virtual double GetBoardingCargoPercent() const = 0;
+    [[nodiscard]] virtual bool IsLoadingCargo() const = 0;
+    [[nodiscard]] virtual bool IsLoaderWaitingForDoor() const = 0;
     [[nodiscard]] virtual double GetDeboardingCargoPercent() const = 0;
     [[nodiscard]] virtual bool AreStairsInPlace() const = 0;
     [[nodiscard]] virtual bool IsJetwayInPlace() const = 0;
