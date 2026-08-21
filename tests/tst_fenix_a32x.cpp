@@ -137,7 +137,10 @@ private slots:
     static void drivingTickWritesWhatObservationHeldBack();
     static void doorStatusUnknownUntilTheEfbAnswers();
     static void doorStatusAllClosedOnceEveryDoorReadsShut();
-    static void doorStatusOpenWhenADoorReadsOpen();    static void theSecondLeftDoorOnlyCountsOnTheA321();
+    static void doorStatusOpenWhenADoorReadsOpen();
+    static void aClosingDoorIsNotBelievedUntilItsReadingSettles();
+    static void theCargoSwitchBounceRestartsTheSettleWindow();
+    static void theSecondLeftDoorOnlyCountsOnTheA321();
     static void subscribesEveryDoorDatarefSoItCanRead();
     static void registersSmartSwitchForFastRefresh();
     static void subscribesEfbPlanDatarefs();
@@ -980,6 +983,72 @@ void FenixA32xTest::doorStatusOpenWhenADoorReadsOpen()
     fixture.efb.numbers[kFwdCargoDoor] = 1.0;
 
     QVERIFY(fixture.aircraft.GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void FenixA32xTest::aClosingDoorIsNotBelievedUntilItsReadingSettles()
+{
+    FenixFixture fixture;
+
+    for (const char* doorDataref : kA320DoorDatarefs)
+    {
+        fixture.efb.numbers[doorDataref] = 0.0;
+    }
+    fixture.aircraft.Observe();
+
+    QVERIFY(fixture.aircraft.GetDoorStatus() == DoorStatus::AllClosed);
+
+    fixture.efb.numbers[kFwdCargoDoor] = 1.0;
+    fixture.aircraft.Observe();
+
+    QVERIFY(fixture.aircraft.GetDoorStatus() == DoorStatus::AnyOpen);
+
+    fixture.efb.numbers[kFwdCargoDoor] = 0.0;
+
+    for (int tick = 0; tick < 8; ++tick)
+    {
+        fixture.aircraft.Observe();
+        QVERIFY2(fixture.aircraft.GetDoorStatus() == DoorStatus::AnyOpen,
+                 qPrintable(QStringLiteral("tick %1").arg(tick)));
+    }
+
+    fixture.aircraft.Observe();
+
+    QVERIFY(fixture.aircraft.GetDoorStatus() == DoorStatus::AllClosed);
+}
+
+void FenixA32xTest::theCargoSwitchBounceRestartsTheSettleWindow()
+{
+    FenixFixture fixture;
+
+    for (const char* doorDataref : kA320DoorDatarefs)
+    {
+        fixture.efb.numbers[doorDataref] = 0.0;
+    }
+    fixture.efb.numbers[kFwdCargoDoor] = 1.0;
+    fixture.aircraft.Observe();
+
+    fixture.efb.numbers[kFwdCargoDoor] = 0.0;
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        fixture.aircraft.Observe();
+    }
+
+    fixture.efb.numbers[kFwdCargoDoor] = 1.0;
+    fixture.aircraft.Observe();
+
+    QVERIFY(fixture.aircraft.GetDoorStatus() == DoorStatus::AnyOpen);
+
+    fixture.efb.numbers[kFwdCargoDoor] = 0.0;
+    for (int tick = 0; tick < 8; ++tick)
+    {
+        fixture.aircraft.Observe();
+        QVERIFY2(fixture.aircraft.GetDoorStatus() == DoorStatus::AnyOpen,
+                 qPrintable(QStringLiteral("tick %1 depois do reengate").arg(tick)));
+    }
+
+    fixture.aircraft.Observe();
+
+    QVERIFY(fixture.aircraft.GetDoorStatus() == DoorStatus::AllClosed);
 }
 
 void FenixA32xTest::theSecondLeftDoorOnlyCountsOnTheA321()

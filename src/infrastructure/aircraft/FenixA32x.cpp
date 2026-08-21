@@ -83,6 +83,8 @@ namespace
     };
 
     constexpr double kDoorUnanswered = -1.0;
+    constexpr int kDoorSettleTicks = 8;
+
     constexpr std::array kProbeDoorDatarefs = {
         kFwdPaxDoorDataref, kMidPaxDoorDataref, kAftPaxDoorDataref,
         kFwdCateringDoorDataref, kAftCateringDoorDataref,
@@ -202,7 +204,9 @@ bool FenixA32x::IsCargoVariant() const
 
 void FenixA32x::Observe()
 {
-    efb_->Poll();    ReportProbe();
+    efb_->Poll();
+    AdvanceDoorSettle();
+    ReportProbe();
 }
 
 void FenixA32x::OnTick()
@@ -324,8 +328,46 @@ DoorStatus FenixA32x::GetDoorStatus() const
 std::optional<bool> FenixA32x::DoorOpen(const char* dataref) const
 {
     const double reading = efb_->GetNumber(dataref, kDoorUnanswered);
+    if (reading < 0.0)
+    {
+        return std::nullopt;
+    }
 
-    return reading < 0.0 ? std::nullopt : std::optional{reading > 0.0};
+    if (reading > 0.0)
+    {
+        return true;
+    }
+
+    const auto settling = doorSettleTicks_.find(dataref);
+
+    return settling != doorSettleTicks_.end() && settling->second > 0
+               ? std::optional{true}
+               : std::optional{false};
+}
+
+void FenixA32x::AdvanceDoorSettle()
+{
+    for (const char* dataref : kProbeDoorDatarefs)
+    {
+        const double reading = efb_->GetNumber(dataref, kDoorUnanswered);
+        int& settling = doorSettleTicks_[dataref];
+        double& last = lastDoorReading_[dataref];
+
+        if (reading != 0.0)
+        {
+            settling = 0;
+        }
+        else if (last > 0.0)
+        {
+            settling = kDoorSettleTicks;
+        }
+        else if (settling > 0)
+        {
+            --settling;
+        }
+
+        last = reading;
+    }
 }
 
 void FenixA32x::UpdateDoors()

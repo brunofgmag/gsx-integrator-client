@@ -1,7 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FENIXA32X_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FENIXA32X_H
 
+#include <map>
 #include <memory>
+#include <string>
 #include "SmartSwitch.h"
 #include "../fenix/FenixEfbGateway.h"
 #include "../gsx/GsxDoorSync.h"
@@ -64,7 +66,9 @@ private:
     [[nodiscard]] bool IsBeaconOn() const;
     void EnsureEfbInitialized();
     void UpdateDoors();
-    [[nodiscard]] std::optional<bool> DoorOpen(const char* dataref) const;    void ReportProbe() const;
+    [[nodiscard]] std::optional<bool> DoorOpen(const char* dataref) const;
+    void AdvanceDoorSettle();
+    void ReportProbe() const;
     void DisarmRefuelSystemWhenDone();
     void SyncPassengersAndCargo(double zfwKg);
     void WriteSeatOccupation(int passengersOnBoard);
@@ -73,7 +77,10 @@ private:
 
     VariableGateway* variableGateway_;
     FenixVariant variant_;
-    std::unique_ptr<FenixEfbGateway> efb_;    GsxDoorSync doors_;
+    std::unique_ptr<FenixEfbGateway> efb_;
+    std::map<std::string, int> doorSettleTicks_;
+    std::map<std::string, double> lastDoorReading_;
+    GsxDoorSync doors_;
     SmartSwitch smartSwitch_;
     bool efbInitialized_ = false;
     bool finalLoadsheetRequested_ = true;
