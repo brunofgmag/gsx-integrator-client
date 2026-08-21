@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.6.0...v1.7.0) (2026-08-21)
+
+
+### Features
+
+* **probe:** instrument the client to answer what only the simulator can ([#45](https://github.com/brunofgmag/gsx-integrator-client/issues/45)) ([a7ba758](https://github.com/brunofgmag/gsx-integrator-client/commit/a7ba75811937961eb2f02e295b18a4189126632b))
+
 ## [1.6.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.5.0...v1.6.0) (2026-08-19)
 
 
