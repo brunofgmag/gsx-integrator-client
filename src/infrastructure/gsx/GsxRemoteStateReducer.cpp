@@ -1,5 +1,8 @@
 ﻿#include "GsxRemoteStateReducer.h"
 
+#include <algorithm>
+#include <array>
+#include <string_view>
 #include <utility>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -7,6 +10,10 @@
 
 namespace
 {
+    constexpr std::array<std::string_view, 5> kDiscardedPaths = {
+        "/billing", "/operators", "/message", "/state", "/stateText"
+    };
+
     std::string Str(const QJsonValue& v) { return v.toString().toStdString(); }
 
     void SetServices(GsxRemoteState& state, const QJsonValue& value)
@@ -18,7 +25,6 @@ namespace
 
             GsxRemoteService svc;
             svc.id = Str(o.value("id"));
-            svc.state = Str(o.value("state"));
             svc.stateRaw = o.value("stateRaw").toInt();
             svc.canTrigger = o.value("canTrigger").toBool();
 
@@ -45,14 +51,6 @@ namespace
         }
     }
 
-    void SetMessage(GsxRemoteState& state, const QJsonValue& value)
-    {
-        const QJsonObject& o = value.toObject();
-
-        state.message.text = Str(o.value("text"));
-        state.message.visible = o.value("visible").toBool();
-    }
-
     void SetSimBrief(GsxRemoteState& state, const QJsonValue& value)
     {
         const QJsonObject& o = value.toObject();
@@ -64,13 +62,6 @@ namespace
 
 void GsxRemoteStateReducer::ApplySnapshot(GsxRemoteState& state, const QJsonObject& snapshot)
 {
-    state.sessionState = snapshot.value("state").toInt(state.sessionState);
-
-    if (snapshot.contains("stateText"))
-    {
-        state.sessionStateText = Str(snapshot.value("stateText"));
-    }
-
     if (snapshot.contains("services"))
     {
         SetServices(state, snapshot.value("services"));
@@ -86,51 +77,39 @@ void GsxRemoteStateReducer::ApplySnapshot(GsxRemoteState& state, const QJsonObje
         state.menu.shown = snapshot.value("menuShown").toBool();
     }
 
-    if (snapshot.contains("message"))
-    {
-        SetMessage(state, snapshot.value("message"));
-    }
-
     if (snapshot.contains("simbrief"))
     {
         SetSimBrief(state, snapshot.value("simbrief"));
     }
 }
 
-void GsxRemoteStateReducer::ApplyPatch(GsxRemoteState& state, const std::string& path, const QJsonValue& value)
+GsxPatchOutcome GsxRemoteStateReducer::ApplyPatch(GsxRemoteState& state, const std::string& path,
+                                                  const QJsonValue& value)
 {
     if (path == "/services")
     {
         SetServices(state, value);
     }
-
-    if (path == "/menu")
+    else if (path == "/menu")
     {
         SetMenu(state, value);
     }
-
-    if (path == "/menuShown")
+    else if (path == "/menuShown")
     {
         state.menu.shown = value.toBool();
     }
-
-    if (path == "/message")
-    {
-        SetMessage(state, value);
-    }
-
-    if (path == "/simbrief")
+    else if (path == "/simbrief")
     {
         SetSimBrief(state, value);
     }
-
-    if (path == "/state")
+    else if (std::ranges::find(kDiscardedPaths, path) != kDiscardedPaths.end())
     {
-        state.sessionState = value.toInt();
+        return GsxPatchOutcome::Discarded;
+    }
+    else
+    {
+        return GsxPatchOutcome::Unknown;
     }
 
-    if (path == "/stateText")
-    {
-        state.sessionStateText = Str(value);
-    }
+    return GsxPatchOutcome::Applied;
 }

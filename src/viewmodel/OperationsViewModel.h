@@ -43,6 +43,7 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(QString simbriefStatusText READ GetSimbriefStatusText NOTIFY SnapshotChanged)
     Q_PROPERTY(bool simbriefReady READ IsSimbriefReady NOTIFY SnapshotChanged)
     Q_PROPERTY(bool simbriefError READ HasSimbriefError NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString simbriefRefusal READ GetSimbriefRefusal NOTIFY SnapshotChanged)
     Q_PROPERTY(bool canToggleAutomation READ CanToggleAutomation NOTIFY SnapshotChanged)
     Q_PROPERTY(bool canStartLoading READ CanStartLoading NOTIFY SnapshotChanged)
     Q_PROPERTY(bool canReloadSimbrief READ CanReloadSimbrief NOTIFY SnapshotChanged)
@@ -91,6 +92,7 @@ public:
     [[nodiscard]] QString GetSimbriefStatusText() const;
     [[nodiscard]] bool IsSimbriefReady() const;
     [[nodiscard]] bool HasSimbriefError() const;
+    [[nodiscard]] QString GetSimbriefRefusal() const;
     [[nodiscard]] bool CanToggleAutomation() const;
     [[nodiscard]] bool CanStartLoading() const;
     [[nodiscard]] bool CanReloadSimbrief() const;

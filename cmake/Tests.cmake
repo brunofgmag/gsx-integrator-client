@@ -747,7 +747,8 @@ set(GSXI_GUARD_CHECKS
         check-turnaround-data-field-unread
         check-viewmodel-property-unbound
         check-infra-gateway-uncalled
-        check-state-predicate-lvar-default)
+        check-state-predicate-lvar-default
+        check-remote-state-field-unread)
 
 foreach (GSXI_GUARD_CHECK ${GSXI_GUARD_CHECKS})
     add_test(NAME ${GSXI_GUARD_CHECK}

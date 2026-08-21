@@ -79,7 +79,11 @@ void IntegratorRuntime::Setup()
             &gsxRemoteClient_, [this](const QString& p, const QJsonValue& v)
             {
                 const std::string path = p.toStdString();
-                GsxRemoteStateReducer::ApplyPatch(gsxRemoteState_, path, v);
+                if (GsxRemoteStateReducer::ApplyPatch(gsxRemoteState_, path, v) == GsxPatchOutcome::Unknown
+                    && unknownPatchPaths_.insert(path).second)
+                {
+                    LOG_WARN("GSX published an unknown path: %s", path.c_str());
+                }
                 if (path == "/menu" || path == "/menuShown")
                 {
                     gsxMenu_.OnMenuChanged();
@@ -475,6 +479,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.cargoDoorStuck = IsCargoDoorStuck();
     snapshot.phase = GetPhase();
     snapshot.flightPlanStatus = status_.flightPlanStatus;
+    snapshot.simbriefRefusal = gsxService_.GetSimbriefRefusal();
     snapshot.fuelProgress = status_.fuelProgress;
     snapshot.boardingProgress = status_.boardingProgress;
     snapshot.deboardingProgress = status_.deboardingProgress;

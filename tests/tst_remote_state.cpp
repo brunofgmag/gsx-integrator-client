@@ -65,7 +65,8 @@ class RemoteStateTest final : public QObject
 private slots:
     static void snapshotPopulatesServicesAndMenu();
     static void menuPatchFillsEntries();
-    static void messagePatchTogglesVisibility();
+    static void everyPatchPathInTheCaptureIsAccountedFor();
+    static void discardedPathsAreNamedAndNotSilent();
 };
 
 void RemoteStateTest::snapshotPopulatesServicesAndMenu()
@@ -82,7 +83,6 @@ void RemoteStateTest::snapshotPopulatesServicesAndMenu()
     const auto* gpu = FindService(state, "GPU");
 
     QVERIFY(gpu);
-    QCOMPARE(gpu->state, std::string{"performing"});
     QCOMPARE(gpu->stateRaw, 5);
     QVERIFY(!gpu->canTrigger);
 }
@@ -100,16 +100,47 @@ void RemoteStateTest::menuPatchFillsEntries()
     QVERIFY(state.menu.title.find("Activate Services") != std::string::npos);
 }
 
-void RemoteStateTest::messagePatchTogglesVisibility()
+void RemoteStateTest::everyPatchPathInTheCaptureIsAccountedFor()
+{
+    const QJsonArray fixtures = LoadFixtures();
+
+    QVERIFY(!fixtures.isEmpty());
+
+    QStringList unknown;
+    for (const QJsonValue& event : fixtures)
+    {
+        const QJsonObject message = MessageFromEvent(event);
+        if (message.value("type").toString() != QStringLiteral("patch"))
+        {
+            continue;
+        }
+
+        GsxRemoteState state;
+        const std::string path = message.value("path").toString().toStdString();
+        if (GsxRemoteStateReducer::ApplyPatch(state, path, message.value("value"))
+            == GsxPatchOutcome::Unknown)
+        {
+            unknown.append(QString::fromStdString(path));
+        }
+    }
+
+    QVERIFY2(unknown.isEmpty(), qPrintable(unknown.join(QLatin1Char(' '))));
+}
+
+void RemoteStateTest::discardedPathsAreNamedAndNotSilent()
 {
     GsxRemoteState state;
-    const QJsonObject message = QJsonDocument::fromJson(
-        R"({"text":"Fuel Truck is on its way","visible":true})").object();
 
-    GsxRemoteStateReducer::ApplyPatch(state, "/message", message);
-
-    QVERIFY(state.message.visible);
-    QCOMPARE(state.message.text, std::string{"Fuel Truck is on its way"});
+    QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/billing", QJsonValue()),
+             GsxPatchOutcome::Discarded);
+    QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/operators", QJsonValue()),
+             GsxPatchOutcome::Discarded);
+    QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/message", QJsonValue()),
+             GsxPatchOutcome::Discarded);
+    QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/menuShown", QJsonValue(true)),
+             GsxPatchOutcome::Applied);
+    QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/somethingNobodyHasSeen", QJsonValue()),
+             GsxPatchOutcome::Unknown);
 }
 
 QTEST_APPLESS_MAIN(RemoteStateTest)

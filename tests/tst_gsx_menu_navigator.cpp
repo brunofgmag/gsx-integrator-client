@@ -76,7 +76,7 @@ namespace
 
     void OfferService(GsxRemoteState& state, const std::string& id)
     {
-        state.services.push_back(GsxRemoteService{id, "available", 1, true});
+        state.services.push_back(GsxRemoteService{id, 1, true});
     }
 
     void MarkServiceTaken(GsxRemoteState& state, const std::string& id)
@@ -85,7 +85,6 @@ namespace
         {
             if (service.id == id)
             {
-                service.state = "performing";
                 service.stateRaw = 5;
                 service.canTrigger = false;
 
@@ -93,7 +92,7 @@ namespace
             }
         }
 
-        state.services.push_back(GsxRemoteService{id, "performing", 5, false});
+        state.services.push_back(GsxRemoteService{id, 5, false});
     }
 
     bool Logged(const FakeDomainLogger& logger, const std::string& needle)

@@ -1,6 +1,7 @@
 #include "WaitingFlightPlanState.h"
 
 #include <format>
+#include <string>
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
 #include "../../ports/GsxGateway.h"
@@ -39,7 +40,14 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::Evaluate(TurnaroundC
     {
         if (ctx.TickCondition(kRetryTicks))
         {
-            ctx.logger->LogInfo(std::format("GSX Simbrief plan not loaded after {} seconds", kRetryTicks));
+            if (const std::string refusal = ctx.gsxGateway->GetSimbriefRefusal(); !refusal.empty())
+            {
+                ctx.logger->LogInfo(std::format("GSX refused the SimBrief plan: {}", refusal));
+            }
+            else
+            {
+                ctx.logger->LogInfo(std::format("GSX Simbrief plan not loaded after {} seconds", kRetryTicks));
+            }
             flightPlanRequested = false;
         }
 
