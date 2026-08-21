@@ -36,6 +36,9 @@ private slots:
     static void latchesEfbPlanImportOnFetchSuccess();
     static void readsDoorStatesFromStateReply();
     static void doorInMotionHasNoState();
+    static void readsThePassengerEntryMethodFromStateReply();
+    static void groundPowerInTransitIsReportedAsMoving();
+    static void settledGroundPowerVerbsAreNotMoving();
     static void requestStateAsksThePlaneForGroundState();
     static void unsubscribesBorrowedBridgeOnDestruction();
     static void skipsUnsubscribeWhenNeverPolled();
@@ -176,6 +179,27 @@ void PmdgTabletClientTest::doorInMotionHasNoState()
     QCOMPARE(client.DoorOpen("fwd_cargo"), std::optional(false));
 }
 
+void PmdgTabletClientTest::readsThePassengerEntryMethodFromStateReply()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+    client.Poll();
+
+    QVERIFY(!client.PassengerEntryViaJetway().has_value());
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("ground_conn":{"jetway":"INHIBITED","passenger_entry":"STAIRS"}})");
+
+    QCOMPARE(client.PassengerEntryViaJetway(), std::optional(false));
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("ground_conn":{"jetway":"REQ/REL","passenger_entry":"JETWAY"}})");
+
+    QCOMPARE(client.PassengerEntryViaJetway(), std::optional(true));
+}
+
 void PmdgTabletClientTest::requestStateAsksThePlaneForGroundState()
 {
     FakeCommBusBridgeGateway bridge;
@@ -216,6 +240,49 @@ void PmdgTabletClientTest::skipsUnsubscribeWhenNeverPolled()
     }
 
     QVERIFY(bridge.unsubscribed.empty());
+}
+
+void PmdgTabletClientTest::groundPowerInTransitIsReportedAsMoving()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+    client.Poll();
+
+    QVERIFY(!client.GroundConnMoving("ground_power"));
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("ground_conn":{"chocks_set":true,"ground_power_state":"CONNECTING"}})");
+
+    QVERIFY(client.GroundConnMoving("ground_power"));
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("ground_conn":{"chocks_set":true,"ground_power_state":"DISCONNECTING"}})");
+
+    QVERIFY(client.GroundConnMoving("ground_power"));
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("ground_conn":{"chocks_set":true,"ground_power_state":"RELEASE"}})");
+
+    QVERIFY(!client.GroundConnMoving("ground_power"));
+}
+
+void PmdgTabletClientTest::settledGroundPowerVerbsAreNotMoving()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+    client.Poll();
+
+    for (const char* verb : {"REQUEST", "RELEASE", "CHOCKS INHIBIT"})
+    {
+        bridge.Deliver("PlaneToTablet",
+                       std::string(R"({"message_tag":"state_reply","tablet_side":"FO",)")
+                       + R"("ground_conn":{"ground_power_state":")" + verb + R"("}})");
+
+        QVERIFY2(!client.GroundConnMoving("ground_power"), verb);
+    }
 }
 
 QTEST_APPLESS_MAIN(PmdgTabletClientTest)

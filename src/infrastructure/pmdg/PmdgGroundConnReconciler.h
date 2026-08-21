@@ -13,20 +13,25 @@ public:
 
     void SetChocks(bool placed);
     void SetGroundPower(bool on);
+    void SetPassengerEntryJetway();
     void Reconcile();
 
 private:
     void ReconcileChocks();
     void ReconcileGroundPower();
+    void ReconcilePassengerEntry();
 
     PmdgGroundSource& source_;
     PmdgTabletGateway& tablet_;
     std::optional<bool> desiredChocks_;
     std::optional<bool> desiredGroundPower_;
+    bool passengerEntryRequested_ = false;
     int chocksAttempts_ = 0;
     int groundPowerAttempts_ = 0;
+    int passengerEntryAttempts_ = 0;
     int ticksSinceChocksRequest_ = 0;
     int ticksSinceGroundPowerRequest_ = 0;
+    int ticksSincePassengerEntryRequest_ = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGGROUNDCONNRECONCILER_H

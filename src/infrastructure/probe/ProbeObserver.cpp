@@ -5,6 +5,7 @@
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 #include "ProbeLog.h"
+#include "ProbeWatchList.h"
 #include "../simvars/SimVars.h"
 #include "../simvars/VariableGateway.h"
 #include "../../domain/ports/Aircraft.h"
@@ -206,6 +207,32 @@ const ProbeObserver::Track& ProbeObserver::Follow(VariableGateway& variables, co
     return track;
 }
 
+void ProbeObserver::ReportWatchList(VariableGateway& variables, const QString& id)
+{
+    for (const probe::WatchedVariable& watched : probe::WatchList())
+    {
+        if (watched.kind == probe::WatchKind::Dataref)
+        {
+            continue;
+        }
+
+        const bool isLVar = watched.kind == probe::WatchKind::LVar;
+        const double value = isLVar
+            ? variables.GetLVar(watched.name, 0.0)
+            : variables.GetAVar(watched.name, watched.unit, 0.0);
+        const bool received = isLVar
+            ? variables.HasReceivedLVar(watched.name)
+            : variables.HasReceivedAVar(watched.name, watched.unit);
+        const Track& track = isLVar ? Follow(variables, watched.name.c_str()) : Track{};
+
+        probe::Change("watch." + watched.name,
+                      QStringLiteral("watch %1 %2=%3 recv=%4 span=[%5..%6]")
+                      .arg(id, QString::fromStdString(watched.name), Number(value))
+                      .arg(received ? 1 : 0)
+                      .arg(Number(track.min), Number(track.max)));
+    }
+}
+
 void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables,
                             const std::string& profileId)
 {
@@ -231,9 +258,10 @@ void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables
     probe::Change("identity", QStringLiteral("plane %1 title='%2' atcModel='%3'")
                   .arg(id, QString::fromLatin1(title), QString::fromLatin1(atcModel)));
 
-    probe::Change("door", QStringLiteral("door  %1 GetDoorStatus=%2 IsParkingBrakeSet=%3")
+    probe::Change("door", QStringLiteral("door  %1 GetDoorStatus=%2 IsParkingBrakeSet=%3 IsHeldInPlace=%4")
                   .arg(id, QLatin1String(StatusText(aircraft.GetDoorStatus())))
-                  .arg(aircraft.IsParkingBrakeSet() ? 1 : 0));
+                  .arg(aircraft.IsParkingBrakeSet() ? 1 : 0)
+                  .arg(aircraft.IsHeldInPlace() ? 1 : 0));
 
     if (profile.brakeLVar != nullptr)
     {
@@ -288,6 +316,8 @@ void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables
         probe::Change("cand.flat", QStringLiteral("cand  %1 flat=%2 of %3")
                       .arg(id).arg(flat).arg(profile.candidateCount));
     }
+
+    ReportWatchList(variables, id);
 
     QStringList exits;
     for (const ProbeAVar& exit : kSimExits)

@@ -19,6 +19,7 @@ public:
     bool readyToPush = false;
     bool readyToDeboard = false;
     bool engineRunning = false;
+    bool heldInPlace = false;
     bool parkingBrakeSet = false;
     bool supportsStairsOrJetways = true;
     bool completesPushbackViaInterruptMenu = false;
@@ -31,6 +32,9 @@ public:
     bool groundPowerOn = false;
     int setGroundPowerCalls = 0;
     int closeAllDoorsCalls = 0;
+    bool doorsHeldClosed = false;
+    int holdDoorsClosedCalls = 0;
+    int clearOwnGroundEquipmentCalls = 0;
     RefuelBy refuelMethod = RefuelBy::Self;
     BoardBy boardMethod = BoardBy::Self;
     int consumeSmartSwitchCalls = 0;
@@ -89,9 +93,18 @@ public:
     }
 
     void CloseAllDoors() override { ++closeAllDoorsCalls; }
+
+    void HoldDoorsClosed(const bool hold) override
+    {
+        ++holdDoorsClosedCalls;
+        doorsHeldClosed = hold;
+    }
+
+    void ClearOwnGroundEquipment() override { ++clearOwnGroundEquipmentCalls; }
     [[nodiscard]] bool IsReadyToPush() const override { return readyToPush; }
     [[nodiscard]] bool IsReadyToDeboard() const override { return readyToDeboard; }
     [[nodiscard]] bool IsEngineRunning() const override { return engineRunning; }
+    [[nodiscard]] bool IsHeldInPlace() const override { return heldInPlace || parkingBrakeSet; }
     [[nodiscard]] bool IsParkingBrakeSet() const override { return parkingBrakeSet; }
 };
 

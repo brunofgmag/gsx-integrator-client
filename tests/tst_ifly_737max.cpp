@@ -26,7 +26,17 @@ namespace
     constexpr auto kChocks = "iFly_NLG_Chock_Display_VAL";
 
     constexpr auto kFwdCargoAnim = "Animation_FWD_Cargo_VAL";
+    constexpr auto kFwdEntryAnim = "ANIMATION_FWD_ENTRY_VAL";
+    constexpr auto kAftServiceAnim = "ANIMATION_AFT_SERVICE_VAL";
     constexpr auto kAftCargoAnim = "Animation_AFT_Cargo_VAL";
+
+    constexpr std::array kAllDoorAnims = {
+        kFwdCargoAnim, kAftCargoAnim,
+        kFwdEntryAnim, "ANIMATION_FWD_SERVICE_VAL",
+        "ANIMATION_AFT_ENTRY_VAL", kAftServiceAnim,
+        "ANIMATION_L_FWD_OVERWING_VAL", "ANIMATION_R_FWD_OVERWING_VAL",
+        "ANIMATION_L_AFT_OVERWING_VAL", "ANIMATION_R_AFT_OVERWING_VAL"
+    };
 
     constexpr double kEmptyOperatingZfwKg = 45070.0;
 
@@ -41,7 +51,7 @@ class IFly737MaxTest final : public QObject
     Q_OBJECT
 
 private slots:
-    static void reportsNameAndVariant();
+    static void reportsCargoVariant();
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
@@ -58,7 +68,8 @@ private slots:
     static void zfwSetterHoldsUntilEmptyWeightArrives();
     static void zfwSetterClampsPayloadAtZero();
     static void zfwSetterSkipsRepeatedValue();
-    static void parkingBrakeRequiresSwitchAndSimBrake();
+    static void parkingBrakeReadsTheSwitchAndIgnoresTheSimVar();
+    static void heldInPlaceAcceptsChocksWithoutTheSwitch();
     static void readyToDeboardFollowsSafetyState();
     static void aircraftPowerFollowsAvionicsBus();
     static void readyToPushFollowsPowerBeaconAndEngines();
@@ -66,7 +77,9 @@ private slots:
     static void engineAssumedRunningUntilCombustionDataArrives();
     static void doorStatusOpenWhenACargoDoorAnimationReadsOpen();
     static void doorStatusUnknownUntilCargoDoorDataArrives();
-    static void doorStatusNeverAllClosedWhilePaxDoorsAreUnreadable();
+    static void doorStatusAllClosedOnceEveryDoorReadsShut();
+    static void doorStatusOpenWhenAPassengerDoorReadsOpen();
+    static void doorStatusUnknownWhileAPassengerDoorHasNotAnswered();
     static void reportsLoadMethods();
     static void closesEachCargoDoorAsItsLoaderFinishes();
     static void waitsWhileLoadersUnloadCargo();
@@ -79,13 +92,12 @@ private slots:
     static void stopsClosingWhenBoardingStarts();
 };
 
-void IFly737MaxTest::reportsNameAndVariant()
+void IFly737MaxTest::reportsCargoVariant()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
     const IFly737Max aircraft(&gateway, &status);
 
-    QCOMPARE(QString(aircraft.GetName()), QString("iFly 737 MAX 8"));
     QVERIFY(!aircraft.IsCargoVariant());
 }
 
@@ -324,7 +336,7 @@ void IFly737MaxTest::zfwSetterSkipsRepeatedValue()
     QCOMPARE(gateway.setAVarCalls, 18);
 }
 
-void IFly737MaxTest::parkingBrakeRequiresSwitchAndSimBrake()
+void IFly737MaxTest::parkingBrakeReadsTheSwitchAndIgnoresTheSimVar()
 {
     struct TestCase
     {
@@ -336,8 +348,8 @@ void IFly737MaxTest::parkingBrakeRequiresSwitchAndSimBrake()
 
     constexpr auto cases = std::array{
         TestCase{"released", 0.0, 0.0, false},
-        TestCase{"switch only", 1.0, 0.0, false},
-        TestCase{"sim brake only", 0.0, 1.0, false},
+        TestCase{"switch only", 1.0, 0.0, true},
+        TestCase{"cold sim brake lies", 0.0, 1.0, false},
         TestCase{"both", 1.0, 1.0, true},
     };
 
@@ -351,6 +363,36 @@ void IFly737MaxTest::parkingBrakeRequiresSwitchAndSimBrake()
         gateway.avars[kSimParkingBrake] = testCase.simBrake;
 
         QVERIFY2(aircraft.IsParkingBrakeSet() == testCase.expected, testCase.name);
+    }
+}
+
+void IFly737MaxTest::heldInPlaceAcceptsChocksWithoutTheSwitch()
+{
+    struct TestCase
+    {
+        const char* name;
+        double lever;
+        double chocks;
+        bool expected;
+    };
+
+    constexpr auto cases = std::array{
+        TestCase{"rolling", 0.0, 0.0, false},
+        TestCase{"switch only", 1.0, 0.0, true},
+        TestCase{"chocks only", 0.0, 1.0, true},
+        TestCase{"both", 1.0, 1.0, true},
+    };
+
+    for (const auto& testCase : cases)
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        IFly737Max aircraft(&gateway, &status);
+
+        gateway.lvars[kParkingBrake] = testCase.lever;
+        gateway.lvars[kChocks] = testCase.chocks;
+
+        QVERIFY2(aircraft.IsHeldInPlace() == testCase.expected, testCase.name);
     }
 }
 
@@ -777,17 +819,50 @@ void IFly737MaxTest::doorStatusUnknownUntilCargoDoorDataArrives()
     QVERIFY(aircraft.GetDoorStatus() == DoorStatus::Unknown);
 }
 
-void IFly737MaxTest::doorStatusNeverAllClosedWhilePaxDoorsAreUnreadable()
+void IFly737MaxTest::doorStatusAllClosedOnceEveryDoorReadsShut()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
     const IFly737Max aircraft(&gateway, &status);
 
-    gateway.lvars[kFwdCargoAnim] = 0.0;
-    gateway.lvars[kAftCargoAnim] = 0.0;
+    for (const char* animLVar : kAllDoorAnims)
+    {
+        gateway.lvars[animLVar] = 0.0;
+    }
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AllClosed);
+}
+
+void IFly737MaxTest::doorStatusOpenWhenAPassengerDoorReadsOpen()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const IFly737Max aircraft(&gateway, &status);
+
+    for (const char* animLVar : kAllDoorAnims)
+    {
+        gateway.lvars[animLVar] = 0.0;
+    }
+    gateway.lvars[kFwdEntryAnim] = 100.0;
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void IFly737MaxTest::doorStatusUnknownWhileAPassengerDoorHasNotAnswered()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const IFly737Max aircraft(&gateway, &status);
+
+    for (const char* animLVar : kAllDoorAnims)
+    {
+        gateway.lvars[animLVar] = 0.0;
+    }
+    gateway.lvars.erase(kAftServiceAnim);
 
     QVERIFY(aircraft.GetDoorStatus() == DoorStatus::Unknown);
 }
+
 
 QTEST_APPLESS_MAIN(IFly737MaxTest)
 

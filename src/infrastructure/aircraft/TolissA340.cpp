@@ -62,6 +62,15 @@ namespace
          kPaxDoorMode1LLVar, kPaxDoorMode2LLVar, kPaxDoorMode3LLVar, kPaxDoorMode4LLVar,
          kPaxDoorMode1RLVar, kPaxDoorMode2RLVar, kPaxDoorMode3RLVar, kPaxDoorMode4RLVar};
 
+    constexpr std::array kDoorOpenRatioLVars =
+        {"TLS_CARGO_DOOR_OPEN_RATIO_FWD", "TLS_CARGO_DOOR_OPEN_RATIO_AFT",
+         "TLS_PAX_DOOR_OPEN_RATIO_1L", "TLS_PAX_DOOR_OPEN_RATIO_2L",
+         "TLS_PAX_DOOR_OPEN_RATIO_3L", "TLS_PAX_DOOR_OPEN_RATIO_4L",
+         "TLS_PAX_DOOR_OPEN_RATIO_1R", "TLS_PAX_DOOR_OPEN_RATIO_2R",
+         "TLS_PAX_DOOR_OPEN_RATIO_3R", "TLS_PAX_DOOR_OPEN_RATIO_4R"};
+
+    constexpr double kDoorSeatedRatio = 0.0;
+
     std::optional<bool> DoorOpenByMode(VariableGateway& variables, const char* modeLVar)
     {
         if (!variables.HasReceivedLVar(modeLVar))
@@ -76,6 +85,16 @@ namespace
         }
 
         return mode == kDoorOpen ? std::optional{true} : std::nullopt;
+    }
+
+    std::optional<bool> DoorOpen(VariableGateway& variables, const char* modeLVar, const char* ratioLVar)
+    {
+        if (variables.HasReceivedLVar(ratioLVar))
+        {
+            return variables.GetLVar(ratioLVar, kDoorSeatedRatio) > kDoorSeatedRatio;
+        }
+
+        return DoorOpenByMode(variables, modeLVar);
     }
 
     const char* DoorModeLVar(const GsxDoor door)
@@ -125,11 +144,6 @@ TolissA340::TolissA340(VariableGateway* variableGateway, const AutomationStatus*
     smartSwitch_.Subscribe();
 
     LOG_INFO("Profile loaded: Toliss A340-600");
-}
-
-const char* TolissA340::GetName() const
-{
-    return kName;
 }
 
 bool TolissA340::IsCargoVariant() const
@@ -182,9 +196,10 @@ DoorStatus TolissA340::GetDoorStatus() const
 {
     DoorStatus status = doors::kNoDoorsSeen;
 
-    for (const char* modeLVar : kDoorModeLVars)
+    for (std::size_t door = 0; door < kDoorModeLVars.size(); ++door)
     {
-        status = doors::Combine(status, DoorOpenByMode(*variableGateway_, modeLVar));
+        status = doors::Combine(status, DoorOpen(*variableGateway_, kDoorModeLVars[door],
+                                                 kDoorOpenRatioLVars[door]));
     }
 
     return status;
@@ -275,7 +290,12 @@ bool TolissA340::IsReadyToPush() const
 
 bool TolissA340::IsReadyToDeboard() const
 {
-    return !IsEngineRunning() && IsParkingBrakeSet() && !IsBeaconOn();
+    return !IsEngineRunning() && IsHeldInPlace() && !IsBeaconOn();
+}
+
+bool TolissA340::IsHeldInPlace() const
+{
+    return IsParkingBrakeSet();
 }
 
 bool TolissA340::IsEngineRunning() const
@@ -289,8 +309,7 @@ bool TolissA340::IsEngineRunning() const
 
 bool TolissA340::IsParkingBrakeSet() const
 {
-    return variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0
-        || variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) >= kParkingBrakeSetLVarValue;
+    return variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) >= kParkingBrakeSetLVarValue;
 }
 
 bool TolissA340::IsBeaconOn() const
@@ -317,4 +336,9 @@ namespace
     };
 
     [[maybe_unused]] const AircraftRegistration kTolissA340Registration{kTolissA340Descriptor};
+}
+
+void TolissA340::HoldDoorsClosed(const bool hold)
+{
+    doors_.HoldClosedForDeparture(hold);
 }

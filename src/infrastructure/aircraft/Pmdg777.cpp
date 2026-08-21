@@ -18,7 +18,7 @@ namespace
 {
     constexpr auto kSmartSwitchCaptLVar = "switch_554_a";
     constexpr auto kSmartSwitchFoLVar = "switch_773_a";
-    constexpr double kSmartSwitchPressed = 100.0;
+    constexpr double kSmartSwitchNeutral = 50.0;
 
     constexpr int kDoorSlots = 16;
     constexpr int kMainDeckCargoDoor = 12;
@@ -44,7 +44,8 @@ namespace
             IsCargo(variant),
             DoorBaseline::Unknown,
             {kSmartSwitchCaptLVar, kSmartSwitchFoLVar},
-            [](double, const double max) { return max >= kSmartSwitchPressed; }
+            [](const double min, const double max)
+            { return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral; }
         };
     }
 }

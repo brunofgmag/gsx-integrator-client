@@ -314,6 +314,11 @@ bool OperationsViewModel::HasSimbriefError() const
     return snapshot_.flightPlanStatus == FlightPlanStatus::Error;
 }
 
+QString OperationsViewModel::GetSimbriefRefusal() const
+{
+    return QString::fromStdString(snapshot_.simbriefRefusal);
+}
+
 bool OperationsViewModel::CanToggleAutomation() const
 {
     return snapshot_.canToggleAutomation;

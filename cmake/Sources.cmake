@@ -155,6 +155,8 @@ set(APP_SOURCES
         src/infrastructure/probe/ProbeLog.h
         src/infrastructure/probe/ProbeObserver.cpp
         src/infrastructure/probe/ProbeObserver.h
+        src/infrastructure/probe/ProbeWatchList.cpp
+        src/infrastructure/probe/ProbeWatchList.h
         src/infrastructure/simbrief/SimbriefClient.cpp
         src/infrastructure/simbrief/SimbriefClient.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp

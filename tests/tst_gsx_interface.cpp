@@ -21,6 +21,8 @@ private slots:
     static void recordsExplicitCompletedState();
     static void recordsCompletionWhenActiveReturnsToIdle();
     static void doesNotRecordCompletionWithoutActiveState();
+    static void latchAdvancesWithoutAnyoneAskingForTheStatus();
+    static void readingTheStatusDoesNotAdvanceTheLatch();
     static void readsFuelHoseAndPassengerCounts();
     static void detectsSimbriefLoaded();
     static void resetClearsCompletionFlags();
@@ -82,6 +84,7 @@ void GsxInterfaceTest::recordsExplicitCompletedState()
     GsxStateService gsx(&gateway);
 
     gateway.lvars[kRefuelingState] = static_cast<double>(GsxStateStatus::Completed);
+    gsx.Observe();
 
     QCOMPARE(gsx.GetStateStatus(GsxState::Refueling), GsxStateStatus::Completed);
     QVERIFY(gsx.WasStateCompleted(GsxState::Refueling));
@@ -93,11 +96,13 @@ void GsxInterfaceTest::recordsCompletionWhenActiveReturnsToIdle()
     GsxStateService gsx(&gateway);
 
     gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
+    gsx.Observe();
 
     QCOMPARE(gsx.GetStateStatus(GsxState::Boarding), GsxStateStatus::Active);
     QVERIFY(!gsx.WasStateCompleted(GsxState::Boarding));
 
     gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Callable);
+    gsx.Observe();
 
     QCOMPARE(gsx.GetStateStatus(GsxState::Boarding), GsxStateStatus::Callable);
     QVERIFY(gsx.WasStateCompleted(GsxState::Boarding));
@@ -109,6 +114,7 @@ void GsxInterfaceTest::doesNotRecordCompletionWithoutActiveState()
     GsxStateService gsx(&gateway);
 
     gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Callable);
+    gsx.Observe();
 
     QCOMPARE(gsx.GetStateStatus(GsxState::Boarding), GsxStateStatus::Callable);
     QVERIFY(!gsx.WasStateCompleted(GsxState::Boarding));
@@ -147,9 +153,9 @@ void GsxInterfaceTest::resetClearsCompletionFlags()
     GsxStateService gsx(&gateway);
 
     gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
-    (void)gsx.GetStateStatus(GsxState::Boarding);
+    gsx.Observe();
     gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Callable);
-    (void)gsx.GetStateStatus(GsxState::Boarding);
+    gsx.Observe();
 
     QVERIFY(gsx.WasStateCompleted(GsxState::Boarding));
 
@@ -552,10 +558,10 @@ void GsxInterfaceTest::serviceInProgressFollowsRemoteStateRaw()
 {
     FakeVariableGateway gateway;
     GsxRemoteState remote;
-    remote.services.push_back(GsxRemoteService{"Catering", "", 5, false});
-    remote.services.push_back(GsxRemoteService{"Water", "", 4, false});
-    remote.services.push_back(GsxRemoteService{"Lavatory", "", 1, true});
-    remote.services.push_back(GsxRemoteService{"Cleaning", "", 6, false});
+    remote.services.push_back(GsxRemoteService{"Catering", 5, false});
+    remote.services.push_back(GsxRemoteService{"Water", 4, false});
+    remote.services.push_back(GsxRemoteService{"Lavatory", 1, true});
+    remote.services.push_back(GsxRemoteService{"Cleaning", 6, false});
 
     const GsxStateService gsx(&gateway, &remote);
 
@@ -569,7 +575,7 @@ void GsxInterfaceTest::serviceInProgressFalseWhenAbsentOrNoRemote()
 {
     FakeVariableGateway gateway;
     GsxRemoteState remote;
-    remote.services.push_back(GsxRemoteService{"Catering", "", 5, false});
+    remote.services.push_back(GsxRemoteService{"Catering", 5, false});
 
     const GsxStateService withRemote(&gateway, &remote);
 
@@ -578,6 +584,36 @@ void GsxInterfaceTest::serviceInProgressFalseWhenAbsentOrNoRemote()
     const GsxStateService noRemote(&gateway);
 
     QVERIFY(!noRemote.IsServiceInProgress(GroundService::Catering));
+}
+
+void GsxInterfaceTest::latchAdvancesWithoutAnyoneAskingForTheStatus()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kPushbackVehicleState] = static_cast<double>(GsxStateStatus::Active);
+    gsx.Observe();
+
+    QVERIFY(!gsx.WasStateCompleted(GsxState::Pushback));
+
+    gateway.lvars[kPushbackVehicleState] = static_cast<double>(GsxStateStatus::Callable);
+    gsx.Observe();
+
+    QVERIFY(gsx.WasStateCompleted(GsxState::Pushback));
+}
+
+void GsxInterfaceTest::readingTheStatusDoesNotAdvanceTheLatch()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
+    QCOMPARE(gsx.GetStateStatus(GsxState::Boarding), GsxStateStatus::Active);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Callable);
+    QCOMPARE(gsx.GetStateStatus(GsxState::Boarding), GsxStateStatus::Callable);
+
+    QVERIFY(!gsx.WasStateCompleted(GsxState::Boarding));
 }
 
 QTEST_APPLESS_MAIN(GsxInterfaceTest)

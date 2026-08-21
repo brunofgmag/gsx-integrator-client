@@ -1,6 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_TESTS_FAKEGSXSERVICE_H
 #define GSX_INTEGRATOR_CLIENT_TESTS_FAKEGSXSERVICE_H
 
+#include <array>
+#include <cstddef>
+#include <string>
 #include "../../src/domain/ports/GsxGateway.h"
 
 class FakeGsxService final : public GsxGateway
@@ -34,10 +37,12 @@ public:
     bool pushbackCompleted = false;
     bool deboardingCompleted = false;
     bool simbriefLoaded = false;
+    std::string simbriefError;
     bool onGround = true;
     bool goodEngineStartConfirmation = false;
     GroundPowerStatus gpuStatus = GroundPowerStatus::Disconnected;
     int takeOverCalls = 0;
+    std::array<GsxStateStatus, 5> lastObserved{};
     bool cateringInProgress = false;
     bool lavatoryInProgress = false;
     bool waterInProgress = false;
@@ -46,7 +51,32 @@ public:
     bool departureInProgress = false;
 
 
-    [[nodiscard]] GsxStateStatus GetStateStatus(const GsxState state) override
+    int observeCalls = 0;
+
+    void Observe() override
+    {
+        ++observeCalls;
+
+        for (const GsxState state : {GsxState::Refueling, GsxState::Boarding, GsxState::Pushback,
+                                     GsxState::Deboarding, GsxState::Deice})
+        {
+            const GsxStateStatus status = GetStateStatus(state);
+            GsxStateStatus& last = lastObserved[static_cast<std::size_t>(state)];
+
+            const bool returnedToIdle =
+                (status == GsxStateStatus::Callable || status == GsxStateStatus::Bypassed)
+                && last == GsxStateStatus::Active;
+
+            if (status == GsxStateStatus::Completed || returnedToIdle)
+            {
+                MarkCompleted(state);
+            }
+
+            last = status;
+        }
+    }
+
+    [[nodiscard]] GsxStateStatus GetStateStatus(const GsxState state) const override
     {
         switch (state)
         {
@@ -82,6 +112,28 @@ public:
         }
     }
 
+    void MarkCompleted(const GsxState state)
+    {
+        switch (state)
+        {
+        case GsxState::Refueling:
+            refuelingCompleted = true;
+            break;
+        case GsxState::Boarding:
+            boardingCompleted = true;
+            break;
+        case GsxState::Pushback:
+            pushbackCompleted = true;
+            break;
+        case GsxState::Deboarding:
+            deboardingCompleted = true;
+            break;
+        default:
+            break;
+        }
+    }
+
+    [[nodiscard]] std::string GetSimbriefRefusal() const override { return simbriefError; }
     [[nodiscard]] bool IsWaitingForEngines() const override { return waitingForEngines; }
     [[nodiscard]] bool IsFuelHoseConnected() const override { return hoseConnected; }
     [[nodiscard]] double GetRefuelCounterGallons() const override { return refuelCounterGallons; }

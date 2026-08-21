@@ -88,10 +88,13 @@ SIMCONNECTAPI SimConnect_AddToDataDefinition(HANDLE, SIMCONNECT_DATA_DEFINITION_
     return S_OK;
 }
 
-SIMCONNECTAPI SimConnect_RequestDataOnSimObject(HANDLE, SIMCONNECT_DATA_REQUEST_ID, SIMCONNECT_DATA_DEFINITION_ID,
-                                                SIMCONNECT_OBJECT_ID, SIMCONNECT_PERIOD,
-                                                SIMCONNECT_DATA_REQUEST_FLAG, DWORD, DWORD, DWORD)
+SIMCONNECTAPI SimConnect_RequestDataOnSimObject(HANDLE, SIMCONNECT_DATA_REQUEST_ID,
+                                                const SIMCONNECT_DATA_DEFINITION_ID DefineID,
+                                                SIMCONNECT_OBJECT_ID, const SIMCONNECT_PERIOD Period,
+                                                SIMCONNECT_DATA_REQUEST_FLAG, DWORD, const DWORD interval, DWORD)
 {
+    FakeSimConnectApi::dataRequests.push_back({DefineID, Period, interval});
+
     return S_OK;
 }
 

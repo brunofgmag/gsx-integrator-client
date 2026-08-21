@@ -1,6 +1,13 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDDATA_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDDATA_H
 
+struct CabinServiceProgress
+{
+    bool asked = false;
+    bool requested = false;
+    bool activeSeen = false;
+};
+
 struct TurnaroundData
 {
     double plannedFuelKg = 0.0;
@@ -35,6 +42,7 @@ struct TurnaroundData
     bool chocksPlaced = false;
     bool chocksRemoved = false;
     bool doorsClosed = false;
+    bool ownGroundEquipmentCleared = false;
     bool arrivalGpuRequested = false;
     bool arrivalChocksPlaced = false;
     bool arrivalDoorsClosed = false;
@@ -42,15 +50,9 @@ struct TurnaroundData
     bool cateringRequested = false;
     bool gpuDismissRequested = false;
     int cateringWaitIntervals = 0;
-    bool lavatoryAsked = false;
-    bool waterAsked = false;
-    bool cleaningAsked = false;
-    bool lavatoryRequested = false;
-    bool waterRequested = false;
-    bool cleaningRequested = false;
-    bool lavatoryActiveSeen = false;
-    bool waterActiveSeen = false;
-    bool cleaningActiveSeen = false;
+    CabinServiceProgress lavatory;
+    CabinServiceProgress water;
+    CabinServiceProgress cleaning;
     int cabinWaitIntervals = 0;
     bool flightPlanRequested = false;
     bool repositionRequested = false;

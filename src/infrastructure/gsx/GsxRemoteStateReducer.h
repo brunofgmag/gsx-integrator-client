@@ -7,11 +7,19 @@
 class QJsonObject;
 class QJsonValue;
 
+enum class GsxPatchOutcome
+{
+    Applied,
+    Discarded,
+    Unknown
+};
+
 class GsxRemoteStateReducer
 {
 public:
     static void ApplySnapshot(GsxRemoteState& state, const QJsonObject& snapshot);
-    static void ApplyPatch(GsxRemoteState& state, const std::string& path, const QJsonValue& value);
+    static GsxPatchOutcome ApplyPatch(GsxRemoteState& state, const std::string& path,
+                                      const QJsonValue& value);
 
 private:
     GsxRemoteStateReducer() = delete;

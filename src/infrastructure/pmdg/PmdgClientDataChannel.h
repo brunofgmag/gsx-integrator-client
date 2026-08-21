@@ -1,7 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGCLIENTDATACHANNEL_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGCLIENTDATACHANNEL_H
 
+#include <chrono>
 #include <cstring>
+#include <functional>
 #include <string>
 #include "../logging/LogMacros.h"
 #include "../simconnect/SimConnectSession.h"
@@ -22,8 +24,14 @@ template <typename TData>
 class PmdgClientDataChannel
 {
 public:
-    explicit PmdgClientDataChannel(const PmdgClientDataSpec& spec) : spec_(spec)
+    explicit PmdgClientDataChannel(const PmdgClientDataSpec& spec)
+        : spec_(spec), nowMs_(&SteadyNowMs)
     {
+    }
+
+    void SetClock(std::function<long long()> clock)
+    {
+        nowMs_ = std::move(clock);
     }
 
     ~PmdgClientDataChannel()
@@ -42,7 +50,7 @@ public:
 
     [[nodiscard]] bool HasData() const
     {
-        return hasData_;
+        return hasData_ && nowMs_() - lastFrameMs_ <= kStaleAfterMs;
     }
 
     [[nodiscard]] const TData& Data() const
@@ -66,6 +74,12 @@ public:
     }
 
 private:
+    static long long SteadyNowMs()
+    {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
+
     static std::string EventName(const unsigned offset)
     {
         constexpr unsigned kThirdPartyEventBase = 69632;
@@ -109,16 +123,21 @@ private:
             return;
         }
 
-        if (!hasData_)
+        if (!HasData())
         {
             LOG_INFO("%s ClientData received: model %d", spec_.label, data_.AircraftModel);
         }
         hasData_ = true;
+        lastFrameMs_ = nowMs_();
     }
+
+    static constexpr long long kStaleAfterMs = 15000;
 
     PmdgClientDataSpec spec_;
     SimConnectSession session_;
+    std::function<long long()> nowMs_;
     TData data_{};
+    long long lastFrameMs_ = 0;
     bool hasData_ = false;
     bool connected_ = false;
     bool inFlight_ = false;

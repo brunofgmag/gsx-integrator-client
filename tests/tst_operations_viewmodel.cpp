@@ -16,6 +16,7 @@ private slots:
     static void reportsRejectedCommands();
     static void mapsFlightPlanStatusToText();
     static void simbriefReadyAndErrorFlags();
+    static void simbriefRefusalReachesTheScreen();
     static void noopWhenSettingSameEnabledValue();
     static void startLoadingDelegatesToService();
     static void startLoadingReportsRejectedCommands();
@@ -424,6 +425,20 @@ void OperationsViewModelTest::exposesInDeboardingPhaseFromSnapshot()
     service.Notify();
 
     QVERIFY(viewModel.IsInDeboardingPhase());
+}
+
+void OperationsViewModelTest::simbriefRefusalReachesTheScreen()
+{
+    FakeIntegratorService service;
+    const OperationsViewModel viewModel(&service);
+
+    QVERIFY(viewModel.GetSimbriefRefusal().isEmpty());
+
+    service.snapshot.simbriefRefusal = "SimBrief aircraft A320 doesn't match MSFS aircraft A321";
+    service.Notify();
+
+    QCOMPARE(viewModel.GetSimbriefRefusal(),
+             QString("SimBrief aircraft A320 doesn't match MSFS aircraft A321"));
 }
 
 QTEST_APPLESS_MAIN(OperationsViewModelTest)

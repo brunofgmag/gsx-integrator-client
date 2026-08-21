@@ -86,6 +86,7 @@ void TurnaroundStateMachine::RegisterStates()
 
 void TurnaroundStateMachine::Tick()
 {
+    context_.gsxGateway->Observe();
     Step();
     PublishStatus();
 }

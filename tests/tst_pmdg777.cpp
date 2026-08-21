@@ -13,6 +13,9 @@ namespace
     constexpr auto kAvionicsPoweredLVar = "PowerOn";
     constexpr auto kSmartSwitchCaptLVar = "switch_554_a";
     constexpr auto kSmartSwitchFoLVar = "switch_773_a";
+    constexpr double kSmartSwitchNeutral = 50.0;
+    constexpr double kSmartSwitchDown = 0.0;
+    constexpr double kSmartSwitchUp = 100.0;
     constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
     constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
     constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
@@ -69,20 +72,27 @@ private slots:
     static void groundPowerUnknownUntilData();
     static void groundPowerFollowsExtPowerAnnunciator();
     static void onTickPollsGateways();
+    static void observationTickWritesNothing();
+    static void drivingTickWritesWhatObservationHeldBack();
     static void notPoweredWhileNothingReceived();
     static void notPoweredByTabletLvarWhileDark();
     static void poweredByApuOrExtPower();
     static void poweredByRunningEngine();
     static void engineRunningConservativeUntilReceived();
     static void parkingBrakeRequiresClientData();
-    static void parkingBrakeAcceptsTheSimVariableWithoutTheSdkBlock();
+    static void parkingBrakeIgnoresTheSimVariable();
+    static void heldInPlaceAcceptsChocksWithoutTheBrake();
     static void doorStatusUnknownUntilClientDataArrives();
     static void doorStatusOpenWhenASdkDoorReadsOpen();
     static void doorStatusUnknownWhileADoorIsMoving();
+    static void aDoorThatKeepsMovingEventuallyReadsOpen();
+    static void aDoorThatFinishesMovingNeverReadsOpen();
+    static void theMainDeckDoorGetsALongerMovingBudget();
     static void doorStatusAllClosedWhenEverySdkDoorReadsClosed();
     static void smartSwitchEdgesOncePerPress();
     static void smartSwitchWorksFromBothSeats();
     static void smartSwitchCatchesTransientPress();
+    static void smartSwitchAnswersTheDownwardFlick();
     static void smartSwitchLVarsGetFastRefresh();
     static void readyToPushMatrix();
     static void readyToDeboardMatrix();
@@ -102,6 +112,8 @@ private slots:
     static void doorsHoldBeforeClientData();
     static void doorThatIgnoresTheCommandStopsAfterTwoRetries();
     static void mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses();
+    static void mainDeckDoorOpenedByHandIsLeftAloneWithoutALoader();
+    static void mainDeckDoorStillClosesWhenTheLoaderLeavesAfterOpeningIt();
     static void closeAllDoorsTogglesOpenMappedDoors();
     static void chocksReconcileWithRetryCap();
     static void zfwTrimsCargoAgainstActualWeight();
@@ -218,7 +230,7 @@ void Pmdg777Test::parkingBrakeRequiresClientData()
     QVERIFY(fixture.aircraft->IsParkingBrakeSet());
 }
 
-void Pmdg777Test::parkingBrakeAcceptsTheSimVariableWithoutTheSdkBlock()
+void Pmdg777Test::parkingBrakeIgnoresTheSimVariable()
 {
     Pmdg777Fixture fixture;
 
@@ -226,7 +238,22 @@ void Pmdg777Test::parkingBrakeAcceptsTheSimVariableWithoutTheSdkBlock()
     fixture.data->parkingBrakeOn = false;
     fixture.gateway.avars[kSimParkingBrake] = 1.0;
 
-    QVERIFY(fixture.aircraft->IsParkingBrakeSet());
+    QVERIFY(!fixture.aircraft->IsParkingBrakeSet());
+}
+
+void Pmdg777Test::heldInPlaceAcceptsChocksWithoutTheBrake()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->parkingBrakeOn = false;
+
+    QVERIFY(!fixture.aircraft->IsHeldInPlace());
+
+    fixture.data->wheelChocksSet = true;
+
+    QVERIFY(fixture.aircraft->IsHeldInPlace());
+    QVERIFY(!fixture.aircraft->IsParkingBrakeSet());
 }
 
 void Pmdg777Test::doorStatusUnknownUntilClientDataArrives()
@@ -256,6 +283,68 @@ void Pmdg777Test::doorStatusUnknownWhileADoorIsMoving()
     QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
 }
 
+void Pmdg777Test::aDoorThatKeepsMovingEventuallyReadsOpen()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->doorStates.fill(kDoorStateClosed);
+    fixture.data->doorStates[2] = kDoorStateClosing;
+
+    for (int tick = 0; tick < 14; ++tick)
+    {
+        fixture.aircraft->Observe();
+        QVERIFY2(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown,
+                 qPrintable(QStringLiteral("tick %1").arg(tick)));
+    }
+
+    fixture.aircraft->Observe();
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void Pmdg777Test::aDoorThatFinishesMovingNeverReadsOpen()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->doorStates.fill(kDoorStateClosed);
+    fixture.data->doorStates[2] = kDoorStateClosing;
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        fixture.aircraft->Observe();
+    }
+
+    fixture.data->doorStates[2] = kDoorStateClosed;
+    fixture.aircraft->Observe();
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::AllClosed);
+}
+
+void Pmdg777Test::theMainDeckDoorGetsALongerMovingBudget()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+
+    fixture.data->hasData = true;
+    fixture.data->doorStates.fill(kDoorStateClosed);
+    fixture.data->doorStates[12] = kDoorStateClosing;
+
+    for (int tick = 0; tick < 100; ++tick)
+    {
+        fixture.aircraft->Observe();
+    }
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
+
+    for (int tick = 0; tick < 21; ++tick)
+    {
+        fixture.aircraft->Observe();
+    }
+
+    QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
 void Pmdg777Test::doorStatusAllClosedWhenEverySdkDoorReadsClosed()
 {
     const Pmdg777Fixture fixture;
@@ -275,16 +364,20 @@ void Pmdg777Test::smartSwitchEdgesOncePerPress()
 
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
 
-    fixture.gateway.lvars[kSmartSwitchCaptLVar] = 100.0;
+    fixture.gateway.lvars[kSmartSwitchCaptLVar] = kSmartSwitchNeutral;
+
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvars[kSmartSwitchCaptLVar] = kSmartSwitchUp;
 
     QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
 
-    fixture.gateway.lvars[kSmartSwitchCaptLVar] = 0.0;
+    fixture.gateway.lvars[kSmartSwitchCaptLVar] = kSmartSwitchNeutral;
 
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
 
-    fixture.gateway.lvars[kSmartSwitchCaptLVar] = 100.0;
+    fixture.gateway.lvars[kSmartSwitchCaptLVar] = kSmartSwitchUp;
 
     QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
 }
@@ -309,6 +402,23 @@ void Pmdg777Test::smartSwitchCatchesTransientPress()
     fixture.aircraft->OnTick();
     fixture.gateway.lvars[kSmartSwitchCaptLVar] = 50.0;
     fixture.gateway.lvarSpans[kSmartSwitchCaptLVar] = LVarSpan{50.0, 100.0, true};
+
+    QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+}
+
+void Pmdg777Test::smartSwitchAnswersTheDownwardFlick()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.aircraft->OnTick();
+    fixture.gateway.lvars[kSmartSwitchCaptLVar] = kSmartSwitchNeutral;
+
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvarSpans[kSmartSwitchCaptLVar] =
+        LVarSpan{kSmartSwitchDown, kSmartSwitchNeutral, true};
 
     QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
@@ -886,6 +996,79 @@ void Pmdg777Test::aftCateringDoorOpensFiveRightOnlyOn300()
 
     QVERIFY(std::ranges::find(er200.data->toggledDoors, 7) != er200.data->toggledDoors.end());
     QVERIFY(std::ranges::find(er200.data->toggledDoors, 9) == er200.data->toggledDoors.end());
+}
+
+void Pmdg777Test::observationTickWritesNothing()
+{
+    Pmdg777Fixture f;
+    f.data->hasData = true;
+
+    const int lvarWrites = f.gateway.setLVarCalls;
+    const int avarWrites = f.gateway.setAVarCalls;
+
+    f.aircraft->Observe();
+
+    QCOMPARE(f.gateway.setLVarCalls, lvarWrites);
+    QCOMPARE(f.gateway.setAVarCalls, avarWrites);
+    QVERIFY(f.tablet->groundConnRequests.empty());
+    QVERIFY(f.tablet->fuelSends.empty());
+    QVERIFY(f.tablet->paxSends.empty());
+    QVERIFY(f.tablet->cargoSends.empty());
+}
+
+void Pmdg777Test::drivingTickWritesWhatObservationHeldBack()
+{
+    Pmdg777Fixture f;
+    f.data->hasData = true;
+
+    f.aircraft->Observe();
+    const int afterObservation = f.gateway.setLVarCalls;
+
+    f.aircraft->OnTick();
+
+    QVERIFY(f.gateway.setLVarCalls > afterObservation);
+}
+
+void Pmdg777Test::mainDeckDoorOpenedByHandIsLeftAloneWithoutALoader()
+{
+    Pmdg777Fixture freighter(Pmdg777Variant::Freighter);
+
+    freighter.data->hasData = true;
+    freighter.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        freighter.aircraft->OnTick();
+    }
+
+    freighter.data->doorStates[12] = 0;
+    freighter.data->toggledDoors.clear();
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        freighter.aircraft->OnTick();
+    }
+
+    QVERIFY(freighter.data->toggledDoors.empty());
+}
+
+void Pmdg777Test::mainDeckDoorStillClosesWhenTheLoaderLeavesAfterOpeningIt()
+{
+    Pmdg777Fixture freighter(Pmdg777Variant::Freighter);
+
+    freighter.data->hasData = true;
+    freighter.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    freighter.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
+
+    freighter.aircraft->OnTick();
+    freighter.data->doorStates[12] = 0;
+    freighter.aircraft->OnTick();
+    freighter.data->toggledDoors.clear();
+
+    freighter.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 0.0;
+    freighter.aircraft->OnTick();
+
+    QCOMPARE(static_cast<int>(std::ranges::count(freighter.data->toggledDoors, 12)), 1);
 }
 
 QTEST_APPLESS_MAIN(Pmdg777Test)

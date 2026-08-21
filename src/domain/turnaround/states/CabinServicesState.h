@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_CABINSERVICESSTATE_H
 
 #include "TurnaroundState.h"
+#include "../TurnaroundData.h"
 #include "../../ports/GsxGateway.h"
 
 class CabinServicesState final : public TurnaroundState
@@ -17,14 +18,13 @@ public:
 private:
     static bool DispatchNextService(TurnaroundContext& ctx);
     static bool DispatchService(const TurnaroundContext& ctx, bool enabled,
-                                bool& asked,
-                                bool& requested,
-                                bool& activeSeen,
+                                CabinServiceProgress& progress,
                                 GroundService service);
     static void SendServiceTrigger(const TurnaroundContext& ctx, GroundService service);
     static void UpdateActiveSeen(TurnaroundContext& ctx);
     static bool AllEnabledCompleted(const TurnaroundContext& ctx);
-    static bool IsServiceDone(const TurnaroundContext& ctx, bool activeSeen, GroundService service);
+    static bool IsServiceDone(const TurnaroundContext& ctx, const CabinServiceProgress& progress,
+                              GroundService service);
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_CABINSERVICESSTATE_H

@@ -18,6 +18,10 @@ namespace
 
     constexpr double kEngineRunningDefault = 1.0;
     constexpr double kEngineCombustionDefault = 0.0;
+
+    constexpr int kPaxDoorMovingLimitTicks = 15;
+    constexpr int kCargoDoorMovingLimitTicks = 60;
+    constexpr int kMainDeckDoorMovingLimitTicks = 120;
 }
 
 PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationStatus* status,
@@ -30,6 +34,7 @@ PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationSta
       cargoVariant_(spec.cargoVariant),
       doorSlots_(spec.doorSlots),
       mainDeckDoorSlot_(spec.mainDeckDoorSlot),
+      movingTicks_(static_cast<std::size_t>(spec.doorSlots), 0),
       doors_(variableGateway),
       doorReconciler_(*this, spec.doorSlots, spec.doorBaseline),
       groundConn_(*this, *tablet_),
@@ -44,12 +49,13 @@ bool PmdgAircraft::IsCargoVariant() const
     return cargoVariant_;
 }
 
-void PmdgAircraft::OnTick()
+void PmdgAircraft::Observe()
 {
     data_->SetInFlight(variableGateway_->GetAVar(kSimOnGround, kBoolUnit, 1.0) <= 0.0);
     data_->Poll();
     tablet_->Poll();
     RefreshDoors();
+    AdvanceMovingDoors();
 
     if (status_->flightPlanStatus == FlightPlanStatus::Ready)
     {
@@ -60,6 +66,15 @@ void PmdgAircraft::OnTick()
     if (data_->HasData())
     {
         smartSwitch_.Subscribe();
+    }
+}
+
+void PmdgAircraft::OnTick()
+{
+    Observe();
+
+    if (data_->HasData())
+    {
         SyncDoors();
         groundConn_.Reconcile();
         payload_.Trim();
@@ -77,12 +92,27 @@ void PmdgAircraft::SyncDoors()
 
     if (cargoVariant_)
     {
-        const bool mainLoaderPresent = gsx::states::IsLoaderAtDoor(
-            variableGateway_->GetLVar(gsx::lvars::kBaggageLoaderMainState, 0.0));
-        doorReconciler_.SetSlotDesired(mainDeckDoorSlot_, mainLoaderPresent);
+        SyncMainDeckDoor();
     }
 
     doorReconciler_.Reconcile();
+}
+
+void PmdgAircraft::SyncMainDeckDoor()
+{
+    const bool loaderPresent = gsx::states::IsLoaderAtDoor(
+        variableGateway_->GetLVar(gsx::lvars::kBaggageLoaderMainState, 0.0));
+
+    if (loaderPresent && mainDeckTarget_ != MainDeckTarget::Open)
+    {
+        doorReconciler_.SetSlotDesired(mainDeckDoorSlot_, true);
+        mainDeckTarget_ = MainDeckTarget::Open;
+    }
+    else if (!loaderPresent && mainDeckTarget_ == MainDeckTarget::Open)
+    {
+        doorReconciler_.SetSlotDesired(mainDeckDoorSlot_, false);
+        mainDeckTarget_ = MainDeckTarget::Closed;
+    }
 }
 
 void PmdgAircraft::OnLoadingStarted()
@@ -97,9 +127,15 @@ void PmdgAircraft::CloseAllDoors()
     if (cargoVariant_)
     {
         doorReconciler_.SetSlotDesired(mainDeckDoorSlot_, false);
+        mainDeckTarget_ = MainDeckTarget::Closed;
     }
 
     doorReconciler_.Reconcile();
+}
+
+void PmdgAircraft::ClearOwnGroundEquipment()
+{
+    groundConn_.SetPassengerEntryJetway();
 }
 
 DoorStatus PmdgAircraft::GetDoorStatus() const
@@ -205,7 +241,12 @@ bool PmdgAircraft::IsReadyToPush() const
 
 bool PmdgAircraft::IsReadyToDeboard() const
 {
-    return !IsEngineRunning() && (IsParkingBrakeSet() || ChocksSet()) && !data_->BeaconOn();
+    return !IsEngineRunning() && IsHeldInPlace() && !data_->BeaconOn();
+}
+
+bool PmdgAircraft::IsHeldInPlace() const
+{
+    return IsParkingBrakeSet() || ChocksSet();
 }
 
 bool PmdgAircraft::IsEngineRunning() const
@@ -215,8 +256,31 @@ bool PmdgAircraft::IsEngineRunning() const
 
 bool PmdgAircraft::IsParkingBrakeSet() const
 {
-    return data_->ParkingBrakeOn()
-        || variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0;
+    return data_->ParkingBrakeOn();
+}
+
+void PmdgAircraft::AdvanceMovingDoors()
+{
+    for (int slot = 0; slot < doorSlots_; ++slot)
+    {
+        int& ticks = movingTicks_[static_cast<std::size_t>(slot)];
+        ticks = ObserveDoor(slot) == DoorObservation::Moving ? ticks + 1 : 0;
+    }
+}
+
+int PmdgAircraft::MovingDoorLimitTicks(const int slot) const
+{
+    if (cargoVariant_ && slot == mainDeckDoorSlot_)
+    {
+        return kMainDeckDoorMovingLimitTicks;
+    }
+
+    if (slot == DoorSlotFor(GsxDoor::FwdCargo) || slot == DoorSlotFor(GsxDoor::AftCargo))
+    {
+        return kCargoDoorMovingLimitTicks;
+    }
+
+    return kPaxDoorMovingLimitTicks;
 }
 
 std::optional<bool> PmdgAircraft::DoorOpenAt(const int slot) const
@@ -227,7 +291,16 @@ std::optional<bool> PmdgAircraft::DoorOpenAt(const int slot) const
         return true;
     case DoorObservation::Closed:
         return false;
+    case DoorObservation::Moving:
+        return movingTicks_[static_cast<std::size_t>(slot)] >= MovingDoorLimitTicks(slot)
+                   ? std::optional{true}
+                   : std::nullopt;
     default:
         return std::nullopt;
     }
+}
+
+void PmdgAircraft::HoldDoorsClosed(const bool hold)
+{
+    doors_.HoldClosedForDeparture(hold);
 }

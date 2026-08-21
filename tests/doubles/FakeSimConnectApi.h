@@ -22,6 +22,15 @@ struct FakeSimConnectApi
     static inline std::vector<std::pair<DWORD, std::string>> transmittedNamedEvents;
     static inline std::vector<std::vector<char>> writtenClientData;
 
+    struct DataRequest
+    {
+        DWORD defineId = 0;
+        SIMCONNECT_PERIOD period = SIMCONNECT_PERIOD_NEVER;
+        DWORD interval = 0;
+    };
+
+    static inline std::vector<DataRequest> dataRequests;
+
     static void Reset()
     {
         openSucceeds = true;
@@ -34,6 +43,7 @@ struct FakeSimConnectApi
         mappedEventNames.clear();
         transmittedNamedEvents.clear();
         writtenClientData.clear();
+        dataRequests.clear();
     }
 
     static void PushClientData(const DWORD requestId, const void* payload, const std::size_t payloadSize)

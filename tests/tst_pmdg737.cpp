@@ -14,6 +14,10 @@ namespace
 {
     constexpr auto kChocksLVar = "NGXWheelChocks";
     constexpr auto kSmartSwitchLVar = "switch_752_73X";
+    constexpr double kSmartSwitchNeutral = 50.0;
+    constexpr double kSmartSwitchDown = 0.0;
+    constexpr double kSmartSwitchUp = 100.0;
+    constexpr auto kPassengerEntryRequest = "pax_entree";
     constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
     constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
     constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
@@ -58,14 +62,18 @@ class Pmdg737Test final : public QObject
 private slots:
     static void nameAndCargoFlagFollowTheVariant();
     static void onTickPollsBothGateways();
+    static void observationTickWritesNothing();
+    static void drivingTickWritesWhatObservationHeldBack();
     static void groundPowerUnknownUntilData();
     static void groundPowerFollowsTheSingleAnnunciator();
     static void poweredByMainBusOrRunningEngine();
     static void engineRunningConservativeUntilReceived();
-    static void parkingBrakeFallsBackToTheSimVar();
+    static void parkingBrakeReadsTheSdkBlockAndIgnoresTheSimVar();
     static void doorStatusUnknownUntilTheEfbAnswers();
     static void doorStatusOpenWhenTheEfbReportsADoorOpen();
     static void doorStatusUnknownWhileTheAirstairHasNoEfbReading();
+    static void airstairReadsTheAnnunciatorOnceTheBusIsLive();
+    static void airstairSaysNothingWhileTheBusIsDead();
     static void readyToDeboardAcceptsChocksInsteadOfBrake();
     static void mapsOnlyTheDoorsTheSevenThirtySevenHas();
     static void closingDoorsThatWereNeverOpenedCommandsNothing();
@@ -85,6 +93,10 @@ private slots:
     static void setFuelSendsRoundedLbsOnce();
     static void cargoVariantSendsNoPassengers();
     static void progressiveWriterDoesNotUndoTheTrim();
+    static void smartSwitchAtRestIsNotAPress();
+    static void smartSwitchAnswersEveryPressOfTheSession();
+    static void entryMethodIsLeftAloneUntilTheTabletReportsIt();
+    static void ownStairsAreClearedByTakingTheEntryMethodToJetway();
 };
 
 void Pmdg737Test::nameAndCargoFlagFollowTheVariant()
@@ -191,7 +203,7 @@ void Pmdg737Test::doorStatusUnknownWhileTheAirstairHasNoEfbReading()
     QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
 }
 
-void Pmdg737Test::parkingBrakeFallsBackToTheSimVar()
+void Pmdg737Test::parkingBrakeReadsTheSdkBlockAndIgnoresTheSimVar()
 {
     Pmdg737Fixture fixture;
 
@@ -200,7 +212,7 @@ void Pmdg737Test::parkingBrakeFallsBackToTheSimVar()
     QVERIFY(!fixture.aircraft->IsParkingBrakeSet());
 
     fixture.gateway.avars[kSimParkingBrake] = 1.0;
-    QVERIFY(fixture.aircraft->IsParkingBrakeSet());
+    QVERIFY(!fixture.aircraft->IsParkingBrakeSet());
 
     fixture.gateway.avars[kSimParkingBrake] = 0.0;
     fixture.data->parkingBrakeOn = true;
@@ -247,6 +259,12 @@ namespace
         fixture.data->hasData = true;
         fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
         fixture.gateway.lvars[gsx::lvars::kJetway] = kJetwayDocked;
+    }
+
+    int PassengerEntryRequests(const Pmdg737Fixture& fixture)
+    {
+        return static_cast<int>(
+            std::ranges::count(fixture.tablet->groundConnRequests, kPassengerEntryRequest));
     }
 
     void Tick(const Pmdg737Fixture& fixture, const int times)
@@ -584,6 +602,131 @@ void Pmdg737Test::progressiveWriterDoesNotUndoTheTrim()
 
     QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
     QCOMPARE(fixture.tablet->cargoSends.back(), trimmedCargo);
+}
+
+void Pmdg737Test::smartSwitchAtRestIsNotAPress()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[kSmartSwitchLVar] = kSmartSwitchNeutral;
+    fixture.aircraft->OnTick();
+
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+}
+
+void Pmdg737Test::smartSwitchAnswersEveryPressOfTheSession()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[kSmartSwitchLVar] = kSmartSwitchNeutral;
+    fixture.aircraft->OnTick();
+
+    fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchDown, kSmartSwitchNeutral, true};
+    QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchNeutral, kSmartSwitchNeutral, true};
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchNeutral, kSmartSwitchUp, true};
+    QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
+}
+
+void Pmdg737Test::entryMethodIsLeftAloneUntilTheTabletReportsIt()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.aircraft->ClearOwnGroundEquipment();
+
+    Tick(fixture, 20);
+
+    QVERIFY(fixture.tablet->groundConnRequests.empty());
+}
+
+void Pmdg737Test::ownStairsAreClearedByTakingTheEntryMethodToJetway()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.tablet->passengerEntryJetway = false;
+    fixture.aircraft->ClearOwnGroundEquipment();
+
+    Tick(fixture, 1);
+
+    QCOMPARE(PassengerEntryRequests(fixture), 1);
+
+    fixture.tablet->passengerEntryJetway = true;
+    Tick(fixture, 20);
+
+    QCOMPARE(PassengerEntryRequests(fixture), 1);
+}
+
+void Pmdg737Test::observationTickWritesNothing()
+{
+    Pmdg737Fixture f;
+    f.data->hasData = true;
+    f.gateway.lvars[kSmartSwitchLVar] = kSmartSwitchNeutral;
+
+    const int lvarWrites = f.gateway.setLVarCalls;
+    const int avarWrites = f.gateway.setAVarCalls;
+
+    f.aircraft->Observe();
+
+    QCOMPARE(f.gateway.setLVarCalls, lvarWrites);
+    QCOMPARE(f.gateway.setAVarCalls, avarWrites);
+    QVERIFY(f.data->toggledDoors.empty());
+    QVERIFY(f.tablet->groundConnRequests.empty());
+    QVERIFY(f.tablet->fuelSends.empty());
+    QVERIFY(f.tablet->paxSends.empty());
+    QVERIFY(f.tablet->cargoSends.empty());
+}
+
+void Pmdg737Test::drivingTickWritesWhatObservationHeldBack()
+{
+    Pmdg737Fixture f;
+    f.data->hasData = true;
+
+    f.aircraft->Observe();
+    const int afterObservation = f.gateway.setLVarCalls;
+
+    f.aircraft->OnTick();
+
+    QVERIFY(f.gateway.setLVarCalls > afterObservation);
+}
+
+void Pmdg737Test::airstairReadsTheAnnunciatorOnceTheBusIsLive()
+{
+    Pmdg737Fixture f;
+
+    f.data->hasData = true;
+    f.data->anyMainBusPowered = true;
+    for (const char* key : kEfbDoorKeys)
+    {
+        f.tablet->doorOpen[key] = false;
+    }
+
+    QVERIFY(f.aircraft->GetDoorStatus() == DoorStatus::AllClosed);
+
+    f.data->airstairAnnunciator = true;
+
+    QVERIFY(f.aircraft->GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void Pmdg737Test::airstairSaysNothingWhileTheBusIsDead()
+{
+    Pmdg737Fixture f;
+
+    f.data->hasData = true;
+    f.data->anyMainBusPowered = false;
+    for (const char* key : kEfbDoorKeys)
+    {
+        f.tablet->doorOpen[key] = false;
+    }
+
+    QVERIFY(f.aircraft->GetDoorStatus() == DoorStatus::Unknown);
 }
 
 QTEST_APPLESS_MAIN(Pmdg737Test)

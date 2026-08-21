@@ -15,12 +15,12 @@ public:
 
     TolissA340(VariableGateway* variableGateway, const AutomationStatus* status, bool cargoVariant);
 
-    [[nodiscard]] const char* GetName() const;
     [[nodiscard]] bool IsCargoVariant() const override;
 
     void OnTick() override;
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
+    void HoldDoorsClosed(bool hold) override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -42,6 +42,7 @@ public:
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;
     [[nodiscard]] bool IsEngineRunning() const override;
+    [[nodiscard]] bool IsHeldInPlace() const override;
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
 private:

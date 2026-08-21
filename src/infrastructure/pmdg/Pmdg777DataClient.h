@@ -27,7 +27,11 @@ public:
     void KickDataRefresh() override;
     void SetInFlight(bool inFlight) override;
 
-    void SetClockForTest(std::function<long long()> clock) { nowMs_ = std::move(clock); }
+    void SetClockForTest(std::function<long long()> clock)
+    {
+        channel_.SetClock(clock);
+        nowMs_ = std::move(clock);
+    }
 
 private:
     void ReportProbe() const;

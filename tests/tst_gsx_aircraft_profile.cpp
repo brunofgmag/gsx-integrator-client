@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <utility>
 #include "../src/infrastructure/gsx/GsxAircraftProfile.h"
 
 namespace
@@ -55,6 +56,8 @@ private slots:
     static void profileRootsKnownForTolissA340();
     static void profileRootsKnownForTfdiMd11();
     static void profileRootsKnownForFenixA32x();
+    static void profileRootsKnownForPmdg777();
+    static void profileRootsShareOneFolderAcrossPmdg737Variants();
     static void profileRootsEmptyForUnknownAircraft();
     static void flagsMissingProfileOnlyForTolissA340();
     static void findCfgsScansRootsRecursively();
@@ -193,6 +196,38 @@ void GsxAircraftProfileTest::profileRootsKnownForFenixA32x()
 
         QVERIFY(roots[0].string().find(airplanes) != std::string::npos);
         QCOMPARE(roots[0].filename().string(), std::string("FNX_32X"));
+    }
+}
+
+void GsxAircraftProfileTest::profileRootsKnownForPmdg777()
+{
+    const std::string airplanes = (std::filesystem::path("Virtuali") / "Airplanes").string();
+
+    const std::pair<const char*, const char*> expected[] = {
+        {"PMDG 777-200ER", "PMDG 777-200ER"},
+        {"PMDG 777-200LR", "PMDG 777-200LR"},
+        {"PMDG 777-300ER", "PMDG 777-300ER"},
+        {"PMDG 777F", "PMDG 777F"},
+    };
+
+    for (const auto& [aircraftName, folder] : expected)
+    {
+        const auto roots = GsxAircraftProfile::ProfileRootsFor(aircraftName);
+
+        QCOMPARE(roots.size(), static_cast<std::size_t>(1));
+        QVERIFY(roots[0].string().find(airplanes) != std::string::npos);
+        QCOMPARE(roots[0].filename().string(), std::string(folder));
+    }
+}
+
+void GsxAircraftProfileTest::profileRootsShareOneFolderAcrossPmdg737Variants()
+{
+    for (const auto* aircraftName : {"PMDG 737-800", "PMDG 737-800BCF", "PMDG 737-800BDSF", "PMDG 737 BBJ2"})
+    {
+        const auto roots = GsxAircraftProfile::ProfileRootsFor(aircraftName);
+
+        QCOMPARE(roots.size(), static_cast<std::size_t>(1));
+        QCOMPARE(roots[0].filename().string(), std::string("PMDG 737-800"));
     }
 }
 
