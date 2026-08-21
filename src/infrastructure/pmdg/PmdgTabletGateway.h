@@ -14,6 +14,7 @@ public:
     [[nodiscard]] virtual bool EfbPlanImported() const = 0;
     [[nodiscard]] virtual std::optional<bool> DoorOpen(const std::string& key) const = 0;
     [[nodiscard]] virtual bool DoorMoving(const std::string& key) const = 0;
+    [[nodiscard]] virtual bool GroundConnMoving(const std::string& key) const = 0;
     [[nodiscard]] virtual std::optional<bool> PassengerEntryViaJetway() const = 0;
 
     virtual void SendFuelTotalLbs(int lbs) = 0;

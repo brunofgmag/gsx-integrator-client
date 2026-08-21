@@ -41,6 +41,8 @@ private slots:
     static void chocksStopAtTheAttemptCap();
     static void groundPowerCountsAsPresentNotConnected();
     static void groundPowerIsRequestedUntilItAppears();
+    static void groundPowerIsNotPressedAgainWhileConnecting();
+    static void groundPowerIsPressedAgainOnceTheTransitEnds();
     static void reversingTheRequestRearmsTheRetry();
     static void passengerEntryIsNotPressedBeforeTheAircraftAnswers();
     static void passengerEntryIsPressedUntilTheAircraftSaysJetway();
@@ -205,6 +207,48 @@ void PmdgGroundConnReconcilerTest::passengerEntryStopsAtTheAttemptCap()
     }
 
     QCOMPARE(RequestCount(tablet, kPassengerEntryRequest), 10);
+}
+
+void PmdgGroundConnReconcilerTest::groundPowerIsNotPressedAgainWhileConnecting()
+{
+    FakeGroundSource source;
+    FakePmdgTabletGateway tablet;
+    PmdgGroundConnReconciler reconciler(source, tablet);
+
+    reconciler.SetGroundPower(true);
+    reconciler.Reconcile();
+    QCOMPARE(RequestCount(tablet, kGroundPowerRequest), 1);
+
+    tablet.groundConnMoving.emplace(kGroundPowerRequest);
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QCOMPARE(RequestCount(tablet, kGroundPowerRequest), 1);
+}
+
+void PmdgGroundConnReconcilerTest::groundPowerIsPressedAgainOnceTheTransitEnds()
+{
+    FakeGroundSource source;
+    FakePmdgTabletGateway tablet;
+    PmdgGroundConnReconciler reconciler(source, tablet);
+
+    reconciler.SetGroundPower(true);
+    reconciler.Reconcile();
+    tablet.groundConnMoving.emplace(kGroundPowerRequest);
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    tablet.groundConnMoving.clear();
+    for (int tick = 0; tick < 6; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QCOMPARE(RequestCount(tablet, kGroundPowerRequest), 2);
 }
 
 QTEST_APPLESS_MAIN(PmdgGroundConnReconcilerTest)

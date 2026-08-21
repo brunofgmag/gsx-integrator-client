@@ -37,6 +37,8 @@ private slots:
     static void readsDoorStatesFromStateReply();
     static void doorInMotionHasNoState();
     static void readsThePassengerEntryMethodFromStateReply();
+    static void groundPowerInTransitIsReportedAsMoving();
+    static void settledGroundPowerVerbsAreNotMoving();
     static void requestStateAsksThePlaneForGroundState();
     static void unsubscribesBorrowedBridgeOnDestruction();
     static void skipsUnsubscribeWhenNeverPolled();
@@ -238,6 +240,49 @@ void PmdgTabletClientTest::skipsUnsubscribeWhenNeverPolled()
     }
 
     QVERIFY(bridge.unsubscribed.empty());
+}
+
+void PmdgTabletClientTest::groundPowerInTransitIsReportedAsMoving()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+    client.Poll();
+
+    QVERIFY(!client.GroundConnMoving("ground_power"));
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("ground_conn":{"chocks_set":true,"ground_power_state":"CONNECTING"}})");
+
+    QVERIFY(client.GroundConnMoving("ground_power"));
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("ground_conn":{"chocks_set":true,"ground_power_state":"DISCONNECTING"}})");
+
+    QVERIFY(client.GroundConnMoving("ground_power"));
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("ground_conn":{"chocks_set":true,"ground_power_state":"RELEASE"}})");
+
+    QVERIFY(!client.GroundConnMoving("ground_power"));
+}
+
+void PmdgTabletClientTest::settledGroundPowerVerbsAreNotMoving()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+    client.Poll();
+
+    for (const char* verb : {"REQUEST", "RELEASE", "CHOCKS INHIBIT"})
+    {
+        bridge.Deliver("PlaneToTablet",
+                       std::string(R"({"message_tag":"state_reply","tablet_side":"FO",)")
+                       + R"("ground_conn":{"ground_power_state":")" + verb + R"("}})");
+
+        QVERIFY2(!client.GroundConnMoving("ground_power"), verb);
+    }
 }
 
 QTEST_APPLESS_MAIN(PmdgTabletClientTest)

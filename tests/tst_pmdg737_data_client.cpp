@@ -43,6 +43,8 @@ private slots:
     static void receivesClientDataThroughSession();
     static void exposesTypedFields();
     static void invalidPacketDoesNotLatchData();
+    static void dataExpiresWhenTheBlockStopsArriving();
+    static void aFreshBlockRevivesTheReading();
     static void pollNeverTransmitsAnEvent();
     static void doorEventsSkipTheTwoNumbersTheSdkReserves();
     static void groundPowerSeparatesAvailableFromPowered();
@@ -155,6 +157,49 @@ void Pmdg737DataClientTest::groundPowerSeparatesAvailableFromPowered()
 
     QVERIFY(client.GroundPowerAvailable());
     QVERIFY(!client.AnyMainBusPowered());
+}
+
+void Pmdg737DataClientTest::dataExpiresWhenTheBlockStopsArriving()
+{
+    Pmdg737DataClient client;
+    long long now = 0;
+    client.SetClockForTest([&now] { return now; });
+
+    client.Poll();
+    const PMDG_NG3_Data sample = MakeSampleData();
+    FakeSimConnectApi::PushClientData(PMDG_NG3_DATA_DEFINITION, &sample, sizeof(sample));
+    client.Poll();
+
+    QVERIFY(client.HasData());
+
+    now = 5000;
+    QVERIFY(client.HasData());
+
+    now = 20000;
+    QVERIFY(!client.HasData());
+    QVERIFY(!client.BeaconOn());
+    QVERIFY(!client.GroundPowerAvailable());
+}
+
+void Pmdg737DataClientTest::aFreshBlockRevivesTheReading()
+{
+    Pmdg737DataClient client;
+    long long now = 0;
+    client.SetClockForTest([&now] { return now; });
+
+    client.Poll();
+    const PMDG_NG3_Data sample = MakeSampleData();
+    FakeSimConnectApi::PushClientData(PMDG_NG3_DATA_DEFINITION, &sample, sizeof(sample));
+    client.Poll();
+
+    now = 20000;
+    QVERIFY(!client.HasData());
+
+    FakeSimConnectApi::PushClientData(PMDG_NG3_DATA_DEFINITION, &sample, sizeof(sample));
+    client.Poll();
+
+    QVERIFY(client.HasData());
+    QVERIFY(client.BeaconOn());
 }
 
 QTEST_APPLESS_MAIN(Pmdg737DataClientTest)

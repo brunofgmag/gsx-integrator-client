@@ -90,6 +90,13 @@ void PmdgGroundConnReconciler::ReconcileGroundPower()
         return;
     }
 
+    if (tablet_.GroundConnMoving(kGroundPowerRequest))
+    {
+        ticksSinceGroundPowerRequest_ = 0;
+
+        return;
+    }
+
     ++ticksSinceGroundPowerRequest_;
     if (ticksSinceGroundPowerRequest_ >= kGroundConnRetryTicks
         && groundPowerAttempts_ < kGroundConnMaxAttempts)

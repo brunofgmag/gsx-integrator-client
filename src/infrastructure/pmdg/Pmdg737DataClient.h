@@ -2,6 +2,8 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG737DATACLIENT_H
 
 #include <cstddef>
+#include <functional>
+#include <utility>
 #include "Pmdg737DataGateway.h"
 #include "Pmdg737SdkData.h"
 #include "PmdgClientDataChannel.h"
@@ -23,6 +25,8 @@ public:
     void SetInFlight(bool inFlight) override;
 
     [[nodiscard]] static unsigned DoorEventOffsetFor(Pmdg737Door door);
+
+    void SetClockForTest(std::function<long long()> clock) { channel_.SetClock(std::move(clock)); }
 
 private:
     void ReportProbe() const;

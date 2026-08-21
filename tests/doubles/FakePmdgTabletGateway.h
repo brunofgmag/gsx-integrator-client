@@ -20,6 +20,7 @@ public:
     std::vector<std::string> groundConnRequests;
     std::map<std::string, bool> doorOpen;
     std::set<std::string> moving;
+    std::set<std::string> groundConnMoving;
     int stateRequests = 0;
     std::optional<bool> passengerEntryJetway;
 
@@ -37,6 +38,11 @@ public:
         const auto it = doorOpen.find(key);
 
         return it == doorOpen.end() ? std::nullopt : std::optional(it->second);
+    }
+
+    [[nodiscard]] bool GroundConnMoving(const std::string& key) const override
+    {
+        return groundConnMoving.contains(key);
     }
 
     [[nodiscard]] std::optional<bool> PassengerEntryViaJetway() const override

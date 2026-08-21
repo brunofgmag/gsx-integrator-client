@@ -27,6 +27,9 @@ namespace
     constexpr auto kGroundConnState = "ground_conn";
     constexpr auto kPassengerEntryField = "passenger_entry";
     constexpr auto kPassengerEntryJetway = "JETWAY";
+    constexpr auto kGroundPowerStateField = "ground_power_state";
+    constexpr auto kGroundPowerRequestKey = "ground_power";
+    constexpr std::array kGroundConnMoving = {"CONNECTING", "DISCONNECTING"};
     constexpr std::array kDoorMoving = {"OPENING", "CLOSING"};
 
     std::string BuildEnvelope(const char* tag, const QJsonObject& data)
@@ -170,6 +173,38 @@ PmdgTabletClient::DoorSnapshot PmdgTabletClient::ParseDoorStates(const std::stri
     return snapshot;
 }
 
+std::optional<std::set<std::string>> PmdgTabletClient::ParseGroundConnMoving(const std::string& json)
+{
+    const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(json));
+    if (!document.isObject())
+    {
+        return std::nullopt;
+    }
+
+    const QJsonObject object = document.object();
+    if (object.value(QStringLiteral("message_tag")).toString() != QLatin1String(kTagStateReply))
+    {
+        return std::nullopt;
+    }
+
+    const QJsonValue groundPower = object.value(QLatin1String(kGroundConnState)).toObject()
+                                         .value(QLatin1String(kGroundPowerStateField));
+    if (!groundPower.isString())
+    {
+        return std::nullopt;
+    }
+
+    const QString state = groundPower.toString();
+    std::set<std::string> moving;
+    if (std::ranges::any_of(kGroundConnMoving, [&state](const char* verb)
+                            { return state == QLatin1String(verb); }))
+    {
+        moving.emplace(kGroundPowerRequestKey);
+    }
+
+    return moving;
+}
+
 std::optional<bool> PmdgTabletClient::ParsePassengerEntry(const std::string& json)
 {
     const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(json));
@@ -244,6 +279,11 @@ void PmdgTabletClient::OnInbound(const std::string& payload)
         passengerEntryJetway_ = viaJetway;
     }
 
+    if (auto groundConn = ParseGroundConnMoving(payload); groundConn.has_value())
+    {
+        groundConnMoving_ = std::move(*groundConn);
+    }
+
     if (auto doors = ParseDoorStates(payload); !doors.settled.empty() || !doors.moving.empty())
     {
         doorOpen_ = std::move(doors.settled);
@@ -254,6 +294,11 @@ void PmdgTabletClient::OnInbound(const std::string& payload)
 bool PmdgTabletClient::DoorMoving(const std::string& key) const
 {
     return doorMoving_.contains(key);
+}
+
+bool PmdgTabletClient::GroundConnMoving(const std::string& key) const
+{
+    return groundConnMoving_.contains(key);
 }
 
 std::optional<bool> PmdgTabletClient::PassengerEntryViaJetway() const
