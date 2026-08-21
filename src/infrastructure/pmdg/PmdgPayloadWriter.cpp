@@ -34,6 +34,7 @@ void PmdgPayloadWriter::Reset()
     lastSentCargoLbs_ = -1;
     lastProgressiveCargoLbs_ = -1;
     lastRequestedZfwKg_ = 0.0;
+    progressiveRampMoving_ = false;
     zfwSettledTicks_ = 0;
     zfwTrims_ = 0;
 }
@@ -70,6 +71,7 @@ void PmdgPayloadWriter::SetZfwKg(const double zfwKg)
     }
 
     const double progress = std::clamp((zfwKg - emptyZfwKg) / payloadSpanKg, 0.0, 1.0);
+    progressiveRampMoving_ = progress > 0.0 && progress < 1.0;
 
     double plannedCargoKg = payloadSpanKg;
     if (!cargoVariant_)
@@ -104,7 +106,7 @@ void PmdgPayloadWriter::SetZfwKg(const double zfwKg)
 void PmdgPayloadWriter::Trim()
 {
     if (lastRequestedZfwKg_ <= 0.0 || lastSentCargoLbs_ < 0 || !tablet_.IsAvailable()
-        || zfwTrims_ >= kZfwTrimMaxAttempts)
+        || progressiveRampMoving_ || zfwTrims_ >= kZfwTrimMaxAttempts)
     {
         return;
     }

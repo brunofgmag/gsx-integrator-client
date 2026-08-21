@@ -26,6 +26,7 @@ private:
     int lastSentCargoLbs_ = -1;
     int lastProgressiveCargoLbs_ = -1;
     double lastRequestedZfwKg_ = 0.0;
+    bool progressiveRampMoving_ = false;
     int zfwSettledTicks_ = 0;
     int zfwTrims_ = 0;
 };
