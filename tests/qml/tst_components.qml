@@ -1,6 +1,6 @@
 import QtQuick
 import QtTest
-import GsxIntegratorClient
+import GsxIntegratorClientTests
 
 TestCase {
     id: testCase

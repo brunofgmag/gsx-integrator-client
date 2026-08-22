@@ -761,9 +761,9 @@ if (NOT GSXI_TESTS_ONLY)
     set_source_files_properties(src/qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
     qt_add_qml_module(gsxi-qml-tests
-            URI GsxIntegratorClient
+            URI GsxIntegratorClientTests
             VERSION 1.0
-            OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/qml-tests/GsxIntegratorClient"
+            OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/qml-tests/GsxIntegratorClientTests"
             QML_FILES
             src/qml/Theme.qml
             src/qml/components/ActionButton.qml
