@@ -16,9 +16,17 @@ std::optional<TurnaroundTransition> RemoveGroundEquipmentState::Evaluate(Turnaro
     const bool manageEquipment = ctx.settings != nullptr && (ctx.settings->callGpu || ctx.settings->callGpuOnArrival);
     const bool removeChocks = manageEquipment || ctx.data.chocksPlaced || ctx.data.arrivalChocksPlaced;
 
-    if (removeChocks && !ctx.data.chocksRemoved && ctx.aircraft->SetChocks(false))
+    if (removeChocks && !ctx.data.chocksRemoved)
     {
-        ctx.data.chocksRemoved = true;
+        if (!ctx.aircraft->IsParkingBrakeSet())
+        {
+            return std::nullopt;
+        }
+
+        if (ctx.aircraft->SetChocks(false))
+        {
+            ctx.data.chocksRemoved = true;
+        }
     }
 
     const bool connected =

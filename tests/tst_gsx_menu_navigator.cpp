@@ -128,6 +128,8 @@ private slots:
     static void completeRefuelPicksCompleteNowViaServiceMenu();
     static void completeRefuelIntentExpiresAfterTtl();
     static void completeRefuelMatchesLbsLoadedEntry();
+    static void completeBoardingPicksCompleteNowViaCargoEntry();
+    static void completeBoardingMatchesThePassengerEntry();
     static void completePushbackPicksEntryWithoutInterruptTitle();
     static void staleRepositionClearedByServiceIntent();
     static void picksGsxChoiceDuringServiceIntent();
@@ -469,6 +471,56 @@ void GsxMenuNavigatorTest::completeRefuelPicksCompleteNowViaServiceMenu()
 
     QVERIFY(second != nullptr);
     QCOMPARE(second->args.value("index").toInt(), 0);
+}
+
+void GsxMenuNavigatorTest::completeBoardingPicksCompleteNowViaCargoEntry()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.CompleteBoarding();
+
+    QCOMPARE(client.Count("menu.toggle"), 1);
+
+    ShowMenu(state, "Activate Services at ZZZZ",
+             {"Request Deboarding", "Request Refueling", "Cargo loading in progress"});
+    nav.OnMenuChanged();
+
+    const Sent* first = client.Last("menu.pick");
+
+    QVERIFY(first != nullptr);
+    QCOMPARE(first->args.value("index").toInt(), 2);
+
+    ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
+    nav.OnMenuChanged();
+
+    const Sent* second = client.Last("menu.pick");
+
+    QVERIFY(second != nullptr);
+    QCOMPARE(second->args.value("index").toInt(), 0);
+}
+
+void GsxMenuNavigatorTest::completeBoardingMatchesThePassengerEntry()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.CompleteBoarding();
+
+    ShowMenu(state, "Activate Services at ZZZZ",
+             {"Request Deboarding", "Boarding passengers now", "Prepare for Push-back and Departure"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+    QCOMPARE(pick->args.value("index").toInt(), 1);
 }
 
 void GsxMenuNavigatorTest::completeRefuelIntentExpiresAfterTtl()

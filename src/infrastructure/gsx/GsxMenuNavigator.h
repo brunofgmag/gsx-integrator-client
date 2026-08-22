@@ -37,6 +37,7 @@ public:
     void RequestPushback() override;
     void RequestRefueling() override;
     void CompleteRefuel() override;
+    void CompleteBoarding() override;
     void ToggleGpu() override;
     void RequestCatering() override;
     void RequestLavatory() override;
@@ -115,6 +116,7 @@ private:
     Reposition reposition_ = Reposition::Idle;
     TimedIntent completingPushback_;
     TimedIntent completingRefuel_;
+    TimedIntent completingBoarding_;
     TimedIntent confirmingEngines_;
 
     Intent intent_ = Intent::None;

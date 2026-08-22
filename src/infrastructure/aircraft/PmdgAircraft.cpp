@@ -101,7 +101,7 @@ void PmdgAircraft::SyncDoors()
 void PmdgAircraft::SyncMainDeckDoor()
 {
     const bool loaderPresent = gsx::states::IsLoaderAtDoor(
-        variableGateway_->GetLVar(gsx::lvars::kBaggageLoaderMainState, 0.0));
+        doors_.VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0));
 
     if (loaderPresent && mainDeckTarget_ != MainDeckTarget::Open)
     {

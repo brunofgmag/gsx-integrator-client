@@ -1,6 +1,8 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGPAYLOADWRITER_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGPAYLOADWRITER_H
 
+#include <optional>
+
 class PmdgTabletGateway;
 class VariableGateway;
 struct AutomationStatus;
@@ -25,6 +27,7 @@ private:
     int lastSentPax_ = -1;
     int lastSentCargoLbs_ = -1;
     int lastProgressiveCargoLbs_ = -1;
+    std::optional<double> rampStartZfwKg_;
     double lastRequestedZfwKg_ = 0.0;
     bool progressiveRampMoving_ = false;
     int zfwSettledTicks_ = 0;

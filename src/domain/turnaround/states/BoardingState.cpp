@@ -6,6 +6,12 @@
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
 #include "../../ports/GsxGateway.h"
+#include "../../ports/GsxMenuGateway.h"
+
+namespace
+{
+    constexpr int kBoardingStallTicks = 180;
+}
 
 std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& ctx)
 {
@@ -40,7 +46,38 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
         data.loadedZfwKg,
         data.plannedZfwKg);
 
+    MaybeForceCompletion(ctx);
+
     return std::nullopt;
+}
+
+bool BoardingState::IsBarFull(const TurnaroundContext& ctx)
+{
+    if (ctx.gsxGateway->GetBoardingCargoPercent() < 100.0)
+    {
+        return false;
+    }
+
+    return ctx.aircraft->IsCargoVariant()
+        || ctx.data.boardedPassengers >= ctx.data.plannedPassengers;
+}
+
+void BoardingState::MaybeForceCompletion(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+
+    if (data.boardingCompletionForced || IsCargoPending(ctx) || !IsBarFull(ctx))
+    {
+        data.boardingStallTicks = 0;
+
+        return;
+    }
+
+    if (++data.boardingStallTicks >= kBoardingStallTicks)
+    {
+        data.boardingCompletionForced = true;
+        ctx.menuGateway->CompleteBoarding();
+    }
 }
 
 bool BoardingState::IsCargoPending(const TurnaroundContext& ctx)

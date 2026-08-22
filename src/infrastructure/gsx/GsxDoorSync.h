@@ -3,6 +3,8 @@
 
 #include <array>
 #include <functional>
+#include <map>
+#include <string>
 
 class VariableGateway;
 
@@ -28,14 +30,19 @@ public:
     void Sync(const DoorWriter& write);
     void CloseAll(const DoorWriter& write);
     void HoldClosedForDeparture(bool hold);
+    [[nodiscard]] double VehicleState(const char* lVar, double absent) const;
 
 private:
     [[nodiscard]] bool IsDesiredOpen(GsxDoor door) const;
+    void ObserveCouatl();
     void ReportProbe() const;
 
     VariableGateway* variableGateway_;
     std::array<double, static_cast<std::size_t>(GsxDoor::Count)> lastTargets_{};
     bool heldForDeparture_ = false;
+    bool couatlSeenStarted_ = false;
+    bool couatlRestarting_ = false;
+    mutable std::map<std::string, double> inheritedVehicles_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_GSXDOORSYNC_H

@@ -12,6 +12,9 @@ public:
     }
 
     [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
+
+private:
+    static void TrackStalledRequest(TurnaroundContext& ctx, bool gsxStillOffersService);
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_REQUESTFUELSTATE_H

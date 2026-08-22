@@ -9,6 +9,7 @@ struct AutomationStatus
     bool enabled = false;
     bool aircraftSupported = false;
     bool gsxAvailable = false;
+    bool fuelRequestStalled = false;
     double fuelProgress = 0.0;
     double boardingProgress = 0.0;
     double deboardingProgress = 0.0;
