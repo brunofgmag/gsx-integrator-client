@@ -116,6 +116,11 @@ bool Pmdg737DataClient::BeaconOn() const
     return channel_.HasData() && channel_.Data().LTS_AntiCollisionSw;
 }
 
+bool Pmdg737DataClient::AirstairAnnunciator() const
+{
+    return channel_.HasData() && channel_.Data().DOOR_annunAIRSTAIR;
+}
+
 bool Pmdg737DataClient::ParkingBrakeOn() const
 {
     return channel_.HasData() && channel_.Data().PED_annunParkingBrake;

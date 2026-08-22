@@ -56,7 +56,16 @@ bool GsxStateService::IsAvailable() const
     return varManager_->GetLVar(kCouatlStarted) >= 1.0;
 }
 
-GsxStateStatus GsxStateService::GetStateStatus(const GsxState gsxState)
+void GsxStateService::Observe()
+{
+    for (const GsxState gsxState : {GsxState::Refueling, GsxState::Boarding, GsxState::Pushback,
+                                    GsxState::Deboarding, GsxState::Deice})
+    {
+        ObserveState(gsxState);
+    }
+}
+
+GsxStateStatus GsxStateService::GetStateStatus(const GsxState gsxState) const
 {
     const char* stateLVar = StateLVarName(gsxState);
     if (stateLVar == nullptr)
@@ -64,12 +73,7 @@ GsxStateStatus GsxStateService::GetStateStatus(const GsxState gsxState)
         return GsxStateStatus::Unavailable;
     }
 
-    const auto stateStatus = static_cast<GsxStateStatus>(varManager_->GetLVar(stateLVar));
-
-    ParseCompleted(gsxState, stateStatus);
-    states_.at(gsxState).status = stateStatus;
-
-    return stateStatus;
+    return static_cast<GsxStateStatus>(varManager_->GetLVar(stateLVar));
 }
 
 bool GsxStateService::WasStateCompleted(const GsxState gsxState) const
@@ -288,13 +292,30 @@ bool GsxStateService::IsSimbriefLoaded() const
     return varManager_->GetLVar(kSimbriefSuccess) >= 1.0;
 }
 
+std::string GsxStateService::GetSimbriefRefusal() const
+{
+    if (remote_ == nullptr || remote_->simbriefStatus != "error")
+    {
+        return {};
+    }
+
+    return remote_->simbriefError;
+}
+
 bool GsxStateService::IsGoodEngineStartConfirmationEnabled() const
 {
     return varManager_->GetLVar(kGoodEngineStart, 1.0) >= 1.0;
 }
 
-void GsxStateService::ParseCompleted(const GsxState gsxState, const GsxStateStatus stateStatus)
+void GsxStateService::ObserveState(const GsxState gsxState)
 {
+    const char* stateLVar = StateLVarName(gsxState);
+    if (stateLVar == nullptr)
+    {
+        return;
+    }
+
+    const auto stateStatus = static_cast<GsxStateStatus>(varManager_->GetLVar(stateLVar));
     StateTrack& track = states_.at(gsxState);
 
     const bool returnedToIdle =
@@ -302,4 +323,5 @@ void GsxStateService::ParseCompleted(const GsxState gsxState, const GsxStateStat
         && track.status == GsxStateStatus::Active;
 
     track.completed = track.completed || stateStatus == GsxStateStatus::Completed || returnedToIdle;
+    track.status = stateStatus;
 }

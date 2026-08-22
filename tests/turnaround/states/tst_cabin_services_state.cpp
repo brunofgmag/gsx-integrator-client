@@ -14,6 +14,7 @@ private slots:
     static void waitsForActiveServiceWhenDisabledMidRun();
     static void asksServiceOnceAndWaits();
     static void givesUpWhenServiceNeverStarts();
+    static void waitsPastTenMinutesForAServiceStillRunning();
 };
 
 void CabinServicesStateTest::advancesImmediatelyWhenAllDisabled()
@@ -63,7 +64,7 @@ void CabinServicesStateTest::confirmsEachServiceThenWaitsForCompletion()
 
     f.gsxService.lavatoryInProgress = true;
     QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QVERIFY(f.ctx.data.lavatoryRequested);
+    QVERIFY(f.ctx.data.lavatory.requested);
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.requestWaterCalls, 1);
@@ -104,7 +105,7 @@ void CabinServicesStateTest::waitsForActiveServiceWhenDisabledMidRun()
     f.gsxService.lavatoryInProgress = true;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QVERIFY(f.ctx.data.lavatoryActiveSeen);
+    QVERIFY(f.ctx.data.lavatory.activeSeen);
 
     f.settings.callLavatory = false;
 
@@ -127,7 +128,7 @@ void CabinServicesStateTest::asksServiceOnceAndWaits()
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.requestLavatoryCalls, 1);
-    QVERIFY(!f.ctx.data.lavatoryRequested);
+    QVERIFY(!f.ctx.data.lavatory.requested);
 
     for (int tick = 0; tick < 20; ++tick)
     {
@@ -136,11 +137,11 @@ void CabinServicesStateTest::asksServiceOnceAndWaits()
     }
 
     QCOMPARE(f.menuGateway.requestLavatoryCalls, 1);
-    QVERIFY(!f.ctx.data.lavatoryRequested);
+    QVERIFY(!f.ctx.data.lavatory.requested);
 
     f.gsxService.lavatoryInProgress = true;
     QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QVERIFY(f.ctx.data.lavatoryRequested);
+    QVERIFY(f.ctx.data.lavatory.requested);
 }
 
 void CabinServicesStateTest::givesUpWhenServiceNeverStarts()
@@ -156,6 +157,32 @@ void CabinServicesStateTest::givesUpWhenServiceNeverStarts()
         ++f.ctx.data.stateTickCount;
         transition = state.Evaluate(f.ctx);
     }
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);
+}
+
+void CabinServicesStateTest::waitsPastTenMinutesForAServiceStillRunning()
+{
+    TurnaroundStateFixture f;
+    CabinServicesState state;
+
+    f.settings.callCleaning = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    f.gsxService.cleaningInProgress = true;
+
+    std::optional<TurnaroundTransition> transition;
+    for (int tick = 0; tick < 700 && !transition; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        transition = state.Evaluate(f.ctx);
+    }
+
+    QVERIFY(!transition.has_value());
+
+    f.gsxService.cleaningInProgress = false;
+    transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);

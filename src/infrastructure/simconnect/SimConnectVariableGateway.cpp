@@ -53,7 +53,13 @@ SimConnectVariableGateway::Slot& SimConnectVariableGateway::EnsureSlot(const std
 {
     if (const auto it = index_.find(key); it != index_.end())
     {
-        return slots_[it->second];
+        Slot& existing = slots_[it->second];
+        if (fastMode && !existing.fast)
+        {
+            PromoteToFastRefresh(existing);
+        }
+
+        return existing;
     }
 
     slots_.emplace_back();
@@ -72,6 +78,17 @@ SimConnectVariableGateway::Slot& SimConnectVariableGateway::EnsureSlot(const std
     }
 
     return slot;
+}
+
+void SimConnectVariableGateway::PromoteToFastRefresh(Slot& slot) const
+{
+    slot.fast = true;
+    slot.registered = false;
+
+    if (!RegisterSlot(slot))
+    {
+        LOG_WARN("Failed to promote variable '%s' to frame rate", slot.datumName.c_str());
+    }
 }
 
 bool SimConnectVariableGateway::RegisterSlot(Slot& slot) const

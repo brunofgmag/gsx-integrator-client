@@ -63,11 +63,29 @@ namespace
     constexpr double kDoorModeAuto = 1.0;
     constexpr double kDoorModeOpen = 2.0;
 
+    constexpr auto kCargoDoorRatioFwd = "TLS_CARGO_DOOR_OPEN_RATIO_FWD";
+    constexpr auto kCargoDoorRatioAft = "TLS_CARGO_DOOR_OPEN_RATIO_AFT";
+
+    constexpr std::array kDoorRatioLVars =
+        {kCargoDoorRatioFwd, kCargoDoorRatioAft,
+         "TLS_PAX_DOOR_OPEN_RATIO_1L", "TLS_PAX_DOOR_OPEN_RATIO_2L",
+         "TLS_PAX_DOOR_OPEN_RATIO_3L", "TLS_PAX_DOOR_OPEN_RATIO_4L",
+         "TLS_PAX_DOOR_OPEN_RATIO_1R", "TLS_PAX_DOOR_OPEN_RATIO_2R",
+         "TLS_PAX_DOOR_OPEN_RATIO_3R", "TLS_PAX_DOOR_OPEN_RATIO_4R"};
+
     void AllDoorModesClosed(FakeVariableGateway& gateway)
     {
         for (const char* modeLVar : kDoorModeLVars)
         {
             gateway.lvars[modeLVar] = kDoorModeClosed;
+        }
+    }
+
+    void AllDoorRatiosClosed(FakeVariableGateway& gateway)
+    {
+        for (const char* ratioLVar : kDoorRatioLVars)
+        {
+            gateway.lvars[ratioLVar] = 0.0;
         }
     }
 }
@@ -77,7 +95,7 @@ class TolissA340Test final : public QObject
     Q_OBJECT
 
 private slots:
-    static void reportsNameAndVariant();
+    static void reportsCargoVariant();
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
@@ -102,9 +120,11 @@ private slots:
     static void powerFollowsExternalOnAnnunciator();
     static void engineRunningDetectsAnyOfFourEngines();
     static void engineAssumedRunningUntilFuelFlowDataArrives();
-    static void parkingBrakeFollowsEitherSource();
+    static void parkingBrakeReadsTheLeverAndIgnoresTheSimVar();
+    static void heldInPlaceFollowsTheLeverWithoutAChocksSource();
     static void readyToPushFollowsPowerBeaconAndEngines();
     static void readyToDeboardFollowsSafetyState();
+    static void holdForDepartureClosesPaxAndCargoButNotCatering();
     static void doorsUntouchedByDefaultWhenGsxAvailable();
     static void cargoDoorsOpenPerLoaderAndCloseWhenDone();
     static void cargoDoorsUntouchedWithoutGsx();
@@ -122,17 +142,19 @@ private slots:
     static void doorStatusUnknownUntilDoorModesArrive();
     static void doorStatusUnknownWhileADoorSitsInAutoMode();
     static void doorStatusAllClosedWhenEveryModeReadsClosed();
+    static void doorStillMovingIsNotReportedClosed();
+    static void positionBeatsTheCommandOnceItArrives();
+    static void doorStatusFallsBackToTheModeUntilThePositionArrives();
     static void reportsLoadMethods();
 };
 
-void TolissA340Test::reportsNameAndVariant()
+void TolissA340Test::reportsCargoVariant()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
     const TolissA340 passenger(&gateway, &status, false);
     const TolissA340 freighter(&gateway, &status, true);
 
-    QCOMPARE(QString(passenger.GetName()), QString("ToLiss A340-600"));
     QVERIFY(!passenger.IsCargoVariant());
     QVERIFY(freighter.IsCargoVariant());
 }
@@ -542,7 +564,7 @@ void TolissA340Test::engineAssumedRunningUntilFuelFlowDataArrives()
     QVERIFY(aircraft.IsEngineRunning());
 }
 
-void TolissA340Test::parkingBrakeFollowsEitherSource()
+void TolissA340Test::parkingBrakeReadsTheLeverAndIgnoresTheSimVar()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -552,9 +574,8 @@ void TolissA340Test::parkingBrakeFollowsEitherSource()
 
     gateway.avars[kSimParkingBrake] = 1.0;
 
-    QVERIFY(aircraft.IsParkingBrakeSet());
+    QVERIFY(!aircraft.IsParkingBrakeSet());
 
-    gateway.avars[kSimParkingBrake] = 0.0;
     gateway.lvars[kParkingBrakeLvar] = 100.0;
 
     QVERIFY(aircraft.IsParkingBrakeSet());
@@ -562,6 +583,19 @@ void TolissA340Test::parkingBrakeFollowsEitherSource()
     gateway.lvars[kParkingBrakeLvar] = 0.0;
 
     QVERIFY(!aircraft.IsParkingBrakeSet());
+}
+
+void TolissA340Test::heldInPlaceFollowsTheLeverWithoutAChocksSource()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TolissA340 aircraft(&gateway, &status, false);
+
+    QVERIFY(!aircraft.IsHeldInPlace());
+
+    gateway.lvars[kParkingBrakeLvar] = 100.0;
+
+    QVERIFY(aircraft.IsHeldInPlace());
 }
 
 void TolissA340Test::readyToPushFollowsPowerBeaconAndEngines()
@@ -604,7 +638,7 @@ void TolissA340Test::readyToDeboardFollowsSafetyState()
     {
         gateway.lvars["TLS_ENG" + std::to_string(engine) + "_FUEL_FLOW"] = 0.0;
     }
-    gateway.avars[kSimParkingBrake] = 1.0;
+    gateway.lvars[kParkingBrakeLvar] = 100.0;
     gateway.avars[kSimBeaconLight] = 0.0;
 
     QVERIFY(aircraft.IsReadyToDeboard());
@@ -614,14 +648,45 @@ void TolissA340Test::readyToDeboardFollowsSafetyState()
     QVERIFY(!aircraft.IsReadyToDeboard());
 
     gateway.avars[kSimBeaconLight] = 0.0;
-    gateway.avars[kSimParkingBrake] = 0.0;
+    gateway.lvars[kParkingBrakeLvar] = 0.0;
 
     QVERIFY(!aircraft.IsReadyToDeboard());
 
-    gateway.avars[kSimParkingBrake] = 1.0;
+    gateway.lvars[kParkingBrakeLvar] = 100.0;
     gateway.lvars["TLS_ENG2_FUEL_FLOW"] = 1.0;
 
     QVERIFY(!aircraft.IsReadyToDeboard());
+}
+
+
+void TolissA340Test::holdForDepartureClosesPaxAndCargoButNotCatering()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kGsxJetway] = 5.0;
+    gateway.lvars[kGsxLoaderFront] = 8.0;
+    gateway.lvars[kGsxCateringFront] = 7.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeOpen);
+    QCOMPARE(gateway.Written(kCargoDoorModeFwd), kDoorModeOpen);
+    QCOMPARE(gateway.Written(kPaxDoorMode1R), kDoorModeOpen);
+
+    aircraft.HoldDoorsClosed(true);
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeClosed);
+    QCOMPARE(gateway.Written(kCargoDoorModeFwd), kDoorModeClosed);
+    QCOMPARE(gateway.Written(kPaxDoorMode1R), kDoorModeOpen);
+
+    aircraft.HoldDoorsClosed(false);
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeOpen);
+    QCOMPARE(gateway.Written(kCargoDoorModeFwd), kDoorModeOpen);
 }
 
 void TolissA340Test::doorsUntouchedByDefaultWhenGsxAvailable()
@@ -958,6 +1023,43 @@ void TolissA340Test::doorStatusUnknownWhileADoorSitsInAutoMode()
 }
 
 void TolissA340Test::doorStatusAllClosedWhenEveryModeReadsClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TolissA340 aircraft(&gateway, &status, false);
+
+    AllDoorModesClosed(gateway);
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AllClosed);
+}
+
+void TolissA340Test::doorStillMovingIsNotReportedClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TolissA340 aircraft(&gateway, &status, false);
+
+    AllDoorModesClosed(gateway);
+    AllDoorRatiosClosed(gateway);
+    gateway.lvars[kCargoDoorRatioFwd] = 0.920;
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AnyOpen);
+}
+
+void TolissA340Test::positionBeatsTheCommandOnceItArrives()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TolissA340 aircraft(&gateway, &status, false);
+
+    AllDoorModesClosed(gateway);
+    gateway.lvars[kPaxDoorMode2R] = kDoorModeAuto;
+    AllDoorRatiosClosed(gateway);
+
+    QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AllClosed);
+}
+
+void TolissA340Test::doorStatusFallsBackToTheModeUntilThePositionArrives()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;

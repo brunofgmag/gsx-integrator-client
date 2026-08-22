@@ -46,7 +46,8 @@ private slots:
     static void kickFiredWhenStale();
     static void kickReleasesSwitchOnNextPoll();
     static void kickSuppressedInFlight();
-    static void kickStopsAfterFirstData();
+    static void kickStaysQuietWhileFramesKeepArriving();
+    static void kickResumesWhenTheBlockGoesStale();
     static void invalidPacketDoesNotLatchData();
     static void toggleDoorTransmitsMappedEvent();
     static void fmcFlightPlanFromCruiseAltOrFlightNumber();
@@ -157,7 +158,7 @@ void Pmdg777DataClientTest::kickSuppressedInFlight()
     QVERIFY(!MappedEvent("#69750"));
 }
 
-void Pmdg777DataClientTest::kickStopsAfterFirstData()
+void Pmdg777DataClientTest::kickStaysQuietWhileFramesKeepArriving()
 {
     Pmdg777DataClient client;
     long long now = 0;
@@ -169,12 +170,16 @@ void Pmdg777DataClientTest::kickStopsAfterFirstData()
     client.Poll();
 
     QVERIFY(client.HasData());
-    FakeSimConnectApi::mappedEventNames.clear();
+    const int afterFirstFrame = FakeSimConnectApi::transmittedEvents;
 
-    now = 100000;
-    client.Poll();
+    for (now = 10000; now <= 100000; now += 10000)
+    {
+        FakeSimConnectApi::PushClientData(PMDG_777X_DATA_DEFINITION, &sample, sizeof(sample));
+        client.Poll();
+    }
 
-    QVERIFY(!MappedEvent("#69750"));
+    QVERIFY(client.HasData());
+    QCOMPARE(FakeSimConnectApi::transmittedEvents, afterFirstFrame);
 }
 
 void Pmdg777DataClientTest::invalidPacketDoesNotLatchData()
@@ -234,6 +239,34 @@ void Pmdg777DataClientTest::fmcFlightPlanFromCruiseAltOrFlightNumber()
     FakeSimConnectApi::PushClientData(PMDG_777X_DATA_DEFINITION, &sample, sizeof(sample));
     client.Poll();
     QVERIFY(client.HasFmcFlightPlan());
+}
+
+void Pmdg777DataClientTest::kickResumesWhenTheBlockGoesStale()
+{
+    Pmdg777DataClient client;
+    long long now = 0;
+    client.SetClockForTest([&now] { return now; });
+
+    client.Poll();
+    const PMDG_777X_Data sample = MakeSampleData();
+    FakeSimConnectApi::PushClientData(PMDG_777X_DATA_DEFINITION, &sample, sizeof(sample));
+    client.Poll();
+
+    QVERIFY(client.HasData());
+
+    now = 6000;
+    client.Poll();
+    const int whileFresh = FakeSimConnectApi::transmittedEvents;
+
+    now = 12000;
+    client.Poll();
+    QCOMPARE(FakeSimConnectApi::transmittedEvents, whileFresh);
+
+    now = 20000;
+    client.Poll();
+
+    QVERIFY(!client.HasData());
+    QVERIFY(FakeSimConnectApi::transmittedEvents > whileFresh);
 }
 
 QTEST_APPLESS_MAIN(Pmdg777DataClientTest)

@@ -10,6 +10,7 @@ namespace
 
     constexpr auto kChocksRequest = "wheel_chocks";
     constexpr auto kGroundPowerRequest = "ground_power";
+    constexpr auto kPassengerEntryRequest = "pax_entree";
 }
 
 PmdgGroundConnReconciler::PmdgGroundConnReconciler(PmdgGroundSource& source, PmdgTabletGateway& tablet)
@@ -38,10 +39,23 @@ void PmdgGroundConnReconciler::SetGroundPower(const bool on)
     }
 }
 
+void PmdgGroundConnReconciler::SetPassengerEntryJetway()
+{
+    if (passengerEntryRequested_)
+    {
+        return;
+    }
+
+    passengerEntryRequested_ = true;
+    passengerEntryAttempts_ = 0;
+    ticksSincePassengerEntryRequest_ = kGroundConnRetryTicks;
+}
+
 void PmdgGroundConnReconciler::Reconcile()
 {
     ReconcileChocks();
     ReconcileGroundPower();
+    ReconcilePassengerEntry();
 }
 
 void PmdgGroundConnReconciler::ReconcileChocks()
@@ -76,6 +90,13 @@ void PmdgGroundConnReconciler::ReconcileGroundPower()
         return;
     }
 
+    if (tablet_.GroundConnMoving(kGroundPowerRequest))
+    {
+        ticksSinceGroundPowerRequest_ = 0;
+
+        return;
+    }
+
     ++ticksSinceGroundPowerRequest_;
     if (ticksSinceGroundPowerRequest_ >= kGroundConnRetryTicks
         && groundPowerAttempts_ < kGroundConnMaxAttempts)
@@ -83,5 +104,35 @@ void PmdgGroundConnReconciler::ReconcileGroundPower()
         ticksSinceGroundPowerRequest_ = 0;
         ++groundPowerAttempts_;
         tablet_.RequestGroundConn(kGroundPowerRequest);
+    }
+}
+
+void PmdgGroundConnReconciler::ReconcilePassengerEntry()
+{
+    if (!passengerEntryRequested_)
+    {
+        return;
+    }
+
+    const std::optional<bool> viaJetway = tablet_.PassengerEntryViaJetway();
+    if (!viaJetway.has_value())
+    {
+        return;
+    }
+
+    if (*viaJetway)
+    {
+        passengerEntryAttempts_ = 0;
+
+        return;
+    }
+
+    ++ticksSincePassengerEntryRequest_;
+    if (ticksSincePassengerEntryRequest_ >= kGroundConnRetryTicks
+        && passengerEntryAttempts_ < kGroundConnMaxAttempts)
+    {
+        ticksSincePassengerEntryRequest_ = 0;
+        ++passengerEntryAttempts_;
+        tablet_.RequestGroundConn(kPassengerEntryRequest);
     }
 }

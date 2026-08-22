@@ -22,6 +22,9 @@ include(CTest)
 
 if (BUILD_TESTING)
     find_package(Qt6 6.8 REQUIRED COMPONENTS Test)
+    if (NOT GSXI_TESTS_ONLY)
+        find_package(Qt6 6.8 REQUIRED COMPONENTS QuickTest)
+    endif ()
 endif ()
 
 if (NOT GSXI_TESTS_ONLY)

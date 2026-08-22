@@ -282,6 +282,23 @@ ColumnLayout {
                     ? Theme.ok
                     : (root.integratorVm.simbriefError ? Theme.red : Theme.muted)
 
+                Item {
+                    width: parent ? parent.width : 0
+                    implicitHeight: refusalText.contentHeight
+                    visible: root.integratorVm.simbriefRefusal !== ""
+
+                    Text {
+                        id: refusalText
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        text: root.integratorVm.simbriefRefusal
+                        color: Theme.red
+                        font.pixelSize: 10
+                        font.capitalization: Font.AllUppercase
+                        wrapMode: Text.WordWrap
+                    }
+                }
+
                 KeyValueRow {
                     label: qsTr("Fuel")
                     value: root.formatWeight(root.integratorVm.plannedFuelKg)

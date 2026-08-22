@@ -28,6 +28,7 @@ private:
     [[nodiscard]] DoorObservation ObserveDoor(int slot) const override;
     void ToggleDoor(int slot) override;
     void RefreshDoors() override;
+    [[nodiscard]] DoorObservation ObserveAirstair() const;
 
     [[nodiscard]] bool HasAircraftPower() const override;
     [[nodiscard]] bool GroundPowerConnected() const override;

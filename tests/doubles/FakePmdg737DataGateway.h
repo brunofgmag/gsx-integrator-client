@@ -12,6 +12,7 @@ public:
     int pollCalls = 0;
     bool groundPowerAvailable = false;
     bool anyMainBusPowered = false;
+    bool airstairAnnunciator = false;
     bool beaconOn = false;
     bool parkingBrakeOn = false;
     bool inFlight = false;
@@ -23,6 +24,7 @@ public:
     [[nodiscard]] bool GroundPowerAvailable() const override { return hasData && groundPowerAvailable; }
     [[nodiscard]] bool AnyMainBusPowered() const override { return hasData && anyMainBusPowered; }
     [[nodiscard]] bool BeaconOn() const override { return hasData && beaconOn; }
+    [[nodiscard]] bool AirstairAnnunciator() const override { return hasData && airstairAnnunciator; }
     [[nodiscard]] bool ParkingBrakeOn() const override { return hasData && parkingBrakeOn; }
 
     void ToggleDoor(const Pmdg737Door door) override { toggledDoors.push_back(door); }

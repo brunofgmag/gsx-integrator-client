@@ -39,7 +39,13 @@ namespace
     constexpr auto kAftCargoAnimLVar = "Animation_AFT_Cargo_VAL";
     constexpr double kCargoDoorOpenThreshold = 90.0;
     constexpr std::array kCargoDoorAnimLVars = {kFwdCargoAnimLVar, kAftCargoAnimLVar};
-    constexpr DoorStatus kPaxDoorsUnreadable = DoorStatus::Unknown;
+
+    constexpr std::array kPaxDoorAnimLVars = {
+        "ANIMATION_FWD_ENTRY_VAL", "ANIMATION_FWD_SERVICE_VAL",
+        "ANIMATION_AFT_ENTRY_VAL", "ANIMATION_AFT_SERVICE_VAL",
+        "ANIMATION_L_FWD_OVERWING_VAL", "ANIMATION_R_FWD_OVERWING_VAL",
+        "ANIMATION_L_AFT_OVERWING_VAL", "ANIMATION_R_AFT_OVERWING_VAL"
+    };
     constexpr int kPulseSettleTicks = 5;
     constexpr int kMaxDoorPulseAttempts = 3;
 
@@ -68,11 +74,6 @@ IFly737Max::IFly737Max(VariableGateway* variableGateway, const AutomationStatus*
     smartSwitch_.Subscribe();
 
     LOG_INFO("Profile loaded: iFly 737 MAX 8");
-}
-
-const char* IFly737Max::GetName() const
-{
-    return "iFly 737 MAX 8";
 }
 
 void IFly737Max::OnTick()
@@ -322,9 +323,14 @@ bool IFly737Max::ConsumeSmartSwitch()
 
 DoorStatus IFly737Max::GetDoorStatus() const
 {
-    DoorStatus status = kPaxDoorsUnreadable;
+    DoorStatus status = doors::kNoDoorsSeen;
 
     for (const char* animLVar : kCargoDoorAnimLVars)
+    {
+        status = doors::Combine(status, doors::OpenAboveZero(*variableGateway_, animLVar));
+    }
+
+    for (const char* animLVar : kPaxDoorAnimLVars)
     {
         status = doors::Combine(status, doors::OpenAboveZero(*variableGateway_, animLVar));
     }
@@ -344,9 +350,12 @@ bool IFly737Max::IsReadyToPush() const
 
 bool IFly737Max::IsReadyToDeboard() const
 {
-    const bool isChocksOn = variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
+    return !IsEngineRunning() && IsHeldInPlace() && !IsBeaconOn();
+}
 
-    return !IsEngineRunning() && (IsParkingBrakeSet() || isChocksOn) && !IsBeaconOn();
+bool IFly737Max::IsHeldInPlace() const
+{
+    return IsParkingBrakeSet() || variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
 }
 
 bool IFly737Max::IsEngineRunning() const
@@ -356,10 +365,7 @@ bool IFly737Max::IsEngineRunning() const
 
 bool IFly737Max::IsParkingBrakeSet() const
 {
-    const bool isParkingBrakeOn = variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) > 0.0;
-    const bool isSimParkingBrakeOn = variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0;
-
-    return isParkingBrakeOn && isSimParkingBrakeOn;
+    return variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) > 0.0;
 }
 
 bool IFly737Max::IsBeaconOn() const

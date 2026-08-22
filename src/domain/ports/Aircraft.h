@@ -17,6 +17,7 @@ public:
 
     [[nodiscard]] virtual bool IsCargoVariant() const = 0;
 
+    virtual void Observe() {}
     virtual void OnTick() {}
     virtual void OnSlowTick() {}
     virtual void OnLoadingStarted() = 0;
@@ -47,11 +48,14 @@ public:
     [[nodiscard]] virtual bool SupportsGroundPowerControl() const { return false; }
     virtual void SetGroundPower(bool) {}
     virtual void CloseAllDoors() {}
+    virtual void HoldDoorsClosed(bool) {}
+    virtual void ClearOwnGroundEquipment() {}
     [[nodiscard]] virtual DoorStatus GetDoorStatus() const { return DoorStatus::Unknown; }
     [[nodiscard]] virtual bool IsMainDeckCargoDoorStuck() const { return false; }
     [[nodiscard]] virtual bool IsReadyToPush() const = 0 ;
     [[nodiscard]] virtual bool IsReadyToDeboard() const = 0;
     [[nodiscard]] virtual bool IsEngineRunning() const = 0;
+    [[nodiscard]] virtual bool IsHeldInPlace() const = 0;
     [[nodiscard]] virtual bool IsParkingBrakeSet() const = 0;
 };
 

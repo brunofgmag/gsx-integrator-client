@@ -50,6 +50,8 @@ private slots:
     static void zfwWaitsForTheEmptyWeightToArrive();
     static void passengersAndCargoFollowTheProgress();
     static void cargoVariantSendsNoPassengers();
+    static void trimStaysQuietWhileTheProgressiveRampIsMoving();
+    static void trimResumesWhenTheProgressiveRampReachesThePlan();
     static void trimWaitsForTheWeightToSettle();
     static void trimCorrectsTheCargoTowardsTheRequest();
     static void trimGivesUpAfterTheAttemptCap();
@@ -115,6 +117,53 @@ void PmdgPayloadWriterTest::cargoVariantSendsNoPassengers()
     QCOMPARE(fixture.tablet.cargoSends.size(), static_cast<std::size_t>(1));
     QCOMPARE(fixture.tablet.cargoSends.front(),
              static_cast<int>(std::lround(0.5 * (kPlannedZfwKg - kEmptyKg) * kLbsPerKg)));
+}
+
+void PmdgPayloadWriterTest::trimStaysQuietWhileTheProgressiveRampIsMoving()
+{
+    WriterFixture fixture;
+    const double spanKg = kPlannedZfwKg - kEmptyKg;
+
+    for (int step = 1; step <= 4; ++step)
+    {
+        const double requestedKg = kEmptyKg + spanKg * step / 10.0;
+        fixture.writer->SetZfwKg(requestedKg);
+        fixture.SeeZfw(requestedKg + 1000.0);
+        fixture.writer->Trim();
+    }
+
+    const std::size_t sendsWhenTheRampPaused = fixture.tablet.cargoSends.size();
+
+    for (int tick = 0; tick < 6; ++tick)
+    {
+        fixture.writer->Trim();
+    }
+
+    QCOMPARE(fixture.tablet.cargoSends.size(), sendsWhenTheRampPaused);
+}
+
+void PmdgPayloadWriterTest::trimResumesWhenTheProgressiveRampReachesThePlan()
+{
+    WriterFixture fixture;
+
+    fixture.writer->SetZfwKg(kEmptyKg + (kPlannedZfwKg - kEmptyKg) / 2.0);
+    fixture.SeeZfw(kPlannedZfwKg + 500.0);
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        fixture.writer->Trim();
+    }
+
+    fixture.writer->SetZfwKg(kPlannedZfwKg);
+    const int requestedLbs = fixture.tablet.cargoSends.back();
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        fixture.writer->Trim();
+    }
+
+    QCOMPARE(fixture.tablet.cargoSends.back(),
+             requestedLbs - static_cast<int>(std::lround(500.0 * kLbsPerKg)));
 }
 
 void PmdgPayloadWriterTest::trimWaitsForTheWeightToSettle()

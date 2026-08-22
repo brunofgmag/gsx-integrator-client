@@ -1,10 +1,13 @@
 #include "ProbeObserver.h"
 
 #include <array>
+#include <cmath>
+#include <optional>
 #include <QtCore/QDateTime>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 #include "ProbeLog.h"
+#include "ProbeWatchList.h"
 #include "../simvars/SimVars.h"
 #include "../simvars/VariableGateway.h"
 #include "../../domain/ports/Aircraft.h"
@@ -185,6 +188,41 @@ namespace
     {
         return QString::number(value, 'f', 3);
     }
+
+    struct LVarWrite
+    {
+        std::string name;
+        double value = 0.0;
+        std::optional<double> arm;
+    };
+
+    std::optional<LVarWrite> ParseLVarWrite(const QString& spec)
+    {
+        const qsizetype equals = spec.indexOf(QLatin1Char('='));
+        if (equals <= 0)
+        {
+            return std::nullopt;
+        }
+
+        LVarWrite write;
+        write.name = spec.left(equals).trimmed().toStdString();
+        if (write.name.empty())
+        {
+            return std::nullopt;
+        }
+
+        QString value = spec.mid(equals + 1).trimmed();
+        const qsizetype at = value.indexOf(QLatin1Char('@'));
+        if (at >= 0)
+        {
+            write.arm = value.mid(at + 1).trimmed().toDouble();
+            value = value.left(at).trimmed();
+        }
+
+        write.value = value.toDouble();
+
+        return write;
+    }
 }
 
 const ProbeObserver::Track& ProbeObserver::Follow(VariableGateway& variables, const char* name)
@@ -204,6 +242,32 @@ const ProbeObserver::Track& ProbeObserver::Follow(VariableGateway& variables, co
     }
 
     return track;
+}
+
+void ProbeObserver::ReportWatchList(VariableGateway& variables, const QString& id)
+{
+    for (const probe::WatchedVariable& watched : probe::WatchList())
+    {
+        if (watched.kind == probe::WatchKind::Dataref)
+        {
+            continue;
+        }
+
+        const bool isLVar = watched.kind == probe::WatchKind::LVar;
+        const double value = isLVar
+            ? variables.GetLVar(watched.name, 0.0)
+            : variables.GetAVar(watched.name, watched.unit, 0.0);
+        const bool received = isLVar
+            ? variables.HasReceivedLVar(watched.name)
+            : variables.HasReceivedAVar(watched.name, watched.unit);
+        const Track& track = isLVar ? Follow(variables, watched.name.c_str()) : Track{};
+
+        probe::Change("watch." + watched.name,
+                      QStringLiteral("watch %1 %2=%3 recv=%4 span=[%5..%6]")
+                      .arg(id, QString::fromStdString(watched.name), Number(value))
+                      .arg(received ? 1 : 0)
+                      .arg(Number(track.min), Number(track.max)));
+    }
 }
 
 void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables,
@@ -231,9 +295,10 @@ void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables
     probe::Change("identity", QStringLiteral("plane %1 title='%2' atcModel='%3'")
                   .arg(id, QString::fromLatin1(title), QString::fromLatin1(atcModel)));
 
-    probe::Change("door", QStringLiteral("door  %1 GetDoorStatus=%2 IsParkingBrakeSet=%3")
+    probe::Change("door", QStringLiteral("door  %1 GetDoorStatus=%2 IsParkingBrakeSet=%3 IsHeldInPlace=%4")
                   .arg(id, QLatin1String(StatusText(aircraft.GetDoorStatus())))
-                  .arg(aircraft.IsParkingBrakeSet() ? 1 : 0));
+                  .arg(aircraft.IsParkingBrakeSet() ? 1 : 0)
+                  .arg(aircraft.IsHeldInPlace() ? 1 : 0));
 
     if (profile.brakeLVar != nullptr)
     {
@@ -289,6 +354,8 @@ void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables
                       .arg(id).arg(flat).arg(profile.candidateCount));
     }
 
+    ReportWatchList(variables, id);
+
     QStringList exits;
     for (const ProbeAVar& exit : kSimExits)
     {
@@ -296,4 +363,45 @@ void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables
         exits.append(QStringLiteral("%1=%2").arg(QLatin1String(exit.name), Number(value)));
     }
     probe::Change("exits", QStringLiteral("exit  %1 %2").arg(id, exits.join(QLatin1Char(' '))));
+
+    MaybeSetLVar(variables);
+}
+
+void ProbeObserver::MaybeSetLVar(VariableGateway& variables)
+{
+    if (setLVarSent_)
+    {
+        return;
+    }
+
+    const QString spec = qEnvironmentVariable("GSXI_PROBE_SET_LVAR");
+    if (spec.isEmpty())
+    {
+        return;
+    }
+
+    const std::optional<LVarWrite> write = ParseLVarWrite(spec);
+    if (!write)
+    {
+        setLVarSent_ = true;
+        probe::Line(QStringLiteral("probe set-lvar malformed '%1', expected NAME=VALUE[@ARM]").arg(spec));
+
+        return;
+    }
+
+    if (!variables.HasReceivedLVar(write->name))
+    {
+        return;
+    }
+
+    const double current = variables.GetLVar(write->name, 0.0);
+    if (write->arm && std::abs(current - *write->arm) > 0.001)
+    {
+        return;
+    }
+
+    setLVarSent_ = true;
+    probe::Line(QStringLiteral("probe set-lvar %1 %2 -> %3")
+                .arg(QString::fromStdString(write->name), Number(current), Number(write->value)));
+    variables.SetLVar(write->name, write->value);
 }

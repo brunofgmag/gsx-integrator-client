@@ -1,5 +1,8 @@
 #include <QtTest/QTest>
 
+#include <algorithm>
+#include <string>
+
 #include "../TurnaroundStateFixture.h"
 #include "../../../src/domain/turnaround/states/WaitingFlightPlanState.h"
 
@@ -13,6 +16,8 @@ private slots:
     static void holdsWhenSimbriefRequestFails();
     static void usesGsxPassengersWhenAircraftPlanHasNone();
     static void shouldRetryWhenFlightPlanFailsToLoad();
+    static void logsTheReasonGsxRefusedThePlan();
+    static void keepsTheSilentSentenceWhenGsxGaveNoReason();
     static void unloadsPayloadWhileWaiting();
 };
 
@@ -122,6 +127,49 @@ void WaitingFlightPlanStateTest::shouldRetryWhenFlightPlanFailsToLoad()
 
     QVERIFY(!transition.has_value());
     QCOMPARE(f.menuGateway.simbriefLoadCalls, 2);
+}
+
+void WaitingFlightPlanStateTest::logsTheReasonGsxRefusedThePlan()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    f.aircraft.flightPlanLoaded = true;
+    f.gsxService.simbriefError = "SimBrief aircraft A320 doesn't match MSFS aircraft A321";
+
+    for (int tick = 0; tick < 11; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        (void)state.Evaluate(f.ctx);
+    }
+
+    const auto refusal = std::ranges::find_if(f.logger.messages, [](const std::string& message)
+    {
+        return message.find("A320 doesn't match MSFS aircraft A321") != std::string::npos;
+    });
+
+    QVERIFY(refusal != f.logger.messages.end());
+}
+
+void WaitingFlightPlanStateTest::keepsTheSilentSentenceWhenGsxGaveNoReason()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    f.aircraft.flightPlanLoaded = true;
+
+    for (int tick = 0; tick < 11; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        (void)state.Evaluate(f.ctx);
+    }
+
+    const auto timeout = std::ranges::find_if(f.logger.messages, [](const std::string& message)
+    {
+        return message.find("not loaded after") != std::string::npos;
+    });
+
+    QVERIFY(timeout != f.logger.messages.end());
 }
 
 QTEST_APPLESS_MAIN(WaitingFlightPlanStateTest)

@@ -17,6 +17,7 @@ namespace
 {
     constexpr auto kChocksLVar = "NGXWheelChocks";
     constexpr auto kSmartSwitchLVar = "switch_752_73X";
+    constexpr double kSmartSwitchNeutral = 50.0;
 
     constexpr int kStateQueryTicks = 3;
 
@@ -55,7 +56,8 @@ namespace
             IsCargo(variant),
             DoorBaseline::Closed,
             {kSmartSwitchLVar},
-            [](double, const double max) { return max > 0.0; }
+            [](const double min, const double max)
+            { return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral; }
         };
     }
 }
@@ -110,7 +112,13 @@ int Pmdg737::DoorSlotFor(const GsxDoor door) const
 
 DoorObservation Pmdg737::ObserveDoor(const int slot) const
 {
-    const char* key = EfbDoorKey(static_cast<Pmdg737Door>(slot));
+    const auto door = static_cast<Pmdg737Door>(slot);
+    if (door == Pmdg737Door::Airstair)
+    {
+        return ObserveAirstair();
+    }
+
+    const char* key = EfbDoorKey(door);
     if (key == nullptr)
     {
         return DoorObservation::Unknown;
@@ -128,6 +136,16 @@ DoorObservation Pmdg737::ObserveDoor(const int slot) const
     }
 
     return *reading ? DoorObservation::Open : DoorObservation::Closed;
+}
+
+DoorObservation Pmdg737::ObserveAirstair() const
+{
+    if (!ownedData_->AnyMainBusPowered())
+    {
+        return DoorObservation::Unknown;
+    }
+
+    return ownedData_->AirstairAnnunciator() ? DoorObservation::Open : DoorObservation::Closed;
 }
 
 void Pmdg737::ToggleDoor(const int slot)

@@ -1,5 +1,55 @@
 # Changelog
 
+## [1.9.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.8.1...v1.9.0) (2026-08-22)
+
+
+* the defects an in-sim session found, starting with an app that would not open ([#52](https://github.com/brunofgmag/gsx-integrator-client/issues/52)) ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+
+
+### Features
+
+* **probe:** write one arbitrary LVar, armed on a value ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+
+
+### Bug Fixes
+
+* **gsx:** reload the SimBrief plan on the GSX side too ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+* **pmdg:** subscribe the 777 block by second instead of kicking the cockpit ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+* **qml:** stop the test module from shadowing the app's QML module ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+* **turnaround:** wait past ten minutes for a cabin service still running ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+* **ui:** tell a GSX refusal from a ready SimBrief plan on the card ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+
+## [1.8.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.8.0...v1.8.1) (2026-08-21)
+
+
+* publish the release from main with its assets ([#50](https://github.com/brunofgmag/gsx-integrator-client/issues/50)) ([a652ffc](https://github.com/brunofgmag/gsx-integrator-client/commit/a652ffc99d46106ced0446219f9fb62c3d2acf51))
+
+## [1.8.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.7.0...v1.8.0) (2026-08-21)
+
+
+* pay the debts that only needed code or a decision ([#48](https://github.com/brunofgmag/gsx-integrator-client/issues/48)) ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+
+
+### Features
+
+* **aircraft:** clear the ground equipment an aircraft parks by itself ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **aircraft:** read the doors the fleet could not answer ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **gsx:** observe the state once a tick and report what GSX refuses ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* let the probe watch new variables and put the QML components under test ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **turnaround:** hold the doors closed once the boarding ends ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+
+
+### Bug Fixes
+
+* **aircraft:** tell "held in place" from "the pilot set the brake" ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **ci:** resume, retry and cache the MSFS SDK download ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **fenix:** believe a closed door only when the reading settles ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **gsx:** confer the GSX profile of the PMDG family too ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **pmdg:** describe the smart switch press as deviation from the named neutral ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **pmdg:** hold the payload trim while the progressive ramp is moving ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **pmdg:** stop reading a door jammed mid-travel as unknown ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+* **pmdg:** tell a live SDK block from a frozen one ([df5ae1c](https://github.com/brunofgmag/gsx-integrator-client/commit/df5ae1c98c76d650adffda2ab782324eb5afa714))
+
 ## [1.7.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.6.0...v1.7.0) (2026-08-21)
 
 

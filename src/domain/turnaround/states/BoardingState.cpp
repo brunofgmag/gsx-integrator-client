@@ -71,6 +71,7 @@ void BoardingState::FinishBoarding(TurnaroundContext& ctx)
     data.loadedZfwKg = data.plannedZfwKg;
     ctx.aircraft->SetCurrentZfwKg(data.plannedZfwKg);
     data.boardingProgress = 100.0;
+    ctx.aircraft->HoldDoorsClosed(true);
 }
 
 void BoardingState::AdvanceBoardingBar(TurnaroundContext& ctx)

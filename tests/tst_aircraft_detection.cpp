@@ -75,9 +75,11 @@ void AircraftDetectionTest::detectsPassengerVariant()
 
     gateway.aircraftName = "TFDi Design MD-11";
 
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
 
     QVERIFY(aircraft != nullptr);
+    QCOMPARE(QString(descriptor->name), QString("TFDi MD-11"));
     QVERIFY(!aircraft->IsCargoVariant());
 }
 
@@ -88,9 +90,11 @@ void AircraftDetectionTest::detectsCargoVariant()
 
     gateway.aircraftName = "TFDi Design MD-11F";
 
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
 
     QVERIFY(aircraft != nullptr);
+    QCOMPARE(QString(descriptor->name), QString("TFDi MD-11"));
     QVERIFY(aircraft->IsCargoVariant());
 }
 

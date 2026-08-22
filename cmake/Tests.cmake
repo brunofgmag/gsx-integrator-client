@@ -231,18 +231,12 @@ gsxi_add_qt_test(gsxi-simconnect-session-tests simconnect-session
 target_include_directories(gsxi-simconnect-session-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
 gsxi_add_qt_test(gsxi-variable-gateway-tests variable-gateway
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
         tests/tst_variable_gateway.cpp
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_include_directories(gsxi-variable-gateway-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
-target_link_libraries(gsxi-variable-gateway-tests PRIVATE "${SIMCONNECT_IMPORT_LIB}")
-if (EXISTS "${SIMCONNECT_DLL}")
-    add_custom_command(TARGET gsxi-variable-gateway-tests POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-            "${SIMCONNECT_DLL}"
-            "$<TARGET_FILE_DIR:gsxi-variable-gateway-tests>"
-            VERBATIM)
-endif ()
 
 gsxi_add_qt_test(gsxi-smart-switch-tests smart-switch
         tests/doubles/FakeVariableGateway.h
@@ -326,6 +320,8 @@ gsxi_add_qt_test(gsxi-fenix-a32x-tests fenix-a32x
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/FenixA32x.cpp
+        src/infrastructure/probe/ProbeWatchList.cpp
+        src/infrastructure/probe/ProbeWatchList.h
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
@@ -538,6 +534,11 @@ gsxi_add_qt_test(gsxi-aircraft-matching-tests aircraft-matching
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h)
 
+gsxi_add_qt_test(gsxi-probe-watch-list-tests probe-watch-list
+        tests/tst_probe_watch_list.cpp
+        src/infrastructure/probe/ProbeWatchList.cpp
+        src/infrastructure/probe/ProbeWatchList.h)
+
 gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         tests/TestDoubles.h
         tests/doubles/FakeSimConnectApi.h
@@ -549,6 +550,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/FenixA32x.cpp
+        src/infrastructure/probe/ProbeWatchList.cpp
+        src/infrastructure/probe/ProbeWatchList.h
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
@@ -660,6 +663,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/application/IntegratorRuntime.h
         src/infrastructure/probe/ProbeLog.h
         src/infrastructure/probe/ProbeObserver.cpp
+        src/infrastructure/probe/ProbeWatchList.cpp
+        src/infrastructure/probe/ProbeWatchList.h
         src/infrastructure/probe/ProbeObserver.h
         src/application/RuntimeIntegratorService.cpp
         src/application/RuntimeIntegratorService.h
@@ -670,6 +675,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/FenixA32x.cpp
+        src/infrastructure/probe/ProbeWatchList.cpp
+        src/infrastructure/probe/ProbeWatchList.h
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
         src/infrastructure/aircraft/IFly737Max.h
@@ -748,12 +755,51 @@ add_custom_command(TARGET gsxi-runtime-integrator-service-tests POST_BUILD
         "$<TARGET_FILE_DIR:gsxi-runtime-integrator-service-tests>"
         VERBATIM)
 
+if (NOT GSXI_TESTS_ONLY)
+    qt_add_executable(gsxi-qml-tests tests/qml/main.cpp)
+
+    set_source_files_properties(src/qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
+    qt_add_qml_module(gsxi-qml-tests
+            URI GsxIntegratorClientTests
+            VERSION 1.0
+            OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/qml-tests/GsxIntegratorClientTests"
+            QML_FILES
+            src/qml/Theme.qml
+            src/qml/components/ActionButton.qml
+            src/qml/components/Advisory.qml
+            src/qml/components/HelpHint.qml
+            src/qml/components/KeyValueRow.qml
+            src/qml/components/SegmentedControl.qml
+            src/qml/components/SettingRow.qml
+            src/qml/components/SquareSwitch.qml
+            src/qml/components/StatusChip.qml
+            src/qml/components/SwitchRow.qml
+    )
+
+    target_link_libraries(gsxi-qml-tests PRIVATE Qt6::QuickTest Qt6::Quick)
+    target_compile_definitions(gsxi-qml-tests PRIVATE
+            QUICK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}/tests/qml")
+
+    add_test(NAME qml-components COMMAND gsxi-qml-tests -platform offscreen)
+
+    get_target_property(GSXI_QT_CORE_DLL Qt6::Core IMPORTED_LOCATION_DEBUG)
+    if (NOT GSXI_QT_CORE_DLL)
+        get_target_property(GSXI_QT_CORE_DLL Qt6::Core IMPORTED_LOCATION_RELEASE)
+    endif ()
+    get_filename_component(GSXI_QT_BIN_DIR "${GSXI_QT_CORE_DLL}" DIRECTORY)
+    get_filename_component(GSXI_QT_PREFIX "${GSXI_QT_BIN_DIR}" DIRECTORY)
+    set_tests_properties(qml-components PROPERTIES ENVIRONMENT
+            "PATH=${GSXI_QT_BIN_DIR};$ENV{PATH};QT_PLUGIN_PATH=${GSXI_QT_PREFIX}/plugins;QML_IMPORT_PATH=${GSXI_QT_PREFIX}/qml;QML2_IMPORT_PATH=${GSXI_QT_PREFIX}/qml")
+endif ()
+
 set(GSXI_GUARD_CHECKS
         check-domain-port-uncalled
         check-turnaround-data-field-unread
         check-viewmodel-property-unbound
         check-infra-gateway-uncalled
-        check-state-predicate-lvar-default)
+        check-state-predicate-lvar-default
+        check-remote-state-field-unread)
 
 foreach (GSXI_GUARD_CHECK ${GSXI_GUARD_CHECKS})
     add_test(NAME ${GSXI_GUARD_CHECK}

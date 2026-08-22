@@ -301,17 +301,27 @@ bool OperationsViewModel::IsCargoAircraft() const
 
 QString OperationsViewModel::GetSimbriefStatusText() const
 {
+    if (!snapshot_.simbriefRefusal.empty())
+    {
+        return QCoreApplication::translate("Turnaround", "Refused");
+    }
+
     return FlightPlanStatusLabel(snapshot_.flightPlanStatus);
 }
 
 bool OperationsViewModel::IsSimbriefReady() const
 {
-    return snapshot_.flightPlanStatus == FlightPlanStatus::Ready;
+    return snapshot_.simbriefRefusal.empty() && snapshot_.flightPlanStatus == FlightPlanStatus::Ready;
 }
 
 bool OperationsViewModel::HasSimbriefError() const
 {
-    return snapshot_.flightPlanStatus == FlightPlanStatus::Error;
+    return !snapshot_.simbriefRefusal.empty() || snapshot_.flightPlanStatus == FlightPlanStatus::Error;
+}
+
+QString OperationsViewModel::GetSimbriefRefusal() const
+{
+    return QString::fromStdString(snapshot_.simbriefRefusal);
 }
 
 bool OperationsViewModel::CanToggleAutomation() const

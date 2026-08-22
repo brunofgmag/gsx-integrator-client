@@ -74,7 +74,7 @@ class TfdiMd11Test final : public QObject
     Q_OBJECT
 
 private slots:
-    static void reportsNameAndVariant();
+    static void reportsCargoVariant();
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
@@ -87,7 +87,8 @@ private slots:
     static void smartSwitchReassertsResetWhileSimKeepsOldValue();
     static void smartSwitchReportsSinglePressPerActivation();
     static void emptyZfwReadsSimEmptyWeight();
-    static void parkingBrakeRequiresLeverAndSimBrake();
+    static void parkingBrakeReadsTheLeverAndIgnoresTheSimVar();
+    static void heldInPlaceAcceptsChocksWithoutTheLever();
     static void readyToDeboardFollowsSafetyState();
     static void slowTickWithoutPendingCommitDoesNothing();
     static void commitWritesEfbTargetsInPounds();
@@ -114,7 +115,7 @@ private slots:
     static void reportsLoadMethods();
 };
 
-void TfdiMd11Test::reportsNameAndVariant()
+void TfdiMd11Test::reportsCargoVariant()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -122,7 +123,6 @@ void TfdiMd11Test::reportsNameAndVariant()
     const TfdiMd11 passenger(&gateway, &status, false);
     const TfdiMd11 freighter(&gateway, &status, true);
 
-    QCOMPARE(QString(passenger.GetName()), QString("TFDi MD-11"));
     QVERIFY(!passenger.IsCargoVariant());
     QVERIFY(freighter.IsCargoVariant());
 }
@@ -307,7 +307,7 @@ void TfdiMd11Test::emptyZfwReadsSimEmptyWeight()
     QCOMPARE(aircraft.GetEmptyZfwKg(), 128500.0);
 }
 
-void TfdiMd11Test::parkingBrakeRequiresLeverAndSimBrake()
+void TfdiMd11Test::parkingBrakeReadsTheLeverAndIgnoresTheSimVar()
 {
     struct TestCase
     {
@@ -319,8 +319,8 @@ void TfdiMd11Test::parkingBrakeRequiresLeverAndSimBrake()
 
     constexpr auto cases = std::array{
         TestCase{"released", 0.0, 0.0, false},
-        TestCase{"lever only", 1.0, 0.0, false},
-        TestCase{"sim brake only", 0.0, 1.0, false},
+        TestCase{"lever only", 1.0, 0.0, true},
+        TestCase{"chocks drive the sim var", 0.0, 1.0, false},
         TestCase{"both", 1.0, 1.0, true},
     };
 
@@ -334,6 +334,36 @@ void TfdiMd11Test::parkingBrakeRequiresLeverAndSimBrake()
         gateway.avars[kSimParkingBrake] = testCase.simBrake;
 
         QVERIFY2(aircraft.IsParkingBrakeSet() == testCase.expected, testCase.name);
+    }
+}
+
+void TfdiMd11Test::heldInPlaceAcceptsChocksWithoutTheLever()
+{
+    struct TestCase
+    {
+        const char* name;
+        double lever;
+        double chocks;
+        bool expected;
+    };
+
+    constexpr auto cases = std::array{
+        TestCase{"rolling", 0.0, 0.0, false},
+        TestCase{"lever only", 1.0, 0.0, true},
+        TestCase{"chocks only", 0.0, 1.0, true},
+        TestCase{"both", 1.0, 1.0, true},
+    };
+
+    for (const auto& testCase : cases)
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        TfdiMd11 aircraft(&gateway, &status, false);
+
+        gateway.lvars[kParkingBrake] = testCase.lever;
+        gateway.lvars[kChocks] = testCase.chocks;
+
+        QVERIFY2(aircraft.IsHeldInPlace() == testCase.expected, testCase.name);
     }
 }
 

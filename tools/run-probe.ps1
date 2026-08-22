@@ -1,7 +1,8 @@
 param(
     [int]$ToggleEvent = 0,
     [int]$ToggleDoor = -1,
-    [string]$PressGroundConn = ''
+    [string]$PressGroundConn = '',
+    [string]$SetLVar = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,6 +37,14 @@ if ($PressGroundConn) {
 }
 else {
     Remove-Item Env:\GSXI_PROBE_GROUND_CONN -ErrorAction SilentlyContinue
+}
+
+if ($SetLVar) {
+    $env:GSXI_PROBE_SET_LVAR = $SetLVar
+    Write-Host "Will write the LVar '$SetLVar' once, as NAME=VALUE or NAME=VALUE@ARM, waiting for the LVar to read ARM"
+}
+else {
+    Remove-Item Env:\GSXI_PROBE_SET_LVAR -ErrorAction SilentlyContinue
 }
 
 $folder = Join-Path $env:LOCALAPPDATA 'brunofgmag\gsx-integrator-client\probe'

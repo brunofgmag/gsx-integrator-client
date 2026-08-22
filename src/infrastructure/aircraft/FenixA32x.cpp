@@ -1,5 +1,7 @@
 #include "FenixA32x.h"
 
+#include "DoorReading.h"
+#include "../probe/ProbeWatchList.h"
 #include "../simvars/SimVars.h"
 
 #include <algorithm>
@@ -71,6 +73,17 @@ namespace
     constexpr auto kSecondRightDoorCandidate = "doors.entry.d2r";
     constexpr auto kThirdRightDoorCandidate = "doors.entry.d3r";
     constexpr auto kBulkCargoDoorCandidate = "doors.cargo.bulk";
+
+    constexpr std::array kSharedDoorDatarefs = {
+        kFwdPaxDoorDataref, kAftPaxDoorDataref,
+        kFwdCateringDoorDataref, kAftCateringDoorDataref,
+        kFwdCargoDoorDataref, kAftCargoDoorDataref,
+        kThirdLeftDoorCandidate, kSecondRightDoorCandidate,
+        kThirdRightDoorCandidate, kBulkCargoDoorCandidate
+    };
+
+    constexpr double kDoorUnanswered = -1.0;
+    constexpr int kDoorSettleTicks = 8;
 
     constexpr std::array kProbeDoorDatarefs = {
         kFwdPaxDoorDataref, kMidPaxDoorDataref, kAftPaxDoorDataref,
@@ -158,12 +171,14 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
     efb_->Subscribe(kCargoTargetDataref);
     efb_->Subscribe(kWeightUnitDataref);
 
-    if (probe::IsOn())
+    for (const char* dataref : kSharedDoorDatarefs)
     {
-        for (const char* dataref : kProbeDoorDatarefs)
-        {
-            efb_->Subscribe(dataref);
-        }
+        efb_->Subscribe(dataref);
+    }
+
+    if (variant_ == FenixVariant::A321)
+    {
+        efb_->Subscribe(kMidPaxDoorDataref);
     }
 
     LOG_INFO("Profile loaded: %s", GetName());
@@ -187,13 +202,19 @@ bool FenixA32x::IsCargoVariant() const
     return false;
 }
 
-void FenixA32x::OnTick()
+void FenixA32x::Observe()
 {
     efb_->Poll();
+    AdvanceDoorSettle();
+    ReportProbe();
+}
+
+void FenixA32x::OnTick()
+{
+    Observe();
     EnsureEfbInitialized();
     UpdateDoors();
     DisarmRefuelSystemWhenDone();
-    ReportProbe();
 }
 
 void FenixA32x::ReportProbe() const
@@ -213,6 +234,19 @@ void FenixA32x::ReportProbe() const
     probe::Change("fenix.doors", QStringLiteral("efb   fenix available=%1 %2")
                   .arg(efb_->IsAvailable() ? 1 : 0)
                   .arg(doors.join(QLatin1Char(' '))));
+
+    for (const probe::WatchedVariable& watched : probe::WatchList())
+    {
+        if (watched.kind != probe::WatchKind::Dataref)
+        {
+            continue;
+        }
+
+        probe::Change("watch." + watched.name,
+                      QStringLiteral("watch fenix %1=%2")
+                      .arg(QString::fromStdString(watched.name))
+                      .arg(efb_->GetNumber(watched.name, -1.0), 0, 'f', 3));
+    }
 }
 
 void FenixA32x::EnsureEfbInitialized()
@@ -272,6 +306,68 @@ void FenixA32x::CloseAllDoors()
     });
 
     LOG_INFO("All doors commanded closed: door control is now manual");
+}
+
+DoorStatus FenixA32x::GetDoorStatus() const
+{
+    DoorStatus status = doors::kNoDoorsSeen;
+
+    for (const char* dataref : kSharedDoorDatarefs)
+    {
+        status = doors::Combine(status, DoorOpen(dataref));
+    }
+
+    if (variant_ == FenixVariant::A321)
+    {
+        status = doors::Combine(status, DoorOpen(kMidPaxDoorDataref));
+    }
+
+    return status;
+}
+
+std::optional<bool> FenixA32x::DoorOpen(const char* dataref) const
+{
+    const double reading = efb_->GetNumber(dataref, kDoorUnanswered);
+    if (reading < 0.0)
+    {
+        return std::nullopt;
+    }
+
+    if (reading > 0.0)
+    {
+        return true;
+    }
+
+    const auto settling = doorSettleTicks_.find(dataref);
+
+    return settling != doorSettleTicks_.end() && settling->second > 0
+               ? std::optional{true}
+               : std::optional{false};
+}
+
+void FenixA32x::AdvanceDoorSettle()
+{
+    for (const char* dataref : kProbeDoorDatarefs)
+    {
+        const double reading = efb_->GetNumber(dataref, kDoorUnanswered);
+        int& settling = doorSettleTicks_[dataref];
+        double& last = lastDoorReading_[dataref];
+
+        if (reading != 0.0)
+        {
+            settling = 0;
+        }
+        else if (last > 0.0)
+        {
+            settling = kDoorSettleTicks;
+        }
+        else if (settling > 0)
+        {
+            --settling;
+        }
+
+        last = reading;
+    }
 }
 
 void FenixA32x::UpdateDoors()
@@ -493,9 +589,12 @@ bool FenixA32x::IsReadyToPush() const
 
 bool FenixA32x::IsReadyToDeboard() const
 {
-    const bool isChocksOn = variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
+    return !IsEngineRunning() && IsHeldInPlace() && !IsBeaconOn();
+}
 
-    return !IsEngineRunning() && (IsParkingBrakeSet() || isChocksOn) && !IsBeaconOn();
+bool FenixA32x::IsHeldInPlace() const
+{
+    return IsParkingBrakeSet() || variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
 }
 
 bool FenixA32x::IsEngineRunning() const
@@ -505,10 +604,7 @@ bool FenixA32x::IsEngineRunning() const
 
 bool FenixA32x::IsParkingBrakeSet() const
 {
-    const bool isParkingBrakeOn = variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) > 0.0;
-    const bool isSimParkingBrakeOn = variableGateway_->GetAVar(kSimParkingBrake, kBoolUnit, 0.0) > 0.0;
-
-    return isParkingBrakeOn && isSimParkingBrakeOn;
+    return variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) > 0.0;
 }
 
 bool FenixA32x::IsBeaconOn() const
@@ -567,4 +663,9 @@ namespace
     [[maybe_unused]] const AircraftRegistration kFenixA319Registration{kFenixA319Descriptor};
     [[maybe_unused]] const AircraftRegistration kFenixA320Registration{kFenixA320Descriptor};
     [[maybe_unused]] const AircraftRegistration kFenixA321Registration{kFenixA321Descriptor};
+}
+
+void FenixA32x::HoldDoorsClosed(const bool hold)
+{
+    doors_.HoldClosedForDeparture(hold);
 }

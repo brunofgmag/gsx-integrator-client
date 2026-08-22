@@ -16,7 +16,8 @@ public:
 
     [[nodiscard]] bool IsAvailable() const;
 
-    [[nodiscard]] GsxStateStatus GetStateStatus(GsxState gsxState) override;
+    void Observe() override;
+    [[nodiscard]] GsxStateStatus GetStateStatus(GsxState gsxState) const override;
     [[nodiscard]] bool WasStateCompleted(GsxState gsxState) const override;
 
     [[nodiscard]] bool IsFuelHoseConnected() const override;
@@ -46,6 +47,7 @@ public:
     void ReassertTakeovers() const;
 
     [[nodiscard]] bool IsSimbriefLoaded() const override;
+    [[nodiscard]] std::string GetSimbriefRefusal() const override;
 
 private:
     bool fuelAndPayloadTakenOver_ = false;
@@ -65,7 +67,7 @@ private:
         int Update(int current, bool active);
     };
 
-    void ParseCompleted(GsxState gsxState, GsxStateStatus stateStatus);
+    void ObserveState(GsxState gsxState);
 
     VariableGateway* varManager_;
     const GsxRemoteState* remote_;

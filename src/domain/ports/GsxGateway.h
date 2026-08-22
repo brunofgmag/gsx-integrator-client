@@ -1,6 +1,8 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_GSXGATEWAY_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_GSXGATEWAY_H
 
+#include <string>
+
 #include "../model/GroundPowerStatus.h"
 
 enum class GsxStateStatus : int
@@ -38,7 +40,8 @@ class GsxGateway
 public:
     virtual ~GsxGateway() = default;
 
-    [[nodiscard]] virtual GsxStateStatus GetStateStatus(GsxState gsxState) = 0;
+    virtual void Observe() = 0;
+    [[nodiscard]] virtual GsxStateStatus GetStateStatus(GsxState gsxState) const = 0;
     [[nodiscard]] virtual bool WasStateCompleted(GsxState gsxState) const = 0;
     [[nodiscard]] virtual bool IsWaitingForEngines() const = 0;
     [[nodiscard]] virtual bool IsFuelHoseConnected() const = 0;
@@ -59,6 +62,7 @@ public:
     [[nodiscard]] virtual bool IsJetwayAvailable() const = 0;
     [[nodiscard]] virtual bool IsJetwayOrStairsOperating() const = 0;
     [[nodiscard]] virtual bool IsSimbriefLoaded() const = 0;
+    [[nodiscard]] virtual std::string GetSimbriefRefusal() const = 0;
     [[nodiscard]] virtual bool IsAircraftOnGround() const = 0;
     [[nodiscard]] virtual bool IsGoodEngineStartConfirmationEnabled() const = 0;
     [[nodiscard]] virtual GroundPowerStatus GetGpuStatus() const = 0;

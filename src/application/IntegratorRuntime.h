@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 #include <QtCore/QObject>
@@ -139,6 +140,7 @@ private:
     GsxStateService gsxService_;
     GsxRemoteApiClient gsxRemoteClient_;
     GsxRemoteState gsxRemoteState_;
+    std::set<std::string> unknownPatchPaths_;
     AutomationStatus status_;
     AutomationSettings settings_;
     GsxMenuNavigator gsxMenu_;

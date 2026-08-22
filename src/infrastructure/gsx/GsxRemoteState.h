@@ -7,7 +7,6 @@
 struct GsxRemoteService
 {
     std::string id;
-    std::string state;
     int stateRaw = 0;
     bool canTrigger = false;
 };
@@ -20,17 +19,8 @@ struct GsxRemoteMenu
     bool shown = false;
 };
 
-struct GsxRemoteMessage
-{
-    std::string text;
-    bool visible = false;
-};
-
 struct GsxRemoteState
 {
-    int sessionState = 0;
-    std::string sessionStateText;
-    GsxRemoteMessage message;
     std::string simbriefStatus;
     std::string simbriefError;
     GsxRemoteMenu menu;

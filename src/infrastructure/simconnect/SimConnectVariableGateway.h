@@ -49,6 +49,7 @@ private:
     static void StoreSample(Slot& slot, const void* payload);
     void WriteSlot(const Slot& slot, const std::string& name, double value) const;
     bool RegisterSlot(Slot& slot) const;
+    void PromoteToFastRefresh(Slot& slot) const;
     bool FetchStringSlot(const char* key, const char* datumName, char* buffer, int bufferSize);
 
     HANDLE hSimConnect_ = nullptr;
