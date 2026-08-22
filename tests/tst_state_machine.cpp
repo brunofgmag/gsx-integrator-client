@@ -200,6 +200,7 @@ namespace
         void RequestPushback()
         {
             f.aircraft.readyToPush = true;
+            f.aircraft.parkingBrakeSet = true;
             TickTo(TurnaroundPhase::WaitCatering);
             TickTo(TurnaroundPhase::RemoveGroundEquipment);
             TickTo(TurnaroundPhase::RequestPushback);

@@ -5,10 +5,15 @@
 
 std::optional<TurnaroundTransition> WaitingReadyToPushState::Evaluate(TurnaroundContext& ctx)
 {
-    if (ctx.aircraft->IsReadyToPush())
+    if (!ctx.aircraft->IsReadyToPush() || !ctx.aircraft->IsParkingBrakeSet())
     {
-        return TurnaroundTransition{TurnaroundPhase::WaitCatering};
+        return std::nullopt;
     }
 
-    return std::nullopt;
+    if (ctx.aircraft->GetDoorStatus() == DoorStatus::AnyOpen)
+    {
+        return std::nullopt;
+    }
+
+    return TurnaroundTransition{TurnaroundPhase::WaitCatering};
 }
