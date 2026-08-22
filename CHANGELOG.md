@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.9.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.8.1...v1.9.0) (2026-08-22)
+
+
+* the defects an in-sim session found, starting with an app that would not open ([#52](https://github.com/brunofgmag/gsx-integrator-client/issues/52)) ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+
+
+### Features
+
+* **probe:** write one arbitrary LVar, armed on a value ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+
+
+### Bug Fixes
+
+* **gsx:** reload the SimBrief plan on the GSX side too ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+* **pmdg:** subscribe the 777 block by second instead of kicking the cockpit ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+* **qml:** stop the test module from shadowing the app's QML module ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+* **turnaround:** wait past ten minutes for a cabin service still running ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+* **ui:** tell a GSX refusal from a ready SimBrief plan on the card ([ed6957f](https://github.com/brunofgmag/gsx-integrator-client/commit/ed6957f148a785a6f98fc65d79d23a0725ed94de))
+
 ## [1.8.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.8.0...v1.8.1) (2026-08-21)
 
 
