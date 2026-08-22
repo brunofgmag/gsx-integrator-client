@@ -20,6 +20,7 @@ private:
     void ReconcileChocks();
     void ReconcileGroundPower();
     void ReconcilePassengerEntry();
+    void ReleaseOwnStairs();
 
     PmdgGroundSource& source_;
     PmdgTabletGateway& tablet_;

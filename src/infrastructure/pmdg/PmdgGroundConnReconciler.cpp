@@ -6,11 +6,13 @@
 namespace
 {
     constexpr int kGroundConnRetryTicks = 5;
+    constexpr int kChocksRetryTicks = 10;
     constexpr int kGroundConnMaxAttempts = 10;
 
     constexpr auto kChocksRequest = "wheel_chocks";
     constexpr auto kGroundPowerRequest = "ground_power";
     constexpr auto kPassengerEntryRequest = "pax_entree";
+    constexpr auto kOwnStairsRequest = "stairs_1l";
 }
 
 PmdgGroundConnReconciler::PmdgGroundConnReconciler(PmdgGroundSource& source, PmdgTabletGateway& tablet)
@@ -25,7 +27,7 @@ void PmdgGroundConnReconciler::SetChocks(const bool placed)
     {
         desiredChocks_ = placed;
         chocksAttempts_ = 0;
-        ticksSinceChocksRequest_ = kGroundConnRetryTicks;
+        ticksSinceChocksRequest_ = kChocksRetryTicks;
     }
 }
 
@@ -60,15 +62,21 @@ void PmdgGroundConnReconciler::Reconcile()
 
 void PmdgGroundConnReconciler::ReconcileChocks()
 {
-    if (!desiredChocks_.has_value() || source_.ChocksSet() == *desiredChocks_)
+    if (!desiredChocks_.has_value())
     {
+        return;
+    }
+
+    if (source_.ChocksSet() == *desiredChocks_)
+    {
+        desiredChocks_.reset();
         chocksAttempts_ = 0;
 
         return;
     }
 
     ++ticksSinceChocksRequest_;
-    if (ticksSinceChocksRequest_ >= kGroundConnRetryTicks && chocksAttempts_ < kGroundConnMaxAttempts)
+    if (ticksSinceChocksRequest_ >= kChocksRetryTicks && chocksAttempts_ < kGroundConnMaxAttempts)
     {
         ticksSinceChocksRequest_ = 0;
         ++chocksAttempts_;
@@ -85,6 +93,7 @@ void PmdgGroundConnReconciler::ReconcileGroundPower()
 
     if (source_.GroundPowerPresent() == *desiredGroundPower_)
     {
+        desiredGroundPower_.reset();
         groundPowerAttempts_ = 0;
 
         return;
@@ -114,6 +123,19 @@ void PmdgGroundConnReconciler::ReconcilePassengerEntry()
         return;
     }
 
+    const std::optional<bool> jetwayInhibited = tablet_.JetwayInhibited();
+    if (!jetwayInhibited.has_value())
+    {
+        return;
+    }
+
+    if (*jetwayInhibited)
+    {
+        ReleaseOwnStairs();
+
+        return;
+    }
+
     const std::optional<bool> viaJetway = tablet_.PassengerEntryViaJetway();
     if (!viaJetway.has_value())
     {
@@ -122,6 +144,7 @@ void PmdgGroundConnReconciler::ReconcilePassengerEntry()
 
     if (*viaJetway)
     {
+        passengerEntryRequested_ = false;
         passengerEntryAttempts_ = 0;
 
         return;
@@ -134,5 +157,31 @@ void PmdgGroundConnReconciler::ReconcilePassengerEntry()
         ticksSincePassengerEntryRequest_ = 0;
         ++passengerEntryAttempts_;
         tablet_.RequestGroundConn(kPassengerEntryRequest);
+    }
+}
+
+void PmdgGroundConnReconciler::ReleaseOwnStairs()
+{
+    const std::optional<bool> deployed = tablet_.OwnStairsDeployed();
+    if (!deployed.has_value())
+    {
+        return;
+    }
+
+    if (!*deployed)
+    {
+        passengerEntryRequested_ = false;
+        passengerEntryAttempts_ = 0;
+
+        return;
+    }
+
+    ++ticksSincePassengerEntryRequest_;
+    if (ticksSincePassengerEntryRequest_ >= kGroundConnRetryTicks
+        && passengerEntryAttempts_ < kGroundConnMaxAttempts)
+    {
+        ticksSincePassengerEntryRequest_ = 0;
+        ++passengerEntryAttempts_;
+        tablet_.RequestGroundVehicle(kOwnStairsRequest);
     }
 }
