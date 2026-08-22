@@ -1533,6 +1533,10 @@
         <source>Error</source>
         <translation>Error</translation>
     </message>
+    <message>
+        <source>Refused</source>
+        <translation>Refused</translation>
+    </message>
 </context>
 <context>
     <name>UpdateViewModel</name>

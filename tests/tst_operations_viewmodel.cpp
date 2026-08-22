@@ -17,6 +17,7 @@ private slots:
     static void mapsFlightPlanStatusToText();
     static void simbriefReadyAndErrorFlags();
     static void simbriefRefusalReachesTheScreen();
+    static void aRefusedPlanIsNotReadyOnTheCard();
     static void noopWhenSettingSameEnabledValue();
     static void startLoadingDelegatesToService();
     static void startLoadingReportsRejectedCommands();
@@ -439,6 +440,26 @@ void OperationsViewModelTest::simbriefRefusalReachesTheScreen()
 
     QCOMPARE(viewModel.GetSimbriefRefusal(),
              QString("SimBrief aircraft A320 doesn't match MSFS aircraft A321"));
+}
+
+void OperationsViewModelTest::aRefusedPlanIsNotReadyOnTheCard()
+{
+    FakeIntegratorService service;
+    const OperationsViewModel viewModel(&service);
+
+    service.snapshot.flightPlanStatus = FlightPlanStatus::Ready;
+    service.Notify();
+
+    QVERIFY(viewModel.IsSimbriefReady());
+    QVERIFY(!viewModel.HasSimbriefError());
+
+    service.snapshot.simbriefRefusal =
+        "The loaded flight plan from CYVR doesn't match the one on SimBrief, from SBFZ to SBTE";
+    service.Notify();
+
+    QVERIFY(!viewModel.IsSimbriefReady());
+    QVERIFY(viewModel.HasSimbriefError());
+    QVERIFY(viewModel.GetSimbriefStatusText() != QString("Ready"));
 }
 
 QTEST_APPLESS_MAIN(OperationsViewModelTest)
