@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.10.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.9.0...v1.10.0) (2026-08-22)
+
+
+* pay the implementation debts the in-sim session left open ([#56](https://github.com/brunofgmag/gsx-integrator-client/issues/56)) ([756b5ab](https://github.com/brunofgmag/gsx-integrator-client/commit/756b5ab332c8fc991948cdae90764dabbed2426f))
+
+
+### Features
+
+* **turnaround:** gate pushback on the beacon, the brake and every door ([b40d22f](https://github.com/brunofgmag/gsx-integrator-client/commit/b40d22f7f797270d3fe0da24baab5d397d42a30d)) ([756b5ab](https://github.com/brunofgmag/gsx-integrator-client/commit/756b5ab332c8fc991948cdae90764dabbed2426f))
+
+
+### Bug Fixes
+
+* **gsx:** distrust vehicle state inherited from before a Couatl restart ([45f21fc](https://github.com/brunofgmag/gsx-integrator-client/commit/45f21fc32f644aceb93ea41b4a5dafda191c23d3)) ([756b5ab](https://github.com/brunofgmag/gsx-integrator-client/commit/756b5ab332c8fc991948cdae90764dabbed2426f))
+* **pmdg:** derive each cargo step from the EFB weight echo ([da95358](https://github.com/brunofgmag/gsx-integrator-client/commit/da95358eb34a9765e45f632053da203c8ac07ce2)) ([756b5ab](https://github.com/brunofgmag/gsx-integrator-client/commit/756b5ab332c8fc991948cdae90764dabbed2426f))
+* **pmdg:** let the ground connection desire die and release the own stairs ([cfd10b8](https://github.com/brunofgmag/gsx-integrator-client/commit/cfd10b82bdb12082b488562098886a22869671d6)) ([756b5ab](https://github.com/brunofgmag/gsx-integrator-client/commit/756b5ab332c8fc991948cdae90764dabbed2426f))
+* **pmdg:** wait one subscription period before the first light-test kick ([3d265ae](https://github.com/brunofgmag/gsx-integrator-client/commit/3d265ae18191681ec9fdfbfecd069b062b7e2644)) ([756b5ab](https://github.com/brunofgmag/gsx-integrator-client/commit/756b5ab332c8fc991948cdae90764dabbed2426f))
+* **turnaround:** ask GSX to complete a boarding stalled at one hundred ([923ed5c](https://github.com/brunofgmag/gsx-integrator-client/commit/923ed5c5b4163be7ba1fa0caf84ad5a6ce04dd53)) ([756b5ab](https://github.com/brunofgmag/gsx-integrator-client/commit/756b5ab332c8fc991948cdae90764dabbed2426f))
+* **turnaround:** hold the chocks while the parking brake is released ([75ac87f](https://github.com/brunofgmag/gsx-integrator-client/commit/75ac87f3a9c1b17507ffc40cf650d8a7772301b1)) ([756b5ab](https://github.com/brunofgmag/gsx-integrator-client/commit/756b5ab332c8fc991948cdae90764dabbed2426f))
+* **turnaround:** warn when GSX takes the fuel request and no truck arrives ([35c9c68](https://github.com/brunofgmag/gsx-integrator-client/commit/35c9c68f57960fb7dcdd05210207aad1dc2cd706)) ([756b5ab](https://github.com/brunofgmag/gsx-integrator-client/commit/756b5ab332c8fc991948cdae90764dabbed2426f))
+
 ## [1.9.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.8.1...v1.9.0) (2026-08-22)
 
 
