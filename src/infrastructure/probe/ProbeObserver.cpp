@@ -1,6 +1,8 @@
 #include "ProbeObserver.h"
 
 #include <array>
+#include <cmath>
+#include <optional>
 #include <QtCore/QDateTime>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -186,6 +188,41 @@ namespace
     {
         return QString::number(value, 'f', 3);
     }
+
+    struct LVarWrite
+    {
+        std::string name;
+        double value = 0.0;
+        std::optional<double> arm;
+    };
+
+    std::optional<LVarWrite> ParseLVarWrite(const QString& spec)
+    {
+        const qsizetype equals = spec.indexOf(QLatin1Char('='));
+        if (equals <= 0)
+        {
+            return std::nullopt;
+        }
+
+        LVarWrite write;
+        write.name = spec.left(equals).trimmed().toStdString();
+        if (write.name.empty())
+        {
+            return std::nullopt;
+        }
+
+        QString value = spec.mid(equals + 1).trimmed();
+        const qsizetype at = value.indexOf(QLatin1Char('@'));
+        if (at >= 0)
+        {
+            write.arm = value.mid(at + 1).trimmed().toDouble();
+            value = value.left(at).trimmed();
+        }
+
+        write.value = value.toDouble();
+
+        return write;
+    }
 }
 
 const ProbeObserver::Track& ProbeObserver::Follow(VariableGateway& variables, const char* name)
@@ -326,4 +363,45 @@ void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables
         exits.append(QStringLiteral("%1=%2").arg(QLatin1String(exit.name), Number(value)));
     }
     probe::Change("exits", QStringLiteral("exit  %1 %2").arg(id, exits.join(QLatin1Char(' '))));
+
+    MaybeSetLVar(variables);
+}
+
+void ProbeObserver::MaybeSetLVar(VariableGateway& variables)
+{
+    if (setLVarSent_)
+    {
+        return;
+    }
+
+    const QString spec = qEnvironmentVariable("GSXI_PROBE_SET_LVAR");
+    if (spec.isEmpty())
+    {
+        return;
+    }
+
+    const std::optional<LVarWrite> write = ParseLVarWrite(spec);
+    if (!write)
+    {
+        setLVarSent_ = true;
+        probe::Line(QStringLiteral("probe set-lvar malformed '%1', expected NAME=VALUE[@ARM]").arg(spec));
+
+        return;
+    }
+
+    if (!variables.HasReceivedLVar(write->name))
+    {
+        return;
+    }
+
+    const double current = variables.GetLVar(write->name, 0.0);
+    if (write->arm && std::abs(current - *write->arm) > 0.001)
+    {
+        return;
+    }
+
+    setLVarSent_ = true;
+    probe::Line(QStringLiteral("probe set-lvar %1 %2 -> %3")
+                .arg(QString::fromStdString(write->name), Number(current), Number(write->value)));
+    variables.SetLVar(write->name, write->value);
 }
