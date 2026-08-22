@@ -14,6 +14,7 @@ private slots:
     static void waitsForActiveServiceWhenDisabledMidRun();
     static void asksServiceOnceAndWaits();
     static void givesUpWhenServiceNeverStarts();
+    static void waitsPastTenMinutesForAServiceStillRunning();
 };
 
 void CabinServicesStateTest::advancesImmediatelyWhenAllDisabled()
@@ -156,6 +157,32 @@ void CabinServicesStateTest::givesUpWhenServiceNeverStarts()
         ++f.ctx.data.stateTickCount;
         transition = state.Evaluate(f.ctx);
     }
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);
+}
+
+void CabinServicesStateTest::waitsPastTenMinutesForAServiceStillRunning()
+{
+    TurnaroundStateFixture f;
+    CabinServicesState state;
+
+    f.settings.callCleaning = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    f.gsxService.cleaningInProgress = true;
+
+    std::optional<TurnaroundTransition> transition;
+    for (int tick = 0; tick < 700 && !transition; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        transition = state.Evaluate(f.ctx);
+    }
+
+    QVERIFY(!transition.has_value());
+
+    f.gsxService.cleaningInProgress = false;
+    transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingNewFlight);
