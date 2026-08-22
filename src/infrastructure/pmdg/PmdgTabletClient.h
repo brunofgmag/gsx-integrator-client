@@ -24,15 +24,20 @@ public:
     [[nodiscard]] bool DoorMoving(const std::string& key) const override;
     [[nodiscard]] bool GroundConnMoving(const std::string& key) const override;
     [[nodiscard]] std::optional<bool> PassengerEntryViaJetway() const override;
+    [[nodiscard]] std::optional<bool> JetwayInhibited() const override;
+    [[nodiscard]] std::optional<bool> OwnStairsDeployed() const override;
+    [[nodiscard]] std::optional<PmdgWeightEcho> LastWeightEcho() const override;
 
     void SendFuelTotalLbs(int lbs) override;
     void SendPaxTotal(int count) override;
     void SendCargoTotalLbs(int lbs) override;
     void RequestGroundConn(const std::string& key) override;
+    void RequestGroundVehicle(const std::string& key) override;
     void RequestState() override;
 
     [[nodiscard]] static std::string BuildWbPayload(const std::string& field, int value);
     [[nodiscard]] static std::string BuildGroundConn(const std::string& key);
+    [[nodiscard]] static std::string BuildGroundVehicle(const std::string& key);
     [[nodiscard]] static bool IsSimbriefFetchSuccess(const std::string& json);
     struct DoorSnapshot
     {
@@ -42,6 +47,9 @@ public:
 
     [[nodiscard]] static DoorSnapshot ParseDoorStates(const std::string& json);
     [[nodiscard]] static std::optional<bool> ParsePassengerEntry(const std::string& json);
+    [[nodiscard]] static std::optional<bool> ParseJetwayInhibited(const std::string& json);
+    [[nodiscard]] static std::optional<bool> ParseOwnStairsDeployed(const std::string& json);
+    [[nodiscard]] static std::optional<PmdgWeightEcho> ParseWeightEcho(const std::string& json);
 
 private:
     void SendToPlane(const std::string& payload) const;
@@ -61,6 +69,9 @@ private:
     std::set<std::string> doorMoving_;
     std::set<std::string> groundConnMoving_;
     std::optional<bool> passengerEntryJetway_;
+    std::optional<bool> jetwayInhibited_;
+    std::optional<bool> ownStairsDeployed_;
+    std::optional<PmdgWeightEcho> weightEcho_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGTABLETCLIENT_H

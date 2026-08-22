@@ -1,5 +1,6 @@
 #include <QtTest/QTest>
 
+#include <cmath>
 #include <memory>
 #include "doubles/FakePmdgTabletGateway.h"
 #include "doubles/FakeVariableGateway.h"
@@ -15,6 +16,12 @@ namespace
     constexpr double kPlannedZfwKg = 60000.0;
     constexpr int kPlannedPax = 100;
     constexpr double kLbsPerKg = 2.20462262185;
+    constexpr double kEfbNoPayloadLbs = 97000.0;
+
+    int ExpectedCargoLbs(const double zfwKg, const double nonCargoLbs = kEfbNoPayloadLbs)
+    {
+        return static_cast<int>(std::lround(zfwKg * kLbsPerKg - nonCargoLbs));
+    }
 
     struct WriterFixture
     {
@@ -30,12 +37,18 @@ namespace
             gateway.avars[kSimTotalWeight] = kEmptyKg;
             status.plannedZfwKg = kPlannedZfwKg;
             status.plannedPassengers = kPlannedPax;
+            tablet.weightEcho = PmdgWeightEcho{kEfbNoPayloadLbs, 0.0};
             writer = std::make_unique<PmdgPayloadWriter>(tablet, gateway, &status, cargoVariant);
         }
 
         void SeeZfw(const double zfwKg)
         {
             gateway.avars[kSimTotalWeight] = zfwKg + gateway.avars[kSimFuelTotalKg];
+        }
+
+        void EchoPayload(const double cargoLbs, const double paxLbs)
+        {
+            tablet.weightEcho = PmdgWeightEcho{kEfbNoPayloadLbs + cargoLbs + paxLbs, cargoLbs};
         }
     };
 }
@@ -47,8 +60,10 @@ class PmdgPayloadWriterTest final : public QObject
 private slots:
     static void fuelIsSentOncePerRoundedValue();
     static void nothingIsSentWhileTheTabletIsAway();
-    static void zfwWaitsForTheEmptyWeightToArrive();
-    static void passengersAndCargoFollowTheProgress();
+    static void zfwWaitsForTheEfbToReportItsWeights();
+    static void passengersFollowTheProgress();
+    static void cargoIsTheGapBetweenTheTargetAndTheEfbEcho();
+    static void cargoAbsorbsTheEfbPassengerWeightWithoutAModel();
     static void cargoVariantSendsNoPassengers();
     static void trimStaysQuietWhileTheProgressiveRampIsMoving();
     static void trimResumesWhenTheProgressiveRampReachesThePlan();
@@ -82,29 +97,57 @@ void PmdgPayloadWriterTest::nothingIsSentWhileTheTabletIsAway()
     QVERIFY(fixture.tablet.paxSends.empty());
 }
 
-void PmdgPayloadWriterTest::zfwWaitsForTheEmptyWeightToArrive()
+void PmdgPayloadWriterTest::zfwWaitsForTheEfbToReportItsWeights()
 {
     WriterFixture fixture;
-    fixture.gateway.avars.erase(kSimEmptyWeight);
+    fixture.tablet.weightEcho.reset();
 
     fixture.writer->SetZfwKg(50000.0);
 
     QVERIFY(fixture.tablet.cargoSends.empty());
+    QVERIFY(fixture.tablet.paxSends.empty());
 }
 
-void PmdgPayloadWriterTest::passengersAndCargoFollowTheProgress()
+void PmdgPayloadWriterTest::passengersFollowTheProgress()
 {
     WriterFixture fixture;
 
+    fixture.writer->SetZfwKg(kEmptyKg);
+    QCOMPARE(fixture.tablet.paxSends.front(), 0);
+
     fixture.writer->SetZfwKg(kEmptyKg + (kPlannedZfwKg - kEmptyKg) / 2.0);
+    QCOMPARE(fixture.tablet.paxSends.back(), kPlannedPax / 2);
 
-    QCOMPARE(fixture.tablet.paxSends.size(), static_cast<std::size_t>(1));
-    QCOMPARE(fixture.tablet.paxSends.front(), kPlannedPax / 2);
+    fixture.writer->SetZfwKg(kPlannedZfwKg);
+    QCOMPARE(fixture.tablet.paxSends.back(), kPlannedPax);
+}
+
+void PmdgPayloadWriterTest::cargoIsTheGapBetweenTheTargetAndTheEfbEcho()
+{
+    WriterFixture fixture;
+
+    fixture.writer->SetZfwKg(kEmptyKg);
+
     QCOMPARE(fixture.tablet.cargoSends.size(), static_cast<std::size_t>(1));
+    QCOMPARE(fixture.tablet.cargoSends.front(), ExpectedCargoLbs(kEmptyKg));
 
-    const double plannedCargoKg = kPlannedZfwKg - kEmptyKg - kPlannedPax * 84.0;
-    QCOMPARE(fixture.tablet.cargoSends.front(),
-             static_cast<int>(std::lround(0.5 * plannedCargoKg * kLbsPerKg)));
+    fixture.EchoPayload(fixture.tablet.cargoSends.front(), 0.0);
+    fixture.writer->SetZfwKg(kPlannedZfwKg);
+
+    QCOMPARE(fixture.tablet.cargoSends.back(), ExpectedCargoLbs(kPlannedZfwKg));
+}
+
+void PmdgPayloadWriterTest::cargoAbsorbsTheEfbPassengerWeightWithoutAModel()
+{
+    WriterFixture fixture;
+
+    fixture.writer->SetZfwKg(kEmptyKg);
+    fixture.EchoPayload(fixture.tablet.cargoSends.front(), 8000.0);
+
+    fixture.writer->SetZfwKg(kPlannedZfwKg);
+
+    QCOMPARE(fixture.tablet.cargoSends.back(),
+             ExpectedCargoLbs(kPlannedZfwKg, kEfbNoPayloadLbs + 8000.0));
 }
 
 void PmdgPayloadWriterTest::cargoVariantSendsNoPassengers()
@@ -116,7 +159,7 @@ void PmdgPayloadWriterTest::cargoVariantSendsNoPassengers()
     QVERIFY(fixture.tablet.paxSends.empty());
     QCOMPARE(fixture.tablet.cargoSends.size(), static_cast<std::size_t>(1));
     QCOMPARE(fixture.tablet.cargoSends.front(),
-             static_cast<int>(std::lround(0.5 * (kPlannedZfwKg - kEmptyKg) * kLbsPerKg)));
+             ExpectedCargoLbs(kEmptyKg + (kPlannedZfwKg - kEmptyKg) / 2.0));
 }
 
 void PmdgPayloadWriterTest::trimStaysQuietWhileTheProgressiveRampIsMoving()

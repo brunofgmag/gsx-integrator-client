@@ -23,6 +23,10 @@ public:
     std::set<std::string> groundConnMoving;
     int stateRequests = 0;
     std::optional<bool> passengerEntryJetway;
+    std::optional<PmdgWeightEcho> weightEcho;
+    std::optional<bool> jetwayInhibited;
+    std::optional<bool> ownStairsDeployed;
+    std::vector<std::string> groundVehicleRequests;
 
     void Poll() override { ++pollCalls; }
     [[nodiscard]] bool IsAvailable() const override { return available; }
@@ -50,10 +54,19 @@ public:
         return passengerEntryJetway;
     }
 
+    [[nodiscard]] std::optional<PmdgWeightEcho> LastWeightEcho() const override
+    {
+        return weightEcho;
+    }
+
+    [[nodiscard]] std::optional<bool> JetwayInhibited() const override { return jetwayInhibited; }
+    [[nodiscard]] std::optional<bool> OwnStairsDeployed() const override { return ownStairsDeployed; }
+
     void SendFuelTotalLbs(const int lbs) override { fuelSends.push_back(lbs); }
     void SendPaxTotal(const int count) override { paxSends.push_back(count); }
     void SendCargoTotalLbs(const int lbs) override { cargoSends.push_back(lbs); }
     void RequestGroundConn(const std::string& key) override { groundConnRequests.push_back(key); }
+    void RequestGroundVehicle(const std::string& key) override { groundVehicleRequests.push_back(key); }
     void RequestState() override { ++stateRequests; }
 };
 

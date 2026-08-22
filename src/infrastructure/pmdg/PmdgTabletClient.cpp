@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <optional>
 #include <utility>
 #include <QtCore/QByteArray>
 #include <QtCore/QJsonDocument>
@@ -19,6 +20,7 @@ namespace
 
     constexpr auto kTagWbPayload = "wb_payload";
     constexpr auto kTagGroundConn = "ground_conn";
+    constexpr auto kTagGroundVehicles = "ground_vehicles";
     constexpr auto kTagSimbriefFetchResult = "simbrief_fetch_result";
     constexpr auto kTagQueryState = "query_state";
     constexpr auto kTagStateReply = "state_reply";
@@ -26,7 +28,15 @@ namespace
     constexpr auto kDoorActionClose = "CLOSE";
     constexpr auto kGroundConnState = "ground_conn";
     constexpr auto kPassengerEntryField = "passenger_entry";
+    constexpr auto kWeightBalanceState = "weight_balance";
+    constexpr auto kZfwField = "zfw";
+    constexpr std::array kCargoFields = {"cargo_lbs_fwd", "cargo_lbs_aft", "cargo_lbs_main"};
     constexpr auto kPassengerEntryJetway = "JETWAY";
+    constexpr auto kJetwayField = "jetway";
+    constexpr auto kJetwayInhibited = "INHIBITED";
+    constexpr auto kVehiclesState = "vehicles";
+    constexpr auto kOwnStairsField = "stairs_1l_state";
+    constexpr auto kOwnStairsDeployed = "RELEASE";
     constexpr auto kGroundPowerStateField = "ground_power_state";
     constexpr auto kGroundPowerRequestKey = "ground_power";
     constexpr std::array kGroundConnMoving = {"CONNECTING", "DISCONNECTING"};
@@ -41,6 +51,35 @@ namespace
 
         return QString::fromUtf8(QJsonDocument(envelope).toJson(QJsonDocument::Compact)).toStdString();
     }
+
+    std::optional<QJsonObject> StateReply(const std::string& json)
+    {
+        const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(json));
+        if (!document.isObject())
+        {
+            return std::nullopt;
+        }
+
+        const QJsonObject object = document.object();
+        if (object.value(QStringLiteral("message_tag")).toString() != QLatin1String(kTagStateReply))
+        {
+            return std::nullopt;
+        }
+
+        return object;
+    }
+
+    std::optional<QString> NestedString(const QJsonObject& object, const char* state, const char* field)
+    {
+        const QJsonValue value = object.value(QLatin1String(state)).toObject().value(QLatin1String(field));
+        if (!value.isString())
+        {
+            return std::nullopt;
+        }
+
+        return value.toString();
+    }
+
 }
 
 PmdgTabletClient::PmdgTabletClient(CommBusBridgeGateway* bridge) : bridge_(bridge)
@@ -75,6 +114,14 @@ std::string PmdgTabletClient::BuildGroundConn(const std::string& key)
     data.insert(QString::fromStdString(key), 1);
 
     return BuildEnvelope(kTagGroundConn, data);
+}
+
+std::string PmdgTabletClient::BuildGroundVehicle(const std::string& key)
+{
+    QJsonObject data;
+    data.insert(QString::fromStdString(key), 1);
+
+    return BuildEnvelope(kTagGroundVehicles, data);
 }
 
 void PmdgTabletClient::Poll()
@@ -129,19 +176,13 @@ bool PmdgTabletClient::EfbPlanImported() const
 
 PmdgTabletClient::DoorSnapshot PmdgTabletClient::ParseDoorStates(const std::string& json)
 {
-    const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(json));
-    if (!document.isObject())
+    const std::optional<QJsonObject> object = StateReply(json);
+    if (!object.has_value())
     {
         return {};
     }
 
-    const QJsonObject object = document.object();
-    if (object.value(QStringLiteral("message_tag")).toString() != QLatin1String(kTagStateReply))
-    {
-        return {};
-    }
-
-    const QJsonObject doors = object.value(QStringLiteral("doors")).toObject()
+    const QJsonObject doors = object->value(QStringLiteral("doors")).toObject()
                                     .value(QStringLiteral("individual_doors")).toObject();
 
     DoorSnapshot snapshot;
@@ -175,29 +216,21 @@ PmdgTabletClient::DoorSnapshot PmdgTabletClient::ParseDoorStates(const std::stri
 
 std::optional<std::set<std::string>> PmdgTabletClient::ParseGroundConnMoving(const std::string& json)
 {
-    const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(json));
-    if (!document.isObject())
+    const std::optional<QJsonObject> object = StateReply(json);
+    if (!object.has_value())
     {
         return std::nullopt;
     }
 
-    const QJsonObject object = document.object();
-    if (object.value(QStringLiteral("message_tag")).toString() != QLatin1String(kTagStateReply))
+    const std::optional<QString> state = NestedString(*object, kGroundConnState, kGroundPowerStateField);
+    if (!state.has_value())
     {
         return std::nullopt;
     }
 
-    const QJsonValue groundPower = object.value(QLatin1String(kGroundConnState)).toObject()
-                                         .value(QLatin1String(kGroundPowerStateField));
-    if (!groundPower.isString())
-    {
-        return std::nullopt;
-    }
-
-    const QString state = groundPower.toString();
     std::set<std::string> moving;
     if (std::ranges::any_of(kGroundConnMoving, [&state](const char* verb)
-                            { return state == QLatin1String(verb); }))
+                            { return *state == QLatin1String(verb); }))
     {
         moving.emplace(kGroundPowerRequestKey);
     }
@@ -207,26 +240,78 @@ std::optional<std::set<std::string>> PmdgTabletClient::ParseGroundConnMoving(con
 
 std::optional<bool> PmdgTabletClient::ParsePassengerEntry(const std::string& json)
 {
-    const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(json));
-    if (!document.isObject())
+    const std::optional<QJsonObject> object = StateReply(json);
+    if (!object.has_value())
     {
         return std::nullopt;
     }
 
-    const QJsonObject object = document.object();
-    if (object.value(QStringLiteral("message_tag")).toString() != QLatin1String(kTagStateReply))
+    const std::optional<QString> entry = NestedString(*object, kGroundConnState, kPassengerEntryField);
+    if (!entry.has_value())
     {
         return std::nullopt;
     }
 
-    const QJsonValue entry = object.value(QLatin1String(kGroundConnState)).toObject()
-                                   .value(QLatin1String(kPassengerEntryField));
-    if (!entry.isString())
+    return *entry == QLatin1String(kPassengerEntryJetway);
+}
+
+std::optional<PmdgWeightEcho> PmdgTabletClient::ParseWeightEcho(const std::string& json)
+{
+    const std::optional<QJsonObject> object = StateReply(json);
+    if (!object.has_value())
     {
         return std::nullopt;
     }
 
-    return entry.toString() == QLatin1String(kPassengerEntryJetway);
+    const QJsonObject weights = object->value(QLatin1String(kWeightBalanceState)).toObject();
+    const QJsonValue zfw = weights.value(QLatin1String(kZfwField));
+    if (!zfw.isDouble())
+    {
+        return std::nullopt;
+    }
+
+    PmdgWeightEcho echo;
+    echo.zfwLbs = zfw.toDouble();
+    for (const char* field : kCargoFields)
+    {
+        echo.cargoLbs += weights.value(QLatin1String(field)).toDouble();
+    }
+
+    return echo;
+}
+
+std::optional<bool> PmdgTabletClient::ParseJetwayInhibited(const std::string& json)
+{
+    const std::optional<QJsonObject> object = StateReply(json);
+    if (!object.has_value())
+    {
+        return std::nullopt;
+    }
+
+    const std::optional<QString> jetway = NestedString(*object, kGroundConnState, kJetwayField);
+    if (!jetway.has_value())
+    {
+        return std::nullopt;
+    }
+
+    return *jetway == QLatin1String(kJetwayInhibited);
+}
+
+std::optional<bool> PmdgTabletClient::ParseOwnStairsDeployed(const std::string& json)
+{
+    const std::optional<QJsonObject> object = StateReply(json);
+    if (!object.has_value())
+    {
+        return std::nullopt;
+    }
+
+    const std::optional<QString> stairs = NestedString(*object, kVehiclesState, kOwnStairsField);
+    if (!stairs.has_value())
+    {
+        return std::nullopt;
+    }
+
+    return *stairs == QLatin1String(kOwnStairsDeployed);
 }
 
 bool PmdgTabletClient::IsSimbriefFetchSuccess(const std::string& json)
@@ -279,6 +364,21 @@ void PmdgTabletClient::OnInbound(const std::string& payload)
         passengerEntryJetway_ = viaJetway;
     }
 
+    if (const std::optional<bool> inhibited = ParseJetwayInhibited(payload); inhibited.has_value())
+    {
+        jetwayInhibited_ = inhibited;
+    }
+
+    if (const std::optional<bool> deployed = ParseOwnStairsDeployed(payload); deployed.has_value())
+    {
+        ownStairsDeployed_ = deployed;
+    }
+
+    if (const std::optional<PmdgWeightEcho> echo = ParseWeightEcho(payload); echo.has_value())
+    {
+        weightEcho_ = echo;
+    }
+
     if (auto groundConn = ParseGroundConnMoving(payload); groundConn.has_value())
     {
         groundConnMoving_ = std::move(*groundConn);
@@ -304,6 +404,21 @@ bool PmdgTabletClient::GroundConnMoving(const std::string& key) const
 std::optional<bool> PmdgTabletClient::PassengerEntryViaJetway() const
 {
     return passengerEntryJetway_;
+}
+
+std::optional<PmdgWeightEcho> PmdgTabletClient::LastWeightEcho() const
+{
+    return weightEcho_;
+}
+
+std::optional<bool> PmdgTabletClient::JetwayInhibited() const
+{
+    return jetwayInhibited_;
+}
+
+std::optional<bool> PmdgTabletClient::OwnStairsDeployed() const
+{
+    return ownStairsDeployed_;
 }
 
 std::optional<bool> PmdgTabletClient::DoorOpen(const std::string& key) const
@@ -374,4 +489,14 @@ void PmdgTabletClient::RequestGroundConn(const std::string& key)
     }
 
     SendToPlane(BuildGroundConn(key));
+}
+
+void PmdgTabletClient::RequestGroundVehicle(const std::string& key)
+{
+    if (!IsAvailable())
+    {
+        return;
+    }
+
+    SendToPlane(BuildGroundVehicle(key));
 }

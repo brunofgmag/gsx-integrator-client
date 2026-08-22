@@ -11,7 +11,6 @@ using namespace simvars;
 namespace
 {
     constexpr double kLbsPerKg = 2.20462262185;
-    constexpr double kPassengerWeightKg = 84.0;
 
     constexpr int kZfwSettleTicks = 5;
     constexpr int kZfwTrimMaxAttempts = 5;
@@ -33,6 +32,7 @@ void PmdgPayloadWriter::Reset()
     lastSentPax_ = -1;
     lastSentCargoLbs_ = -1;
     lastProgressiveCargoLbs_ = -1;
+    rampStartZfwKg_.reset();
     lastRequestedZfwKg_ = 0.0;
     progressiveRampMoving_ = false;
     zfwSettledTicks_ = 0;
@@ -58,27 +58,25 @@ void PmdgPayloadWriter::SetFuelKg(const double fuelKg)
 
 void PmdgPayloadWriter::SetZfwKg(const double zfwKg)
 {
-    if (!tablet_.IsAvailable() || !variables_.HasReceivedAVar(kSimEmptyWeight, kKgUnit))
+    const std::optional<PmdgWeightEcho> echo = tablet_.LastWeightEcho();
+    if (!tablet_.IsAvailable() || !echo.has_value())
     {
         return;
     }
 
-    const double emptyZfwKg = EmptyZfwKg(variables_);
-    const double payloadSpanKg = status_->plannedZfwKg - emptyZfwKg;
-    if (payloadSpanKg <= 0.0)
+    if (!rampStartZfwKg_.has_value())
     {
-        return;
+        rampStartZfwKg_ = zfwKg;
     }
 
-    const double progress = std::clamp((zfwKg - emptyZfwKg) / payloadSpanKg, 0.0, 1.0);
-    progressiveRampMoving_ = progress > 0.0 && progress < 1.0;
+    const double rampSpanKg = status_->plannedZfwKg - *rampStartZfwKg_;
+    const double progress = rampSpanKg > 0.0
+                                ? std::clamp((zfwKg - *rampStartZfwKg_) / rampSpanKg, 0.0, 1.0)
+                                : 1.0;
+    progressiveRampMoving_ = progress < 1.0;
 
-    double plannedCargoKg = payloadSpanKg;
     if (!cargoVariant_)
     {
-        plannedCargoKg =
-            (std::max)(payloadSpanKg - status_->plannedPassengers * kPassengerWeightKg, 0.0);
-
         const int pax = static_cast<int>(std::lround(progress * status_->plannedPassengers));
         if (pax != lastSentPax_)
         {
@@ -87,7 +85,9 @@ void PmdgPayloadWriter::SetZfwKg(const double zfwKg)
         }
     }
 
-    const int cargoLbs = static_cast<int>(std::lround(progress * plannedCargoKg * kLbsPerKg));
+    const double nonCargoLbs = echo->zfwLbs - echo->cargoLbs;
+    const int cargoLbs =
+        (std::max)(static_cast<int>(std::lround(zfwKg * kLbsPerKg - nonCargoLbs)), 0);
     if (cargoLbs != lastProgressiveCargoLbs_)
     {
         lastProgressiveCargoLbs_ = cargoLbs;
