@@ -10,7 +10,7 @@ namespace
     constexpr int kExitDelayTicks = 60;
     constexpr int kServiceGiveUpTicks = 30;
     constexpr int kWaitTicks = 30;
-    constexpr int kMaxWaitIntervals = 10;
+    constexpr int kMaxWaitIntervals = 30;
 }
 
 std::optional<TurnaroundTransition> CabinServicesState::Evaluate(TurnaroundContext& ctx)

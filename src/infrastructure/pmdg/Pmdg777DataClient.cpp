@@ -20,8 +20,8 @@ namespace
         PMDG_777X_DATA_ID,
         PMDG_777X_DATA_DEFINITION,
         PMDG_777X_DATA_DEFINITION,
-        SIMCONNECT_CLIENT_DATA_PERIOD_VISUAL_FRAME,
-        SIMCONNECT_CLIENT_DATA_REQUEST_FLAG_CHANGED,
+        SIMCONNECT_CLIENT_DATA_PERIOD_SECOND,
+        SIMCONNECT_CLIENT_DATA_REQUEST_FLAG_DEFAULT,
         "PMDG 777"
     };
 
@@ -131,6 +131,8 @@ void Pmdg777DataClient::ToggleDoor(const int index)
 
 void Pmdg777DataClient::KickDataRefresh()
 {
+    probe::Line(QStringLiteral("probe pmdg-777 kicking light test, block stale for %1 ms")
+                .arg(nowMs_() - lastKickMs_));
     lastKickMs_ = nowMs_();
     pendingKickRelease_ = true;
     channel_.TransmitEvent(kLightTestOffset, kMouseWheelUp);

@@ -693,6 +693,10 @@ bool IntegratorRuntime::ReloadSimbrief()
     }
 
     const bool started = simbriefClient_.Reload();
+    if (started)
+    {
+        gsxMenu_.RequestSimbriefLoad();
+    }
 
     emit Updated();
 
