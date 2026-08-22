@@ -19,6 +19,8 @@ private slots:
     static void requestsFuelWhenSmartSwitchIsPressed();
     static void smartSwitchActsAsStartLoadingButton();
     static void doesNotNotifyAircraftWhileRequesting();
+    static void flagsTheRequestGsxTookAndNeverServed();
+    static void keepsQuietWhileGsxStillOffersTheService();
 };
 
 void RequestFuelStateTest::doesNotRequestFuelWhenServiceIsUnavailable()
@@ -205,6 +207,49 @@ void RequestFuelStateTest::doesNotNotifyAircraftWhileRequesting()
     }
 
     QCOMPARE(f.aircraft.onLoadingStartedCalls, 0);
+}
+
+void RequestFuelStateTest::flagsTheRequestGsxTookAndNeverServed()
+{
+    TurnaroundStateFixture f;
+    RequestFuelState state;
+
+    f.gsxService.refuelingState = GsxStateStatus::Callable;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.refuelingCalls, 1);
+    QVERIFY(!f.ctx.data.fuelRequestStalled);
+
+    f.gsxService.refuelingState = GsxStateStatus::Requested;
+
+    for (int tick = 0; tick < 599; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QVERIFY(!f.ctx.data.fuelRequestStalled);
+
+    ++f.ctx.data.stateTickCount;
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QVERIFY(f.ctx.data.fuelRequestStalled);
+}
+
+void RequestFuelStateTest::keepsQuietWhileGsxStillOffersTheService()
+{
+    TurnaroundStateFixture f;
+    RequestFuelState state;
+
+    f.gsxService.refuelingState = GsxStateStatus::Callable;
+
+    for (int tick = 0; tick < 800; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QVERIFY(!f.ctx.data.fuelRequestStalled);
 }
 
 QTEST_APPLESS_MAIN(RequestFuelStateTest)

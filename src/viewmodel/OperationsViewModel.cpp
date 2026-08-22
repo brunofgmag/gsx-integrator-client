@@ -63,6 +63,7 @@ namespace
             return QCoreApplication::translate("Turnaround", "Confirm a good engine start with the SmartSwitch.");
         case TurnaroundPhase::WaitingEngineShutdown:
             return QCoreApplication::translate("Turnaround", "Shut down the engines.");
+        case TurnaroundPhase::RemoveGroundEquipment:
         case TurnaroundPhase::PlaceArrivalGroundEquipment:
             return QCoreApplication::translate("Turnaround", "Set the parking brake.");
         case TurnaroundPhase::RequestDeboarding:
@@ -247,6 +248,11 @@ bool OperationsViewModel::HasPmdgOptionsConflict() const
 bool OperationsViewModel::IsCargoDoorStuck() const
 {
     return snapshot_.cargoDoorStuck;
+}
+
+bool OperationsViewModel::IsFuelRequestStalled() const
+{
+    return snapshot_.fuelRequestStalled;
 }
 
 bool OperationsViewModel::IsPmdgOptionsFixable() const

@@ -9,6 +9,7 @@
 namespace
 {
     constexpr int kRetryTicks = 60;
+    constexpr int kStalledRequestTicks = 600;
 }
 
 std::optional<TurnaroundTransition> RequestFuelState::Evaluate(TurnaroundContext& ctx)
@@ -45,5 +46,22 @@ std::optional<TurnaroundTransition> RequestFuelState::Evaluate(TurnaroundContext
         data.refuelingRequested = false;
     }
 
+    TrackStalledRequest(ctx, refuelingState == GsxStateStatus::Callable);
+
     return std::nullopt;
+}
+
+void RequestFuelState::TrackStalledRequest(TurnaroundContext& ctx, const bool gsxStillOffersService)
+{
+    auto& data = ctx.data;
+
+    if (!data.refuelingRequested || gsxStillOffersService)
+    {
+        data.fuelRequestStallTicks = 0;
+        data.fuelRequestStalled = false;
+
+        return;
+    }
+
+    data.fuelRequestStalled = ++data.fuelRequestStallTicks >= kStalledRequestTicks;
 }
