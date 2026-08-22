@@ -20,6 +20,7 @@ public:
     int confirmGoodEnginesCalls = 0;
     int completePushbackCalls = 0;
     int completeRefuelCalls = 0;
+    int completeBoardingCalls = 0;
     int toggleGpuCalls = 0;
     int requestCateringCalls = 0;
     int requestLavatoryCalls = 0;
@@ -43,6 +44,8 @@ public:
     void RequestRefueling() override { ++refuelingCalls; }
 
     void CompleteRefuel() override { ++completeRefuelCalls; }
+
+    void CompleteBoarding() override { ++completeBoardingCalls; }
 
     void ToggleGpu() override { ++toggleGpuCalls; }
 

@@ -25,6 +25,8 @@ namespace
     constexpr auto kServiceInProgressTitle = "Service in progress";
     constexpr auto kCompleteNowText = "Complete now";
     constexpr auto kRefuelingLoadedText = "loaded";
+    constexpr auto kLoadingInProgressText = "loading in progress";
+    constexpr auto kBoardingPassengersText = "Boarding passengers now";
     constexpr auto kBoardCrewQuestion = "board crew";
     constexpr auto kDeIceQuestion = "de-icing";
     constexpr auto kAirstairsQuestion = "own airstairs";
@@ -184,6 +186,14 @@ void GsxMenuNavigator::CompleteRefuel()
     OpenMenu();
 }
 
+void GsxMenuNavigator::CompleteBoarding()
+{
+    completingBoarding_ = {true, nowMs_()};
+
+    OpenIntent(Intent::Service);
+    OpenMenu();
+}
+
 void GsxMenuNavigator::DisableGsxMenu()
 {
     (void)client_->SendCommand("menu.close");
@@ -197,6 +207,7 @@ void GsxMenuNavigator::Reset()
     reposition_ = Reposition::Idle;
     completingPushback_ = {};
     completingRefuel_ = {};
+    completingBoarding_ = {};
     confirmingEngines_ = {};
     intent_ = Intent::None;
     intentSinceMs_ = 0;
@@ -279,6 +290,7 @@ void GsxMenuNavigator::ExpireTimedIntents()
 {
     ExpireIntent(completingPushback_, "complete-pushback");
     ExpireIntent(completingRefuel_, "complete-refuel");
+    ExpireIntent(completingBoarding_, "complete-boarding");
     ExpireIntent(confirmingEngines_, "confirm-engines");
 }
 
@@ -445,6 +457,24 @@ bool GsxMenuNavigator::HandlePendingCompletions()
         }
 
         if (PickByContains(kRefuelingLoadedText))
+        {
+            return true;
+        }
+    }
+
+    if (completingBoarding_.active)
+    {
+        if (Contains(state_->menu.title, kServiceInProgressTitle))
+        {
+            if (PickByContains(kCompleteNowText))
+            {
+                completingBoarding_ = {};
+            }
+
+            return true;
+        }
+
+        if (PickByContains(kLoadingInProgressText) || PickByContains(kBoardingPassengersText))
         {
             return true;
         }

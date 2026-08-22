@@ -15,6 +15,7 @@ public:
     virtual void RequestPushback() = 0;
     virtual void RequestRefueling() = 0;
     virtual void CompleteRefuel() = 0;
+    virtual void CompleteBoarding() = 0;
     virtual void ToggleGpu() = 0;
     virtual void RequestCatering() = 0;
     virtual void RequestLavatory() = 0;
