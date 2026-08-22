@@ -60,7 +60,12 @@ void Pmdg777DataClient::Poll()
         return;
     }
 
-    if (nowMs_() - lastKickMs_ >= kKickIntervalMs)
+    if (!lastKickMs_.has_value())
+    {
+        lastKickMs_ = nowMs_();
+    }
+
+    if (nowMs_() - *lastKickMs_ >= kKickIntervalMs)
     {
         KickDataRefresh();
     }
@@ -132,7 +137,7 @@ void Pmdg777DataClient::ToggleDoor(const int index)
 void Pmdg777DataClient::KickDataRefresh()
 {
     probe::Line(QStringLiteral("probe pmdg-777 kicking light test, block stale for %1 ms")
-                .arg(nowMs_() - lastKickMs_));
+                .arg(nowMs_() - lastKickMs_.value_or(nowMs_())));
     lastKickMs_ = nowMs_();
     pendingKickRelease_ = true;
     channel_.TransmitEvent(kLightTestOffset, kMouseWheelUp);

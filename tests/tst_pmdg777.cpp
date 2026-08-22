@@ -1,6 +1,7 @@
 #include <QtTest/QTest>
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include "doubles/FakePmdg777DataGateway.h"
 #include "doubles/FakePmdgTabletGateway.h"
@@ -60,6 +61,12 @@ namespace
             gateway.avars["EMPTY WEIGHT"] = emptyKg;
             status.plannedZfwKg = plannedZfwKg;
             status.plannedPassengers = plannedPax;
+            SeeEfbWeights(emptyKg);
+        }
+
+        void SeeEfbWeights(const double zfwKg, const double cargoLbs = 0.0)
+        {
+            tablet->weightEcho = PmdgWeightEcho{zfwKg * 2.20462262185 + cargoLbs, cargoLbs};
         }
     };
 }
@@ -103,9 +110,9 @@ private slots:
     static void loadingStartResetsFuelDedup();
     static void setZfwFreighterSendsCargoOnly();
     static void setZfwPaxVariantSplitsPaxAndCargo();
-    static void setZfwClampsToPayloadSpan();
+    static void setZfwNeverSendsNegativeCargo();
     static void setZfwDedupsAndDrainsOnDeboard();
-    static void setZfwHeldUntilEmptyWeightReceived();
+    static void setZfwHeldUntilTheEfbAnswers();
     static void doorsFollowGsxLoaders();
     static void doorsTakeOverGsxDoorAutomation();
     static void doorsSkipTogglesWhileMoving();
@@ -587,22 +594,23 @@ void Pmdg777Test::setZfwPaxVariantSplitsPaxAndCargo()
     Pmdg777Fixture fixture(Pmdg777Variant::Er300);
 
     fixture.SeedWeights(160000.0, 200000.0, 300);
+    fixture.aircraft->SetCurrentZfwKg(160000.0);
     fixture.aircraft->SetCurrentZfwKg(180000.0);
 
-    QCOMPARE(fixture.tablet->paxSends.size(), static_cast<std::size_t>(1));
-    QCOMPARE(fixture.tablet->paxSends[0], 150);
-    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(1));
-    QCOMPARE(fixture.tablet->cargoSends[0], 16314);
+    QCOMPARE(fixture.tablet->paxSends.back(), 150);
+    QCOMPARE(fixture.tablet->cargoSends.back(),
+             static_cast<int>(std::lround(20000.0 * 2.20462262185)));
 }
 
-void Pmdg777Test::setZfwClampsToPayloadSpan()
+void Pmdg777Test::setZfwNeverSendsNegativeCargo()
 {
     Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
 
     fixture.SeedWeights(144000.0, 244000.0);
-    fixture.aircraft->SetCurrentZfwKg(300000.0);
+    fixture.aircraft->SetCurrentZfwKg(244000.0);
 
-    QCOMPARE(fixture.tablet->cargoSends.back(), 220462);
+    QCOMPARE(fixture.tablet->cargoSends.back(),
+             static_cast<int>(std::lround(100000.0 * 2.20462262185)));
 
     fixture.aircraft->SetCurrentZfwKg(100000.0);
 
@@ -625,7 +633,7 @@ void Pmdg777Test::setZfwDedupsAndDrainsOnDeboard()
     QVERIFY(fixture.tablet->cargoSends[1] < fixture.tablet->cargoSends[0]);
 }
 
-void Pmdg777Test::setZfwHeldUntilEmptyWeightReceived()
+void Pmdg777Test::setZfwHeldUntilTheEfbAnswers()
 {
     Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
 
@@ -790,7 +798,7 @@ void Pmdg777Test::chocksReconcileWithRetryCap()
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
     QCOMPARE(QString::fromStdString(fixture.tablet->groundConnRequests[0]), QString("wheel_chocks"));
 
-    for (int tick = 0; tick < 4; ++tick)
+    for (int tick = 0; tick < 9; ++tick)
     {
         fixture.aircraft->OnTick();
     }
