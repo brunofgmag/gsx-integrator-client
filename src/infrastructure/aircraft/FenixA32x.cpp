@@ -204,6 +204,7 @@ bool FenixA32x::IsCargoVariant() const
 
 void FenixA32x::Observe()
 {
+    doors_.Observe();
     efb_->Poll();
     AdvanceDoorSettle();
     ReportProbe();

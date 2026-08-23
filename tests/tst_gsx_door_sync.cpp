@@ -14,6 +14,10 @@ namespace
     constexpr double kJetwayDocked = 5.0;
     constexpr double kStairsParked = 1.0;
 
+    struct Recorder;
+
+    void Tick(GsxDoorSync& sync, FakeVariableGateway& gateway, Recorder& recorder);
+
     struct Recorder
     {
         std::map<GsxDoor, bool> last;
@@ -42,6 +46,16 @@ namespace
             return it != last.end() && !it->second;
         }
     };
+
+    void Tick(GsxDoorSync& sync, FakeVariableGateway& gateway, Recorder& recorder)
+    {
+        sync.Observe();
+
+        if (gateway.lvars[kCouatlStarted] >= kCouatlUp)
+        {
+            sync.Sync(recorder.Writer());
+        }
+    }
 }
 
 class GsxDoorSyncTest final : public QObject
@@ -54,6 +68,7 @@ private slots:
     static void distrustsAnInheritedJetwayDownToUnavailable();
     static void trustsTheVehicleStateAgainOnceItActuallyMoves();
     static void treatsAFirstStartAsAStartAndNotAsARestart();
+    static void seesTheRestartThoughSyncNeverRunsWhileGsxIsDown();
 };
 
 void GsxDoorSyncTest::followsVehicleStateWhileCouatlKeepsRunning()
@@ -65,8 +80,8 @@ void GsxDoorSyncTest::followsVehicleStateWhileCouatlKeepsRunning()
     GsxDoorSync sync(&gateway);
     Recorder recorder;
 
-    sync.Sync(recorder.Writer());
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
+    Tick(sync, gateway, recorder);
 
     QVERIFY(recorder.Opened(GsxDoor::AftPax));
 }
@@ -80,14 +95,14 @@ void GsxDoorSyncTest::distrustsVehicleStateInheritedAcrossACouatlRestart()
     GsxDoorSync sync(&gateway);
     Recorder recorder;
 
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
     QVERIFY(recorder.Opened(GsxDoor::AftPax));
 
     gateway.lvars[kCouatlStarted] = kCouatlDown;
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
 
     gateway.lvars[kCouatlStarted] = kCouatlUp;
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
 
     QVERIFY(recorder.Closed(GsxDoor::AftPax));
     QCOMPARE(sync.VehicleState(kPassengerStairsRearState, 0.0), 0.0);
@@ -102,14 +117,14 @@ void GsxDoorSyncTest::distrustsAnInheritedJetwayDownToUnavailable()
     GsxDoorSync sync(&gateway);
     Recorder recorder;
 
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
     QVERIFY(recorder.Opened(GsxDoor::FwdPax));
 
     gateway.lvars[kCouatlStarted] = kCouatlDown;
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
 
     gateway.lvars[kCouatlStarted] = kCouatlUp;
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
 
     QVERIFY(recorder.Closed(GsxDoor::FwdPax));
 }
@@ -123,18 +138,18 @@ void GsxDoorSyncTest::trustsTheVehicleStateAgainOnceItActuallyMoves()
     GsxDoorSync sync(&gateway);
     Recorder recorder;
 
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
     gateway.lvars[kCouatlStarted] = kCouatlDown;
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
     gateway.lvars[kCouatlStarted] = kCouatlUp;
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
     QVERIFY(recorder.Closed(GsxDoor::AftPax));
 
     gateway.lvars[kPassengerStairsRearState] = kStairsParked;
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
 
     gateway.lvars[kPassengerStairsRearState] = gsx::states::kStairsFinalPosition;
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
 
     QVERIFY(recorder.Opened(GsxDoor::AftPax));
 }
@@ -148,13 +163,38 @@ void GsxDoorSyncTest::treatsAFirstStartAsAStartAndNotAsARestart()
     GsxDoorSync sync(&gateway);
     Recorder recorder;
 
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
     QCOMPARE(recorder.writes, 0);
 
     gateway.lvars[kCouatlStarted] = kCouatlUp;
-    sync.Sync(recorder.Writer());
+    Tick(sync, gateway, recorder);
 
     QVERIFY(recorder.Opened(GsxDoor::AftPax));
+}
+
+void GsxDoorSyncTest::seesTheRestartThoughSyncNeverRunsWhileGsxIsDown()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kPassengerStairsRearState] = gsx::states::kStairsFinalPosition;
+
+    GsxDoorSync sync(&gateway);
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+    QVERIFY(recorder.Opened(GsxDoor::AftPax));
+
+    gateway.lvars[kCouatlStarted] = kCouatlDown;
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        sync.Observe();
+    }
+    QCOMPARE(recorder.writes, 1);
+
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::AftPax));
 }
 
 QTEST_APPLESS_MAIN(GsxDoorSyncTest)

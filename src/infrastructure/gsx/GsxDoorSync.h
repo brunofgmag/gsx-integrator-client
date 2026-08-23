@@ -27,6 +27,7 @@ public:
 
     explicit GsxDoorSync(VariableGateway* variableGateway);
 
+    void Observe();
     void Sync(const DoorWriter& write);
     void CloseAll(const DoorWriter& write);
     void HoldClosedForDeparture(bool hold);
@@ -34,7 +35,6 @@ public:
 
 private:
     [[nodiscard]] bool IsDesiredOpen(GsxDoor door) const;
-    void ObserveCouatl();
     void ReportProbe() const;
 
     VariableGateway* variableGateway_;

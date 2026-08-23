@@ -151,8 +151,14 @@ bool TolissA340::IsCargoVariant() const
     return cargoVariant_;
 }
 
+void TolissA340::Observe()
+{
+    doors_.Observe();
+}
+
 void TolissA340::OnTick()
 {
+    Observe();
     UpdateDoors();
 
     if (!IsPowered())
