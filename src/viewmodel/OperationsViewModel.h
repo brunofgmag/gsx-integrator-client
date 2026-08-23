@@ -19,6 +19,7 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(int phaseCount READ GetPhaseCount CONSTANT)
     Q_PROPERTY(QString phaseTip READ GetPhaseTip NOTIFY SnapshotChanged)
     Q_PROPERTY(int delayTicksRemaining READ GetDelayTicksRemaining NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool advancedByPilot READ AdvancedByPilot NOTIFY SnapshotChanged)
     Q_PROPERTY(bool inDeboardingPhase READ IsInDeboardingPhase NOTIFY SnapshotChanged)
     Q_PROPERTY(double fuelProgress READ GetFuelProgress NOTIFY SnapshotChanged)
     Q_PROPERTY(double boardingProgress READ GetBoardingProgress NOTIFY SnapshotChanged)
@@ -67,6 +68,7 @@ public:
     [[nodiscard]] static int GetPhaseCount();
     [[nodiscard]] QString GetPhaseTip() const;
     [[nodiscard]] int GetDelayTicksRemaining() const;
+    [[nodiscard]] bool AdvancedByPilot() const;
     Q_INVOKABLE static QString phaseLabelAt(int index);
     [[nodiscard]] bool IsInDeboardingPhase() const;
     [[nodiscard]] double GetFuelProgress() const;

@@ -14,6 +14,12 @@ private slots:
     static void advancesOnceTheOpenDoorCloses();
     static void advancesWhenNoDoorAnswers();
     static void holdsWhileTheParkingBrakeIsReleased();
+    static void advancingByReadingCarriesTheReadingOrigin();
+    static void theSmartSwitchUnlocksTheDoorHold();
+    static void theUnlockCarriesThePilotOrigin();
+    static void theSmartSwitchDoesNotUnlockTheParkingBrakeHold();
+    static void theUnlockConsumesTheTouchOnce();
+    static void anOpenGateLeavesTheTouchForTheNextPhase();
 };
 
 void WaitingReadyToPushStateTest::holdsUntilAircraftReady()
@@ -107,6 +113,97 @@ void WaitingReadyToPushStateTest::holdsWhileTheParkingBrakeIsReleased()
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitCatering);
+}
+
+void WaitingReadyToPushStateTest::advancingByReadingCarriesTheReadingOrigin()
+{
+    TurnaroundStateFixture f;
+    WaitingReadyToPushState state;
+
+    f.aircraft.readyToPush = true;
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.doorStatus = DoorStatus::AllClosed;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->origin, TransitionOrigin::Reading);
+}
+
+void WaitingReadyToPushStateTest::theSmartSwitchUnlocksTheDoorHold()
+{
+    TurnaroundStateFixture f;
+    WaitingReadyToPushState state;
+
+    f.aircraft.readyToPush = true;
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.doorStatus = DoorStatus::AnyOpen;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    f.ctx.smartSwitchPressed = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitCatering);
+}
+
+void WaitingReadyToPushStateTest::theUnlockCarriesThePilotOrigin()
+{
+    TurnaroundStateFixture f;
+    WaitingReadyToPushState state;
+
+    f.aircraft.readyToPush = true;
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.doorStatus = DoorStatus::AnyOpen;
+    f.ctx.smartSwitchPressed = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->origin, TransitionOrigin::Pilot);
+}
+
+void WaitingReadyToPushStateTest::theSmartSwitchDoesNotUnlockTheParkingBrakeHold()
+{
+    TurnaroundStateFixture f;
+    WaitingReadyToPushState state;
+
+    f.aircraft.readyToPush = true;
+    f.aircraft.parkingBrakeSet = false;
+    f.aircraft.doorStatus = DoorStatus::AllClosed;
+    f.ctx.smartSwitchPressed = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+}
+
+void WaitingReadyToPushStateTest::theUnlockConsumesTheTouchOnce()
+{
+    TurnaroundStateFixture f;
+    WaitingReadyToPushState state;
+
+    f.aircraft.readyToPush = true;
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.doorStatus = DoorStatus::AnyOpen;
+    f.ctx.smartSwitchPressed = true;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.ctx.smartSwitchPressed);
+}
+
+void WaitingReadyToPushStateTest::anOpenGateLeavesTheTouchForTheNextPhase()
+{
+    TurnaroundStateFixture f;
+    WaitingReadyToPushState state;
+
+    f.aircraft.readyToPush = true;
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.doorStatus = DoorStatus::AllClosed;
+    f.ctx.smartSwitchPressed = true;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QVERIFY(f.ctx.smartSwitchPressed);
 }
 
 QTEST_APPLESS_MAIN(WaitingReadyToPushStateTest)

@@ -9,6 +9,7 @@ class OperationsViewModelTest final : public QObject
     Q_OBJECT
 
 private slots:
+    static void distinguishesAPhaseUnlockedByThePilotFromOneAdvancedByReading();
     static void exposesUpdatedSnapshot();
     static void emitsOneSignalForSnapshotChanges();
     static void doesNotEmitWhenSnapshotIsUnchanged();
@@ -460,6 +461,24 @@ void OperationsViewModelTest::aRefusedPlanIsNotReadyOnTheCard()
     QVERIFY(!viewModel.IsSimbriefReady());
     QVERIFY(viewModel.HasSimbriefError());
     QVERIFY(viewModel.GetSimbriefStatusText() != QString("Ready"));
+}
+
+void OperationsViewModelTest::distinguishesAPhaseUnlockedByThePilotFromOneAdvancedByReading()
+{
+    FakeIntegratorService service;
+    const OperationsViewModel viewModel(&service);
+
+    QVERIFY(!viewModel.AdvancedByPilot());
+
+    service.snapshot.phaseOrigin = TransitionOrigin::Pilot;
+    service.Notify();
+
+    QVERIFY(viewModel.AdvancedByPilot());
+
+    service.snapshot.phaseOrigin = TransitionOrigin::Reading;
+    service.Notify();
+
+    QVERIFY(!viewModel.AdvancedByPilot());
 }
 
 QTEST_APPLESS_MAIN(OperationsViewModelTest)

@@ -181,6 +181,11 @@ int OperationsViewModel::GetDelayTicksRemaining() const
     return snapshot_.delayTicksRemaining;
 }
 
+bool OperationsViewModel::AdvancedByPilot() const
+{
+    return snapshot_.phaseOrigin == TransitionOrigin::Pilot;
+}
+
 QString OperationsViewModel::phaseLabelAt(const int index)
 {
     if (index < 0 || index >= static_cast<int>(TurnaroundPhase::Count))

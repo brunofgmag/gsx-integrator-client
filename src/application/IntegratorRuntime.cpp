@@ -488,6 +488,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.cargoDoorStuck = IsCargoDoorStuck();
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
     snapshot.phase = GetPhase();
+    snapshot.phaseOrigin = GetPhaseOrigin();
     snapshot.flightPlanStatus = status_.flightPlanStatus;
     snapshot.simbriefRefusal = gsxService_.GetSimbriefRefusal();
     snapshot.fuelProgress = status_.fuelProgress;

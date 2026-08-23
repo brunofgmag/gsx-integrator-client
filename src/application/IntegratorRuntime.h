@@ -47,6 +47,7 @@ public:
     [[nodiscard]] bool IsReconnectPending() const { return reconnectTimer_.isActive(); }
     [[nodiscard]] bool IsSessionActive() const { return isSessionActive_; }
     [[nodiscard]] TurnaroundPhase GetPhase() const { return stateMachine_.GetPhase(); }
+    [[nodiscard]] TransitionOrigin GetPhaseOrigin() const { return stateMachine_.GetLastTransitionOrigin(); }
     [[nodiscard]] std::string GetAircraftProfileId() const;
     [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfile_.conflict; }
     bool FixGsxProfile();
