@@ -80,6 +80,19 @@ Edit it with the sim closed, or the aircraft rewrites the file on exit. When the
 
 Fuel and payload go through the CommBus plugin, so on this aircraft the plugin from the section below is required rather than recommended. The turnaround waits at "Waiting for flight plan" until you import your SimBrief OFP on the tablet's flight plan page (or into the FMC, either works).
 
+## PMDG 737 setup
+
+The client reads this aircraft through the same PMDG SDK broadcast as the 777, and the flag is off from the factory here too. The 737 keeps one options file for the whole family, so there is a single file to edit whichever variant you fly. Open `737_Options.ini` under `%APPDATA%\Microsoft Flight Simulator 2024\WASM\MSFS2024\pmdg-aircraft-738\work\` and make sure it has:
+
+```ini
+[SDK]
+EnableDataBroadcast=1
+```
+
+Edit it with the sim closed, or the aircraft rewrites the file on exit. Without the flag the client cannot read the aircraft: it stays at "Waiting aircraft" and shows an advisory with an Enable broadcast button that writes the line for you. Reload the flight after you apply it, because the aircraft reads the file once, when it loads.
+
+Fuel and payload go through the CommBus plugin, so on this aircraft the plugin from the section below is required rather than recommended. On the BCF and the BDSF the whole payload goes in as main deck cargo, and that door runs on hydraulics: with the electric pumps off, the open command sits armed and the door moves only once pressure arrives.
+
 ## The CommBus plugin
 
 Install the CommBus plugin (`gsx-integrator-commbus`) in your Community folder; the [`gsx-integrator-installer`](https://github.com/brunofgmag/gsx-integrator-installer) does that for you. The plugin is a small bridge between the client and the parts of the sim only a WASM module can reach. It lets the client activate the GSX menu icon on the MSFS toolbar, and on the PMDG aircraft it also carries the fuel and payload writes. Most aircraft run without it, at the cost of GSX's own messages not showing on screen, because the client cannot open the menu for you. Some aircraft depend on it outright. The PMDG 777 and 737 are those: without the plugin, version 0.2.0 or newer, they will not refuel or board.
