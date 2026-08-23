@@ -169,6 +169,10 @@ private slots:
     static void triggerWaitsForTheMenuToSettle();
     static void triggerRetriesWhileGsxStillOffersTheService();
     static void triggerStopsRetryingOnceGsxTakesIt();
+    static void rearmedTriggerKeepsItsAttemptCount();
+    static void rearmedTriggerIsDroppedOnceGsxTakesIt();
+    static void stuckMenuIsClosedAfterResyncsAreExhausted();
+    static void resetAllowsClosingTheSameStuckMenuAgain();
 };
 
 void GsxMenuNavigatorTest::serviceTriggersUseCanonicalVerbs()
@@ -1596,6 +1600,147 @@ void GsxMenuNavigatorTest::triggerStopsRetryingOnceGsxTakesIt()
 
     QCOMPARE(client.Count("service.trigger"), 1);
     QVERIFY(!Logged(logger, "never taken by GSX"));
+}
+
+void GsxMenuNavigatorTest::rearmedTriggerKeepsItsAttemptCount()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Boarding");
+
+    nav.RequestBoarding();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    fakeNow = 15000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 2);
+
+    nav.RequestBoarding();
+
+    QCOMPARE(client.Count("service.trigger"), 2);
+
+    fakeNow = 25000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 3);
+
+    fakeNow = 35000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 3);
+    QVERIFY(Logged(logger, "never taken by GSX"));
+}
+
+void GsxMenuNavigatorTest::rearmedTriggerIsDroppedOnceGsxTakesIt()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Boarding");
+
+    nav.RequestBoarding();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    MarkServiceTaken(state, "Boarding");
+
+    nav.RequestBoarding();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    fakeNow = 25000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+}
+
+void GsxMenuNavigatorTest::stuckMenuIsClosedAfterResyncsAreExhausted()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Boarding");
+
+    nav.RequestBoarding();
+    MarkServiceTaken(state, "Boarding");
+    nav.OnMenuChanged();
+
+    ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
+    nav.OnMenuChanged();
+
+    for (int resync = 0; resync < 3; ++resync)
+    {
+        fakeNow += 2000;
+        nav.OnMenuChanged();
+    }
+
+    QCOMPARE(client.Count("state.get"), 3);
+    QCOMPARE(client.Count("menu.close"), 0);
+
+    fakeNow += 2000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.close"), 1);
+    QVERIFY(Logged(logger, "the resyncs could not move"));
+
+    fakeNow += 2000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.close"), 1);
+}
+
+void GsxMenuNavigatorTest::resetAllowsClosingTheSameStuckMenuAgain()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    const auto driveToStuckMenu = [&]
+    {
+        ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
+        nav.OnMenuChanged();
+
+        for (int tick = 0; tick < 4; ++tick)
+        {
+            fakeNow += 2000;
+            nav.OnMenuChanged();
+        }
+    };
+
+    driveToStuckMenu();
+
+    QCOMPARE(client.Count("menu.close"), 1);
+
+    nav.Reset();
+    driveToStuckMenu();
+
+    QCOMPARE(client.Count("menu.close"), 2);
 }
 
 QTEST_GUILESS_MAIN(GsxMenuNavigatorTest)

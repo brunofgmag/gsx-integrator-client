@@ -16,6 +16,7 @@ private slots:
     static void holdsUntilGsxActive();
     static void retriesWhenBoardingDoesNotStart();
     static void advancesWhenBoardingAlreadyCompleted();
+    static void advancesOnGsxActiveBeforeAnyVisibleProgress();
 };
 
 void RequestBoardingStateTest::callsMenuWhenCallable()
@@ -134,6 +135,25 @@ void RequestBoardingStateTest::advancesWhenBoardingAlreadyCompleted()
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::Boarding);
     QCOMPARE(f.menuGateway.boardingCalls, 0);
+}
+
+void RequestBoardingStateTest::advancesOnGsxActiveBeforeAnyVisibleProgress()
+{
+    TurnaroundStateFixture f;
+    RequestBoardingState state;
+
+    f.aircraft.cargo = true;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardedPassengers = 0;
+    f.gsxService.cargoPercent = 0.0;
+    f.ctx.data.boardingRequested = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::Boarding);
+    QCOMPARE(f.menuGateway.boardingCalls, 0);
+    QVERIFY(f.ctx.data.boardingRequested);
 }
 
 QTEST_APPLESS_MAIN(RequestBoardingStateTest)

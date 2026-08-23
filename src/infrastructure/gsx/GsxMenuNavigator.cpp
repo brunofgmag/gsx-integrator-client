@@ -214,6 +214,7 @@ void GsxMenuNavigator::Reset()
     lastPickedSig_.clear();
     lastDiagSig_.clear();
     watchedSig_.clear();
+    discardedSig_.clear();
     resyncCount_ = 0;
     resyncPending_ = false;
     lastActionMs_ = 0;
@@ -353,8 +354,15 @@ void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
 
     const bool automationInterested = settings_ == nullptr || settings_->autoSelectGsxChoice
         || settings_->autoDeice || HasActiveIntent();
-    if (!automationInterested || resyncCount_ >= kMaxResyncs)
+    if (!automationInterested)
     {
+        return;
+    }
+
+    if (resyncCount_ >= kMaxResyncs)
+    {
+        DiscardStuckMenu(sig);
+
         return;
     }
 
@@ -366,6 +374,21 @@ void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
     (void)client_->SendCommand("state.get");
     logger_->LogInfo(std::format("RemoteAPI menu stalled: requesting snapshot resync {}/{} ('{}')",
                                  resyncCount_, kMaxResyncs, state_->menu.title));
+}
+
+void GsxMenuNavigator::DiscardStuckMenu(const std::string& sig)
+{
+    if (!pending_.empty() || sig == discardedSig_)
+    {
+        return;
+    }
+
+    discardedSig_ = sig;
+    watchedSinceMs_ = nowMs_();
+    lastActionMs_ = nowMs_();
+    (void)client_->SendCommand("menu.close");
+    logger_->LogInfo(std::format("RemoteAPI closing the menu the resyncs could not move: '{}'",
+                                 state_->menu.title));
 }
 
 bool GsxMenuNavigator::MaybeCloseStaleMenu()
@@ -556,12 +579,16 @@ void GsxMenuNavigator::ArmRequest(QString verb, QJsonObject args, std::string la
         return request.verb == verb && request.label == label;
     });
 
+    PendingRequest request{std::move(verb), std::move(args), std::move(label), std::move(confirmId)};
+
     if (same != pending_.end())
     {
+        request.lastSentMs = same->lastSentMs;
+        request.attempts = same->attempts;
         pending_.erase(same);
     }
 
-    pending_.push_back({std::move(verb), std::move(args), std::move(label), std::move(confirmId)});
+    pending_.push_back(std::move(request));
 
     PumpRequests();
 }
