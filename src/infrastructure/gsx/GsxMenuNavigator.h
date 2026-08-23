@@ -92,6 +92,7 @@ private:
     void ClearMenuTracking();
     bool LogMenuIfNew(const std::string& sig);
     void MaybeResyncStalledMenu(const std::string& sig);
+    void DiscardStuckMenu(const std::string& sig);
     bool MaybeCloseStaleMenu();
     bool HandleAutoPicks(const std::string& sig);
     bool HandlePendingCompletions();
@@ -130,6 +131,7 @@ private:
     int resyncCount_ = 0;
     bool resyncPending_ = false;
     std::string resyncSig_;
+    std::string discardedSig_;
     mutable long long lastActionMs_ = 0;
 
     static constexpr long long kIntentTtlMs = 60000;

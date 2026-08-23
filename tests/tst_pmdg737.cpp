@@ -100,6 +100,7 @@ private slots:
     static void progressiveWriterDoesNotUndoTheTrim();
     static void smartSwitchAtRestIsNotAPress();
     static void smartSwitchAnswersEveryPressOfTheSession();
+    static void smartSwitchIgnoresTheLatchingIcSide();
     static void entryMethodIsLeftAloneUntilTheTabletReportsIt();
     static void ownStairsAreClearedByTakingTheEntryMethodToJetway();
     static void ownStairsAreReleasedByNameWhereNoJetwayIsOffered();
@@ -639,7 +640,25 @@ void Pmdg737Test::smartSwitchAnswersEveryPressOfTheSession()
     fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchNeutral, kSmartSwitchNeutral, true};
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
 
+    fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchDown, kSmartSwitchNeutral, true};
+    QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
+}
+
+void Pmdg737Test::smartSwitchIgnoresTheLatchingIcSide()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[kSmartSwitchLVar] = kSmartSwitchNeutral;
+    fixture.aircraft->OnTick();
+
     fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchNeutral, kSmartSwitchUp, true};
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchUp, kSmartSwitchUp, true};
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchDown, kSmartSwitchUp, true};
     QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
 }
 

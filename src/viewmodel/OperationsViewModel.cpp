@@ -23,7 +23,7 @@ namespace
         case TurnaroundPhase::Refueling: return QCoreApplication::translate("Turnaround", "Refueling");
         case TurnaroundPhase::RequestBoarding: return QCoreApplication::translate("Turnaround", "Requesting boarding");
         case TurnaroundPhase::Boarding: return QCoreApplication::translate("Turnaround", "Boarding");
-        case TurnaroundPhase::WaitingReadyToPush: return QCoreApplication::translate("Turnaround", "Waiting for beacon");
+        case TurnaroundPhase::WaitingReadyToPush: return QCoreApplication::translate("Turnaround", "Waiting for beacon & brake");
         case TurnaroundPhase::WaitCatering: return QCoreApplication::translate("Turnaround", "Waiting for catering");
         case TurnaroundPhase::RemoveGroundEquipment: return QCoreApplication::translate("Turnaround", "Removing GPU & chocks");
         case TurnaroundPhase::RequestPushback: return QCoreApplication::translate("Turnaround", "Requesting pushback");
@@ -56,7 +56,7 @@ namespace
         case TurnaroundPhase::RequestPushback:
             return QCoreApplication::translate("Turnaround", "Remember to remove additional services (like the GPU).");
         case TurnaroundPhase::WaitingReadyToPush:
-            return QCoreApplication::translate("Turnaround", "When you are ready to pushback, turn on the beacon lights.");
+            return QCoreApplication::translate("Turnaround", "Turn on the beacon lights and set the parking brake.");
         case TurnaroundPhase::WaitingPushbackToStart:
             return QCoreApplication::translate("Turnaround", "Select the final pushback position in the GSX menu.");
         case TurnaroundPhase::WaitingForEngines:

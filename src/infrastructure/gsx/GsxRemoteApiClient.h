@@ -21,6 +21,8 @@ public:
 
     virtual bool SendCommand(const QString& verb, const QJsonObject& args = {});
 
+    void SetHandshakeTimeoutForTest(const int ms) { handshakeTimeoutMs_ = ms; }
+
 signals:
     void SnapshotReceived(const QJsonObject& snapshot);
     void PatchReceived(const QString& path, const QJsonValue& value);
@@ -31,6 +33,7 @@ private slots:
     void OnDisconnected();
     void OnTextMessage(const QString& text);
     void OnReconnect();
+    void OnHandshakeTimeout();
 
 private:
     static quint16 ResolvePort();
@@ -38,12 +41,17 @@ private:
     void ScheduleReconnect();
     void HandleResult(const QJsonObject& msg);
 
+    static constexpr int kHandshakeTimeoutMs = 5000;
+
     QWebSocket* socket_ = nullptr;
     QTimer* reconnectTimer_ = nullptr;
+    QTimer* handshakeTimer_ = nullptr;
     quint16 port_ = 8744;
     bool connected_ = false;
+    bool handshakeDone_ = false;
     bool stopping_ = false;
     int backoffMs_ = 1000;
+    int handshakeTimeoutMs_ = kHandshakeTimeoutMs;
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_GSXREMOTEAPICLIENT_H

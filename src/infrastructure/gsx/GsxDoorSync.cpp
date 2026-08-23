@@ -68,7 +68,6 @@ GsxDoorSync::GsxDoorSync(VariableGateway* variableGateway) : variableGateway_(va
 void GsxDoorSync::Sync(const DoorWriter& write)
 {
     ReportProbe();
-    ObserveCouatl();
 
     if (variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
     {
@@ -96,7 +95,7 @@ void GsxDoorSync::Sync(const DoorWriter& write)
     }
 }
 
-void GsxDoorSync::ObserveCouatl()
+void GsxDoorSync::Observe()
 {
     const bool started = variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) >= 1.0;
 

@@ -32,7 +32,7 @@ namespace
             return TickMode::Driving;
         }
 
-        return probe::IsOn() ? TickMode::ObserveOnly : TickMode::Idle;
+        return automationEnabled || probe::IsOn() ? TickMode::ObserveOnly : TickMode::Idle;
     }
 }
 

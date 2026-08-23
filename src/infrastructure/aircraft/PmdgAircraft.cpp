@@ -51,6 +51,7 @@ bool PmdgAircraft::IsCargoVariant() const
 
 void PmdgAircraft::Observe()
 {
+    doors_.Observe();
     data_->SetInFlight(variableGateway_->GetAVar(kSimOnGround, kBoolUnit, 1.0) <= 0.0);
     data_->Poll();
     tablet_->Poll();
