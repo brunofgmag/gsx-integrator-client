@@ -43,6 +43,7 @@ private slots:
     static void noDataBeforeFirstPacket();
     static void receivesClientDataThroughSession();
     static void exposesTypedFields();
+    static void firstPollWaitsOneIntervalBeforeKicking();
     static void kickFiredWhenStale();
     static void kickReleasesSwitchOnNextPoll();
     static void kickSuppressedInFlight();
@@ -104,6 +105,30 @@ void Pmdg777DataClientTest::exposesTypedFields()
     QCOMPARE(client.DoorState(0), 0);
 }
 
+void Pmdg777DataClientTest::firstPollWaitsOneIntervalBeforeKicking()
+{
+    Pmdg777DataClient client;
+
+    long long now = 1000000;
+    client.SetClockForTest([&now] { return now; });
+
+    client.Poll();
+
+    QVERIFY(!MappedEvent("#69750"));
+    QCOMPARE(FakeSimConnectApi::transmittedEvents, 0);
+
+    now = 1004999;
+    client.Poll();
+
+    QCOMPARE(FakeSimConnectApi::transmittedEvents, 0);
+
+    now = 1005000;
+    client.Poll();
+
+    QVERIFY(MappedEvent("#69750"));
+    QVERIFY(FakeSimConnectApi::transmittedEvents > 0);
+}
+
 void Pmdg777DataClientTest::kickFiredWhenStale()
 {
     Pmdg777DataClient client;
@@ -113,18 +138,21 @@ void Pmdg777DataClientTest::kickFiredWhenStale()
 
     client.Poll();
 
+    now = 5000;
+    client.Poll();
+
     QVERIFY(MappedEvent("#69750"));
     QVERIFY(FakeSimConnectApi::transmittedEvents > 0);
 
-    now = 1000;
+    now = 6000;
     client.Poll();
     const int afterRelease = FakeSimConnectApi::transmittedEvents;
 
-    now = 2000;
+    now = 7000;
     client.Poll();
     QCOMPARE(FakeSimConnectApi::transmittedEvents, afterRelease);
 
-    now = 6000;
+    now = 11000;
     client.Poll();
     QVERIFY(FakeSimConnectApi::transmittedEvents > afterRelease);
 }
@@ -136,13 +164,16 @@ void Pmdg777DataClientTest::kickReleasesSwitchOnNextPoll()
     client.SetClockForTest([&now] { return now; });
 
     client.Poll();
+
+    now = 5000;
+    client.Poll();
     const int afterKick = FakeSimConnectApi::transmittedEvents;
 
-    now = 1000;
+    now = 6000;
     client.Poll();
     QCOMPARE(FakeSimConnectApi::transmittedEvents, afterKick + 1);
 
-    now = 2000;
+    now = 7000;
     client.Poll();
     QCOMPARE(FakeSimConnectApi::transmittedEvents, afterKick + 1);
 }
@@ -150,9 +181,13 @@ void Pmdg777DataClientTest::kickReleasesSwitchOnNextPoll()
 void Pmdg777DataClientTest::kickSuppressedInFlight()
 {
     Pmdg777DataClient client;
-    client.SetClockForTest([] { return 100000LL; });
+    long long now = 0;
+    client.SetClockForTest([&now] { return now; });
     client.SetInFlight(true);
 
+    client.Poll();
+
+    now = 100000;
     client.Poll();
 
     QVERIFY(!MappedEvent("#69750"));

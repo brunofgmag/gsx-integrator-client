@@ -4,6 +4,12 @@
 #include <optional>
 #include <string>
 
+struct PmdgWeightEcho
+{
+    double zfwLbs = 0.0;
+    double cargoLbs = 0.0;
+};
+
 class PmdgTabletGateway
 {
 public:
@@ -16,11 +22,15 @@ public:
     [[nodiscard]] virtual bool DoorMoving(const std::string& key) const = 0;
     [[nodiscard]] virtual bool GroundConnMoving(const std::string& key) const = 0;
     [[nodiscard]] virtual std::optional<bool> PassengerEntryViaJetway() const = 0;
+    [[nodiscard]] virtual std::optional<bool> JetwayInhibited() const = 0;
+    [[nodiscard]] virtual std::optional<bool> OwnStairsDeployed() const = 0;
+    [[nodiscard]] virtual std::optional<PmdgWeightEcho> LastWeightEcho() const = 0;
 
     virtual void SendFuelTotalLbs(int lbs) = 0;
     virtual void SendPaxTotal(int count) = 0;
     virtual void SendCargoTotalLbs(int lbs) = 0;
     virtual void RequestGroundConn(const std::string& key) = 0;
+    virtual void RequestGroundVehicle(const std::string& key) = 0;
     virtual void RequestState() = 0;
 };
 

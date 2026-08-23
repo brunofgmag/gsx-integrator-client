@@ -21,6 +21,7 @@ public:
     bool engineRunning = false;
     bool heldInPlace = false;
     bool parkingBrakeSet = false;
+    DoorStatus doorStatus = DoorStatus::Unknown;
     bool supportsStairsOrJetways = true;
     bool completesPushbackViaInterruptMenu = false;
     std::optional<GroundPowerStatus> groundPowerStatus = std::nullopt;
@@ -101,6 +102,7 @@ public:
     }
 
     void ClearOwnGroundEquipment() override { ++clearOwnGroundEquipmentCalls; }
+    [[nodiscard]] DoorStatus GetDoorStatus() const override { return doorStatus; }
     [[nodiscard]] bool IsReadyToPush() const override { return readyToPush; }
     [[nodiscard]] bool IsReadyToDeboard() const override { return readyToDeboard; }
     [[nodiscard]] bool IsEngineRunning() const override { return engineRunning; }

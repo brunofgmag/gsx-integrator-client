@@ -25,6 +25,8 @@ namespace
     constexpr auto kServiceInProgressTitle = "Service in progress";
     constexpr auto kCompleteNowText = "Complete now";
     constexpr auto kRefuelingLoadedText = "loaded";
+    constexpr auto kLoadingInProgressText = "loading in progress";
+    constexpr auto kBoardingPassengersText = "Boarding passengers now";
     constexpr auto kBoardCrewQuestion = "board crew";
     constexpr auto kDeIceQuestion = "de-icing";
     constexpr auto kAirstairsQuestion = "own airstairs";
@@ -184,6 +186,14 @@ void GsxMenuNavigator::CompleteRefuel()
     OpenMenu();
 }
 
+void GsxMenuNavigator::CompleteBoarding()
+{
+    completingBoarding_ = {true, nowMs_()};
+
+    OpenIntent(Intent::Service);
+    OpenMenu();
+}
+
 void GsxMenuNavigator::DisableGsxMenu()
 {
     (void)client_->SendCommand("menu.close");
@@ -197,12 +207,14 @@ void GsxMenuNavigator::Reset()
     reposition_ = Reposition::Idle;
     completingPushback_ = {};
     completingRefuel_ = {};
+    completingBoarding_ = {};
     confirmingEngines_ = {};
     intent_ = Intent::None;
     intentSinceMs_ = 0;
     lastPickedSig_.clear();
     lastDiagSig_.clear();
     watchedSig_.clear();
+    discardedSig_.clear();
     resyncCount_ = 0;
     resyncPending_ = false;
     lastActionMs_ = 0;
@@ -279,6 +291,7 @@ void GsxMenuNavigator::ExpireTimedIntents()
 {
     ExpireIntent(completingPushback_, "complete-pushback");
     ExpireIntent(completingRefuel_, "complete-refuel");
+    ExpireIntent(completingBoarding_, "complete-boarding");
     ExpireIntent(confirmingEngines_, "confirm-engines");
 }
 
@@ -341,8 +354,15 @@ void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
 
     const bool automationInterested = settings_ == nullptr || settings_->autoSelectGsxChoice
         || settings_->autoDeice || HasActiveIntent();
-    if (!automationInterested || resyncCount_ >= kMaxResyncs)
+    if (!automationInterested)
     {
+        return;
+    }
+
+    if (resyncCount_ >= kMaxResyncs)
+    {
+        DiscardStuckMenu(sig);
+
         return;
     }
 
@@ -354,6 +374,21 @@ void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
     (void)client_->SendCommand("state.get");
     logger_->LogInfo(std::format("RemoteAPI menu stalled: requesting snapshot resync {}/{} ('{}')",
                                  resyncCount_, kMaxResyncs, state_->menu.title));
+}
+
+void GsxMenuNavigator::DiscardStuckMenu(const std::string& sig)
+{
+    if (!pending_.empty() || sig == discardedSig_)
+    {
+        return;
+    }
+
+    discardedSig_ = sig;
+    watchedSinceMs_ = nowMs_();
+    lastActionMs_ = nowMs_();
+    (void)client_->SendCommand("menu.close");
+    logger_->LogInfo(std::format("RemoteAPI closing the menu the resyncs could not move: '{}'",
+                                 state_->menu.title));
 }
 
 bool GsxMenuNavigator::MaybeCloseStaleMenu()
@@ -450,6 +485,24 @@ bool GsxMenuNavigator::HandlePendingCompletions()
         }
     }
 
+    if (completingBoarding_.active)
+    {
+        if (Contains(state_->menu.title, kServiceInProgressTitle))
+        {
+            if (PickByContains(kCompleteNowText))
+            {
+                completingBoarding_ = {};
+            }
+
+            return true;
+        }
+
+        if (PickByContains(kLoadingInProgressText) || PickByContains(kBoardingPassengersText))
+        {
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -526,12 +579,16 @@ void GsxMenuNavigator::ArmRequest(QString verb, QJsonObject args, std::string la
         return request.verb == verb && request.label == label;
     });
 
+    PendingRequest request{std::move(verb), std::move(args), std::move(label), std::move(confirmId)};
+
     if (same != pending_.end())
     {
+        request.lastSentMs = same->lastSentMs;
+        request.attempts = same->attempts;
         pending_.erase(same);
     }
 
-    pending_.push_back({std::move(verb), std::move(args), std::move(label), std::move(confirmId)});
+    pending_.push_back(std::move(request));
 
     PumpRequests();
 }

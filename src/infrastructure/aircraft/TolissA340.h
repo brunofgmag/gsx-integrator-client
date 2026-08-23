@@ -17,6 +17,7 @@ public:
 
     [[nodiscard]] bool IsCargoVariant() const override;
 
+    void Observe() override;
     void OnTick() override;
     void OnLoadingStarted() override;
     void CloseAllDoors() override;

@@ -15,6 +15,8 @@ public:
 
 private:
     [[nodiscard]] static bool IsCargoPending(const TurnaroundContext& ctx);
+    [[nodiscard]] static bool IsBarFull(const TurnaroundContext& ctx);
+    static void MaybeForceCompletion(TurnaroundContext& ctx);
     static void EnsureBaseline(TurnaroundContext& ctx);
     static void FinishBoarding(TurnaroundContext& ctx);
     static void AdvanceBoardingBar(TurnaroundContext& ctx);

@@ -32,6 +32,8 @@ private slots:
     static void firesFromEitherLVar();
     static void writesResetValueWhenConfigured();
     static void subscribesRawLVarName();
+    static void discardsTheSpanOfAGapBetweenConsumes();
+    static void discardsTheSpanAccumulatedBeforeTheFirstConsume();
 };
 
 void SmartSwitchTest::quietUntilSubscribed()
@@ -121,6 +123,52 @@ void SmartSwitchTest::subscribesRawLVarName()
 
     QCOMPARE(gateway.fastRefreshNames.size(), static_cast<std::size_t>(1));
     QVERIFY(gateway.fastRefreshNames.front() == kLVar);
+}
+
+void SmartSwitchTest::discardsTheSpanOfAGapBetweenConsumes()
+{
+    FakeVariableGateway gateway;
+    long long now = 1000;
+    SmartSwitch smartSwitch(gateway, {kLVar}, PeaksTo(50.0));
+    smartSwitch.SetClockForTest([&now] { return now; });
+    smartSwitch.Subscribe();
+
+    gateway.lvarSpans[kLVar] = LVarSpan{0.0, 100.0, true};
+    now += 1000;
+    QVERIFY(smartSwitch.Consume());
+
+    gateway.lvarSpans[kLVar] = LVarSpan{0.0, 0.0, true};
+    now += 1000;
+    QVERIFY(!smartSwitch.Consume());
+
+    gateway.lvarSpans[kLVar] = LVarSpan{0.0, 100.0, true};
+    now += 197000;
+    QVERIFY(!smartSwitch.Consume());
+
+    now += 1000;
+    QVERIFY(!smartSwitch.Consume());
+
+    gateway.lvarSpans[kLVar] = LVarSpan{0.0, 100.0, true};
+    now += 1000;
+    QVERIFY(smartSwitch.Consume());
+}
+
+void SmartSwitchTest::discardsTheSpanAccumulatedBeforeTheFirstConsume()
+{
+    FakeVariableGateway gateway;
+    long long now = 1000;
+    SmartSwitch smartSwitch(gateway, {kLVar}, PeaksTo(50.0));
+    smartSwitch.SetClockForTest([&now] { return now; });
+    smartSwitch.Subscribe();
+
+    gateway.lvarSpans[kLVar] = LVarSpan{0.0, 100.0, true};
+    now += 196000;
+    QVERIFY(!smartSwitch.Consume());
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.lvarSpans[kLVar] = LVarSpan{0.0, 100.0, true};
+    now += 1000;
+    QVERIFY(smartSwitch.Consume());
 }
 
 QTEST_APPLESS_MAIN(SmartSwitchTest)

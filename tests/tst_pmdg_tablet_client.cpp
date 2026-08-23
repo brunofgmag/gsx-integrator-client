@@ -37,6 +37,9 @@ private slots:
     static void readsDoorStatesFromStateReply();
     static void doorInMotionHasNoState();
     static void readsThePassengerEntryMethodFromStateReply();
+    static void readsTheWeightEchoFromStateReply();
+    static void buildsGroundVehicleEnvelope();
+    static void readsTheJetwayAndOwnStairsFromStateReply();
     static void groundPowerInTransitIsReportedAsMoving();
     static void settledGroundPowerVerbsAreNotMoving();
     static void requestStateAsksThePlaneForGroundState();
@@ -198,6 +201,61 @@ void PmdgTabletClientTest::readsThePassengerEntryMethodFromStateReply()
                    R"("ground_conn":{"jetway":"REQ/REL","passenger_entry":"JETWAY"}})");
 
     QCOMPARE(client.PassengerEntryViaJetway(), std::optional(true));
+}
+
+void PmdgTabletClientTest::readsTheWeightEchoFromStateReply()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+    client.Poll();
+
+    QVERIFY(!client.LastWeightEcho().has_value());
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("weight_balance":{"cargo_lbs_aft":5188.88,"cargo_lbs_fwd":4155.87,)"
+                   R"("cargo_lbs_main":34960,"zfw":131679.75}})");
+
+    const std::optional<PmdgWeightEcho> echo = client.LastWeightEcho();
+
+    QVERIFY(echo.has_value());
+    QCOMPARE(echo->zfwLbs, 131679.75);
+    QCOMPARE(echo->cargoLbs, 5188.88 + 4155.87 + 34960.0);
+}
+
+void PmdgTabletClientTest::buildsGroundVehicleEnvelope()
+{
+    const QJsonObject envelope = Parse(PmdgTabletClient::BuildGroundVehicle("stairs_1l"));
+
+    QCOMPARE(envelope.value("message_tag").toString(), QString("ground_vehicles"));
+    QCOMPARE(envelope.value("tablet_side").toString(), QString("CA"));
+    QCOMPARE(envelope.value("data").toObject().value("stairs_1l").toInt(), 1);
+}
+
+void PmdgTabletClientTest::readsTheJetwayAndOwnStairsFromStateReply()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+    client.Poll();
+
+    QVERIFY(!client.JetwayInhibited().has_value());
+    QVERIFY(!client.OwnStairsDeployed().has_value());
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("ground_conn":{"jetway":"INHIBITED","passenger_entry":"STAIRS"},)"
+                   R"("vehicles":{"stairs_1l_state":"RELEASE"}})");
+
+    QCOMPARE(client.JetwayInhibited(), std::optional(true));
+    QCOMPARE(client.OwnStairsDeployed(), std::optional(true));
+
+    bridge.Deliver("PlaneToTablet",
+                   R"({"message_tag":"state_reply","tablet_side":"FO",)"
+                   R"("ground_conn":{"jetway":"REQ/REL","passenger_entry":"JETWAY"},)"
+                   R"("vehicles":{"stairs_1l_state":"REQUEST"}})");
+
+    QCOMPARE(client.JetwayInhibited(), std::optional(false));
+    QCOMPARE(client.OwnStairsDeployed(), std::optional(false));
 }
 
 void PmdgTabletClientTest::requestStateAsksThePlaneForGroundState()

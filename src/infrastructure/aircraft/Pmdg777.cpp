@@ -44,8 +44,7 @@ namespace
             IsCargo(variant),
             DoorBaseline::Unknown,
             {kSmartSwitchCaptLVar, kSmartSwitchFoLVar},
-            [](const double min, const double max)
-            { return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral; }
+            [](double, const double max) { return max > kSmartSwitchNeutral; }
         };
     }
 }

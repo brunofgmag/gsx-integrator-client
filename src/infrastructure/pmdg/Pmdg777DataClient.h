@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777DATACLIENT_H
 
 #include <functional>
+#include <optional>
 #include "Pmdg777DataGateway.h"
 #include "Pmdg777SdkData.h"
 #include "PmdgClientDataChannel.h"
@@ -42,7 +43,7 @@ private:
     PmdgClientDataChannel<PMDG_777X_Data> channel_;
     bool pendingKickRelease_ = false;
     bool probeToggleSent_ = false;
-    long long lastKickMs_ = -kKickIntervalMs;
+    std::optional<long long> lastKickMs_;
     std::function<long long()> nowMs_;
 };
 

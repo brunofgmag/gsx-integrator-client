@@ -51,6 +51,7 @@ bool PmdgAircraft::IsCargoVariant() const
 
 void PmdgAircraft::Observe()
 {
+    doors_.Observe();
     data_->SetInFlight(variableGateway_->GetAVar(kSimOnGround, kBoolUnit, 1.0) <= 0.0);
     data_->Poll();
     tablet_->Poll();
@@ -101,7 +102,7 @@ void PmdgAircraft::SyncDoors()
 void PmdgAircraft::SyncMainDeckDoor()
 {
     const bool loaderPresent = gsx::states::IsLoaderAtDoor(
-        variableGateway_->GetLVar(gsx::lvars::kBaggageLoaderMainState, 0.0));
+        doors_.VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0));
 
     if (loaderPresent && mainDeckTarget_ != MainDeckTarget::Open)
     {

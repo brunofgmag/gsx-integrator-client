@@ -37,6 +37,7 @@ public:
     void RequestPushback() override;
     void RequestRefueling() override;
     void CompleteRefuel() override;
+    void CompleteBoarding() override;
     void ToggleGpu() override;
     void RequestCatering() override;
     void RequestLavatory() override;
@@ -91,6 +92,7 @@ private:
     void ClearMenuTracking();
     bool LogMenuIfNew(const std::string& sig);
     void MaybeResyncStalledMenu(const std::string& sig);
+    void DiscardStuckMenu(const std::string& sig);
     bool MaybeCloseStaleMenu();
     bool HandleAutoPicks(const std::string& sig);
     bool HandlePendingCompletions();
@@ -115,6 +117,7 @@ private:
     Reposition reposition_ = Reposition::Idle;
     TimedIntent completingPushback_;
     TimedIntent completingRefuel_;
+    TimedIntent completingBoarding_;
     TimedIntent confirmingEngines_;
 
     Intent intent_ = Intent::None;
@@ -128,6 +131,7 @@ private:
     int resyncCount_ = 0;
     bool resyncPending_ = false;
     std::string resyncSig_;
+    std::string discardedSig_;
     mutable long long lastActionMs_ = 0;
 
     static constexpr long long kIntentTtlMs = 60000;

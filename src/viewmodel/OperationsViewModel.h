@@ -31,6 +31,7 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(bool gsxProfileFixable READ IsGsxProfileFixable NOTIFY SnapshotChanged)
     Q_PROPERTY(bool pmdgOptionsConflict READ HasPmdgOptionsConflict NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoDoorStuck READ IsCargoDoorStuck NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool fuelRequestStalled READ IsFuelRequestStalled NOTIFY SnapshotChanged)
     Q_PROPERTY(bool pmdgOptionsFixable READ IsPmdgOptionsFixable NOTIFY SnapshotChanged)
     Q_PROPERTY(double plannedZfwKg READ GetPlannedZfwKg NOTIFY SnapshotChanged)
     Q_PROPERTY(int plannedPax READ GetPlannedPax NOTIFY SnapshotChanged)
@@ -79,6 +80,7 @@ public:
     [[nodiscard]] bool IsGsxProfileFixable() const;
     [[nodiscard]] bool HasPmdgOptionsConflict() const;
     [[nodiscard]] bool IsCargoDoorStuck() const;
+    [[nodiscard]] bool IsFuelRequestStalled() const;
     [[nodiscard]] bool IsPmdgOptionsFixable() const;
     [[nodiscard]] double GetPlannedZfwKg() const;
     [[nodiscard]] int GetPlannedPax() const;

@@ -47,6 +47,11 @@ namespace
                                                  std::move(dataGateway), std::move(tabletGateway));
         }
 
+        void SeeEfbWeights(const double zfwKg, const double cargoLbs = 0.0)
+        {
+            tablet->weightEcho = PmdgWeightEcho{zfwKg * 2.20462262185 + cargoLbs, cargoLbs};
+        }
+
         void SeedEnginesOff()
         {
             gateway.avars[kSimEng1Combustion] = 0.0;
@@ -95,8 +100,11 @@ private slots:
     static void progressiveWriterDoesNotUndoTheTrim();
     static void smartSwitchAtRestIsNotAPress();
     static void smartSwitchAnswersEveryPressOfTheSession();
+    static void smartSwitchIgnoresTheLatchingIcSide();
     static void entryMethodIsLeftAloneUntilTheTabletReportsIt();
     static void ownStairsAreClearedByTakingTheEntryMethodToJetway();
+    static void ownStairsAreReleasedByNameWhereNoJetwayIsOffered();
+    static void vehicleStateInheritedFromBeforeACouatlRestartIsNotBelieved();
 };
 
 void Pmdg737Test::nameAndCargoFlagFollowTheVariant()
@@ -505,7 +513,7 @@ void Pmdg737Test::chocksReadFromTheLVarAndRetryWithCap()
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
     QCOMPARE(QString::fromStdString(fixture.tablet->groundConnRequests[0]), QString("wheel_chocks"));
 
-    for (int tick = 0; tick < 4; ++tick)
+    for (int tick = 0; tick < 9; ++tick)
     {
         fixture.aircraft->OnTick();
     }
@@ -563,6 +571,7 @@ void Pmdg737Test::cargoVariantSendsNoPassengers()
     fixture.gateway.avars["TOTAL WEIGHT"] = 40000.0;
     fixture.status.plannedZfwKg = 60000.0;
     fixture.status.plannedPassengers = 100;
+    fixture.SeeEfbWeights(40000.0);
 
     fixture.aircraft->SetCurrentZfwKg(50000.0);
 
@@ -579,6 +588,7 @@ void Pmdg737Test::progressiveWriterDoesNotUndoTheTrim()
     fixture.gateway.avars["TOTAL WEIGHT"] = 61200.0;
     fixture.gateway.avars["FUEL TOTAL QUANTITY WEIGHT"] = 0.0;
     fixture.status.plannedZfwKg = 60000.0;
+    fixture.SeeEfbWeights(40000.0);
 
     fixture.aircraft->SetCurrentZfwKg(60000.0);
 
@@ -630,7 +640,25 @@ void Pmdg737Test::smartSwitchAnswersEveryPressOfTheSession()
     fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchNeutral, kSmartSwitchNeutral, true};
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
 
+    fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchDown, kSmartSwitchNeutral, true};
+    QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
+}
+
+void Pmdg737Test::smartSwitchIgnoresTheLatchingIcSide()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[kSmartSwitchLVar] = kSmartSwitchNeutral;
+    fixture.aircraft->OnTick();
+
     fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchNeutral, kSmartSwitchUp, true};
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchUp, kSmartSwitchUp, true};
+    QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchDown, kSmartSwitchUp, true};
     QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
 }
 
@@ -651,6 +679,7 @@ void Pmdg737Test::ownStairsAreClearedByTakingTheEntryMethodToJetway()
     Pmdg737Fixture fixture;
 
     fixture.data->hasData = true;
+    fixture.tablet->jetwayInhibited = false;
     fixture.tablet->passengerEntryJetway = false;
     fixture.aircraft->ClearOwnGroundEquipment();
 
@@ -662,6 +691,62 @@ void Pmdg737Test::ownStairsAreClearedByTakingTheEntryMethodToJetway()
     Tick(fixture, 20);
 
     QCOMPARE(PassengerEntryRequests(fixture), 1);
+}
+
+void Pmdg737Test::ownStairsAreReleasedByNameWhereNoJetwayIsOffered()
+{
+    Pmdg737Fixture fixture(Pmdg737Variant::Bcf800);
+
+    fixture.data->hasData = true;
+    fixture.tablet->jetwayInhibited = true;
+    fixture.tablet->ownStairsDeployed = true;
+    fixture.aircraft->ClearOwnGroundEquipment();
+
+    Tick(fixture, 1);
+
+    QCOMPARE(PassengerEntryRequests(fixture), 0);
+    QCOMPARE(static_cast<int>(fixture.tablet->groundVehicleRequests.size()), 1);
+    QCOMPARE(QString::fromStdString(fixture.tablet->groundVehicleRequests[0]), QString("stairs_1l"));
+
+    fixture.tablet->ownStairsDeployed = false;
+    Tick(fixture, 20);
+
+    QCOMPARE(static_cast<int>(fixture.tablet->groundVehicleRequests.size()), 1);
+}
+
+void Pmdg737Test::vehicleStateInheritedFromBeforeACouatlRestartIsNotBelieved()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+
+    fixture.aircraft->CloseAllDoors();
+    Tick(fixture, 2);
+
+    const auto entryToggles = [&fixture] {
+        return static_cast<int>(std::ranges::count(fixture.data->toggledDoors, Pmdg737Door::FwdEntry));
+    };
+
+    fixture.gateway.lvars[gsx::lvars::kCateringFrontState] = gsx::states::kCateringWaitingForDoor;
+    fixture.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = gsx::states::kStairsFinalPosition;
+    Tick(fixture, 2);
+
+    QCOMPARE(entryToggles(), 1);
+
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 0.0;
+    Tick(fixture, 2);
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    Tick(fixture, 2);
+
+    QCOMPARE(entryToggles(), 2);
+
+    fixture.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = 1.0;
+    Tick(fixture, 2);
+    fixture.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = gsx::states::kStairsFinalPosition;
+    Tick(fixture, 2);
+
+    QCOMPARE(entryToggles(), 3);
 }
 
 void Pmdg737Test::observationTickWritesNothing()

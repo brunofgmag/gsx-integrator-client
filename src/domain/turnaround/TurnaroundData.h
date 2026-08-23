@@ -31,8 +31,12 @@ struct TurnaroundData
     int refuelStallTicks = 0;
     bool refuelCompletionForced = false;
     bool boardingBaselined = false;
+    int boardingStallTicks = 0;
+    int boardingCompletionAttempts = 0;
     bool deboardingBaselined = false;
     bool refuelingRequested = false;
+    int fuelRequestStallTicks = 0;
+    bool fuelRequestStalled = false;
     bool boardingRequested = false;
     bool deboardingRequested = false;
     bool pushbackRequested = false;

@@ -17,6 +17,18 @@ namespace
     constexpr double kJetwayDockedValue = 5.0;
     constexpr double kJetwayUnavailableValue = 2.0;
 
+    constexpr std::array kVehicleLVars = {
+        gsx::lvars::kJetway,
+        gsx::lvars::kPassengerStairsFrontState,
+        gsx::lvars::kPassengerStairsMiddleState,
+        gsx::lvars::kPassengerStairsRearState,
+        gsx::lvars::kCateringFrontState,
+        gsx::lvars::kCateringRearState,
+        gsx::lvars::kBaggageLoaderFrontState,
+        gsx::lvars::kBaggageLoaderRearState,
+        gsx::lvars::kBaggageLoaderMainState
+    };
+
     constexpr std::array kAllDoors = {
         GsxDoor::FwdPax, GsxDoor::MidPax, GsxDoor::AftPax,
         GsxDoor::FwdCatering, GsxDoor::AftCatering,
@@ -81,6 +93,51 @@ void GsxDoorSync::Sync(const DoorWriter& write)
             lastTarget = kDoorClosed;
         }
     }
+}
+
+void GsxDoorSync::Observe()
+{
+    const bool started = variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) >= 1.0;
+
+    if (!started)
+    {
+        couatlRestarting_ = couatlSeenStarted_;
+
+        return;
+    }
+
+    if (couatlRestarting_)
+    {
+        couatlRestarting_ = false;
+        inheritedVehicles_.clear();
+        for (const char* lVar : kVehicleLVars)
+        {
+            inheritedVehicles_.emplace(lVar, variableGateway_->GetLVar(lVar, 0.0));
+        }
+        probe::Line(QStringLiteral("gsx couatl restarted, vehicle states distrusted"));
+    }
+
+    couatlSeenStarted_ = true;
+}
+
+double GsxDoorSync::VehicleState(const char* lVar, const double absent) const
+{
+    const double value = variableGateway_->GetLVar(lVar, absent);
+
+    const auto inherited = inheritedVehicles_.find(lVar);
+    if (inherited == inheritedVehicles_.end())
+    {
+        return value;
+    }
+
+    if (inherited->second != value)
+    {
+        inheritedVehicles_.erase(inherited);
+
+        return value;
+    }
+
+    return absent;
 }
 
 void GsxDoorSync::ReportProbe() const
@@ -168,13 +225,13 @@ bool GsxDoorSync::IsDesiredOpen(const GsxDoor door) const
 
     const auto vehicleState = [this](const char* lVar)
     {
-        return variableGateway_->GetLVar(lVar, 0.0);
+        return VehicleState(lVar, 0.0);
     };
 
     switch (door)
     {
     case GsxDoor::FwdPax:
-        return variableGateway_->GetLVar(gsx::lvars::kJetway, kJetwayUnavailableValue) == kJetwayDockedValue
+        return VehicleState(gsx::lvars::kJetway, kJetwayUnavailableValue) == kJetwayDockedValue
             || vehicleState(gsx::lvars::kPassengerStairsFrontState) == gsx::states::kStairsFinalPosition;
     case GsxDoor::MidPax:
         return vehicleState(gsx::lvars::kPassengerStairsMiddleState) == gsx::states::kStairsFinalPosition;

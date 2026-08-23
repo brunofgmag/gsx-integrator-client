@@ -21,11 +21,11 @@ std::optional<TurnaroundTransition> RequestBoardingState::Evaluate(TurnaroundCon
         data.boardingRequested = true;
     }
 
+    const bool gsxReady = boardingState == GsxStateStatus::Active;
     const bool hasPassengersBoarding = ctx.gsxGateway->GetBoardedPassengers() > 0;
     const bool hasCargoBoarding = ctx.gsxGateway->GetBoardingCargoPercent() > 0.0;
-    const bool hasBoardingStarted = hasPassengersBoarding || hasCargoBoarding;
+    const bool hasBoardingStarted = hasPassengersBoarding || hasCargoBoarding || gsxReady;
 
-    const bool gsxReady = boardingState == GsxStateStatus::Active;
     if (hasBoardingStarted && gsxReady)
     {
         return TurnaroundTransition{TurnaroundPhase::Boarding};

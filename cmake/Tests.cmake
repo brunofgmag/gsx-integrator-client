@@ -170,6 +170,13 @@ add_custom_command(TARGET gsxi-gsx-menu-navigator-tests POST_BUILD
         "$<TARGET_FILE_DIR:gsxi-gsx-menu-navigator-tests>"
         VERBATIM)
 
+gsxi_add_qt_test(gsxi-gsx-door-sync-tests gsx-door-sync
+        tests/tst_gsx_door_sync.cpp
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
+        src/infrastructure/gsx/GsxLVars.h
+        src/infrastructure/simvars/VariableGateway.h)
+
 gsxi_add_qt_test(gsxi-gsx-interface-tests gsx-interface
         tests/TestDoubles.h
         tests/tst_gsx_interface.cpp

@@ -17,6 +17,11 @@ private slots:
     static void snapsToPlannedWhenGsxCountersFallShort();
     static void rebaselinesInitialZfwWhenCapturedBeforeSimData();
     static void clampsRebaselineToPlannedZfw();
+    static void asksGsxToCompleteBoardingStalledAtOneHundred();
+    static void asksAgainWhenGsxSwallowsTheForcedCompletion();
+    static void stopsAskingOnceTheServiceCloses();
+    static void doesNotAskGsxToCompleteWhileTheLoaderIsStillWorking();
+    static void doesNotAskGsxToCompleteWhilePassengersAreMissing();
 };
 
 void BoardingStateTest::holdsUntilGsxActive()
@@ -216,6 +221,140 @@ void BoardingStateTest::clampsRebaselineToPlannedZfw()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 
     QCOMPARE(f.ctx.data.initialZfwKg, 20000.0);
+}
+
+void BoardingStateTest::asksGsxToCompleteBoardingStalledAtOneHundred()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    f.aircraft.cargo = true;
+    f.ctx.data.plannedZfwKg = 180000.0;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.cargoPercent = 100.0;
+
+    for (int tick = 0; tick < 179; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
+}
+
+void BoardingStateTest::asksAgainWhenGsxSwallowsTheForcedCompletion()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    f.aircraft.cargo = true;
+    f.ctx.data.plannedZfwKg = 180000.0;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.cargoPercent = 100.0;
+
+    for (int tick = 0; tick < 180; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
+
+    for (int tick = 0; tick < 29; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 2);
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 3);
+}
+
+void BoardingStateTest::stopsAskingOnceTheServiceCloses()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    f.aircraft.cargo = true;
+    f.ctx.data.plannedZfwKg = 180000.0;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.cargoPercent = 100.0;
+
+    for (int tick = 0; tick < 180; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
+
+    f.gsxService.boardingState = GsxStateStatus::Completed;
+
+    const auto transition = state.Evaluate(f.ctx);
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingReadyToPush);
+
+    for (int tick = 0; tick < 120; ++tick)
+    {
+        (void)state.Evaluate(f.ctx);
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
+}
+
+void BoardingStateTest::doesNotAskGsxToCompleteWhileTheLoaderIsStillWorking()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    f.aircraft.cargo = true;
+    f.ctx.data.plannedZfwKg = 180000.0;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.cargoPercent = 100.0;
+    f.gsxService.loaderWaitingForDoor = true;
+
+    for (int tick = 0; tick < 400; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
+}
+
+void BoardingStateTest::doesNotAskGsxToCompleteWhilePassengersAreMissing()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    f.aircraft.cargo = false;
+    f.ctx.data.plannedZfwKg = 180000.0;
+    f.ctx.data.plannedPassengers = 174;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.cargoPercent = 100.0;
+    f.gsxService.boardedPassengers = 173;
+
+    for (int tick = 0; tick < 400; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
+
+    f.gsxService.boardedPassengers = 174;
+    for (int tick = 0; tick < 180; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
 }
 
 QTEST_APPLESS_MAIN(BoardingStateTest)

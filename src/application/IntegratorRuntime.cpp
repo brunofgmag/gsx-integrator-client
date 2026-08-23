@@ -32,7 +32,7 @@ namespace
             return TickMode::Driving;
         }
 
-        return probe::IsOn() ? TickMode::ObserveOnly : TickMode::Idle;
+        return automationEnabled || probe::IsOn() ? TickMode::ObserveOnly : TickMode::Idle;
     }
 }
 
@@ -327,6 +327,11 @@ bool IntegratorRuntime::IsCargoDoorStuck() const
     return aircraft_ && IsLoadingCargoPhase() && aircraft_->IsMainDeckCargoDoorStuck();
 }
 
+bool IntegratorRuntime::IsFuelRequestStalled() const
+{
+    return status_.fuelRequestStalled && GetPhase() == TurnaroundPhase::RequestFuel;
+}
+
 void IntegratorRuntime::UpdateSlow()
 {
     if (!IsSessionActive() || !aircraft_ || !status_.enabled || !IsSessionReady() || IsSessionPaused())
@@ -481,6 +486,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.pmdgOptionsConflict = HasPmdgOptionsConflict();
     snapshot.pmdgOptionsFixable = CanFixPmdgOptions();
     snapshot.cargoDoorStuck = IsCargoDoorStuck();
+    snapshot.fuelRequestStalled = IsFuelRequestStalled();
     snapshot.phase = GetPhase();
     snapshot.flightPlanStatus = status_.flightPlanStatus;
     snapshot.simbriefRefusal = gsxService_.GetSimbriefRefusal();

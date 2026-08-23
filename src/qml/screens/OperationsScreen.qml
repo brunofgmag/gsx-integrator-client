@@ -162,6 +162,12 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            visible: root.integratorVm.fuelRequestStalled
+            text: qsTr("GSX took the refuelling request but the truck has not arrived. Check the GSX menu, or another service may be holding it.")
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             text: root.integratorVm.phaseTip
         }
 
