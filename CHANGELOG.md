@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.11.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.10.0...v1.11.0) (2026-08-23)
+
+
+* let the pilot unlock the pushback gate with the smart switch ([#60](https://github.com/brunofgmag/gsx-integrator-client/issues/60)) ([98c2d88](https://github.com/brunofgmag/gsx-integrator-client/commit/98c2d88b70877e0188ca60707b5cc894d15383a7))
+* pay the sim debts the last run closed ([#58](https://github.com/brunofgmag/gsx-integrator-client/issues/58)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+
+
+### Features
+
+* **tools:** a versioned tap for the gsx wire ([a2fd227](https://github.com/brunofgmag/gsx-integrator-client/commit/a2fd227c276f26793b65f70a76ff2427f78cc9de)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* **tools:** launch the client on the couatl that just restarted ([9d7aac8](https://github.com/brunofgmag/gsx-integrator-client/commit/9d7aac8f83fc1616c5f78731953cb67d784d7297)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* **turnaround:** unlock the pushback gate with the pilot's smart switch ([5ceacbd](https://github.com/brunofgmag/gsx-integrator-client/commit/5ceacbdd5705d72cb6ea5b73310be2e294fa84dc)) ([98c2d88](https://github.com/brunofgmag/gsx-integrator-client/commit/98c2d88b70877e0188ca60707b5cc894d15383a7))
+* **ui:** mark a phase the pilot unlocked ([90b4985](https://github.com/brunofgmag/gsx-integrator-client/commit/90b49858c2498f64845f24b8b565e0255535f8bd)) ([98c2d88](https://github.com/brunofgmag/gsx-integrator-client/commit/98c2d88b70877e0188ca60707b5cc894d15383a7))
+
+
+### Bug Fixes
+
+* a rearmed request keeps its attempts and a stuck menu gets closed ([de88215](https://github.com/brunofgmag/gsx-integrator-client/commit/de88215701e54b110878e935439adbae3a677422)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* drop the socket that connects and never answers ([123e9bc](https://github.com/brunofgmag/gsx-integrator-client/commit/123e9bc4de461b0bfe0bbfd27a39822090cced07)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* **i18n:** the pushback prompt names the brake the gate already required ([b8f5714](https://github.com/brunofgmag/gsx-integrator-client/commit/b8f57148585669eb22807444a8e16565539960fb)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* observe the couatl restart from outside the gate it closes ([9f3999e](https://github.com/brunofgmag/gsx-integrator-client/commit/9f3999e1e9cebb1389d908d02ab63ddbe2e56167)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* the boarding completion asks again when the first ask is swallowed ([761052c](https://github.com/brunofgmag/gsx-integrator-client/commit/761052c4ec93c939abd0322298fc0836c743fc53)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* the smart switch counts only the side that springs back ([a00a189](https://github.com/brunofgmag/gsx-integrator-client/commit/a00a189670cfc42b7957642b446169a37370ea37)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* the smart switch throws away the span a paused sim stretched ([b02320a](https://github.com/brunofgmag/gsx-integrator-client/commit/b02320a66dd7b14ee3737cf02c4b1135bd2a0083)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+
 ## [1.10.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.9.0...v1.10.0) (2026-08-22)
 
 
