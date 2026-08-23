@@ -11,6 +11,7 @@
 namespace
 {
     constexpr int kBoardingStallTicks = 180;
+    constexpr int kBoardingRetryTicks = 30;
 }
 
 std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& ctx)
@@ -66,16 +67,22 @@ void BoardingState::MaybeForceCompletion(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 
-    if (data.boardingCompletionForced || IsCargoPending(ctx) || !IsBarFull(ctx))
+    if (IsCargoPending(ctx) || !IsBarFull(ctx))
     {
         data.boardingStallTicks = 0;
+        data.boardingCompletionAttempts = 0;
 
         return;
     }
 
-    if (++data.boardingStallTicks >= kBoardingStallTicks)
+    const int ticksBeforeAsking = data.boardingCompletionAttempts == 0
+                                      ? kBoardingStallTicks
+                                      : kBoardingRetryTicks;
+
+    if (++data.boardingStallTicks >= ticksBeforeAsking)
     {
-        data.boardingCompletionForced = true;
+        data.boardingStallTicks = 0;
+        ++data.boardingCompletionAttempts;
         ctx.menuGateway->CompleteBoarding();
     }
 }
