@@ -114,7 +114,7 @@ void TurnaroundStateMachine::Step()
             return;
         }
 
-        TransitionTo(pendingPhase_);
+        TransitionTo(pendingPhase_, pendingOrigin_);
     }
 
     const auto transition = EvaluateCurrentPhase();
@@ -127,11 +127,12 @@ void TurnaroundStateMachine::Step()
     if (transition->delayTicks > 0)
     {
         pendingPhase_ = transition->next;
+        pendingOrigin_ = transition->origin;
         ticksRemaining_ = transition->delayTicks;
         return;
     }
 
-    TransitionTo(transition->next);
+    TransitionTo(transition->next, transition->origin);
 }
 
 void TurnaroundStateMachine::PublishStatus() const
@@ -164,6 +165,8 @@ void TurnaroundStateMachine::Reset()
     context_.data.Reset();
     phase_ = TurnaroundPhase::WaitingSupportedAircraft;
     pendingPhase_ = TurnaroundPhase::WaitingSupportedAircraft;
+    pendingOrigin_ = TransitionOrigin::Reading;
+    lastTransitionOrigin_ = TransitionOrigin::Reading;
     ticksRemaining_ = 0;
 }
 
@@ -173,7 +176,7 @@ void TurnaroundStateMachine::DebugSkipPhase(const int delta)
     const int target = std::clamp(static_cast<int>(phase_) + delta,
                                   0, static_cast<int>(TurnaroundPhase::Count) - 1);
     ticksRemaining_ = 0;
-    TransitionTo(static_cast<TurnaroundPhase>(target));
+    TransitionTo(static_cast<TurnaroundPhase>(target), TransitionOrigin::Reading);
 }
 #endif
 
@@ -188,12 +191,17 @@ std::optional<TurnaroundTransition> TurnaroundStateMachine::EvaluateCurrentPhase
     return state->Evaluate(context_);
 }
 
-void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase)
+void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const TransitionOrigin origin)
 {
+    lastTransitionOrigin_ = origin;
+
     if (context_.logger)
     {
         context_.logger->LogInfo(
-            std::format("Transitioning: {} -> {}", TurnaroundPhaseToString(phase_), TurnaroundPhaseToString(phase))
+            std::format("Transitioning: {} -> {}{}",
+                        TurnaroundPhaseToString(phase_),
+                        TurnaroundPhaseToString(phase),
+                        origin == TransitionOrigin::Pilot ? " (unlocked by the pilot's smart switch)" : "")
         );
     }
 

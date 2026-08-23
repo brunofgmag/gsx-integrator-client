@@ -3,6 +3,7 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/TurnaroundTransition.h
         src/domain/turnaround/TurnaroundContext.h
         src/domain/turnaround/TurnaroundMath.h
+        src/domain/turnaround/PilotUnlock.h
         src/domain/turnaround/states/TurnaroundState.h
         src/domain/turnaround/states/WaitingFlightPlanState.cpp
         src/domain/turnaround/states/WaitingFlightPlanState.h
