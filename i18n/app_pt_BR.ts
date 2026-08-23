@@ -1367,8 +1367,8 @@
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="26"/>
-        <source>Waiting for beacon</source>
-        <translation>Aguardando beacon</translation>
+        <source>Waiting for beacon &amp; brake</source>
+        <translation>Aguardando beacon e freio</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="27"/>
@@ -1467,8 +1467,8 @@
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="59"/>
-        <source>When you are ready to pushback, turn on the beacon lights.</source>
-        <translation>Quando estiver pronto para o pushback, ligue as luzes beacon.</translation>
+        <source>Turn on the beacon lights and set the parking brake.</source>
+        <translation>Ligue as luzes beacon e acione o freio de estacionamento.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="61"/>
