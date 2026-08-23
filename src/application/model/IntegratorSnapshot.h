@@ -5,6 +5,7 @@
 #include <string>
 #include "../../domain/model/FlightPlan.h"
 #include "../../domain/turnaround/TurnaroundPhase.h"
+#include "../../domain/turnaround/TurnaroundTransition.h"
 
 struct SnapshotDouble
 {
@@ -52,6 +53,7 @@ struct IntegratorSnapshot
     std::string aircraftName;
     std::string aircraftProfileId;
     TurnaroundPhase phase = TurnaroundPhase::WaitingFlightPlan;
+    TransitionOrigin phaseOrigin = TransitionOrigin::Reading;
     FlightPlanStatus flightPlanStatus = FlightPlanStatus::Idle;
     std::string simbriefRefusal;
 

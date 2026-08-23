@@ -574,7 +574,7 @@
 <context>
     <name>OperationsScreen</name>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="339"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="361"/>
         <source>Start Flow</source>
         <translation>Iniciar Fluxo</translation>
     </message>
@@ -624,7 +624,7 @@
     <message>
         <location filename="../src/qml/screens/OperationsScreen.qml" line="76"/>
         <location filename="../src/qml/screens/OperationsScreen.qml" line="83"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="249"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="271"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
@@ -642,68 +642,73 @@
         <translation>Estado do turnaround</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="118"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="121"/>
+        <source>Unlocked by the pilot</source>
+        <translation>Destravado pelo piloto</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="140"/>
         <source>Next</source>
         <translation>Próximo</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="130"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="152"/>
         <source>Next state in %1s</source>
         <translation>Próximo estado em %1s</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="143"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="165"/>
         <source>The GSX profile for this aircraft does not set &apos;refueling = 0&apos;, so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.</source>
         <translation>O perfil do GSX desta aeronave não define &apos;refueling = 0&apos;, então o caminhão de combustível nunca conecta a mangueira. Aplique a correção e depois reinicie o GSX ou recarregue o voo.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="144"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="166"/>
         <source>No GSX profile with &apos;refueling = 0&apos; was found for this aircraft. Install an aircraft profile and set &apos;refueling = 0&apos; in its gsx.cfg.</source>
         <translation>Nenhum perfil do GSX com &apos;refueling = 0&apos; foi encontrado para esta aeronave. Instale um perfil de aeronave e defina &apos;refueling = 0&apos; no gsx.cfg dele.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="145"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="167"/>
         <source>Fix profile</source>
         <translation>Corrigir perfil</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="152"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="174"/>
         <source>The PMDG options file does not enable the SDK data broadcast, so the client cannot read this aircraft. Apply the fix, then reload the flight.</source>
         <translation>O arquivo de opções da PMDG não habilita a transmissão de dados do SDK, então o cliente não consegue ler esta aeronave. Aplique a correção e recarregue o voo.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="153"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="175"/>
         <source>Enable broadcast</source>
         <translation>Habilitar transmissão</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="160"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="182"/>
         <source>A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.</source>
         <translation>Um carregador do GSX espera pela porta de carga principal. Confira se a bomba hidráulica está ligada.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="166"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="188"/>
         <source>GSX took the refuelling request but the truck has not arrived. Check the GSX menu, or another service may be holding it.</source>
         <translation>O GSX aceitou o pedido de abastecimento, mas o caminhão não chegou. Confira o menu do GSX; outro serviço pode estar segurando o caminhão.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="234"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="309"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="256"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="331"/>
         <source>Fuel</source>
         <translation>Combustível</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="239"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="261"/>
         <source>Loaded</source>
         <translation>Carregado</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="243"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="265"/>
         <source>Planned</source>
         <translation>Planejado</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="247"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="269"/>
         <source>Rate</source>
         <translation>Taxa</translation>
     </message>
@@ -712,43 +717,43 @@
         <translation type="vanished">kg/s</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="263"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="285"/>
         <source>Boarding</source>
         <translation>Embarque</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="269"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="317"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="291"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="339"/>
         <source>Pax</source>
         <translation>Pax</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="313"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="335"/>
         <source>ZFW</source>
         <translation>ZFW</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="359"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="381"/>
         <source>Confirm restart</source>
         <translation>Confirmar reinício</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="359"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="381"/>
         <source>Restart Flow</source>
         <translation>Reiniciar Fluxo</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="276"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="298"/>
         <source>Planned ZFW</source>
         <translation>ZFW Planejado</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="284"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="306"/>
         <source>SimBrief OFP</source>
         <translation>OFP SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="202"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="224"/>
         <source>Error</source>
         <translation>Erro</translation>
     </message>
@@ -805,17 +810,17 @@
         <translation>Carregamento</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="263"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="285"/>
         <source>Deboarding</source>
         <translation>Desembarque</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="326"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="348"/>
         <source>Reload SimBrief</source>
         <translation>Recarregar SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="346"/>
+        <location filename="../src/qml/screens/OperationsScreen.qml" line="368"/>
         <source>Start Loading</source>
         <translation>Iniciar Carregamento</translation>
     </message>
@@ -1539,7 +1544,7 @@
         <translation>Erro</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="312"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="317"/>
         <source>Refused</source>
         <translation>Recusado</translation>
     </message>
