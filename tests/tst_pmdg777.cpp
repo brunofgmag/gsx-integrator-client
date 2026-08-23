@@ -99,7 +99,7 @@ private slots:
     static void smartSwitchEdgesOncePerPress();
     static void smartSwitchWorksFromBothSeats();
     static void smartSwitchCatchesTransientPress();
-    static void smartSwitchAnswersTheDownwardFlick();
+    static void smartSwitchIgnoresTheRadioSide();
     static void smartSwitchLVarsGetFastRefresh();
     static void readyToPushMatrix();
     static void readyToDeboardMatrix();
@@ -414,7 +414,7 @@ void Pmdg777Test::smartSwitchCatchesTransientPress()
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
 }
 
-void Pmdg777Test::smartSwitchAnswersTheDownwardFlick()
+void Pmdg777Test::smartSwitchIgnoresTheRadioSide()
 {
     Pmdg777Fixture fixture;
 
@@ -427,8 +427,12 @@ void Pmdg777Test::smartSwitchAnswersTheDownwardFlick()
     fixture.gateway.lvarSpans[kSmartSwitchCaptLVar] =
         LVarSpan{kSmartSwitchDown, kSmartSwitchNeutral, true};
 
-    QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
+
+    fixture.gateway.lvarSpans[kSmartSwitchCaptLVar] =
+        LVarSpan{kSmartSwitchNeutral, kSmartSwitchUp, true};
+
+    QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
 }
 
 void Pmdg777Test::smartSwitchLVarsGetFastRefresh()

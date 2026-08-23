@@ -56,8 +56,7 @@ namespace
             IsCargo(variant),
             DoorBaseline::Closed,
             {kSmartSwitchLVar},
-            [](const double min, const double max)
-            { return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral; }
+            [](const double min, double) { return min < kSmartSwitchNeutral; }
         };
     }
 }
