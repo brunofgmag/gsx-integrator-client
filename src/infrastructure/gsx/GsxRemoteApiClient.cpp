@@ -36,11 +36,14 @@ GsxRemoteApiClient::GsxRemoteApiClient(QObject* parent) : QObject(parent)
     socket_ = new QWebSocket(QString(), QWebSocketProtocol::VersionLatest, this);
     reconnectTimer_ = new QTimer(this);
     reconnectTimer_->setSingleShot(true);
+    handshakeTimer_ = new QTimer(this);
+    handshakeTimer_->setSingleShot(true);
 
     connect(socket_, &QWebSocket::connected, this, &GsxRemoteApiClient::OnConnected);
     connect(socket_, &QWebSocket::disconnected, this, &GsxRemoteApiClient::OnDisconnected);
     connect(socket_, &QWebSocket::textMessageReceived, this, &GsxRemoteApiClient::OnTextMessage);
     connect(reconnectTimer_, &QTimer::timeout, this, &GsxRemoteApiClient::OnReconnect);
+    connect(handshakeTimer_, &QTimer::timeout, this, &GsxRemoteApiClient::OnHandshakeTimeout);
 }
 
 GsxRemoteApiClient::~GsxRemoteApiClient() = default;
@@ -55,6 +58,7 @@ void GsxRemoteApiClient::Stop()
 {
     stopping_ = true;
     reconnectTimer_->stop();
+    handshakeTimer_->stop();
     socket_->close();
 }
 
@@ -72,7 +76,8 @@ void GsxRemoteApiClient::OnReconnect()
 void GsxRemoteApiClient::OnConnected()
 {
     connected_ = true;
-    backoffMs_ = 1000;
+    handshakeDone_ = false;
+    handshakeTimer_->start(handshakeTimeoutMs_);
 
     SendSubscribe();
 }
@@ -81,13 +86,27 @@ void GsxRemoteApiClient::OnConnected()
 void GsxRemoteApiClient::OnDisconnected()
 {
     connected_ = false;
+    handshakeDone_ = false;
+    handshakeTimer_->stop();
+
+    ScheduleReconnect();
+}
+
+void GsxRemoteApiClient::OnHandshakeTimeout()
+{
+    LOG_WARN("GSX RemoteAPI: no answer within %d ms after connecting; dropping the deaf socket.",
+             handshakeTimeoutMs_);
+
+    connected_ = false;
+
+    socket_->abort();
 
     ScheduleReconnect();
 }
 
 void GsxRemoteApiClient::ScheduleReconnect()
 {
-    if (stopping_)
+    if (stopping_ || reconnectTimer_->isActive())
     {
         return;
     }
@@ -127,6 +146,13 @@ bool GsxRemoteApiClient::SendCommand(const QString& verb, const QJsonObject& arg
 void GsxRemoteApiClient::OnTextMessage(const QString& text)
 {
     probe::Wire(text);
+
+    if (!handshakeDone_)
+    {
+        handshakeDone_ = true;
+        handshakeTimer_->stop();
+        backoffMs_ = 1000;
+    }
 
     const QJsonDocument doc = QJsonDocument::fromJson(text.toUtf8());
     if (!doc.isObject())

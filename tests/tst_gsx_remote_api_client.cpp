@@ -7,9 +7,16 @@
 
 namespace
 {
+    constexpr int kDeadlineMs = 30;
+
     void Deliver(GsxRemoteApiClient& client, const QString& text)
     {
         QMetaObject::invokeMethod(&client, "OnTextMessage", Qt::DirectConnection, Q_ARG(QString, text));
+    }
+
+    void Connect(GsxRemoteApiClient& client)
+    {
+        QMetaObject::invokeMethod(&client, "OnConnected", Qt::DirectConnection);
     }
 }
 
@@ -27,6 +34,8 @@ private slots:
     static void unknownTypeEmitsNothing();
     static void helloWithOtherProtocolEmitsNothing();
     static void commandIsDroppedWhileOffline();
+    static void silentSocketIsDroppedAfterTheHandshakeDeadline();
+    static void firstFrameCancelsTheHandshakeDeadline();
 };
 
 void GsxRemoteApiClientTest::snapshotMessageEmitsSnapshotReceived()
@@ -142,6 +151,33 @@ void GsxRemoteApiClientTest::commandIsDroppedWhileOffline()
     GsxRemoteApiClient client;
 
     QVERIFY(!client.SendCommand(QStringLiteral("menu.toggle")));
+}
+
+void GsxRemoteApiClientTest::silentSocketIsDroppedAfterTheHandshakeDeadline()
+{
+    GsxRemoteApiClient client;
+    client.SetHandshakeTimeoutForTest(kDeadlineMs);
+
+    Connect(client);
+
+    QVERIFY(client.SendCommand(QStringLiteral("menu.toggle")));
+
+    QTest::qWait(kDeadlineMs * 4);
+
+    QVERIFY(!client.SendCommand(QStringLiteral("menu.toggle")));
+}
+
+void GsxRemoteApiClientTest::firstFrameCancelsTheHandshakeDeadline()
+{
+    GsxRemoteApiClient client;
+    client.SetHandshakeTimeoutForTest(kDeadlineMs);
+
+    Connect(client);
+    Deliver(client, QStringLiteral(R"({"type":"hello","protocol":1})"));
+
+    QTest::qWait(kDeadlineMs * 4);
+
+    QVERIFY(client.SendCommand(QStringLiteral("menu.toggle")));
 }
 
 QTEST_GUILESS_MAIN(GsxRemoteApiClientTest)
