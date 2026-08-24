@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.12.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.11.0...v1.12.0) (2026-08-24)
+
+
+* publish the operations snapshot on the CommBus channel ([#62](https://github.com/brunofgmag/gsx-integrator-client/issues/62)) ([2e64738](https://github.com/brunofgmag/gsx-integrator-client/commit/2e647382f33d73c1252c87ce2a7245e38f9ef65b))
+
+
+### Features
+
+* **efb:** publish the operations snapshot on the CommBus channel ([8b621b5](https://github.com/brunofgmag/gsx-integrator-client/commit/8b621b5530b4e87adc09e05cba929a422ceec11a)) ([2e64738](https://github.com/brunofgmag/gsx-integrator-client/commit/2e647382f33d73c1252c87ce2a7245e38f9ef65b))
+
+
+### Bug Fixes
+
+* **turnaround:** hold chocks only for aircraft that can remove them ([7c312b6](https://github.com/brunofgmag/gsx-integrator-client/commit/7c312b62e37d1a66adceaf6ffe8d905ca911b8ea)) ([2e64738](https://github.com/brunofgmag/gsx-integrator-client/commit/2e647382f33d73c1252c87ce2a7245e38f9ef65b))
+
 ## [1.11.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.10.0...v1.11.0) (2026-08-23)
 
 
