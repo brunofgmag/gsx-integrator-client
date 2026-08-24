@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.15.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.14.0...v1.15.0) (2026-08-24)
+
+
+* publish the loading-mode flag the EFB app colours a chip with ([#68](https://github.com/brunofgmag/gsx-integrator-client/issues/68)) ([fea6a02](https://github.com/brunofgmag/gsx-integrator-client/commit/fea6a029fa52e8278f17e1ffe8bb01a6b957046c))
+
+
+### Features
+
+* **efb:** publish the loading-mode flag the EFB app colours a chip with ([7d56adb](https://github.com/brunofgmag/gsx-integrator-client/commit/7d56adb6da092b87587f4897dbdd8ae5e3a67bd9)) ([fea6a02](https://github.com/brunofgmag/gsx-integrator-client/commit/fea6a029fa52e8278f17e1ffe8bb01a6b957046c))
+
 ## [1.14.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.13.0...v1.14.0) (2026-08-24)
 
 
