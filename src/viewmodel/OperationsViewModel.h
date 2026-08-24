@@ -4,6 +4,7 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include "../application/ports/IntegratorService.h"
+#include "OperationsDisplaySettings.h"
 
 class OperationsViewModel final : public QObject, public IntegratorServiceObserver
 {
@@ -13,19 +14,23 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(bool enabled READ IsEnabled WRITE SetEnabled NOTIFY SnapshotChanged)
     Q_PROPERTY(bool gsxAvailable READ IsGsxAvailable NOTIFY SnapshotChanged)
     Q_PROPERTY(bool aircraftSupported READ IsAircraftSupported NOTIFY SnapshotChanged)
-    Q_PROPERTY(QString aircraftName READ GetAircraftName NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString aircraftNameText READ GetAircraftNameText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString stateText READ GetStateText NOTIFY SnapshotChanged)
     Q_PROPERTY(int phase READ GetPhase NOTIFY SnapshotChanged)
     Q_PROPERTY(int phaseCount READ GetPhaseCount CONSTANT)
     Q_PROPERTY(QString phaseTip READ GetPhaseTip NOTIFY SnapshotChanged)
-    Q_PROPERTY(int delayTicksRemaining READ GetDelayTicksRemaining NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString nextPhaseText READ GetNextPhaseText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString holdCountdownText READ GetHoldCountdownText NOTIFY SnapshotChanged)
     Q_PROPERTY(bool advancedByPilot READ AdvancedByPilot NOTIFY SnapshotChanged)
     Q_PROPERTY(bool inDeboardingPhase READ IsInDeboardingPhase NOTIFY SnapshotChanged)
     Q_PROPERTY(double fuelProgress READ GetFuelProgress NOTIFY SnapshotChanged)
     Q_PROPERTY(double boardingProgress READ GetBoardingProgress NOTIFY SnapshotChanged)
     Q_PROPERTY(double deboardingProgress READ GetDeboardingProgress NOTIFY SnapshotChanged)
-    Q_PROPERTY(double plannedFuelKg READ GetPlannedFuelKg NOTIFY SnapshotChanged)
-    Q_PROPERTY(double loadedFuelKg READ GetLoadedFuelKg NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString plannedFuelText READ GetPlannedFuelText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString loadedFuelText READ GetLoadedFuelText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString targetFuelText READ GetTargetFuelText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString targetZfwText READ GetTargetZfwText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString plannedZfwText READ GetPlannedZfwText NOTIFY SnapshotChanged)
     Q_PROPERTY(bool refuelByGsx READ RefuelByGsx NOTIFY SnapshotChanged)
     Q_PROPERTY(bool refuelBySelf READ RefuelBySelf NOTIFY SnapshotChanged)
     Q_PROPERTY(bool gsxProfileConflict READ HasGsxProfileConflict NOTIFY SnapshotChanged)
@@ -34,12 +39,9 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(bool cargoDoorStuck READ IsCargoDoorStuck NOTIFY SnapshotChanged)
     Q_PROPERTY(bool fuelRequestStalled READ IsFuelRequestStalled NOTIFY SnapshotChanged)
     Q_PROPERTY(bool pmdgOptionsFixable READ IsPmdgOptionsFixable NOTIFY SnapshotChanged)
-    Q_PROPERTY(double plannedZfwKg READ GetPlannedZfwKg NOTIFY SnapshotChanged)
     Q_PROPERTY(int plannedPax READ GetPlannedPax NOTIFY SnapshotChanged)
     Q_PROPERTY(int boardedPax READ GetBoardedPax NOTIFY SnapshotChanged)
     Q_PROPERTY(int deboardedPax READ GetDeboardedPax NOTIFY SnapshotChanged)
-    Q_PROPERTY(double targetFuelKg READ GetTargetFuelKg NOTIFY SnapshotChanged)
-    Q_PROPERTY(double targetZfwKg READ GetTargetZfwKg NOTIFY SnapshotChanged)
     Q_PROPERTY(int targetPax READ GetTargetPax NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoAircraft READ IsCargoAircraft NOTIFY SnapshotChanged)
     Q_PROPERTY(QString simbriefStatusText READ GetSimbriefStatusText NOTIFY SnapshotChanged)
@@ -53,7 +55,7 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(bool debugToolsAvailable READ AreDebugToolsAvailable CONSTANT)
 
 public:
-    explicit OperationsViewModel(IntegratorService* service, QObject* parent = nullptr);
+    OperationsViewModel(IntegratorService* service, const OperationsDisplaySettings* display, QObject* parent = nullptr);
     ~OperationsViewModel() override;
 
     [[nodiscard]] bool IsConnected() const;
@@ -63,18 +65,25 @@ public:
     [[nodiscard]] bool IsGsxAvailable() const;
     [[nodiscard]] bool IsAircraftSupported() const;
     [[nodiscard]] QString GetAircraftName() const;
+    [[nodiscard]] QString GetAircraftNameText() const;
     [[nodiscard]] QString GetStateText() const;
     [[nodiscard]] int GetPhase() const;
     [[nodiscard]] static int GetPhaseCount();
     [[nodiscard]] QString GetPhaseTip() const;
+    [[nodiscard]] QString GetNextPhaseText() const;
+    [[nodiscard]] QString GetHoldCountdownText() const;
     [[nodiscard]] int GetDelayTicksRemaining() const;
     [[nodiscard]] bool AdvancedByPilot() const;
-    Q_INVOKABLE static QString phaseLabelAt(int index);
     [[nodiscard]] bool IsInDeboardingPhase() const;
     [[nodiscard]] double GetFuelProgress() const;
     [[nodiscard]] double GetBoardingProgress() const;
     [[nodiscard]] double GetDeboardingProgress() const;
     [[nodiscard]] double GetPlannedFuelKg() const;
+    [[nodiscard]] QString GetPlannedFuelText() const;
+    [[nodiscard]] QString GetLoadedFuelText() const;
+    [[nodiscard]] QString GetTargetFuelText() const;
+    [[nodiscard]] QString GetTargetZfwText() const;
+    [[nodiscard]] QString GetPlannedZfwText() const;
     [[nodiscard]] double GetLoadedFuelKg() const;
     [[nodiscard]] bool RefuelByGsx() const;
     [[nodiscard]] bool RefuelBySelf() const;
@@ -121,10 +130,12 @@ signals:
 
 private:
     [[nodiscard]] bool IsAwaitingStartLoading() const;
+    [[nodiscard]] QString WeightText(double kilograms) const;
     void Refresh();
     void SetCommandError(const CommandResult& result);
 
     IntegratorService* service_;
+    const OperationsDisplaySettings* display_;
     IntegratorSnapshot snapshot_;
     QString commandError_;
 };

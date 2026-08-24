@@ -9,5 +9,6 @@
 #include "doubles/FakeFenixEfbGateway.h"
 #include "doubles/FakeVariableGateway.h"
 #include "doubles/FakeDomainLogger.h"
+#include "doubles/FakeOperationsDisplaySettings.h"
 
 #endif // GSX_INTEGRATOR_CLIENT_TESTDOUBLES_H

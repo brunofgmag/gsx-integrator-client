@@ -98,6 +98,16 @@ gsxi_add_qt_test(gsxi-operations-viewmodel-tests operations-viewmodel
         src/viewmodel/OperationsViewModel.cpp
         src/viewmodel/OperationsViewModel.h)
 
+gsxi_add_qt_test(gsxi-efb-state-publisher-tests efb-state-publisher
+        tests/TestDoubles.h
+        tests/doubles/FakeCommBusBridgeGateway.h
+        tests/tst_efb_state_publisher.cpp
+        src/infrastructure/efb/EfbStatePublisher.cpp
+        src/infrastructure/efb/EfbStatePublisher.h
+        src/infrastructure/commbus/CommBusBridgeGateway.h
+        src/viewmodel/OperationsViewModel.cpp
+        src/viewmodel/OperationsViewModel.h)
+
 gsxi_add_qt_test(gsxi-settings-viewmodel-tests settings-viewmodel
         tests/TestDoubles.h
         tests/tst_settings_viewmodel.cpp

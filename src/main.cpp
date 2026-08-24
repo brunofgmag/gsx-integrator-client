@@ -22,6 +22,7 @@
 #include "infrastructure/platform/WindowForeground.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
 #include "infrastructure/update/GithubUpdateService.h"
+#include "infrastructure/efb/EfbStatePublisher.h"
 #include "viewmodel/OperationsViewModel.h"
 #include "viewmodel/SettingsViewModel.h"
 #include "viewmodel/UpdateViewModel.h"
@@ -178,7 +179,12 @@ int main(int argc, char* argv[])
     RuntimeIntegratorService integratorService(&runtime);
     SettingsViewModel settingsViewModel(&settingsRepository, &integratorService,
                                         SupportedAircraftProfiles());
-    OperationsViewModel operationsViewModel(&integratorService);
+    OperationsViewModel operationsViewModel(&integratorService, &settingsViewModel);
+
+    EfbStatePublisher efbStatePublisher(runtime.Bridge(), &operationsViewModel,
+                                        [&runtime] { return runtime.GetSimVersion(); });
+    QObject::connect(&operationsViewModel, &OperationsViewModel::SnapshotChanged, &operationsViewModel,
+                     [&efbStatePublisher] { efbStatePublisher.Publish(); });
 
     GithubUpdateService updateService(
         qEnvironmentVariable(

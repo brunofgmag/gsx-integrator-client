@@ -2,8 +2,10 @@
 
 #include <cmath>
 #include <QtCore/QCoreApplication>
+#include <QtCore/QLocale>
 #include "../domain/turnaround/TurnaroundPhase.h"
 #include "../domain/model/FlightPlan.h"
+#include "../domain/support/Weight.h"
 
 namespace
 {
@@ -99,8 +101,9 @@ namespace
     }
 }
 
-OperationsViewModel::OperationsViewModel(IntegratorService* service, QObject* parent)
-    : QObject(parent), service_(service), snapshot_(service_->GetSnapshot())
+OperationsViewModel::OperationsViewModel(IntegratorService* service, const OperationsDisplaySettings* display,
+                                         QObject* parent)
+    : QObject(parent), service_(service), display_(display), snapshot_(service_->GetSnapshot())
 {
     service_->AddObserver(this);
 }
@@ -151,6 +154,49 @@ QString OperationsViewModel::GetAircraftName() const
     return QString::fromStdString(snapshot_.aircraftName);
 }
 
+QString OperationsViewModel::WeightText(const double kilograms) const
+{
+    const bool lb = display_->GetWeightIsLb();
+    const double shown = lb ? weight::KgToLb(kilograms) : kilograms;
+
+    return QLocale().toString(qRound64(shown))
+        + QStringLiteral(" ")
+        + (lb ? QCoreApplication::translate("OperationsScreen", "lb")
+              : QCoreApplication::translate("OperationsScreen", "kg"));
+}
+
+QString OperationsViewModel::GetPlannedFuelText() const
+{
+    return WeightText(GetPlannedFuelKg());
+}
+
+QString OperationsViewModel::GetLoadedFuelText() const
+{
+    return WeightText(GetLoadedFuelKg());
+}
+
+QString OperationsViewModel::GetTargetFuelText() const
+{
+    return WeightText(GetTargetFuelKg());
+}
+
+QString OperationsViewModel::GetTargetZfwText() const
+{
+    return WeightText(GetTargetZfwKg());
+}
+
+QString OperationsViewModel::GetPlannedZfwText() const
+{
+    return WeightText(GetPlannedZfwKg());
+}
+
+QString OperationsViewModel::GetAircraftNameText() const
+{
+    return IsAircraftSupported()
+        ? GetAircraftName()
+        : QCoreApplication::translate("OperationsScreen", "Standby");
+}
+
 QString OperationsViewModel::GetStateText() const
 {
     return IsAwaitingStartLoading() ? StartLoadingLabel() : PhaseLabel(snapshot_.phase);
@@ -164,6 +210,30 @@ int OperationsViewModel::GetPhase() const
 int OperationsViewModel::GetPhaseCount()
 {
     return static_cast<int>(TurnaroundPhase::Count);
+}
+
+QString OperationsViewModel::GetNextPhaseText() const
+{
+    const int next = GetPhase() + 1;
+    const QString label = next < GetPhaseCount()
+        ? PhaseLabel(static_cast<TurnaroundPhase>(next))
+        : QCoreApplication::translate("OperationsScreen", "New session");
+
+    return QCoreApplication::translate("OperationsScreen", "Next")
+        + QStringLiteral(" ▸ ")
+        + label;
+}
+
+QString OperationsViewModel::GetHoldCountdownText() const
+{
+    const int remaining = GetDelayTicksRemaining();
+    if (remaining <= 0)
+    {
+        return {};
+    }
+
+    return QCoreApplication::translate("OperationsScreen", "Next state in %1s")
+        .arg(remaining);
 }
 
 QString OperationsViewModel::GetPhaseTip() const
@@ -184,15 +254,6 @@ int OperationsViewModel::GetDelayTicksRemaining() const
 bool OperationsViewModel::AdvancedByPilot() const
 {
     return snapshot_.phaseOrigin == TransitionOrigin::Pilot;
-}
-
-QString OperationsViewModel::phaseLabelAt(const int index)
-{
-    if (index < 0 || index >= static_cast<int>(TurnaroundPhase::Count))
-    {
-        return {};
-    }
-    return PhaseLabel(static_cast<TurnaroundPhase>(index));
 }
 
 bool OperationsViewModel::IsInDeboardingPhase() const

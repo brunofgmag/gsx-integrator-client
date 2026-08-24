@@ -14,29 +14,6 @@ ColumnLayout {
 
     spacing: 10
 
-    property var phaseLabels: root.buildPhaseLabels()
-
-    function buildPhaseLabels() {
-        const names = [];
-        for (let i = 0; i < root.integratorVm.phaseCount; i++) {
-            names.push(root.integratorVm.phaseLabelAt(i));
-        }
-        return names;
-    }
-
-    function formatWeight(kg) {
-        const lb = root.settingsVm.weightIsLb;
-        const value = lb ? root.settingsVm.kgToLb(kg) : kg;
-        return Number(Math.round(value)).toLocaleString(Qt.locale(), 'f', 0) + " "
-            + (lb ? qsTr("lb") : qsTr("kg"));
-    }
-
-    readonly property string nextPhaseLabel: integratorVm.phase + 1 < integratorVm.phaseCount
-        ? (phaseLabels[integratorVm.phase + 1] ?? "")
-        : qsTr("New session")
-
-    Component.onCompleted: root.integratorVm.SnapshotChanged.connect(() => root.phaseLabels = root.buildPhaseLabels())
-
     ColumnLayout {
         Layout.fillWidth: true
         visible: root.integratorVm.connected
@@ -66,7 +43,7 @@ ColumnLayout {
             StatusChip {
                 Layout.fillWidth: true
                 label: qsTr("Aircraft")
-                value: root.integratorVm.aircraftSupported ? root.integratorVm.aircraftName : qsTr("Standby")
+                value: root.integratorVm.aircraftNameText
                 valueColor: root.integratorVm.aircraftSupported ? Theme.text : Theme.muted
             }
 
@@ -137,7 +114,7 @@ ColumnLayout {
                     anchors.left: parent.left
                     anchors.right: holdCountdown.visible ? holdCountdown.left : parent.right
                     anchors.rightMargin: holdCountdown.visible ? 10 : 0
-                    text: qsTr("Next") + " ▸ " + root.nextPhaseLabel
+                    text: root.integratorVm.nextPhaseText
                     color: Theme.muted
                     font.pixelSize: 11
                     font.letterSpacing: 0.8
@@ -148,8 +125,8 @@ ColumnLayout {
                 Text {
                     id: holdCountdown
                     anchors.right: parent.right
-                    visible: root.integratorVm.delayTicksRemaining > 0
-                    text: qsTr("Next state in %1s").arg(root.integratorVm.delayTicksRemaining)
+                    visible: root.integratorVm.holdCountdownText !== ""
+                    text: root.integratorVm.holdCountdownText
                     color: Theme.accent
                     font.pixelSize: 11
                     font.letterSpacing: 0.8
@@ -259,11 +236,11 @@ ColumnLayout {
 
                 KeyValueRow {
                     label: qsTr("Loaded")
-                    value: root.formatWeight(root.integratorVm.loadedFuelKg)
+                    value: root.integratorVm.loadedFuelText
                 }
                 KeyValueRow {
                     label: qsTr("Planned")
-                    value: root.formatWeight(root.integratorVm.targetFuelKg)
+                    value: root.integratorVm.targetFuelText
                 }
                 KeyValueRow {
                     label: qsTr("Rate")
@@ -296,7 +273,7 @@ ColumnLayout {
                 }
                 KeyValueRow {
                     label: qsTr("Planned ZFW")
-                    value: root.formatWeight(root.integratorVm.targetZfwKg)
+                    value: root.integratorVm.targetZfwText
                 }
             }
 
@@ -329,11 +306,11 @@ ColumnLayout {
 
                 KeyValueRow {
                     label: qsTr("Fuel")
-                    value: root.formatWeight(root.integratorVm.plannedFuelKg)
+                    value: root.integratorVm.plannedFuelText
                 }
                 KeyValueRow {
                     label: qsTr("ZFW")
-                    value: root.formatWeight(root.integratorVm.plannedZfwKg)
+                    value: root.integratorVm.plannedZfwText
                 }
                 KeyValueRow {
                     label: qsTr("Pax")
