@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.16.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.15.0...v1.16.0) (2026-08-24)
+
+
+* name the configured mode and whether it runs in the turnaround chip ([#70](https://github.com/brunofgmag/gsx-integrator-client/issues/70)) ([83f6d03](https://github.com/brunofgmag/gsx-integrator-client/commit/83f6d0349875a89407b709e078d71b4ff7e83b24))
+
+
+### Features
+
+* **efb:** name the configured mode and whether it runs in the turnaround chip ([3f46572](https://github.com/brunofgmag/gsx-integrator-client/commit/3f46572b0afdf7f7d33129918e0b52112e64b4e3)) ([83f6d03](https://github.com/brunofgmag/gsx-integrator-client/commit/83f6d0349875a89407b709e078d71b4ff7e83b24))
+
 ## [1.15.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.14.0...v1.15.0) (2026-08-24)
 
 
