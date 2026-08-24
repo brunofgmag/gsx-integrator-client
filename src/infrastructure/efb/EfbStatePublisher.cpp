@@ -10,14 +10,34 @@ EfbStatePublisher::EfbStatePublisher(CommBusBridgeGateway* bridge, const Operati
 {
 }
 
+void EfbStatePublisher::Setup()
+{
+    bridge_->Subscribe(EfbCommBus::kHelloChannel, CommBusFlag::kJs,
+                       [this](const std::string&) { Republish(); });
+}
+
+bool EfbStatePublisher::CanPublish() const
+{
+    return simVersion_() == SimVersion::Msfs2024 && bridge_->IsAvailable();
+}
+
+void EfbStatePublisher::Send(std::string payload)
+{
+    if (bridge_->Call(EfbCommBus::kStateChannel, CommBusFlag::kJs, payload))
+    {
+        lastPayload_ = std::move(payload);
+    }
+}
+
+void EfbStatePublisher::Republish()
+{
+    lastPayload_.clear();
+    Publish();
+}
+
 void EfbStatePublisher::Publish()
 {
-    if (simVersion_() != SimVersion::Msfs2024)
-    {
-        return;
-    }
-
-    if (!bridge_->IsAvailable())
+    if (!CanPublish())
     {
         return;
     }
@@ -28,10 +48,17 @@ void EfbStatePublisher::Publish()
         return;
     }
 
-    if (bridge_->Call(EfbCommBus::kStateChannel, CommBusFlag::kJs, payload))
+    Send(std::move(payload));
+}
+
+void EfbStatePublisher::PublishDeparture()
+{
+    if (!CanPublish())
     {
-        lastPayload_ = std::move(payload);
+        return;
     }
+
+    Send(R"({"connected":false})");
 }
 
 std::string EfbStatePublisher::BuildPayload() const
