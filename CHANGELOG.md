@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.14.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.13.0...v1.14.0) (2026-08-24)
+
+
+* keep the EFB app's view of the client in sync ([#66](https://github.com/brunofgmag/gsx-integrator-client/issues/66)) ([e325616](https://github.com/brunofgmag/gsx-integrator-client/commit/e325616a40697eccf8f734cdad35a9bb1f01c657))
+
+
+### Features
+
+* **efb:** answer the app and announce the client's departure ([704c864](https://github.com/brunofgmag/gsx-integrator-client/commit/704c8640b6610527601e68676f7e5e44aaf58c6b)) ([e325616](https://github.com/brunofgmag/gsx-integrator-client/commit/e325616a40697eccf8f734cdad35a9bb1f01c657))
+
+
+### Bug Fixes
+
+* **update:** find the bridge package in every Community folder ([de0addb](https://github.com/brunofgmag/gsx-integrator-client/commit/de0addb1ac1fd4b30727adf4a694eae93f2ab7bf)) ([e325616](https://github.com/brunofgmag/gsx-integrator-client/commit/e325616a40697eccf8f734cdad35a9bb1f01c657))
+
 ## [1.13.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.12.0...v1.13.0) (2026-08-24)
 
 
