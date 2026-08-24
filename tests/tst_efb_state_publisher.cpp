@@ -21,6 +21,7 @@ private slots:
     static void subscribesToTheAppHelloChannelOnSetup();
     static void answersTheAppHelloWithAFreshSnapshot();
     static void answersNoHelloOnMsfs2020();
+    static void carriesTheLoadingModeFlagTheScreenColoursWith();
 };
 
 void EfbStatePublisherTest::publishesTheSnapshotWhenItChanges()
@@ -220,6 +221,23 @@ void EfbStatePublisherTest::answersNoHelloOnMsfs2020()
     bridge.Deliver(EfbCommBus::kHelloChannel, "hello");
 
     QCOMPARE(bridge.CallCount(EfbCommBus::kStateChannel), 0);
+}
+
+void EfbStatePublisherTest::carriesTheLoadingModeFlagTheScreenColoursWith()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    display.autoStartLoading = true;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.Notify();
+    publisher.Publish();
+
+    QVERIFY(std::get<2>(bridge.calls.front()).find(R"("autoStartLoading":true)") != std::string::npos);
 }
 
 QTEST_APPLESS_MAIN(EfbStatePublisherTest)

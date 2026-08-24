@@ -105,6 +105,7 @@ public:
     [[nodiscard]] QString GetTurnaroundModeText() const;
     [[nodiscard]] static QString GetLoadingModeLabel();
     [[nodiscard]] QString GetLoadingModeText() const;
+    [[nodiscard]] bool AutoStartsLoading() const;
     [[nodiscard]] static QString GetTurnaroundStateLabel();
     [[nodiscard]] QString GetStateText() const;
     [[nodiscard]] QString GetPhaseCounterText() const;

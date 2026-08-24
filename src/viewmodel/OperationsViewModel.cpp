@@ -261,6 +261,11 @@ QString OperationsViewModel::GetLoadingModeText() const
     return AutomationModeLabel(display_->GetAutoStartLoading());
 }
 
+bool OperationsViewModel::AutoStartsLoading() const
+{
+    return display_->GetAutoStartLoading();
+}
+
 QString OperationsViewModel::GetTurnaroundStateLabel()
 {
     return QCoreApplication::translate("OperationsScreen", "Turnaround state");
