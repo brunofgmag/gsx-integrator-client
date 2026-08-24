@@ -107,6 +107,13 @@ namespace
                    : QCoreApplication::translate("OperationsScreen", "Manual");
     }
 
+    QString AutomationRunningLabel(const bool running)
+    {
+        return running
+                   ? QCoreApplication::translate("OperationsScreen", "On")
+                   : QCoreApplication::translate("OperationsScreen", "Off");
+    }
+
     QString FlightPlanStatusLabel(const FlightPlanStatus status)
     {
         switch (status)
@@ -248,7 +255,9 @@ QString OperationsViewModel::GetTurnaroundModeLabel()
 
 QString OperationsViewModel::GetTurnaroundModeText() const
 {
-    return AutomationModeLabel(display_->GetAutoStartFlow());
+    return QCoreApplication::translate("OperationsScreen", "%1 · %2")
+        .arg(AutomationModeLabel(display_->GetAutoStartFlow()),
+             AutomationRunningLabel(snapshot_.automationEnabled));
 }
 
 QString OperationsViewModel::GetLoadingModeLabel()
