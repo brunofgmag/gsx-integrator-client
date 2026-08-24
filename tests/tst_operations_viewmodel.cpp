@@ -45,6 +45,21 @@ private slots:
     static void plannedFuelTextFollowsTheDisplayWeightUnit();
     static void eachWeightTextReadsItsOwnSnapshotField();
     static void exposesInDeboardingPhaseFromSnapshot();
+    static void simAndGsxStatusTextsFollowTheConnection();
+    static void turnaroundAndLoadingModeTextsFollowTheSettings();
+    static void statusStripLabelsNameEachChip();
+    static void announcesADisplaySettingChangeWithoutTheSnapshot();
+    static void phaseCounterTextCountsFromOne();
+    static void turnaroundStateCardLabelsNameTheirText();
+    static void gsxProfileAdvisoryChoosesTheParagraphTheFlagAsks();
+    static void pmdgOptionsAdvisoryOffersTheFixOnlyWhenItIsFixable();
+    static void standingAdvisoryTextsNameTheirCondition();
+    static void progressTextsRoundToAWholePercent();
+    static void theBoardingCardFollowsTheDeboardingPhase();
+    static void fuelRateTextNamesWhoSetsThePace();
+    static void plannedPaxTextPrintsThePlainNumber();
+    static void cardAndRowLabelsNameTheirValue();
+    static void buttonLabelsNameTheirAction();
 };
 
 void OperationsViewModelTest::waitingForLoadingOverridesStateTextAndTip()
@@ -619,3 +634,240 @@ void OperationsViewModelTest::eachWeightTextReadsItsOwnSnapshotField()
 QTEST_APPLESS_MAIN(OperationsViewModelTest)
 
 #include "tst_operations_viewmodel.moc"
+
+void OperationsViewModelTest::simAndGsxStatusTextsFollowTheConnection()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetSimStatusText(), QStringLiteral("Offline"));
+    QCOMPARE(viewModel.GetGsxStatusText(), QStringLiteral("Offline"));
+
+    service.snapshot.connected = true;
+    service.snapshot.gsxAvailable = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetSimStatusText(), QStringLiteral("Connected"));
+    QCOMPARE(viewModel.GetGsxStatusText(), QStringLiteral("Connected"));
+}
+
+void OperationsViewModelTest::turnaroundAndLoadingModeTextsFollowTheSettings()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Manual"));
+    QCOMPARE(viewModel.GetLoadingModeText(), QStringLiteral("Manual"));
+
+    display.autoStartFlow = true;
+    display.autoStartLoading = true;
+
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Auto"));
+    QCOMPARE(viewModel.GetLoadingModeText(), QStringLiteral("Auto"));
+}
+
+void OperationsViewModelTest::statusStripLabelsNameEachChip()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetSimLabel(), QStringLiteral("Sim"));
+    QCOMPARE(viewModel.GetGsxLabel(), QStringLiteral("GSX Pro"));
+    QCOMPARE(viewModel.GetAircraftLabel(), QStringLiteral("Aircraft"));
+    QCOMPARE(viewModel.GetTurnaroundModeLabel(), QStringLiteral("Turnaround"));
+    QCOMPARE(viewModel.GetLoadingModeLabel(), QStringLiteral("Loading"));
+}
+
+void OperationsViewModelTest::announcesADisplaySettingChangeWithoutTheSnapshot()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+    const QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
+
+    display.weightIsLb = true;
+    viewModel.RefreshDisplayText();
+
+    QCOMPARE(spy.count(), 1);
+}
+
+void OperationsViewModelTest::phaseCounterTextCountsFromOne()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseCounterText(),
+             QStringLiteral("1/") + QString::number(OperationsViewModel::GetPhaseCount()));
+
+    service.snapshot.phase = TurnaroundPhase::Refueling;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseCounterText(),
+             QString::number(static_cast<int>(TurnaroundPhase::Refueling) + 1)
+                 + QStringLiteral("/") + QString::number(OperationsViewModel::GetPhaseCount()));
+}
+
+void OperationsViewModelTest::turnaroundStateCardLabelsNameTheirText()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetTurnaroundStateLabel(), QStringLiteral("Turnaround state"));
+    QCOMPARE(viewModel.GetAdvancedByPilotText(), QStringLiteral("Unlocked by the pilot"));
+}
+
+void OperationsViewModelTest::gsxProfileAdvisoryChoosesTheParagraphTheFlagAsks()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.gsxProfileConflict = true;
+    service.Notify();
+
+    QVERIFY(viewModel.GetGsxProfileAdvisoryText().contains(QStringLiteral("No GSX profile")));
+    QCOMPARE(viewModel.GetGsxProfileActionLabel(), QString());
+
+    service.snapshot.gsxProfileFixable = true;
+    service.Notify();
+
+    QVERIFY(viewModel.GetGsxProfileAdvisoryText().contains(QStringLiteral("does not set")));
+    QCOMPARE(viewModel.GetGsxProfileActionLabel(), QStringLiteral("Fix profile"));
+}
+
+void OperationsViewModelTest::pmdgOptionsAdvisoryOffersTheFixOnlyWhenItIsFixable()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(viewModel.GetPmdgOptionsAdvisoryText().contains(QStringLiteral("SDK data broadcast")));
+    QCOMPARE(viewModel.GetPmdgOptionsActionLabel(), QString());
+
+    service.snapshot.pmdgOptionsFixable = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPmdgOptionsActionLabel(), QStringLiteral("Enable broadcast"));
+}
+
+void OperationsViewModelTest::standingAdvisoryTextsNameTheirCondition()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(viewModel.GetCargoDoorAdvisoryText().contains(QStringLiteral("hydraulic pump")));
+    QVERIFY(viewModel.GetFuelRequestAdvisoryText().contains(QStringLiteral("truck has not arrived")));
+    QCOMPARE(viewModel.GetCommandErrorLabel(), QStringLiteral("Error"));
+}
+
+void OperationsViewModelTest::progressTextsRoundToAWholePercent()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.fuelProgress = 45.6;
+    service.snapshot.boardingProgress = 12.2;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetFuelProgressText(), QStringLiteral("46%"));
+    QCOMPARE(viewModel.GetPaxProgressText(), QStringLiteral("12%"));
+}
+
+void OperationsViewModelTest::theBoardingCardFollowsTheDeboardingPhase()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.targetPax = 180;
+    service.snapshot.boardedPax = 42;
+    service.snapshot.boardingProgress = 23.0;
+    service.snapshot.deboardingProgress = 50.0;
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPaxCardLabel(), QStringLiteral("Boarding"));
+    QCOMPARE(viewModel.GetPaxCountText(), QStringLiteral("42 / 180"));
+    QCOMPARE(viewModel.GetPaxProgressText(), QStringLiteral("23%"));
+
+    service.snapshot.phase = TurnaroundPhase::Deboarding;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPaxCardLabel(), QStringLiteral("Deboarding"));
+    QCOMPARE(viewModel.GetPaxCountText(), QStringLiteral("90 / 180"));
+    QCOMPARE(viewModel.GetPaxProgressText(), QStringLiteral("50%"));
+}
+
+void OperationsViewModelTest::fuelRateTextNamesWhoSetsThePace()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    display.fuelRateText = QStringLiteral("1.2");
+    display.fuelRateUnitText = QStringLiteral("kg/s");
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("1.2 kg/s"));
+
+    service.snapshot.refuelBySelf = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("GSX"));
+
+    service.snapshot.refuelByGsx = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("Auto"));
+}
+
+void OperationsViewModelTest::plannedPaxTextPrintsThePlainNumber()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.plannedPax = 1234;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPlannedPaxText(), QStringLiteral("1234"));
+}
+
+void OperationsViewModelTest::cardAndRowLabelsNameTheirValue()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetFuelCardLabel(), QStringLiteral("Fuel"));
+    QCOMPARE(viewModel.GetLoadedFuelLabel(), QStringLiteral("Loaded"));
+    QCOMPARE(viewModel.GetTargetFuelLabel(), QStringLiteral("Planned"));
+    QCOMPARE(viewModel.GetFuelRateLabel(), QStringLiteral("Rate"));
+    QCOMPARE(viewModel.GetPaxLabel(), QStringLiteral("Pax"));
+    QCOMPARE(viewModel.GetTargetZfwLabel(), QStringLiteral("Planned ZFW"));
+    QCOMPARE(viewModel.GetSimbriefCardLabel(), QStringLiteral("SimBrief OFP"));
+    QCOMPARE(viewModel.GetPlannedFuelLabel(), QStringLiteral("Fuel"));
+    QCOMPARE(viewModel.GetPlannedZfwLabel(), QStringLiteral("ZFW"));
+    QCOMPARE(viewModel.GetPlannedPaxLabel(), QStringLiteral("Pax"));
+}
+
+void OperationsViewModelTest::buttonLabelsNameTheirAction()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetStartFlowLabel(), QStringLiteral("Start Flow"));
+    QCOMPARE(viewModel.GetStartLoadingLabel(), QStringLiteral("Start Loading"));
+    QCOMPARE(viewModel.GetRestartFlowLabel(), QStringLiteral("Restart Flow"));
+    QCOMPARE(viewModel.GetConfirmRestartLabel(), QStringLiteral("Confirm restart"));
+    QCOMPARE(viewModel.GetReloadSimbriefLabel(), QStringLiteral("Reload SimBrief"));
+}

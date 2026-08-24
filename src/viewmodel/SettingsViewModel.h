@@ -107,7 +107,7 @@ public:
     [[nodiscard]] bool GetStreamerMode() const;
     void SetStreamerMode(bool enabled);
 
-    [[nodiscard]] QString GetFuelRateText() const;
+    [[nodiscard]] QString GetFuelRateText() const override;
     void SetFuelRateText(const QString& rate);
 
     [[nodiscard]] bool GetAutoSelectGsxChoice() const;
@@ -122,10 +122,10 @@ public:
     [[nodiscard]] int GetCrewBoarding() const;
     void SetCrewBoarding(int choice);
 
-    [[nodiscard]] bool GetAutoStartFlow() const;
+    [[nodiscard]] bool GetAutoStartFlow() const override;
     void SetAutoStartFlow(bool enabled);
 
-    [[nodiscard]] bool GetAutoStartLoading() const;
+    [[nodiscard]] bool GetAutoStartLoading() const override;
     void SetAutoStartLoading(bool enabled);
 
     [[nodiscard]] bool GetSkipReposition() const;
@@ -174,7 +174,7 @@ public:
     [[nodiscard]] int GetWeightUnitMode() const;
     void SetWeightUnitMode(int mode);
     [[nodiscard]] bool GetWeightIsLb() const override;
-    [[nodiscard]] QString GetFuelRateUnitText() const;
+    [[nodiscard]] QString GetFuelRateUnitText() const override;
     [[nodiscard]] Q_INVOKABLE static double kgToLb(double kg);
 
     [[nodiscard]] bool GetCloseToTray() const;

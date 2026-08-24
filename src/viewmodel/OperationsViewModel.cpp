@@ -88,6 +88,25 @@ namespace
                                            "Press START LOADING or activate the SmartSwitch to begin refueling and boarding.");
     }
 
+    QString PercentText(const double progress)
+    {
+        return QString::number(qRound(progress)) + QStringLiteral("%");
+    }
+
+    QString ConnectionLabel(const bool connected)
+    {
+        return connected
+                   ? QCoreApplication::translate("OperationsScreen", "Connected")
+                   : QCoreApplication::translate("OperationsScreen", "Offline");
+    }
+
+    QString AutomationModeLabel(const bool automatic)
+    {
+        return automatic
+                   ? QCoreApplication::translate("OperationsScreen", "Auto")
+                   : QCoreApplication::translate("OperationsScreen", "Manual");
+    }
+
     QString FlightPlanStatusLabel(const FlightPlanStatus status)
     {
         switch (status)
@@ -197,6 +216,68 @@ QString OperationsViewModel::GetAircraftNameText() const
         : QCoreApplication::translate("OperationsScreen", "Standby");
 }
 
+QString OperationsViewModel::GetSimLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Sim");
+}
+
+QString OperationsViewModel::GetSimStatusText() const
+{
+    return ConnectionLabel(IsConnected());
+}
+
+QString OperationsViewModel::GetGsxLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "GSX Pro");
+}
+
+QString OperationsViewModel::GetGsxStatusText() const
+{
+    return ConnectionLabel(IsGsxAvailable());
+}
+
+QString OperationsViewModel::GetAircraftLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Aircraft");
+}
+
+QString OperationsViewModel::GetTurnaroundModeLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Turnaround");
+}
+
+QString OperationsViewModel::GetTurnaroundModeText() const
+{
+    return AutomationModeLabel(display_->GetAutoStartFlow());
+}
+
+QString OperationsViewModel::GetLoadingModeLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Loading");
+}
+
+QString OperationsViewModel::GetLoadingModeText() const
+{
+    return AutomationModeLabel(display_->GetAutoStartLoading());
+}
+
+QString OperationsViewModel::GetTurnaroundStateLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Turnaround state");
+}
+
+QString OperationsViewModel::GetPhaseCounterText() const
+{
+    return QString::number(GetPhase() + 1)
+        + QStringLiteral("/")
+        + QString::number(GetPhaseCount());
+}
+
+QString OperationsViewModel::GetAdvancedByPilotText()
+{
+    return QCoreApplication::translate("OperationsScreen", "Unlocked by the pilot");
+}
+
 QString OperationsViewModel::GetStateText() const
 {
     return IsAwaitingStartLoading() ? StartLoadingLabel() : PhaseLabel(snapshot_.phase);
@@ -261,6 +342,102 @@ bool OperationsViewModel::IsInDeboardingPhase() const
     return snapshot_.phase >= TurnaroundPhase::WaitingEngineShutdown;
 }
 
+QString OperationsViewModel::GetFuelCardLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Fuel");
+}
+
+QString OperationsViewModel::GetFuelProgressText() const
+{
+    return PercentText(GetFuelProgress());
+}
+
+QString OperationsViewModel::GetLoadedFuelLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Loaded");
+}
+
+QString OperationsViewModel::GetTargetFuelLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Planned");
+}
+
+QString OperationsViewModel::GetFuelRateLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Rate");
+}
+
+QString OperationsViewModel::GetFuelRateText() const
+{
+    if (RefuelByGsx())
+    {
+        return QCoreApplication::translate("OperationsScreen", "Auto");
+    }
+
+    if (RefuelBySelf())
+    {
+        return QStringLiteral("GSX");
+    }
+
+    return display_->GetFuelRateText()
+        + QStringLiteral(" ")
+        + display_->GetFuelRateUnitText();
+}
+
+QString OperationsViewModel::GetPaxCardLabel() const
+{
+    return IsInDeboardingPhase()
+               ? QCoreApplication::translate("OperationsScreen", "Deboarding")
+               : QCoreApplication::translate("OperationsScreen", "Boarding");
+}
+
+QString OperationsViewModel::GetPaxProgressText() const
+{
+    return PercentText(IsInDeboardingPhase() ? GetDeboardingProgress() : GetBoardingProgress());
+}
+
+QString OperationsViewModel::GetPaxLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Pax");
+}
+
+QString OperationsViewModel::GetPaxCountText() const
+{
+    return QString::number(IsInDeboardingPhase() ? GetDeboardedPax() : GetBoardedPax())
+        + QStringLiteral(" / ")
+        + QString::number(GetTargetPax());
+}
+
+QString OperationsViewModel::GetTargetZfwLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Planned ZFW");
+}
+
+QString OperationsViewModel::GetSimbriefCardLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "SimBrief OFP");
+}
+
+QString OperationsViewModel::GetPlannedFuelLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Fuel");
+}
+
+QString OperationsViewModel::GetPlannedZfwLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "ZFW");
+}
+
+QString OperationsViewModel::GetPlannedPaxLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Pax");
+}
+
+QString OperationsViewModel::GetPlannedPaxText() const
+{
+    return QString::number(GetPlannedPax());
+}
+
 double OperationsViewModel::GetFuelProgress() const
 {
     return snapshot_.fuelProgress;
@@ -294,6 +471,52 @@ bool OperationsViewModel::RefuelByGsx() const
 bool OperationsViewModel::RefuelBySelf() const
 {
     return snapshot_.refuelBySelf;
+}
+
+QString OperationsViewModel::GetGsxProfileAdvisoryText() const
+{
+    return IsGsxProfileFixable()
+               ? QCoreApplication::translate("OperationsScreen",
+                                             "The GSX profile for this aircraft does not set 'refueling = 0', so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.")
+               : QCoreApplication::translate("OperationsScreen",
+                                             "No GSX profile with 'refueling = 0' was found for this aircraft. Install an aircraft profile and set 'refueling = 0' in its gsx.cfg.");
+}
+
+QString OperationsViewModel::GetGsxProfileActionLabel() const
+{
+    return IsGsxProfileFixable()
+               ? QCoreApplication::translate("OperationsScreen", "Fix profile")
+               : QString();
+}
+
+QString OperationsViewModel::GetPmdgOptionsAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "The PMDG options file does not enable the SDK data broadcast, so the client cannot read this aircraft. Apply the fix, then reload the flight.");
+}
+
+QString OperationsViewModel::GetPmdgOptionsActionLabel() const
+{
+    return IsPmdgOptionsFixable()
+               ? QCoreApplication::translate("OperationsScreen", "Enable broadcast")
+               : QString();
+}
+
+QString OperationsViewModel::GetCargoDoorAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.");
+}
+
+QString OperationsViewModel::GetFuelRequestAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "GSX took the refuelling request but the truck has not arrived. Check the GSX menu, or another service may be holding it.");
+}
+
+QString OperationsViewModel::GetCommandErrorLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Error");
 }
 
 bool OperationsViewModel::HasGsxProfileConflict() const
@@ -396,6 +619,31 @@ QString OperationsViewModel::GetSimbriefRefusal() const
     return QString::fromStdString(snapshot_.simbriefRefusal);
 }
 
+QString OperationsViewModel::GetStartFlowLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Start Flow");
+}
+
+QString OperationsViewModel::GetStartLoadingLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Start Loading");
+}
+
+QString OperationsViewModel::GetRestartFlowLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Restart Flow");
+}
+
+QString OperationsViewModel::GetConfirmRestartLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Confirm restart");
+}
+
+QString OperationsViewModel::GetReloadSimbriefLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Reload SimBrief");
+}
+
 bool OperationsViewModel::CanToggleAutomation() const
 {
     return snapshot_.canToggleAutomation;
@@ -474,7 +722,7 @@ void OperationsViewModel::OnIntegratorStateChanged()
     Refresh();
 }
 
-void OperationsViewModel::RetranslateUi()
+void OperationsViewModel::RefreshDisplayText()
 {
     emit SnapshotChanged();
 }
