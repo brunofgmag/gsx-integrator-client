@@ -28,36 +28,36 @@ ColumnLayout {
 
             StatusChip {
                 Layout.fillWidth: true
-                label: qsTr("Sim")
-                value: root.integratorVm.connected ? qsTr("Connected") : qsTr("Offline")
+                label: root.integratorVm.simLabel
+                value: root.integratorVm.simStatusText
                 valueColor: root.integratorVm.connected ? Theme.ok : Theme.amber
             }
 
             StatusChip {
                 Layout.fillWidth: true
-                label: qsTr("GSX Pro")
-                value: root.integratorVm.gsxAvailable ? qsTr("Connected") : qsTr("Offline")
+                label: root.integratorVm.gsxLabel
+                value: root.integratorVm.gsxStatusText
                 valueColor: root.integratorVm.gsxAvailable ? Theme.ok : Theme.amber
             }
 
             StatusChip {
                 Layout.fillWidth: true
-                label: qsTr("Aircraft")
+                label: root.integratorVm.aircraftLabel
                 value: root.integratorVm.aircraftNameText
                 valueColor: root.integratorVm.aircraftSupported ? Theme.text : Theme.muted
             }
 
             StatusChip {
                 Layout.fillWidth: true
-                label: qsTr("Turnaround")
-                value: root.settingsVm.autoStartFlow ? qsTr("Auto") : qsTr("Manual")
+                label: root.integratorVm.turnaroundModeLabel
+                value: root.integratorVm.turnaroundModeText
                 valueColor: root.integratorVm.enabled ? Theme.accent : Theme.muted
             }
 
             StatusChip {
                 Layout.fillWidth: true
-                label: qsTr("Loading")
-                value: root.settingsVm.autoStartLoading ? qsTr("Auto") : qsTr("Manual")
+                label: root.integratorVm.loadingModeLabel
+                value: root.integratorVm.loadingModeText
                 valueColor: root.settingsVm.autoStartLoading ? Theme.accent : Theme.muted
             }
         }
@@ -65,9 +65,9 @@ ColumnLayout {
         // Big turnaround state readout.
         DataCard {
             Layout.fillWidth: true
-            title: qsTr("Turnaround state")
+            title: root.integratorVm.turnaroundStateLabel
             helpText: ""
-            metric: (root.integratorVm.phase + 1) + "/" + root.integratorVm.phaseCount
+            metric: root.integratorVm.phaseCounterText
             metricColor: Theme.muted
 
             Text {
@@ -95,7 +95,7 @@ ColumnLayout {
                 Text {
                     id: pilotMark
                     anchors.centerIn: parent
-                    text: qsTr("Unlocked by the pilot")
+                    text: root.integratorVm.advancedByPilotText
                     color: Theme.accent
                     font.pixelSize: 10
                     font.letterSpacing: 1
@@ -138,31 +138,29 @@ ColumnLayout {
         Advisory {
             Layout.fillWidth: true
             visible: root.integratorVm.gsxProfileConflict
-            text: root.integratorVm.gsxProfileFixable
-                  ? qsTr("The GSX profile for this aircraft does not set 'refueling = 0', so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.")
-                  : qsTr("No GSX profile with 'refueling = 0' was found for this aircraft. Install an aircraft profile and set 'refueling = 0' in its gsx.cfg.")
-            actionText: root.integratorVm.gsxProfileFixable ? qsTr("Fix profile") : ""
+            text: root.integratorVm.gsxProfileAdvisoryText
+            actionText: root.integratorVm.gsxProfileActionLabel
             onActionTriggered: root.integratorVm.fixGsxProfile()
         }
 
         Advisory {
             Layout.fillWidth: true
             visible: root.integratorVm.pmdgOptionsConflict
-            text: qsTr("The PMDG options file does not enable the SDK data broadcast, so the client cannot read this aircraft. Apply the fix, then reload the flight.")
-            actionText: root.integratorVm.pmdgOptionsFixable ? qsTr("Enable broadcast") : ""
+            text: root.integratorVm.pmdgOptionsAdvisoryText
+            actionText: root.integratorVm.pmdgOptionsActionLabel
             onActionTriggered: root.integratorVm.fixPmdgOptions()
         }
 
         Advisory {
             Layout.fillWidth: true
             visible: root.integratorVm.cargoDoorStuck
-            text: qsTr("A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.")
+            text: root.integratorVm.cargoDoorAdvisoryText
         }
 
         Advisory {
             Layout.fillWidth: true
             visible: root.integratorVm.fuelRequestStalled
-            text: qsTr("GSX took the refuelling request but the truck has not arrived. Check the GSX menu, or another service may be holding it.")
+            text: root.integratorVm.fuelRequestAdvisoryText
         }
 
         Advisory {
@@ -198,7 +196,7 @@ ColumnLayout {
                     Text {
                         id: errorBadge
                         anchors.centerIn: parent
-                        text: qsTr("Error")
+                        text: root.integratorVm.commandErrorLabel
                         color: Theme.bg
                         font.pixelSize: 9
                         font.bold: true
@@ -230,25 +228,21 @@ ColumnLayout {
             DataCard {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                title: qsTr("Fuel")
-                metric: Math.round(root.integratorVm.fuelProgress) + "%"
+                title: root.integratorVm.fuelCardLabel
+                metric: root.integratorVm.fuelProgressText
                 progress: root.integratorVm.fuelProgress
 
                 KeyValueRow {
-                    label: qsTr("Loaded")
+                    label: root.integratorVm.loadedFuelLabel
                     value: root.integratorVm.loadedFuelText
                 }
                 KeyValueRow {
-                    label: qsTr("Planned")
+                    label: root.integratorVm.targetFuelLabel
                     value: root.integratorVm.targetFuelText
                 }
                 KeyValueRow {
-                    label: qsTr("Rate")
-                    value: root.integratorVm.refuelByGsx
-                        ? qsTr("Auto")
-                        : root.integratorVm.refuelBySelf
-                            ? "GSX"
-                            : root.settingsVm.fuelRateText + " " + root.settingsVm.fuelRateUnitText
+                    label: root.integratorVm.fuelRateLabel
+                    value: root.integratorVm.fuelRateText
                 }
             }
 
@@ -259,20 +253,17 @@ ColumnLayout {
                 readonly property double paxProgress: root.deboarding
                     ? root.integratorVm.deboardingProgress
                     : root.integratorVm.boardingProgress
-                title: root.deboarding ? qsTr("Deboarding") : qsTr("Boarding")
-                metric: Math.round(paxCard.paxProgress) + "%"
+                title: root.integratorVm.paxCardLabel
+                metric: root.integratorVm.paxProgressText
                 progress: paxCard.paxProgress
 
                 KeyValueRow {
                     visible: !root.integratorVm.cargoAircraft
-                    label: qsTr("Pax")
-                    value: (root.deboarding
-                            ? root.integratorVm.deboardedPax
-                            : root.integratorVm.boardedPax)
-                           + " / " + root.integratorVm.targetPax
+                    label: root.integratorVm.paxLabel
+                    value: root.integratorVm.paxCountText
                 }
                 KeyValueRow {
-                    label: qsTr("Planned ZFW")
+                    label: root.integratorVm.targetZfwLabel
                     value: root.integratorVm.targetZfwText
                 }
             }
@@ -280,7 +271,7 @@ ColumnLayout {
             DataCard {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                title: qsTr("SimBrief OFP")
+                title: root.integratorVm.simbriefCardLabel
                 helpText: ""
                 metric: root.integratorVm.simbriefStatusText
                 metricColor: root.integratorVm.simbriefReady
@@ -305,16 +296,16 @@ ColumnLayout {
                 }
 
                 KeyValueRow {
-                    label: qsTr("Fuel")
+                    label: root.integratorVm.plannedFuelLabel
                     value: root.integratorVm.plannedFuelText
                 }
                 KeyValueRow {
-                    label: qsTr("ZFW")
+                    label: root.integratorVm.plannedZfwLabel
                     value: root.integratorVm.plannedZfwText
                 }
                 KeyValueRow {
-                    label: qsTr("Pax")
-                    value: String(root.integratorVm.plannedPax)
+                    label: root.integratorVm.plannedPaxLabel
+                    value: root.integratorVm.plannedPaxText
                 }
 
                 Item { width: 1; height: 6 }
@@ -322,7 +313,7 @@ ColumnLayout {
                 ActionButton {
                     width: parent.width
                     small: true
-                    text: qsTr("Reload SimBrief")
+                    text: root.integratorVm.reloadSimbriefLabel
                     enabled: root.integratorVm.canReloadSimbrief
                     onClicked: root.integratorVm.reloadSimbrief()
                 }
@@ -335,14 +326,14 @@ ColumnLayout {
 
             ActionButton {
                 small: true
-                text: qsTr("Start Flow")
+                text: root.integratorVm.startFlowLabel
                 enabled: root.integratorVm.canToggleAutomation && !root.integratorVm.enabled && !root.settingsVm.autoStartFlow
                 onClicked: root.integratorVm.startFlow()
             }
 
             ActionButton {
                 small: true
-                text: qsTr("Start Loading")
+                text: root.integratorVm.startLoadingLabel
                 enabled: root.integratorVm.canStartLoading
                 onClicked: root.integratorVm.startLoading()
             }
@@ -355,7 +346,9 @@ ColumnLayout {
                 small: true
                 secondary: !restartButton.armed
                 tint: Theme.red
-                text: restartButton.armed ? qsTr("Confirm restart") : qsTr("Restart Flow")
+                text: restartButton.armed
+                      ? root.integratorVm.confirmRestartLabel
+                      : root.integratorVm.restartFlowLabel
                 enabled: root.integratorVm.connected && root.integratorVm.enabled
                 onEnabledChanged: restartButton.armed = false
                 onClicked: {

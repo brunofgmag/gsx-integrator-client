@@ -248,7 +248,7 @@ int main(int argc, char* argv[])
                      {
                          InstallAppTranslator(translator, settingsViewModel.GetLanguage());
                          engine.retranslate();
-                         operationsViewModel.RetranslateUi();
+                         operationsViewModel.RefreshDisplayText();
                          settingsViewModel.RetranslateUi();
                      });
 
