@@ -27,6 +27,7 @@ private slots:
     static void removesPlacedChocksWhenGpuTogglesDisabledMidRun();
     static void holdsTheChocksWhileTheParkingBrakeIsReleased();
     static void removesTheChocksWhenTheParkingBrakeIsSet();
+    static void advancesWithoutChocksControlWhileTheParkingBrakeIsReleased();
 };
 
 void RemoveGroundEquipmentStateTest::skipsWhenGpuManagementDisabled()
@@ -420,6 +421,23 @@ void RemoveGroundEquipmentStateTest::removesTheChocksWhenTheParkingBrakeIsSet()
     QCOMPARE(f.aircraft.setChocksCalls, 1);
     QVERIFY(!f.aircraft.chocksPlaced);
     QVERIFY(f.ctx.data.chocksRemoved);
+}
+
+void RemoveGroundEquipmentStateTest::advancesWithoutChocksControlWhileTheParkingBrakeIsReleased()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = false;
+    f.aircraft.supportsChocksControl = false;
+    f.settings.callGpu = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
 }
 
 QTEST_APPLESS_MAIN(RemoveGroundEquipmentStateTest)

@@ -14,7 +14,8 @@ namespace
 std::optional<TurnaroundTransition> RemoveGroundEquipmentState::Evaluate(TurnaroundContext& ctx)
 {
     const bool manageEquipment = ctx.settings != nullptr && (ctx.settings->callGpu || ctx.settings->callGpuOnArrival);
-    const bool removeChocks = manageEquipment || ctx.data.chocksPlaced || ctx.data.arrivalChocksPlaced;
+    const bool removeChocks = ctx.aircraft->SupportsChocksControl()
+        && (manageEquipment || ctx.data.chocksPlaced || ctx.data.arrivalChocksPlaced);
 
     if (removeChocks && !ctx.data.chocksRemoved)
     {

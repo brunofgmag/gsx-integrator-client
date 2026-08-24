@@ -72,6 +72,8 @@ public:
     [[nodiscard]] bool IsPowered() const override { return powered; }
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override { return groundPowerStatus; }
 
+    [[nodiscard]] bool SupportsChocksControl() const override { return supportsChocksControl; }
+
     bool SetChocks(const bool placed) override
     {
         if (!supportsChocksControl)
