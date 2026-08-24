@@ -23,6 +23,11 @@ namespace
     constexpr SIMCONNECT_DATA_REQUEST_ID kReadyRequestId = 0x47535808;
     constexpr DWORD kAreaSize = 8192;
 
+    bool FitsArea(const std::string& envelope)
+    {
+        return envelope.size() <= kAreaSize - 1;
+    }
+
     constexpr auto kReadyAreaName = "GSXI.CommBus.Ready";
     constexpr double kMinProtocol = 2.0;
 
@@ -187,34 +192,36 @@ void CommBusBridgeClient::OnReadyData(const void* data, const DWORD size)
     }
 }
 
-void CommBusBridgeClient::SendEnvelope(const std::string& envelope) const
+bool CommBusBridgeClient::SendEnvelope(const std::string& envelope) const
 {
     if (!connected_)
     {
-        return;
+        return false;
     }
 
-    if (envelope.size() > kAreaSize - 1)
+    if (!FitsArea(envelope))
     {
         LOG_WARN("CommBus bridge: dropping oversize envelope (%zu bytes)", envelope.size());
 
-        return;
+        return false;
     }
 
     std::vector buffer(kAreaSize, '\0');
     std::memcpy(buffer.data(), envelope.data(), envelope.size());
 
     session_.WriteClientData(kTxAreaId, kTxDefId, kAreaSize, buffer.data());
+
+    return true;
 }
 
-void CommBusBridgeClient::Call(const std::string& channel, const int flag, const std::string& payload)
+bool CommBusBridgeClient::Call(const std::string& channel, const int flag, const std::string& payload)
 {
     if (!IsAvailable())
     {
-        return;
+        return false;
     }
 
-    SendEnvelope(BuildCallEnvelope(channel, flag, payload));
+    return SendEnvelope(BuildCallEnvelope(channel, flag, payload));
 }
 
 void CommBusBridgeClient::Subscribe(const std::string& channel, const int flag, Handler handler)

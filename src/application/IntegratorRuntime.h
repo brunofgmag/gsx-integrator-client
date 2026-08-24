@@ -64,6 +64,9 @@ public:
     void ApplySettings(const AutomationSettings& settings);
     [[nodiscard]] bool ReloadSimbrief();
 
+    [[nodiscard]] CommBusBridgeGateway* Bridge() { return &bridgeClient_; }
+    [[nodiscard]] SimVersion GetSimVersion() const { return simVersion_; }
+
 signals:
     void Updated();
     void SimulatorQuit();

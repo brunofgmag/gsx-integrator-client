@@ -115,6 +115,8 @@ set(APP_SOURCES
         src/infrastructure/commbus/CommBusBridgeClient.cpp
         src/infrastructure/commbus/CommBusBridgeClient.h
         src/infrastructure/commbus/CommBusBridgeGateway.h
+        src/infrastructure/efb/EfbStatePublisher.cpp
+        src/infrastructure/efb/EfbStatePublisher.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
         src/infrastructure/pmdg/Pmdg777DataClient.cpp
