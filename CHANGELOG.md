@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.13.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.12.0...v1.13.0) (2026-08-24)
+
+
+* move every operations screen phrase into the view model ([#64](https://github.com/brunofgmag/gsx-integrator-client/issues/64)) ([fa9a366](https://github.com/brunofgmag/gsx-integrator-client/commit/fa9a3662f0a3000c32d1b1365100850291342d0f))
+
+
+### Features
+
+* **efb:** move every operations screen phrase into the view model ([a02f5c5](https://github.com/brunofgmag/gsx-integrator-client/commit/a02f5c518a074057910279b5a76a27b213eea1b1)) ([fa9a366](https://github.com/brunofgmag/gsx-integrator-client/commit/fa9a3662f0a3000c32d1b1365100850291342d0f))
+
+
+### Bug Fixes
+
+* **ui:** redraw the operations screen when a display setting changes ([a685192](https://github.com/brunofgmag/gsx-integrator-client/commit/a6851929677ecee0fa0e9431569a3c934c478b8d)) ([fa9a366](https://github.com/brunofgmag/gsx-integrator-client/commit/fa9a3662f0a3000c32d1b1365100850291342d0f))
+
 ## [1.12.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.11.0...v1.12.0) (2026-08-24)
 
 
