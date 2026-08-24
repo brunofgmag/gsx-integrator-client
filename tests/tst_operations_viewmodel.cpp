@@ -47,6 +47,7 @@ private slots:
     static void exposesInDeboardingPhaseFromSnapshot();
     static void simAndGsxStatusTextsFollowTheConnection();
     static void turnaroundAndLoadingModeTextsFollowTheSettings();
+    static void turnaroundModeTextNamesTheConfiguredModeAndWhetherItRuns();
     static void statusStripLabelsNameEachChip();
     static void announcesADisplaySettingChangeWithoutTheSnapshot();
     static void phaseCounterTextCountsFromOne();
@@ -658,14 +659,32 @@ void OperationsViewModelTest::turnaroundAndLoadingModeTextsFollowTheSettings()
     FakeOperationsDisplaySettings display;
     const OperationsViewModel viewModel(&service, &display);
 
-    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Manual"));
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Manual · Off"));
     QCOMPARE(viewModel.GetLoadingModeText(), QStringLiteral("Manual"));
 
     display.autoStartFlow = true;
     display.autoStartLoading = true;
 
-    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Auto"));
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Auto · Off"));
     QCOMPARE(viewModel.GetLoadingModeText(), QStringLiteral("Auto"));
+}
+
+void OperationsViewModelTest::turnaroundModeTextNamesTheConfiguredModeAndWhetherItRuns()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Manual · Off"));
+
+    viewModel.SetEnabled(true);
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Manual · On"));
+
+    display.autoStartFlow = true;
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Auto · On"));
+
+    viewModel.SetEnabled(false);
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Auto · Off"));
 }
 
 void OperationsViewModelTest::statusStripLabelsNameEachChip()
