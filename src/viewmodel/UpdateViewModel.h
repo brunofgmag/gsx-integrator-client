@@ -26,6 +26,7 @@ class UpdateViewModel final : public QObject, public UpdateServiceObserver
     Q_PROPERTY(QString commbusInstalledVersion READ GetCommbusInstalledVersion NOTIFY CommbusChanged)
     Q_PROPERTY(QString commbusLatestVersion READ GetCommbusLatestVersion NOTIFY CommbusChanged)
     Q_PROPERTY(QString commbusReleaseUrl READ GetCommbusReleaseUrl NOTIFY CommbusChanged)
+    Q_PROPERTY(bool commbusInstallMissing READ IsCommbusInstallMissing NOTIFY CommbusChanged)
 
 public:
     enum State { Idle = 0, Checking, UpToDate, UpdateAvailable, Downloading, ReadyToRestart, Error };
@@ -56,6 +57,7 @@ public:
     [[nodiscard]] QString GetReleaseUrl() const;
     [[nodiscard]] bool AreChecksEnabled() const;
     [[nodiscard]] bool IsCommbusUpdateAvailable() const;
+    [[nodiscard]] bool IsCommbusInstallMissing() const;
     [[nodiscard]] QString GetCommbusInstalledVersion() const;
     [[nodiscard]] QString GetCommbusLatestVersion() const;
     [[nodiscard]] QString GetCommbusReleaseUrl() const;
@@ -98,6 +100,7 @@ private:
     QString errorMessage_;
 
     bool commbusUpdateAvailable_ = false;
+    bool commbusInstallMissing_ = false;
     QString commbusInstalledVersion_;
     QString commbusLatestVersion_;
     QString commbusReleaseUrl_;

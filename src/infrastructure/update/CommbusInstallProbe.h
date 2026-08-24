@@ -7,6 +7,7 @@
 
 [[nodiscard]] QString ParseInstalledPackagesPath(const QByteArray& userCfg);
 [[nodiscard]] QString ParseManifestVersion(const QByteArray& manifestJson);
+[[nodiscard]] QStringList CommunityDirsUnder(const QString& packagesPath);
 [[nodiscard]] QStringList CandidateCommunityDirs();
 [[nodiscard]] QString DetectInstalledCommbusVersion(const QString& overrideDir = {});
 

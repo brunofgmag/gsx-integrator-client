@@ -15,6 +15,8 @@ private slots:
     static void rejectsInvalidManifest();
     static void detectsVersionFromOverrideDir();
     static void detectionReturnsEmptyWithoutManifest();
+    static void listsEveryCommunitySiblingUnderThePackagesPath();
+    static void listsNothingWhenThePackagesPathHasNoCommunityFolder();
 };
 
 void CommbusInstallProbeTest::parsesInstalledPackagesPath()
@@ -73,6 +75,35 @@ void CommbusInstallProbeTest::detectionReturnsEmptyWithoutManifest()
     QVERIFY(community.isValid());
 
     QVERIFY(DetectInstalledCommbusVersion(community.path()).isEmpty());
+}
+
+void CommbusInstallProbeTest::listsEveryCommunitySiblingUnderThePackagesPath()
+{
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+
+    const QDir base(root.path());
+    QVERIFY(base.mkdir(QStringLiteral("Community")));
+    QVERIFY(base.mkdir(QStringLiteral("Community2024")));
+    QVERIFY(base.mkdir(QStringLiteral("CommunityBackup")));
+    QVERIFY(base.mkdir(QStringLiteral("Official")));
+
+    const QStringList dirs = CommunityDirsUnder(root.path());
+
+    QCOMPARE(dirs.size(), 3);
+    QVERIFY(dirs.contains(base.filePath(QStringLiteral("Community"))));
+    QVERIFY(dirs.contains(base.filePath(QStringLiteral("Community2024"))));
+    QVERIFY(dirs.contains(base.filePath(QStringLiteral("CommunityBackup"))));
+}
+
+void CommbusInstallProbeTest::listsNothingWhenThePackagesPathHasNoCommunityFolder()
+{
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+    QVERIFY(QDir(root.path()).mkdir(QStringLiteral("Official")));
+
+    QVERIFY(CommunityDirsUnder(root.path()).isEmpty());
+    QVERIFY(CommunityDirsUnder(QString()).isEmpty());
 }
 
 QTEST_APPLESS_MAIN(CommbusInstallProbeTest)
