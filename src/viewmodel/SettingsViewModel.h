@@ -10,10 +10,11 @@
 #include "../application/model/AppSettings.h"
 #include "../application/model/AircraftProfile.h"
 #include "../application/ports/IntegratorService.h"
+#include "OperationsDisplaySettings.h"
 
 class SettingsRepository;
 
-class SettingsViewModel final : public QObject, public IntegratorServiceObserver
+class SettingsViewModel final : public QObject, public IntegratorServiceObserver, public OperationsDisplaySettings
 {
     Q_OBJECT
 
@@ -172,7 +173,7 @@ public:
 
     [[nodiscard]] int GetWeightUnitMode() const;
     void SetWeightUnitMode(int mode);
-    [[nodiscard]] bool GetWeightIsLb() const;
+    [[nodiscard]] bool GetWeightIsLb() const override;
     [[nodiscard]] QString GetFuelRateUnitText() const;
     [[nodiscard]] Q_INVOKABLE static double kgToLb(double kg);
 

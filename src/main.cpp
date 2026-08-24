@@ -178,7 +178,7 @@ int main(int argc, char* argv[])
     RuntimeIntegratorService integratorService(&runtime);
     SettingsViewModel settingsViewModel(&settingsRepository, &integratorService,
                                         SupportedAircraftProfiles());
-    OperationsViewModel operationsViewModel(&integratorService);
+    OperationsViewModel operationsViewModel(&integratorService, &settingsViewModel);
 
     GithubUpdateService updateService(
         qEnvironmentVariable(
