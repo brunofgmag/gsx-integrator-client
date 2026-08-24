@@ -79,6 +79,7 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("turnaroundModeText"), view_->GetTurnaroundModeText());
     state.insert(QLatin1String("loadingModeLabel"), OperationsViewModel::GetLoadingModeLabel());
     state.insert(QLatin1String("loadingModeText"), view_->GetLoadingModeText());
+    state.insert(QLatin1String("autoStartLoading"), view_->AutoStartsLoading());
 
     state.insert(QLatin1String("phase"), view_->GetPhase());
     state.insert(QLatin1String("phaseCount"), OperationsViewModel::GetPhaseCount());
