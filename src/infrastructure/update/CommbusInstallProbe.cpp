@@ -55,6 +55,28 @@ QString ParseManifestVersion(const QByteArray& manifestJson)
     return version;
 }
 
+QStringList CommunityDirsUnder(const QString& packagesPath)
+{
+    if (packagesPath.isEmpty())
+    {
+        return {};
+    }
+
+    const QDir base(packagesPath);
+    if (!base.exists())
+    {
+        return {};
+    }
+
+    QStringList dirs;
+    for (const QString& name : base.entryList({QStringLiteral("Community*")}, QDir::Dirs | QDir::NoDotAndDotDot))
+    {
+        dirs.append(base.filePath(name));
+    }
+
+    return dirs;
+}
+
 QStringList CandidateCommunityDirs()
 {
     const QString localAppData = QDir::fromNativeSeparators(qEnvironmentVariable("LOCALAPPDATA"));
@@ -72,10 +94,7 @@ QStringList CandidateCommunityDirs()
     {
         const QString packagesPath =
             ParseInstalledPackagesPath(ReadFileIfExists(base + QStringLiteral("/UserCfg.opt")));
-        if (!packagesPath.isEmpty())
-        {
-            result.append(packagesPath + QStringLiteral("/Community"));
-        }
+        result.append(CommunityDirsUnder(packagesPath));
         result.append(base + QStringLiteral("/Packages/Community"));
     }
 

@@ -15,6 +15,12 @@ private slots:
     static void publishesNothingOnMsfs2020();
     static void publishesNothingWhileTheBridgeIsUnavailable();
     static void keepsRetryingAfterTheBridgeRefusesTheWrite();
+    static void announcesTheDepartureWhenTheClientQuits();
+    static void announcesNoDepartureOnMsfs2020();
+    static void announcesNoDepartureWhileTheBridgeIsUnavailable();
+    static void subscribesToTheAppHelloChannelOnSetup();
+    static void answersTheAppHelloWithAFreshSnapshot();
+    static void answersNoHelloOnMsfs2020();
 };
 
 void EfbStatePublisherTest::publishesTheSnapshotWhenItChanges()
@@ -114,6 +120,106 @@ void EfbStatePublisherTest::keepsRetryingAfterTheBridgeRefusesTheWrite()
     publisher.Publish();
 
     QCOMPARE(bridge.CallCount(EfbCommBus::kStateChannel), 1);
+}
+
+void EfbStatePublisherTest::announcesTheDepartureWhenTheClientQuits()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.Notify();
+    publisher.Publish();
+    publisher.PublishDeparture();
+
+    QCOMPARE(bridge.CallCount(EfbCommBus::kStateChannel), 2);
+    QCOMPARE(std::get<1>(bridge.calls.back()), CommBusFlag::kJs);
+    QCOMPARE(std::get<2>(bridge.calls.back()), std::string(R"({"connected":false})"));
+}
+
+void EfbStatePublisherTest::announcesNoDepartureOnMsfs2020()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2020; });
+
+    publisher.PublishDeparture();
+
+    QCOMPARE(bridge.CallCount(EfbCommBus::kStateChannel), 0);
+}
+
+void EfbStatePublisherTest::announcesNoDepartureWhileTheBridgeIsUnavailable()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+    bridge.available = false;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    publisher.PublishDeparture();
+
+    QCOMPARE(bridge.CallCount(EfbCommBus::kStateChannel), 0);
+}
+
+void EfbStatePublisherTest::subscribesToTheAppHelloChannelOnSetup()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+    publisher.Setup();
+
+    QCOMPARE(bridge.subscribed, std::vector<std::string>{EfbCommBus::kHelloChannel});
+    QCOMPARE(bridge.subscribedFlags, std::vector<int>{CommBusFlag::kJs});
+}
+
+void EfbStatePublisherTest::answersTheAppHelloWithAFreshSnapshot()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+    publisher.Setup();
+
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.Notify();
+    publisher.Publish();
+    publisher.Publish();
+
+    QCOMPARE(bridge.CallCount(EfbCommBus::kStateChannel), 1);
+
+    bridge.Deliver(EfbCommBus::kHelloChannel, "hello");
+
+    QCOMPARE(bridge.CallCount(EfbCommBus::kStateChannel), 2);
+    QCOMPARE(std::get<2>(bridge.calls.back()), std::get<2>(bridge.calls.front()));
+}
+
+void EfbStatePublisherTest::answersNoHelloOnMsfs2020()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2020; });
+    publisher.Setup();
+
+    bridge.Deliver(EfbCommBus::kHelloChannel, "hello");
+
+    QCOMPARE(bridge.CallCount(EfbCommBus::kStateChannel), 0);
 }
 
 QTEST_APPLESS_MAIN(EfbStatePublisherTest)

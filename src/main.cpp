@@ -183,8 +183,11 @@ int main(int argc, char* argv[])
 
     EfbStatePublisher efbStatePublisher(runtime.Bridge(), &operationsViewModel,
                                         [&runtime] { return runtime.GetSimVersion(); });
+    efbStatePublisher.Setup();
     QObject::connect(&operationsViewModel, &OperationsViewModel::SnapshotChanged, &operationsViewModel,
                      [&efbStatePublisher] { efbStatePublisher.Publish(); });
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, &operationsViewModel,
+                     [&efbStatePublisher] { efbStatePublisher.PublishDeparture(); });
 
     GithubUpdateService updateService(
         qEnvironmentVariable(

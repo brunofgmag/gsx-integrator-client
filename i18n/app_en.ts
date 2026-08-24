@@ -59,6 +59,16 @@
         <translation>Release notes</translation>
     </message>
     <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="156"/>
+        <source>CommBus plugin not found</source>
+        <translation>CommBus plugin not found</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="156"/>
+        <source>No plugin found in any Community folder. The client can&apos;t warn you about new versions.</source>
+        <translation>No plugin found in any Community folder. The client can&apos;t warn you about new versions.</translation>
+    </message>
+    <message>
         <location filename="../src/qml/screens/AboutScreen.qml" line="157"/>
         <source>CommBus update available — v%1</source>
         <translation>CommBus update available — v%1</translation>
