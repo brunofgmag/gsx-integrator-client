@@ -252,6 +252,16 @@ int main(int argc, char* argv[])
                          settingsViewModel.RetranslateUi();
                      });
 
+    const auto refreshOperationsText = [&operationsViewModel] { operationsViewModel.RefreshDisplayText(); };
+    QObject::connect(&settingsViewModel, &SettingsViewModel::WeightUnitDisplayChanged, &app,
+                     refreshOperationsText);
+    QObject::connect(&settingsViewModel, &SettingsViewModel::FuelRateTextChanged, &app,
+                     refreshOperationsText);
+    QObject::connect(&settingsViewModel, &SettingsViewModel::AutoStartFlowChanged, &app,
+                     refreshOperationsText);
+    QObject::connect(&settingsViewModel, &SettingsViewModel::AutoStartLoadingChanged, &app,
+                     refreshOperationsText);
+
     engine.load(QUrl(QStringLiteral("qrc:/qt/qml/GsxIntegratorClient/src/qml/Main.qml")));
     if (engine.rootObjects().isEmpty())
     {
