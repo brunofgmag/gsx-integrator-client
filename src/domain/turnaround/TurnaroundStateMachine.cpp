@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <format>
+#include <utility>
 #include "states/WaitingFlightPlanState.h"
 #include "states/RequestFuelState.h"
 #include "states/RefuelingState.h"
@@ -32,6 +33,19 @@
 #include "states/CabinServicesState.h"
 #include "states/RequestDeboardingState.h"
 #include "states/WaitingNewFlightState.h"
+
+namespace
+{
+    constexpr const char* TouchSurface(const bool fromSwitch, const bool fromApp)
+    {
+        if (fromSwitch && fromApp)
+        {
+            return "SmartSwitch and the EFB app";
+        }
+
+        return fromSwitch ? "SmartSwitch" : "EFB app";
+    }
+}
 
 TurnaroundStateMachine::TurnaroundStateMachine(AutomationStatus* status,
                                                const AutomationSettings* settings,
@@ -98,13 +112,7 @@ void TurnaroundStateMachine::Step()
         context_.data.loadedFuelKg = context_.aircraft->GetCurrentFuelKg();
     }
 
-    context_.smartSwitchPressed = context_.aircraft != nullptr && context_.aircraft->ConsumeSmartSwitch();
-    if (context_.smartSwitchPressed && context_.logger)
-    {
-        context_.logger->LogInfo(
-            std::format("SmartSwitch pressed (phase: {})", TurnaroundPhaseToString(phase_))
-        );
-    }
+    ResolvePilotTouch();
 
     if (ticksRemaining_ > 0)
     {
@@ -135,6 +143,24 @@ void TurnaroundStateMachine::Step()
     TransitionTo(transition->next, transition->origin);
 }
 
+void TurnaroundStateMachine::ResolvePilotTouch()
+{
+    const bool fromSwitch = context_.aircraft != nullptr && context_.aircraft->ConsumeSmartSwitch();
+    const bool fromApp = std::exchange(appTouchPending_, false);
+
+    context_.pilotTouched = fromSwitch || fromApp;
+    if (!context_.pilotTouched || context_.logger == nullptr)
+    {
+        return;
+    }
+
+    context_.logger->LogInfo(
+        std::format("Pilot touch from the {} (phase: {})",
+                    TouchSurface(fromSwitch, fromApp),
+                    TurnaroundPhaseToString(phase_))
+    );
+}
+
 void TurnaroundStateMachine::PublishStatus() const
 {
     if (context_.status == nullptr)
@@ -161,7 +187,8 @@ void TurnaroundStateMachine::AttachAircraft(Aircraft* aircraft)
 void TurnaroundStateMachine::Reset()
 {
     context_.aircraft = nullptr;
-    context_.smartSwitchPressed = false;
+    context_.pilotTouched = false;
+    appTouchPending_ = false;
     context_.data.Reset();
     phase_ = TurnaroundPhase::WaitingSupportedAircraft;
     pendingPhase_ = TurnaroundPhase::WaitingSupportedAircraft;
@@ -201,7 +228,7 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
             std::format("Transitioning: {} -> {}{}",
                         TurnaroundPhaseToString(phase_),
                         TurnaroundPhaseToString(phase),
-                        origin == TransitionOrigin::Pilot ? " (unlocked by the pilot's smart switch)" : "")
+                        origin == TransitionOrigin::Pilot ? " (unlocked by the pilot)" : "")
         );
     }
 

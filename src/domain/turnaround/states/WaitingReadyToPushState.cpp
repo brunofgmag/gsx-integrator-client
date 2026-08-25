@@ -13,7 +13,7 @@ std::optional<TurnaroundTransition> WaitingReadyToPushState::Evaluate(Turnaround
 
     if (ctx.aircraft->GetDoorStatus() == DoorStatus::AnyOpen)
     {
-        if (!PilotUnlock::Accepts(Phase()) || !ctx.ConsumeSmartSwitch())
+        if (!PilotUnlock::Accepts(Phase()) || !ctx.ConsumePilotTouch())
         {
             return std::nullopt;
         }

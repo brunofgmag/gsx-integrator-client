@@ -141,7 +141,7 @@ void WaitingReadyToPushStateTest::theSmartSwitchUnlocksTheDoorHold()
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 
-    f.ctx.smartSwitchPressed = true;
+    f.ctx.pilotTouched = true;
 
     const auto transition = state.Evaluate(f.ctx);
 
@@ -157,7 +157,7 @@ void WaitingReadyToPushStateTest::theUnlockCarriesThePilotOrigin()
     f.aircraft.readyToPush = true;
     f.aircraft.parkingBrakeSet = true;
     f.aircraft.doorStatus = DoorStatus::AnyOpen;
-    f.ctx.smartSwitchPressed = true;
+    f.ctx.pilotTouched = true;
 
     const auto transition = state.Evaluate(f.ctx);
 
@@ -173,7 +173,7 @@ void WaitingReadyToPushStateTest::theSmartSwitchDoesNotUnlockTheParkingBrakeHold
     f.aircraft.readyToPush = true;
     f.aircraft.parkingBrakeSet = false;
     f.aircraft.doorStatus = DoorStatus::AllClosed;
-    f.ctx.smartSwitchPressed = true;
+    f.ctx.pilotTouched = true;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 }
@@ -186,10 +186,10 @@ void WaitingReadyToPushStateTest::theUnlockConsumesTheTouchOnce()
     f.aircraft.readyToPush = true;
     f.aircraft.parkingBrakeSet = true;
     f.aircraft.doorStatus = DoorStatus::AnyOpen;
-    f.ctx.smartSwitchPressed = true;
+    f.ctx.pilotTouched = true;
 
     QVERIFY(state.Evaluate(f.ctx).has_value());
-    QVERIFY(!f.ctx.smartSwitchPressed);
+    QVERIFY(!f.ctx.pilotTouched);
 }
 
 void WaitingReadyToPushStateTest::anOpenGateLeavesTheTouchForTheNextPhase()
@@ -200,10 +200,10 @@ void WaitingReadyToPushStateTest::anOpenGateLeavesTheTouchForTheNextPhase()
     f.aircraft.readyToPush = true;
     f.aircraft.parkingBrakeSet = true;
     f.aircraft.doorStatus = DoorStatus::AllClosed;
-    f.ctx.smartSwitchPressed = true;
+    f.ctx.pilotTouched = true;
 
     QVERIFY(state.Evaluate(f.ctx).has_value());
-    QVERIFY(f.ctx.smartSwitchPressed);
+    QVERIFY(f.ctx.pilotTouched);
 }
 
 QTEST_APPLESS_MAIN(WaitingReadyToPushStateTest)

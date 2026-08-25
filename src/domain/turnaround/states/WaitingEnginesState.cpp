@@ -25,7 +25,7 @@ std::optional<TurnaroundTransition> WaitingEnginesState::Evaluate(TurnaroundCont
         return std::nullopt;
     }
 
-    if (ctx.ConsumeSmartSwitch()
+    if (ctx.ConsumePilotTouch()
         && (viaInterruptMenu ? ctx.menuGateway->CompletePushback() : ctx.menuGateway->ConfirmGoodEngines()))
     {
         return TurnaroundTransition{TurnaroundPhase::WaitingDeparture};
