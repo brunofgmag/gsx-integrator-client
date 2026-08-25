@@ -187,6 +187,8 @@ int main(int argc, char* argv[])
     efbStatePublisher.Setup();
     QObject::connect(&operationsViewModel, &OperationsViewModel::SnapshotChanged, &operationsViewModel,
                      [&efbStatePublisher] { efbStatePublisher.Publish(); });
+    QObject::connect(&operationsViewModel, &OperationsViewModel::CommandErrorChanged, &operationsViewModel,
+                     [&efbStatePublisher] { efbStatePublisher.Publish(); });
 
     EfbCommandReceiver efbCommandReceiver(runtime.Bridge(), &operationsViewModel);
     efbCommandReceiver.Setup();
