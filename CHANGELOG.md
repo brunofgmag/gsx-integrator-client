@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.18.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.17.0...v1.18.0) (2026-08-25)
+
+
+* accept the pilot touch from the EFB app with the phase it saw ([#74](https://github.com/brunofgmag/gsx-integrator-client/issues/74)) ([1a058a7](https://github.com/brunofgmag/gsx-integrator-client/commit/1a058a7c9aa0bdc5fe16125fcaef95fdb31ee750))
+
+
+### Features
+
+* **app:** guard the pilot touch behind connection, flow and phase stamp ([9ec7765](https://github.com/brunofgmag/gsx-integrator-client/commit/9ec7765ad9ab86546b297afc9e512c52588f6411)) ([1a058a7](https://github.com/brunofgmag/gsx-integrator-client/commit/1a058a7c9aa0bdc5fe16125fcaef95fdb31ee750))
+* **efb:** publish the pilot touch button and act on its command ([5bccd63](https://github.com/brunofgmag/gsx-integrator-client/commit/5bccd638cf6b604d4a9cfac50221418c6723f7f1)) ([1a058a7](https://github.com/brunofgmag/gsx-integrator-client/commit/1a058a7c9aa0bdc5fe16125fcaef95fdb31ee750))
+* **turnaround:** accept a pilot touch from the EFB app alongside the smart switch ([d9d35bb](https://github.com/brunofgmag/gsx-integrator-client/commit/d9d35bbd51b63314cedb0cfc73e60796c40f5e61)) ([1a058a7](https://github.com/brunofgmag/gsx-integrator-client/commit/1a058a7c9aa0bdc5fe16125fcaef95fdb31ee750))
+
 ## [1.17.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.16.0...v1.17.0) (2026-08-25)
 
 
