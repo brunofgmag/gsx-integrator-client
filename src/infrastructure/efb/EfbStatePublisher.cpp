@@ -151,6 +151,8 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("restartFlowLabel"), OperationsViewModel::GetRestartFlowLabel());
     state.insert(QLatin1String("confirmRestartLabel"), OperationsViewModel::GetConfirmRestartLabel());
     state.insert(QLatin1String("reloadSimbriefLabel"), OperationsViewModel::GetReloadSimbriefLabel());
+    state.insert(QLatin1String("canPilotTouch"), view_->CanPilotTouch());
+    state.insert(QLatin1String("pilotTouchLabel"), view_->GetPilotTouchLabel());
     state.insert(QLatin1String("commandErrorLabel"), OperationsViewModel::GetCommandErrorLabel());
     state.insert(QLatin1String("commandError"), view_->GetCommandError());
 

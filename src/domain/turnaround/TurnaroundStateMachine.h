@@ -23,6 +23,7 @@ public:
     void AttachAircraft(Aircraft* aircraft);
     void Reset();
     void ConfirmLoading() { context_.data.loadingConfirmed = true; }
+    void AcceptAppTouch() { appTouchPending_ = true; }
 #ifndef NDEBUG
     void DebugSkipPhase(int delta);
 #endif
@@ -37,6 +38,7 @@ private:
 
     void RegisterStates();
     void Step();
+    void ResolvePilotTouch();
     void PublishStatus() const;
     void TransitionTo(TurnaroundPhase phase, TransitionOrigin origin);
     [[nodiscard]] std::optional<TurnaroundTransition> EvaluateCurrentPhase();
@@ -54,6 +56,7 @@ private:
     TransitionOrigin pendingOrigin_ = TransitionOrigin::Reading;
     TransitionOrigin lastTransitionOrigin_ = TransitionOrigin::Reading;
     int ticksRemaining_ = 0;
+    bool appTouchPending_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDSTATEMACHINE_H

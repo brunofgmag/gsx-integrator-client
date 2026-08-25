@@ -6,6 +6,7 @@
 #include "model/EffectiveSettings.h"
 #include "../domain/model/AutomationStatus.h"
 #include "../domain/model/AutomationSettings.h"
+#include "../domain/turnaround/PilotTouch.h"
 #include "../domain/turnaround/TurnaroundPhase.h"
 
 namespace
@@ -139,6 +140,37 @@ CommandResult RuntimeIntegratorService::FixPmdgOptions()
         return CommandResult::Failure(
             QCoreApplication::translate("Integrator", "Could not update the PMDG options file.").toStdString());
     }
+
+    return CommandResult::Success();
+}
+
+CommandResult RuntimeIntegratorService::AcceptPilotTouch(const TurnaroundPhase stamped)
+{
+    if (!runtime_->IsConnected())
+    {
+        return OfflineFailure();
+    }
+
+    if (!runtime_->Snapshot().automationEnabled)
+    {
+        return CommandResult::Failure(
+            QCoreApplication::translate("Integrator", "Start the turnaround flow first.").toStdString());
+    }
+
+    if (stamped != runtime_->GetPhase())
+    {
+        return CommandResult::Failure(
+            QCoreApplication::translate("Integrator", "The turnaround moved on before your touch arrived.").
+            toStdString());
+    }
+
+    if (!PilotTouch::Accepts(stamped))
+    {
+        return CommandResult::Failure(
+            QCoreApplication::translate("Integrator", "This step does not wait on the pilot.").toStdString());
+    }
+
+    runtime_->AcceptPilotTouch();
 
     return CommandResult::Success();
 }

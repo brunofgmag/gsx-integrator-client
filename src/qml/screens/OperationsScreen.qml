@@ -103,7 +103,7 @@ ColumnLayout {
                 }
             }
 
-            Item { width: 1; height: 4 }
+            Item { width: 1; height: root.integratorVm.advancedByPilot ? 6 : 4 }
 
             Item {
                 width: parent.width

@@ -4,7 +4,7 @@
 
 std::optional<TurnaroundTransition> WaitingNewFlightState::Evaluate(TurnaroundContext& ctx)
 {
-    if (ctx.ConsumeSmartSwitch())
+    if (ctx.ConsumePilotTouch())
     {
         return TurnaroundTransition{TurnaroundPhase::WaitingSupportedAircraft};
     }

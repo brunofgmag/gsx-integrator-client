@@ -5,6 +5,7 @@
 
 #include "doubles/FakeSimConnectApi.h"
 #include "../src/application/IntegratorRuntime.h"
+#include "../src/domain/turnaround/PilotTouch.h"
 #include "../src/application/RuntimeIntegratorService.h"
 
 namespace
@@ -40,6 +41,10 @@ private slots:
     static void subscribeFailureDisconnects();
     static void subscribeFailureKeepsRetrying();
     static void simulatorQuitRearmsTheReconnect();
+    static void aTouchWithoutTheFlowRunningIsRefused();
+    static void aTouchStampedWithAnotherPhaseIsRefusedAndNothingMoves();
+    static void aTouchStampedWithAPhaseThatTakesNoneIsRefused();
+    static void aTouchStampedWithTheCurrentPhaseReachesTheFlow();
 };
 
 void RuntimeIntegratorServiceTest::init()
@@ -110,6 +115,11 @@ void RuntimeIntegratorServiceTest::commandsFailWhileOffline()
 
     QVERIFY(!reload.succeeded);
     QCOMPARE(reload.message, offline);
+
+    const CommandResult touch = service.AcceptPilotTouch(TurnaroundPhase::WaitingSupportedAircraft);
+
+    QVERIFY(!touch.succeeded);
+    QCOMPARE(touch.message, offline);
 }
 
 void RuntimeIntegratorServiceTest::fixGsxProfileWithoutConflictFails()
@@ -297,6 +307,74 @@ void RuntimeIntegratorServiceTest::simulatorQuitRearmsTheReconnect()
     QVERIFY(quits.wait(2000));
     QVERIFY(!runtime.IsConnected());
     QVERIFY(runtime.IsReconnectPending());
+}
+
+void RuntimeIntegratorServiceTest::aTouchWithoutTheFlowRunningIsRefused()
+{
+    IntegratorRuntime runtime;
+    RuntimeIntegratorService service(&runtime);
+
+    runtime.Setup();
+
+    const CommandResult touch = service.AcceptPilotTouch(runtime.GetPhase());
+
+    QVERIFY(!touch.succeeded);
+    QCOMPARE(touch.message, std::string("Start the turnaround flow first."));
+}
+
+void RuntimeIntegratorServiceTest::aTouchStampedWithAnotherPhaseIsRefusedAndNothingMoves()
+{
+    IntegratorRuntime runtime;
+    RuntimeIntegratorService service(&runtime);
+
+    runtime.Setup();
+    QVERIFY(service.SetAutomationEnabled(true).succeeded);
+
+    const TurnaroundPhase before = runtime.GetPhase();
+    const CommandResult touch = service.AcceptPilotTouch(TurnaroundPhase::WaitingNewFlight);
+
+    QVERIFY(!touch.succeeded);
+    QCOMPARE(touch.message, std::string("The turnaround moved on before your touch arrived."));
+    QCOMPARE(runtime.GetPhase(), before);
+    QCOMPARE(runtime.GetPhaseOrigin(), TransitionOrigin::Reading);
+}
+
+void RuntimeIntegratorServiceTest::aTouchStampedWithAPhaseThatTakesNoneIsRefused()
+{
+    IntegratorRuntime runtime;
+    RuntimeIntegratorService service(&runtime);
+
+    runtime.Setup();
+    QVERIFY(service.SetAutomationEnabled(true).succeeded);
+
+    QVERIFY(!PilotTouch::Accepts(runtime.GetPhase()));
+
+    const CommandResult touch = service.AcceptPilotTouch(runtime.GetPhase());
+
+    QVERIFY(!touch.succeeded);
+    QCOMPARE(touch.message, std::string("This step does not wait on the pilot."));
+}
+
+void RuntimeIntegratorServiceTest::aTouchStampedWithTheCurrentPhaseReachesTheFlow()
+{
+#ifndef NDEBUG
+    IntegratorRuntime runtime;
+    RuntimeIntegratorService service(&runtime);
+
+    runtime.Setup();
+    QVERIFY(service.SetAutomationEnabled(true).succeeded);
+
+    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::WaitingNewFlight));
+
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::WaitingNewFlight);
+
+    const CommandResult touch = service.AcceptPilotTouch(TurnaroundPhase::WaitingNewFlight);
+
+    QVERIFY(touch.succeeded);
+    QVERIFY(touch.message.empty());
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
 }
 
 QTEST_GUILESS_MAIN(RuntimeIntegratorServiceTest)

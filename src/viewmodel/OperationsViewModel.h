@@ -184,6 +184,8 @@ public:
     [[nodiscard]] bool IsLoadingRunning() const;
     [[nodiscard]] bool CanStartLoading() const;
     [[nodiscard]] bool CanReloadSimbrief() const;
+    [[nodiscard]] QString GetPilotTouchLabel() const;
+    [[nodiscard]] bool CanPilotTouch() const;
     [[nodiscard]] QString GetCommandError() const;
     [[nodiscard]] static bool AreDebugToolsAvailable();
 
@@ -194,6 +196,8 @@ public:
     Q_INVOKABLE void fixGsxProfile();
     Q_INVOKABLE void fixPmdgOptions();
     Q_INVOKABLE void debugSkipPhase(int delta);
+
+    void AcceptPilotTouch(TurnaroundPhase stamped);
 
     void RefreshDisplayText();
 

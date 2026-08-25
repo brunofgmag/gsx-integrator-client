@@ -61,6 +61,7 @@ public:
     void DebugSkipPhase(const int delta) { stateMachine_.DebugSkipPhase(delta); }
 #endif
     void ConfirmLoading();
+    void AcceptPilotTouch();
     void ApplySettings(const AutomationSettings& settings);
     [[nodiscard]] bool ReloadSimbrief();
 

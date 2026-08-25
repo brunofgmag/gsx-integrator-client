@@ -17,7 +17,7 @@ void WaitingNewFlightStateTest::holdsWithoutSmartSwitch()
     TurnaroundStateFixture f;
     WaitingNewFlightState state;
 
-    f.ctx.smartSwitchPressed = false;
+    f.ctx.pilotTouched = false;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 }
@@ -27,13 +27,13 @@ void WaitingNewFlightStateTest::proceedsOnSmartSwitch()
     TurnaroundStateFixture f;
     WaitingNewFlightState state;
 
-    f.ctx.smartSwitchPressed = true;
+    f.ctx.pilotTouched = true;
 
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingSupportedAircraft);
-    QVERIFY(!f.ctx.smartSwitchPressed);
+    QVERIFY(!f.ctx.pilotTouched);
 }
 
 QTEST_APPLESS_MAIN(WaitingNewFlightStateTest)

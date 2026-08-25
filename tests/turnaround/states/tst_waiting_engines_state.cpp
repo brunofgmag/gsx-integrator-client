@@ -29,7 +29,7 @@ namespace
         f.gsxService.waitingForEngines = true;
         f.aircraft.engineRunning = true;
         f.aircraft.parkingBrakeSet = true;
-        f.ctx.smartSwitchPressed = true;
+        f.ctx.pilotTouched = true;
     }
 }
 
@@ -43,7 +43,7 @@ void WaitingEnginesStateTest::holdsWhenEnginesOffEvenWithSmartSwitch()
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 0);
-    QVERIFY(f.ctx.smartSwitchPressed);
+    QVERIFY(f.ctx.pilotTouched);
 }
 
 void WaitingEnginesStateTest::holdsWhenGsxAsksWithoutSmartSwitch()
@@ -52,7 +52,7 @@ void WaitingEnginesStateTest::holdsWhenGsxAsksWithoutSmartSwitch()
     WaitingEnginesState state;
 
     ArmConfirmationScenario(f);
-    f.ctx.smartSwitchPressed = false;
+    f.ctx.pilotTouched = false;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 0);
@@ -68,7 +68,7 @@ void WaitingEnginesStateTest::holdsWhenGsxNotWaitingEvenWithEverythingElse()
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 0);
-    QVERIFY(f.ctx.smartSwitchPressed);
+    QVERIFY(f.ctx.pilotTouched);
 }
 
 void WaitingEnginesStateTest::holdsWhenParkingBrakeReleased()
@@ -81,7 +81,7 @@ void WaitingEnginesStateTest::holdsWhenParkingBrakeReleased()
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 0);
-    QVERIFY(f.ctx.smartSwitchPressed);
+    QVERIFY(f.ctx.pilotTouched);
 }
 
 void WaitingEnginesStateTest::holdsWhenOnlyChocksHoldTheAircraft()
@@ -141,7 +141,7 @@ void WaitingEnginesStateTest::confirmsAndProceedsWhenAllConditionsMet()
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingDeparture);
     QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 1);
-    QVERIFY(!f.ctx.smartSwitchPressed);
+    QVERIFY(!f.ctx.pilotTouched);
 }
 
 void WaitingEnginesStateTest::usesCompletePushbackForInterruptMenuAircraft()

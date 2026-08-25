@@ -19,13 +19,13 @@ struct TurnaroundContext
     Aircraft* aircraft = nullptr;
     TurnaroundData data;
     DomainLogger* logger = nullptr;
-    bool smartSwitchPressed = false;
+    bool pilotTouched = false;
 
-    bool ConsumeSmartSwitch()
+    bool ConsumePilotTouch()
     {
-        const bool pressed = smartSwitchPressed;
-        smartSwitchPressed = false;
-        return pressed;
+        const bool touched = pilotTouched;
+        pilotTouched = false;
+        return touched;
     }
 
     bool TickCondition(const int tickValue) const

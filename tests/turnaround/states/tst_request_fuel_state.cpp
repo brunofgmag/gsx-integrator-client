@@ -163,7 +163,7 @@ void RequestFuelStateTest::requestsFuelWhenSmartSwitchIsPressed()
     RequestFuelState state;
 
     f.settings.autoStartLoading = false;
-    f.ctx.smartSwitchPressed = true;
+    f.ctx.pilotTouched = true;
     f.gsxService.refuelingState = GsxStateStatus::Callable;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
@@ -179,10 +179,10 @@ void RequestFuelStateTest::smartSwitchActsAsStartLoadingButton()
 
     f.settings.autoStartLoading = false;
     f.gsxService.refuelingState = GsxStateStatus::Unavailable;
-    f.ctx.smartSwitchPressed = true;
+    f.ctx.pilotTouched = true;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QVERIFY(!f.ctx.smartSwitchPressed);
+    QVERIFY(!f.ctx.pilotTouched);
     QVERIFY(f.ctx.data.loadingConfirmed);
     QCOMPARE(f.menuGateway.refuelingCalls, 0);
 
