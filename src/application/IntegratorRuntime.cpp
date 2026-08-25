@@ -660,6 +660,15 @@ void IntegratorRuntime::ConfirmLoading()
     emit Updated();
 }
 
+void IntegratorRuntime::AcceptPilotTouch()
+{
+    LOG_INFO("Pilot touch accepted from the EFB app.");
+
+    stateMachine_.AcceptAppTouch();
+
+    emit Updated();
+}
+
 void IntegratorRuntime::MaybeAutoStart()
 {
     if (!settings_.autoStartFlow || !IsConnected() || status_.enabled)
