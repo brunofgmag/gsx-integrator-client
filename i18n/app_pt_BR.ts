@@ -599,7 +599,7 @@
 <context>
     <name>OperationsScreen</name>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="666"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="656"/>
         <source>Start Flow</source>
         <translation>Iniciar Fluxo</translation>
     </message>
@@ -613,7 +613,7 @@
         <translation>kg</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="343"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="338"/>
         <source>New session</source>
         <translation>Nova sessão</translation>
     </message>
@@ -648,7 +648,7 @@
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="122"/>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="416"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="406"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
@@ -672,53 +672,53 @@
         <translation>Estado do turnaround</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="345"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="340"/>
         <source>Next</source>
         <translation>Próximo</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="358"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="353"/>
         <source>Next state in %1s</source>
         <translation>Próximo estado em %1s</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="521"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="511"/>
         <source>The GSX profile for this aircraft does not set &apos;refueling = 0&apos;, so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.</source>
         <translation>O perfil do GSX desta aeronave não define &apos;refueling = 0&apos;, então o caminhão de combustível nunca conecta a mangueira. Aplique a correção e depois reinicie o GSX ou recarregue o voo.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="523"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="513"/>
         <source>No GSX profile with &apos;refueling = 0&apos; was found for this aircraft. Install an aircraft profile and set &apos;refueling = 0&apos; in its gsx.cfg.</source>
         <translation>Nenhum perfil do GSX com &apos;refueling = 0&apos; foi encontrado para esta aeronave. Instale um perfil de aeronave e defina &apos;refueling = 0&apos; no gsx.cfg dele.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="530"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="520"/>
         <source>Fix profile</source>
         <translation>Corrigir perfil</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="536"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="526"/>
         <source>The PMDG options file does not enable the SDK data broadcast, so the client cannot read this aircraft. Apply the fix, then reload the flight.</source>
         <translation>O arquivo de opções da PMDG não habilita a transmissão de dados do SDK, então o cliente não consegue ler esta aeronave. Aplique a correção e recarregue o voo.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="543"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="533"/>
         <source>Enable broadcast</source>
         <translation>Habilitar transmissão</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="549"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="539"/>
         <source>A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.</source>
         <translation>Um carregador do GSX espera pela porta de carga principal. Confira se a bomba hidráulica está ligada.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="555"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="545"/>
         <source>GSX took the refuelling request but the truck has not arrived. Check the GSX menu, or another service may be holding it.</source>
         <translation>O GSX aceitou o pedido de abastecimento, mas o caminhão não chegou. Confira o menu do GSX; outro serviço pode estar segurando o caminhão.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="389"/>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="465"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="379"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="455"/>
         <source>Fuel</source>
         <translation>Combustível</translation>
     </message>
@@ -743,17 +743,17 @@
         <translation>Lig.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="399"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="389"/>
         <source>Loaded</source>
         <translation>Carregado</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="404"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="394"/>
         <source>Planned</source>
         <translation>Planejado</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="409"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="399"/>
         <source>Rate</source>
         <translation>Taxa</translation>
     </message>
@@ -762,43 +762,43 @@
         <translation type="vanished">kg/s</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="433"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="423"/>
         <source>Boarding</source>
         <translation>Embarque</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="443"/>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="475"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="433"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="465"/>
         <source>Pax</source>
         <translation>Pax</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="470"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="460"/>
         <source>ZFW</source>
         <translation>ZFW</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="681"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="671"/>
         <source>Confirm restart</source>
         <translation>Confirmar reinício</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="676"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="666"/>
         <source>Restart Flow</source>
         <translation>Reiniciar Fluxo</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="455"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="445"/>
         <source>Planned ZFW</source>
         <translation>ZFW Planejado</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="460"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="450"/>
         <source>SimBrief OFP</source>
         <translation>OFP SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="561"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="551"/>
         <source>Error</source>
         <translation>Erro</translation>
     </message>
@@ -852,17 +852,17 @@
         <translation>Carregamento</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="432"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="422"/>
         <source>Deboarding</source>
         <translation>Desembarque</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="686"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="676"/>
         <source>Reload SimBrief</source>
         <translation>Recarregar SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="671"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="661"/>
         <source>Start Loading</source>
         <translation>Iniciar Carregamento</translation>
     </message>
@@ -1038,6 +1038,7 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="68"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="82"/>
         <source>The GSX option to ignore Crew/Pilots boarding must be disabled, otherwise this prompt never appears.</source>
         <translation>A opção do GSX de ignorar o embarque de Crew/Pilots precisa estar desativada, senão esta pergunta nunca aparece.</translation>
     </message>
@@ -1047,51 +1048,65 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="72"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="86"/>
         <source>Nobody</source>
         <translation>Ninguém</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="72"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="86"/>
         <source>Crew</source>
         <translation>Tripulação</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="72"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="86"/>
         <source>Pilots</source>
         <translation>Pilotos</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="72"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="86"/>
         <source>Both</source>
         <translation>Ambos</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="80"/>
+        <source>Crew deboarding</source>
+        <translation>Desembarque da tripulação</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="81"/>
+        <source>Answer when GSX asks who leaves the aircraft</source>
+        <translation>Resposta quando o GSX pergunta quem desembarca da aeronave</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="94"/>
         <source>Always use aircraft stairs</source>
         <translation>Sempre usar as escadas da aeronave</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="81"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="95"/>
         <source>Answer &quot;Yes&quot; when GSX offers the airplane&apos;s own airstairs</source>
         <translation>Responder &quot;Sim&quot; quando o GSX oferecer as escadas da própria aeronave</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="82"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="96"/>
         <source>GSX only asks this on aircraft that have their own airstairs. When off, the integrator answers with the airport stairs.</source>
         <translation>O GSX só pergunta isso em aeronaves que têm escadas próprias. Quando desligado, o integrador responde com as escadas do aeroporto.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="89"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="103"/>
         <source>Accept de-ice requests</source>
         <translation>Aceitar solicitações de degelo</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="90"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="104"/>
         <source>Answer &quot;Yes&quot; when GSX offers de-icing treatment</source>
         <translation>Responder &quot;Sim&quot; quando o GSX oferecer o tratamento de degelo</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="91"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="105"/>
         <source>Overrides the GSX choice for the ice-warning popup, which otherwise declines de-icing.</source>
         <translation>Sobrepõe a escolha do GSX para a pergunta de aviso de gelo, que caso contrário recusa o degelo.</translation>
     </message>
@@ -1308,43 +1323,43 @@
 <context>
     <name>SettingsViewModel</name>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="649"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="659"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="888"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="898"/>
         <source>Enter a valid SimBrief Pilot ID.</source>
         <translation>Informe um SimBrief Pilot ID válido.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="898"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="908"/>
         <source>Enter a valid fuel rate.</source>
         <translation>Informe uma taxa de combustível válida.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="915"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="925"/>
         <source>Enter a valid fuel rate for %1.</source>
         <translation>Informe uma taxa de combustível válida para %1.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="581"/>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="932"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="591"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="942"/>
         <source>Could not save settings.</source>
         <translation>Não foi possível salvar as configurações.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="435"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="445"/>
         <source>lb/s</source>
         <translation>lb/s</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="435"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="445"/>
         <source>kg/s</source>
         <translation>kg/s</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="587"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="597"/>
         <source>Settings saved.</source>
         <translation>Configurações salvas.</translation>
     </message>
@@ -1586,7 +1601,7 @@
         <translation>Erro</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="643"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="633"/>
         <source>Refused</source>
         <translation>Recusado</translation>
     </message>

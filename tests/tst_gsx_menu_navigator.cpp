@@ -142,6 +142,8 @@ private slots:
     static void boardCrewMenuPicksConfiguredChoice();
     static void crewMenusPickDeclineOnBothVariantsWhenNobodyConfigured();
     static void crewMenuPickedWithoutActiveIntent();
+    static void deboardCrewMenuFollowsItsOwnChoice();
+    static void boardCrewMenuIgnoresTheDeboardChoice();
     static void airstairsMenuPicksAirportStairsByDefault();
     static void airstairsMenuPicksAirplaneStairsWhenEnabled();
     static void deIceMenuPicksYesWhenEnabled();
@@ -764,7 +766,7 @@ void GsxMenuNavigatorTest::boardCrewMenuPicksConfiguredChoice()
     FakeRemoteClient client;
     GsxRemoteState state;
     AutomationSettings settings;
-    settings.crewBoarding = CrewBoarding::Pilots;
+    settings.crewBoarding = CrewChoice::Pilots;
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
@@ -785,7 +787,8 @@ void GsxMenuNavigatorTest::crewMenusPickDeclineOnBothVariantsWhenNobodyConfigure
     FakeRemoteClient client;
     GsxRemoteState state;
     AutomationSettings settings;
-    settings.crewBoarding = CrewBoarding::Nobody;
+    settings.crewBoarding = CrewChoice::Nobody;
+    settings.crewDeboarding = CrewChoice::Nobody;
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
@@ -817,7 +820,7 @@ void GsxMenuNavigatorTest::crewMenuPickedWithoutActiveIntent()
     FakeRemoteClient client;
     GsxRemoteState state;
     AutomationSettings settings;
-    settings.crewBoarding = CrewBoarding::Crew;
+    settings.crewDeboarding = CrewChoice::Crew;
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
@@ -828,6 +831,48 @@ void GsxMenuNavigatorTest::crewMenuPickedWithoutActiveIntent()
 
     fakeNow = 90000;
     ShowMenu(state, "Do you want to deboard crew?", {"No", "Crew", "Pilots", "Both"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+    QCOMPARE(pick->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::deboardCrewMenuFollowsItsOwnChoice()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.crewBoarding = CrewChoice::Nobody;
+    settings.crewDeboarding = CrewChoice::Pilots;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.RequestDeboarding();
+
+    ShowMenu(state, "Do you want to deboard crew?", {"No", "Crew", "Pilots", "Both"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+    QCOMPARE(pick->args.value("index").toInt(), 2);
+}
+
+void GsxMenuNavigatorTest::boardCrewMenuIgnoresTheDeboardChoice()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.crewBoarding = CrewChoice::Crew;
+    settings.crewDeboarding = CrewChoice::Nobody;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.RequestBoarding();
+
+    ShowMenu(state, "Do you want to board crew?", {"Nobody", "Crew", "Pilots", "Both"});
     nav.OnMenuChanged();
 
     const Sent* pick = client.Last("menu.pick");

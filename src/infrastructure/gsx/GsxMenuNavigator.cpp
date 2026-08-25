@@ -28,17 +28,18 @@ namespace
     constexpr auto kLoadingInProgressText = "loading in progress";
     constexpr auto kBoardingPassengersText = "Boarding passengers now";
     constexpr auto kBoardCrewQuestion = "board crew";
+    constexpr auto kDeboardCrewQuestion = "deboard crew";
     constexpr auto kDeIceQuestion = "de-icing";
     constexpr auto kAirstairsQuestion = "own airstairs";
 
-    const char* CrewBoardingEntry(const CrewBoarding choice)
+    const char* CrewChoiceEntry(const CrewChoice choice)
     {
         switch (choice)
         {
-        case CrewBoarding::Nobody: return "No";
-        case CrewBoarding::Crew: return "Crew";
-        case CrewBoarding::Pilots: return "Pilots";
-        case CrewBoarding::Both: return "Both";
+        case CrewChoice::Nobody: return "No";
+        case CrewChoice::Crew: return "Crew";
+        case CrewChoice::Pilots: return "Pilots";
+        case CrewChoice::Both: return "Both";
         }
         return "Both";
     }
@@ -439,13 +440,18 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
         return true;
     }
 
+    if (Contains(menu.title, kDeboardCrewQuestion))
+    {
+        const CrewChoice choice = settings_ != nullptr ? settings_->crewDeboarding : CrewChoice::Both;
+
+        return PickByContains(CrewChoiceEntry(choice));
+    }
+
     if (Contains(menu.title, kBoardCrewQuestion))
     {
-        const auto choice = settings_ != nullptr ? settings_->crewBoarding : CrewBoarding::Both;
-        if (PickByContains(CrewBoardingEntry(choice)))
-        {
-            return true;
-        }
+        const CrewChoice choice = settings_ != nullptr ? settings_->crewBoarding : CrewChoice::Both;
+
+        return PickByContains(CrewChoiceEntry(choice));
     }
 
     return false;

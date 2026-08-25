@@ -13,7 +13,8 @@ inline AutomationSettings ResolveAutomationSettings(const AppSettings& settings,
     result.autoSelectGsxChoice = settings.autoSelectGsxChoice;
     result.autoDeice = settings.autoDeice;
     result.useAircraftStairs = settings.useAircraftStairs;
-    result.crewBoarding = static_cast<CrewBoarding>(settings.crewBoarding);
+    result.crewBoarding = static_cast<CrewChoice>(settings.crewBoarding);
+    result.crewDeboarding = static_cast<CrewChoice>(settings.crewDeboarding);
     result.autoStartFlow = settings.autoStartFlow;
     result.autoStartLoading = settings.autoStartLoading;
     result.skipReposition = settings.skipReposition;
