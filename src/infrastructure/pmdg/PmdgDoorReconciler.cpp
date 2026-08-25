@@ -1,5 +1,7 @@
 #include "PmdgDoorReconciler.h"
 
+#include "../logging/LogMacros.h"
+
 namespace
 {
     constexpr int kDoorRetryTicks = 5;
@@ -73,7 +75,7 @@ void PmdgDoorReconciler::ReconcileSlot(const std::size_t slot)
 
         if (isOpen != wantOpen)
         {
-            source_.ToggleDoor(static_cast<int>(slot));
+            CommandDoor(slot, wantOpen, 0);
         }
 
         return;
@@ -91,8 +93,18 @@ void PmdgDoorReconciler::ReconcileSlot(const std::size_t slot)
     {
         ticksSinceCommand_[slot] = 0;
         ++attempts_[slot];
-        source_.ToggleDoor(static_cast<int>(slot));
+        CommandDoor(slot, wantOpen, attempts_[slot]);
     }
+}
+
+void PmdgDoorReconciler::CommandDoor(const std::size_t slot, const bool open, const int attempt)
+{
+    LOG_INFO("Door slot %d: commanding %s%s.",
+             static_cast<int>(slot),
+             open ? "open" : "close",
+             attempt > 0 ? " (retry)" : "");
+
+    source_.ToggleDoor(static_cast<int>(slot));
 }
 
 bool PmdgDoorReconciler::IsStuck(const int slot) const

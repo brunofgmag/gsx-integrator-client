@@ -23,6 +23,7 @@ public:
 
 private:
     void ReconcileSlot(std::size_t slot);
+    void CommandDoor(std::size_t slot, bool open, int attempt);
 
     PmdgDoorSource& source_;
     std::vector<int> desired_;
