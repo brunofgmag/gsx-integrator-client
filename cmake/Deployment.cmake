@@ -55,6 +55,7 @@ if (MSVC)
             COMMAND "${POWERSHELL_EXE}" -NoProfile -ExecutionPolicy Bypass
             -File "${CMAKE_SOURCE_DIR}/tools/prune-deployment.ps1"
             -DeploymentDir "$<TARGET_FILE_DIR:${APP_NAME}>"
+            -Configuration "$<CONFIG>"
             COMMENT "Deploying Qt runtime and QML imports"
             VERBATIM)
 endif ()
