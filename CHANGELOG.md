@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.19.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.18.0...v1.19.0) (2026-08-25)
+
+
+* settle five debts found in the in-sim run ([#76](https://github.com/brunofgmag/gsx-integrator-client/issues/76)) ([34c1d1c](https://github.com/brunofgmag/gsx-integrator-client/commit/34c1d1cdcefcf6f0017d01250600bb11787d1256))
+
+
+### Features
+
+* **pmdg:** log every door command the reconciler sends ([ed50262](https://github.com/brunofgmag/gsx-integrator-client/commit/ed50262a61077fd38ec50158689a2015f81c251b)) ([34c1d1c](https://github.com/brunofgmag/gsx-integrator-client/commit/34c1d1cdcefcf6f0017d01250600bb11787d1256))
+
+
+### Bug Fixes
+
+* **build:** drop locked outputs and disable msbuild node reuse ([69cc423](https://github.com/brunofgmag/gsx-integrator-client/commit/69cc423d19b03ea3a54e444447c832643d7485cf)) ([34c1d1c](https://github.com/brunofgmag/gsx-integrator-client/commit/34c1d1cdcefcf6f0017d01250600bb11787d1256))
+* **qml:** disable an action button by colour instead of opacity ([748c144](https://github.com/brunofgmag/gsx-integrator-client/commit/748c14485683e2dc2fe57a5b1b67bc4a5bd77300)) ([34c1d1c](https://github.com/brunofgmag/gsx-integrator-client/commit/34c1d1cdcefcf6f0017d01250600bb11787d1256))
+* **tools:** prune debug artefacts and name what overflows the package ([b80b9b9](https://github.com/brunofgmag/gsx-integrator-client/commit/b80b9b98fa639b1fa0d62c2df9791e93186bf0f6)) ([34c1d1c](https://github.com/brunofgmag/gsx-integrator-client/commit/34c1d1cdcefcf6f0017d01250600bb11787d1256))
+
 ## [1.18.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.17.0...v1.18.0) (2026-08-25)
 
 
