@@ -61,6 +61,10 @@ private slots:
     static void plannedPaxTextPrintsThePlainNumber();
     static void cardAndRowLabelsNameTheirValue();
     static void buttonLabelsNameTheirAction();
+    static void theStartFlowButtonStandsDownWhenTheTurnaroundStartsItself();
+    static void theRestartButtonWaitsForARunningTurnaround();
+    static void theLoadingChipKnowsWhenAServiceIsActuallyRunning();
+    static void theTurnaroundChipKnowsItIsArmedBeforeItRuns();
 };
 
 void OperationsViewModelTest::waitingForLoadingOverridesStateTextAndTip()
@@ -889,4 +893,81 @@ void OperationsViewModelTest::buttonLabelsNameTheirAction()
     QCOMPARE(viewModel.GetRestartFlowLabel(), QStringLiteral("Restart Flow"));
     QCOMPARE(viewModel.GetConfirmRestartLabel(), QStringLiteral("Confirm restart"));
     QCOMPARE(viewModel.GetReloadSimbriefLabel(), QStringLiteral("Reload SimBrief"));
+}
+
+void OperationsViewModelTest::theStartFlowButtonStandsDownWhenTheTurnaroundStartsItself()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.CanStartFlow());
+
+    service.snapshot.canToggleAutomation = true;
+    service.Notify();
+
+    QVERIFY(viewModel.CanStartFlow());
+
+    display.autoStartFlow = true;
+
+    QVERIFY(!viewModel.CanStartFlow());
+
+    display.autoStartFlow = false;
+    viewModel.SetEnabled(true);
+
+    QVERIFY(!viewModel.CanStartFlow());
+}
+
+void OperationsViewModelTest::theRestartButtonWaitsForARunningTurnaround()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.CanRestartFlow());
+
+    service.snapshot.connected = true;
+    service.Notify();
+
+    QVERIFY(!viewModel.CanRestartFlow());
+
+    viewModel.SetEnabled(true);
+
+    QVERIFY(viewModel.CanRestartFlow());
+}
+
+void OperationsViewModelTest::theLoadingChipKnowsWhenAServiceIsActuallyRunning()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.IsLoadingRunning());
+
+    for (const TurnaroundPhase phase : {TurnaroundPhase::Refueling, TurnaroundPhase::Boarding,
+                                        TurnaroundPhase::Deboarding})
+    {
+        service.snapshot.phase = phase;
+        service.Notify();
+
+        QVERIFY2(viewModel.IsLoadingRunning(), QByteArray::number(static_cast<int>(phase)));
+    }
+
+    service.snapshot.phase = TurnaroundPhase::RequestBoarding;
+    service.Notify();
+
+    QVERIFY(!viewModel.IsLoadingRunning());
+}
+
+void OperationsViewModelTest::theTurnaroundChipKnowsItIsArmedBeforeItRuns()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.AutoStartsFlow());
+
+    display.autoStartFlow = true;
+
+    QVERIFY(viewModel.AutoStartsFlow());
 }
