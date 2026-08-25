@@ -80,6 +80,8 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("loadingModeLabel"), OperationsViewModel::GetLoadingModeLabel());
     state.insert(QLatin1String("loadingModeText"), view_->GetLoadingModeText());
     state.insert(QLatin1String("autoStartLoading"), view_->AutoStartsLoading());
+    state.insert(QLatin1String("autoStartFlow"), view_->AutoStartsFlow());
+    state.insert(QLatin1String("loadingRunning"), view_->IsLoadingRunning());
 
     state.insert(QLatin1String("phase"), view_->GetPhase());
     state.insert(QLatin1String("phaseCount"), OperationsViewModel::GetPhaseCount());
@@ -140,7 +142,8 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("cargoDoorStuck"), view_->IsCargoDoorStuck());
     state.insert(QLatin1String("fuelRequestStalled"), view_->IsFuelRequestStalled());
 
-    state.insert(QLatin1String("canToggleAutomation"), view_->CanToggleAutomation());
+    state.insert(QLatin1String("canStartFlow"), view_->CanStartFlow());
+    state.insert(QLatin1String("canRestartFlow"), view_->CanRestartFlow());
     state.insert(QLatin1String("canStartLoading"), view_->CanStartLoading());
     state.insert(QLatin1String("canReloadSimbrief"), view_->CanReloadSimbrief());
     state.insert(QLatin1String("startFlowLabel"), OperationsViewModel::GetStartFlowLabel());

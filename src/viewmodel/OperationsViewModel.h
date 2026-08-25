@@ -78,7 +78,8 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(QString restartFlowLabel READ GetRestartFlowLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(QString confirmRestartLabel READ GetConfirmRestartLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(QString reloadSimbriefLabel READ GetReloadSimbriefLabel NOTIFY SnapshotChanged)
-    Q_PROPERTY(bool canToggleAutomation READ CanToggleAutomation NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool canStartFlow READ CanStartFlow NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool canRestartFlow READ CanRestartFlow NOTIFY SnapshotChanged)
     Q_PROPERTY(bool canStartLoading READ CanStartLoading NOTIFY SnapshotChanged)
     Q_PROPERTY(bool canReloadSimbrief READ CanReloadSimbrief NOTIFY SnapshotChanged)
     Q_PROPERTY(QString commandError READ GetCommandError NOTIFY CommandErrorChanged)
@@ -177,7 +178,10 @@ public:
     [[nodiscard]] static QString GetRestartFlowLabel();
     [[nodiscard]] static QString GetConfirmRestartLabel();
     [[nodiscard]] static QString GetReloadSimbriefLabel();
-    [[nodiscard]] bool CanToggleAutomation() const;
+    [[nodiscard]] bool CanStartFlow() const;
+    [[nodiscard]] bool CanRestartFlow() const;
+    [[nodiscard]] bool AutoStartsFlow() const;
+    [[nodiscard]] bool IsLoadingRunning() const;
     [[nodiscard]] bool CanStartLoading() const;
     [[nodiscard]] bool CanReloadSimbrief() const;
     [[nodiscard]] QString GetCommandError() const;

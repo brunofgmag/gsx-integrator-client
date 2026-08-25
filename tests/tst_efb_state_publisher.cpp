@@ -22,6 +22,8 @@ private slots:
     static void answersTheAppHelloWithAFreshSnapshot();
     static void answersNoHelloOnMsfs2020();
     static void carriesTheLoadingModeFlagTheScreenColoursWith();
+    static void carriesTheFlowButtonPermissionsTheWindowDecidesOnce();
+    static void carriesTheRefusalTheWindowShowsWithoutASnapshotChange();
 };
 
 void EfbStatePublisherTest::publishesTheSnapshotWhenItChanges()
@@ -243,3 +245,51 @@ void EfbStatePublisherTest::carriesTheLoadingModeFlagTheScreenColoursWith()
 QTEST_APPLESS_MAIN(EfbStatePublisherTest)
 
 #include "tst_efb_state_publisher.moc"
+
+void EfbStatePublisherTest::carriesTheFlowButtonPermissionsTheWindowDecidesOnce()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.canToggleAutomation = true;
+    service.Notify();
+    publisher.Publish();
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("canStartFlow":true)") != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("canRestartFlow":false)") != std::string::npos);
+
+    viewModel.startFlow();
+    publisher.Publish();
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("canStartFlow":false)") != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("canRestartFlow":true)") != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesTheRefusalTheWindowShowsWithoutASnapshotChange()
+{
+    FakeIntegratorService service;
+    service.startLoadingResult = CommandResult::Failure("The turnaround is not waiting to start loading.");
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.Notify();
+    publisher.Publish();
+
+    const int before = bridge.CallCount(EfbCommBus::kStateChannel);
+
+    viewModel.startLoading();
+    publisher.Publish();
+
+    QCOMPARE(bridge.CallCount(EfbCommBus::kStateChannel), before + 1);
+    QVERIFY(std::get<2>(bridge.calls.back())
+                .find("The turnaround is not waiting to start loading.") != std::string::npos);
+}

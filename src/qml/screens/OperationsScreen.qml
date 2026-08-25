@@ -327,7 +327,7 @@ ColumnLayout {
             ActionButton {
                 small: true
                 text: root.integratorVm.startFlowLabel
-                enabled: root.integratorVm.canToggleAutomation && !root.integratorVm.enabled && !root.settingsVm.autoStartFlow
+                enabled: root.integratorVm.canStartFlow
                 onClicked: root.integratorVm.startFlow()
             }
 
@@ -349,7 +349,7 @@ ColumnLayout {
                 text: restartButton.armed
                       ? root.integratorVm.confirmRestartLabel
                       : root.integratorVm.restartFlowLabel
-                enabled: root.integratorVm.connected && root.integratorVm.enabled
+                enabled: root.integratorVm.canRestartFlow
                 onEnabledChanged: restartButton.armed = false
                 onClicked: {
                     if (restartButton.armed) {

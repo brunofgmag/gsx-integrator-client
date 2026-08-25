@@ -24,6 +24,7 @@ qrc_*.cpp
 *.qmlc
 
 # AI/Tools
+CLAUDE.md
 .claude/
 .cursor/
 .copilot/

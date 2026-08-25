@@ -270,6 +270,18 @@ QString OperationsViewModel::GetLoadingModeText() const
     return AutomationModeLabel(display_->GetAutoStartLoading());
 }
 
+bool OperationsViewModel::AutoStartsFlow() const
+{
+    return display_->GetAutoStartFlow();
+}
+
+bool OperationsViewModel::IsLoadingRunning() const
+{
+    return snapshot_.phase == TurnaroundPhase::Refueling
+        || snapshot_.phase == TurnaroundPhase::Boarding
+        || snapshot_.phase == TurnaroundPhase::Deboarding;
+}
+
 bool OperationsViewModel::AutoStartsLoading() const
 {
     return display_->GetAutoStartLoading();
@@ -658,9 +670,14 @@ QString OperationsViewModel::GetReloadSimbriefLabel()
     return QCoreApplication::translate("OperationsScreen", "Reload SimBrief");
 }
 
-bool OperationsViewModel::CanToggleAutomation() const
+bool OperationsViewModel::CanStartFlow() const
 {
-    return snapshot_.canToggleAutomation;
+    return snapshot_.canToggleAutomation && !snapshot_.automationEnabled && !display_->GetAutoStartFlow();
+}
+
+bool OperationsViewModel::CanRestartFlow() const
+{
+    return snapshot_.connected && snapshot_.automationEnabled;
 }
 
 bool OperationsViewModel::CanStartLoading() const
