@@ -672,11 +672,6 @@
         <translation>Turnaround state</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="320"/>
-        <source>Unlocked by the pilot</source>
-        <translation>Unlocked by the pilot</translation>
-    </message>
-    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="345"/>
         <source>Next</source>
         <translation>Next</translation>

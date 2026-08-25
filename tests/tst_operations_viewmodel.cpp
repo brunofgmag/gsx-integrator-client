@@ -11,7 +11,6 @@ class OperationsViewModelTest final : public QObject
     Q_OBJECT
 
 private slots:
-    static void distinguishesAPhaseUnlockedByThePilotFromOneAdvancedByReading();
     static void exposesUpdatedSnapshot();
     static void emitsOneSignalForSnapshotChanges();
     static void doesNotEmitWhenSnapshotIsUnchanged();
@@ -523,25 +522,6 @@ void OperationsViewModelTest::aRefusedPlanIsNotReadyOnTheCard()
     QVERIFY(viewModel.GetSimbriefStatusText() != QString("Ready"));
 }
 
-void OperationsViewModelTest::distinguishesAPhaseUnlockedByThePilotFromOneAdvancedByReading()
-{
-    FakeIntegratorService service;
-    FakeOperationsDisplaySettings display;
-    const OperationsViewModel viewModel(&service, &display);
-
-    QVERIFY(!viewModel.AdvancedByPilot());
-
-    service.snapshot.phaseOrigin = TransitionOrigin::Pilot;
-    service.Notify();
-
-    QVERIFY(viewModel.AdvancedByPilot());
-
-    service.snapshot.phaseOrigin = TransitionOrigin::Reading;
-    service.Notify();
-
-    QVERIFY(!viewModel.AdvancedByPilot());
-}
-
 void OperationsViewModelTest::nextPhaseTextNamesThePhaseThatFollows()
 {
     FakeIntegratorService service;
@@ -752,7 +732,6 @@ void OperationsViewModelTest::turnaroundStateCardLabelsNameTheirText()
     const OperationsViewModel viewModel(&service, &display);
 
     QCOMPARE(viewModel.GetTurnaroundStateLabel(), QStringLiteral("Turnaround state"));
-    QCOMPARE(viewModel.GetAdvancedByPilotText(), QStringLiteral("Unlocked by the pilot"));
 }
 
 void OperationsViewModelTest::gsxProfileAdvisoryChoosesTheParagraphTheFlagAsks()

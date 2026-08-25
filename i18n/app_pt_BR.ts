@@ -672,11 +672,6 @@
         <translation>Estado do turnaround</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="320"/>
-        <source>Unlocked by the pilot</source>
-        <translation>Destravado pelo piloto</translation>
-    </message>
-    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="345"/>
         <source>Next</source>
         <translation>Próximo</translation>

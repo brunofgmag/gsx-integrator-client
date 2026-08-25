@@ -53,7 +53,6 @@ struct IntegratorSnapshot
     std::string aircraftName;
     std::string aircraftProfileId;
     TurnaroundPhase phase = TurnaroundPhase::WaitingFlightPlan;
-    TransitionOrigin phaseOrigin = TransitionOrigin::Reading;
     FlightPlanStatus flightPlanStatus = FlightPlanStatus::Idle;
     std::string simbriefRefusal;
 

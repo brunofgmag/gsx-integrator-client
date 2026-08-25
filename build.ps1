@@ -82,12 +82,43 @@ if (Test-Path -LiteralPath $cacheFile) {
     }
 }
 
+function Remove-LockedBuildOutputs {
+    param([string]$Directory)
+
+    if (-not (Test-Path -LiteralPath $Directory)) { return }
+
+    $locked = Get-ChildItem -LiteralPath $Directory -File -Recurse -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -in '.exe', '.pdb', '.dll', '.obj', '.lib' } |
+        Where-Object {
+            try {
+                $stream = [IO.File]::Open($_.FullName, 'Open', 'Write', 'None')
+                $stream.Close()
+                $false
+            }
+            catch { $true }
+        }
+
+    foreach ($file in $locked) {
+        Remove-Item -LiteralPath $file.FullName -Force -ErrorAction SilentlyContinue
+        if (Test-Path -LiteralPath $file.FullName) {
+            Write-Host "Still locked after delete: $($file.FullName)"
+        }
+        else {
+            Write-Host "Removed locked build output: $($file.FullName)"
+        }
+    }
+}
+
+$env:MSBUILDDISABLENODEREUSE = '1'
+
+Remove-LockedBuildOutputs -Directory $buildDir
+
 $configureArgs = @('--preset', $preset)
 if ($SkipTests) { $configureArgs += '-DBUILD_TESTING=OFF' }
 & $cmake @configureArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-& $cmake --build --preset $preset --parallel
+& $cmake --build --preset $preset --parallel -- '-nodeReuse:false'
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if ($RunTests) {
