@@ -3,6 +3,7 @@
 #include <QtTest/QTest>
 
 #include "TestDoubles.h"
+#include "../src/domain/turnaround/PilotTouch.h"
 #include "../src/viewmodel/OperationsViewModel.h"
 
 class OperationsViewModelTest final : public QObject
@@ -65,6 +66,13 @@ private slots:
     static void theRestartButtonWaitsForARunningTurnaround();
     static void theLoadingChipKnowsWhenAServiceIsActuallyRunning();
     static void theTurnaroundChipKnowsItIsArmedBeforeItRuns();
+    static void thePilotTouchLabelNamesWhatTheTouchDoesInThisPhase();
+    static void thePilotTouchLabelIsEmptyWherePhaseTakesNoTouch();
+    static void thePilotTouchLabelStandsDownWhereTheLoadingButtonAlreadyAsks();
+    static void thePilotTouchWaitsForAConnectedAndRunningTurnaround();
+    static void thePilotTouchCarriesTheStampToTheService();
+    static void aRefusedPilotTouchReportsTheReason();
+    static void everyTouchablePhaseNamesItsTouchExceptTheOneAButtonAlreadyCovers();
 };
 
 void OperationsViewModelTest::waitingForLoadingOverridesStateTextAndTip()
@@ -970,4 +978,129 @@ void OperationsViewModelTest::theTurnaroundChipKnowsItIsArmedBeforeItRuns()
     display.autoStartFlow = true;
 
     QVERIFY(viewModel.AutoStartsFlow());
+}
+
+void OperationsViewModelTest::thePilotTouchLabelNamesWhatTheTouchDoesInThisPhase()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingReadyToPush;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPilotTouchLabel(), QStringLiteral("Unlock Pushback"));
+
+    service.snapshot.phase = TurnaroundPhase::WaitingForEngines;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPilotTouchLabel(), QStringLiteral("Confirm Engine Start"));
+
+    service.snapshot.phase = TurnaroundPhase::WaitingNewFlight;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPilotTouchLabel(), QStringLiteral("Start New Flight"));
+}
+
+void OperationsViewModelTest::thePilotTouchLabelIsEmptyWherePhaseTakesNoTouch()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.Notify();
+
+    QVERIFY(viewModel.GetPilotTouchLabel().isEmpty());
+}
+
+void OperationsViewModelTest::thePilotTouchLabelStandsDownWhereTheLoadingButtonAlreadyAsks()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::RequestFuel;
+    service.Notify();
+
+    QVERIFY(viewModel.GetPilotTouchLabel().isEmpty());
+}
+
+void OperationsViewModelTest::thePilotTouchWaitsForAConnectedAndRunningTurnaround()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingNewFlight;
+    service.Notify();
+
+    QVERIFY(!viewModel.CanPilotTouch());
+
+    service.snapshot.connected = true;
+    service.Notify();
+
+    QVERIFY(!viewModel.CanPilotTouch());
+
+    service.snapshot.automationEnabled = true;
+    service.Notify();
+
+    QVERIFY(viewModel.CanPilotTouch());
+
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.Notify();
+
+    QVERIFY(!viewModel.CanPilotTouch());
+}
+
+void OperationsViewModelTest::thePilotTouchCarriesTheStampToTheService()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    viewModel.AcceptPilotTouch(TurnaroundPhase::WaitingReadyToPush);
+
+    QCOMPARE(service.pilotTouchCalls, 1);
+    QCOMPARE(service.pilotTouchStamp, TurnaroundPhase::WaitingReadyToPush);
+    QVERIFY(viewModel.GetCommandError().isEmpty());
+}
+
+void OperationsViewModelTest::aRefusedPilotTouchReportsTheReason()
+{
+    FakeIntegratorService service;
+    service.pilotTouchResult = CommandResult::Failure("The turnaround moved on before your touch arrived.");
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    const QSignalSpy errors(&viewModel, &OperationsViewModel::CommandErrorChanged);
+
+    viewModel.AcceptPilotTouch(TurnaroundPhase::WaitingNewFlight);
+
+    QCOMPARE(viewModel.GetCommandError(),
+             QStringLiteral("The turnaround moved on before your touch arrived."));
+    QCOMPARE(errors.count(), 1);
+}
+
+void OperationsViewModelTest::everyTouchablePhaseNamesItsTouchExceptTheOneAButtonAlreadyCovers()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    for (const TurnaroundPhase phase : PilotTouch::kPhases)
+    {
+        service.snapshot.phase = phase;
+        service.Notify();
+
+        if (phase == TurnaroundPhase::RequestFuel)
+        {
+            QVERIFY(viewModel.GetPilotTouchLabel().isEmpty());
+            QVERIFY(!OperationsViewModel::GetStartLoadingLabel().isEmpty());
+
+            continue;
+        }
+
+        QVERIFY(!viewModel.GetPilotTouchLabel().isEmpty());
+    }
 }

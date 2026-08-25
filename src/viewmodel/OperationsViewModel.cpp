@@ -3,6 +3,7 @@
 #include <cmath>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QLocale>
+#include "../domain/turnaround/PilotTouch.h"
 #include "../domain/turnaround/TurnaroundPhase.h"
 #include "../domain/model/FlightPlan.h"
 #include "../domain/support/Weight.h"
@@ -72,6 +73,21 @@ namespace
             return QCoreApplication::translate("Turnaround", "Turn off the beacon lights and set the parking brake.");
         case TurnaroundPhase::WaitingNewFlight:
             return QCoreApplication::translate("Turnaround", "Activate the SmartSwitch to start a new flight.");
+        default:
+            return {};
+        }
+    }
+
+    QString PilotTouchLabel(const TurnaroundPhase phase)
+    {
+        switch (phase)
+        {
+        case TurnaroundPhase::WaitingReadyToPush:
+            return QCoreApplication::translate("OperationsScreen", "Unlock Pushback");
+        case TurnaroundPhase::WaitingForEngines:
+            return QCoreApplication::translate("OperationsScreen", "Confirm Engine Start");
+        case TurnaroundPhase::WaitingNewFlight:
+            return QCoreApplication::translate("OperationsScreen", "Start New Flight");
         default:
             return {};
         }
@@ -690,6 +706,16 @@ bool OperationsViewModel::CanReloadSimbrief() const
     return snapshot_.canReloadSimbrief;
 }
 
+QString OperationsViewModel::GetPilotTouchLabel() const
+{
+    return PilotTouchLabel(snapshot_.phase);
+}
+
+bool OperationsViewModel::CanPilotTouch() const
+{
+    return snapshot_.connected && snapshot_.automationEnabled && PilotTouch::Accepts(snapshot_.phase);
+}
+
 QString OperationsViewModel::GetCommandError() const
 {
     return commandError_;
@@ -698,6 +724,12 @@ QString OperationsViewModel::GetCommandError() const
 void OperationsViewModel::startFlow()
 {
     SetEnabled(true);
+}
+
+void OperationsViewModel::AcceptPilotTouch(const TurnaroundPhase stamped)
+{
+    SetCommandError(service_->AcceptPilotTouch(stamped));
+    Refresh();
 }
 
 void OperationsViewModel::startLoading()

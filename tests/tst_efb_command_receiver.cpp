@@ -23,6 +23,9 @@ private slots:
     static void aRefusedTouchCarriesTheReasonTheWindowWouldShow();
     static void anUnknownCommandIsDroppedAndNothingElseRuns();
     static void aMalformedPayloadIsDroppedAndNothingElseRuns();
+    static void aStampedTouchReachesTheServiceWithThePhaseTheScreenDrew();
+    static void aTouchWithoutAPhaseStampIsDropped();
+    static void aRefusedStampedTouchCarriesTheReasonToTheScreen();
 };
 
 void EfbCommandReceiverTest::subscribesToTheCommandChannelOnSetup()
@@ -128,6 +131,61 @@ void EfbCommandReceiverTest::aMalformedPayloadIsDroppedAndNothingElseRuns()
     QCOMPARE(service.startLoadingCalls, 0);
     QCOMPARE(service.restartFlowCalls, 0);
     QCOMPARE(service.reloadCalls, 0);
+}
+
+void EfbCommandReceiverTest::aStampedTouchReachesTheServiceWithThePhaseTheScreenDrew()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbCommandReceiver receiver(&bridge, &viewModel);
+    receiver.Setup();
+
+    bridge.Deliver(EfbCommBus::kCommandChannel,
+                   R"({"command":"pilotTouch","phase":12})");
+
+    QCOMPARE(service.pilotTouchCalls, 1);
+    QCOMPARE(service.pilotTouchStamp, TurnaroundPhase::WaitingReadyToPush);
+}
+
+void EfbCommandReceiverTest::aTouchWithoutAPhaseStampIsDropped()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbCommandReceiver receiver(&bridge, &viewModel);
+    receiver.Setup();
+
+    bridge.Deliver(EfbCommBus::kCommandChannel, Command("pilotTouch"));
+    bridge.Deliver(EfbCommBus::kCommandChannel, R"({"command":"pilotTouch","phase":"12"})");
+    bridge.Deliver(EfbCommBus::kCommandChannel, R"({"command":"pilotTouch","phase":-1})");
+    bridge.Deliver(EfbCommBus::kCommandChannel,
+                   R"({"command":"pilotTouch","phase":)"
+                   + std::to_string(static_cast<int>(TurnaroundPhase::Count)) + "}");
+
+    QCOMPARE(service.pilotTouchCalls, 0);
+    QVERIFY(viewModel.GetCommandError().isEmpty());
+}
+
+void EfbCommandReceiverTest::aRefusedStampedTouchCarriesTheReasonToTheScreen()
+{
+    FakeIntegratorService service;
+    service.pilotTouchResult = CommandResult::Failure("The turnaround moved on before your touch arrived.");
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbCommandReceiver receiver(&bridge, &viewModel);
+    receiver.Setup();
+
+    bridge.Deliver(EfbCommBus::kCommandChannel, R"({"command":"pilotTouch","phase":25})");
+
+    QCOMPARE(viewModel.GetCommandError(),
+             QStringLiteral("The turnaround moved on before your touch arrived."));
 }
 
 QTEST_APPLESS_MAIN(EfbCommandReceiverTest)

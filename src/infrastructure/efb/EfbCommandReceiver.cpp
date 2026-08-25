@@ -7,10 +7,13 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include "../logging/LogMacros.h"
+#include "../../domain/turnaround/TurnaroundPhase.h"
 #include "../../viewmodel/OperationsViewModel.h"
 
 namespace
 {
+    constexpr auto kPilotTouch = QLatin1String("pilotTouch");
+
     using Touch = void (OperationsViewModel::*)();
 
     constexpr std::array<std::pair<QLatin1String, Touch>, 4> kTouches{{
@@ -20,7 +23,7 @@ namespace
         {QLatin1String("reloadSimbrief"), &OperationsViewModel::reloadSimbrief},
     }};
 
-    std::optional<QString> CommandName(const std::string& payload)
+    std::optional<QJsonObject> CommandObject(const std::string& payload)
     {
         const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(payload));
         if (!document.isObject())
@@ -30,15 +33,36 @@ namespace
             return std::nullopt;
         }
 
-        const QJsonValue command = document.object().value(QLatin1String("command"));
-        if (!command.isString())
+        const QJsonObject object = document.object();
+        if (!object.value(QLatin1String("command")).isString())
         {
             LOG_WARN("EFB app: dropping a command payload without a command name");
 
             return std::nullopt;
         }
 
-        return command.toString();
+        return object;
+    }
+
+    std::optional<TurnaroundPhase> StampedPhase(const QJsonObject& command)
+    {
+        const QJsonValue phase = command.value(QLatin1String("phase"));
+        if (!phase.isDouble())
+        {
+            LOG_WARN("EFB app: dropping a pilot touch that carries no phase stamp");
+
+            return std::nullopt;
+        }
+
+        const int index = phase.toInt(-1);
+        if (index < 0 || index >= static_cast<int>(TurnaroundPhase::Count))
+        {
+            LOG_WARN("EFB app: dropping a pilot touch stamped with the unknown phase %d", index);
+
+            return std::nullopt;
+        }
+
+        return static_cast<TurnaroundPhase>(index);
     }
 }
 
@@ -55,15 +79,28 @@ void EfbCommandReceiver::Setup()
 
 void EfbCommandReceiver::Accept(const std::string& payload) const
 {
-    const std::optional<QString> name = CommandName(payload);
-    if (!name.has_value())
+    const std::optional<QJsonObject> command = CommandObject(payload);
+    if (!command.has_value())
     {
+        return;
+    }
+
+    const QString name = command->value(QLatin1String("command")).toString();
+
+    if (name == kPilotTouch)
+    {
+        const std::optional<TurnaroundPhase> stamped = StampedPhase(*command);
+        if (stamped.has_value())
+        {
+            view_->AcceptPilotTouch(*stamped);
+        }
+
         return;
     }
 
     for (const auto& [known, touch] : kTouches)
     {
-        if (*name == known)
+        if (name == known)
         {
             (view_->*touch)();
 
@@ -71,5 +108,5 @@ void EfbCommandReceiver::Accept(const std::string& payload) const
         }
     }
 
-    LOG_WARN("EFB app: dropping the unknown command '%s'", qUtf8Printable(*name));
+    LOG_WARN("EFB app: dropping the unknown command '%s'", qUtf8Printable(name));
 }

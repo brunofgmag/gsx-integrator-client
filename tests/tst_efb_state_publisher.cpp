@@ -24,6 +24,7 @@ private slots:
     static void carriesTheLoadingModeFlagTheScreenColoursWith();
     static void carriesTheFlowButtonPermissionsTheWindowDecidesOnce();
     static void carriesTheRefusalTheWindowShowsWithoutASnapshotChange();
+    static void carriesThePilotTouchTheCurrentPhaseAnswersFor();
 };
 
 void EfbStatePublisherTest::publishesTheSnapshotWhenItChanges()
@@ -292,4 +293,30 @@ void EfbStatePublisherTest::carriesTheRefusalTheWindowShowsWithoutASnapshotChang
     QCOMPARE(bridge.CallCount(EfbCommBus::kStateChannel), before + 1);
     QVERIFY(std::get<2>(bridge.calls.back())
                 .find("The turnaround is not waiting to start loading.") != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesThePilotTouchTheCurrentPhaseAnswersFor()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.phase = TurnaroundPhase::WaitingNewFlight;
+    service.Notify();
+    publisher.Publish();
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("pilotTouchLabel":"Start New Flight")") != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("canPilotTouch":true)") != std::string::npos);
+
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.Notify();
+    publisher.Publish();
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("pilotTouchLabel":"")") != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("canPilotTouch":false)") != std::string::npos);
 }
