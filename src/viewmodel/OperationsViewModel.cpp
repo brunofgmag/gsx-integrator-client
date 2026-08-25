@@ -315,11 +315,6 @@ QString OperationsViewModel::GetPhaseCounterText() const
         + QString::number(GetPhaseCount());
 }
 
-QString OperationsViewModel::GetAdvancedByPilotText()
-{
-    return QCoreApplication::translate("OperationsScreen", "Unlocked by the pilot");
-}
-
 QString OperationsViewModel::GetStateText() const
 {
     return IsAwaitingStartLoading() ? StartLoadingLabel() : PhaseLabel(snapshot_.phase);
@@ -372,11 +367,6 @@ bool OperationsViewModel::IsAwaitingStartLoading() const
 int OperationsViewModel::GetDelayTicksRemaining() const
 {
     return snapshot_.delayTicksRemaining;
-}
-
-bool OperationsViewModel::AdvancedByPilot() const
-{
-    return snapshot_.phaseOrigin == TransitionOrigin::Pilot;
 }
 
 bool OperationsViewModel::IsInDeboardingPhase() const

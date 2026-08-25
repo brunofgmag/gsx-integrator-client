@@ -27,11 +27,9 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(QString turnaroundStateLabel READ GetTurnaroundStateLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(QString stateText READ GetStateText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString phaseCounterText READ GetPhaseCounterText NOTIFY SnapshotChanged)
-    Q_PROPERTY(QString advancedByPilotText READ GetAdvancedByPilotText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString phaseTip READ GetPhaseTip NOTIFY SnapshotChanged)
     Q_PROPERTY(QString nextPhaseText READ GetNextPhaseText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString holdCountdownText READ GetHoldCountdownText NOTIFY SnapshotChanged)
-    Q_PROPERTY(bool advancedByPilot READ AdvancedByPilot NOTIFY SnapshotChanged)
     Q_PROPERTY(bool inDeboardingPhase READ IsInDeboardingPhase NOTIFY SnapshotChanged)
     Q_PROPERTY(double fuelProgress READ GetFuelProgress NOTIFY SnapshotChanged)
     Q_PROPERTY(QString fuelCardLabel READ GetFuelCardLabel NOTIFY SnapshotChanged)
@@ -110,14 +108,12 @@ public:
     [[nodiscard]] static QString GetTurnaroundStateLabel();
     [[nodiscard]] QString GetStateText() const;
     [[nodiscard]] QString GetPhaseCounterText() const;
-    [[nodiscard]] static QString GetAdvancedByPilotText();
     [[nodiscard]] int GetPhase() const;
     [[nodiscard]] static int GetPhaseCount();
     [[nodiscard]] QString GetPhaseTip() const;
     [[nodiscard]] QString GetNextPhaseText() const;
     [[nodiscard]] QString GetHoldCountdownText() const;
     [[nodiscard]] int GetDelayTicksRemaining() const;
-    [[nodiscard]] bool AdvancedByPilot() const;
     [[nodiscard]] bool IsInDeboardingPhase() const;
     [[nodiscard]] double GetFuelProgress() const;
     [[nodiscard]] static QString GetFuelCardLabel();

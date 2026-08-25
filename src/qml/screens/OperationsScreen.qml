@@ -81,29 +81,7 @@ ColumnLayout {
                 wrapMode: Text.WordWrap
             }
 
-            Item { width: 1; height: 6; visible: root.integratorVm.advancedByPilot }
-
-            Rectangle {
-                visible: root.integratorVm.advancedByPilot
-                width: pilotMark.implicitWidth + 16
-                height: pilotMark.implicitHeight + 8
-                radius: Theme.radiusSmall
-                color: "transparent"
-                border.color: Theme.accent
-                border.width: 1
-
-                Text {
-                    id: pilotMark
-                    anchors.centerIn: parent
-                    text: root.integratorVm.advancedByPilotText
-                    color: Theme.accent
-                    font.pixelSize: 10
-                    font.letterSpacing: 1
-                    font.capitalization: Font.AllUppercase
-                }
-            }
-
-            Item { width: 1; height: root.integratorVm.advancedByPilot ? 6 : 4 }
+            Item { width: 1; height: 4 }
 
             Item {
                 width: parent.width

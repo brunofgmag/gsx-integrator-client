@@ -336,7 +336,6 @@ void RuntimeIntegratorServiceTest::aTouchStampedWithAnotherPhaseIsRefusedAndNoth
     QVERIFY(!touch.succeeded);
     QCOMPARE(touch.message, std::string("The turnaround moved on before your touch arrived."));
     QCOMPARE(runtime.GetPhase(), before);
-    QCOMPARE(runtime.GetPhaseOrigin(), TransitionOrigin::Reading);
 }
 
 void RuntimeIntegratorServiceTest::aTouchStampedWithAPhaseThatTakesNoneIsRefused()

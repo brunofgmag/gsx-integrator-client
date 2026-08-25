@@ -88,11 +88,9 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("turnaroundStateLabel"), OperationsViewModel::GetTurnaroundStateLabel());
     state.insert(QLatin1String("stateText"), view_->GetStateText());
     state.insert(QLatin1String("phaseCounterText"), view_->GetPhaseCounterText());
-    state.insert(QLatin1String("advancedByPilotText"), OperationsViewModel::GetAdvancedByPilotText());
     state.insert(QLatin1String("phaseTip"), view_->GetPhaseTip());
     state.insert(QLatin1String("nextPhaseText"), view_->GetNextPhaseText());
     state.insert(QLatin1String("holdCountdownText"), view_->GetHoldCountdownText());
-    state.insert(QLatin1String("advancedByPilot"), view_->AdvancedByPilot());
     state.insert(QLatin1String("inDeboardingPhase"), view_->IsInDeboardingPhase());
     state.insert(QLatin1String("cargoAircraft"), view_->IsCargoAircraft());
 
