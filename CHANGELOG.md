@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.17.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.16.0...v1.17.0) (2026-08-25)
+
+
+* act on the four flow buttons from inside the EFB app ([#72](https://github.com/brunofgmag/gsx-integrator-client/issues/72)) ([08e68bc](https://github.com/brunofgmag/gsx-integrator-client/commit/08e68bc7920e6e6bba8ac2f8465a952e61d7933d))
+
+
+### Features
+
+* **efb:** decide each flow button permission once and publish it ([2b47dad](https://github.com/brunofgmag/gsx-integrator-client/commit/2b47dad54578d4d3ba302b92a33b020382098d21)) ([08e68bc](https://github.com/brunofgmag/gsx-integrator-client/commit/08e68bc7920e6e6bba8ac2f8465a952e61d7933d))
+* **efb:** take the four flow commands back from the EFB app ([f550ef1](https://github.com/brunofgmag/gsx-integrator-client/commit/f550ef145271c62623e520f8b9ce53ceafbd90f9)) ([08e68bc](https://github.com/brunofgmag/gsx-integrator-client/commit/08e68bc7920e6e6bba8ac2f8465a952e61d7933d))
+
+
+### Bug Fixes
+
+* **efb:** publish a refused command so the EFB app shows the reason ([381fc5d](https://github.com/brunofgmag/gsx-integrator-client/commit/381fc5d0969a7e16002806dec56f204b36e71365)) ([08e68bc](https://github.com/brunofgmag/gsx-integrator-client/commit/08e68bc7920e6e6bba8ac2f8465a952e61d7933d))
+
 ## [1.16.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.15.0...v1.16.0) (2026-08-24)
 
 
