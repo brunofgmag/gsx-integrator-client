@@ -14,7 +14,7 @@ ColumnLayout {
     SettingRow {
         Layout.fillWidth: true
         title: qsTr("SimBrief Pilot ID")
-        caption: qsTr("Used to fetch your latest OFP")
+        caption: qsTr("Fetches your latest OFP")
         helpText: ""
 
         TextField {
@@ -50,13 +50,18 @@ ColumnLayout {
         onToggled: checked => root.settingsVm.streamerMode = checked
     }
 
-    SwitchRow {
+    SettingRow {
         Layout.fillWidth: true
-        title: qsTr("Open GSX on requests")
-        caption: qsTr("Shows the GSX window in the sim when requesting services")
-        helpText: qsTr("When off, requests are sent silently: the GSX window no longer opens on every request, but GSX menus and messages won't appear in the sim.")
-        checked: root.settingsVm.openGsxOnRequests
-        onToggled: checked => root.settingsVm.openGsxOnRequests = checked
+        title: qsTr("GSX panel")
+        caption: qsTr("When the client opens the GSX window in the sim")
+        helpText: qsTr("On pushback opens the panel for the destination menu and closes it once the push begins. Keep closed dismisses a panel left open. Never leaves the panel alone. All requests opens it whenever the client asks GSX for anything.")
+
+        SelectBox {
+            anchors.verticalCenter: parent.verticalCenter
+            model: [qsTr("Never"), qsTr("Keep closed"), qsTr("On pushback"), qsTr("All requests")]
+            currentIndex: root.settingsVm.gsxPanelMode
+            onActivated: index => root.settingsVm.gsxPanelMode = index
+        }
     }
 
     SettingRow {
@@ -77,7 +82,7 @@ ColumnLayout {
         Layout.fillWidth: true
         title: qsTr("Weight unit")
         caption: qsTr("Units shown for fuel and payload")
-        helpText: qsTr("In Automatic mode the unit is taken from SimBrief (when a Pilot ID is set) or from the aircraft's flight plan when the client can read it; otherwise KG.")
+        helpText: qsTr("In Auto the unit comes from SimBrief, when a Pilot ID is set, or from the aircraft's flight plan when the client can read it. With neither, the client uses KG.")
 
         SegmentedControl {
             anchors.verticalCenter: parent.verticalCenter

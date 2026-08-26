@@ -27,6 +27,7 @@ public:
     int requestWaterCalls = 0;
     int requestCleaningCalls = 0;
     int turnaroundTurnedCalls = 0;
+    int pushbackStartedCalls = 0;
 
     void CallJetway() override { ++callJetwayCalls; }
 
@@ -73,6 +74,7 @@ public:
     void DisableGsxMenu() override {}
 
     void OnTurnaroundTurned() override { ++turnaroundTurnedCalls; }
+    void OnPushbackStarted() override { ++pushbackStartedCalls; }
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_TESTS_FAKEGSXMENUGATEWAY_H

@@ -25,7 +25,7 @@ struct AppSettings
     bool callLavatory = false;
     bool callWater = false;
     bool callCleaning = false;
-    bool openGsxOnRequests = true;
+    int gsxPanelMode = static_cast<int>(GsxPanelMode::OnPushback);
     int themeMode = 2;
     std::string language = "system";
     std::string renderer = "software";

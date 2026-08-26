@@ -119,6 +119,9 @@ void GsxMenuNavigator::RequestDeboarding()
 
 void GsxMenuNavigator::RequestPushback()
 {
+    pushbackWindow_ = true;
+    OpenPanelForPushback();
+
     TriggerService(gsx::services::Id(GroundService::Departure));
 }
 
@@ -219,7 +222,9 @@ void GsxMenuNavigator::Reset()
     resyncCount_ = 0;
     resyncPending_ = false;
     lastActionMs_ = 0;
-    toolbarCloseSpent_ = false;
+    panelDrops_ = 0;
+    panelGaveUp_ = false;
+    RearmPanelLatches();
     pending_.clear();
 }
 
@@ -623,7 +628,7 @@ void GsxMenuNavigator::PumpRequests()
         ++it;
     }
 
-    if (!IsMenuSettled())
+    if (IsWaitingForThePanel() || !IsMenuSettled())
     {
         return;
     }
@@ -690,6 +695,16 @@ bool GsxMenuNavigator::WasTaken(const PendingRequest& request) const
     return service->stateRaw != static_cast<int>(GsxStateStatus::Callable) || !service->canTrigger;
 }
 
+GsxPanelMode GsxMenuNavigator::PanelMode() const
+{
+    return panelGaveUp_ ? GsxPanelMode::Never : settings_->gsxPanelMode;
+}
+
+bool GsxMenuNavigator::HasGivenUpOnThePanel() const
+{
+    return panelGaveUp_;
+}
+
 void GsxMenuNavigator::SyncGsxToolbar() const
 {
     if (pluginClient_ == nullptr)
@@ -697,7 +712,9 @@ void GsxMenuNavigator::SyncGsxToolbar() const
         return;
     }
 
-    if (settings_->openGsxOnRequests)
+    const GsxPanelMode mode = PanelMode();
+
+    if (mode == GsxPanelMode::AllRequests)
     {
         if (!pluginClient_->IsGsxToolbarActive())
         {
@@ -708,7 +725,15 @@ void GsxMenuNavigator::SyncGsxToolbar() const
         return;
     }
 
-    if (toolbarCloseSpent_ || !pluginClient_->IsGsxToolbarActive())
+    if (mode == GsxPanelMode::KeepClosed)
+    {
+        DropForgottenPanel();
+    }
+}
+
+void GsxMenuNavigator::DropForgottenPanel() const
+{
+    if (pushbackWindow_ || !pluginClient_->IsGsxToolbarActive())
     {
         return;
     }
@@ -718,13 +743,102 @@ void GsxMenuNavigator::SyncGsxToolbar() const
         return;
     }
 
-    toolbarCloseSpent_ = true;
+    ++panelDrops_;
     logger_->LogInfo("RemoteAPI closing the GSX toolbar left open");
+
+    if (panelDrops_ < kMaxPanelDrops)
+    {
+        return;
+    }
+
+    panelGaveUp_ = true;
+    logger_->LogInfo(std::format(
+        "RemoteAPI gave up on keeping the GSX toolbar closed after {} drops in this session",
+        panelDrops_));
+}
+
+void GsxMenuNavigator::OpenPanelForPushback()
+{
+    if (pluginClient_ == nullptr || PanelMode() != GsxPanelMode::OnPushback || panelOpenSpent_)
+    {
+        return;
+    }
+
+    if (pluginClient_->IsGsxToolbarActive())
+    {
+        panelOpenSpent_ = true;
+
+        return;
+    }
+
+    if (!pluginClient_->OpenGsxToolbar())
+    {
+        return;
+    }
+
+    panelOpenSpent_ = true;
+    panelOpenedByUs_ = true;
+    panelOpenSentMs_ = nowMs_();
+    logger_->LogInfo("RemoteAPI opening the GSX toolbar for the pushback menu");
+}
+
+void GsxMenuNavigator::ClosePanelAfterPushback()
+{
+    if (pluginClient_ == nullptr || PanelMode() != GsxPanelMode::OnPushback)
+    {
+        return;
+    }
+
+    if (!panelOpenedByUs_ || panelCloseSpent_ || !pluginClient_->IsGsxToolbarActive())
+    {
+        return;
+    }
+
+    if (!pluginClient_->CloseGsxToolbar())
+    {
+        return;
+    }
+
+    panelCloseSpent_ = true;
+    logger_->LogInfo("RemoteAPI closing the GSX toolbar now that the pushback has started");
+}
+
+bool GsxMenuNavigator::IsWaitingForThePanel()
+{
+    if (panelOpenSentMs_ == 0 || pluginClient_ == nullptr || pluginClient_->IsGsxToolbarActive())
+    {
+        return false;
+    }
+
+    if ((nowMs_() - panelOpenSentMs_) < kPanelOpenWaitMs)
+    {
+        return true;
+    }
+
+    panelOpenSentMs_ = 0;
+    logger_->LogInfo("RemoteAPI sending the pushback request without the GSX toolbar confirming it opened");
+
+    return false;
+}
+
+void GsxMenuNavigator::RearmPanelLatches()
+{
+    pushbackWindow_ = false;
+    panelOpenSpent_ = false;
+    panelCloseSpent_ = false;
+    panelOpenedByUs_ = false;
+    panelOpenSentMs_ = 0;
 }
 
 void GsxMenuNavigator::OnTurnaroundTurned()
 {
-    toolbarCloseSpent_ = false;
+    RearmPanelLatches();
+}
+
+void GsxMenuNavigator::OnPushbackStarted()
+{
+    pushbackWindow_ = false;
+    ClosePanelAfterPushback();
 }
 
 void GsxMenuNavigator::OpenMenu() const

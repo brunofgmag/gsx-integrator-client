@@ -40,8 +40,8 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(bool callLavatory READ GetCallLavatory WRITE SetCallLavatory NOTIFY CallLavatoryChanged)
     Q_PROPERTY(bool callWater READ GetCallWater WRITE SetCallWater NOTIFY CallWaterChanged)
     Q_PROPERTY(bool callCleaning READ GetCallCleaning WRITE SetCallCleaning NOTIFY CallCleaningChanged)
-    Q_PROPERTY(bool openGsxOnRequests READ GetOpenGsxOnRequests
-        WRITE SetOpenGsxOnRequests NOTIFY OpenGsxOnRequestsChanged)
+    Q_PROPERTY(int gsxPanelMode READ GetGsxPanelMode
+        WRITE SetGsxPanelMode NOTIFY GsxPanelModeChanged)
     Q_PROPERTY(int themeMode READ GetThemeMode WRITE SetThemeMode NOTIFY ThemeModeChanged)
     Q_PROPERTY(bool effectiveDark READ GetEffectiveDark NOTIFY EffectiveDarkChanged)
     Q_PROPERTY(QString language READ GetLanguage WRITE SetLanguage NOTIFY LanguageChanged)
@@ -152,8 +152,8 @@ public:
     [[nodiscard]] bool GetCallCleaning() const;
     void SetCallCleaning(bool enabled);
 
-    [[nodiscard]] bool GetOpenGsxOnRequests() const;
-    void SetOpenGsxOnRequests(bool enabled);
+    [[nodiscard]] int GetGsxPanelMode() const;
+    void SetGsxPanelMode(int mode);
 
     [[nodiscard]] int GetThemeMode() const;
     void SetThemeMode(int mode);
@@ -254,7 +254,7 @@ signals:
     void CallLavatoryChanged();
     void CallWaterChanged();
     void CallCleaningChanged();
-    void OpenGsxOnRequestsChanged();
+    void GsxPanelModeChanged();
     void ThemeModeChanged();
     void EffectiveDarkChanged();
     void LanguageChanged();
@@ -306,6 +306,7 @@ private:
     [[nodiscard]] const ProfileDraft& SelectedDraft() const;
     void TouchProfileDraft();
     void SetProfileToggle(bool ProfileDraft::* member, bool value);
+    void SurrenderTheGsxPanel();
 
     template <typename T>
     bool SetPersisted(T& field, const T& value, void (SettingsViewModel::*signal)())

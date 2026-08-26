@@ -1,6 +1,14 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_AUTOMATIONSETTINGS_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_AUTOMATIONSETTINGS_H
 
+enum class GsxPanelMode
+{
+    Never = 0,
+    KeepClosed = 1,
+    OnPushback = 2,
+    AllRequests = 3
+};
+
 enum class CrewChoice
 {
     Nobody = 0,
@@ -29,7 +37,7 @@ struct AutomationSettings
     bool callLavatory = false;
     bool callWater = false;
     bool callCleaning = false;
-    bool openGsxOnRequests = true;
+    GsxPanelMode gsxPanelMode = GsxPanelMode::OnPushback;
 
     [[nodiscard]] double EffectiveFuelRateKgs() const
     {

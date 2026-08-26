@@ -131,6 +131,12 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            visible: root.integratorVm.gsxPanelGuardTripped
+            text: root.integratorVm.gsxPanelGuardAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             visible: root.integratorVm.cargoDoorStuck
             text: root.integratorVm.cargoDoorAdvisoryText
         }

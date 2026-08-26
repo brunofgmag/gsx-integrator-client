@@ -37,7 +37,8 @@ private slots:
     static void traySettingsPersistImmediately();
     static void streamerModeDefaultsToDisabled();
     static void streamerModePersistsImmediately();
-    static void openGsxOnRequestsDefaultsToEnabledAndPersists();
+    static void theGsxPanelModeDefaultsToOnPushbackAndPersists();
+    static void theTrippedPanelGuardWritesNeverOnce();
     static void rejectsNonNumericFuelRate();
     static void rejectsNonPositiveFuelRate();
     static void emptyPilotIdIsAcceptedAsZero();
@@ -338,26 +339,53 @@ void SettingsViewModelTest::streamerModePersistsImmediately()
     QCOMPARE(repository.saveCalls, savesBefore);
 }
 
-void SettingsViewModelTest::openGsxOnRequestsDefaultsToEnabledAndPersists()
+void SettingsViewModelTest::theGsxPanelModeDefaultsToOnPushbackAndPersists()
 {
     FakeSettingsRepository repository;
     FakeIntegratorService service;
     SettingsViewModel viewModel(&repository, &service);
 
-    QVERIFY(viewModel.GetOpenGsxOnRequests());
-    QVERIFY(service.appliedSettings.openGsxOnRequests);
+    QCOMPARE(viewModel.GetGsxPanelMode(), static_cast<int>(GsxPanelMode::OnPushback));
+    QCOMPARE(service.appliedSettings.gsxPanelMode, static_cast<int>(GsxPanelMode::OnPushback));
 
-    viewModel.SetOpenGsxOnRequests(false);
+    viewModel.SetGsxPanelMode(static_cast<int>(GsxPanelMode::KeepClosed));
 
-    QVERIFY(!viewModel.GetOpenGsxOnRequests());
+    QCOMPARE(viewModel.GetGsxPanelMode(), static_cast<int>(GsxPanelMode::KeepClosed));
     QCOMPARE(repository.saveCalls, 1);
-    QVERIFY(!repository.stored.openGsxOnRequests);
-    QVERIFY(!service.appliedSettings.openGsxOnRequests);
+    QCOMPARE(repository.stored.gsxPanelMode, static_cast<int>(GsxPanelMode::KeepClosed));
+    QCOMPARE(service.appliedSettings.gsxPanelMode, static_cast<int>(GsxPanelMode::KeepClosed));
 
     const int savesBefore = repository.saveCalls;
-    viewModel.SetOpenGsxOnRequests(false);
+    viewModel.SetGsxPanelMode(static_cast<int>(GsxPanelMode::KeepClosed));
 
     QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::theTrippedPanelGuardWritesNeverOnce()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    viewModel.SetGsxPanelMode(static_cast<int>(GsxPanelMode::KeepClosed));
+
+    const int savesBefore = repository.saveCalls;
+
+    service.Notify();
+
+    QCOMPARE(viewModel.GetGsxPanelMode(), static_cast<int>(GsxPanelMode::KeepClosed));
+    QCOMPARE(repository.saveCalls, savesBefore);
+
+    service.snapshot.gsxPanelGuardTripped = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetGsxPanelMode(), static_cast<int>(GsxPanelMode::Never));
+    QCOMPARE(repository.stored.gsxPanelMode, static_cast<int>(GsxPanelMode::Never));
+    QCOMPARE(repository.saveCalls, savesBefore + 1);
+
+    service.Notify();
+
+    QCOMPARE(repository.saveCalls, savesBefore + 1);
 }
 
 void SettingsViewModelTest::rejectsNonNumericFuelRate()

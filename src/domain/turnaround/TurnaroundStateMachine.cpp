@@ -243,6 +243,11 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
         }
     }
 
+    if (phase == TurnaroundPhase::WaitingForEngines && context_.menuGateway != nullptr)
+    {
+        context_.menuGateway->OnPushbackStarted();
+    }
+
     if (phase == TurnaroundPhase::WaitingSupportedAircraft
         && phase_ == TurnaroundPhase::WaitingNewFlight
         && context_.settings != nullptr && !context_.settings->autoStartFlow
