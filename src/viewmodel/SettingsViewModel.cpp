@@ -199,6 +199,16 @@ void SettingsViewModel::SetCrewBoarding(const int choice)
     SetPersisted(settings_.crewBoarding, choice, &SettingsViewModel::CrewBoardingChanged);
 }
 
+int SettingsViewModel::GetCrewDeboarding() const
+{
+    return settings_.crewDeboarding;
+}
+
+void SettingsViewModel::SetCrewDeboarding(const int choice)
+{
+    SetPersisted(settings_.crewDeboarding, choice, &SettingsViewModel::CrewDeboardingChanged);
+}
+
 bool SettingsViewModel::GetAutoStartFlow() const
 {
     return settings_.autoStartFlow;

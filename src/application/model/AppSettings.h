@@ -15,6 +15,7 @@ struct AppSettings
     bool autoDeice = false;
     bool useAircraftStairs = false;
     int crewBoarding = 3;
+    int crewDeboarding = 3;
     bool autoStartFlow = true;
     bool autoStartLoading = true;
     bool skipReposition = false;

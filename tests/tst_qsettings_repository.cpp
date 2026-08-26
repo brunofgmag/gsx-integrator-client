@@ -19,6 +19,8 @@ private slots:
     void themeModeLegacyLightFallsBackToLight() const;
     void explicitThemeModeWinsOverLegacy() const;
     void saveReplacesExistingProfiles();
+    void crewDeboardingInheritsTheBoardingChoiceWhenAbsent() const;
+    void explicitCrewDeboardingWinsOverTheBoardingChoice() const;
 
 private:
     QTemporaryDir tempDir_;
@@ -51,6 +53,7 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QCOMPARE(loaded.autoDeice, false);
     QCOMPARE(loaded.useAircraftStairs, false);
     QCOMPARE(loaded.crewBoarding, 3);
+    QCOMPARE(loaded.crewDeboarding, 3);
     QCOMPARE(loaded.autoStartFlow, false);
     QCOMPARE(loaded.autoStartLoading, true);
     QCOMPARE(loaded.skipReposition, false);
@@ -72,6 +75,31 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QVERIFY(loaded.profiles.empty());
 }
 
+void QSettingsRepositoryTest::crewDeboardingInheritsTheBoardingChoiceWhenAbsent() const
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("gsx/crewBoarding"), 2);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QCOMPARE(loaded.crewBoarding, 2);
+    QCOMPARE(loaded.crewDeboarding, 2);
+}
+
+void QSettingsRepositoryTest::explicitCrewDeboardingWinsOverTheBoardingChoice() const
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("gsx/crewBoarding"), 2);
+    settings.setValue(QStringLiteral("gsx/crewDeboarding"), 0);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QCOMPARE(loaded.crewBoarding, 2);
+    QCOMPARE(loaded.crewDeboarding, 0);
+}
+
 void QSettingsRepositoryTest::saveLoadRoundTrip()
 {
     AppSettings values;
@@ -82,6 +110,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     values.autoDeice = true;
     values.useAircraftStairs = true;
     values.crewBoarding = 1;
+    values.crewDeboarding = 2;
     values.autoStartFlow = true;
     values.autoStartLoading = false;
     values.skipReposition = true;
@@ -123,6 +152,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     QCOMPARE(loaded.autoDeice, values.autoDeice);
     QCOMPARE(loaded.useAircraftStairs, values.useAircraftStairs);
     QCOMPARE(loaded.crewBoarding, values.crewBoarding);
+    QCOMPARE(loaded.crewDeboarding, values.crewDeboarding);
     QCOMPARE(loaded.autoStartFlow, values.autoStartFlow);
     QCOMPARE(loaded.autoStartLoading, values.autoStartLoading);
     QCOMPARE(loaded.skipReposition, values.skipReposition);

@@ -30,6 +30,7 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(bool useAircraftStairs READ GetUseAircraftStairs
         WRITE SetUseAircraftStairs NOTIFY UseAircraftStairsChanged)
     Q_PROPERTY(int crewBoarding READ GetCrewBoarding WRITE SetCrewBoarding NOTIFY CrewBoardingChanged)
+    Q_PROPERTY(int crewDeboarding READ GetCrewDeboarding WRITE SetCrewDeboarding NOTIFY CrewDeboardingChanged)
     Q_PROPERTY(bool autoStartFlow READ GetAutoStartFlow WRITE SetAutoStartFlow NOTIFY AutoStartFlowChanged)
     Q_PROPERTY(bool autoStartLoading READ GetAutoStartLoading WRITE SetAutoStartLoading NOTIFY AutoStartLoadingChanged)
     Q_PROPERTY(bool skipReposition READ GetSkipReposition WRITE SetSkipReposition NOTIFY SkipRepositionChanged)
@@ -121,6 +122,8 @@ public:
 
     [[nodiscard]] int GetCrewBoarding() const;
     void SetCrewBoarding(int choice);
+    [[nodiscard]] int GetCrewDeboarding() const;
+    void SetCrewDeboarding(int choice);
 
     [[nodiscard]] bool GetAutoStartFlow() const override;
     void SetAutoStartFlow(bool enabled);
@@ -241,6 +244,7 @@ signals:
     void AutoDeiceChanged();
     void UseAircraftStairsChanged();
     void CrewBoardingChanged();
+    void CrewDeboardingChanged();
     void AutoStartFlowChanged();
     void AutoStartLoadingChanged();
     void SkipRepositionChanged();

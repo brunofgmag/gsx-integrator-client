@@ -27,6 +27,7 @@
 #include "states/WaitingSupportedAircraftState.h"
 #include "../ports/Aircraft.h"
 #include "../ports/DomainLogger.h"
+#include "../ports/GsxMenuGateway.h"
 #include "../model/AutomationStatus.h"
 #include "../model/AutomationSettings.h"
 #include "states/DeboardingState.h"
@@ -235,6 +236,11 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
     if (phase == TurnaroundPhase::WaitingNewFlight)
     {
         context_.data.Reset();
+
+        if (context_.menuGateway != nullptr)
+        {
+            context_.menuGateway->OnTurnaroundTurned();
+        }
     }
 
     if (phase == TurnaroundPhase::WaitingSupportedAircraft

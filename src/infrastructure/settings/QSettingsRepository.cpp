@@ -8,6 +8,7 @@ namespace
     constexpr auto kKeyAutoDeice = "gsx/autoDeice";
     constexpr auto kKeyUseAircraftStairs = "gsx/useAircraftStairs";
     constexpr auto kKeyCrewBoarding = "gsx/crewBoarding";
+    constexpr auto kKeyCrewDeboarding = "gsx/crewDeboarding";
     constexpr auto kKeyOpenGsxOnRequests = "gsx/openGsxOnRequests";
     constexpr auto kKeyAutoStartFlow = "automation/autoStartFlow";
     constexpr auto kKeyAutoStartLoading = "automation/autoStartLoading";
@@ -92,6 +93,7 @@ AppSettings QSettingsRepository::Load() const
     result.autoDeice = settings.value(kKeyAutoDeice, false).toBool();
     result.useAircraftStairs = settings.value(kKeyUseAircraftStairs, false).toBool();
     result.crewBoarding = settings.value(kKeyCrewBoarding, 3).toInt();
+    result.crewDeboarding = settings.value(kKeyCrewDeboarding, result.crewBoarding).toInt();
     result.autoStartFlow = settings.value(kKeyAutoStartFlow, false).toBool();
     result.autoStartLoading = settings.value(kKeyAutoStartLoading, true).toBool();
     result.skipReposition = settings.value(kKeySkipReposition, false).toBool();
@@ -136,6 +138,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyAutoDeice, values.autoDeice);
     settings.setValue(kKeyUseAircraftStairs, values.useAircraftStairs);
     settings.setValue(kKeyCrewBoarding, values.crewBoarding);
+    settings.setValue(kKeyCrewDeboarding, values.crewDeboarding);
     settings.setValue(kKeyAutoStartFlow, values.autoStartFlow);
     settings.setValue(kKeyAutoStartLoading, values.autoStartLoading);
     settings.setValue(kKeySkipReposition, values.skipReposition);

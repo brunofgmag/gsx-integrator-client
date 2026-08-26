@@ -355,6 +355,7 @@ private slots:
     static void waitsForBoardingTransitionDelay();
     static void holdsBoardingWhileCargoIsPending();
     static void completesReachableWorkflowAndReturnsToStart();
+    static void theTurnaroundTurnNotifiesTheMenuGateway();
     static void publishesCurrentTankFuelBeforeRefuel();
     static void publishesLoadingTargetsAfterFlightPlanCapture();
     static void debugSkipPhaseClampsToEnumRange();
@@ -577,6 +578,28 @@ void TurnaroundStateMachineTest::holdsBoardingWhileCargoIsPending()
     workflow.f.gsxService.cargoPercent = 100.0;
 
     workflow.CompleteBoarding();
+}
+
+void TurnaroundStateMachineTest::theTurnaroundTurnNotifiesTheMenuGateway()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+    workflow.StartPushbackMovement();
+    workflow.ConfirmEngineStart();
+    workflow.Depart();
+    workflow.Land();
+    workflow.RequestDeboarding();
+    workflow.StartDeboarding();
+
+    QCOMPARE(workflow.f.menuGateway.turnaroundTurnedCalls, 0);
+
+    workflow.CompleteDeboarding();
+
+    QCOMPARE(workflow.f.menuGateway.turnaroundTurnedCalls, 1);
 }
 
 void TurnaroundStateMachineTest::completesReachableWorkflowAndReturnsToStart()

@@ -28,17 +28,18 @@ namespace
     constexpr auto kLoadingInProgressText = "loading in progress";
     constexpr auto kBoardingPassengersText = "Boarding passengers now";
     constexpr auto kBoardCrewQuestion = "board crew";
+    constexpr auto kDeboardCrewQuestion = "deboard crew";
     constexpr auto kDeIceQuestion = "de-icing";
     constexpr auto kAirstairsQuestion = "own airstairs";
 
-    const char* CrewBoardingEntry(const CrewBoarding choice)
+    const char* CrewChoiceEntry(const CrewChoice choice)
     {
         switch (choice)
         {
-        case CrewBoarding::Nobody: return "No";
-        case CrewBoarding::Crew: return "Crew";
-        case CrewBoarding::Pilots: return "Pilots";
-        case CrewBoarding::Both: return "Both";
+        case CrewChoice::Nobody: return "No";
+        case CrewChoice::Crew: return "Crew";
+        case CrewChoice::Pilots: return "Pilots";
+        case CrewChoice::Both: return "Both";
         }
         return "Both";
     }
@@ -218,6 +219,7 @@ void GsxMenuNavigator::Reset()
     resyncCount_ = 0;
     resyncPending_ = false;
     lastActionMs_ = 0;
+    toolbarCloseSpent_ = false;
     pending_.clear();
 }
 
@@ -439,13 +441,18 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
         return true;
     }
 
+    if (Contains(menu.title, kDeboardCrewQuestion))
+    {
+        const CrewChoice choice = settings_ != nullptr ? settings_->crewDeboarding : CrewChoice::Both;
+
+        return PickByContains(CrewChoiceEntry(choice));
+    }
+
     if (Contains(menu.title, kBoardCrewQuestion))
     {
-        const auto choice = settings_ != nullptr ? settings_->crewBoarding : CrewBoarding::Both;
-        if (PickByContains(CrewBoardingEntry(choice)))
-        {
-            return true;
-        }
+        const CrewChoice choice = settings_ != nullptr ? settings_->crewBoarding : CrewChoice::Both;
+
+        return PickByContains(CrewChoiceEntry(choice));
     }
 
     return false;
@@ -564,7 +571,7 @@ bool GsxMenuNavigator::HandleIntentPrompts()
 void GsxMenuNavigator::TriggerService(const char* serviceId)
 {
     OpenIntent(Intent::Service);
-    ShowGsxToolbar();
+    SyncGsxToolbar();
 
     ArmRequest("service.trigger",
                QJsonObject{{"service", QString::fromLatin1(serviceId)}},
@@ -683,18 +690,46 @@ bool GsxMenuNavigator::WasTaken(const PendingRequest& request) const
     return service->stateRaw != static_cast<int>(GsxStateStatus::Callable) || !service->canTrigger;
 }
 
-void GsxMenuNavigator::ShowGsxToolbar() const
+void GsxMenuNavigator::SyncGsxToolbar() const
 {
-    if (settings_->openGsxOnRequests && pluginClient_ != nullptr && !pluginClient_->IsGsxToolbarActive())
+    if (pluginClient_ == nullptr)
     {
-        logger_->LogInfo("RemoteAPI opening the GSX toolbar");
-        (void)pluginClient_->OpenGsxToolbar();
+        return;
     }
+
+    if (settings_->openGsxOnRequests)
+    {
+        if (!pluginClient_->IsGsxToolbarActive())
+        {
+            logger_->LogInfo("RemoteAPI opening the GSX toolbar");
+            (void)pluginClient_->OpenGsxToolbar();
+        }
+
+        return;
+    }
+
+    if (toolbarCloseSpent_ || !pluginClient_->IsGsxToolbarActive())
+    {
+        return;
+    }
+
+    if (!pluginClient_->CloseGsxToolbar())
+    {
+        return;
+    }
+
+    toolbarCloseSpent_ = true;
+    logger_->LogInfo("RemoteAPI closing the GSX toolbar left open");
+}
+
+void GsxMenuNavigator::OnTurnaroundTurned()
+{
+    toolbarCloseSpent_ = false;
 }
 
 void GsxMenuNavigator::OpenMenu() const
 {
-    ShowGsxToolbar();
+    SyncGsxToolbar();
 
     if (!state_->menu.shown)
     {

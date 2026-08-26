@@ -75,6 +75,20 @@ ColumnLayout {
         }
     }
 
+    SettingRow {
+        Layout.fillWidth: true
+        title: qsTr("Crew deboarding")
+        caption: qsTr("Answer when GSX asks who leaves the aircraft")
+        helpText: qsTr("The GSX option to ignore Crew/Pilots boarding must be disabled, otherwise this prompt never appears.")
+
+        SegmentedControl {
+            anchors.verticalCenter: parent.verticalCenter
+            model: [qsTr("Nobody"), qsTr("Crew"), qsTr("Pilots"), qsTr("Both")]
+            currentIndex: root.settingsVm.crewDeboarding
+            onActivated: index => root.settingsVm.crewDeboarding = index
+        }
+    }
+
     SwitchRow {
         Layout.fillWidth: true
         title: qsTr("Always use aircraft stairs")
