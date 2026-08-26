@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.23.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.22.0...v1.23.0) (2026-08-26)
+
+
+* open the panel on the wait for the push and drop keep closed ([#84](https://github.com/brunofgmag/gsx-integrator-client/issues/84)) ([34cd3f4](https://github.com/brunofgmag/gsx-integrator-client/commit/34cd3f4f1df7a2b066d846b1a9707700a3b74364))
+
+
+### Features
+
+* **gsx:** open the panel on the wait for the push and drop keep closed ([56f60d1](https://github.com/brunofgmag/gsx-integrator-client/commit/56f60d11653a7ac89dda514067f48f43174a264e)) ([34cd3f4](https://github.com/brunofgmag/gsx-integrator-client/commit/34cd3f4f1df7a2b066d846b1a9707700a3b74364))
+
 ## [1.22.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.21.0...v1.22.0) (2026-08-26)
 
 
