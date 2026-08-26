@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.21.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.20.0...v1.21.0) (2026-08-26)
+
+
+* finish what was left of the wire readers, the plan error and the header hover ([#80](https://github.com/brunofgmag/gsx-integrator-client/issues/80)) ([dd903d5](https://github.com/brunofgmag/gsx-integrator-client/commit/dd903d561eb80243eb1338c8a6c55e9693ab849f))
+
+
+### Features
+
+* **gsx:** read the four wire facts the client was throwing away ([da2b0e5](https://github.com/brunofgmag/gsx-integrator-client/commit/da2b0e59145a7416e53c19deba153b9de902c98d)) ([dd903d5](https://github.com/brunofgmag/gsx-integrator-client/commit/dd903d561eb80243eb1338c8a6c55e9693ab849f))
+* **simbrief:** tell the pilot why the flight plan import failed ([8e73524](https://github.com/brunofgmag/gsx-integrator-client/commit/8e73524a8912871c180d0cb19f9da7edc77dfd94)) ([dd903d5](https://github.com/brunofgmag/gsx-integrator-client/commit/dd903d561eb80243eb1338c8a6c55e9693ab849f))
+* **ui:** give the header buttons the accent hover the rest of the app uses ([23287b8](https://github.com/brunofgmag/gsx-integrator-client/commit/23287b88003c5c3feabbfff5291e85b0cab36a57)) ([dd903d5](https://github.com/brunofgmag/gsx-integrator-client/commit/dd903d561eb80243eb1338c8a6c55e9693ab849f))
+
 ## [1.20.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.19.0...v1.20.0) (2026-08-26)
 
 
