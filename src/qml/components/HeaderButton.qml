@@ -14,6 +14,7 @@ Button {
         renderType: Text.QtRendering
         text: root.text
         color: root.active ? Theme.accentText : (root.enabled ? Theme.muted : Theme.faint)
+        font.family: root.font.family
         font.pixelSize: 13
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
