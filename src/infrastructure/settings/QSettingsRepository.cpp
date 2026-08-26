@@ -10,6 +10,8 @@ namespace
     constexpr auto kKeyCrewBoarding = "gsx/crewBoarding";
     constexpr auto kKeyCrewDeboarding = "gsx/crewDeboarding";
     constexpr auto kKeyGsxPanelMode = "gsx/panelMode";
+    constexpr auto kKeyGsxPanelScale = "gsx/panelModeScale";
+    constexpr int kGsxPanelScale = 2;
     constexpr auto kKeyOpenGsxOnRequestsLegacy = "gsx/openGsxOnRequests";
     constexpr auto kKeyAutoStartFlow = "automation/autoStartFlow";
     constexpr auto kKeyAutoStartLoading = "automation/autoStartLoading";
@@ -41,12 +43,31 @@ namespace
     constexpr auto kKeyProfileCallWater = "callWater";
     constexpr auto kKeyProfileCallCleaning = "callCleaning";
 
+    constexpr int kRetiredKeepClosed = 1;
+    constexpr int kRetiredOnPushback = 2;
+    constexpr int kRetiredAllRequests = 3;
+
+    int RetireKeepClosed(const int stored)
+    {
+        if (stored == kRetiredAllRequests)
+        {
+            return static_cast<int>(GsxPanelMode::AllRequests);
+        }
+
+        if (stored == kRetiredOnPushback || stored == kRetiredKeepClosed)
+        {
+            return static_cast<int>(GsxPanelMode::OnPushback);
+        }
+
+        return stored;
+    }
+
     int ResolveGsxPanelMode(const QSettings& settings)
     {
         const int panelMode = settings.value(kKeyGsxPanelMode, -1).toInt();
         if (panelMode >= 0)
         {
-            return panelMode;
+            return settings.contains(kKeyGsxPanelScale) ? panelMode : RetireKeepClosed(panelMode);
         }
 
         if (!settings.contains(kKeyOpenGsxOnRequestsLegacy))
@@ -168,6 +189,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyCallWater, values.callWater);
     settings.setValue(kKeyCallCleaning, values.callCleaning);
     settings.setValue(kKeyGsxPanelMode, values.gsxPanelMode);
+    settings.setValue(kKeyGsxPanelScale, kGsxPanelScale);
     settings.setValue(kKeyThemeMode, values.themeMode);
     settings.setValue(kKeyLanguage, QString::fromStdString(values.language));
     settings.setValue(kKeyRenderer, QString::fromStdString(values.renderer));

@@ -119,20 +119,16 @@ private slots:
     static void allRequestsDoesNotReopenAnOpenPanel();
     static void neverSendsNoPanelCommandAtAll();
     static void allRequestsOpensThePanelOnEveryRequest();
-    static void keepClosedDropsThePanelEveryTimeItIsSeenOpen();
-    static void keepClosedGivesUpAfterTheSecondDrop();
-    static void keepClosedLeavesThePanelAloneInsideThePushbackWindow();
-    static void keepClosedNeverOpensThePanel();
-    static void aDroppedCloseKeepsTheDropOwed();
-    static void onPushbackOpensThePanelWithTheDepartureRequest();
-    static void theDepartureRequestWaitsForThePanelToConfirmOpen();
-    static void theDepartureRequestGoesOutWhenThePanelNeverConfirms();
+    static void onPushbackOpensThePanelOnTheWaitAndNotOnTheRequest();
+    static void aRequestWaitsForThePanelToConfirmOpen();
+    static void aRequestGoesOutWhenThePanelNeverConfirms();
+    static void aPanelThatConfirmedIsNeverReportedAsUnconfirmed();
     static void onPushbackClosesThePanelWhenThePushStarts();
     static void aPanelFoundOpenIsNotClosedWhenThePushStarts();
     static void onPushbackIgnoresAPanelLeftOpenOutsideTheWindow();
     static void onPushbackDoesNotReopenThePanelThePilotClosed();
     static void aDroppedOpenKeepsThePushbackOpenOwed();
-    static void theTurnaroundTurnRearmsThePanelButNotTheGiveUp();
+    static void theTurnaroundTurnRearmsThePanel();
     static void triggerServiceDoesNotOpenClosedMenu();
     static void triggerServiceDoesNotToggleOpenMenu();
     static void confirmGoodEnginesPicksWhenMenuVisible();
@@ -188,6 +184,7 @@ private slots:
     static void rearmedTriggerKeepsItsAttemptCount();
     static void rearmedTriggerIsDroppedOnceGsxTakesIt();
     static void stuckMenuIsClosedAfterResyncsAreExhausted();
+    static void thePushbackDirectionMenuIsNeverDiscarded();
     static void resetAllowsClosingTheSameStuckMenuAgain();
 };
 
@@ -357,92 +354,7 @@ void GsxMenuNavigatorTest::allRequestsOpensThePanelOnEveryRequest()
     QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandOpen));
 }
 
-void GsxMenuNavigatorTest::keepClosedDropsThePanelEveryTimeItIsSeenOpen()
-{
-    PanelRig rig(GsxPanelMode::KeepClosed);
-    rig.PanelIs("open");
-    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
-
-    nav.RequestRefueling();
-
-    QCOMPARE(rig.PanelCommands(), 1);
-    QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandClose));
-
-    rig.PanelIs("open");
-    nav.RequestBoarding();
-
-    QCOMPARE(rig.PanelCommands(), 2);
-}
-
-void GsxMenuNavigatorTest::keepClosedGivesUpAfterTheSecondDrop()
-{
-    PanelRig rig(GsxPanelMode::KeepClosed);
-    rig.PanelIs("open");
-    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
-
-    nav.RequestRefueling();
-    rig.PanelIs("open");
-    nav.RequestBoarding();
-
-    QVERIFY(nav.HasGivenUpOnThePanel());
-
-    rig.PanelIs("open");
-    nav.RequestRefueling();
-
-    QCOMPARE(rig.PanelCommands(), 2);
-}
-
-void GsxMenuNavigatorTest::keepClosedLeavesThePanelAloneInsideThePushbackWindow()
-{
-    PanelRig rig(GsxPanelMode::KeepClosed);
-    rig.PanelIs("closed");
-    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
-
-    nav.RequestPushback();
-    rig.PanelIs("open");
-    nav.RequestRefueling();
-
-    QCOMPARE(rig.PanelCommands(), 0);
-
-    nav.OnPushbackStarted();
-    nav.RequestBoarding();
-
-    QCOMPARE(rig.PanelCommands(), 1);
-    QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandClose));
-}
-
-void GsxMenuNavigatorTest::keepClosedNeverOpensThePanel()
-{
-    PanelRig rig(GsxPanelMode::KeepClosed);
-    rig.PanelIs("closed");
-    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
-
-    nav.RequestPushback();
-    nav.RequestRefueling();
-
-    QCOMPARE(rig.PanelCommands(), 0);
-}
-
-void GsxMenuNavigatorTest::aDroppedCloseKeepsTheDropOwed()
-{
-    PanelRig rig(GsxPanelMode::KeepClosed);
-    rig.PanelIs("open");
-    rig.bridge.available = false;
-    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
-
-    nav.RequestRefueling();
-
-    QCOMPARE(rig.PanelCommands(), 0);
-    QVERIFY(!nav.HasGivenUpOnThePanel());
-
-    rig.bridge.available = true;
-    nav.RequestBoarding();
-
-    QCOMPARE(rig.PanelCommands(), 1);
-    QVERIFY(!nav.HasGivenUpOnThePanel());
-}
-
-void GsxMenuNavigatorTest::onPushbackOpensThePanelWithTheDepartureRequest()
+void GsxMenuNavigatorTest::onPushbackOpensThePanelOnTheWaitAndNotOnTheRequest()
 {
     PanelRig rig(GsxPanelMode::OnPushback);
     rig.PanelIs("closed");
@@ -453,18 +365,23 @@ void GsxMenuNavigatorTest::onPushbackOpensThePanelWithTheDepartureRequest()
     QCOMPARE(rig.PanelCommands(), 0);
 
     nav.RequestPushback();
+
+    QCOMPARE(rig.PanelCommands(), 0);
+
+    nav.OpenPushbackPanel();
 
     QCOMPARE(rig.PanelCommands(), 1);
     QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandOpen));
 }
 
-void GsxMenuNavigatorTest::theDepartureRequestWaitsForThePanelToConfirmOpen()
+void GsxMenuNavigatorTest::aRequestWaitsForThePanelToConfirmOpen()
 {
     PanelRig rig(GsxPanelMode::OnPushback);
     rig.PanelIs("closed");
     GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
 
-    nav.RequestPushback();
+    nav.OpenPushbackPanel();
+    nav.RequestRefueling();
 
     QCOMPARE(rig.client.Count("service.trigger"), 0);
 
@@ -474,7 +391,7 @@ void GsxMenuNavigatorTest::theDepartureRequestWaitsForThePanelToConfirmOpen()
     QCOMPARE(rig.client.Count("service.trigger"), 1);
 }
 
-void GsxMenuNavigatorTest::theDepartureRequestGoesOutWhenThePanelNeverConfirms()
+void GsxMenuNavigatorTest::aRequestGoesOutWhenThePanelNeverConfirms()
 {
     PanelRig rig(GsxPanelMode::OnPushback);
     rig.PanelIs("closed");
@@ -483,7 +400,8 @@ void GsxMenuNavigatorTest::theDepartureRequestGoesOutWhenThePanelNeverConfirms()
     long long now = 1000;
     nav.SetClockForTest([&now] { return now; });
 
-    nav.RequestPushback();
+    nav.OpenPushbackPanel();
+    nav.RequestRefueling();
 
     QCOMPARE(rig.client.Count("service.trigger"), 0);
 
@@ -493,6 +411,31 @@ void GsxMenuNavigatorTest::theDepartureRequestGoesOutWhenThePanelNeverConfirms()
     QCOMPARE(rig.client.Count("service.trigger"), 1);
 }
 
+void GsxMenuNavigatorTest::aPanelThatConfirmedIsNeverReportedAsUnconfirmed()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("closed");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    long long now = 1000;
+    nav.SetClockForTest([&now] { return now; });
+
+    nav.OpenPushbackPanel();
+    nav.RequestRefueling();
+
+    now += 2000;
+    rig.PanelIs("open");
+    nav.OnSnapshot();
+
+    QCOMPARE(rig.client.Count("service.trigger"), 1);
+
+    rig.PanelIs("closed");
+    now += 30000;
+    nav.OnSnapshot();
+
+    QVERIFY(!Logged(rig.logger, "without the GSX toolbar confirming it opened"));
+}
+
 void GsxMenuNavigatorTest::onPushbackClosesThePanelWhenThePushStarts()
 {
     PanelRig rig(GsxPanelMode::OnPushback);
@@ -500,6 +443,7 @@ void GsxMenuNavigatorTest::onPushbackClosesThePanelWhenThePushStarts()
     GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
 
     nav.RequestPushback();
+    nav.OpenPushbackPanel();
     rig.PanelIs("open");
     nav.OnPushbackStarted();
 
@@ -542,10 +486,11 @@ void GsxMenuNavigatorTest::onPushbackDoesNotReopenThePanelThePilotClosed()
     GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
 
     nav.RequestPushback();
+    nav.OpenPushbackPanel();
     rig.PanelIs("open");
     nav.OnSnapshot();
     rig.PanelIs("closed");
-    nav.RequestPushback();
+    nav.OpenPushbackPanel();
 
     QCOMPARE(rig.PanelCommands(), 1);
 }
@@ -558,24 +503,26 @@ void GsxMenuNavigatorTest::aDroppedOpenKeepsThePushbackOpenOwed()
     GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
 
     nav.RequestPushback();
+    nav.OpenPushbackPanel();
 
     QCOMPARE(rig.PanelCommands(), 0);
     QCOMPARE(rig.client.Count("service.trigger"), 1);
 
     rig.bridge.available = true;
-    nav.RequestPushback();
+    nav.OpenPushbackPanel();
 
     QCOMPARE(rig.PanelCommands(), 1);
     QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandOpen));
 }
 
-void GsxMenuNavigatorTest::theTurnaroundTurnRearmsThePanelButNotTheGiveUp()
+void GsxMenuNavigatorTest::theTurnaroundTurnRearmsThePanel()
 {
     PanelRig rig(GsxPanelMode::OnPushback);
     rig.PanelIs("closed");
     GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
 
     nav.RequestPushback();
+    nav.OpenPushbackPanel();
     rig.PanelIs("open");
     nav.OnPushbackStarted();
 
@@ -583,7 +530,7 @@ void GsxMenuNavigatorTest::theTurnaroundTurnRearmsThePanelButNotTheGiveUp()
 
     nav.OnTurnaroundTurned();
     rig.PanelIs("closed");
-    nav.RequestPushback();
+    nav.OpenPushbackPanel();
 
     QCOMPARE(rig.PanelCommands(), 3);
 }
@@ -2024,6 +1971,37 @@ void GsxMenuNavigatorTest::stuckMenuIsClosedAfterResyncsAreExhausted()
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("menu.close"), 1);
+}
+
+void GsxMenuNavigatorTest::thePushbackDirectionMenuIsNeverDiscarded()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Departure");
+
+    nav.RequestPushback();
+    MarkServiceTaken(state, "Departure");
+    nav.OnMenuChanged();
+
+    ShowMenu(state, "Select pushback direction",
+             {"Nose Right/Tail Left (LEFT)", "Nose Left/Tail Right (RIGHT)", "QuickEdit Pushback"});
+    nav.OnMenuChanged();
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        fakeNow += 2000;
+        nav.OnMenuChanged();
+    }
+
+    QCOMPARE(client.Count("menu.close"), 0);
+    QVERIFY(!Logged(logger, "the resyncs could not move"));
 }
 
 void GsxMenuNavigatorTest::resetAllowsClosingTheSameStuckMenuAgain()

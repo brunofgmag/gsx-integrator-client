@@ -16,6 +16,7 @@ public:
     int boardingCalls = 0;
     int deboardingCalls = 0;
     int pushbackCalls = 0;
+    int openPushbackPanelCalls = 0;
     int refuelingCalls = 0;
     int confirmGoodEnginesCalls = 0;
     int completePushbackCalls = 0;
@@ -42,6 +43,8 @@ public:
     void RequestDeboarding() override { ++deboardingCalls; }
 
     void RequestPushback() override { ++pushbackCalls; }
+
+    void OpenPushbackPanel() override { ++openPushbackPanelCalls; }
 
     void RequestRefueling() override { ++refuelingCalls; }
 

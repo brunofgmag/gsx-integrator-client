@@ -34,7 +34,6 @@ private slots:
     static void exposesPhaseIndexCountAndTip();
     static void flightPlanTipFollowsPlanSource();
     static void exposesGsxProfileConflictFromSnapshot();
-    static void thePanelGuardAdvisoryFollowsTheSnapshot();
     static void fixGsxProfileDelegatesToService();
     static void fixGsxProfileReportsRejectedCommands();
     static void fixPmdgOptionsDelegatesToService();
@@ -380,21 +379,6 @@ void OperationsViewModelTest::exposesGsxProfileConflictFromSnapshot()
 
     QVERIFY(viewModel.HasGsxProfileConflict());
     QVERIFY(viewModel.IsGsxProfileFixable());
-}
-
-void OperationsViewModelTest::thePanelGuardAdvisoryFollowsTheSnapshot()
-{
-    FakeIntegratorService service;
-    FakeOperationsDisplaySettings display;
-    const OperationsViewModel viewModel(&service, &display);
-
-    QVERIFY(!viewModel.HasGivenUpOnTheGsxPanel());
-
-    service.snapshot.gsxPanelGuardTripped = true;
-    service.Notify();
-
-    QVERIFY(viewModel.HasGivenUpOnTheGsxPanel());
-    QVERIFY(OperationsViewModel::GetGsxPanelGuardAdvisoryText().contains(QStringLiteral("Never")));
 }
 
 void OperationsViewModelTest::fixGsxProfileDelegatesToService()

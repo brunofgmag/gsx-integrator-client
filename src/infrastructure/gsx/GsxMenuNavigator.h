@@ -51,10 +51,9 @@ public:
     [[nodiscard]] bool IsMenuSettled() const;
 
     void OpenMenu() const;
+    void OpenPushbackPanel() override;
     void OnTurnaroundTurned() override;
     void OnPushbackStarted() override;
-
-    [[nodiscard]] bool HasGivenUpOnThePanel() const;
 
     void OnMenuChanged();
     void OnSnapshot();
@@ -84,8 +83,6 @@ private:
     void TriggerService(const char* serviceId);
     void SyncGsxToolbar() const;
     [[nodiscard]] GsxPanelMode PanelMode() const;
-    void DropForgottenPanel() const;
-    void OpenPanelForPushback();
     void ClosePanelAfterPushback();
     void RearmPanelLatches();
     [[nodiscard]] bool IsWaitingForThePanel();
@@ -145,9 +142,6 @@ private:
     std::string resyncSig_;
     std::string discardedSig_;
     mutable long long lastActionMs_ = 0;
-    mutable int panelDrops_ = 0;
-    mutable bool panelGaveUp_ = false;
-    bool pushbackWindow_ = false;
     bool panelOpenSpent_ = false;
     bool panelCloseSpent_ = false;
     bool panelOpenedByUs_ = false;
@@ -160,7 +154,6 @@ private:
     static constexpr long long kMenuSettleMs = 1500;
     static constexpr long long kTriggerRetryMs = 10000;
     static constexpr int kMaxTriggerAttempts = 3;
-    static constexpr int kMaxPanelDrops = 2;
     static constexpr long long kPanelOpenWaitMs = 8000;
 };
 

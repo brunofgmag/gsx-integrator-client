@@ -306,7 +306,6 @@ private:
     [[nodiscard]] const ProfileDraft& SelectedDraft() const;
     void TouchProfileDraft();
     void SetProfileToggle(bool ProfileDraft::* member, bool value);
-    void SurrenderTheGsxPanel();
 
     template <typename T>
     bool SetPersisted(T& field, const T& value, void (SettingsViewModel::*signal)())

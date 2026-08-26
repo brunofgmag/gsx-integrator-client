@@ -375,11 +375,6 @@ bool IntegratorRuntime::IsCargoDoorStuck() const
     return aircraft_ && IsLoadingCargoPhase() && aircraft_->IsMainDeckCargoDoorStuck();
 }
 
-bool IntegratorRuntime::HasGivenUpOnTheGsxPanel() const
-{
-    return gsxMenu_.HasGivenUpOnThePanel();
-}
-
 bool IntegratorRuntime::IsFuelRequestStalled() const
 {
     return status_.fuelRequestStalled && GetPhase() == TurnaroundPhase::RequestFuel;
@@ -539,7 +534,6 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.pmdgOptionsConflict = HasPmdgOptionsConflict();
     snapshot.pmdgOptionsFixable = CanFixPmdgOptions();
     snapshot.cargoDoorStuck = IsCargoDoorStuck();
-    snapshot.gsxPanelGuardTripped = HasGivenUpOnTheGsxPanel();
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
     snapshot.phase = GetPhase();
     snapshot.flightPlanStatus = status_.flightPlanStatus;

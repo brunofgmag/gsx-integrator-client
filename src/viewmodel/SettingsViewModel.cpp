@@ -105,7 +105,6 @@ SettingsViewModel::~SettingsViewModel()
 
 void SettingsViewModel::OnIntegratorStateChanged()
 {
-    SurrenderTheGsxPanel();
     SyncDisplayUnit();
 }
 
@@ -329,16 +328,6 @@ int SettingsViewModel::GetGsxPanelMode() const
 void SettingsViewModel::SetGsxPanelMode(const int mode)
 {
     SetPersisted(settings_.gsxPanelMode, mode, &SettingsViewModel::GsxPanelModeChanged);
-}
-
-void SettingsViewModel::SurrenderTheGsxPanel()
-{
-    if (!integratorService_->GetSnapshot().gsxPanelGuardTripped)
-    {
-        return;
-    }
-
-    SetGsxPanelMode(static_cast<int>(GsxPanelMode::Never));
 }
 
 int SettingsViewModel::GetThemeMode() const
