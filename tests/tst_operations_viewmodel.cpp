@@ -19,6 +19,9 @@ private slots:
     static void mapsFlightPlanStatusToText();
     static void simbriefReadyAndErrorFlags();
     static void simbriefRefusalReachesTheScreen();
+    static void theClientsOwnPlanFailureNamesItself();
+    static void theGsxRefusalWinsOverTheClientsOwnFailure();
+    static void aPlanWithoutFailurePublishesNoReason();
     static void aRefusedPlanIsNotReadyOnTheCard();
     static void noopWhenSettingSameEnabledValue();
     static void startLoadingDelegatesToService();
@@ -499,6 +502,61 @@ void OperationsViewModelTest::simbriefRefusalReachesTheScreen()
 
     QCOMPARE(viewModel.GetSimbriefRefusal(),
              QString("SimBrief aircraft A320 doesn't match MSFS aircraft A321"));
+}
+
+void OperationsViewModelTest::theClientsOwnPlanFailureNamesItself()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.flightPlanStatus = FlightPlanStatus::Error;
+    service.snapshot.flightPlanFailure = FlightPlanFailure::Http;
+    service.snapshot.flightPlanHttpStatus = 404;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetSimbriefFailureText(), QStringLiteral("SimBrief answered HTTP 404"));
+
+    service.snapshot.flightPlanFailure = FlightPlanFailure::Parse;
+    service.snapshot.flightPlanHttpStatus = 0;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetSimbriefFailureText(),
+             QStringLiteral("SimBrief answered a flight plan the client could not read"));
+
+    service.snapshot.flightPlanFailure = FlightPlanFailure::NotSent;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetSimbriefFailureText(), QStringLiteral("The SimBrief request was never sent"));
+}
+
+void OperationsViewModelTest::theGsxRefusalWinsOverTheClientsOwnFailure()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.flightPlanStatus = FlightPlanStatus::Error;
+    service.snapshot.flightPlanFailure = FlightPlanFailure::Http;
+    service.snapshot.flightPlanHttpStatus = 500;
+    service.snapshot.simbriefRefusal = "SimBrief aircraft A320 doesn't match MSFS aircraft A321";
+    service.Notify();
+
+    QCOMPARE(viewModel.GetSimbriefFailureText(),
+             QString("SimBrief aircraft A320 doesn't match MSFS aircraft A321"));
+}
+
+void OperationsViewModelTest::aPlanWithoutFailurePublishesNoReason()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.flightPlanStatus = FlightPlanStatus::Ready;
+    service.Notify();
+
+    QVERIFY(viewModel.GetSimbriefFailureText().isEmpty());
+    QVERIFY(!viewModel.HasSimbriefError());
 }
 
 void OperationsViewModelTest::aRefusedPlanIsNotReadyOnTheCard()

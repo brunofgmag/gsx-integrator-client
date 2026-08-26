@@ -651,6 +651,29 @@ QString OperationsViewModel::GetSimbriefRefusal() const
     return QString::fromStdString(snapshot_.simbriefRefusal);
 }
 
+QString OperationsViewModel::GetSimbriefFailureText() const
+{
+    if (!snapshot_.simbriefRefusal.empty())
+    {
+        return QString::fromStdString(snapshot_.simbriefRefusal);
+    }
+
+    switch (snapshot_.flightPlanFailure)
+    {
+    case FlightPlanFailure::NotSent:
+        return QCoreApplication::translate("Turnaround", "The SimBrief request was never sent");
+    case FlightPlanFailure::Http:
+        return QCoreApplication::translate("Turnaround", "SimBrief answered HTTP %1")
+            .arg(snapshot_.flightPlanHttpStatus);
+    case FlightPlanFailure::Parse:
+        return QCoreApplication::translate("Turnaround", "SimBrief answered a flight plan the client could not read");
+    case FlightPlanFailure::None:
+        break;
+    }
+
+    return {};
+}
+
 QString OperationsViewModel::GetStartFlowLabel()
 {
     return QCoreApplication::translate("OperationsScreen", "Start Flow");

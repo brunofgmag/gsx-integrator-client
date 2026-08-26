@@ -44,6 +44,20 @@ namespace
         }
     }
 
+    void ApplyPatches(GsxRemoteState& state, const QJsonArray& fixtures)
+    {
+        for (const QJsonValue& event : fixtures)
+        {
+            const QJsonObject message = MessageFromEvent(event);
+            if (message.value("type").toString() == QStringLiteral("patch"))
+            {
+                GsxRemoteStateReducer::ApplyPatch(state,
+                                                  message.value("path").toString().toStdString(),
+                                                  message.value("value"));
+            }
+        }
+    }
+
     void ApplyMenuPatches(GsxRemoteState& state, const QJsonArray& fixtures)
     {
         for (const QJsonValue& event : fixtures)
@@ -67,6 +81,10 @@ private slots:
     static void menuPatchFillsEntries();
     static void everyPatchPathInTheCaptureIsAccountedFor();
     static void discardedPathsAreNamedAndNotSilent();
+    static void theHandlingOperatorIsReadFromTheCapture();
+    static void theApronVerdictIsReadFromTheCapture();
+    static void theMatchedAircraftTitleIsReadFromTheCapture();
+    static void theSimbriefGenerationIsReadFromTheCapture();
 };
 
 void RemoteStateTest::snapshotPopulatesServicesAndMenu()
@@ -133,14 +151,69 @@ void RemoteStateTest::discardedPathsAreNamedAndNotSilent()
 
     QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/billing", QJsonValue()),
              GsxPatchOutcome::Discarded);
-    QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/operators", QJsonValue()),
-             GsxPatchOutcome::Discarded);
     QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/message", QJsonValue()),
              GsxPatchOutcome::Discarded);
     QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/menuShown", QJsonValue(true)),
              GsxPatchOutcome::Applied);
     QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/somethingNobodyHasSeen", QJsonValue()),
              GsxPatchOutcome::Unknown);
+}
+
+void RemoteStateTest::theHandlingOperatorIsReadFromTheCapture()
+{
+    GsxRemoteState state;
+    const QJsonArray fixtures = LoadFixtures();
+
+    QVERIFY(!fixtures.isEmpty());
+    QVERIFY(state.handlingOperator.empty());
+
+    ApplyPatches(state, fixtures);
+
+    QCOMPARE(state.handlingOperator, std::string{"Operator A"});
+}
+
+void RemoteStateTest::theApronVerdictIsReadFromTheCapture()
+{
+    GsxRemoteState state;
+    const QJsonArray fixtures = LoadFixtures();
+
+    QVERIFY(!fixtures.isEmpty());
+
+    ApplySnapshots(state, fixtures);
+
+    QCOMPARE(state.apronVerdict.size(), std::size_t{2});
+    QVERIFY(Contains(state.apronVerdict, "Ramp Cargo"));
+    QVERIFY(Contains(state.apronVerdict, "max wingspan 66m"));
+}
+
+void RemoteStateTest::theMatchedAircraftTitleIsReadFromTheCapture()
+{
+    GsxRemoteState state;
+    const QJsonArray fixtures = LoadFixtures();
+
+    QVERIFY(!fixtures.isEmpty());
+
+    ApplySnapshots(state, fixtures);
+
+    QCOMPARE(state.matchedAircraftTitle, std::string{"TFDI MD11"});
+}
+
+void RemoteStateTest::theSimbriefGenerationIsReadFromTheCapture()
+{
+    GsxRemoteState state;
+    const QJsonArray fixtures = LoadFixtures();
+
+    QVERIFY(!fixtures.isEmpty());
+
+    ApplySnapshots(state, fixtures);
+
+    const int fromSnapshot = state.simbriefGeneration;
+
+    GsxRemoteStateReducer::ApplyPatch(state, "/simbrief",
+                                      QJsonDocument::fromJson(R"({"status":"ok","gen":7})").object());
+
+    QCOMPARE(fromSnapshot, 0);
+    QCOMPARE(state.simbriefGeneration, 7);
 }
 
 QTEST_APPLESS_MAIN(RemoteStateTest)

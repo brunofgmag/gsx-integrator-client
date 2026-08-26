@@ -22,6 +22,8 @@ struct AutomationStatus
     double targetZfwKg = 0.0;
     int targetPassengers = 0;
     FlightPlanStatus flightPlanStatus = FlightPlanStatus::Idle;
+    FlightPlanFailure flightPlanFailure = FlightPlanFailure::None;
+    int flightPlanHttpStatus = 0;
     std::string plannedOrigin;
     std::string plannedDestination;
     long long planGeneratedEpoch = 0;

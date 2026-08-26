@@ -599,7 +599,7 @@
 <context>
     <name>OperationsScreen</name>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="656"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="679"/>
         <source>Start Flow</source>
         <translation>Start Flow</translation>
     </message>
@@ -778,12 +778,12 @@
         <translation>ZFW</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="671"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="694"/>
         <source>Confirm restart</source>
         <translation>Confirm restart</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="666"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="689"/>
         <source>Restart Flow</source>
         <translation>Restart Flow</translation>
     </message>
@@ -857,12 +857,12 @@
         <translation>Deboarding</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="676"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="699"/>
         <source>Reload SimBrief</source>
         <translation>Reload SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="661"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="684"/>
         <source>Start Loading</source>
         <translation>Start Loading</translation>
     </message>
@@ -1556,6 +1556,21 @@
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="73"/>
         <source>Turn off the beacon lights and set the parking brake.</source>
         <translation>Turn off the beacon lights and set the parking brake.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="664"/>
+        <source>The SimBrief request was never sent</source>
+        <translation>The SimBrief request was never sent</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="666"/>
+        <source>SimBrief answered HTTP %1</source>
+        <translation>SimBrief answered HTTP %1</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="669"/>
+        <source>SimBrief answered a flight plan the client could not read</source>
+        <translation>SimBrief answered a flight plan the client could not read</translation>
     </message>
     <message>
         <source>Shut down the engines and set the parking brake.</source>

@@ -23,6 +23,10 @@ struct GsxRemoteState
 {
     std::string simbriefStatus;
     std::string simbriefError;
+    int simbriefGeneration = 0;
+    std::string handlingOperator;
+    std::string matchedAircraftTitle;
+    std::vector<std::string> apronVerdict;
     GsxRemoteMenu menu;
     std::vector<GsxRemoteService> services;
 };
