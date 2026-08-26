@@ -18,6 +18,21 @@ namespace
         return !refueling.has_value() || *refueling != 0;
     }
 
+    std::string JoinVerdict(const std::vector<std::string>& descriptors)
+    {
+        std::string joined;
+        for (const std::string& descriptor : descriptors)
+        {
+            if (!joined.empty())
+            {
+                joined += ", ";
+            }
+            joined += descriptor;
+        }
+
+        return joined;
+    }
+
     enum class TickMode
     {
         Idle,
@@ -72,6 +87,7 @@ void IntegratorRuntime::Setup()
             &gsxRemoteClient_, [this](const QJsonObject& s)
             {
                 GsxRemoteStateReducer::ApplySnapshot(gsxRemoteState_, s);
+                AnnounceWireFacts();
                 gsxMenu_.OnSnapshot();
             });
 
@@ -84,6 +100,7 @@ void IntegratorRuntime::Setup()
                 {
                     LOG_WARN("GSX published an unknown path: %s", path.c_str());
                 }
+                AnnounceWireFacts();
                 if (path == "/menu" || path == "/menuShown")
                 {
                     gsxMenu_.OnMenuChanged();
@@ -93,6 +110,37 @@ void IntegratorRuntime::Setup()
     gsxRemoteClient_.Start();
 
     dispatchTimer_.start();
+}
+
+void IntegratorRuntime::AnnounceWireFacts()
+{
+    if (const std::string handling = gsxService_.GetHandlingOperator();
+        !handling.empty() && handling != announcedHandlingOperator_)
+    {
+        announcedHandlingOperator_ = handling;
+        LOG_INFO("GSX assigned the handling operator %s", handling.c_str());
+    }
+
+    if (const std::string verdict = JoinVerdict(gsxService_.GetApronVerdict());
+        !verdict.empty() && verdict != announcedApronVerdict_)
+    {
+        announcedApronVerdict_ = verdict;
+        LOG_INFO("GSX rates this apron as %s", verdict.c_str());
+    }
+
+    if (const std::string title = gsxService_.GetMatchedAircraftTitle();
+        !title.empty() && title != announcedAircraftTitle_)
+    {
+        announcedAircraftTitle_ = title;
+        LOG_INFO("GSX matched the aircraft title %s", title.c_str());
+    }
+
+    if (const int generation = gsxService_.GetSimbriefGeneration();
+        generation != announcedSimbriefGeneration_)
+    {
+        announcedSimbriefGeneration_ = generation;
+        LOG_INFO("GSX served SimBrief generation %d", generation);
+    }
 }
 
 bool IntegratorRuntime::IsSimOnMenu()

@@ -49,6 +49,11 @@ public:
     [[nodiscard]] bool IsSimbriefLoaded() const override;
     [[nodiscard]] std::string GetSimbriefRefusal() const override;
 
+    [[nodiscard]] std::string GetHandlingOperator() const;
+    [[nodiscard]] std::string GetMatchedAircraftTitle() const;
+    [[nodiscard]] std::vector<std::string> GetApronVerdict() const;
+    [[nodiscard]] int GetSimbriefGeneration() const;
+
 private:
     bool fuelAndPayloadTakenOver_ = false;
     struct StateTrack
