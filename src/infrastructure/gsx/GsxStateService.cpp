@@ -302,26 +302,6 @@ std::string GsxStateService::GetSimbriefRefusal() const
     return remote_->simbriefError;
 }
 
-std::string GsxStateService::GetHandlingOperator() const
-{
-    return remote_ == nullptr ? std::string{} : remote_->handlingOperator;
-}
-
-std::string GsxStateService::GetMatchedAircraftTitle() const
-{
-    return remote_ == nullptr ? std::string{} : remote_->matchedAircraftTitle;
-}
-
-std::vector<std::string> GsxStateService::GetApronVerdict() const
-{
-    return remote_ == nullptr ? std::vector<std::string>{} : remote_->apronVerdict;
-}
-
-int GsxStateService::GetSimbriefGeneration() const
-{
-    return remote_ == nullptr ? 0 : remote_->simbriefGeneration;
-}
-
 bool GsxStateService::IsGoodEngineStartConfirmationEnabled() const
 {
     return varManager_->GetLVar(kGoodEngineStart, 1.0) >= 1.0;

@@ -114,28 +114,28 @@ void IntegratorRuntime::Setup()
 
 void IntegratorRuntime::AnnounceWireFacts()
 {
-    if (const std::string handling = gsxService_.GetHandlingOperator();
+    if (const std::string& handling = gsxRemoteState_.handlingOperator;
         !handling.empty() && handling != announcedHandlingOperator_)
     {
         announcedHandlingOperator_ = handling;
         LOG_INFO("GSX assigned the handling operator %s", handling.c_str());
     }
 
-    if (const std::string verdict = JoinVerdict(gsxService_.GetApronVerdict());
+    if (const std::string verdict = JoinVerdict(gsxRemoteState_.apronVerdict);
         !verdict.empty() && verdict != announcedApronVerdict_)
     {
         announcedApronVerdict_ = verdict;
         LOG_INFO("GSX rates this apron as %s", verdict.c_str());
     }
 
-    if (const std::string title = gsxService_.GetMatchedAircraftTitle();
+    if (const std::string& title = gsxRemoteState_.matchedAircraftTitle;
         !title.empty() && title != announcedAircraftTitle_)
     {
         announcedAircraftTitle_ = title;
         LOG_INFO("GSX matched the aircraft title %s", title.c_str());
     }
 
-    if (const int generation = gsxService_.GetSimbriefGeneration();
+    if (const int generation = gsxRemoteState_.simbriefGeneration;
         generation != announcedSimbriefGeneration_)
     {
         announcedSimbriefGeneration_ = generation;
