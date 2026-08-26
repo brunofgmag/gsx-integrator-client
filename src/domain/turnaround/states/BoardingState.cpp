@@ -10,7 +10,7 @@
 
 namespace
 {
-    constexpr int kBoardingStallTicks = 180;
+    constexpr int kBoardingStallTicks = 90;
     constexpr int kBoardingRetryTicks = 30;
 }
 

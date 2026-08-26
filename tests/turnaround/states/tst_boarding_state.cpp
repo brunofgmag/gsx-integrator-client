@@ -233,7 +233,7 @@ void BoardingStateTest::asksGsxToCompleteBoardingStalledAtOneHundred()
     f.gsxService.boardingState = GsxStateStatus::Active;
     f.gsxService.cargoPercent = 100.0;
 
-    for (int tick = 0; tick < 179; ++tick)
+    for (int tick = 0; tick < 89; ++tick)
     {
         QVERIFY(!state.Evaluate(f.ctx).has_value());
     }
@@ -254,7 +254,7 @@ void BoardingStateTest::asksAgainWhenGsxSwallowsTheForcedCompletion()
     f.gsxService.boardingState = GsxStateStatus::Active;
     f.gsxService.cargoPercent = 100.0;
 
-    for (int tick = 0; tick < 180; ++tick)
+    for (int tick = 0; tick < 90; ++tick)
     {
         QVERIFY(!state.Evaluate(f.ctx).has_value());
     }
@@ -289,7 +289,7 @@ void BoardingStateTest::stopsAskingOnceTheServiceCloses()
     f.gsxService.boardingState = GsxStateStatus::Active;
     f.gsxService.cargoPercent = 100.0;
 
-    for (int tick = 0; tick < 180; ++tick)
+    for (int tick = 0; tick < 90; ++tick)
     {
         QVERIFY(!state.Evaluate(f.ctx).has_value());
     }
@@ -349,7 +349,7 @@ void BoardingStateTest::doesNotAskGsxToCompleteWhilePassengersAreMissing()
     QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
 
     f.gsxService.boardedPassengers = 174;
-    for (int tick = 0; tick < 180; ++tick)
+    for (int tick = 0; tick < 90; ++tick)
     {
         QVERIFY(!state.Evaluate(f.ctx).has_value());
     }
