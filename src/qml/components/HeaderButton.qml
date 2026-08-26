@@ -21,7 +21,7 @@ Button {
 
     background: Rectangle {
         radius: Theme.radiusSmall
-        color: root.active ? Theme.accent : (root.hovered ? Theme.panel2 : "transparent")
+        color: root.active ? Theme.accent : (root.hovered ? Qt.alpha(Theme.accent, 0.12) : "transparent")
         border.color: root.active ? Theme.accent : Theme.line
         border.width: 1
     }
