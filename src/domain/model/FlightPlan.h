@@ -12,6 +12,14 @@ enum class FlightPlanStatus : int
     Error = 3,
 };
 
+enum class FlightPlanFailure : int
+{
+    None = 0,
+    NotSent = 1,
+    Http = 2,
+    Parse = 3,
+};
+
 struct FlightPlan
 {
     double fuelKg = 0.0;

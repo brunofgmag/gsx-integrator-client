@@ -258,14 +258,14 @@ ColumnLayout {
 
                 Item {
                     width: parent ? parent.width : 0
-                    implicitHeight: refusalText.contentHeight
-                    visible: root.integratorVm.simbriefRefusal !== ""
+                    implicitHeight: failureText.contentHeight
+                    visible: root.integratorVm.simbriefFailureText !== ""
 
                     Text {
-                        id: refusalText
+                        id: failureText
                         anchors.left: parent.left
                         anchors.right: parent.right
-                        text: root.integratorVm.simbriefRefusal
+                        text: root.integratorVm.simbriefFailureText
                         color: Theme.red
                         font.pixelSize: 10
                         font.capitalization: Font.AllUppercase

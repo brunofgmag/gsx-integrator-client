@@ -599,7 +599,7 @@
 <context>
     <name>OperationsScreen</name>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="656"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="679"/>
         <source>Start Flow</source>
         <translation>Iniciar Fluxo</translation>
     </message>
@@ -778,12 +778,12 @@
         <translation>ZFW</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="671"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="694"/>
         <source>Confirm restart</source>
         <translation>Confirmar reinício</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="666"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="689"/>
         <source>Restart Flow</source>
         <translation>Reiniciar Fluxo</translation>
     </message>
@@ -857,12 +857,12 @@
         <translation>Desembarque</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="676"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="699"/>
         <source>Reload SimBrief</source>
         <translation>Recarregar SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="661"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="684"/>
         <source>Start Loading</source>
         <translation>Iniciar Carregamento</translation>
     </message>
@@ -1556,6 +1556,21 @@
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="73"/>
         <source>Turn off the beacon lights and set the parking brake.</source>
         <translation>Apague as luzes beacon e acione o freio de estacionamento.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="664"/>
+        <source>The SimBrief request was never sent</source>
+        <translation>O pedido à SimBrief nunca saiu</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="666"/>
+        <source>SimBrief answered HTTP %1</source>
+        <translation>A SimBrief respondeu HTTP %1</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="669"/>
+        <source>SimBrief answered a flight plan the client could not read</source>
+        <translation>A SimBrief respondeu um plano que o cliente não conseguiu ler</translation>
     </message>
     <message>
         <source>Shut down the engines and set the parking brake.</source>

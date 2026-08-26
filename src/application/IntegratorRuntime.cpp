@@ -537,6 +537,8 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
     snapshot.phase = GetPhase();
     snapshot.flightPlanStatus = status_.flightPlanStatus;
+    snapshot.flightPlanFailure = status_.flightPlanFailure;
+    snapshot.flightPlanHttpStatus = status_.flightPlanHttpStatus;
     snapshot.simbriefRefusal = gsxService_.GetSimbriefRefusal();
     snapshot.fuelProgress = status_.fuelProgress;
     snapshot.boardingProgress = status_.boardingProgress;
