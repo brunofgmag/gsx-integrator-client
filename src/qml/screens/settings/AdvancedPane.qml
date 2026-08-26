@@ -23,7 +23,7 @@ ColumnLayout {
     SettingRow {
         Layout.fillWidth: true
         title: qsTr("Renderer")
-        caption: qsTr("Graphics Backend")
+        caption: qsTr("Graphics backend")
         helpText: qsTr("Software is the default because it uses the least RAM and VRAM. D3D12 draws on the graphics card; OpenGL is there for drivers that misbehave.")
 
         SegmentedControl {

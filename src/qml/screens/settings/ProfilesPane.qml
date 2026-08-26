@@ -68,7 +68,7 @@ ColumnLayout {
     SwitchRow {
         Layout.fillWidth: true
         title: qsTr("Use global settings")
-        caption: qsTr("Mirror the global configuration for this aircraft")
+        caption: qsTr("Mirrors the global settings for this aircraft")
         checked: root.settingsVm.profileUseGlobal
         onToggled: checked => root.settingsVm.profileUseGlobal = checked
     }
@@ -80,7 +80,7 @@ ColumnLayout {
         caption: qsTr("Refueling speed")
         helpText: root.settingsVm.profileFuelEditable
                   ? qsTr("Refueling speed used when this aircraft is loaded by the client.")
-                  : qsTr("This aircraft's refueling pace is driven by GSX or by the aircraft itself, so the rate is not configurable.")
+                  : qsTr("This aircraft refuels through GSX or on its own, so you cannot set the rate.")
 
         TextField {
             id: profileFuelField
