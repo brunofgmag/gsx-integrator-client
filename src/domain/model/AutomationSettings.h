@@ -4,9 +4,8 @@
 enum class GsxPanelMode
 {
     Never = 0,
-    KeepClosed = 1,
-    OnPushback = 2,
-    AllRequests = 3
+    OnPushback = 1,
+    AllRequests = 2
 };
 
 enum class CrewChoice

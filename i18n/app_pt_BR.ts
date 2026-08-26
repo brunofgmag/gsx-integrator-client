@@ -302,22 +302,25 @@
         <translation>Quando o cliente abre a janela do GSX no sim</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="57"/>
         <source>On pushback opens the panel for the destination menu and closes it once the push begins. Keep closed dismisses a panel left open. Never leaves the panel alone. All requests opens it whenever the client asks GSX for anything.</source>
-        <translation>No pushback abre o painel para o menu de destino e fecha quando o push começa. Manter fechado dispensa painel deixado aberto. Nunca não encosta no painel. Em todos os pedidos abre sempre que o cliente pede algo ao GSX.</translation>
+        <translation type="vanished">No pushback abre o painel para o menu de destino e fecha quando o push começa. Manter fechado dispensa painel deixado aberto. Nunca não encosta no painel. Em todos os pedidos abre sempre que o cliente pede algo ao GSX.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="58"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
         <source>Never</source>
         <translation>Nunca</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="59"/>
         <source>Keep closed</source>
-        <translation>Manter fechado</translation>
+        <translation type="vanished">Manter fechado</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="60"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="57"/>
+        <source>On pushback opens the panel for the destination menu and closes it once the push begins. Never leaves the panel alone. All requests opens it whenever the client asks GSX for anything.</source>
+        <translation>No pushback abre o painel para o menu de destino e fecha quando o push começa. Nunca não encosta no painel. Em todos os pedidos abre sempre que o cliente pede algo ao GSX.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
         <source>On pushback</source>
         <translation>No pushback</translation>
     </message>
@@ -327,94 +330,94 @@
         <translation>Em todos os pedidos</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="64"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="69"/>
         <source>Updates</source>
         <translation>Atualizações</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="65"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="70"/>
         <source>How new versions are installed</source>
         <translation>Como novas versões são instaladas</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="66"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="71"/>
         <source>Auto downloads updates and applies them when the app closes. Notify only shows an alert in the header. Manual never checks on its own.</source>
         <translation>Auto baixa atualizações e aplica ao fechar o app. Avisar só mostra um alerta no cabeçalho. Manual nunca verifica sozinho.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="70"/>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="84"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="75"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="89"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="70"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="75"/>
         <source>Notify</source>
         <translation>Avisar</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="70"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="75"/>
         <source>Manual</source>
         <translation>Manual</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="78"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="83"/>
         <source>Weight unit</source>
         <translation>Unidade de peso</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="79"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="84"/>
         <source>Units shown for fuel and payload</source>
         <translation>Unidades exibidas para combustível e carga</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="80"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="85"/>
         <source>In Auto the unit comes from SimBrief, when a Pilot ID is set, or from the aircraft&apos;s flight plan when the client can read it. With neither, the client uses KG.</source>
         <translation>Em Auto a unidade vem do SimBrief, com Pilot ID configurado, ou do plano de voo da aeronave, quando o cliente consegue lê-lo. Faltando os dois, o cliente usa KG.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="84"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="89"/>
         <source>KG</source>
         <translation>KG</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="84"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="89"/>
         <source>LB</source>
         <translation>LB</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="92"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="97"/>
         <source>Theme</source>
         <translation>Tema</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="93"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="98"/>
         <source>&quot;Windows&quot; follows the system</source>
         <translation>&quot;Windows&quot; segue o sistema</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="97"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="102"/>
         <source>Light</source>
         <translation>Claro</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="97"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="102"/>
         <source>Dark</source>
         <translation>Escuro</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="97"/>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="110"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="102"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="115"/>
         <source>Windows</source>
         <translation>Windows</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="105"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="110"/>
         <source>Language</source>
         <translation>Idioma</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="106"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="111"/>
         <source>&quot;Windows&quot; uses the system language</source>
         <translation>&quot;Windows&quot; usa o idioma do sistema</translation>
     </message>
@@ -727,9 +730,8 @@
         <translation>Habilitar transmissão</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="543"/>
         <source>You reopened the GSX panel twice, so the client stopped closing it. The setting is now Never.</source>
-        <translation>Você reabriu o painel do GSX duas vezes, então o cliente parou de fechá-lo. O ajuste agora é Nunca.</translation>
+        <translation type="vanished">Você reabriu o painel do GSX duas vezes, então o cliente parou de fechá-lo. O ajuste agora é Nunca.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="539"/>

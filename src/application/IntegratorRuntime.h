@@ -53,7 +53,6 @@ public:
     [[nodiscard]] bool HasPmdgOptionsConflict() const { return pmdgOptions_.conflict; }
     bool FixPmdgOptions();
     [[nodiscard]] bool IsCargoDoorStuck() const;
-    [[nodiscard]] bool HasGivenUpOnTheGsxPanel() const;
     [[nodiscard]] bool IsFuelRequestStalled() const;
     void SetAutomationEnabled(bool enabled);
     void RestartFlow();

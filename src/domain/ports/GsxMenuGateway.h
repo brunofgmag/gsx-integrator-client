@@ -13,6 +13,7 @@ public:
     virtual void RequestBoarding() = 0;
     virtual void RequestDeboarding() = 0;
     virtual void RequestPushback() = 0;
+    virtual void OpenPushbackPanel() = 0;
     virtual void RequestRefueling() = 0;
     virtual void CompleteRefuel() = 0;
     virtual void CompleteBoarding() = 0;

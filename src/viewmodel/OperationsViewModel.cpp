@@ -540,17 +540,6 @@ QString OperationsViewModel::GetCargoDoorAdvisoryText()
                                        "A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.");
 }
 
-bool OperationsViewModel::HasGivenUpOnTheGsxPanel() const
-{
-    return snapshot_.gsxPanelGuardTripped;
-}
-
-QString OperationsViewModel::GetGsxPanelGuardAdvisoryText()
-{
-    return QCoreApplication::translate("OperationsScreen",
-                                       "You reopened the GSX panel twice, so the client stopped closing it. The setting is now Never.");
-}
-
 QString OperationsViewModel::GetFuelRequestAdvisoryText()
 {
     return QCoreApplication::translate("OperationsScreen",

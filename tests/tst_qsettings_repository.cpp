@@ -25,6 +25,9 @@ private slots:
     void theLegacyOpenOnRequestsOnBecomesAllRequests() const;
     void theLegacyOpenOnRequestsOffBecomesNever() const;
     void anExplicitPanelModeWinsOverTheLegacyKey() const;
+    void theRetiredKeepClosedBecomesOnPushback() const;
+    void theRetiredAllRequestsSurvivesTheRescale() const;
+    void aRescaledPanelModeIsNeverMigratedTwice() const;
     void savingThePanelModeLeavesTheLegacyKeyIntact();
 
 private:
@@ -113,12 +116,46 @@ void QSettingsRepositoryTest::anExplicitPanelModeWinsOverTheLegacyKey() const
 {
     QSettings settings;
     settings.setValue(QStringLiteral("gsx/openGsxOnRequests"), true);
-    settings.setValue(QStringLiteral("gsx/panelMode"), static_cast<int>(GsxPanelMode::KeepClosed));
+    settings.setValue(QStringLiteral("gsx/panelMode"), static_cast<int>(GsxPanelMode::Never));
     settings.sync();
 
     const AppSettings loaded = repository_.Load();
 
-    QCOMPARE(loaded.gsxPanelMode, static_cast<int>(GsxPanelMode::KeepClosed));
+    QCOMPARE(loaded.gsxPanelMode, static_cast<int>(GsxPanelMode::Never));
+}
+
+void QSettingsRepositoryTest::theRetiredKeepClosedBecomesOnPushback() const
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("gsx/panelMode"), 1);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QCOMPARE(loaded.gsxPanelMode, static_cast<int>(GsxPanelMode::OnPushback));
+}
+
+void QSettingsRepositoryTest::theRetiredAllRequestsSurvivesTheRescale() const
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("gsx/panelMode"), 3);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QCOMPARE(loaded.gsxPanelMode, static_cast<int>(GsxPanelMode::AllRequests));
+}
+
+void QSettingsRepositoryTest::aRescaledPanelModeIsNeverMigratedTwice() const
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("gsx/panelMode"), static_cast<int>(GsxPanelMode::AllRequests));
+    settings.setValue(QStringLiteral("gsx/panelModeScale"), 2);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QCOMPARE(loaded.gsxPanelMode, static_cast<int>(GsxPanelMode::AllRequests));
 }
 
 void QSettingsRepositoryTest::savingThePanelModeLeavesTheLegacyKeyIntact()
@@ -184,7 +221,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     values.callLavatory = true;
     values.callWater = true;
     values.callCleaning = true;
-    values.gsxPanelMode = static_cast<int>(GsxPanelMode::KeepClosed);
+    values.gsxPanelMode = static_cast<int>(GsxPanelMode::AllRequests);
     values.themeMode = 0;
     values.language = "pt_BR";
     values.renderer = "opengl";

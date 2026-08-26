@@ -2,6 +2,7 @@
 
 #include "../TurnaroundContext.h"
 #include "../../ports/GsxGateway.h"
+#include "../../ports/GsxMenuGateway.h"
 
 std::optional<TurnaroundTransition> WaitingPushbackToStartState::Evaluate(TurnaroundContext& ctx)
 {
@@ -14,6 +15,8 @@ std::optional<TurnaroundTransition> WaitingPushbackToStartState::Evaluate(Turnar
     {
         return TurnaroundTransition{TurnaroundPhase::WaitingForEngines};
     }
+
+    ctx.menuGateway->OpenPushbackPanel();
 
     return std::nullopt;
 }

@@ -61,8 +61,6 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(QString pmdgOptionsAdvisoryText READ GetPmdgOptionsAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString pmdgOptionsActionLabel READ GetPmdgOptionsActionLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(QString cargoDoorAdvisoryText READ GetCargoDoorAdvisoryText NOTIFY SnapshotChanged)
-    Q_PROPERTY(bool gsxPanelGuardTripped READ HasGivenUpOnTheGsxPanel NOTIFY SnapshotChanged)
-    Q_PROPERTY(QString gsxPanelGuardAdvisoryText READ GetGsxPanelGuardAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString fuelRequestAdvisoryText READ GetFuelRequestAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString commandErrorLabel READ GetCommandErrorLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(bool pmdgOptionsConflict READ HasPmdgOptionsConflict NOTIFY SnapshotChanged)
@@ -151,8 +149,6 @@ public:
     [[nodiscard]] static QString GetPmdgOptionsAdvisoryText();
     [[nodiscard]] QString GetPmdgOptionsActionLabel() const;
     [[nodiscard]] static QString GetCargoDoorAdvisoryText();
-    [[nodiscard]] bool HasGivenUpOnTheGsxPanel() const;
-    [[nodiscard]] static QString GetGsxPanelGuardAdvisoryText();
     [[nodiscard]] static QString GetFuelRequestAdvisoryText();
     [[nodiscard]] static QString GetCommandErrorLabel();
     [[nodiscard]] bool IsGsxProfileFixable() const;

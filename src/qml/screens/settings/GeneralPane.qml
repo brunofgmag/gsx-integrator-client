@@ -54,11 +54,11 @@ ColumnLayout {
         Layout.fillWidth: true
         title: qsTr("GSX panel")
         caption: qsTr("When the client opens the GSX window in the sim")
-        helpText: qsTr("On pushback opens the panel for the destination menu and closes it once the push begins. Keep closed dismisses a panel left open. Never leaves the panel alone. All requests opens it whenever the client asks GSX for anything.")
+        helpText: qsTr("On pushback opens the panel for the destination menu and closes it once the push begins. Never leaves the panel alone. All requests opens it whenever the client asks GSX for anything.")
 
         SelectBox {
             anchors.verticalCenter: parent.verticalCenter
-            model: [qsTr("Never"), qsTr("Keep closed"), qsTr("On pushback"), qsTr("All requests")]
+            model: [qsTr("Never"), qsTr("On pushback"), qsTr("All requests")]
             currentIndex: root.settingsVm.gsxPanelMode
             onActivated: index => root.settingsVm.gsxPanelMode = index
         }

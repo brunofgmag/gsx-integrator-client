@@ -20,6 +20,7 @@ namespace
     constexpr auto kRepositionRootText = "Reposition Aircraft";
     constexpr auto kRepositionHereText = "Reposition here";
     constexpr auto kPushTugQuestion = "Attach Pushback Tug";
+    constexpr auto kPushbackDirectionText = "pushback direction";
     constexpr auto kConfirmEnginesText = "Confirm good engine";
     constexpr auto kCompletePushbackText = "complete pushback procedure";
     constexpr auto kServiceInProgressTitle = "Service in progress";
@@ -119,9 +120,6 @@ void GsxMenuNavigator::RequestDeboarding()
 
 void GsxMenuNavigator::RequestPushback()
 {
-    pushbackWindow_ = true;
-    OpenPanelForPushback();
-
     TriggerService(gsx::services::Id(GroundService::Departure));
 }
 
@@ -222,8 +220,6 @@ void GsxMenuNavigator::Reset()
     resyncCount_ = 0;
     resyncPending_ = false;
     lastActionMs_ = 0;
-    panelDrops_ = 0;
-    panelGaveUp_ = false;
     RearmPanelLatches();
     pending_.clear();
 }
@@ -386,6 +382,11 @@ void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
 void GsxMenuNavigator::DiscardStuckMenu(const std::string& sig)
 {
     if (!pending_.empty() || sig == discardedSig_)
+    {
+        return;
+    }
+
+    if (Contains(state_->menu.title, kPushbackDirectionText))
     {
         return;
     }
@@ -697,67 +698,24 @@ bool GsxMenuNavigator::WasTaken(const PendingRequest& request) const
 
 GsxPanelMode GsxMenuNavigator::PanelMode() const
 {
-    return panelGaveUp_ ? GsxPanelMode::Never : settings_->gsxPanelMode;
-}
-
-bool GsxMenuNavigator::HasGivenUpOnThePanel() const
-{
-    return panelGaveUp_;
+    return settings_->gsxPanelMode;
 }
 
 void GsxMenuNavigator::SyncGsxToolbar() const
 {
-    if (pluginClient_ == nullptr)
+    if (pluginClient_ == nullptr || PanelMode() != GsxPanelMode::AllRequests)
     {
         return;
     }
 
-    const GsxPanelMode mode = PanelMode();
-
-    if (mode == GsxPanelMode::AllRequests)
+    if (!pluginClient_->IsGsxToolbarActive())
     {
-        if (!pluginClient_->IsGsxToolbarActive())
-        {
-            logger_->LogInfo("RemoteAPI opening the GSX toolbar");
-            (void)pluginClient_->OpenGsxToolbar();
-        }
-
-        return;
-    }
-
-    if (mode == GsxPanelMode::KeepClosed)
-    {
-        DropForgottenPanel();
+        logger_->LogInfo("RemoteAPI opening the GSX toolbar");
+        (void)pluginClient_->OpenGsxToolbar();
     }
 }
 
-void GsxMenuNavigator::DropForgottenPanel() const
-{
-    if (pushbackWindow_ || !pluginClient_->IsGsxToolbarActive())
-    {
-        return;
-    }
-
-    if (!pluginClient_->CloseGsxToolbar())
-    {
-        return;
-    }
-
-    ++panelDrops_;
-    logger_->LogInfo("RemoteAPI closing the GSX toolbar left open");
-
-    if (panelDrops_ < kMaxPanelDrops)
-    {
-        return;
-    }
-
-    panelGaveUp_ = true;
-    logger_->LogInfo(std::format(
-        "RemoteAPI gave up on keeping the GSX toolbar closed after {} drops in this session",
-        panelDrops_));
-}
-
-void GsxMenuNavigator::OpenPanelForPushback()
+void GsxMenuNavigator::OpenPushbackPanel()
 {
     if (pluginClient_ == nullptr || PanelMode() != GsxPanelMode::OnPushback || panelOpenSpent_)
     {
@@ -805,8 +763,15 @@ void GsxMenuNavigator::ClosePanelAfterPushback()
 
 bool GsxMenuNavigator::IsWaitingForThePanel()
 {
-    if (panelOpenSentMs_ == 0 || pluginClient_ == nullptr || pluginClient_->IsGsxToolbarActive())
+    if (panelOpenSentMs_ == 0 || pluginClient_ == nullptr)
     {
+        return false;
+    }
+
+    if (pluginClient_->IsGsxToolbarActive())
+    {
+        panelOpenSentMs_ = 0;
+
         return false;
     }
 
@@ -823,7 +788,6 @@ bool GsxMenuNavigator::IsWaitingForThePanel()
 
 void GsxMenuNavigator::RearmPanelLatches()
 {
-    pushbackWindow_ = false;
     panelOpenSpent_ = false;
     panelCloseSpent_ = false;
     panelOpenedByUs_ = false;
@@ -837,7 +801,6 @@ void GsxMenuNavigator::OnTurnaroundTurned()
 
 void GsxMenuNavigator::OnPushbackStarted()
 {
-    pushbackWindow_ = false;
     ClosePanelAfterPushback();
 }
 
