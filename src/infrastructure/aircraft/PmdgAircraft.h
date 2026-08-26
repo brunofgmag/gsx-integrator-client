@@ -55,7 +55,6 @@ public:
     void HoldDoorsClosed(bool hold) override;
     void ClearOwnGroundEquipment() override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
-    [[nodiscard]] bool IsMainDeckCargoDoorStuck() const override;
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -89,6 +88,7 @@ public:
 
 protected:
     [[nodiscard]] virtual bool HasVendorFlightPlan() const { return false; }
+    [[nodiscard]] bool MainDeckDoorStuck() const;
 
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;

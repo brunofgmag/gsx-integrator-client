@@ -151,7 +151,7 @@ DoorStatus PmdgAircraft::GetDoorStatus() const
     return status;
 }
 
-bool PmdgAircraft::IsMainDeckCargoDoorStuck() const
+bool PmdgAircraft::MainDeckDoorStuck() const
 {
     return cargoVariant_ && doorReconciler_.IsStuck(mainDeckDoorSlot_);
 }

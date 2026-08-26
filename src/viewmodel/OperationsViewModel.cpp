@@ -537,7 +537,7 @@ QString OperationsViewModel::GetPmdgOptionsActionLabel() const
 QString OperationsViewModel::GetCargoDoorAdvisoryText()
 {
     return QCoreApplication::translate("OperationsScreen",
-                                       "A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.");
+                                       "A GSX loader is waiting for the main deck cargo door. That door runs on hydraulics, so switch the ELEC 2 pump on in the overhead.");
 }
 
 QString OperationsViewModel::GetFuelRequestAdvisoryText()
