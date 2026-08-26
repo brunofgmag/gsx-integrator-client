@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.22.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.21.0...v1.22.0) (2026-08-26)
+
+
+* let the pilot choose when the client opens the GSX panel ([#82](https://github.com/brunofgmag/gsx-integrator-client/issues/82)) ([ca4e282](https://github.com/brunofgmag/gsx-integrator-client/commit/ca4e2823042507cedab9d5b48bea77c34bc29c7e))
+
+
+### Features
+
+* **gsx:** let the pilot choose when the client opens the GSX panel ([32cd1f7](https://github.com/brunofgmag/gsx-integrator-client/commit/32cd1f7f80abdff7dac31b9e5a3b17d38a854c24)) ([ca4e282](https://github.com/brunofgmag/gsx-integrator-client/commit/ca4e2823042507cedab9d5b48bea77c34bc29c7e))
+* **i18n:** update the catalogues for the panel choice and the new copy ([a5b3996](https://github.com/brunofgmag/gsx-integrator-client/commit/a5b39968814ac878f314db7cce2e70401632917f)) ([ca4e282](https://github.com/brunofgmag/gsx-integrator-client/commit/ca4e2823042507cedab9d5b48bea77c34bc29c7e))
+
 ## [1.21.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.20.0...v1.21.0) (2026-08-26)
 
 
