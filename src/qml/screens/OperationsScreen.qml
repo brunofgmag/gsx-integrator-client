@@ -8,7 +8,6 @@ ColumnLayout {
 
     required property var integratorVm
     required property var settingsVm
-    required property bool compact
 
     readonly property bool deboarding: integratorVm.inDeboardingPhase
 
@@ -74,7 +73,7 @@ ColumnLayout {
                 width: parent.width
                 text: root.integratorVm.stateText
                 color: Theme.text
-                font.pixelSize: root.compact ? 19 : 24
+                font.pixelSize: 24
                 font.bold: true
                 font.letterSpacing: 1.5
                 font.capitalization: Font.AllUppercase
@@ -199,7 +198,7 @@ ColumnLayout {
         GridLayout {
             Layout.fillWidth: true
             Layout.fillHeight: false
-            columns: root.compact ? 1 : 3
+            columns: 3
             columnSpacing: 10
             rowSpacing: 10
 

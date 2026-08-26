@@ -69,12 +69,15 @@ namespace gsx::lvars
 
 namespace gsx::states
 {
+    inline constexpr double kVehicleDispatched = 2.0;
+    inline constexpr double kVehicleApproaching = 5.0;
     inline constexpr double kLoaderWaitingForDoor = 6.0;
     inline constexpr double kLoaderUnloading = 7.0;
     inline constexpr double kLoaderInPosition = 8.0;
     inline constexpr double kLoaderLoading = 9.0;
     inline constexpr double kLoaderRetracting = 11.0;
     inline constexpr double kLoaderRemoving = 4.0;
+    inline constexpr double kStairsWaitingForDoor = 6.0;
     inline constexpr double kStairsFinalPosition = 3.0;
     inline constexpr double kCateringWaitingForDoor = 6.0;
     inline constexpr double kCateringInProgress = 7.0;
@@ -96,6 +99,21 @@ namespace gsx::states
     {
         return state == kCateringWaitingForDoor
             || state == kCateringInProgress;
+    }
+
+    [[nodiscard]] inline bool IsLoaderArriving(const double state)
+    {
+        return state == kVehicleDispatched || IsLoaderAtDoor(state);
+    }
+
+    [[nodiscard]] inline bool IsCateringArriving(const double state)
+    {
+        return state == kVehicleApproaching || IsCateringAtDoor(state);
+    }
+
+    [[nodiscard]] inline bool AreStairsArriving(const double state)
+    {
+        return state == kStairsWaitingForDoor || state == kStairsFinalPosition;
     }
 }
 

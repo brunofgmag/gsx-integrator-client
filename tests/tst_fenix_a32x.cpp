@@ -165,7 +165,7 @@ private slots:
     static void zfwSetterIgnoresRepeatedValues();
     static void zfwSetterSilentWhileEfbUnavailable();
     static void zfwSetterWaitsForEmptyWeightData();
-    static void zfwSetterSkipsWithoutPlannedZfw();
+    static void zfwSetterEmptiesTheHoldsWithoutAPlannedZfw();
     static void seatWritesWaitForBookedSeats();
     static void preliminaryLoadsheetRequestedWhenLoadingStarts();
     static void preliminaryLoadsheetSkippedWhileEfbUnavailable();
@@ -544,7 +544,7 @@ void FenixA32xTest::zfwSetterWaitsForEmptyWeightData()
     QCOMPARE(fixture.efb.setStringCalls, 0);
 }
 
-void FenixA32xTest::zfwSetterSkipsWithoutPlannedZfw()
+void FenixA32xTest::zfwSetterEmptiesTheHoldsWithoutAPlannedZfw()
 {
     FenixFixture fixture;
 
@@ -552,8 +552,9 @@ void FenixA32xTest::zfwSetterSkipsWithoutPlannedZfw()
 
     fixture.aircraft.SetCurrentZfwKg(50000.0);
 
-    QCOMPARE(fixture.efb.setFloatCalls, 0);
-    QCOMPARE(fixture.efb.setStringCalls, 0);
+    QCOMPARE(fixture.efb.floats[kFwdCargo], 0.0);
+    QCOMPARE(fixture.efb.floats[kAftCargo], 0.0);
+    QCOMPARE(fixture.efb.floats[kBulkCargo], 0.0);
 }
 
 void FenixA32xTest::seatWritesWaitForBookedSeats()

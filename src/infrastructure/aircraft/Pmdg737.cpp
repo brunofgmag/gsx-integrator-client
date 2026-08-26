@@ -88,6 +88,11 @@ const char* Pmdg737::GetName() const
     }
 }
 
+bool Pmdg737::IsMainDeckCargoDoorStuck() const
+{
+    return MainDeckDoorStuck();
+}
+
 std::optional<Pmdg737Door> Pmdg737::DoorFor(const GsxDoor door)
 {
     switch (door)

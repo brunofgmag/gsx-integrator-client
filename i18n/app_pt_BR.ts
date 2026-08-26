@@ -535,86 +535,91 @@
     <name>Main</name>
     <message>
         <location filename="../src/qml/Main.qml" line="18"/>
-        <location filename="../src/qml/Main.qml" line="34"/>
-        <location filename="../src/qml/Main.qml" line="111"/>
+        <location filename="../src/qml/Main.qml" line="33"/>
+        <location filename="../src/qml/Main.qml" line="110"/>
+        <location filename="../src/qml/Main.qml" line="192"/>
         <location filename="../src/qml/Main.qml" line="193"/>
-        <location filename="../src/qml/Main.qml" line="194"/>
         <source>GSX Integrator</source>
         <translation>GSX Integrator</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="112"/>
+        <location filename="../src/qml/Main.qml" line="111"/>
         <source>Still running in the tray. Right-click the icon to open or quit.</source>
         <translation>Ainda em execução na bandeja. Clique com o botão direito no ícone para abrir ou fechar.</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="198"/>
+        <location filename="../src/qml/Main.qml" line="197"/>
         <source>Open</source>
         <translation>Abrir</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="179"/>
-        <location filename="../src/qml/Main.qml" line="202"/>
+        <location filename="../src/qml/Main.qml" line="178"/>
+        <location filename="../src/qml/Main.qml" line="201"/>
         <source>Quit</source>
         <translation>Fechar</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="35"/>
+        <location filename="../src/qml/Main.qml" line="34"/>
         <source>Waiting for input: press START LOADING or activate the SmartSwitch.</source>
         <translation>Aguardando ação: pressione INICIAR CARREGAMENTO ou acione o SmartSwitch.</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="159"/>
+        <location filename="../src/qml/Main.qml" line="158"/>
         <source>Quit GSX Integrator?</source>
         <translation>Fechar o GSX Integrator?</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="172"/>
+        <location filename="../src/qml/Main.qml" line="171"/>
         <source>Cancel</source>
         <translation>Cancelar</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="266"/>
+        <location filename="../src/qml/Main.qml" line="265"/>
         <source>Restart to update</source>
         <translation>Reiniciar para atualizar</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="268"/>
+        <location filename="../src/qml/Main.qml" line="267"/>
         <source>↓ CommBus</source>
         <translation>↓ CommBus</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="270"/>
+        <location filename="../src/qml/Main.qml" line="269"/>
         <source>Apply the update and restart now</source>
         <translation>Aplicar a atualização e reiniciar agora</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="271"/>
+        <location filename="../src/qml/Main.qml" line="270"/>
         <source>Update available</source>
         <translation>Atualização disponível</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="283"/>
+        <location filename="../src/qml/Main.qml" line="284"/>
+        <source>Operations</source>
+        <translation>Operações</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/Main.qml" line="290"/>
         <source>Switch to light theme</source>
         <translation>Mudar para o tema claro</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="283"/>
+        <location filename="../src/qml/Main.qml" line="290"/>
         <source>Switch to dark theme</source>
         <translation>Mudar para o tema escuro</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="297"/>
+        <location filename="../src/qml/Main.qml" line="304"/>
         <source>About</source>
         <translation>Sobre</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="418"/>
+        <location filename="../src/qml/Main.qml" line="423"/>
         <source>Save settings</source>
         <translation>Salvar ajustes</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="290"/>
+        <location filename="../src/qml/Main.qml" line="297"/>
         <source>Settings</source>
         <translation>Configurações</translation>
     </message>
@@ -734,9 +739,8 @@
         <translation type="vanished">Você reabriu o painel do GSX duas vezes, então o cliente parou de fechá-lo. O ajuste agora é Nunca.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="539"/>
         <source>A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.</source>
-        <translation>Um carregador do GSX espera pela porta de carga principal. Confira se a bomba hidráulica está ligada.</translation>
+        <translation type="vanished">Um carregador do GSX espera pela porta de carga principal. Confira se a bomba hidráulica está ligada.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="545"/>
@@ -823,6 +827,11 @@
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="450"/>
         <source>SimBrief OFP</source>
         <translation>OFP SimBrief</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="539"/>
+        <source>A GSX loader is waiting for the main deck cargo door. That door runs on hydraulics, so switch the ELEC 2 pump on in the overhead.</source>
+        <translation>Um carregador do GSX espera pela porta de carga do convés principal. Ela é hidráulica, então ligue a bomba ELEC 2 no painel overhead.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="551"/>
@@ -1145,32 +1154,32 @@
         <translation type="vanished">SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="15"/>
         <source>Automation</source>
         <translation>Automação</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="15"/>
         <source>General</source>
         <translation>Geral</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="15"/>
         <source>Services</source>
         <translation>Serviços</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
         <source>Window</source>
         <translation>Janela</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
         <source>Profiles</source>
         <translation>Perfis</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
         <source>Advanced</source>
         <translation>Avançado</translation>
     </message>

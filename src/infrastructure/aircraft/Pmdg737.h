@@ -20,6 +20,7 @@ public:
             std::unique_ptr<Pmdg737DataGateway> data, std::unique_ptr<PmdgTabletGateway> tablet);
 
     [[nodiscard]] const char* GetName() const override;
+    [[nodiscard]] bool IsMainDeckCargoDoorStuck() const override;
 
     [[nodiscard]] static std::optional<Pmdg737Door> DoorFor(GsxDoor door);
 

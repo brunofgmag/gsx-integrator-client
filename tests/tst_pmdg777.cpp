@@ -118,7 +118,7 @@ private slots:
     static void doorsSkipTogglesWhileMoving();
     static void doorsHoldBeforeClientData();
     static void doorThatIgnoresTheCommandStopsAfterTwoRetries();
-    static void mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses();
+    static void theFreighterNeverReportsAStuckMainDeckDoor();
     static void mainDeckDoorOpenedByHandIsLeftAloneWithoutALoader();
     static void mainDeckDoorStillClosesWhenTheLoaderLeavesAfterOpeningIt();
     static void closeAllDoorsTogglesOpenMappedDoors();
@@ -736,7 +736,7 @@ void Pmdg777Test::doorThatIgnoresTheCommandStopsAfterTwoRetries()
     QCOMPARE(toggles, 3);
 }
 
-void Pmdg777Test::mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses()
+void Pmdg777Test::theFreighterNeverReportsAStuckMainDeckDoor()
 {
     Pmdg777Fixture freighter(Pmdg777Variant::Freighter);
 
@@ -744,34 +744,12 @@ void Pmdg777Test::mainDeckCargoDoorStuckOnlyWhenTheDoorRefuses()
     freighter.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
     freighter.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
 
-    freighter.aircraft->OnTick();
-
-    QVERIFY(!freighter.aircraft->IsMainDeckCargoDoorStuck());
-
-    for (int tick = 0; tick < 12; ++tick)
+    for (int tick = 0; tick < 30; ++tick)
     {
         freighter.aircraft->OnTick();
     }
 
-    QVERIFY(freighter.aircraft->IsMainDeckCargoDoorStuck());
-
-    freighter.data->doorStates[12] = 0;
-    freighter.aircraft->OnTick();
-
     QVERIFY(!freighter.aircraft->IsMainDeckCargoDoorStuck());
-
-    Pmdg777Fixture passenger(Pmdg777Variant::Er200);
-
-    passenger.data->hasData = true;
-    passenger.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
-    passenger.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
-
-    for (int tick = 0; tick < 30; ++tick)
-    {
-        passenger.aircraft->OnTick();
-    }
-
-    QVERIFY(!passenger.aircraft->IsMainDeckCargoDoorStuck());
 }
 
 void Pmdg777Test::closeAllDoorsTogglesOpenMappedDoors()

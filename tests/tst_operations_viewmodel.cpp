@@ -832,7 +832,7 @@ void OperationsViewModelTest::standingAdvisoryTextsNameTheirCondition()
     FakeOperationsDisplaySettings display;
     const OperationsViewModel viewModel(&service, &display);
 
-    QVERIFY(viewModel.GetCargoDoorAdvisoryText().contains(QStringLiteral("hydraulic pump")));
+    QVERIFY(viewModel.GetCargoDoorAdvisoryText().contains(QStringLiteral("ELEC 2")));
     QVERIFY(viewModel.GetFuelRequestAdvisoryText().contains(QStringLiteral("truck has not arrived")));
     QCOMPARE(viewModel.GetCommandErrorLabel(), QStringLiteral("Error"));
 }

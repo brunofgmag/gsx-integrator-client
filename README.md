@@ -95,7 +95,17 @@ Fuel and payload go through the CommBus plugin, so on this aircraft the plugin f
 
 ## The CommBus plugin
 
-Install the CommBus plugin (`gsx-integrator-commbus`) in your Community folder; the [`gsx-integrator-installer`](https://github.com/brunofgmag/gsx-integrator-installer) does that for you. The plugin is a small bridge between the client and the parts of the sim only a WASM module can reach. It lets the client activate the GSX menu icon on the MSFS toolbar, and on the PMDG aircraft it also carries the fuel and payload writes. Most aircraft run without it, at the cost of GSX's own messages not showing on screen, because the client cannot open the menu for you. Some aircraft depend on it outright. The PMDG 777 and 737 are those: without the plugin, version 0.2.0 or newer, they will not refuel or board.
+Install the CommBus plugin (`gsx-integrator-commbus`) in your Community folder; the [`gsx-integrator-installer`](https://github.com/brunofgmag/gsx-integrator-installer) does that for you. The plugin is a small bridge between the client and the parts of the sim only a WASM module can reach. It lets the client open the GSX panel on the MSFS toolbar, and on the PMDG aircraft it also carries the fuel and payload writes. Most aircraft run without it. GSX puts its own messages on screen whether the panel is open or not, so the one moment it has to be up is the pushback menu, where you pick where the tug leaves you. Without the plugin, that is the menu you open by hand. Some aircraft depend on it outright. The PMDG 777 and 737 are those: without the plugin, version 0.2.0 or newer, they will not refuel or board.
+
+## GSX settings worth changing
+
+Three settings on the GSX Settings page are worth a visit before your first flight.
+
+Turn Ignore Time on, in the Simulation area beside the SimBrief username. The client asks GSX to load your OFP and holds at "Waiting for flight plan" until GSX says it went in, and GSX ships with Ignore Time off, which makes it turn down any plan whose departure time has already passed. The turnaround then sits there until you dispatch again.
+
+Leave Assistance Services "Auto" mode off. In Auto mode GSX calls its own services in sequence, which is what the client is already doing, in its own order. Run both and you have two dispatchers arguing over one menu.
+
+Set the interval between "Waiting for your action" messages to 25 seconds, in the Timings area. Those reminders repeat forever and the default is 15 seconds, which is a lot of nagging when the client is opening the doors for you anyway. Much longer than 25 and you stop noticing the times GSX is genuinely stuck.
 
 ## How to use it
 

@@ -8,7 +8,6 @@ ColumnLayout {
     id: root
 
     required property var settingsVm
-    required property bool compact
 
     property int sectionIndex: 0
 
@@ -27,7 +26,7 @@ ColumnLayout {
 
         ColumnLayout {
             id: rail
-            Layout.preferredWidth: root.compact ? 96 : 116
+            Layout.preferredWidth: 116
             Layout.alignment: Qt.AlignTop
             spacing: 2
 
