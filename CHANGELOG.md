@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.20.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.19.0...v1.20.0) (2026-08-26)
+
+
+* give crew deboarding its own setting and close a panel left open ([#78](https://github.com/brunofgmag/gsx-integrator-client/issues/78)) ([f33b810](https://github.com/brunofgmag/gsx-integrator-client/commit/f33b8102e2a934f5c13968d315b3553751eeaf58))
+
+
+### Features
+
+* **gsx:** answer the crew deboarding menu with its own setting ([0609de9](https://github.com/brunofgmag/gsx-integrator-client/commit/0609de9f17d6f515732fe9abc9991a80a2f1c8a6)) ([f33b810](https://github.com/brunofgmag/gsx-integrator-client/commit/f33b8102e2a934f5c13968d315b3553751eeaf58))
+* **gsx:** close a GSX panel left open once per turnaround ([afe1e24](https://github.com/brunofgmag/gsx-integrator-client/commit/afe1e2427a07be2478d6686bae6c113e00f25234)) ([f33b810](https://github.com/brunofgmag/gsx-integrator-client/commit/f33b8102e2a934f5c13968d315b3553751eeaf58))
+
 ## [1.19.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.18.0...v1.19.0) (2026-08-25)
 
 
