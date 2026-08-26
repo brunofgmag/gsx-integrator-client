@@ -119,6 +119,11 @@ private slots:
     static void activeGsxIconIsNotReactivated();
     static void openGsxOnRequestsOffSkipsToolbar();
     static void openGsxOnRequestsOnActivatesToolbar();
+    static void toolbarLeftOpenIsClosedOncePerTurnaround();
+    static void closedToolbarIsNotClosedAgain();
+    static void turnaroundTurnRearmsTheToolbarClose();
+    static void openGsxOnRequestsOnNeverClosesTheToolbar();
+    static void aDroppedCloseKeepsTheTurnaroundsOnlyCloseOwed();
     static void triggerServiceDoesNotOpenClosedMenu();
     static void triggerServiceDoesNotToggleOpenMenu();
     static void confirmGoodEnginesPicksWhenMenuVisible();
@@ -315,6 +320,121 @@ void GsxMenuNavigatorTest::openGsxOnRequestsOnActivatesToolbar()
 
     QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
     QCOMPARE(client.Count("service.trigger"), 1);
+}
+
+void GsxMenuNavigatorTest::toolbarLeftOpenIsClosedOncePerTurnaround()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.openGsxOnRequests = false;
+    FakeDomainLogger logger;
+    FakeCommBusBridgeGateway bridge;
+    CommBusPluginClient plugin(&bridge);
+    plugin.Setup();
+    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
+    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
+
+    nav.RequestRefueling();
+
+    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
+
+    const auto& [channel, flag, payload] = bridge.calls.front();
+
+    QCOMPARE(QString::fromStdString(payload), QString(IntegratorPluginCommBus::kCommandClose));
+
+    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
+    nav.RequestBoarding();
+
+    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
+}
+
+void GsxMenuNavigatorTest::closedToolbarIsNotClosedAgain()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.openGsxOnRequests = false;
+    FakeDomainLogger logger;
+    FakeCommBusBridgeGateway bridge;
+    CommBusPluginClient plugin(&bridge);
+    plugin.Setup();
+    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "closed");
+    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
+
+    nav.RequestRefueling();
+
+    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 0);
+}
+
+void GsxMenuNavigatorTest::turnaroundTurnRearmsTheToolbarClose()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.openGsxOnRequests = false;
+    FakeDomainLogger logger;
+    FakeCommBusBridgeGateway bridge;
+    CommBusPluginClient plugin(&bridge);
+    plugin.Setup();
+    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
+    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
+
+    nav.RequestRefueling();
+
+    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
+
+    nav.OnTurnaroundTurned();
+    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
+    nav.RequestBoarding();
+
+    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 2);
+}
+
+void GsxMenuNavigatorTest::openGsxOnRequestsOnNeverClosesTheToolbar()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    FakeCommBusBridgeGateway bridge;
+    CommBusPluginClient plugin(&bridge);
+    plugin.Setup();
+    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
+    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
+
+    nav.RequestRefueling();
+    nav.OnTurnaroundTurned();
+    nav.RequestBoarding();
+
+    for (const auto& [channel, flag, payload] : bridge.calls)
+    {
+        QVERIFY(payload != IntegratorPluginCommBus::kCommandClose);
+    }
+}
+
+void GsxMenuNavigatorTest::aDroppedCloseKeepsTheTurnaroundsOnlyCloseOwed()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.openGsxOnRequests = false;
+    FakeDomainLogger logger;
+    FakeCommBusBridgeGateway bridge;
+    CommBusPluginClient plugin(&bridge);
+    plugin.Setup();
+    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
+    bridge.available = false;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
+
+    nav.RequestRefueling();
+
+    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 0);
+
+    bridge.available = true;
+    nav.RequestBoarding();
+
+    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
 }
 
 void GsxMenuNavigatorTest::triggerServiceDoesNotOpenClosedMenu()

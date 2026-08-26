@@ -50,7 +50,8 @@ public:
     [[nodiscard]] bool IsMenuSettled() const;
 
     void OpenMenu() const;
-    void ShowGsxToolbar() const;
+    void SyncGsxToolbar() const;
+    void OnTurnaroundTurned() override;
     void OnMenuChanged();
     void OnSnapshot();
     void DisableGsxMenu() override;
@@ -133,6 +134,7 @@ private:
     std::string resyncSig_;
     std::string discardedSig_;
     mutable long long lastActionMs_ = 0;
+    mutable bool toolbarCloseSpent_ = false;
 
     static constexpr long long kIntentTtlMs = 60000;
     static constexpr long long kCompleteTtlMs = 20000;

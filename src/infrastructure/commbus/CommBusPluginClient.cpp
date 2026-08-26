@@ -34,18 +34,26 @@ void CommBusPluginClient::OnState(const std::string& state)
     open_ = state == "open";
 }
 
-bool CommBusPluginClient::OpenGsxToolbar() const
+bool CommBusPluginClient::SendToolbarCommand(const char* command) const
 {
     if (!bridge_->IsAvailable())
     {
-        LOG_WARN("Integrator CommBus bridge unavailable; cannot open the GSX toolbar");
+        LOG_WARN("Integrator CommBus bridge unavailable; cannot send '%s' to the GSX toolbar", command);
 
         return false;
     }
 
-    bridge_->Call(kToolbarCommandChannel, CommBusFlag::kJs, kCommandOpen);
+    return bridge_->Call(kToolbarCommandChannel, CommBusFlag::kJs, command);
+}
 
-    return true;
+bool CommBusPluginClient::OpenGsxToolbar() const
+{
+    return SendToolbarCommand(kCommandOpen);
+}
+
+bool CommBusPluginClient::CloseGsxToolbar() const
+{
+    return SendToolbarCommand(kCommandClose);
 }
 
 bool CommBusPluginClient::IsBridgeReady() const

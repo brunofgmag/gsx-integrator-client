@@ -219,6 +219,7 @@ void GsxMenuNavigator::Reset()
     resyncCount_ = 0;
     resyncPending_ = false;
     lastActionMs_ = 0;
+    toolbarCloseSpent_ = false;
     pending_.clear();
 }
 
@@ -570,7 +571,7 @@ bool GsxMenuNavigator::HandleIntentPrompts()
 void GsxMenuNavigator::TriggerService(const char* serviceId)
 {
     OpenIntent(Intent::Service);
-    ShowGsxToolbar();
+    SyncGsxToolbar();
 
     ArmRequest("service.trigger",
                QJsonObject{{"service", QString::fromLatin1(serviceId)}},
@@ -689,18 +690,46 @@ bool GsxMenuNavigator::WasTaken(const PendingRequest& request) const
     return service->stateRaw != static_cast<int>(GsxStateStatus::Callable) || !service->canTrigger;
 }
 
-void GsxMenuNavigator::ShowGsxToolbar() const
+void GsxMenuNavigator::SyncGsxToolbar() const
 {
-    if (settings_->openGsxOnRequests && pluginClient_ != nullptr && !pluginClient_->IsGsxToolbarActive())
+    if (pluginClient_ == nullptr)
     {
-        logger_->LogInfo("RemoteAPI opening the GSX toolbar");
-        (void)pluginClient_->OpenGsxToolbar();
+        return;
     }
+
+    if (settings_->openGsxOnRequests)
+    {
+        if (!pluginClient_->IsGsxToolbarActive())
+        {
+            logger_->LogInfo("RemoteAPI opening the GSX toolbar");
+            (void)pluginClient_->OpenGsxToolbar();
+        }
+
+        return;
+    }
+
+    if (toolbarCloseSpent_ || !pluginClient_->IsGsxToolbarActive())
+    {
+        return;
+    }
+
+    if (!pluginClient_->CloseGsxToolbar())
+    {
+        return;
+    }
+
+    toolbarCloseSpent_ = true;
+    logger_->LogInfo("RemoteAPI closing the GSX toolbar left open");
+}
+
+void GsxMenuNavigator::OnTurnaroundTurned()
+{
+    toolbarCloseSpent_ = false;
 }
 
 void GsxMenuNavigator::OpenMenu() const
 {
-    ShowGsxToolbar();
+    SyncGsxToolbar();
 
     if (!state_->menu.shown)
     {

@@ -26,6 +26,8 @@ public:
     [[nodiscard]] virtual bool CompletePushback() = 0;
 
     virtual void DisableGsxMenu() = 0;
+
+    virtual void OnTurnaroundTurned() = 0;
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_GSXMENUGATEWAY_H

@@ -16,6 +16,8 @@ private slots:
     static void unavailableStateResetsLatch();
     static void openCommandSentWhenBridgeAvailable();
     static void openCommandSkippedWhenBridgeUnavailable();
+    static void closeCommandSentWhenBridgeAvailable();
+    static void closeCommandSkippedWhenBridgeUnavailable();
     static void gsxToolbarActiveFollowsOpenState();
     static void shutdownUnsubscribesState();
 };
@@ -89,6 +91,29 @@ void GsxPluginClientTest::openCommandSkippedWhenBridgeUnavailable()
     const CommBusPluginClient client(&bridge);
 
     QVERIFY(!client.OpenGsxToolbar());
+    QCOMPARE(bridge.CallCount(kToolbarCommandChannel), 0);
+}
+
+void GsxPluginClientTest::closeCommandSentWhenBridgeAvailable()
+{
+    FakeCommBusBridgeGateway bridge;
+    const CommBusPluginClient client(&bridge);
+
+    QVERIFY(client.CloseGsxToolbar());
+    QCOMPARE(bridge.CallCount(kToolbarCommandChannel), 1);
+
+    const auto& [channel, flag, payload] = bridge.calls.front();
+    QCOMPARE(QString::fromStdString(payload), QString(kCommandClose));
+    QCOMPARE(flag, CommBusFlag::kJs);
+}
+
+void GsxPluginClientTest::closeCommandSkippedWhenBridgeUnavailable()
+{
+    FakeCommBusBridgeGateway bridge;
+    bridge.available = false;
+    const CommBusPluginClient client(&bridge);
+
+    QVERIFY(!client.CloseGsxToolbar());
     QCOMPARE(bridge.CallCount(kToolbarCommandChannel), 0);
 }
 
