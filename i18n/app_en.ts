@@ -108,8 +108,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="26"/>
-        <source>Graphics Backend</source>
-        <translation>Graphics Backend</translation>
+        <source>Graphics backend</source>
+        <translation>Graphics backend</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="27"/>
@@ -160,8 +160,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AutomationPane.qml" line="18"/>
-        <source>Used only by aircraft that don&apos;t support refueling through GSX. When GSX drives the fuel truck, the client follows the GSX pace and the rate shows as Auto.</source>
-        <translation>Used only by aircraft that don&apos;t support refueling through GSX. When GSX drives the fuel truck, the client follows the GSX pace and the rate shows as Auto.</translation>
+        <source>Only aircraft that cannot refuel through GSX use this rate. The others show Auto and follow the GSX pace.</source>
+        <translation>Only aircraft that cannot refuel through GSX use this rate. The others show Auto and follow the GSX pace.</translation>
     </message>
     <message>
         <source>kg/s</source>
@@ -174,13 +174,13 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AutomationPane.qml" line="56"/>
-        <source>Picks the recommended GSX menu option for you</source>
-        <translation>Picks the recommended GSX menu option for you</translation>
+        <source>Picks the recommended GSX menu option</source>
+        <translation>Picks the recommended GSX menu option</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AutomationPane.qml" line="57"/>
-        <source>When on, the integrator answers GSX menus on its own: any option marked &quot;GSX choice&quot; and the Simbrief block fuel refueling level, even on menus you open manually.</source>
-        <translation>When on, the integrator answers GSX menus on its own: any option marked &quot;GSX choice&quot; and the Simbrief block fuel refueling level, even on menus you open manually.</translation>
+        <source>The client answers GSX menus on its own: any option marked &quot;GSX choice&quot; and the Simbrief block fuel level, even on menus you opened by hand.</source>
+        <translation>The client answers GSX menus on its own: any option marked &quot;GSX choice&quot; and the Simbrief block fuel level, even on menus you opened by hand.</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AutomationPane.qml" line="64"/>
@@ -209,8 +209,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AutomationPane.qml" line="75"/>
-        <source>When off, the turnaround holds at &quot;Requesting fuel&quot; until you press Start Loading or activate the aircraft&apos;s SmartSwitch. Refueling requested manually in the GSX menu still resumes the flow.</source>
-        <translation>When off, the turnaround holds at &quot;Requesting fuel&quot; until you press Start Loading or activate the aircraft&apos;s SmartSwitch. Refueling requested manually in the GSX menu still resumes the flow.</translation>
+        <source>When off, the turnaround holds at &quot;Requesting fuel&quot; until you press Start Loading or the aircraft&apos;s SmartSwitch. Asking for fuel in the GSX menu resumes it too.</source>
+        <translation>When off, the turnaround holds at &quot;Requesting fuel&quot; until you press Start Loading or the aircraft&apos;s SmartSwitch. Asking for fuel in the GSX menu resumes it too.</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AutomationPane.qml" line="82"/>
@@ -278,8 +278,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="17"/>
-        <source>Used to fetch your latest OFP</source>
-        <translation>Used to fetch your latest OFP</translation>
+        <source>Fetches your latest OFP</source>
+        <translation>Fetches your latest OFP</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="47"/>
@@ -293,18 +293,38 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="55"/>
-        <source>Open GSX on requests</source>
-        <translation>Open GSX on requests</translation>
+        <source>GSX panel</source>
+        <translation>GSX panel</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="56"/>
-        <source>Shows the GSX window in the sim when requesting services</source>
-        <translation>Shows the GSX window in the sim when requesting services</translation>
+        <source>When the client opens the GSX window in the sim</source>
+        <translation>When the client opens the GSX window in the sim</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="57"/>
-        <source>When off, requests are sent silently: the GSX window no longer opens on every request, but GSX menus and messages won&apos;t appear in the sim.</source>
-        <translation>When off, requests are sent silently: the GSX window no longer opens on every request, but GSX menus and messages won&apos;t appear in the sim.</translation>
+        <source>On pushback opens the panel for the destination menu and closes it once the push begins. Keep closed dismisses a panel left open. Never leaves the panel alone. All requests opens it whenever the client asks GSX for anything.</source>
+        <translation>On pushback opens the panel for the destination menu and closes it once the push begins. Keep closed dismisses a panel left open. Never leaves the panel alone. All requests opens it whenever the client asks GSX for anything.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="58"/>
+        <source>Never</source>
+        <translation>Never</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="59"/>
+        <source>Keep closed</source>
+        <translation>Keep closed</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="60"/>
+        <source>On pushback</source>
+        <translation>On pushback</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
+        <source>All requests</source>
+        <translation>All requests</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="64"/>
@@ -349,8 +369,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="80"/>
-        <source>In Automatic mode the unit is taken from SimBrief (when a Pilot ID is set) or from the aircraft&apos;s flight plan when the client can read it; otherwise KG.</source>
-        <translation>In Automatic mode the unit is taken from SimBrief (when a Pilot ID is set) or from the aircraft&apos;s flight plan when the client can read it; otherwise KG.</translation>
+        <source>In Auto the unit comes from SimBrief, when a Pilot ID is set, or from the aircraft&apos;s flight plan when the client can read it. With neither, the client uses KG.</source>
+        <translation>In Auto the unit comes from SimBrief, when a Pilot ID is set, or from the aircraft&apos;s flight plan when the client can read it. With neither, the client uses KG.</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="84"/>
@@ -707,6 +727,11 @@
         <translation>Enable broadcast</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="543"/>
+        <source>You reopened the GSX panel twice, so the client stopped closing it. The setting is now Never.</source>
+        <translation>You reopened the GSX panel twice, so the client stopped closing it. The setting is now Never.</translation>
+    </message>
+    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="539"/>
         <source>A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.</source>
         <translation>A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.</translation>
@@ -876,8 +901,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="71"/>
-        <source>Mirror the global configuration for this aircraft</source>
-        <translation>Mirror the global configuration for this aircraft</translation>
+        <source>Mirrors the global settings for this aircraft</source>
+        <translation>Mirrors the global settings for this aircraft</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="79"/>
@@ -896,8 +921,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="83"/>
-        <source>This aircraft&apos;s refueling pace is driven by GSX or by the aircraft itself, so the rate is not configurable.</source>
-        <translation>This aircraft&apos;s refueling pace is driven by GSX or by the aircraft itself, so the rate is not configurable.</translation>
+        <source>This aircraft refuels through GSX or on its own, so you cannot set the rate.</source>
+        <translation>This aircraft refuels through GSX or on its own, so you cannot set the rate.</translation>
     </message>
     <message>
         <source>kg/s</source>
@@ -975,14 +1000,14 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="17"/>
-        <source>Place ground power and chocks at the gate, remove before pushback</source>
-        <translation>Place ground power and chocks at the gate, remove before pushback</translation>
+        <source>Places ground power and chocks at the gate, removes them before pushback</source>
+        <translation>Places ground power and chocks at the gate, removes them before pushback</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="18"/>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="27"/>
-        <source>Chocks are placed only on aircraft that support external chocks control.</source>
-        <translation>Chocks are placed only on aircraft that support external chocks control.</translation>
+        <source>Only on aircraft that accept external chocks control.</source>
+        <translation>Only on aircraft that accept external chocks control.</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="25"/>
@@ -991,8 +1016,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="26"/>
-        <source>Place ground power and chocks after landing, once engines are off and the parking brake is set</source>
-        <translation>Place ground power and chocks after landing, once engines are off and the parking brake is set</translation>
+        <source>Places ground power and chocks with engines off and the brake set</source>
+        <translation>Places ground power and chocks with engines off and the brake set</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="34"/>
@@ -1033,8 +1058,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="67"/>
-        <source>Answer when GSX asks who boards the aircraft</source>
-        <translation>Answer when GSX asks who boards the aircraft</translation>
+        <source>Answers when GSX asks who boards</source>
+        <translation>Answers when GSX asks who boards</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="68"/>
@@ -1077,8 +1102,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="81"/>
-        <source>Answer when GSX asks who leaves the aircraft</source>
-        <translation>Answer when GSX asks who leaves the aircraft</translation>
+        <source>Answers when GSX asks who deboards</source>
+        <translation>Answers when GSX asks who deboards</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="94"/>
@@ -1087,8 +1112,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="95"/>
-        <source>Answer &quot;Yes&quot; when GSX offers the airplane&apos;s own airstairs</source>
-        <translation>Answer &quot;Yes&quot; when GSX offers the airplane&apos;s own airstairs</translation>
+        <source>Answers &quot;Yes&quot; when GSX offers the aircraft&apos;s own airstairs</source>
+        <translation>Answers &quot;Yes&quot; when GSX offers the aircraft&apos;s own airstairs</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="96"/>
@@ -1102,8 +1127,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="104"/>
-        <source>Answer &quot;Yes&quot; when GSX offers de-icing treatment</source>
-        <translation>Answer &quot;Yes&quot; when GSX offers de-icing treatment</translation>
+        <source>Answers &quot;Yes&quot; when GSX offers de-icing</source>
+        <translation>Answers &quot;Yes&quot; when GSX offers de-icing</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="105"/>
@@ -1156,7 +1181,7 @@
         <translation type="vanished">SimBrief Pilot ID</translation>
     </message>
     <message>
-        <source>Used to fetch your latest OFP</source>
+        <source>Fetches your latest OFP</source>
         <translation type="vanished">Used to fetch your latest OFP</translation>
     </message>
     <message>
@@ -1180,7 +1205,7 @@
         <translation type="vanished">Accept actions automatically</translation>
     </message>
     <message>
-        <source>Picks the recommended GSX menu option for you</source>
+        <source>Picks the recommended GSX menu option</source>
         <translation type="vanished">Picks the recommended GSX menu option for you</translation>
     </message>
     <message>
