@@ -21,6 +21,11 @@ private slots:
     void saveReplacesExistingProfiles();
     void crewDeboardingInheritsTheBoardingChoiceWhenAbsent() const;
     void explicitCrewDeboardingWinsOverTheBoardingChoice() const;
+    void absentPanelKeysYieldTheOnPushbackDefault() const;
+    void theLegacyOpenOnRequestsOnBecomesAllRequests() const;
+    void theLegacyOpenOnRequestsOffBecomesNever() const;
+    void anExplicitPanelModeWinsOverTheLegacyKey() const;
+    void savingThePanelModeLeavesTheLegacyKeyIntact();
 
 private:
     QTemporaryDir tempDir_;
@@ -63,7 +68,7 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QCOMPARE(loaded.callLavatory, false);
     QCOMPARE(loaded.callWater, false);
     QCOMPARE(loaded.callCleaning, false);
-    QCOMPARE(loaded.openGsxOnRequests, true);
+    QCOMPARE(loaded.gsxPanelMode, static_cast<int>(GsxPanelMode::OnPushback));
     QCOMPARE(loaded.themeMode, 2);
     QCOMPARE(loaded.language, std::string("system"));
     QCOMPARE(loaded.renderer, std::string("software"));
@@ -73,6 +78,65 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QCOMPARE(loaded.trayTipShown, false);
     QCOMPARE(loaded.streamerMode, false);
     QVERIFY(loaded.profiles.empty());
+}
+
+void QSettingsRepositoryTest::absentPanelKeysYieldTheOnPushbackDefault() const
+{
+    const AppSettings loaded = repository_.Load();
+
+    QCOMPARE(loaded.gsxPanelMode, static_cast<int>(GsxPanelMode::OnPushback));
+}
+
+void QSettingsRepositoryTest::theLegacyOpenOnRequestsOnBecomesAllRequests() const
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("gsx/openGsxOnRequests"), true);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QCOMPARE(loaded.gsxPanelMode, static_cast<int>(GsxPanelMode::AllRequests));
+}
+
+void QSettingsRepositoryTest::theLegacyOpenOnRequestsOffBecomesNever() const
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("gsx/openGsxOnRequests"), false);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QCOMPARE(loaded.gsxPanelMode, static_cast<int>(GsxPanelMode::Never));
+}
+
+void QSettingsRepositoryTest::anExplicitPanelModeWinsOverTheLegacyKey() const
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("gsx/openGsxOnRequests"), true);
+    settings.setValue(QStringLiteral("gsx/panelMode"), static_cast<int>(GsxPanelMode::KeepClosed));
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QCOMPARE(loaded.gsxPanelMode, static_cast<int>(GsxPanelMode::KeepClosed));
+}
+
+void QSettingsRepositoryTest::savingThePanelModeLeavesTheLegacyKeyIntact()
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("gsx/openGsxOnRequests"), false);
+    settings.sync();
+
+    AppSettings values;
+    values.gsxPanelMode = static_cast<int>(GsxPanelMode::AllRequests);
+
+    QVERIFY(repository_.Save(values));
+
+    QSettings reread;
+
+    QCOMPARE(reread.value(QStringLiteral("gsx/openGsxOnRequests")).toBool(), false);
+    QCOMPARE(reread.value(QStringLiteral("gsx/panelMode")).toInt(),
+             static_cast<int>(GsxPanelMode::AllRequests));
 }
 
 void QSettingsRepositoryTest::crewDeboardingInheritsTheBoardingChoiceWhenAbsent() const
@@ -120,7 +184,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     values.callLavatory = true;
     values.callWater = true;
     values.callCleaning = true;
-    values.openGsxOnRequests = false;
+    values.gsxPanelMode = static_cast<int>(GsxPanelMode::KeepClosed);
     values.themeMode = 0;
     values.language = "pt_BR";
     values.renderer = "opengl";
@@ -162,7 +226,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     QCOMPARE(loaded.callLavatory, values.callLavatory);
     QCOMPARE(loaded.callWater, values.callWater);
     QCOMPARE(loaded.callCleaning, values.callCleaning);
-    QCOMPARE(loaded.openGsxOnRequests, values.openGsxOnRequests);
+    QCOMPARE(loaded.gsxPanelMode, values.gsxPanelMode);
     QCOMPARE(loaded.themeMode, values.themeMode);
     QCOMPARE(loaded.language, values.language);
     QCOMPARE(loaded.renderer, values.renderer);

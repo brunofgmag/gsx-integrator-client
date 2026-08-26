@@ -356,6 +356,7 @@ private slots:
     static void holdsBoardingWhileCargoIsPending();
     static void completesReachableWorkflowAndReturnsToStart();
     static void theTurnaroundTurnNotifiesTheMenuGateway();
+    static void theStartOfThePushMovementNotifiesTheMenuGateway();
     static void publishesCurrentTankFuelBeforeRefuel();
     static void publishesLoadingTargetsAfterFlightPlanCapture();
     static void debugSkipPhaseClampsToEnumRange();
@@ -600,6 +601,22 @@ void TurnaroundStateMachineTest::theTurnaroundTurnNotifiesTheMenuGateway()
     workflow.CompleteDeboarding();
 
     QCOMPARE(workflow.f.menuGateway.turnaroundTurnedCalls, 1);
+}
+
+void TurnaroundStateMachineTest::theStartOfThePushMovementNotifiesTheMenuGateway()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+
+    QCOMPARE(workflow.f.menuGateway.pushbackStartedCalls, 0);
+
+    workflow.StartPushbackMovement();
+
+    QCOMPARE(workflow.f.menuGateway.pushbackStartedCalls, 1);
 }
 
 void TurnaroundStateMachineTest::completesReachableWorkflowAndReturnsToStart()

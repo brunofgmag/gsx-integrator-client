@@ -214,6 +214,7 @@ set(APP_QML_FILES
         src/qml/components/HelpHint.qml
         src/qml/components/KeyValueRow.qml
         src/qml/components/SegmentedControl.qml
+        src/qml/components/SelectBox.qml
         src/qml/components/SettingRow.qml
         src/qml/components/SquareSwitch.qml
         src/qml/components/StatusChip.qml

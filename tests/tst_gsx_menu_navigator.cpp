@@ -115,15 +115,24 @@ class GsxMenuNavigatorTest final : public QObject
 
 private slots:
     static void serviceTriggersUseCanonicalVerbs();
-    static void inactiveGsxIconIsActivatedBeforeMenuAction();
-    static void activeGsxIconIsNotReactivated();
-    static void openGsxOnRequestsOffSkipsToolbar();
-    static void openGsxOnRequestsOnActivatesToolbar();
-    static void toolbarLeftOpenIsClosedOncePerTurnaround();
-    static void closedToolbarIsNotClosedAgain();
-    static void turnaroundTurnRearmsTheToolbarClose();
-    static void openGsxOnRequestsOnNeverClosesTheToolbar();
-    static void aDroppedCloseKeepsTheTurnaroundsOnlyCloseOwed();
+    static void allRequestsOpensTheClosedPanelBeforeAMenuAction();
+    static void allRequestsDoesNotReopenAnOpenPanel();
+    static void neverSendsNoPanelCommandAtAll();
+    static void allRequestsOpensThePanelOnEveryRequest();
+    static void keepClosedDropsThePanelEveryTimeItIsSeenOpen();
+    static void keepClosedGivesUpAfterTheSecondDrop();
+    static void keepClosedLeavesThePanelAloneInsideThePushbackWindow();
+    static void keepClosedNeverOpensThePanel();
+    static void aDroppedCloseKeepsTheDropOwed();
+    static void onPushbackOpensThePanelWithTheDepartureRequest();
+    static void theDepartureRequestWaitsForThePanelToConfirmOpen();
+    static void theDepartureRequestGoesOutWhenThePanelNeverConfirms();
+    static void onPushbackClosesThePanelWhenThePushStarts();
+    static void aPanelFoundOpenIsNotClosedWhenThePushStarts();
+    static void onPushbackIgnoresAPanelLeftOpenOutsideTheWindow();
+    static void onPushbackDoesNotReopenThePanelThePilotClosed();
+    static void aDroppedOpenKeepsThePushbackOpenOwed();
+    static void theTurnaroundTurnRearmsThePanelButNotTheGiveUp();
     static void triggerServiceDoesNotOpenClosedMenu();
     static void triggerServiceDoesNotToggleOpenMenu();
     static void confirmGoodEnginesPicksWhenMenuVisible();
@@ -254,187 +263,329 @@ void GsxMenuNavigatorTest::serviceTriggersUseCanonicalVerbs()
     QCOMPARE(simbriefCommand, QString("RELOAD_SIMBRIEF"));
 }
 
-void GsxMenuNavigatorTest::inactiveGsxIconIsActivatedBeforeMenuAction()
+namespace
 {
-    FakeRemoteClient client;
-    GsxRemoteState state;
-    constexpr AutomationSettings settings;
-    FakeDomainLogger logger;
-    FakeCommBusBridgeGateway bridge;
-    CommBusPluginClient plugin(&bridge);
-    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
-
-    nav.RequestRefueling();
-
-    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
-    QCOMPARE(client.Count("service.trigger"), 1);
-}
-
-void GsxMenuNavigatorTest::activeGsxIconIsNotReactivated()
-{
-    FakeRemoteClient client;
-    GsxRemoteState state;
-    constexpr AutomationSettings settings;
-    FakeDomainLogger logger;
-    FakeCommBusBridgeGateway bridge;
-    CommBusPluginClient plugin(&bridge);
-    plugin.Setup();
-    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
-    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
-
-    nav.RequestRefueling();
-
-    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 0);
-    QCOMPARE(client.Count("service.trigger"), 1);
-}
-
-void GsxMenuNavigatorTest::openGsxOnRequestsOffSkipsToolbar()
-{
-    FakeRemoteClient client;
-    GsxRemoteState state;
-    AutomationSettings settings;
-    settings.openGsxOnRequests = false;
-    FakeDomainLogger logger;
-    FakeCommBusBridgeGateway bridge;
-    CommBusPluginClient plugin(&bridge);
-    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
-
-    nav.RequestRefueling();
-
-    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 0);
-    QCOMPARE(client.Count("menu.toggle"), 0);
-    QCOMPARE(client.Count("service.trigger"), 1);
-}
-
-void GsxMenuNavigatorTest::openGsxOnRequestsOnActivatesToolbar()
-{
-    FakeRemoteClient client;
-    GsxRemoteState state;
-    AutomationSettings settings;
-    FakeDomainLogger logger;
-    FakeCommBusBridgeGateway bridge;
-    CommBusPluginClient plugin(&bridge);
-    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
-
-    nav.RequestRefueling();
-
-    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
-    QCOMPARE(client.Count("service.trigger"), 1);
-}
-
-void GsxMenuNavigatorTest::toolbarLeftOpenIsClosedOncePerTurnaround()
-{
-    FakeRemoteClient client;
-    GsxRemoteState state;
-    AutomationSettings settings;
-    settings.openGsxOnRequests = false;
-    FakeDomainLogger logger;
-    FakeCommBusBridgeGateway bridge;
-    CommBusPluginClient plugin(&bridge);
-    plugin.Setup();
-    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
-    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
-
-    nav.RequestRefueling();
-
-    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
-
-    const auto& [channel, flag, payload] = bridge.calls.front();
-
-    QCOMPARE(QString::fromStdString(payload), QString(IntegratorPluginCommBus::kCommandClose));
-
-    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
-    nav.RequestBoarding();
-
-    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
-}
-
-void GsxMenuNavigatorTest::closedToolbarIsNotClosedAgain()
-{
-    FakeRemoteClient client;
-    GsxRemoteState state;
-    AutomationSettings settings;
-    settings.openGsxOnRequests = false;
-    FakeDomainLogger logger;
-    FakeCommBusBridgeGateway bridge;
-    CommBusPluginClient plugin(&bridge);
-    plugin.Setup();
-    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "closed");
-    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
-
-    nav.RequestRefueling();
-
-    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 0);
-}
-
-void GsxMenuNavigatorTest::turnaroundTurnRearmsTheToolbarClose()
-{
-    FakeRemoteClient client;
-    GsxRemoteState state;
-    AutomationSettings settings;
-    settings.openGsxOnRequests = false;
-    FakeDomainLogger logger;
-    FakeCommBusBridgeGateway bridge;
-    CommBusPluginClient plugin(&bridge);
-    plugin.Setup();
-    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
-    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
-
-    nav.RequestRefueling();
-
-    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
-
-    nav.OnTurnaroundTurned();
-    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
-    nav.RequestBoarding();
-
-    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 2);
-}
-
-void GsxMenuNavigatorTest::openGsxOnRequestsOnNeverClosesTheToolbar()
-{
-    FakeRemoteClient client;
-    GsxRemoteState state;
-    constexpr AutomationSettings settings;
-    FakeDomainLogger logger;
-    FakeCommBusBridgeGateway bridge;
-    CommBusPluginClient plugin(&bridge);
-    plugin.Setup();
-    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
-    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
-
-    nav.RequestRefueling();
-    nav.OnTurnaroundTurned();
-    nav.RequestBoarding();
-
-    for (const auto& [channel, flag, payload] : bridge.calls)
+    struct PanelRig
     {
-        QVERIFY(payload != IntegratorPluginCommBus::kCommandClose);
-    }
+        FakeRemoteClient client;
+        GsxRemoteState state;
+        AutomationSettings settings;
+        FakeDomainLogger logger;
+        FakeCommBusBridgeGateway bridge;
+        CommBusPluginClient plugin{&bridge};
+
+        explicit PanelRig(const GsxPanelMode mode)
+        {
+            settings.gsxPanelMode = mode;
+            plugin.Setup();
+        }
+
+        void PanelIs(const char* panelState)
+        {
+            bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, panelState);
+        }
+
+        [[nodiscard]] int PanelCommands() const
+        {
+            return bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel);
+        }
+
+        [[nodiscard]] QString LastPanelPayload() const
+        {
+            for (auto it = bridge.calls.rbegin(); it != bridge.calls.rend(); ++it)
+            {
+                if (std::get<0>(*it) == IntegratorPluginCommBus::kToolbarCommandChannel)
+                {
+                    return QString::fromStdString(std::get<2>(*it));
+                }
+            }
+
+            return {};
+        }
+    };
 }
 
-void GsxMenuNavigatorTest::aDroppedCloseKeepsTheTurnaroundsOnlyCloseOwed()
+void GsxMenuNavigatorTest::allRequestsOpensTheClosedPanelBeforeAMenuAction()
 {
-    FakeRemoteClient client;
-    GsxRemoteState state;
-    AutomationSettings settings;
-    settings.openGsxOnRequests = false;
-    FakeDomainLogger logger;
-    FakeCommBusBridgeGateway bridge;
-    CommBusPluginClient plugin(&bridge);
-    plugin.Setup();
-    bridge.Deliver(IntegratorPluginCommBus::kToolbarStateChannel, "open");
-    bridge.available = false;
-    GsxMenuNavigator nav(&client, &state, &settings, &logger, &plugin);
+    PanelRig rig(GsxPanelMode::AllRequests);
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
 
     nav.RequestRefueling();
 
-    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 0);
+    QCOMPARE(rig.PanelCommands(), 1);
+    QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandOpen));
+    QCOMPARE(rig.client.Count("service.trigger"), 1);
+}
 
-    bridge.available = true;
+void GsxMenuNavigatorTest::allRequestsDoesNotReopenAnOpenPanel()
+{
+    PanelRig rig(GsxPanelMode::AllRequests);
+    rig.PanelIs("open");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestRefueling();
+
+    QCOMPARE(rig.PanelCommands(), 0);
+    QCOMPARE(rig.client.Count("service.trigger"), 1);
+}
+
+void GsxMenuNavigatorTest::neverSendsNoPanelCommandAtAll()
+{
+    PanelRig rig(GsxPanelMode::Never);
+    rig.PanelIs("open");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestRefueling();
+    nav.RequestPushback();
+    nav.OnPushbackStarted();
+    nav.OnTurnaroundTurned();
     nav.RequestBoarding();
 
-    QCOMPARE(bridge.CallCount(IntegratorPluginCommBus::kToolbarCommandChannel), 1);
+    QCOMPARE(rig.PanelCommands(), 0);
+}
+
+void GsxMenuNavigatorTest::allRequestsOpensThePanelOnEveryRequest()
+{
+    PanelRig rig(GsxPanelMode::AllRequests);
+    rig.PanelIs("closed");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestRefueling();
+    nav.RequestBoarding();
+
+    QCOMPARE(rig.PanelCommands(), 2);
+    QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandOpen));
+}
+
+void GsxMenuNavigatorTest::keepClosedDropsThePanelEveryTimeItIsSeenOpen()
+{
+    PanelRig rig(GsxPanelMode::KeepClosed);
+    rig.PanelIs("open");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestRefueling();
+
+    QCOMPARE(rig.PanelCommands(), 1);
+    QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandClose));
+
+    rig.PanelIs("open");
+    nav.RequestBoarding();
+
+    QCOMPARE(rig.PanelCommands(), 2);
+}
+
+void GsxMenuNavigatorTest::keepClosedGivesUpAfterTheSecondDrop()
+{
+    PanelRig rig(GsxPanelMode::KeepClosed);
+    rig.PanelIs("open");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestRefueling();
+    rig.PanelIs("open");
+    nav.RequestBoarding();
+
+    QVERIFY(nav.HasGivenUpOnThePanel());
+
+    rig.PanelIs("open");
+    nav.RequestRefueling();
+
+    QCOMPARE(rig.PanelCommands(), 2);
+}
+
+void GsxMenuNavigatorTest::keepClosedLeavesThePanelAloneInsideThePushbackWindow()
+{
+    PanelRig rig(GsxPanelMode::KeepClosed);
+    rig.PanelIs("closed");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestPushback();
+    rig.PanelIs("open");
+    nav.RequestRefueling();
+
+    QCOMPARE(rig.PanelCommands(), 0);
+
+    nav.OnPushbackStarted();
+    nav.RequestBoarding();
+
+    QCOMPARE(rig.PanelCommands(), 1);
+    QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandClose));
+}
+
+void GsxMenuNavigatorTest::keepClosedNeverOpensThePanel()
+{
+    PanelRig rig(GsxPanelMode::KeepClosed);
+    rig.PanelIs("closed");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestPushback();
+    nav.RequestRefueling();
+
+    QCOMPARE(rig.PanelCommands(), 0);
+}
+
+void GsxMenuNavigatorTest::aDroppedCloseKeepsTheDropOwed()
+{
+    PanelRig rig(GsxPanelMode::KeepClosed);
+    rig.PanelIs("open");
+    rig.bridge.available = false;
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestRefueling();
+
+    QCOMPARE(rig.PanelCommands(), 0);
+    QVERIFY(!nav.HasGivenUpOnThePanel());
+
+    rig.bridge.available = true;
+    nav.RequestBoarding();
+
+    QCOMPARE(rig.PanelCommands(), 1);
+    QVERIFY(!nav.HasGivenUpOnThePanel());
+}
+
+void GsxMenuNavigatorTest::onPushbackOpensThePanelWithTheDepartureRequest()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("closed");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestRefueling();
+
+    QCOMPARE(rig.PanelCommands(), 0);
+
+    nav.RequestPushback();
+
+    QCOMPARE(rig.PanelCommands(), 1);
+    QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandOpen));
+}
+
+void GsxMenuNavigatorTest::theDepartureRequestWaitsForThePanelToConfirmOpen()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("closed");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestPushback();
+
+    QCOMPARE(rig.client.Count("service.trigger"), 0);
+
+    rig.PanelIs("open");
+    nav.OnSnapshot();
+
+    QCOMPARE(rig.client.Count("service.trigger"), 1);
+}
+
+void GsxMenuNavigatorTest::theDepartureRequestGoesOutWhenThePanelNeverConfirms()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("closed");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    long long now = 1000;
+    nav.SetClockForTest([&now] { return now; });
+
+    nav.RequestPushback();
+
+    QCOMPARE(rig.client.Count("service.trigger"), 0);
+
+    now += 30000;
+    nav.OnSnapshot();
+
+    QCOMPARE(rig.client.Count("service.trigger"), 1);
+}
+
+void GsxMenuNavigatorTest::onPushbackClosesThePanelWhenThePushStarts()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("closed");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestPushback();
+    rig.PanelIs("open");
+    nav.OnPushbackStarted();
+
+    QCOMPARE(rig.PanelCommands(), 2);
+    QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandClose));
+}
+
+void GsxMenuNavigatorTest::aPanelFoundOpenIsNotClosedWhenThePushStarts()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("open");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestPushback();
+
+    QCOMPARE(rig.PanelCommands(), 0);
+    QCOMPARE(rig.client.Count("service.trigger"), 1);
+
+    nav.OnPushbackStarted();
+
+    QCOMPARE(rig.PanelCommands(), 0);
+}
+
+void GsxMenuNavigatorTest::onPushbackIgnoresAPanelLeftOpenOutsideTheWindow()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("open");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestRefueling();
+    nav.RequestBoarding();
+
+    QCOMPARE(rig.PanelCommands(), 0);
+}
+
+void GsxMenuNavigatorTest::onPushbackDoesNotReopenThePanelThePilotClosed()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("closed");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestPushback();
+    rig.PanelIs("open");
+    nav.OnSnapshot();
+    rig.PanelIs("closed");
+    nav.RequestPushback();
+
+    QCOMPARE(rig.PanelCommands(), 1);
+}
+
+void GsxMenuNavigatorTest::aDroppedOpenKeepsThePushbackOpenOwed()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("closed");
+    rig.bridge.available = false;
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestPushback();
+
+    QCOMPARE(rig.PanelCommands(), 0);
+    QCOMPARE(rig.client.Count("service.trigger"), 1);
+
+    rig.bridge.available = true;
+    nav.RequestPushback();
+
+    QCOMPARE(rig.PanelCommands(), 1);
+    QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandOpen));
+}
+
+void GsxMenuNavigatorTest::theTurnaroundTurnRearmsThePanelButNotTheGiveUp()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("closed");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.RequestPushback();
+    rig.PanelIs("open");
+    nav.OnPushbackStarted();
+
+    QCOMPARE(rig.PanelCommands(), 2);
+
+    nav.OnTurnaroundTurned();
+    rig.PanelIs("closed");
+    nav.RequestPushback();
+
+    QCOMPARE(rig.PanelCommands(), 3);
 }
 
 void GsxMenuNavigatorTest::triggerServiceDoesNotOpenClosedMenu()

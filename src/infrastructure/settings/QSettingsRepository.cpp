@@ -9,7 +9,8 @@ namespace
     constexpr auto kKeyUseAircraftStairs = "gsx/useAircraftStairs";
     constexpr auto kKeyCrewBoarding = "gsx/crewBoarding";
     constexpr auto kKeyCrewDeboarding = "gsx/crewDeboarding";
-    constexpr auto kKeyOpenGsxOnRequests = "gsx/openGsxOnRequests";
+    constexpr auto kKeyGsxPanelMode = "gsx/panelMode";
+    constexpr auto kKeyOpenGsxOnRequestsLegacy = "gsx/openGsxOnRequests";
     constexpr auto kKeyAutoStartFlow = "automation/autoStartFlow";
     constexpr auto kKeyAutoStartLoading = "automation/autoStartLoading";
     constexpr auto kKeySkipReposition = "automation/skipReposition";
@@ -39,6 +40,24 @@ namespace
     constexpr auto kKeyProfileCallLavatory = "callLavatory";
     constexpr auto kKeyProfileCallWater = "callWater";
     constexpr auto kKeyProfileCallCleaning = "callCleaning";
+
+    int ResolveGsxPanelMode(const QSettings& settings)
+    {
+        const int panelMode = settings.value(kKeyGsxPanelMode, -1).toInt();
+        if (panelMode >= 0)
+        {
+            return panelMode;
+        }
+
+        if (!settings.contains(kKeyOpenGsxOnRequestsLegacy))
+        {
+            return static_cast<int>(GsxPanelMode::OnPushback);
+        }
+
+        return settings.value(kKeyOpenGsxOnRequestsLegacy, true).toBool()
+                   ? static_cast<int>(GsxPanelMode::AllRequests)
+                   : static_cast<int>(GsxPanelMode::Never);
+    }
 
     int ResolveThemeMode(const QSettings& settings)
     {
@@ -103,7 +122,7 @@ AppSettings QSettingsRepository::Load() const
     result.callLavatory = settings.value(kKeyCallLavatory, false).toBool();
     result.callWater = settings.value(kKeyCallWater, false).toBool();
     result.callCleaning = settings.value(kKeyCallCleaning, false).toBool();
-    result.openGsxOnRequests = settings.value(kKeyOpenGsxOnRequests, true).toBool();
+    result.gsxPanelMode = ResolveGsxPanelMode(settings);
 
     result.themeMode = ResolveThemeMode(settings);
 
@@ -148,7 +167,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyCallLavatory, values.callLavatory);
     settings.setValue(kKeyCallWater, values.callWater);
     settings.setValue(kKeyCallCleaning, values.callCleaning);
-    settings.setValue(kKeyOpenGsxOnRequests, values.openGsxOnRequests);
+    settings.setValue(kKeyGsxPanelMode, values.gsxPanelMode);
     settings.setValue(kKeyThemeMode, values.themeMode);
     settings.setValue(kKeyLanguage, QString::fromStdString(values.language));
     settings.setValue(kKeyRenderer, QString::fromStdString(values.renderer));

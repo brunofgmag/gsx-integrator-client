@@ -24,7 +24,7 @@ inline AutomationSettings ResolveAutomationSettings(const AppSettings& settings,
     result.callLavatory = settings.callLavatory;
     result.callWater = settings.callWater;
     result.callCleaning = settings.callCleaning;
-    result.openGsxOnRequests = settings.openGsxOnRequests;
+    result.gsxPanelMode = static_cast<GsxPanelMode>(settings.gsxPanelMode);
 
     const auto it = settings.profiles.find(aircraftProfileId);
     if (it == settings.profiles.end() || it->second.useGlobal)

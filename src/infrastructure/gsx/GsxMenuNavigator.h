@@ -1,4 +1,4 @@
-﻿#ifndef GSX_INTEGRATOR_CLIENT_GSXMENUNAVIGATOR_H
+#ifndef GSX_INTEGRATOR_CLIENT_GSXMENUNAVIGATOR_H
 #define GSX_INTEGRATOR_CLIENT_GSXMENUNAVIGATOR_H
 
 #include <functional>
@@ -11,6 +11,7 @@
 #include "GsxRemoteState.h"
 #include "../../domain/ports/GsxMenuGateway.h"
 
+enum class GsxPanelMode;
 struct AutomationSettings;
 class CommBusPluginClient;
 class DomainLogger;
@@ -50,8 +51,11 @@ public:
     [[nodiscard]] bool IsMenuSettled() const;
 
     void OpenMenu() const;
-    void SyncGsxToolbar() const;
     void OnTurnaroundTurned() override;
+    void OnPushbackStarted() override;
+
+    [[nodiscard]] bool HasGivenUpOnThePanel() const;
+
     void OnMenuChanged();
     void OnSnapshot();
     void DisableGsxMenu() override;
@@ -78,6 +82,13 @@ private:
     };
 
     void TriggerService(const char* serviceId);
+    void SyncGsxToolbar() const;
+    [[nodiscard]] GsxPanelMode PanelMode() const;
+    void DropForgottenPanel() const;
+    void OpenPanelForPushback();
+    void ClosePanelAfterPushback();
+    void RearmPanelLatches();
+    [[nodiscard]] bool IsWaitingForThePanel();
     void ArmRequest(QString verb, QJsonObject args, std::string label, std::string confirmId);
     void PumpRequests();
     void SendRequest(PendingRequest& request);
@@ -134,7 +145,13 @@ private:
     std::string resyncSig_;
     std::string discardedSig_;
     mutable long long lastActionMs_ = 0;
-    mutable bool toolbarCloseSpent_ = false;
+    mutable int panelDrops_ = 0;
+    mutable bool panelGaveUp_ = false;
+    bool pushbackWindow_ = false;
+    bool panelOpenSpent_ = false;
+    bool panelCloseSpent_ = false;
+    bool panelOpenedByUs_ = false;
+    long long panelOpenSentMs_ = 0;
 
     static constexpr long long kIntentTtlMs = 60000;
     static constexpr long long kCompleteTtlMs = 20000;
@@ -143,6 +160,8 @@ private:
     static constexpr long long kMenuSettleMs = 1500;
     static constexpr long long kTriggerRetryMs = 10000;
     static constexpr int kMaxTriggerAttempts = 3;
+    static constexpr int kMaxPanelDrops = 2;
+    static constexpr long long kPanelOpenWaitMs = 8000;
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_GSXMENUNAVIGATOR_H

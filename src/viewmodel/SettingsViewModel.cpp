@@ -105,6 +105,7 @@ SettingsViewModel::~SettingsViewModel()
 
 void SettingsViewModel::OnIntegratorStateChanged()
 {
+    SurrenderTheGsxPanel();
     SyncDisplayUnit();
 }
 
@@ -320,14 +321,24 @@ void SettingsViewModel::SetCallCleaning(const bool enabled)
     }
 }
 
-bool SettingsViewModel::GetOpenGsxOnRequests() const
+int SettingsViewModel::GetGsxPanelMode() const
 {
-    return settings_.openGsxOnRequests;
+    return settings_.gsxPanelMode;
 }
 
-void SettingsViewModel::SetOpenGsxOnRequests(const bool enabled)
+void SettingsViewModel::SetGsxPanelMode(const int mode)
 {
-    SetPersisted(settings_.openGsxOnRequests, enabled, &SettingsViewModel::OpenGsxOnRequestsChanged);
+    SetPersisted(settings_.gsxPanelMode, mode, &SettingsViewModel::GsxPanelModeChanged);
+}
+
+void SettingsViewModel::SurrenderTheGsxPanel()
+{
+    if (!integratorService_->GetSnapshot().gsxPanelGuardTripped)
+    {
+        return;
+    }
+
+    SetGsxPanelMode(static_cast<int>(GsxPanelMode::Never));
 }
 
 int SettingsViewModel::GetThemeMode() const

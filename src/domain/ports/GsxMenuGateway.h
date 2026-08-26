@@ -1,4 +1,4 @@
-﻿#ifndef GSX_INTEGRATOR_CLIENT_GSXMENUGATEWAY_H
+#ifndef GSX_INTEGRATOR_CLIENT_GSXMENUGATEWAY_H
 #define GSX_INTEGRATOR_CLIENT_GSXMENUGATEWAY_H
 
 class GsxMenuGateway
@@ -28,6 +28,7 @@ public:
     virtual void DisableGsxMenu() = 0;
 
     virtual void OnTurnaroundTurned() = 0;
+    virtual void OnPushbackStarted() = 0;
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_GSXMENUGATEWAY_H
