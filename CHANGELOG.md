@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.24.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.23.0...v1.24.0) (2026-08-26)
+
+
+* open doors on approach, fix the cargo alert and the Fenix reset, and rework the header ([#86](https://github.com/brunofgmag/gsx-integrator-client/issues/86)) ([e6ee2ab](https://github.com/brunofgmag/gsx-integrator-client/commit/e6ee2abba53c8ca15bf52a8a2bff6ea91926deb0))
+
+
+### Features
+
+* **ui:** add a home button and let the window grow past 720px ([7db8857](https://github.com/brunofgmag/gsx-integrator-client/commit/7db885719c7933bc0b4e1831b14de3699ee20831)) ([e6ee2ab](https://github.com/brunofgmag/gsx-integrator-client/commit/e6ee2abba53c8ca15bf52a8a2bff6ea91926deb0))
+
+
+### Bug Fixes
+
+* **fenix:** empty the holds when the turnaround has no planned load yet ([bafbcb7](https://github.com/brunofgmag/gsx-integrator-client/commit/bafbcb73540cb3193f370b2cac15df928f8f32d3)) ([e6ee2ab](https://github.com/brunofgmag/gsx-integrator-client/commit/e6ee2abba53c8ca15bf52a8a2bff6ea91926deb0))
+* **gsx:** open the door while the vehicle is still positioning ([d3895a2](https://github.com/brunofgmag/gsx-integrator-client/commit/d3895a2f3cad06e4db5c8a3de49b889f8270070e)) ([e6ee2ab](https://github.com/brunofgmag/gsx-integrator-client/commit/e6ee2abba53c8ca15bf52a8a2bff6ea91926deb0))
+* **pmdg:** the stuck main deck door advisory belongs to the 737 alone ([51f3e53](https://github.com/brunofgmag/gsx-integrator-client/commit/51f3e53f8cc0498b3d5e371b928f52bcb3496c48)) ([e6ee2ab](https://github.com/brunofgmag/gsx-integrator-client/commit/e6ee2abba53c8ca15bf52a8a2bff6ea91926deb0))
+* **turnaround:** ask GSX to close boarding after 90s instead of 180s ([47c0de0](https://github.com/brunofgmag/gsx-integrator-client/commit/47c0de08b6531cf2c459e03542716fd127e4c231)) ([e6ee2ab](https://github.com/brunofgmag/gsx-integrator-client/commit/e6ee2abba53c8ca15bf52a8a2bff6ea91926deb0))
+
 ## [1.23.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.22.0...v1.23.0) (2026-08-26)
 
 
