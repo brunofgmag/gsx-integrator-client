@@ -748,6 +748,16 @@
         <translation>O GSX aceitou o pedido de abastecimento, mas o caminhão não chegou. Confira o menu do GSX; outro serviço pode estar segurando o caminhão.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="545"/>
+        <source>GSX is reporting the wrong state. The client moves on in %1 s.</source>
+        <translation>O GSX está informando o estado errado. O cliente segue em %1 s.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="545"/>
+        <source>A door is open. Close it, or use the SmartSwitch to unlock the pushback.</source>
+        <translation>Uma porta está aberta. Feche ou libere o pushback com o SmartSwitch.</translation>
+    </message>
+    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="379"/>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="455"/>
         <source>Fuel</source>
@@ -1585,8 +1595,8 @@
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="71"/>
-        <source>Set the parking brake.</source>
-        <translation>Acione o freio de estacionamento.</translation>
+        <source>Remember to set the Parking Brake.</source>
+        <translation>Lembre-se de acionar o freio de estacionamento.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="73"/>

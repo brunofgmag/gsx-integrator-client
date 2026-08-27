@@ -37,6 +37,9 @@ struct TurnaroundData
     bool refuelingRequested = false;
     int fuelRequestStallTicks = 0;
     bool fuelRequestStalled = false;
+    bool servicesStalled = false;
+    int servicesWaitSeconds = 0;
+    int servicesOperatingTicks = 0;
     bool boardingRequested = false;
     bool deboardingRequested = false;
     bool pushbackRequested = false;
