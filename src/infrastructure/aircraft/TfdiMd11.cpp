@@ -99,7 +99,7 @@ void TfdiMd11::UpdateCargoDoors()
 void TfdiMd11::DriveLoaderDoor(const char* loaderStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const
 {
     const double loaderState = variableGateway_->GetLVar(loaderStateLVar, 0.0);
-    const double doorTarget = gsx::states::IsLoaderAtDoor(loaderState) ? kDoorOpen : kDoorClosed;
+    const double doorTarget = gsx::states::IsLoaderArriving(loaderState) ? kDoorOpen : kDoorClosed;
 
     if (doorTarget != lastDoorTarget)
     {
@@ -122,7 +122,7 @@ void TfdiMd11::UpdatePaxDoors()
 
 void TfdiMd11::DriveStairsDoor(const char* stairsStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const
 {
-    if (variableGateway_->GetLVar(stairsStateLVar, 0.0) == gsx::states::kStairsFinalPosition)
+    if (gsx::states::AreStairsArriving(variableGateway_->GetLVar(stairsStateLVar, 0.0)))
     {
         if (lastDoorTarget != kDoorOpen)
         {

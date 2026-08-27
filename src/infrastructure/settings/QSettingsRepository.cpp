@@ -8,7 +8,11 @@ namespace
     constexpr auto kKeyAutoDeice = "gsx/autoDeice";
     constexpr auto kKeyUseAircraftStairs = "gsx/useAircraftStairs";
     constexpr auto kKeyCrewBoarding = "gsx/crewBoarding";
-    constexpr auto kKeyOpenGsxOnRequests = "gsx/openGsxOnRequests";
+    constexpr auto kKeyCrewDeboarding = "gsx/crewDeboarding";
+    constexpr auto kKeyGsxPanelMode = "gsx/panelMode";
+    constexpr auto kKeyGsxPanelScale = "gsx/panelModeScale";
+    constexpr int kGsxPanelScale = 2;
+    constexpr auto kKeyOpenGsxOnRequestsLegacy = "gsx/openGsxOnRequests";
     constexpr auto kKeyAutoStartFlow = "automation/autoStartFlow";
     constexpr auto kKeyAutoStartLoading = "automation/autoStartLoading";
     constexpr auto kKeySkipReposition = "automation/skipReposition";
@@ -38,6 +42,43 @@ namespace
     constexpr auto kKeyProfileCallLavatory = "callLavatory";
     constexpr auto kKeyProfileCallWater = "callWater";
     constexpr auto kKeyProfileCallCleaning = "callCleaning";
+
+    constexpr int kRetiredKeepClosed = 1;
+    constexpr int kRetiredOnPushback = 2;
+    constexpr int kRetiredAllRequests = 3;
+
+    int RetireKeepClosed(const int stored)
+    {
+        if (stored == kRetiredAllRequests)
+        {
+            return static_cast<int>(GsxPanelMode::AllRequests);
+        }
+
+        if (stored == kRetiredOnPushback || stored == kRetiredKeepClosed)
+        {
+            return static_cast<int>(GsxPanelMode::OnPushback);
+        }
+
+        return stored;
+    }
+
+    int ResolveGsxPanelMode(const QSettings& settings)
+    {
+        const int panelMode = settings.value(kKeyGsxPanelMode, -1).toInt();
+        if (panelMode >= 0)
+        {
+            return settings.contains(kKeyGsxPanelScale) ? panelMode : RetireKeepClosed(panelMode);
+        }
+
+        if (!settings.contains(kKeyOpenGsxOnRequestsLegacy))
+        {
+            return static_cast<int>(GsxPanelMode::OnPushback);
+        }
+
+        return settings.value(kKeyOpenGsxOnRequestsLegacy, true).toBool()
+                   ? static_cast<int>(GsxPanelMode::AllRequests)
+                   : static_cast<int>(GsxPanelMode::Never);
+    }
 
     int ResolveThemeMode(const QSettings& settings)
     {
@@ -92,6 +133,7 @@ AppSettings QSettingsRepository::Load() const
     result.autoDeice = settings.value(kKeyAutoDeice, false).toBool();
     result.useAircraftStairs = settings.value(kKeyUseAircraftStairs, false).toBool();
     result.crewBoarding = settings.value(kKeyCrewBoarding, 3).toInt();
+    result.crewDeboarding = settings.value(kKeyCrewDeboarding, result.crewBoarding).toInt();
     result.autoStartFlow = settings.value(kKeyAutoStartFlow, false).toBool();
     result.autoStartLoading = settings.value(kKeyAutoStartLoading, true).toBool();
     result.skipReposition = settings.value(kKeySkipReposition, false).toBool();
@@ -101,7 +143,7 @@ AppSettings QSettingsRepository::Load() const
     result.callLavatory = settings.value(kKeyCallLavatory, false).toBool();
     result.callWater = settings.value(kKeyCallWater, false).toBool();
     result.callCleaning = settings.value(kKeyCallCleaning, false).toBool();
-    result.openGsxOnRequests = settings.value(kKeyOpenGsxOnRequests, true).toBool();
+    result.gsxPanelMode = ResolveGsxPanelMode(settings);
 
     result.themeMode = ResolveThemeMode(settings);
 
@@ -136,6 +178,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyAutoDeice, values.autoDeice);
     settings.setValue(kKeyUseAircraftStairs, values.useAircraftStairs);
     settings.setValue(kKeyCrewBoarding, values.crewBoarding);
+    settings.setValue(kKeyCrewDeboarding, values.crewDeboarding);
     settings.setValue(kKeyAutoStartFlow, values.autoStartFlow);
     settings.setValue(kKeyAutoStartLoading, values.autoStartLoading);
     settings.setValue(kKeySkipReposition, values.skipReposition);
@@ -145,7 +188,8 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyCallLavatory, values.callLavatory);
     settings.setValue(kKeyCallWater, values.callWater);
     settings.setValue(kKeyCallCleaning, values.callCleaning);
-    settings.setValue(kKeyOpenGsxOnRequests, values.openGsxOnRequests);
+    settings.setValue(kKeyGsxPanelMode, values.gsxPanelMode);
+    settings.setValue(kKeyGsxPanelScale, kGsxPanelScale);
     settings.setValue(kKeyThemeMode, values.themeMode);
     settings.setValue(kKeyLanguage, QString::fromStdString(values.language));
     settings.setValue(kKeyRenderer, QString::fromStdString(values.renderer));

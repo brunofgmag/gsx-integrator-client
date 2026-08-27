@@ -18,6 +18,21 @@ namespace
         return !refueling.has_value() || *refueling != 0;
     }
 
+    std::string JoinVerdict(const std::vector<std::string>& descriptors)
+    {
+        std::string joined;
+        for (const std::string& descriptor : descriptors)
+        {
+            if (!joined.empty())
+            {
+                joined += ", ";
+            }
+            joined += descriptor;
+        }
+
+        return joined;
+    }
+
     enum class TickMode
     {
         Idle,
@@ -72,6 +87,7 @@ void IntegratorRuntime::Setup()
             &gsxRemoteClient_, [this](const QJsonObject& s)
             {
                 GsxRemoteStateReducer::ApplySnapshot(gsxRemoteState_, s);
+                AnnounceWireFacts();
                 gsxMenu_.OnSnapshot();
             });
 
@@ -84,6 +100,7 @@ void IntegratorRuntime::Setup()
                 {
                     LOG_WARN("GSX published an unknown path: %s", path.c_str());
                 }
+                AnnounceWireFacts();
                 if (path == "/menu" || path == "/menuShown")
                 {
                     gsxMenu_.OnMenuChanged();
@@ -93,6 +110,37 @@ void IntegratorRuntime::Setup()
     gsxRemoteClient_.Start();
 
     dispatchTimer_.start();
+}
+
+void IntegratorRuntime::AnnounceWireFacts()
+{
+    if (const std::string& handling = gsxRemoteState_.handlingOperator;
+        !handling.empty() && handling != announcedHandlingOperator_)
+    {
+        announcedHandlingOperator_ = handling;
+        LOG_INFO("GSX assigned the handling operator %s", handling.c_str());
+    }
+
+    if (const std::string verdict = JoinVerdict(gsxRemoteState_.apronVerdict);
+        !verdict.empty() && verdict != announcedApronVerdict_)
+    {
+        announcedApronVerdict_ = verdict;
+        LOG_INFO("GSX rates this apron as %s", verdict.c_str());
+    }
+
+    if (const std::string& title = gsxRemoteState_.matchedAircraftTitle;
+        !title.empty() && title != announcedAircraftTitle_)
+    {
+        announcedAircraftTitle_ = title;
+        LOG_INFO("GSX matched the aircraft title %s", title.c_str());
+    }
+
+    if (const int generation = gsxRemoteState_.simbriefGeneration;
+        generation != announcedSimbriefGeneration_)
+    {
+        announcedSimbriefGeneration_ = generation;
+        LOG_INFO("GSX served SimBrief generation %d", generation);
+    }
 }
 
 bool IntegratorRuntime::IsSimOnMenu()
@@ -489,6 +537,8 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
     snapshot.phase = GetPhase();
     snapshot.flightPlanStatus = status_.flightPlanStatus;
+    snapshot.flightPlanFailure = status_.flightPlanFailure;
+    snapshot.flightPlanHttpStatus = status_.flightPlanHttpStatus;
     snapshot.simbriefRefusal = gsxService_.GetSimbriefRefusal();
     snapshot.fuelProgress = status_.fuelProgress;
     snapshot.boardingProgress = status_.boardingProgress;
@@ -655,6 +705,15 @@ void IntegratorRuntime::ConfirmLoading()
     LOG_INFO("Loading confirmed: requesting refueling.");
 
     stateMachine_.ConfirmLoading();
+
+    emit Updated();
+}
+
+void IntegratorRuntime::AcceptPilotTouch()
+{
+    LOG_INFO("Pilot touch accepted from the EFB app.");
+
+    stateMachine_.AcceptAppTouch();
 
     emit Updated();
 }

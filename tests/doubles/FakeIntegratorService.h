@@ -14,6 +14,7 @@ public:
     CommandResult restartFlowResult = CommandResult::Success();
     CommandResult fixGsxProfileResult = CommandResult::Success();
     CommandResult fixPmdgOptionsResult = CommandResult::Success();
+    CommandResult pilotTouchResult = CommandResult::Success();
     AppSettings appliedSettings;
     int automationCalls = 0;
     int startLoadingCalls = 0;
@@ -22,6 +23,8 @@ public:
     int applySettingsCalls = 0;
     int fixGsxProfileCalls = 0;
     int fixPmdgOptionsCalls = 0;
+    int pilotTouchCalls = 0;
+    TurnaroundPhase pilotTouchStamp = TurnaroundPhase::Count;
 
     [[nodiscard]] IntegratorSnapshot GetSnapshot() const override
     {
@@ -92,6 +95,18 @@ public:
         }
 
         return fixPmdgOptionsResult;
+    }
+
+    [[nodiscard]] CommandResult AcceptPilotTouch(const TurnaroundPhase stamped) override
+    {
+        ++pilotTouchCalls;
+        pilotTouchStamp = stamped;
+        if (pilotTouchResult.succeeded)
+        {
+            Notify();
+        }
+
+        return pilotTouchResult;
     }
 
     void ApplySettings(const AppSettings& settings) override

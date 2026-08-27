@@ -25,6 +25,7 @@ public:
 private:
     bool FetchData();
     void SetStatus(FlightPlanStatus status);
+    void Fail(FlightPlanFailure failure, int httpStatus);
     void OnHttpFinished();
     [[nodiscard]] bool HasHttpError() const;
     void ApplyFlightPlan(const FlightPlan& flightPlan);

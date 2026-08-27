@@ -1,7 +1,9 @@
+#include <QtCore/QLocale>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 #include "TestDoubles.h"
+#include "../src/domain/turnaround/PilotTouch.h"
 #include "../src/viewmodel/OperationsViewModel.h"
 
 class OperationsViewModelTest final : public QObject
@@ -17,6 +19,9 @@ private slots:
     static void mapsFlightPlanStatusToText();
     static void simbriefReadyAndErrorFlags();
     static void simbriefRefusalReachesTheScreen();
+    static void theClientsOwnPlanFailureNamesItself();
+    static void theGsxRefusalWinsOverTheClientsOwnFailure();
+    static void aPlanWithoutFailurePublishesNoReason();
     static void aRefusedPlanIsNotReadyOnTheCard();
     static void noopWhenSettingSameEnabledValue();
     static void startLoadingDelegatesToService();
@@ -35,13 +40,48 @@ private slots:
     static void fixPmdgOptionsReportsRejectedCommands();
     static void restartFlowDelegatesToService();
     static void restartFlowReportsRejectedCommands();
+    static void nextPhaseTextNamesThePhaseThatFollows();
+    static void nextPhaseTextOnTheLastPhaseAnnouncesANewSession();
+    static void holdCountdownTextCountsTheRemainingSeconds();
+    static void holdCountdownTextIsEmptyWhenNothingIsHolding();
+    static void aircraftNameTextStandsByWhileTheAircraftIsUnsupported();
+    static void plannedFuelTextFollowsTheDisplayWeightUnit();
+    static void eachWeightTextReadsItsOwnSnapshotField();
     static void exposesInDeboardingPhaseFromSnapshot();
+    static void simAndGsxStatusTextsFollowTheConnection();
+    static void turnaroundAndLoadingModeTextsFollowTheSettings();
+    static void turnaroundModeTextNamesTheConfiguredModeAndWhetherItRuns();
+    static void statusStripLabelsNameEachChip();
+    static void announcesADisplaySettingChangeWithoutTheSnapshot();
+    static void phaseCounterTextCountsFromOne();
+    static void turnaroundStateCardLabelsNameTheirText();
+    static void gsxProfileAdvisoryChoosesTheParagraphTheFlagAsks();
+    static void pmdgOptionsAdvisoryOffersTheFixOnlyWhenItIsFixable();
+    static void standingAdvisoryTextsNameTheirCondition();
+    static void progressTextsRoundToAWholePercent();
+    static void theBoardingCardFollowsTheDeboardingPhase();
+    static void fuelRateTextNamesWhoSetsThePace();
+    static void plannedPaxTextPrintsThePlainNumber();
+    static void cardAndRowLabelsNameTheirValue();
+    static void buttonLabelsNameTheirAction();
+    static void theStartFlowButtonStandsDownWhenTheTurnaroundStartsItself();
+    static void theRestartButtonWaitsForARunningTurnaround();
+    static void theLoadingChipKnowsWhenAServiceIsActuallyRunning();
+    static void theTurnaroundChipKnowsItIsArmedBeforeItRuns();
+    static void thePilotTouchLabelNamesWhatTheTouchDoesInThisPhase();
+    static void thePilotTouchLabelIsEmptyWherePhaseTakesNoTouch();
+    static void thePilotTouchLabelStandsDownWhereTheLoadingButtonAlreadyAsks();
+    static void thePilotTouchWaitsForAConnectedAndRunningTurnaround();
+    static void thePilotTouchCarriesTheStampToTheService();
+    static void aRefusedPilotTouchReportsTheReason();
+    static void everyTouchablePhaseNamesItsTouchExceptTheOneAButtonAlreadyCovers();
 };
 
 void OperationsViewModelTest::waitingForLoadingOverridesStateTextAndTip()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
 
     service.snapshot.phase = TurnaroundPhase::RequestFuel;
     service.Notify();
@@ -58,7 +98,8 @@ void OperationsViewModelTest::waitingForLoadingOverridesStateTextAndTip()
 void OperationsViewModelTest::exposesUpdatedSnapshot()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
 
     service.snapshot.connected = true;
     service.snapshot.phase = TurnaroundPhase::WaitingAircraftReady;
@@ -71,7 +112,8 @@ void OperationsViewModelTest::exposesUpdatedSnapshot()
 void OperationsViewModelTest::emitsOneSignalForSnapshotChanges()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
     const QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
 
     service.snapshot.connected = true;
@@ -85,7 +127,8 @@ void OperationsViewModelTest::emitsOneSignalForSnapshotChanges()
 void OperationsViewModelTest::doesNotEmitWhenSnapshotIsUnchanged()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
     const QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
 
     service.Notify();
@@ -96,9 +139,10 @@ void OperationsViewModelTest::doesNotEmitWhenSnapshotIsUnchanged()
 void OperationsViewModelTest::ignoresInsignificantFloatingPointChanges()
 {
     FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
     service.snapshot.fuelProgress = 10.0;
 
-    const OperationsViewModel viewModel(&service);
+    const OperationsViewModel viewModel(&service, &display);
     const QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
 
     service.snapshot.fuelProgress = 10.00001;
@@ -110,11 +154,12 @@ void OperationsViewModelTest::ignoresInsignificantFloatingPointChanges()
 void OperationsViewModelTest::reportsRejectedCommands()
 {
     FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
     service.snapshot.connected = true;
     service.snapshot.canToggleAutomation = true;
     service.automationResult = CommandResult::Failure("Rejected");
 
-    OperationsViewModel viewModel(&service);
+    OperationsViewModel viewModel(&service, &display);
     const QSignalSpy errorSpy(&viewModel, &OperationsViewModel::CommandErrorChanged);
 
     viewModel.startFlow();
@@ -128,7 +173,8 @@ void OperationsViewModelTest::reportsRejectedCommands()
 void OperationsViewModelTest::mapsFlightPlanStatusToText()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
 
     service.snapshot.flightPlanStatus = FlightPlanStatus::Idle;
     service.Notify();
@@ -154,7 +200,8 @@ void OperationsViewModelTest::mapsFlightPlanStatusToText()
 void OperationsViewModelTest::simbriefReadyAndErrorFlags()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
 
     service.snapshot.flightPlanStatus = FlightPlanStatus::Ready;
     service.Notify();
@@ -172,8 +219,9 @@ void OperationsViewModelTest::simbriefReadyAndErrorFlags()
 void OperationsViewModelTest::noopWhenSettingSameEnabledValue()
 {
     FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
     service.snapshot.automationEnabled = false;
-    OperationsViewModel viewModel(&service);
+    OperationsViewModel viewModel(&service, &display);
 
     viewModel.SetEnabled(false);
 
@@ -183,8 +231,9 @@ void OperationsViewModelTest::noopWhenSettingSameEnabledValue()
 void OperationsViewModelTest::startLoadingDelegatesToService()
 {
     FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
     service.snapshot.canStartLoading = true;
-    OperationsViewModel viewModel(&service);
+    OperationsViewModel viewModel(&service, &display);
 
     viewModel.startLoading();
 
@@ -196,9 +245,10 @@ void OperationsViewModelTest::startLoadingDelegatesToService()
 void OperationsViewModelTest::startLoadingReportsRejectedCommands()
 {
     FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
     service.startLoadingResult = CommandResult::Failure("Rejected");
 
-    OperationsViewModel viewModel(&service);
+    OperationsViewModel viewModel(&service, &display);
     const QSignalSpy errorSpy(&viewModel, &OperationsViewModel::CommandErrorChanged);
 
     viewModel.startLoading();
@@ -210,7 +260,8 @@ void OperationsViewModelTest::startLoadingReportsRejectedCommands()
 void OperationsViewModelTest::exposesCanStartLoadingFromSnapshot()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
 
     QVERIFY(!viewModel.CanStartLoading());
 
@@ -223,7 +274,8 @@ void OperationsViewModelTest::exposesCanStartLoadingFromSnapshot()
 void OperationsViewModelTest::reloadSimbriefDelegatesToService()
 {
     FakeIntegratorService service;
-    OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
 
     viewModel.reloadSimbrief();
 
@@ -233,6 +285,7 @@ void OperationsViewModelTest::reloadSimbriefDelegatesToService()
 void OperationsViewModelTest::exposesAircraftPropertiesFromSnapshot()
 {
     FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
     service.snapshot.aircraftName = "TFDi MD-11";
     service.snapshot.plannedFuelKg = 12000.0;
     service.snapshot.plannedZfwKg = 180000.0;
@@ -242,7 +295,7 @@ void OperationsViewModelTest::exposesAircraftPropertiesFromSnapshot()
     service.snapshot.sessionActive = true;
     service.snapshot.refuelBySelf = true;
 
-    const OperationsViewModel viewModel(&service);
+    const OperationsViewModel viewModel(&service, &display);
 
     QCOMPARE(viewModel.GetAircraftName(), QStringLiteral("TFDi MD-11"));
     QCOMPARE(viewModel.GetPlannedFuelKg(), 12000.0);
@@ -258,10 +311,11 @@ void OperationsViewModelTest::exposesAircraftPropertiesFromSnapshot()
 void OperationsViewModelTest::successfulCommandClearsPreviousError()
 {
     FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
     service.snapshot.connected = true;
     service.snapshot.canToggleAutomation = true;
     service.automationResult = CommandResult::Failure("Rejected");
-    OperationsViewModel viewModel(&service);
+    OperationsViewModel viewModel(&service, &display);
 
     viewModel.startFlow();
 
@@ -278,7 +332,8 @@ void OperationsViewModelTest::successfulCommandClearsPreviousError()
 void OperationsViewModelTest::exposesPhaseIndexCountAndTip()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
 
     QCOMPARE(viewModel.GetPhaseCount(), static_cast<int>(TurnaroundPhase::Count));
 
@@ -288,15 +343,13 @@ void OperationsViewModelTest::exposesPhaseIndexCountAndTip()
     QCOMPARE(viewModel.GetPhase(), static_cast<int>(TurnaroundPhase::WaitingPushbackToStart));
     QCOMPARE(viewModel.GetPhaseTip(),
              QStringLiteral("Select the final pushback position in the GSX menu."));
-    QCOMPARE(viewModel.phaseLabelAt(static_cast<int>(TurnaroundPhase::Boarding)),
-             QStringLiteral("Boarding"));
-    QVERIFY(viewModel.phaseLabelAt(-1).isEmpty());
 }
 
 void OperationsViewModelTest::flightPlanTipFollowsPlanSource()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
 
     service.snapshot.phase = TurnaroundPhase::WaitingFlightPlan;
     service.Notify();
@@ -314,7 +367,8 @@ void OperationsViewModelTest::flightPlanTipFollowsPlanSource()
 void OperationsViewModelTest::exposesGsxProfileConflictFromSnapshot()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
 
     QVERIFY(!viewModel.HasGsxProfileConflict());
     QVERIFY(!viewModel.IsGsxProfileFixable());
@@ -330,9 +384,10 @@ void OperationsViewModelTest::exposesGsxProfileConflictFromSnapshot()
 void OperationsViewModelTest::fixGsxProfileDelegatesToService()
 {
     FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
     service.snapshot.gsxProfileConflict = true;
     service.snapshot.gsxProfileFixable = true;
-    OperationsViewModel viewModel(&service);
+    OperationsViewModel viewModel(&service, &display);
 
     viewModel.fixGsxProfile();
 
@@ -344,9 +399,10 @@ void OperationsViewModelTest::fixGsxProfileDelegatesToService()
 void OperationsViewModelTest::fixGsxProfileReportsRejectedCommands()
 {
     FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
     service.fixGsxProfileResult = CommandResult::Failure("Rejected");
 
-    OperationsViewModel viewModel(&service);
+    OperationsViewModel viewModel(&service, &display);
     const QSignalSpy errorSpy(&viewModel, &OperationsViewModel::CommandErrorChanged);
 
     viewModel.fixGsxProfile();
@@ -358,9 +414,10 @@ void OperationsViewModelTest::fixGsxProfileReportsRejectedCommands()
 void OperationsViewModelTest::fixPmdgOptionsDelegatesToService()
 {
     FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
     service.snapshot.pmdgOptionsConflict = true;
     service.snapshot.pmdgOptionsFixable = true;
-    OperationsViewModel viewModel(&service);
+    OperationsViewModel viewModel(&service, &display);
 
     viewModel.fixPmdgOptions();
 
@@ -372,9 +429,10 @@ void OperationsViewModelTest::fixPmdgOptionsDelegatesToService()
 void OperationsViewModelTest::fixPmdgOptionsReportsRejectedCommands()
 {
     FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
     service.fixPmdgOptionsResult = CommandResult::Failure("Rejected");
 
-    OperationsViewModel viewModel(&service);
+    OperationsViewModel viewModel(&service, &display);
     const QSignalSpy errorSpy(&viewModel, &OperationsViewModel::CommandErrorChanged);
 
     viewModel.fixPmdgOptions();
@@ -386,7 +444,8 @@ void OperationsViewModelTest::fixPmdgOptionsReportsRejectedCommands()
 void OperationsViewModelTest::restartFlowDelegatesToService()
 {
     FakeIntegratorService service;
-    OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
 
     viewModel.restartFlow();
 
@@ -397,7 +456,8 @@ void OperationsViewModelTest::restartFlowDelegatesToService()
 void OperationsViewModelTest::restartFlowReportsRejectedCommands()
 {
     FakeIntegratorService service;
-    OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
 
     service.restartFlowResult = CommandResult::Failure("Simulator is offline.");
 
@@ -410,7 +470,8 @@ void OperationsViewModelTest::restartFlowReportsRejectedCommands()
 void OperationsViewModelTest::exposesInDeboardingPhaseFromSnapshot()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
 
     service.snapshot.phase = TurnaroundPhase::Boarding;
     service.Notify();
@@ -431,7 +492,8 @@ void OperationsViewModelTest::exposesInDeboardingPhaseFromSnapshot()
 void OperationsViewModelTest::simbriefRefusalReachesTheScreen()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
 
     QVERIFY(viewModel.GetSimbriefRefusal().isEmpty());
 
@@ -442,10 +504,66 @@ void OperationsViewModelTest::simbriefRefusalReachesTheScreen()
              QString("SimBrief aircraft A320 doesn't match MSFS aircraft A321"));
 }
 
+void OperationsViewModelTest::theClientsOwnPlanFailureNamesItself()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.flightPlanStatus = FlightPlanStatus::Error;
+    service.snapshot.flightPlanFailure = FlightPlanFailure::Http;
+    service.snapshot.flightPlanHttpStatus = 404;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetSimbriefFailureText(), QStringLiteral("SimBrief answered HTTP 404"));
+
+    service.snapshot.flightPlanFailure = FlightPlanFailure::Parse;
+    service.snapshot.flightPlanHttpStatus = 0;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetSimbriefFailureText(),
+             QStringLiteral("SimBrief answered a flight plan the client could not read"));
+
+    service.snapshot.flightPlanFailure = FlightPlanFailure::NotSent;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetSimbriefFailureText(), QStringLiteral("The SimBrief request was never sent"));
+}
+
+void OperationsViewModelTest::theGsxRefusalWinsOverTheClientsOwnFailure()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.flightPlanStatus = FlightPlanStatus::Error;
+    service.snapshot.flightPlanFailure = FlightPlanFailure::Http;
+    service.snapshot.flightPlanHttpStatus = 500;
+    service.snapshot.simbriefRefusal = "SimBrief aircraft A320 doesn't match MSFS aircraft A321";
+    service.Notify();
+
+    QCOMPARE(viewModel.GetSimbriefFailureText(),
+             QString("SimBrief aircraft A320 doesn't match MSFS aircraft A321"));
+}
+
+void OperationsViewModelTest::aPlanWithoutFailurePublishesNoReason()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.flightPlanStatus = FlightPlanStatus::Ready;
+    service.Notify();
+
+    QVERIFY(viewModel.GetSimbriefFailureText().isEmpty());
+    QVERIFY(!viewModel.HasSimbriefError());
+}
+
 void OperationsViewModelTest::aRefusedPlanIsNotReadyOnTheCard()
 {
     FakeIntegratorService service;
-    const OperationsViewModel viewModel(&service);
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
 
     service.snapshot.flightPlanStatus = FlightPlanStatus::Ready;
     service.Notify();
@@ -462,6 +580,564 @@ void OperationsViewModelTest::aRefusedPlanIsNotReadyOnTheCard()
     QVERIFY(viewModel.GetSimbriefStatusText() != QString("Ready"));
 }
 
+void OperationsViewModelTest::nextPhaseTextNamesThePhaseThatFollows()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingReadyToPush;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetNextPhaseText(), QStringLiteral("Next \u25B8 Waiting for catering"));
+}
+
+void OperationsViewModelTest::nextPhaseTextOnTheLastPhaseAnnouncesANewSession()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingNewFlight;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetNextPhaseText(), QStringLiteral("Next \u25B8 New session"));
+}
+
+void OperationsViewModelTest::holdCountdownTextCountsTheRemainingSeconds()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.delayTicksRemaining = 12;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetHoldCountdownText(), QStringLiteral("Next state in 12s"));
+}
+
+void OperationsViewModelTest::holdCountdownTextIsEmptyWhenNothingIsHolding()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.delayTicksRemaining = 0;
+    service.Notify();
+
+    QVERIFY(viewModel.GetHoldCountdownText().isEmpty());
+}
+
+void OperationsViewModelTest::aircraftNameTextStandsByWhileTheAircraftIsUnsupported()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.aircraftName = "PMDG 737-800";
+    service.snapshot.aircraftSupported = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetAircraftNameText(), QStringLiteral("Standby"));
+
+    service.snapshot.aircraftSupported = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetAircraftNameText(), QStringLiteral("PMDG 737-800"));
+}
+
+void OperationsViewModelTest::plannedFuelTextFollowsTheDisplayWeightUnit()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.plannedFuelKg = 12000.0;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPlannedFuelText(), QLocale().toString(12000) + QStringLiteral(" kg"));
+
+    display.weightIsLb = true;
+
+    QCOMPARE(viewModel.GetPlannedFuelText(), QLocale().toString(26455) + QStringLiteral(" lb"));
+}
+
+void OperationsViewModelTest::eachWeightTextReadsItsOwnSnapshotField()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.loadedFuelKg = 1000.0;
+    service.snapshot.targetFuelKg = 2000.0;
+    service.snapshot.targetZfwKg = 3000.0;
+    service.snapshot.plannedFuelKg = 4000.0;
+    service.snapshot.plannedZfwKg = 5000.0;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetLoadedFuelText(), QLocale().toString(1000) + QStringLiteral(" kg"));
+    QCOMPARE(viewModel.GetTargetFuelText(), QLocale().toString(2000) + QStringLiteral(" kg"));
+    QCOMPARE(viewModel.GetTargetZfwText(), QLocale().toString(3000) + QStringLiteral(" kg"));
+    QCOMPARE(viewModel.GetPlannedFuelText(), QLocale().toString(4000) + QStringLiteral(" kg"));
+    QCOMPARE(viewModel.GetPlannedZfwText(), QLocale().toString(5000) + QStringLiteral(" kg"));
+}
+
 QTEST_APPLESS_MAIN(OperationsViewModelTest)
 
 #include "tst_operations_viewmodel.moc"
+
+void OperationsViewModelTest::simAndGsxStatusTextsFollowTheConnection()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetSimStatusText(), QStringLiteral("Offline"));
+    QCOMPARE(viewModel.GetGsxStatusText(), QStringLiteral("Offline"));
+
+    service.snapshot.connected = true;
+    service.snapshot.gsxAvailable = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetSimStatusText(), QStringLiteral("Connected"));
+    QCOMPARE(viewModel.GetGsxStatusText(), QStringLiteral("Connected"));
+}
+
+void OperationsViewModelTest::turnaroundAndLoadingModeTextsFollowTheSettings()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Manual · Off"));
+    QCOMPARE(viewModel.GetLoadingModeText(), QStringLiteral("Manual"));
+
+    display.autoStartFlow = true;
+    display.autoStartLoading = true;
+
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Auto · Off"));
+    QCOMPARE(viewModel.GetLoadingModeText(), QStringLiteral("Auto"));
+}
+
+void OperationsViewModelTest::turnaroundModeTextNamesTheConfiguredModeAndWhetherItRuns()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Manual · Off"));
+
+    viewModel.SetEnabled(true);
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Manual · On"));
+
+    display.autoStartFlow = true;
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Auto · On"));
+
+    viewModel.SetEnabled(false);
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Auto · Off"));
+}
+
+void OperationsViewModelTest::statusStripLabelsNameEachChip()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetSimLabel(), QStringLiteral("Sim"));
+    QCOMPARE(viewModel.GetGsxLabel(), QStringLiteral("GSX Pro"));
+    QCOMPARE(viewModel.GetAircraftLabel(), QStringLiteral("Aircraft"));
+    QCOMPARE(viewModel.GetTurnaroundModeLabel(), QStringLiteral("Turnaround"));
+    QCOMPARE(viewModel.GetLoadingModeLabel(), QStringLiteral("Loading"));
+}
+
+void OperationsViewModelTest::announcesADisplaySettingChangeWithoutTheSnapshot()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+    const QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
+
+    display.weightIsLb = true;
+    viewModel.RefreshDisplayText();
+
+    QCOMPARE(spy.count(), 1);
+}
+
+void OperationsViewModelTest::phaseCounterTextCountsFromOne()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseCounterText(),
+             QStringLiteral("1/") + QString::number(OperationsViewModel::GetPhaseCount()));
+
+    service.snapshot.phase = TurnaroundPhase::Refueling;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseCounterText(),
+             QString::number(static_cast<int>(TurnaroundPhase::Refueling) + 1)
+                 + QStringLiteral("/") + QString::number(OperationsViewModel::GetPhaseCount()));
+}
+
+void OperationsViewModelTest::turnaroundStateCardLabelsNameTheirText()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetTurnaroundStateLabel(), QStringLiteral("Turnaround state"));
+}
+
+void OperationsViewModelTest::gsxProfileAdvisoryChoosesTheParagraphTheFlagAsks()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.gsxProfileConflict = true;
+    service.Notify();
+
+    QVERIFY(viewModel.GetGsxProfileAdvisoryText().contains(QStringLiteral("No GSX profile")));
+    QCOMPARE(viewModel.GetGsxProfileActionLabel(), QString());
+
+    service.snapshot.gsxProfileFixable = true;
+    service.Notify();
+
+    QVERIFY(viewModel.GetGsxProfileAdvisoryText().contains(QStringLiteral("does not set")));
+    QCOMPARE(viewModel.GetGsxProfileActionLabel(), QStringLiteral("Fix profile"));
+}
+
+void OperationsViewModelTest::pmdgOptionsAdvisoryOffersTheFixOnlyWhenItIsFixable()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(viewModel.GetPmdgOptionsAdvisoryText().contains(QStringLiteral("SDK data broadcast")));
+    QCOMPARE(viewModel.GetPmdgOptionsActionLabel(), QString());
+
+    service.snapshot.pmdgOptionsFixable = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPmdgOptionsActionLabel(), QStringLiteral("Enable broadcast"));
+}
+
+void OperationsViewModelTest::standingAdvisoryTextsNameTheirCondition()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(viewModel.GetCargoDoorAdvisoryText().contains(QStringLiteral("ELEC 2")));
+    QVERIFY(viewModel.GetFuelRequestAdvisoryText().contains(QStringLiteral("truck has not arrived")));
+    QCOMPARE(viewModel.GetCommandErrorLabel(), QStringLiteral("Error"));
+}
+
+void OperationsViewModelTest::progressTextsRoundToAWholePercent()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.fuelProgress = 45.6;
+    service.snapshot.boardingProgress = 12.2;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetFuelProgressText(), QStringLiteral("46%"));
+    QCOMPARE(viewModel.GetPaxProgressText(), QStringLiteral("12%"));
+}
+
+void OperationsViewModelTest::theBoardingCardFollowsTheDeboardingPhase()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.targetPax = 180;
+    service.snapshot.boardedPax = 42;
+    service.snapshot.boardingProgress = 23.0;
+    service.snapshot.deboardingProgress = 50.0;
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPaxCardLabel(), QStringLiteral("Boarding"));
+    QCOMPARE(viewModel.GetPaxCountText(), QStringLiteral("42 / 180"));
+    QCOMPARE(viewModel.GetPaxProgressText(), QStringLiteral("23%"));
+
+    service.snapshot.phase = TurnaroundPhase::Deboarding;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPaxCardLabel(), QStringLiteral("Deboarding"));
+    QCOMPARE(viewModel.GetPaxCountText(), QStringLiteral("90 / 180"));
+    QCOMPARE(viewModel.GetPaxProgressText(), QStringLiteral("50%"));
+}
+
+void OperationsViewModelTest::fuelRateTextNamesWhoSetsThePace()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    display.fuelRateText = QStringLiteral("1.2");
+    display.fuelRateUnitText = QStringLiteral("kg/s");
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("1.2 kg/s"));
+
+    service.snapshot.refuelBySelf = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("GSX"));
+
+    service.snapshot.refuelByGsx = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("Auto"));
+}
+
+void OperationsViewModelTest::plannedPaxTextPrintsThePlainNumber()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.plannedPax = 1234;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPlannedPaxText(), QStringLiteral("1234"));
+}
+
+void OperationsViewModelTest::cardAndRowLabelsNameTheirValue()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetFuelCardLabel(), QStringLiteral("Fuel"));
+    QCOMPARE(viewModel.GetLoadedFuelLabel(), QStringLiteral("Loaded"));
+    QCOMPARE(viewModel.GetTargetFuelLabel(), QStringLiteral("Planned"));
+    QCOMPARE(viewModel.GetFuelRateLabel(), QStringLiteral("Rate"));
+    QCOMPARE(viewModel.GetPaxLabel(), QStringLiteral("Pax"));
+    QCOMPARE(viewModel.GetTargetZfwLabel(), QStringLiteral("Planned ZFW"));
+    QCOMPARE(viewModel.GetSimbriefCardLabel(), QStringLiteral("SimBrief OFP"));
+    QCOMPARE(viewModel.GetPlannedFuelLabel(), QStringLiteral("Fuel"));
+    QCOMPARE(viewModel.GetPlannedZfwLabel(), QStringLiteral("ZFW"));
+    QCOMPARE(viewModel.GetPlannedPaxLabel(), QStringLiteral("Pax"));
+}
+
+void OperationsViewModelTest::buttonLabelsNameTheirAction()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetStartFlowLabel(), QStringLiteral("Start Flow"));
+    QCOMPARE(viewModel.GetStartLoadingLabel(), QStringLiteral("Start Loading"));
+    QCOMPARE(viewModel.GetRestartFlowLabel(), QStringLiteral("Restart Flow"));
+    QCOMPARE(viewModel.GetConfirmRestartLabel(), QStringLiteral("Confirm restart"));
+    QCOMPARE(viewModel.GetReloadSimbriefLabel(), QStringLiteral("Reload SimBrief"));
+}
+
+void OperationsViewModelTest::theStartFlowButtonStandsDownWhenTheTurnaroundStartsItself()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.CanStartFlow());
+
+    service.snapshot.canToggleAutomation = true;
+    service.Notify();
+
+    QVERIFY(viewModel.CanStartFlow());
+
+    display.autoStartFlow = true;
+
+    QVERIFY(!viewModel.CanStartFlow());
+
+    display.autoStartFlow = false;
+    viewModel.SetEnabled(true);
+
+    QVERIFY(!viewModel.CanStartFlow());
+}
+
+void OperationsViewModelTest::theRestartButtonWaitsForARunningTurnaround()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.CanRestartFlow());
+
+    service.snapshot.connected = true;
+    service.Notify();
+
+    QVERIFY(!viewModel.CanRestartFlow());
+
+    viewModel.SetEnabled(true);
+
+    QVERIFY(viewModel.CanRestartFlow());
+}
+
+void OperationsViewModelTest::theLoadingChipKnowsWhenAServiceIsActuallyRunning()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.IsLoadingRunning());
+
+    for (const TurnaroundPhase phase : {TurnaroundPhase::Refueling, TurnaroundPhase::Boarding,
+                                        TurnaroundPhase::Deboarding})
+    {
+        service.snapshot.phase = phase;
+        service.Notify();
+
+        QVERIFY2(viewModel.IsLoadingRunning(), QByteArray::number(static_cast<int>(phase)));
+    }
+
+    service.snapshot.phase = TurnaroundPhase::RequestBoarding;
+    service.Notify();
+
+    QVERIFY(!viewModel.IsLoadingRunning());
+}
+
+void OperationsViewModelTest::theTurnaroundChipKnowsItIsArmedBeforeItRuns()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.AutoStartsFlow());
+
+    display.autoStartFlow = true;
+
+    QVERIFY(viewModel.AutoStartsFlow());
+}
+
+void OperationsViewModelTest::thePilotTouchLabelNamesWhatTheTouchDoesInThisPhase()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingReadyToPush;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPilotTouchLabel(), QStringLiteral("Unlock Pushback"));
+
+    service.snapshot.phase = TurnaroundPhase::WaitingForEngines;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPilotTouchLabel(), QStringLiteral("Confirm Engine Start"));
+
+    service.snapshot.phase = TurnaroundPhase::WaitingNewFlight;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPilotTouchLabel(), QStringLiteral("Start New Flight"));
+}
+
+void OperationsViewModelTest::thePilotTouchLabelIsEmptyWherePhaseTakesNoTouch()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.Notify();
+
+    QVERIFY(viewModel.GetPilotTouchLabel().isEmpty());
+}
+
+void OperationsViewModelTest::thePilotTouchLabelStandsDownWhereTheLoadingButtonAlreadyAsks()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::RequestFuel;
+    service.Notify();
+
+    QVERIFY(viewModel.GetPilotTouchLabel().isEmpty());
+}
+
+void OperationsViewModelTest::thePilotTouchWaitsForAConnectedAndRunningTurnaround()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingNewFlight;
+    service.Notify();
+
+    QVERIFY(!viewModel.CanPilotTouch());
+
+    service.snapshot.connected = true;
+    service.Notify();
+
+    QVERIFY(!viewModel.CanPilotTouch());
+
+    service.snapshot.automationEnabled = true;
+    service.Notify();
+
+    QVERIFY(viewModel.CanPilotTouch());
+
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.Notify();
+
+    QVERIFY(!viewModel.CanPilotTouch());
+}
+
+void OperationsViewModelTest::thePilotTouchCarriesTheStampToTheService()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    viewModel.AcceptPilotTouch(TurnaroundPhase::WaitingReadyToPush);
+
+    QCOMPARE(service.pilotTouchCalls, 1);
+    QCOMPARE(service.pilotTouchStamp, TurnaroundPhase::WaitingReadyToPush);
+    QVERIFY(viewModel.GetCommandError().isEmpty());
+}
+
+void OperationsViewModelTest::aRefusedPilotTouchReportsTheReason()
+{
+    FakeIntegratorService service;
+    service.pilotTouchResult = CommandResult::Failure("The turnaround moved on before your touch arrived.");
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    const QSignalSpy errors(&viewModel, &OperationsViewModel::CommandErrorChanged);
+
+    viewModel.AcceptPilotTouch(TurnaroundPhase::WaitingNewFlight);
+
+    QCOMPARE(viewModel.GetCommandError(),
+             QStringLiteral("The turnaround moved on before your touch arrived."));
+    QCOMPARE(errors.count(), 1);
+}
+
+void OperationsViewModelTest::everyTouchablePhaseNamesItsTouchExceptTheOneAButtonAlreadyCovers()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    for (const TurnaroundPhase phase : PilotTouch::kPhases)
+    {
+        service.snapshot.phase = phase;
+        service.Notify();
+
+        if (phase == TurnaroundPhase::RequestFuel)
+        {
+            QVERIFY(viewModel.GetPilotTouchLabel().isEmpty());
+            QVERIFY(!OperationsViewModel::GetStartLoadingLabel().isEmpty());
+
+            continue;
+        }
+
+        QVERIFY(!viewModel.GetPilotTouchLabel().isEmpty());
+    }
+}

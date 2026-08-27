@@ -15,7 +15,7 @@ ColumnLayout {
         Layout.fillWidth: true
         title: qsTr("Fuel rate")
         caption: qsTr("Refueling speed")
-        helpText: qsTr("Used only by aircraft that don't support refueling through GSX. When GSX drives the fuel truck, the client follows the GSX pace and the rate shows as Auto.")
+        helpText: qsTr("Only aircraft that cannot refuel through GSX use this rate. The others show Auto and follow the GSX pace.")
 
         TextField {
             id: fuelRateField
@@ -53,8 +53,8 @@ ColumnLayout {
     SwitchRow {
         Layout.fillWidth: true
         title: qsTr("Accept actions automatically")
-        caption: qsTr("Picks the recommended GSX menu option for you")
-        helpText: qsTr("When on, the integrator answers GSX menus on its own: any option marked \"GSX choice\" and the Simbrief block fuel refueling level, even on menus you open manually.")
+        caption: qsTr("Picks the recommended GSX menu option")
+        helpText: qsTr("The client answers GSX menus on its own: any option marked \"GSX choice\" and the Simbrief block fuel level, even on menus you opened by hand.")
         checked: root.settingsVm.autoSelectGsxChoice
         onToggled: checked => root.settingsVm.autoSelectGsxChoice = checked
     }
@@ -72,7 +72,7 @@ ColumnLayout {
         Layout.fillWidth: true
         title: qsTr("Auto-start loading")
         caption: qsTr("Request refueling without pressing anything")
-        helpText: qsTr("When off, the turnaround holds at \"Requesting fuel\" until you press Start Loading or activate the aircraft's SmartSwitch. Refueling requested manually in the GSX menu still resumes the flow.")
+        helpText: qsTr("When off, the turnaround holds at \"Requesting fuel\" until you press Start Loading or the aircraft's SmartSwitch. Asking for fuel in the GSX menu resumes it too.")
         checked: root.settingsVm.autoStartLoading
         onToggled: checked => root.settingsVm.autoStartLoading = checked
     }

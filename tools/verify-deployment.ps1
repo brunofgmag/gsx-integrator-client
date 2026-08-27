@@ -78,11 +78,24 @@ $files = @(Get-ChildItem -LiteralPath $root -File -Recurse)
 $totalBytes = ($files | Measure-Object Length -Sum).Sum
 $totalMiB = [math]::Round($totalBytes / 1MB, 2)
 
+function Format-Largest {
+    param([object[]]$Candidates, [int]$Count = 5)
+
+    $lines = $Candidates |
+        Sort-Object Length -Descending |
+        Select-Object -First $Count |
+        ForEach-Object {
+            '{0,8:N2} MiB  {1}' -f ($_.Length / 1MB), $_.FullName.Substring($root.Length).TrimStart([IO.Path]::DirectorySeparatorChar)
+        }
+
+    return "Largest files:`n$($lines -join "`n")"
+}
+
 if ($totalMiB -gt $MaximumSizeMiB) {
-    throw "Deployment is $totalMiB MiB; maximum allowed is $MaximumSizeMiB MiB."
+    throw "Deployment is $totalMiB MiB; maximum allowed is $MaximumSizeMiB MiB.`n$(Format-Largest -Candidates $files)"
 }
 if ($files.Count -gt $MaximumFileCount) {
-    throw "Deployment contains $($files.Count) files; maximum allowed is $MaximumFileCount."
+    throw "Deployment contains $($files.Count) files; maximum allowed is $MaximumFileCount.`n$(Format-Largest -Candidates $files)"
 }
 
 $exeSize = (Get-Item -LiteralPath (Join-Path $root 'gsx-integrator-client.exe')).Length

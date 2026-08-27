@@ -9,6 +9,8 @@ class WaitingPushbackToStartStateTest final : public QObject
 
 private slots:
     static void holdsWhilePushbackNotStarted();
+    static void opensThePushbackPanelWhileItWaits();
+    static void neverOpensThePushbackPanelOnceThePushMoves();
     static void advancesToEnginesWhenPushbackStarts();
     static void advancesToDepartureWhenPushbackFinished();
     static void advancesToDepartureWhenPushbackWasCompleted();
@@ -24,6 +26,32 @@ void WaitingPushbackToStartStateTest::holdsWhilePushbackNotStarted()
     f.gsxService.pushbackStarted = false;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
+}
+
+void WaitingPushbackToStartStateTest::opensThePushbackPanelWhileItWaits()
+{
+    TurnaroundStateFixture f;
+    WaitingPushbackToStartState state;
+
+    f.gsxService.departureState = GsxStateStatus::Requested;
+    f.gsxService.pushbackStarted = false;
+
+    (void)state.Evaluate(f.ctx);
+
+    QCOMPARE(f.menuGateway.openPushbackPanelCalls, 1);
+}
+
+void WaitingPushbackToStartStateTest::neverOpensThePushbackPanelOnceThePushMoves()
+{
+    TurnaroundStateFixture f;
+    WaitingPushbackToStartState state;
+
+    f.gsxService.departureState = GsxStateStatus::Active;
+    f.gsxService.pushbackStarted = true;
+
+    (void)state.Evaluate(f.ctx);
+
+    QCOMPARE(f.menuGateway.openPushbackPanelCalls, 0);
 }
 
 void WaitingPushbackToStartStateTest::advancesToEnginesWhenPushbackStarts()

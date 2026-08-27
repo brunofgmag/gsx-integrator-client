@@ -9,9 +9,9 @@ import Qt.labs.platform as Platform
 ApplicationWindow {
     id: window
 
-    width: 620
-    maximumWidth: 720
-    minimumWidth: 560
+    width: 720
+    maximumWidth: 1080
+    minimumWidth: 720
     visibility: startHidden ? Window.Hidden
               : startMinimized ? Window.Minimized
               : Window.AutomaticVisibility
@@ -25,8 +25,7 @@ ApplicationWindow {
     required property bool startMinimized
     required property string trayIconSource
 
-    readonly property bool compact: width < 620
-    readonly property int shellMargin: compact ? 14 : 20
+    readonly property int shellMargin: 20
 
     readonly property bool waitingForInput: window.integratorVm.canStartLoading
     onWaitingForInputChanged: {
@@ -279,6 +278,14 @@ ApplicationWindow {
                 }
 
                 HeaderButton {
+                    font.family: "Segoe MDL2 Assets"
+                    text: "\uE80F"
+                    active: window.screen === 0
+                    tip: qsTr("Operations")
+                    onClicked: window.screen = 0
+                }
+
+                HeaderButton {
                     text: Theme.dark ? "☀" : "☾"
                     tip: Theme.dark ? qsTr("Switch to light theme") : qsTr("Switch to dark theme")
                     onClicked: window.settingsVm.themeMode = window.settingsVm.effectiveDark ? 0 : 1
@@ -339,12 +346,10 @@ ApplicationWindow {
                     OperationsScreen {
                         integratorVm: window.integratorVm
                         settingsVm: window.settingsVm
-                        compact: window.compact
                     }
 
                     SettingsScreen {
                         settingsVm: window.settingsVm
-                        compact: window.compact
                     }
 
                     AboutScreen {

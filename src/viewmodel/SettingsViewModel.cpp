@@ -199,6 +199,16 @@ void SettingsViewModel::SetCrewBoarding(const int choice)
     SetPersisted(settings_.crewBoarding, choice, &SettingsViewModel::CrewBoardingChanged);
 }
 
+int SettingsViewModel::GetCrewDeboarding() const
+{
+    return settings_.crewDeboarding;
+}
+
+void SettingsViewModel::SetCrewDeboarding(const int choice)
+{
+    SetPersisted(settings_.crewDeboarding, choice, &SettingsViewModel::CrewDeboardingChanged);
+}
+
 bool SettingsViewModel::GetAutoStartFlow() const
 {
     return settings_.autoStartFlow;
@@ -310,14 +320,14 @@ void SettingsViewModel::SetCallCleaning(const bool enabled)
     }
 }
 
-bool SettingsViewModel::GetOpenGsxOnRequests() const
+int SettingsViewModel::GetGsxPanelMode() const
 {
-    return settings_.openGsxOnRequests;
+    return settings_.gsxPanelMode;
 }
 
-void SettingsViewModel::SetOpenGsxOnRequests(const bool enabled)
+void SettingsViewModel::SetGsxPanelMode(const int mode)
 {
-    SetPersisted(settings_.openGsxOnRequests, enabled, &SettingsViewModel::OpenGsxOnRequestsChanged);
+    SetPersisted(settings_.gsxPanelMode, mode, &SettingsViewModel::GsxPanelModeChanged);
 }
 
 int SettingsViewModel::GetThemeMode() const

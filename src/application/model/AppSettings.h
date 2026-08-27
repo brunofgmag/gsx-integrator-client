@@ -15,6 +15,7 @@ struct AppSettings
     bool autoDeice = false;
     bool useAircraftStairs = false;
     int crewBoarding = 3;
+    int crewDeboarding = 3;
     bool autoStartFlow = true;
     bool autoStartLoading = true;
     bool skipReposition = false;
@@ -24,7 +25,7 @@ struct AppSettings
     bool callLavatory = false;
     bool callWater = false;
     bool callCleaning = false;
-    bool openGsxOnRequests = true;
+    int gsxPanelMode = static_cast<int>(GsxPanelMode::OnPushback);
     int themeMode = 2;
     std::string language = "system";
     std::string renderer = "software";

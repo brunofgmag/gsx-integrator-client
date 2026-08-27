@@ -22,4 +22,8 @@ jobs:
     with:
       qt-modules: qtwebsockets
       fork-tests-only: true
+      sdk-required-paths: |
+        SimConnect SDK/include/SimConnect.h
+        SimConnect SDK/lib/SimConnect.lib
+        SimConnect SDK/lib/SimConnect.dll
     secrets: inherit

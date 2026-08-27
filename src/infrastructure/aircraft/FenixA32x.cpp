@@ -480,12 +480,9 @@ void FenixA32x::SyncPassengersAndCargo(const double zfwKg)
 {
     const double emptyZfwKg = GetEmptyZfwKg();
     const double payloadSpanKg = GetPlannedZfwKg() - emptyZfwKg;
-    if (payloadSpanKg <= 0.0)
-    {
-        return;
-    }
-
-    const double progress = std::clamp((zfwKg - emptyZfwKg) / payloadSpanKg, 0.0, 1.0);
+    const double progress = payloadSpanKg > 0.0
+                                ? std::clamp((zfwKg - emptyZfwKg) / payloadSpanKg, 0.0, 1.0)
+                                : 0.0;
 
     WriteSeatOccupation(static_cast<int>(std::lround(progress * GetPlannedPassengers())));
 

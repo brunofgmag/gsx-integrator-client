@@ -1,8 +1,12 @@
 #include <QtTest/QTest>
 
+#include <algorithm>
 #include <array>
+#include <string>
 #include <vector>
 #include "tests/turnaround/TurnaroundStateFixture.h"
+#include "src/domain/turnaround/PilotTouch.h"
+#include "src/domain/turnaround/PilotUnlock.h"
 #include "src/domain/turnaround/TurnaroundStateMachine.h"
 
 namespace
@@ -324,6 +328,14 @@ namespace
         workflow.CompleteRefueling();
         workflow.StartBoarding();
     }
+
+    bool Logged(const TurnaroundWorkflow& workflow, const std::string& fragment)
+    {
+        return std::ranges::any_of(workflow.f.logger.messages, [&fragment](const std::string& message)
+        {
+            return message.find(fragment) != std::string::npos;
+        });
+    }
 }
 
 class TurnaroundStateMachineTest final : public QObject
@@ -343,9 +355,23 @@ private slots:
     static void waitsForBoardingTransitionDelay();
     static void holdsBoardingWhileCargoIsPending();
     static void completesReachableWorkflowAndReturnsToStart();
+    static void theTurnaroundTurnNotifiesTheMenuGateway();
+    static void theStartOfThePushMovementNotifiesTheMenuGateway();
     static void publishesCurrentTankFuelBeforeRefuel();
     static void publishesLoadingTargetsAfterFlightPlanCapture();
     static void debugSkipPhaseClampsToEnumRange();
+    static void theClosedListHoldsOnlyTheGateTheSliceNamed();
+    static void theSmartSwitchUnlocksThePushbackGateHeldByADoor();
+    static void aTouchOnTheTickTheGateIsReachedIsNotSwallowed();
+    static void resetClearsThePilotOrigin();
+    static void aPhaseOutsideTheClosedListIgnoresTheSmartSwitch();
+    static void advancingByReadingPublishesTheReadingOrigin();
+    static void theTouchListHoldsThePhasesTheSwitchActsOn();
+    static void theUnlockListIsContainedInTheTouchList();
+    static void theAppTouchUnlocksTheGateLikeTheSwitchDoes();
+    static void bothSurfacesTouchingOnTheSameTickSpendOneEdge();
+    static void theLogNamesTheSurfaceTheTouchCameFrom();
+    static void resetDiscardsAPendingAppTouch();
 };
 
 void TurnaroundStateMachineTest::publishesCurrentTankFuelBeforeRefuel()
@@ -405,15 +431,7 @@ void TurnaroundStateMachineTest::smartSwitchPressIsLoggedEveryTick()
     workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
 
     QVERIFY(workflow.f.aircraft.consumeSmartSwitchCalls > 0);
-    bool logged = false;
-    for (const std::string& message : workflow.f.logger.messages)
-    {
-        if (message.find("SmartSwitch pressed") != std::string::npos)
-        {
-            logged = true;
-        }
-    }
-    QVERIFY(logged);
+    QVERIFY(Logged(workflow, "Pilot touch from the SmartSwitch"));
 }
 
 void TurnaroundStateMachineTest::unconsumedSmartSwitchPressIsDiscarded()
@@ -563,6 +581,44 @@ void TurnaroundStateMachineTest::holdsBoardingWhileCargoIsPending()
     workflow.CompleteBoarding();
 }
 
+void TurnaroundStateMachineTest::theTurnaroundTurnNotifiesTheMenuGateway()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+    workflow.StartPushbackMovement();
+    workflow.ConfirmEngineStart();
+    workflow.Depart();
+    workflow.Land();
+    workflow.RequestDeboarding();
+    workflow.StartDeboarding();
+
+    QCOMPARE(workflow.f.menuGateway.turnaroundTurnedCalls, 0);
+
+    workflow.CompleteDeboarding();
+
+    QCOMPARE(workflow.f.menuGateway.turnaroundTurnedCalls, 1);
+}
+
+void TurnaroundStateMachineTest::theStartOfThePushMovementNotifiesTheMenuGateway()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+
+    QCOMPARE(workflow.f.menuGateway.pushbackStartedCalls, 0);
+
+    workflow.StartPushbackMovement();
+
+    QCOMPARE(workflow.f.menuGateway.pushbackStartedCalls, 1);
+}
+
 void TurnaroundStateMachineTest::completesReachableWorkflowAndReturnsToStart()
 {
     TurnaroundWorkflow workflow;
@@ -612,6 +668,217 @@ void TurnaroundStateMachineTest::debugSkipPhaseClampsToEnumRange()
 #else
     QSKIP("DebugSkipPhase is compiled out of Release builds");
 #endif
+}
+
+void TurnaroundStateMachineTest::theClosedListHoldsOnlyTheGateTheSliceNamed()
+{
+    for (int index = 0; index < static_cast<int>(TurnaroundPhase::Count); ++index)
+    {
+        const auto phase = static_cast<TurnaroundPhase>(index);
+
+        QCOMPARE(PilotUnlock::Accepts(phase), phase == TurnaroundPhase::WaitingReadyToPush);
+    }
+}
+
+void TurnaroundStateMachineTest::theSmartSwitchUnlocksThePushbackGateHeldByADoor()
+{
+    TurnaroundWorkflow workflow;
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+
+    workflow.f.aircraft.readyToPush = true;
+    workflow.f.aircraft.parkingBrakeSet = true;
+    workflow.f.aircraft.doorStatus = DoorStatus::AnyOpen;
+
+    workflow.TickHolding(TurnaroundPhase::WaitingReadyToPush);
+
+    workflow.f.aircraft.smartSwitchActivated = true;
+
+    workflow.TickTo(TurnaroundPhase::WaitCatering);
+
+    QCOMPARE(workflow.machine.GetLastTransitionOrigin(), TransitionOrigin::Pilot);
+}
+
+void TurnaroundStateMachineTest::aTouchOnTheTickTheGateIsReachedIsNotSwallowed()
+{
+    TurnaroundWorkflow workflow;
+    ReachBoarding(workflow);
+    workflow.BeginBoardingDelay();
+
+    workflow.f.aircraft.readyToPush = true;
+    workflow.f.aircraft.parkingBrakeSet = true;
+    workflow.f.aircraft.doorStatus = DoorStatus::AnyOpen;
+
+    for (int tick = 0; tick < 59; ++tick)
+    {
+        workflow.machine.Tick();
+    }
+
+    workflow.f.aircraft.smartSwitchActivated = true;
+    workflow.machine.Tick();
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::WaitCatering);
+    QCOMPARE(workflow.machine.GetLastTransitionOrigin(), TransitionOrigin::Pilot);
+}
+
+void TurnaroundStateMachineTest::resetClearsThePilotOrigin()
+{
+    TurnaroundWorkflow workflow;
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+
+    workflow.f.aircraft.readyToPush = true;
+    workflow.f.aircraft.parkingBrakeSet = true;
+    workflow.f.aircraft.doorStatus = DoorStatus::AnyOpen;
+    workflow.f.aircraft.smartSwitchActivated = true;
+
+    workflow.TickTo(TurnaroundPhase::WaitCatering);
+
+    QCOMPARE(workflow.machine.GetLastTransitionOrigin(), TransitionOrigin::Pilot);
+
+    workflow.machine.Reset();
+
+    QCOMPARE(workflow.machine.GetLastTransitionOrigin(), TransitionOrigin::Reading);
+}
+
+void TurnaroundStateMachineTest::aPhaseOutsideTheClosedListIgnoresTheSmartSwitch()
+{
+    TurnaroundWorkflow workflow;
+    ReachRefueling(workflow);
+    workflow.CompleteRefueling();
+
+    workflow.f.gsxService.boardingState = GsxStateStatus::Active;
+    workflow.f.gsxService.boardedPassengers = workflow.f.aircraft.plannedPax;
+    workflow.f.gsxService.cargoPercent = 50.0;
+
+    workflow.TickTo(TurnaroundPhase::Boarding);
+
+    workflow.f.aircraft.smartSwitchActivated = true;
+
+    workflow.TickHolding(TurnaroundPhase::Boarding);
+    workflow.TickHolding(TurnaroundPhase::Boarding);
+}
+
+void TurnaroundStateMachineTest::advancingByReadingPublishesTheReadingOrigin()
+{
+    TurnaroundWorkflow workflow;
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+
+    workflow.f.aircraft.readyToPush = true;
+    workflow.f.aircraft.parkingBrakeSet = true;
+    workflow.f.aircraft.doorStatus = DoorStatus::AllClosed;
+
+    workflow.TickTo(TurnaroundPhase::WaitCatering);
+
+    QCOMPARE(workflow.machine.GetLastTransitionOrigin(), TransitionOrigin::Reading);
+}
+
+void TurnaroundStateMachineTest::theTouchListHoldsThePhasesTheSwitchActsOn()
+{
+    constexpr auto kAccepting = std::array{
+        TurnaroundPhase::RequestFuel,
+        TurnaroundPhase::WaitingReadyToPush,
+        TurnaroundPhase::WaitingForEngines,
+        TurnaroundPhase::WaitingNewFlight,
+    };
+
+    for (int index = 0; index < static_cast<int>(TurnaroundPhase::Count); ++index)
+    {
+        const auto phase = static_cast<TurnaroundPhase>(index);
+        const bool expected = std::ranges::find(kAccepting, phase) != kAccepting.end();
+
+        QCOMPARE(PilotTouch::Accepts(phase), expected);
+    }
+}
+
+void TurnaroundStateMachineTest::theUnlockListIsContainedInTheTouchList()
+{
+    for (const TurnaroundPhase phase : PilotUnlock::kPhases)
+    {
+        QVERIFY(PilotTouch::Accepts(phase));
+    }
+}
+
+void TurnaroundStateMachineTest::theAppTouchUnlocksTheGateLikeTheSwitchDoes()
+{
+    TurnaroundWorkflow workflow;
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+
+    workflow.f.aircraft.readyToPush = true;
+    workflow.f.aircraft.parkingBrakeSet = true;
+    workflow.f.aircraft.doorStatus = DoorStatus::AnyOpen;
+
+    workflow.TickHolding(TurnaroundPhase::WaitingReadyToPush);
+
+    workflow.machine.AcceptAppTouch();
+
+    workflow.TickTo(TurnaroundPhase::WaitCatering);
+
+    QCOMPARE(workflow.machine.GetLastTransitionOrigin(), TransitionOrigin::Pilot);
+    QCOMPARE(workflow.f.aircraft.consumeSmartSwitchCalls > 0, true);
+}
+
+void TurnaroundStateMachineTest::bothSurfacesTouchingOnTheSameTickSpendOneEdge()
+{
+    TurnaroundWorkflow workflow;
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+    workflow.StartPushbackMovement();
+
+    workflow.f.aircraft.engineRunning = true;
+    workflow.f.aircraft.parkingBrakeSet = true;
+    workflow.f.gsxService.goodEngineStartConfirmation = true;
+    workflow.f.gsxService.waitingForEngines = true;
+    workflow.f.menuGateway.confirmGoodEnginesResult = false;
+
+    workflow.f.aircraft.smartSwitchActivated = true;
+    workflow.machine.AcceptAppTouch();
+
+    workflow.TickHolding(TurnaroundPhase::WaitingForEngines);
+
+    QCOMPARE(workflow.f.menuGateway.confirmGoodEnginesCalls, 1);
+
+    workflow.f.aircraft.smartSwitchActivated = false;
+
+    workflow.TickHolding(TurnaroundPhase::WaitingForEngines);
+
+    QCOMPARE(workflow.f.menuGateway.confirmGoodEnginesCalls, 1);
+}
+
+void TurnaroundStateMachineTest::theLogNamesTheSurfaceTheTouchCameFrom()
+{
+    TurnaroundWorkflow workflow;
+    workflow.AttachAircraft();
+
+    workflow.f.logger.messages.clear();
+    workflow.machine.AcceptAppTouch();
+    workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
+
+    QVERIFY(Logged(workflow, "Pilot touch from the EFB app"));
+
+    workflow.f.logger.messages.clear();
+    workflow.f.aircraft.smartSwitchActivated = true;
+    workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
+
+    QVERIFY(Logged(workflow, "Pilot touch from the SmartSwitch"));
+}
+
+void TurnaroundStateMachineTest::resetDiscardsAPendingAppTouch()
+{
+    TurnaroundWorkflow workflow;
+    workflow.AttachAircraft();
+
+    workflow.machine.AcceptAppTouch();
+    workflow.machine.Reset();
+
+    workflow.f.logger.messages.clear();
+    workflow.machine.Tick();
+
+    QVERIFY(!Logged(workflow, "Pilot touch"));
 }
 
 QTEST_APPLESS_MAIN(TurnaroundStateMachineTest)

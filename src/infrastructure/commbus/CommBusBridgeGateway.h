@@ -18,7 +18,7 @@ public:
     virtual ~CommBusBridgeGateway() = default;
 
     [[nodiscard]] virtual bool IsAvailable() const = 0;
-    virtual void Call(const std::string& channel, int flag, const std::string& payload) = 0;
+    virtual bool Call(const std::string& channel, int flag, const std::string& payload) = 0;
     virtual void Subscribe(const std::string& channel, int flag, Handler handler) = 0;
     void Subscribe(const std::string& channel, Handler handler)
     {

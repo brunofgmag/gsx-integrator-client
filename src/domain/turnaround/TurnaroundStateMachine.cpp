@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <format>
+#include <utility>
 #include "states/WaitingFlightPlanState.h"
 #include "states/RequestFuelState.h"
 #include "states/RefuelingState.h"
@@ -26,12 +27,26 @@
 #include "states/WaitingSupportedAircraftState.h"
 #include "../ports/Aircraft.h"
 #include "../ports/DomainLogger.h"
+#include "../ports/GsxMenuGateway.h"
 #include "../model/AutomationStatus.h"
 #include "../model/AutomationSettings.h"
 #include "states/DeboardingState.h"
 #include "states/CabinServicesState.h"
 #include "states/RequestDeboardingState.h"
 #include "states/WaitingNewFlightState.h"
+
+namespace
+{
+    constexpr const char* TouchSurface(const bool fromSwitch, const bool fromApp)
+    {
+        if (fromSwitch && fromApp)
+        {
+            return "SmartSwitch and the EFB app";
+        }
+
+        return fromSwitch ? "SmartSwitch" : "EFB app";
+    }
+}
 
 TurnaroundStateMachine::TurnaroundStateMachine(AutomationStatus* status,
                                                const AutomationSettings* settings,
@@ -98,13 +113,7 @@ void TurnaroundStateMachine::Step()
         context_.data.loadedFuelKg = context_.aircraft->GetCurrentFuelKg();
     }
 
-    context_.smartSwitchPressed = context_.aircraft != nullptr && context_.aircraft->ConsumeSmartSwitch();
-    if (context_.smartSwitchPressed && context_.logger)
-    {
-        context_.logger->LogInfo(
-            std::format("SmartSwitch pressed (phase: {})", TurnaroundPhaseToString(phase_))
-        );
-    }
+    ResolvePilotTouch();
 
     if (ticksRemaining_ > 0)
     {
@@ -114,7 +123,7 @@ void TurnaroundStateMachine::Step()
             return;
         }
 
-        TransitionTo(pendingPhase_);
+        TransitionTo(pendingPhase_, pendingOrigin_);
     }
 
     const auto transition = EvaluateCurrentPhase();
@@ -127,11 +136,30 @@ void TurnaroundStateMachine::Step()
     if (transition->delayTicks > 0)
     {
         pendingPhase_ = transition->next;
+        pendingOrigin_ = transition->origin;
         ticksRemaining_ = transition->delayTicks;
         return;
     }
 
-    TransitionTo(transition->next);
+    TransitionTo(transition->next, transition->origin);
+}
+
+void TurnaroundStateMachine::ResolvePilotTouch()
+{
+    const bool fromSwitch = context_.aircraft != nullptr && context_.aircraft->ConsumeSmartSwitch();
+    const bool fromApp = std::exchange(appTouchPending_, false);
+
+    context_.pilotTouched = fromSwitch || fromApp;
+    if (!context_.pilotTouched || context_.logger == nullptr)
+    {
+        return;
+    }
+
+    context_.logger->LogInfo(
+        std::format("Pilot touch from the {} (phase: {})",
+                    TouchSurface(fromSwitch, fromApp),
+                    TurnaroundPhaseToString(phase_))
+    );
 }
 
 void TurnaroundStateMachine::PublishStatus() const
@@ -160,10 +188,13 @@ void TurnaroundStateMachine::AttachAircraft(Aircraft* aircraft)
 void TurnaroundStateMachine::Reset()
 {
     context_.aircraft = nullptr;
-    context_.smartSwitchPressed = false;
+    context_.pilotTouched = false;
+    appTouchPending_ = false;
     context_.data.Reset();
     phase_ = TurnaroundPhase::WaitingSupportedAircraft;
     pendingPhase_ = TurnaroundPhase::WaitingSupportedAircraft;
+    pendingOrigin_ = TransitionOrigin::Reading;
+    lastTransitionOrigin_ = TransitionOrigin::Reading;
     ticksRemaining_ = 0;
 }
 
@@ -173,7 +204,7 @@ void TurnaroundStateMachine::DebugSkipPhase(const int delta)
     const int target = std::clamp(static_cast<int>(phase_) + delta,
                                   0, static_cast<int>(TurnaroundPhase::Count) - 1);
     ticksRemaining_ = 0;
-    TransitionTo(static_cast<TurnaroundPhase>(target));
+    TransitionTo(static_cast<TurnaroundPhase>(target), TransitionOrigin::Reading);
 }
 #endif
 
@@ -188,18 +219,33 @@ std::optional<TurnaroundTransition> TurnaroundStateMachine::EvaluateCurrentPhase
     return state->Evaluate(context_);
 }
 
-void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase)
+void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const TransitionOrigin origin)
 {
+    lastTransitionOrigin_ = origin;
+
     if (context_.logger)
     {
         context_.logger->LogInfo(
-            std::format("Transitioning: {} -> {}", TurnaroundPhaseToString(phase_), TurnaroundPhaseToString(phase))
+            std::format("Transitioning: {} -> {}{}",
+                        TurnaroundPhaseToString(phase_),
+                        TurnaroundPhaseToString(phase),
+                        origin == TransitionOrigin::Pilot ? " (unlocked by the pilot)" : "")
         );
     }
 
     if (phase == TurnaroundPhase::WaitingNewFlight)
     {
         context_.data.Reset();
+
+        if (context_.menuGateway != nullptr)
+        {
+            context_.menuGateway->OnTurnaroundTurned();
+        }
+    }
+
+    if (phase == TurnaroundPhase::WaitingForEngines && context_.menuGateway != nullptr)
+    {
+        context_.menuGateway->OnPushbackStarted();
     }
 
     if (phase == TurnaroundPhase::WaitingSupportedAircraft

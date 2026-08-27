@@ -1,7 +1,14 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_AUTOMATIONSETTINGS_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_AUTOMATIONSETTINGS_H
 
-enum class CrewBoarding
+enum class GsxPanelMode
+{
+    Never = 0,
+    OnPushback = 1,
+    AllRequests = 2
+};
+
+enum class CrewChoice
 {
     Nobody = 0,
     Crew = 1,
@@ -18,7 +25,8 @@ struct AutomationSettings
     bool autoSelectGsxChoice = true;
     bool autoDeice = false;
     bool useAircraftStairs = false;
-    CrewBoarding crewBoarding = CrewBoarding::Both;
+    CrewChoice crewBoarding = CrewChoice::Both;
+    CrewChoice crewDeboarding = CrewChoice::Both;
     bool autoStartFlow = true;
     bool autoStartLoading = true;
     bool skipReposition = false;
@@ -28,7 +36,7 @@ struct AutomationSettings
     bool callLavatory = false;
     bool callWater = false;
     bool callCleaning = false;
-    bool openGsxOnRequests = true;
+    GsxPanelMode gsxPanelMode = GsxPanelMode::OnPushback;
 
     [[nodiscard]] double EffectiveFuelRateKgs() const
     {

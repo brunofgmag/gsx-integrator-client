@@ -10,8 +10,8 @@
 
 namespace
 {
-    constexpr std::array<std::string_view, 5> kDiscardedPaths = {
-        "/billing", "/operators", "/message", "/state", "/stateText"
+    constexpr std::array<std::string_view, 4> kDiscardedPaths = {
+        "/billing", "/message", "/state", "/stateText"
     };
 
     std::string Str(const QJsonValue& v) { return v.toString().toStdString(); }
@@ -57,6 +57,21 @@ namespace
 
         state.simbriefStatus = Str(o.value("status"));
         state.simbriefError = Str(o.value("error"));
+        state.simbriefGeneration = o.value("gen").toInt();
+    }
+
+    void SetOperators(GsxRemoteState& state, const QJsonValue& value)
+    {
+        state.handlingOperator = Str(value.toObject().value("handling"));
+    }
+
+    void SetApronVerdict(GsxRemoteState& state, const QJsonValue& value)
+    {
+        state.apronVerdict.clear();
+        for (const QJsonValue& v : value.toArray())
+        {
+            state.apronVerdict.push_back(Str(v));
+        }
     }
 }
 
@@ -81,6 +96,21 @@ void GsxRemoteStateReducer::ApplySnapshot(GsxRemoteState& state, const QJsonObje
     {
         SetSimBrief(state, snapshot.value("simbrief"));
     }
+
+    if (snapshot.contains("operators"))
+    {
+        SetOperators(state, snapshot.value("operators"));
+    }
+
+    if (snapshot.contains("gateProperties"))
+    {
+        SetApronVerdict(state, snapshot.value("gateProperties"));
+    }
+
+    if (snapshot.contains("aircraft"))
+    {
+        state.matchedAircraftTitle = Str(snapshot.value("aircraft"));
+    }
 }
 
 GsxPatchOutcome GsxRemoteStateReducer::ApplyPatch(GsxRemoteState& state, const std::string& path,
@@ -101,6 +131,18 @@ GsxPatchOutcome GsxRemoteStateReducer::ApplyPatch(GsxRemoteState& state, const s
     else if (path == "/simbrief")
     {
         SetSimBrief(state, value);
+    }
+    else if (path == "/operators")
+    {
+        SetOperators(state, value);
+    }
+    else if (path == "/gateProperties")
+    {
+        SetApronVerdict(state, value);
+    }
+    else if (path == "/aircraft")
+    {
+        state.matchedAircraftTitle = Str(value);
     }
     else if (std::ranges::find(kDiscardedPaths, path) != kDiscardedPaths.end())
     {

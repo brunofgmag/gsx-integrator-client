@@ -22,6 +22,8 @@
 #include "infrastructure/platform/WindowForeground.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
 #include "infrastructure/update/GithubUpdateService.h"
+#include "infrastructure/efb/EfbStatePublisher.h"
+#include "infrastructure/efb/EfbCommandReceiver.h"
 #include "viewmodel/OperationsViewModel.h"
 #include "viewmodel/SettingsViewModel.h"
 #include "viewmodel/UpdateViewModel.h"
@@ -178,7 +180,21 @@ int main(int argc, char* argv[])
     RuntimeIntegratorService integratorService(&runtime);
     SettingsViewModel settingsViewModel(&settingsRepository, &integratorService,
                                         SupportedAircraftProfiles());
-    OperationsViewModel operationsViewModel(&integratorService);
+    OperationsViewModel operationsViewModel(&integratorService, &settingsViewModel);
+
+    EfbStatePublisher efbStatePublisher(runtime.Bridge(), &operationsViewModel,
+                                        [&runtime] { return runtime.GetSimVersion(); });
+    efbStatePublisher.Setup();
+    QObject::connect(&operationsViewModel, &OperationsViewModel::SnapshotChanged, &operationsViewModel,
+                     [&efbStatePublisher] { efbStatePublisher.Publish(); });
+    QObject::connect(&operationsViewModel, &OperationsViewModel::CommandErrorChanged, &operationsViewModel,
+                     [&efbStatePublisher] { efbStatePublisher.Publish(); });
+
+    EfbCommandReceiver efbCommandReceiver(runtime.Bridge(), &operationsViewModel);
+    efbCommandReceiver.Setup();
+
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, &operationsViewModel,
+                     [&efbStatePublisher] { efbStatePublisher.PublishDeparture(); });
 
     GithubUpdateService updateService(
         qEnvironmentVariable(
@@ -242,9 +258,19 @@ int main(int argc, char* argv[])
                      {
                          InstallAppTranslator(translator, settingsViewModel.GetLanguage());
                          engine.retranslate();
-                         operationsViewModel.RetranslateUi();
+                         operationsViewModel.RefreshDisplayText();
                          settingsViewModel.RetranslateUi();
                      });
+
+    const auto refreshOperationsText = [&operationsViewModel] { operationsViewModel.RefreshDisplayText(); };
+    QObject::connect(&settingsViewModel, &SettingsViewModel::WeightUnitDisplayChanged, &app,
+                     refreshOperationsText);
+    QObject::connect(&settingsViewModel, &SettingsViewModel::FuelRateTextChanged, &app,
+                     refreshOperationsText);
+    QObject::connect(&settingsViewModel, &SettingsViewModel::AutoStartFlowChanged, &app,
+                     refreshOperationsText);
+    QObject::connect(&settingsViewModel, &SettingsViewModel::AutoStartLoadingChanged, &app,
+                     refreshOperationsText);
 
     engine.load(QUrl(QStringLiteral("qrc:/qt/qml/GsxIntegratorClient/src/qml/Main.qml")));
     if (engine.rootObjects().isEmpty())

@@ -16,7 +16,7 @@ std::optional<TurnaroundTransition> RequestFuelState::Evaluate(TurnaroundContext
 {
     auto& data = ctx.data;
 
-    if (ctx.ConsumeSmartSwitch())
+    if (ctx.ConsumePilotTouch())
     {
         data.loadingConfirmed = true;
     }

@@ -19,11 +19,20 @@ public:
 
     using CommBusBridgeGateway::Subscribe;
 
+    bool callSucceeds = true;
+
     [[nodiscard]] bool IsAvailable() const override { return available; }
 
-    void Call(const std::string& channel, const int flag, const std::string& payload) override
+    bool Call(const std::string& channel, const int flag, const std::string& payload) override
     {
+        if (!callSucceeds)
+        {
+            return false;
+        }
+
         calls.emplace_back(channel, flag, payload);
+
+        return true;
     }
 
     void Subscribe(const std::string& channel, const int flag, Handler handler) override

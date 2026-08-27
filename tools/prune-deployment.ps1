@@ -1,6 +1,8 @@
 param(
     [Parameter(Mandatory)]
-    [string]$DeploymentDir
+    [string]$DeploymentDir,
+
+    [string]$Configuration = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,6 +37,17 @@ foreach ($relativePath in $unusedPaths) {
     if (Test-Path -LiteralPath $path) {
         Remove-Item -LiteralPath $path -Recurse -Force
     }
+}
+
+if ($Configuration -and $Configuration -ne 'Debug') {
+    Get-ChildItem -LiteralPath $root -Filter 'Qt6*d.dll' -File |
+        Where-Object {
+            $release = $_.Name -replace 'd\.dll$', '.dll'
+            $release -ne $_.Name -and (Test-Path -LiteralPath (Join-Path $root $release))
+        } |
+        Remove-Item -Force
+
+    Get-ChildItem -LiteralPath $root -Filter '*.pdb' -File -Recurse | Remove-Item -Force
 }
 
 # windeployqt may create empty directories for optional QML modules.

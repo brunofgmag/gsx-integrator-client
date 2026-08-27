@@ -20,6 +20,7 @@ namespace
     constexpr auto kRepositionRootText = "Reposition Aircraft";
     constexpr auto kRepositionHereText = "Reposition here";
     constexpr auto kPushTugQuestion = "Attach Pushback Tug";
+    constexpr auto kPushbackDirectionText = "pushback direction";
     constexpr auto kConfirmEnginesText = "Confirm good engine";
     constexpr auto kCompletePushbackText = "complete pushback procedure";
     constexpr auto kServiceInProgressTitle = "Service in progress";
@@ -28,17 +29,18 @@ namespace
     constexpr auto kLoadingInProgressText = "loading in progress";
     constexpr auto kBoardingPassengersText = "Boarding passengers now";
     constexpr auto kBoardCrewQuestion = "board crew";
+    constexpr auto kDeboardCrewQuestion = "deboard crew";
     constexpr auto kDeIceQuestion = "de-icing";
     constexpr auto kAirstairsQuestion = "own airstairs";
 
-    const char* CrewBoardingEntry(const CrewBoarding choice)
+    const char* CrewChoiceEntry(const CrewChoice choice)
     {
         switch (choice)
         {
-        case CrewBoarding::Nobody: return "No";
-        case CrewBoarding::Crew: return "Crew";
-        case CrewBoarding::Pilots: return "Pilots";
-        case CrewBoarding::Both: return "Both";
+        case CrewChoice::Nobody: return "No";
+        case CrewChoice::Crew: return "Crew";
+        case CrewChoice::Pilots: return "Pilots";
+        case CrewChoice::Both: return "Both";
         }
         return "Both";
     }
@@ -218,6 +220,7 @@ void GsxMenuNavigator::Reset()
     resyncCount_ = 0;
     resyncPending_ = false;
     lastActionMs_ = 0;
+    RearmPanelLatches();
     pending_.clear();
 }
 
@@ -383,6 +386,11 @@ void GsxMenuNavigator::DiscardStuckMenu(const std::string& sig)
         return;
     }
 
+    if (Contains(state_->menu.title, kPushbackDirectionText))
+    {
+        return;
+    }
+
     discardedSig_ = sig;
     watchedSinceMs_ = nowMs_();
     lastActionMs_ = nowMs_();
@@ -439,13 +447,18 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
         return true;
     }
 
+    if (Contains(menu.title, kDeboardCrewQuestion))
+    {
+        const CrewChoice choice = settings_ != nullptr ? settings_->crewDeboarding : CrewChoice::Both;
+
+        return PickByContains(CrewChoiceEntry(choice));
+    }
+
     if (Contains(menu.title, kBoardCrewQuestion))
     {
-        const auto choice = settings_ != nullptr ? settings_->crewBoarding : CrewBoarding::Both;
-        if (PickByContains(CrewBoardingEntry(choice)))
-        {
-            return true;
-        }
+        const CrewChoice choice = settings_ != nullptr ? settings_->crewBoarding : CrewChoice::Both;
+
+        return PickByContains(CrewChoiceEntry(choice));
     }
 
     return false;
@@ -564,7 +577,7 @@ bool GsxMenuNavigator::HandleIntentPrompts()
 void GsxMenuNavigator::TriggerService(const char* serviceId)
 {
     OpenIntent(Intent::Service);
-    ShowGsxToolbar();
+    SyncGsxToolbar();
 
     ArmRequest("service.trigger",
                QJsonObject{{"service", QString::fromLatin1(serviceId)}},
@@ -616,7 +629,7 @@ void GsxMenuNavigator::PumpRequests()
         ++it;
     }
 
-    if (!IsMenuSettled())
+    if (IsWaitingForThePanel() || !IsMenuSettled())
     {
         return;
     }
@@ -683,18 +696,117 @@ bool GsxMenuNavigator::WasTaken(const PendingRequest& request) const
     return service->stateRaw != static_cast<int>(GsxStateStatus::Callable) || !service->canTrigger;
 }
 
-void GsxMenuNavigator::ShowGsxToolbar() const
+GsxPanelMode GsxMenuNavigator::PanelMode() const
 {
-    if (settings_->openGsxOnRequests && pluginClient_ != nullptr && !pluginClient_->IsGsxToolbarActive())
+    return settings_->gsxPanelMode;
+}
+
+void GsxMenuNavigator::SyncGsxToolbar() const
+{
+    if (pluginClient_ == nullptr || PanelMode() != GsxPanelMode::AllRequests)
+    {
+        return;
+    }
+
+    if (!pluginClient_->IsGsxToolbarActive())
     {
         logger_->LogInfo("RemoteAPI opening the GSX toolbar");
         (void)pluginClient_->OpenGsxToolbar();
     }
 }
 
+void GsxMenuNavigator::OpenPushbackPanel()
+{
+    if (pluginClient_ == nullptr || PanelMode() != GsxPanelMode::OnPushback || panelOpenSpent_)
+    {
+        return;
+    }
+
+    if (pluginClient_->IsGsxToolbarActive())
+    {
+        panelOpenSpent_ = true;
+
+        return;
+    }
+
+    if (!pluginClient_->OpenGsxToolbar())
+    {
+        return;
+    }
+
+    panelOpenSpent_ = true;
+    panelOpenedByUs_ = true;
+    panelOpenSentMs_ = nowMs_();
+    logger_->LogInfo("RemoteAPI opening the GSX toolbar for the pushback menu");
+}
+
+void GsxMenuNavigator::ClosePanelAfterPushback()
+{
+    if (pluginClient_ == nullptr || PanelMode() != GsxPanelMode::OnPushback)
+    {
+        return;
+    }
+
+    if (!panelOpenedByUs_ || panelCloseSpent_ || !pluginClient_->IsGsxToolbarActive())
+    {
+        return;
+    }
+
+    if (!pluginClient_->CloseGsxToolbar())
+    {
+        return;
+    }
+
+    panelCloseSpent_ = true;
+    logger_->LogInfo("RemoteAPI closing the GSX toolbar now that the pushback has started");
+}
+
+bool GsxMenuNavigator::IsWaitingForThePanel()
+{
+    if (panelOpenSentMs_ == 0 || pluginClient_ == nullptr)
+    {
+        return false;
+    }
+
+    if (pluginClient_->IsGsxToolbarActive())
+    {
+        panelOpenSentMs_ = 0;
+
+        return false;
+    }
+
+    if ((nowMs_() - panelOpenSentMs_) < kPanelOpenWaitMs)
+    {
+        return true;
+    }
+
+    panelOpenSentMs_ = 0;
+    logger_->LogInfo("RemoteAPI sending the pushback request without the GSX toolbar confirming it opened");
+
+    return false;
+}
+
+void GsxMenuNavigator::RearmPanelLatches()
+{
+    panelOpenSpent_ = false;
+    panelCloseSpent_ = false;
+    panelOpenedByUs_ = false;
+    panelOpenSentMs_ = 0;
+}
+
+void GsxMenuNavigator::OnTurnaroundTurned()
+{
+    RearmPanelLatches();
+}
+
+void GsxMenuNavigator::OnPushbackStarted()
+{
+    ClosePanelAfterPushback();
+}
+
 void GsxMenuNavigator::OpenMenu() const
 {
-    ShowGsxToolbar();
+    SyncGsxToolbar();
 
     if (!state_->menu.shown)
     {

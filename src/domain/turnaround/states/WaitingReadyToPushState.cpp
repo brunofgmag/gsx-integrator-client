@@ -1,5 +1,6 @@
 #include "WaitingReadyToPushState.h"
 
+#include "../PilotUnlock.h"
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
 
@@ -12,7 +13,12 @@ std::optional<TurnaroundTransition> WaitingReadyToPushState::Evaluate(Turnaround
 
     if (ctx.aircraft->GetDoorStatus() == DoorStatus::AnyOpen)
     {
-        return std::nullopt;
+        if (!PilotUnlock::Accepts(Phase()) || !ctx.ConsumePilotTouch())
+        {
+            return std::nullopt;
+        }
+
+        return TurnaroundTransition{TurnaroundPhase::WaitCatering, 0, TransitionOrigin::Pilot};
     }
 
     return TurnaroundTransition{TurnaroundPhase::WaitCatering};

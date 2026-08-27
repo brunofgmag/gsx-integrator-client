@@ -10,10 +10,11 @@
 #include "../application/model/AppSettings.h"
 #include "../application/model/AircraftProfile.h"
 #include "../application/ports/IntegratorService.h"
+#include "OperationsDisplaySettings.h"
 
 class SettingsRepository;
 
-class SettingsViewModel final : public QObject, public IntegratorServiceObserver
+class SettingsViewModel final : public QObject, public IntegratorServiceObserver, public OperationsDisplaySettings
 {
     Q_OBJECT
 
@@ -29,6 +30,7 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(bool useAircraftStairs READ GetUseAircraftStairs
         WRITE SetUseAircraftStairs NOTIFY UseAircraftStairsChanged)
     Q_PROPERTY(int crewBoarding READ GetCrewBoarding WRITE SetCrewBoarding NOTIFY CrewBoardingChanged)
+    Q_PROPERTY(int crewDeboarding READ GetCrewDeboarding WRITE SetCrewDeboarding NOTIFY CrewDeboardingChanged)
     Q_PROPERTY(bool autoStartFlow READ GetAutoStartFlow WRITE SetAutoStartFlow NOTIFY AutoStartFlowChanged)
     Q_PROPERTY(bool autoStartLoading READ GetAutoStartLoading WRITE SetAutoStartLoading NOTIFY AutoStartLoadingChanged)
     Q_PROPERTY(bool skipReposition READ GetSkipReposition WRITE SetSkipReposition NOTIFY SkipRepositionChanged)
@@ -38,8 +40,8 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(bool callLavatory READ GetCallLavatory WRITE SetCallLavatory NOTIFY CallLavatoryChanged)
     Q_PROPERTY(bool callWater READ GetCallWater WRITE SetCallWater NOTIFY CallWaterChanged)
     Q_PROPERTY(bool callCleaning READ GetCallCleaning WRITE SetCallCleaning NOTIFY CallCleaningChanged)
-    Q_PROPERTY(bool openGsxOnRequests READ GetOpenGsxOnRequests
-        WRITE SetOpenGsxOnRequests NOTIFY OpenGsxOnRequestsChanged)
+    Q_PROPERTY(int gsxPanelMode READ GetGsxPanelMode
+        WRITE SetGsxPanelMode NOTIFY GsxPanelModeChanged)
     Q_PROPERTY(int themeMode READ GetThemeMode WRITE SetThemeMode NOTIFY ThemeModeChanged)
     Q_PROPERTY(bool effectiveDark READ GetEffectiveDark NOTIFY EffectiveDarkChanged)
     Q_PROPERTY(QString language READ GetLanguage WRITE SetLanguage NOTIFY LanguageChanged)
@@ -106,7 +108,7 @@ public:
     [[nodiscard]] bool GetStreamerMode() const;
     void SetStreamerMode(bool enabled);
 
-    [[nodiscard]] QString GetFuelRateText() const;
+    [[nodiscard]] QString GetFuelRateText() const override;
     void SetFuelRateText(const QString& rate);
 
     [[nodiscard]] bool GetAutoSelectGsxChoice() const;
@@ -120,11 +122,13 @@ public:
 
     [[nodiscard]] int GetCrewBoarding() const;
     void SetCrewBoarding(int choice);
+    [[nodiscard]] int GetCrewDeboarding() const;
+    void SetCrewDeboarding(int choice);
 
-    [[nodiscard]] bool GetAutoStartFlow() const;
+    [[nodiscard]] bool GetAutoStartFlow() const override;
     void SetAutoStartFlow(bool enabled);
 
-    [[nodiscard]] bool GetAutoStartLoading() const;
+    [[nodiscard]] bool GetAutoStartLoading() const override;
     void SetAutoStartLoading(bool enabled);
 
     [[nodiscard]] bool GetSkipReposition() const;
@@ -148,8 +152,8 @@ public:
     [[nodiscard]] bool GetCallCleaning() const;
     void SetCallCleaning(bool enabled);
 
-    [[nodiscard]] bool GetOpenGsxOnRequests() const;
-    void SetOpenGsxOnRequests(bool enabled);
+    [[nodiscard]] int GetGsxPanelMode() const;
+    void SetGsxPanelMode(int mode);
 
     [[nodiscard]] int GetThemeMode() const;
     void SetThemeMode(int mode);
@@ -172,8 +176,8 @@ public:
 
     [[nodiscard]] int GetWeightUnitMode() const;
     void SetWeightUnitMode(int mode);
-    [[nodiscard]] bool GetWeightIsLb() const;
-    [[nodiscard]] QString GetFuelRateUnitText() const;
+    [[nodiscard]] bool GetWeightIsLb() const override;
+    [[nodiscard]] QString GetFuelRateUnitText() const override;
     [[nodiscard]] Q_INVOKABLE static double kgToLb(double kg);
 
     [[nodiscard]] bool GetCloseToTray() const;
@@ -240,6 +244,7 @@ signals:
     void AutoDeiceChanged();
     void UseAircraftStairsChanged();
     void CrewBoardingChanged();
+    void CrewDeboardingChanged();
     void AutoStartFlowChanged();
     void AutoStartLoadingChanged();
     void SkipRepositionChanged();
@@ -249,7 +254,7 @@ signals:
     void CallLavatoryChanged();
     void CallWaterChanged();
     void CallCleaningChanged();
-    void OpenGsxOnRequestsChanged();
+    void GsxPanelModeChanged();
     void ThemeModeChanged();
     void EffectiveDarkChanged();
     void LanguageChanged();

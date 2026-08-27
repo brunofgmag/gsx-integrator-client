@@ -60,8 +60,12 @@ public:
     void DebugSkipPhase(const int delta) { stateMachine_.DebugSkipPhase(delta); }
 #endif
     void ConfirmLoading();
+    void AcceptPilotTouch();
     void ApplySettings(const AutomationSettings& settings);
     [[nodiscard]] bool ReloadSimbrief();
+
+    [[nodiscard]] CommBusBridgeGateway* Bridge() { return &bridgeClient_; }
+    [[nodiscard]] SimVersion GetSimVersion() const { return simVersion_; }
 
 signals:
     void Updated();
@@ -131,6 +135,7 @@ private:
     void ResolveAircraft();
     void CheckGsxProfile();
     void CheckPmdgOptions();
+    void AnnounceWireFacts();
 
     static constexpr int kDispatchIntervalMs = 80;
     static constexpr int kReconnectIntervalMs = 5000;
@@ -142,6 +147,10 @@ private:
     GsxRemoteApiClient gsxRemoteClient_;
     GsxRemoteState gsxRemoteState_;
     std::set<std::string> unknownPatchPaths_;
+    std::string announcedHandlingOperator_;
+    std::string announcedApronVerdict_;
+    std::string announcedAircraftTitle_;
+    int announcedSimbriefGeneration_ = 0;
     AutomationStatus status_;
     AutomationSettings settings_;
     GsxMenuNavigator gsxMenu_;

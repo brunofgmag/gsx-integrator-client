@@ -232,18 +232,18 @@ bool GsxDoorSync::IsDesiredOpen(const GsxDoor door) const
     {
     case GsxDoor::FwdPax:
         return VehicleState(gsx::lvars::kJetway, kJetwayUnavailableValue) == kJetwayDockedValue
-            || vehicleState(gsx::lvars::kPassengerStairsFrontState) == gsx::states::kStairsFinalPosition;
+            || gsx::states::AreStairsArriving(vehicleState(gsx::lvars::kPassengerStairsFrontState));
     case GsxDoor::MidPax:
-        return vehicleState(gsx::lvars::kPassengerStairsMiddleState) == gsx::states::kStairsFinalPosition;
+        return gsx::states::AreStairsArriving(vehicleState(gsx::lvars::kPassengerStairsMiddleState));
     case GsxDoor::AftPax:
-        return vehicleState(gsx::lvars::kPassengerStairsRearState) == gsx::states::kStairsFinalPosition;
+        return gsx::states::AreStairsArriving(vehicleState(gsx::lvars::kPassengerStairsRearState));
     case GsxDoor::FwdCatering:
-        return gsx::states::IsCateringAtDoor(vehicleState(gsx::lvars::kCateringFrontState));
+        return gsx::states::IsCateringArriving(vehicleState(gsx::lvars::kCateringFrontState));
     case GsxDoor::AftCatering:
-        return gsx::states::IsCateringAtDoor(vehicleState(gsx::lvars::kCateringRearState));
+        return gsx::states::IsCateringArriving(vehicleState(gsx::lvars::kCateringRearState));
     case GsxDoor::FwdCargo:
-        return gsx::states::IsLoaderAtDoor(vehicleState(gsx::lvars::kBaggageLoaderFrontState));
+        return gsx::states::IsLoaderArriving(vehicleState(gsx::lvars::kBaggageLoaderFrontState));
     default:
-        return gsx::states::IsLoaderAtDoor(vehicleState(gsx::lvars::kBaggageLoaderRearState));
+        return gsx::states::IsLoaderArriving(vehicleState(gsx::lvars::kBaggageLoaderRearState));
     }
 }

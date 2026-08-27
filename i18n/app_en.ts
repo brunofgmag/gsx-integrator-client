@@ -59,32 +59,42 @@
         <translation>Release notes</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="157"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="156"/>
+        <source>CommBus plugin not found</source>
+        <translation>CommBus plugin not found</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="166"/>
+        <source>No plugin found in any Community folder. The client can&apos;t warn you about new versions.</source>
+        <translation>No plugin found in any Community folder. The client can&apos;t warn you about new versions.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="194"/>
         <source>CommBus update available — v%1</source>
         <translation>CommBus update available — v%1</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="168"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="205"/>
         <source>The client can&apos;t update the plugin. Use the installer to update it.</source>
         <translation>The client can&apos;t update the plugin. Use the installer to update it.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="182"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="219"/>
         <source>Get installer</source>
         <translation>Get installer</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="190"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="228"/>
         <source>Installed v%1 · latest v%2</source>
         <translation>Installed v%1 · latest v%2</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="205"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="243"/>
         <source>Automates the full GSX turnaround.</source>
         <translation>Automates the full GSX turnaround.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="218"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="256"/>
         <source>© 2026 · Not affiliated with FSDreamTeam or Microsoft</source>
         <translation>© 2026 · Not affiliated with FSDreamTeam or Microsoft</translation>
     </message>
@@ -98,8 +108,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="26"/>
-        <source>Graphics Backend</source>
-        <translation>Graphics Backend</translation>
+        <source>Graphics backend</source>
+        <translation>Graphics backend</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="27"/>
@@ -150,8 +160,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AutomationPane.qml" line="18"/>
-        <source>Used only by aircraft that don&apos;t support refueling through GSX. When GSX drives the fuel truck, the client follows the GSX pace and the rate shows as Auto.</source>
-        <translation>Used only by aircraft that don&apos;t support refueling through GSX. When GSX drives the fuel truck, the client follows the GSX pace and the rate shows as Auto.</translation>
+        <source>Only aircraft that cannot refuel through GSX use this rate. The others show Auto and follow the GSX pace.</source>
+        <translation>Only aircraft that cannot refuel through GSX use this rate. The others show Auto and follow the GSX pace.</translation>
     </message>
     <message>
         <source>kg/s</source>
@@ -164,13 +174,13 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AutomationPane.qml" line="56"/>
-        <source>Picks the recommended GSX menu option for you</source>
-        <translation>Picks the recommended GSX menu option for you</translation>
+        <source>Picks the recommended GSX menu option</source>
+        <translation>Picks the recommended GSX menu option</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AutomationPane.qml" line="57"/>
-        <source>When on, the integrator answers GSX menus on its own: any option marked &quot;GSX choice&quot; and the Simbrief block fuel refueling level, even on menus you open manually.</source>
-        <translation>When on, the integrator answers GSX menus on its own: any option marked &quot;GSX choice&quot; and the Simbrief block fuel refueling level, even on menus you open manually.</translation>
+        <source>The client answers GSX menus on its own: any option marked &quot;GSX choice&quot; and the Simbrief block fuel level, even on menus you opened by hand.</source>
+        <translation>The client answers GSX menus on its own: any option marked &quot;GSX choice&quot; and the Simbrief block fuel level, even on menus you opened by hand.</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AutomationPane.qml" line="64"/>
@@ -199,8 +209,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AutomationPane.qml" line="75"/>
-        <source>When off, the turnaround holds at &quot;Requesting fuel&quot; until you press Start Loading or activate the aircraft&apos;s SmartSwitch. Refueling requested manually in the GSX menu still resumes the flow.</source>
-        <translation>When off, the turnaround holds at &quot;Requesting fuel&quot; until you press Start Loading or activate the aircraft&apos;s SmartSwitch. Refueling requested manually in the GSX menu still resumes the flow.</translation>
+        <source>When off, the turnaround holds at &quot;Requesting fuel&quot; until you press Start Loading or the aircraft&apos;s SmartSwitch. Asking for fuel in the GSX menu resumes it too.</source>
+        <translation>When off, the turnaround holds at &quot;Requesting fuel&quot; until you press Start Loading or the aircraft&apos;s SmartSwitch. Asking for fuel in the GSX menu resumes it too.</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AutomationPane.qml" line="82"/>
@@ -268,8 +278,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="17"/>
-        <source>Used to fetch your latest OFP</source>
-        <translation>Used to fetch your latest OFP</translation>
+        <source>Fetches your latest OFP</source>
+        <translation>Fetches your latest OFP</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="47"/>
@@ -283,108 +293,131 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="55"/>
-        <source>Open GSX on requests</source>
-        <translation>Open GSX on requests</translation>
+        <source>GSX panel</source>
+        <translation>GSX panel</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="56"/>
-        <source>Shows the GSX window in the sim when requesting services</source>
-        <translation>Shows the GSX window in the sim when requesting services</translation>
+        <source>When the client opens the GSX window in the sim</source>
+        <translation>When the client opens the GSX window in the sim</translation>
+    </message>
+    <message>
+        <source>On pushback opens the panel for the destination menu and closes it once the push begins. Keep closed dismisses a panel left open. Never leaves the panel alone. All requests opens it whenever the client asks GSX for anything.</source>
+        <translation type="vanished">On pushback opens the panel for the destination menu and closes it once the push begins. Keep closed dismisses a panel left open. Never leaves the panel alone. All requests opens it whenever the client asks GSX for anything.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
+        <source>Never</source>
+        <translation>Never</translation>
+    </message>
+    <message>
+        <source>Keep closed</source>
+        <translation type="vanished">Keep closed</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/GeneralPane.qml" line="57"/>
-        <source>When off, requests are sent silently: the GSX window no longer opens on every request, but GSX menus and messages won&apos;t appear in the sim.</source>
-        <translation>When off, requests are sent silently: the GSX window no longer opens on every request, but GSX menus and messages won&apos;t appear in the sim.</translation>
+        <source>On pushback opens the panel for the destination menu and closes it once the push begins. Never leaves the panel alone. All requests opens it whenever the client asks GSX for anything.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="64"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
+        <source>On pushback</source>
+        <translation>On pushback</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
+        <source>All requests</source>
+        <translation>All requests</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="69"/>
         <source>Updates</source>
         <translation>Updates</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="65"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="70"/>
         <source>How new versions are installed</source>
         <translation>How new versions are installed</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="66"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="71"/>
         <source>Auto downloads updates and applies them when the app closes. Notify only shows an alert in the header. Manual never checks on its own.</source>
         <translation>Auto downloads updates and applies them when the app closes. Notify only shows an alert in the header. Manual never checks on its own.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="70"/>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="84"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="75"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="89"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="70"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="75"/>
         <source>Notify</source>
         <translation>Notify</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="70"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="75"/>
         <source>Manual</source>
         <translation>Manual</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="78"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="83"/>
         <source>Weight unit</source>
         <translation>Weight unit</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="79"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="84"/>
         <source>Units shown for fuel and payload</source>
         <translation>Units shown for fuel and payload</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="80"/>
-        <source>In Automatic mode the unit is taken from SimBrief (when a Pilot ID is set) or from the aircraft&apos;s flight plan when the client can read it; otherwise KG.</source>
-        <translation>In Automatic mode the unit is taken from SimBrief (when a Pilot ID is set) or from the aircraft&apos;s flight plan when the client can read it; otherwise KG.</translation>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="85"/>
+        <source>In Auto the unit comes from SimBrief, when a Pilot ID is set, or from the aircraft&apos;s flight plan when the client can read it. With neither, the client uses KG.</source>
+        <translation>In Auto the unit comes from SimBrief, when a Pilot ID is set, or from the aircraft&apos;s flight plan when the client can read it. With neither, the client uses KG.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="84"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="89"/>
         <source>KG</source>
         <translation>KG</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="84"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="89"/>
         <source>LB</source>
         <translation>LB</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="92"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="97"/>
         <source>Theme</source>
         <translation>Theme</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="93"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="98"/>
         <source>&quot;Windows&quot; follows the system</source>
         <translation>&quot;Windows&quot; follows the system</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="97"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="102"/>
         <source>Light</source>
         <translation>Light</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="97"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="102"/>
         <source>Dark</source>
         <translation>Dark</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="97"/>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="110"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="102"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="115"/>
         <source>Windows</source>
         <translation>Windows</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="105"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="110"/>
         <source>Language</source>
         <translation>Language</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="106"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="111"/>
         <source>&quot;Windows&quot; uses the system language</source>
         <translation>&quot;Windows&quot; uses the system language</translation>
     </message>
@@ -433,140 +466,160 @@
 <context>
     <name>Integrator</name>
     <message>
-        <location filename="../src/application/RuntimeIntegratorService.cpp" line="16"/>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="17"/>
         <source>Simulator is offline.</source>
         <translation>Simulator is offline.</translation>
     </message>
     <message>
-        <location filename="../src/application/RuntimeIntegratorService.cpp" line="53"/>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="54"/>
         <source>The turnaround is not waiting to start loading.</source>
         <translation>The turnaround is not waiting to start loading.</translation>
     </message>
     <message>
-        <location filename="../src/application/RuntimeIntegratorService.cpp" line="89"/>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="90"/>
         <source>Wait for an active flight session.</source>
         <translation>Wait for an active flight session.</translation>
     </message>
     <message>
-        <location filename="../src/application/RuntimeIntegratorService.cpp" line="94"/>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="95"/>
         <source>The flight plan can no longer be reloaded during the turnaround.</source>
         <translation>The flight plan can no longer be reloaded during the turnaround.</translation>
     </message>
     <message>
-        <location filename="../src/application/RuntimeIntegratorService.cpp" line="101"/>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="102"/>
         <source>Configure a valid SimBrief Pilot ID first.</source>
         <translation>Configure a valid SimBrief Pilot ID first.</translation>
     </message>
     <message>
-        <location filename="../src/application/RuntimeIntegratorService.cpp" line="106"/>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="107"/>
         <source>Could not start the SimBrief request.</source>
         <translation>Could not start the SimBrief request.</translation>
     </message>
     <message>
-        <location filename="../src/application/RuntimeIntegratorService.cpp" line="117"/>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="118"/>
         <source>The GSX profile does not need fixing.</source>
         <translation>The GSX profile does not need fixing.</translation>
     </message>
     <message>
-        <location filename="../src/application/RuntimeIntegratorService.cpp" line="123"/>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="124"/>
         <source>Could not update the GSX aircraft profile.</source>
         <translation>Could not update the GSX aircraft profile.</translation>
     </message>
     <message>
-        <location filename="../src/application/RuntimeIntegratorService.cpp" line="134"/>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="135"/>
         <source>The PMDG options file does not need fixing.</source>
         <translation>The PMDG options file does not need fixing.</translation>
     </message>
     <message>
-        <location filename="../src/application/RuntimeIntegratorService.cpp" line="140"/>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="141"/>
         <source>Could not update the PMDG options file.</source>
         <translation>Could not update the PMDG options file.</translation>
+    </message>
+    <message>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="157"/>
+        <source>Start the turnaround flow first.</source>
+        <translation>Start the turnaround flow first.</translation>
+    </message>
+    <message>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="163"/>
+        <source>The turnaround moved on before your touch arrived.</source>
+        <translation>The turnaround moved on before your touch arrived.</translation>
+    </message>
+    <message>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="170"/>
+        <source>This step does not wait on the pilot.</source>
+        <translation>This step does not wait on the pilot.</translation>
     </message>
 </context>
 <context>
     <name>Main</name>
     <message>
         <location filename="../src/qml/Main.qml" line="18"/>
-        <location filename="../src/qml/Main.qml" line="34"/>
-        <location filename="../src/qml/Main.qml" line="111"/>
+        <location filename="../src/qml/Main.qml" line="33"/>
+        <location filename="../src/qml/Main.qml" line="110"/>
+        <location filename="../src/qml/Main.qml" line="192"/>
         <location filename="../src/qml/Main.qml" line="193"/>
-        <location filename="../src/qml/Main.qml" line="194"/>
         <source>GSX Integrator</source>
         <translation>GSX Integrator</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="112"/>
+        <location filename="../src/qml/Main.qml" line="111"/>
         <source>Still running in the tray. Right-click the icon to open or quit.</source>
         <translation>Still running in the tray. Right-click the icon to open or quit.</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="198"/>
+        <location filename="../src/qml/Main.qml" line="197"/>
         <source>Open</source>
         <translation>Open</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="179"/>
-        <location filename="../src/qml/Main.qml" line="202"/>
+        <location filename="../src/qml/Main.qml" line="178"/>
+        <location filename="../src/qml/Main.qml" line="201"/>
         <source>Quit</source>
         <translation>Quit</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="35"/>
+        <location filename="../src/qml/Main.qml" line="34"/>
         <source>Waiting for input: press START LOADING or activate the SmartSwitch.</source>
         <translation>Waiting for input: press START LOADING or activate the SmartSwitch.</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="159"/>
+        <location filename="../src/qml/Main.qml" line="158"/>
         <source>Quit GSX Integrator?</source>
         <translation>Quit GSX Integrator?</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="172"/>
+        <location filename="../src/qml/Main.qml" line="171"/>
         <source>Cancel</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="266"/>
+        <location filename="../src/qml/Main.qml" line="265"/>
         <source>Restart to update</source>
         <translation>Restart to update</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="268"/>
+        <location filename="../src/qml/Main.qml" line="267"/>
         <source>↓ CommBus</source>
         <translation>↓ CommBus</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="270"/>
+        <location filename="../src/qml/Main.qml" line="269"/>
         <source>Apply the update and restart now</source>
         <translation>Apply the update and restart now</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="271"/>
+        <location filename="../src/qml/Main.qml" line="270"/>
         <source>Update available</source>
         <translation>Update available</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="283"/>
+        <location filename="../src/qml/Main.qml" line="284"/>
+        <source>Operations</source>
+        <translation>Operations</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/Main.qml" line="290"/>
         <source>Switch to light theme</source>
         <translation>Switch to light theme</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="283"/>
+        <location filename="../src/qml/Main.qml" line="290"/>
         <source>Switch to dark theme</source>
         <translation>Switch to dark theme</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="297"/>
+        <location filename="../src/qml/Main.qml" line="304"/>
         <source>About</source>
         <translation>About</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="418"/>
+        <location filename="../src/qml/Main.qml" line="423"/>
         <source>Save settings</source>
         <translation>Save settings</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="290"/>
+        <location filename="../src/qml/Main.qml" line="297"/>
         <source>Settings</source>
         <translation>Settings</translation>
     </message>
@@ -574,7 +627,7 @@
 <context>
     <name>OperationsScreen</name>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="339"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="679"/>
         <source>Start Flow</source>
         <translation>Start Flow</translation>
     </message>
@@ -583,12 +636,12 @@
         <translation type="vanished">GSX</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="31"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="207"/>
         <source>kg</source>
         <translation>kg</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="36"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="338"/>
         <source>New session</source>
         <translation>New session</translation>
     </message>
@@ -609,7 +662,7 @@
         <translation type="vanished">Couatl OK</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="69"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="239"/>
         <source>Standby</source>
         <translation>Standby</translation>
     </message>
@@ -622,9 +675,8 @@
         <translation type="vanished">OFP</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="76"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="83"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="249"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="122"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="406"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
@@ -633,77 +685,106 @@
         <translation type="vanished">Active</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="130"/>
         <source>Off</source>
-        <translation type="vanished">Off</translation>
+        <translation>Off</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="91"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="274"/>
+        <source>%1 · %2</source>
+        <translation>%1 · %2</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="308"/>
         <source>Turnaround state</source>
         <translation>Turnaround state</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="118"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="340"/>
         <source>Next</source>
         <translation>Next</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="130"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="353"/>
         <source>Next state in %1s</source>
         <translation>Next state in %1s</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="143"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="511"/>
         <source>The GSX profile for this aircraft does not set &apos;refueling = 0&apos;, so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.</source>
         <translation>The GSX profile for this aircraft does not set &apos;refueling = 0&apos;, so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="144"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="513"/>
         <source>No GSX profile with &apos;refueling = 0&apos; was found for this aircraft. Install an aircraft profile and set &apos;refueling = 0&apos; in its gsx.cfg.</source>
         <translation>No GSX profile with &apos;refueling = 0&apos; was found for this aircraft. Install an aircraft profile and set &apos;refueling = 0&apos; in its gsx.cfg.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="145"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="520"/>
         <source>Fix profile</source>
         <translation>Fix profile</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="152"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="526"/>
         <source>The PMDG options file does not enable the SDK data broadcast, so the client cannot read this aircraft. Apply the fix, then reload the flight.</source>
         <translation>The PMDG options file does not enable the SDK data broadcast, so the client cannot read this aircraft. Apply the fix, then reload the flight.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="153"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="533"/>
         <source>Enable broadcast</source>
         <translation>Enable broadcast</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="160"/>
-        <source>A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.</source>
-        <translation>A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.</translation>
+        <source>You reopened the GSX panel twice, so the client stopped closing it. The setting is now Never.</source>
+        <translation type="vanished">You reopened the GSX panel twice, so the client stopped closing it. The setting is now Never.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="166"/>
+        <source>A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.</source>
+        <translation type="vanished">A GSX loader is waiting for the main cargo door. Make sure a hydraulic pump is on.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="545"/>
         <source>GSX took the refuelling request but the truck has not arrived. Check the GSX menu, or another service may be holding it.</source>
         <translation>GSX took the refuelling request but the truck has not arrived. Check the GSX menu, or another service may be holding it.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="234"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="309"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="379"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="455"/>
         <source>Fuel</source>
         <translation>Fuel</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="239"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="86"/>
+        <source>Unlock Pushback</source>
+        <translation>Unlock Pushback</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="88"/>
+        <source>Confirm Engine Start</source>
+        <translation>Confirm Engine Start</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="90"/>
+        <source>Start New Flight</source>
+        <translation>Start New Flight</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="129"/>
+        <source>On</source>
+        <translation>On</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="389"/>
         <source>Loaded</source>
         <translation>Loaded</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="243"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="394"/>
         <source>Planned</source>
         <translation>Planned</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="247"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="399"/>
         <source>Rate</source>
         <translation>Rate</translation>
     </message>
@@ -712,70 +793,73 @@
         <translation type="vanished">kg/s</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="263"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="423"/>
         <source>Boarding</source>
         <translation>Boarding</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="269"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="317"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="433"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="465"/>
         <source>Pax</source>
         <translation>Pax</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="313"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="460"/>
         <source>ZFW</source>
         <translation>ZFW</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="359"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="694"/>
         <source>Confirm restart</source>
         <translation>Confirm restart</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="359"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="689"/>
         <source>Restart Flow</source>
         <translation>Restart Flow</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="276"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="445"/>
         <source>Planned ZFW</source>
         <translation>Planned ZFW</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="284"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="450"/>
         <source>SimBrief OFP</source>
         <translation>SimBrief OFP</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="202"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="539"/>
+        <source>A GSX loader is waiting for the main deck cargo door. That door runs on hydraulics, so switch the ELEC 2 pump on in the overhead.</source>
+        <translation>A GSX loader is waiting for the main deck cargo door. That door runs on hydraulics, so switch the ELEC 2 pump on in the overhead.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="551"/>
         <source>Error</source>
         <translation>Error</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="31"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="206"/>
         <source>lb</source>
         <translation>lb</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="54"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="244"/>
         <source>Sim</source>
         <translation>Sim</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="55"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="62"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="115"/>
         <source>Connected</source>
         <translation>Connected</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="55"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="62"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="116"/>
         <source>Offline</source>
         <translation>Offline</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="61"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="254"/>
         <source>GSX Pro</source>
         <translation>GSX Pro</translation>
     </message>
@@ -784,38 +868,37 @@
         <translation type="vanished">OK</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="68"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="264"/>
         <source>Aircraft</source>
         <translation>Aircraft</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="75"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="269"/>
         <source>Turnaround</source>
         <translation>Turnaround</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="76"/>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="83"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="123"/>
         <source>Manual</source>
         <translation>Manual</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="82"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="281"/>
         <source>Loading</source>
         <translation>Loading</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="263"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="422"/>
         <source>Deboarding</source>
         <translation>Deboarding</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="326"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="699"/>
         <source>Reload SimBrief</source>
         <translation>Reload SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/OperationsScreen.qml" line="346"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="684"/>
         <source>Start Loading</source>
         <translation>Start Loading</translation>
     </message>
@@ -829,8 +912,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="71"/>
-        <source>Mirror the global configuration for this aircraft</source>
-        <translation>Mirror the global configuration for this aircraft</translation>
+        <source>Mirrors the global settings for this aircraft</source>
+        <translation>Mirrors the global settings for this aircraft</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="79"/>
@@ -849,8 +932,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="83"/>
-        <source>This aircraft&apos;s refueling pace is driven by GSX or by the aircraft itself, so the rate is not configurable.</source>
-        <translation>This aircraft&apos;s refueling pace is driven by GSX or by the aircraft itself, so the rate is not configurable.</translation>
+        <source>This aircraft refuels through GSX or on its own, so you cannot set the rate.</source>
+        <translation>This aircraft refuels through GSX or on its own, so you cannot set the rate.</translation>
     </message>
     <message>
         <source>kg/s</source>
@@ -928,14 +1011,14 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="17"/>
-        <source>Place ground power and chocks at the gate, remove before pushback</source>
-        <translation>Place ground power and chocks at the gate, remove before pushback</translation>
+        <source>Places ground power and chocks at the gate, removes them before pushback</source>
+        <translation>Places ground power and chocks at the gate, removes them before pushback</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="18"/>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="27"/>
-        <source>Chocks are placed only on aircraft that support external chocks control.</source>
-        <translation>Chocks are placed only on aircraft that support external chocks control.</translation>
+        <source>Only on aircraft that accept external chocks control.</source>
+        <translation>Only on aircraft that accept external chocks control.</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="25"/>
@@ -944,8 +1027,8 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="26"/>
-        <source>Place ground power and chocks after landing, once engines are off and the parking brake is set</source>
-        <translation>Place ground power and chocks after landing, once engines are off and the parking brake is set</translation>
+        <source>Places ground power and chocks with engines off and the brake set</source>
+        <translation>Places ground power and chocks with engines off and the brake set</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="34"/>
@@ -986,11 +1069,12 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="67"/>
-        <source>Answer when GSX asks who boards the aircraft</source>
-        <translation>Answer when GSX asks who boards the aircraft</translation>
+        <source>Answers when GSX asks who boards</source>
+        <translation>Answers when GSX asks who boards</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="68"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="82"/>
         <source>The GSX option to ignore Crew/Pilots boarding must be disabled, otherwise this prompt never appears.</source>
         <translation>The GSX option to ignore Crew/Pilots boarding must be disabled, otherwise this prompt never appears.</translation>
     </message>
@@ -1000,51 +1084,65 @@
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="72"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="86"/>
         <source>Nobody</source>
         <translation>Nobody</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="72"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="86"/>
         <source>Crew</source>
         <translation>Crew</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="72"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="86"/>
         <source>Pilots</source>
         <translation>Pilots</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="72"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="86"/>
         <source>Both</source>
         <translation>Both</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/ServicesPane.qml" line="80"/>
+        <source>Crew deboarding</source>
+        <translation>Crew deboarding</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="81"/>
+        <source>Answers when GSX asks who deboards</source>
+        <translation>Answers when GSX asks who deboards</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="94"/>
         <source>Always use aircraft stairs</source>
         <translation>Always use aircraft stairs</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="81"/>
-        <source>Answer &quot;Yes&quot; when GSX offers the airplane&apos;s own airstairs</source>
-        <translation>Answer &quot;Yes&quot; when GSX offers the airplane&apos;s own airstairs</translation>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="95"/>
+        <source>Answers &quot;Yes&quot; when GSX offers the aircraft&apos;s own airstairs</source>
+        <translation>Answers &quot;Yes&quot; when GSX offers the aircraft&apos;s own airstairs</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="82"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="96"/>
         <source>GSX only asks this on aircraft that have their own airstairs. When off, the integrator answers with the airport stairs.</source>
         <translation>GSX only asks this on aircraft that have their own airstairs. When off, the integrator answers with the airport stairs.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="89"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="103"/>
         <source>Accept de-ice requests</source>
         <translation>Accept de-ice requests</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="90"/>
-        <source>Answer &quot;Yes&quot; when GSX offers de-icing treatment</source>
-        <translation>Answer &quot;Yes&quot; when GSX offers de-icing treatment</translation>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="104"/>
+        <source>Answers &quot;Yes&quot; when GSX offers de-icing</source>
+        <translation>Answers &quot;Yes&quot; when GSX offers de-icing</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="91"/>
+        <location filename="../src/qml/screens/settings/ServicesPane.qml" line="105"/>
         <source>Overrides the GSX choice for the ice-warning popup, which otherwise declines de-icing.</source>
         <translation>Overrides the GSX choice for the ice-warning popup, which otherwise declines de-icing.</translation>
     </message>
@@ -1056,32 +1154,32 @@
         <translation type="vanished">SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="15"/>
         <source>Automation</source>
         <translation>Automation</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="15"/>
         <source>General</source>
         <translation>General</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="15"/>
         <source>Services</source>
         <translation>Services</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
         <source>Window</source>
         <translation>Window</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
         <source>Profiles</source>
         <translation>Profiles</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
         <source>Advanced</source>
         <translation>Advanced</translation>
     </message>
@@ -1094,7 +1192,7 @@
         <translation type="vanished">SimBrief Pilot ID</translation>
     </message>
     <message>
-        <source>Used to fetch your latest OFP</source>
+        <source>Fetches your latest OFP</source>
         <translation type="vanished">Used to fetch your latest OFP</translation>
     </message>
     <message>
@@ -1118,7 +1216,7 @@
         <translation type="vanished">Accept actions automatically</translation>
     </message>
     <message>
-        <source>Picks the recommended GSX menu option for you</source>
+        <source>Picks the recommended GSX menu option</source>
         <translation type="vanished">Picks the recommended GSX menu option for you</translation>
     </message>
     <message>
@@ -1261,43 +1359,43 @@
 <context>
     <name>SettingsViewModel</name>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="649"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="659"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="888"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="898"/>
         <source>Enter a valid SimBrief Pilot ID.</source>
         <translation>Enter a valid SimBrief Pilot ID.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="898"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="908"/>
         <source>Enter a valid fuel rate.</source>
         <translation>Enter a valid fuel rate.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="915"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="925"/>
         <source>Enter a valid fuel rate for %1.</source>
         <translation>Enter a valid fuel rate for %1.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="581"/>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="932"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="591"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="942"/>
         <source>Could not save settings.</source>
         <translation>Could not save settings.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="435"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="445"/>
         <source>lb/s</source>
         <translation>lb/s</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="435"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="445"/>
         <source>kg/s</source>
         <translation>kg/s</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="587"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="597"/>
         <source>Settings saved.</source>
         <translation>Settings saved.</translation>
     </message>
@@ -1305,73 +1403,73 @@
 <context>
     <name>Turnaround</name>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="14"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="17"/>
         <source>Waiting for sim ready</source>
         <translation>Waiting for sim ready</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="16"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="19"/>
         <source>Repositioning aircraft</source>
         <translation>Repositioning aircraft</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="17"/>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="34"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="20"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="37"/>
         <source>Placing GPU &amp; chocks</source>
         <translation>Placing GPU &amp; chocks</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="18"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="21"/>
         <source>Starting GSX services</source>
         <translation>Starting GSX services</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="19"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="22"/>
         <source>Waiting for power on</source>
         <translation>Waiting for power on</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="20"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="23"/>
         <source>Requesting catering</source>
         <translation>Requesting catering</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="21"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="24"/>
         <source>Waiting for flight plan</source>
         <translation>Waiting for flight plan</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="22"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="25"/>
         <source>Requesting fuel</source>
         <translation>Requesting fuel</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="23"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="26"/>
         <source>Refueling</source>
         <translation>Refueling</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="24"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="27"/>
         <source>Requesting boarding</source>
         <translation>Requesting boarding</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="25"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="28"/>
         <source>Boarding</source>
         <translation>Boarding</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="15"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="18"/>
         <source>Waiting for aircraft ready</source>
         <translation>Waiting for aircraft ready</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="26"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="29"/>
         <source>Waiting for beacon &amp; brake</source>
         <translation>Waiting for beacon &amp; brake</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="27"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="30"/>
         <source>Waiting for catering</source>
         <translation>Waiting for catering</translation>
     </message>
@@ -1380,120 +1478,135 @@
         <translation type="vanished">Disconnecting GPU</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="28"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="31"/>
         <source>Removing GPU &amp; chocks</source>
         <translation>Removing GPU &amp; chocks</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="29"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="32"/>
         <source>Requesting pushback</source>
         <translation>Requesting pushback</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="30"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="33"/>
         <source>Waiting for pushback start</source>
         <translation>Waiting for pushback start</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="31"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="34"/>
         <source>Waiting for engines</source>
         <translation>Waiting for engines</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="32"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="35"/>
         <source>Waiting for departure</source>
         <translation>Waiting for departure</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="33"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="36"/>
         <source>On flight</source>
         <translation>On flight</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="35"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="38"/>
         <source>Waiting for engine shutdown</source>
         <translation>Waiting for engine shutdown</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="36"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="39"/>
         <source>Requesting deboarding</source>
         <translation>Requesting deboarding</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="37"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="40"/>
         <source>Deboarding</source>
         <translation>Deboarding</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="38"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="41"/>
         <source>Cabin services</source>
         <translation>Cabin services</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="39"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="42"/>
         <source>Waiting for new flight</source>
         <translation>Waiting for new flight</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="40"/>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="98"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="43"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="142"/>
         <source>Unknown</source>
         <translation>Unknown</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="49"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="52"/>
         <source>Check that the aircraft engines are shut down.</source>
         <translation>Check that the aircraft engines are shut down.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="52"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="55"/>
         <source>Import your SimBrief flight plan on the aircraft EFB.</source>
         <translation>Import your SimBrief flight plan on the aircraft EFB.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="53"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="56"/>
         <source>Check that SimBrief is loaded in GSX and in this app.</source>
         <translation>Check that SimBrief is loaded in GSX and in this app.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="55"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="58"/>
         <source>Connect the GPU and switch on the batteries so the aircraft has power.</source>
         <translation>Connect the GPU and switch on the batteries so the aircraft has power.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="57"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="60"/>
         <source>Remember to remove additional services (like the GPU).</source>
         <translation>Remember to remove additional services (like the GPU).</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="59"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="62"/>
         <source>Turn on the beacon lights and set the parking brake.</source>
         <translation>Turn on the beacon lights and set the parking brake.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="61"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="64"/>
         <source>Select the final pushback position in the GSX menu.</source>
         <translation>Select the final pushback position in the GSX menu.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="63"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="66"/>
         <source>Confirm a good engine start with the SmartSwitch.</source>
         <translation>Confirm a good engine start with the SmartSwitch.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="65"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="68"/>
         <source>Shut down the engines.</source>
         <translation>Shut down the engines.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="68"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="71"/>
         <source>Set the parking brake.</source>
         <translation>Set the parking brake.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="70"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="73"/>
         <source>Turn off the beacon lights and set the parking brake.</source>
         <translation>Turn off the beacon lights and set the parking brake.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="664"/>
+        <source>The SimBrief request was never sent</source>
+        <translation>The SimBrief request was never sent</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="666"/>
+        <source>SimBrief answered HTTP %1</source>
+        <translation>SimBrief answered HTTP %1</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="669"/>
+        <source>SimBrief answered a flight plan the client could not read</source>
+        <translation>SimBrief answered a flight plan the client could not read</translation>
     </message>
     <message>
         <source>Shut down the engines and set the parking brake.</source>
@@ -1504,42 +1617,42 @@
         <translation type="vanished">Shut down the engines, turn off the beacon lights and set the parking brake.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="72"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="75"/>
         <source>Activate the SmartSwitch to start a new flight.</source>
         <translation>Activate the SmartSwitch to start a new flight.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="80"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="98"/>
         <source>Waiting for start loading</source>
         <translation>Waiting for start loading</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="85"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="103"/>
         <source>Press START LOADING or activate the SmartSwitch to begin refueling and boarding.</source>
         <translation>Press START LOADING or activate the SmartSwitch to begin refueling and boarding.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="93"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="137"/>
         <source>Inactive</source>
         <translation>Inactive</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="94"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="138"/>
         <source>Fetching</source>
         <translation>Fetching</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="95"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="139"/>
         <source>Ready</source>
         <translation>Ready</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="96"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="140"/>
         <source>Error</source>
         <translation>Error</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="312"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="633"/>
         <source>Refused</source>
         <translation>Refused</translation>
     </message>
@@ -1572,7 +1685,7 @@
         <translation>Update ready — restart to apply</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="186"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="191"/>
         <source>Could not start the updater.</source>
         <translation>Could not start the updater.</translation>
     </message>

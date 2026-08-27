@@ -21,11 +21,13 @@ public:
     void Shutdown();
 
     [[nodiscard]] bool OpenGsxToolbar() const;
+    [[nodiscard]] bool CloseGsxToolbar() const;
     [[nodiscard]] bool IsBridgeReady() const;
     [[nodiscard]] bool IsGsxToolbarActive() const;
 
 private:
     void OnState(const std::string& state);
+    [[nodiscard]] bool SendToolbarCommand(const char* command) const;
 
     CommBusBridgeGateway* bridge_;
     bool ready_ = false;

@@ -17,7 +17,7 @@ public:
     void Poll() override;
 
     [[nodiscard]] bool IsAvailable() const override;
-    void Call(const std::string& channel, int flag, const std::string& payload) override;
+    bool Call(const std::string& channel, int flag, const std::string& payload) override;
     void Subscribe(const std::string& channel, int flag, Handler handler) override;
     using CommBusBridgeGateway::Subscribe;
     void Unsubscribe(const std::string& channel) override;
@@ -42,7 +42,7 @@ private:
     };
 
     void OnRxData(const void* data, DWORD size);
-    void SendEnvelope(const std::string& envelope) const;
+    bool SendEnvelope(const std::string& envelope) const;
 
     SimConnectSession session_;
     std::unordered_map<std::string, Subscription> handlers_;

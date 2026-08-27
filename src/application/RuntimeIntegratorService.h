@@ -22,6 +22,7 @@ public:
     [[nodiscard]] CommandResult ReloadSimbrief() override;
     [[nodiscard]] CommandResult FixGsxProfile() override;
     [[nodiscard]] CommandResult FixPmdgOptions() override;
+    [[nodiscard]] CommandResult AcceptPilotTouch(TurnaroundPhase stamped) override;
     void ApplySettings(const AppSettings& settings) override;
 
 #ifndef NDEBUG

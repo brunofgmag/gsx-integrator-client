@@ -13,7 +13,8 @@ inline AutomationSettings ResolveAutomationSettings(const AppSettings& settings,
     result.autoSelectGsxChoice = settings.autoSelectGsxChoice;
     result.autoDeice = settings.autoDeice;
     result.useAircraftStairs = settings.useAircraftStairs;
-    result.crewBoarding = static_cast<CrewBoarding>(settings.crewBoarding);
+    result.crewBoarding = static_cast<CrewChoice>(settings.crewBoarding);
+    result.crewDeboarding = static_cast<CrewChoice>(settings.crewDeboarding);
     result.autoStartFlow = settings.autoStartFlow;
     result.autoStartLoading = settings.autoStartLoading;
     result.skipReposition = settings.skipReposition;
@@ -23,7 +24,7 @@ inline AutomationSettings ResolveAutomationSettings(const AppSettings& settings,
     result.callLavatory = settings.callLavatory;
     result.callWater = settings.callWater;
     result.callCleaning = settings.callCleaning;
-    result.openGsxOnRequests = settings.openGsxOnRequests;
+    result.gsxPanelMode = static_cast<GsxPanelMode>(settings.gsxPanelMode);
 
     const auto it = settings.profiles.find(aircraftProfileId);
     if (it == settings.profiles.end() || it->second.useGlobal)

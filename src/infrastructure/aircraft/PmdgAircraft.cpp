@@ -101,7 +101,7 @@ void PmdgAircraft::SyncDoors()
 
 void PmdgAircraft::SyncMainDeckDoor()
 {
-    const bool loaderPresent = gsx::states::IsLoaderAtDoor(
+    const bool loaderPresent = gsx::states::IsLoaderArriving(
         doors_.VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0));
 
     if (loaderPresent && mainDeckTarget_ != MainDeckTarget::Open)
@@ -151,7 +151,7 @@ DoorStatus PmdgAircraft::GetDoorStatus() const
     return status;
 }
 
-bool PmdgAircraft::IsMainDeckCargoDoorStuck() const
+bool PmdgAircraft::MainDeckDoorStuck() const
 {
     return cargoVariant_ && doorReconciler_.IsStuck(mainDeckDoorSlot_);
 }

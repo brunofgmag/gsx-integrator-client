@@ -16,6 +16,7 @@ public:
     int boardingCalls = 0;
     int deboardingCalls = 0;
     int pushbackCalls = 0;
+    int openPushbackPanelCalls = 0;
     int refuelingCalls = 0;
     int confirmGoodEnginesCalls = 0;
     int completePushbackCalls = 0;
@@ -26,6 +27,8 @@ public:
     int requestLavatoryCalls = 0;
     int requestWaterCalls = 0;
     int requestCleaningCalls = 0;
+    int turnaroundTurnedCalls = 0;
+    int pushbackStartedCalls = 0;
 
     void CallJetway() override { ++callJetwayCalls; }
 
@@ -40,6 +43,8 @@ public:
     void RequestDeboarding() override { ++deboardingCalls; }
 
     void RequestPushback() override { ++pushbackCalls; }
+
+    void OpenPushbackPanel() override { ++openPushbackPanelCalls; }
 
     void RequestRefueling() override { ++refuelingCalls; }
 
@@ -70,6 +75,9 @@ public:
     }
 
     void DisableGsxMenu() override {}
+
+    void OnTurnaroundTurned() override { ++turnaroundTurnedCalls; }
+    void OnPushbackStarted() override { ++pushbackStartedCalls; }
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_TESTS_FAKEGSXMENUGATEWAY_H

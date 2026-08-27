@@ -129,14 +129,14 @@ private slots:
     static void cargoDoorsOpenPerLoaderAndCloseWhenDone();
     static void cargoDoorsUntouchedWithoutGsx();
     static void paxDoorsOpenPerStairsAndCloseWhenGone();
-    static void paxDoorsOpenOnlyAtFinalPosition();
+    static void paxDoorsOpenOnceTheStairsAreOnFinalApproach();
     static void jetwayOpensOnlyDoor1L();
     static void jetwayAndStairsEitherHoldsDoor1LOpen();
     static void closeAllDoorsForcesEveryDoorClosed();
     static void stairsReopenDoorAfterCloseAllDoors();
     static void paxDoorsUntouchedWithoutGsx();
     static void cateringDoorsOpenWhenVehicleWaitsAndCloseWhenFinished();
-    static void cateringDoorsUntouchedBeforeWaitingState();
+    static void cateringDoorsOpenOnceTheTruckIsApproaching();
     static void cateringDoorsUntouchedWithoutGsx();
     static void doorStatusOpenWhenAModeReadsOpen();
     static void doorStatusUnknownUntilDoorModesArrive();
@@ -778,7 +778,7 @@ void TolissA340Test::paxDoorsOpenPerStairsAndCloseWhenGone()
     QCOMPARE(gateway.Written(kPaxDoorMode1L), 0.0);
 }
 
-void TolissA340Test::paxDoorsOpenOnlyAtFinalPosition()
+void TolissA340Test::paxDoorsOpenOnceTheStairsAreOnFinalApproach()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -794,7 +794,7 @@ void TolissA340Test::paxDoorsOpenOnlyAtFinalPosition()
     gateway.lvars[kStairsFront] = 6.0;
     aircraft.OnTick();
 
-    QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode1L));
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), 2.0);
 
     gateway.lvars[kStairsFront] = 3.0;
     aircraft.OnTick();
@@ -944,7 +944,7 @@ void TolissA340Test::cateringDoorsOpenWhenVehicleWaitsAndCloseWhenFinished()
     QCOMPARE(gateway.Written(kPaxDoorMode4R), 0.0);
 }
 
-void TolissA340Test::cateringDoorsUntouchedBeforeWaitingState()
+void TolissA340Test::cateringDoorsOpenOnceTheTruckIsApproaching()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -954,10 +954,13 @@ void TolissA340Test::cateringDoorsUntouchedBeforeWaitingState()
 
     gateway.lvars[kGsxCateringFront] = 2.0;
     aircraft.OnTick();
+
+    QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode1R));
+
     gateway.lvars[kGsxCateringFront] = 5.0;
     aircraft.OnTick();
 
-    QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode1R));
+    QCOMPARE(gateway.Written(kPaxDoorMode1R), 2.0);
     QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode4R));
 }
 

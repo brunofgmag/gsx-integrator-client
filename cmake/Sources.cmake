@@ -3,6 +3,8 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/TurnaroundTransition.h
         src/domain/turnaround/TurnaroundContext.h
         src/domain/turnaround/TurnaroundMath.h
+        src/domain/turnaround/PilotTouch.h
+        src/domain/turnaround/PilotUnlock.h
         src/domain/turnaround/states/TurnaroundState.h
         src/domain/turnaround/states/WaitingFlightPlanState.cpp
         src/domain/turnaround/states/WaitingFlightPlanState.h
@@ -114,6 +116,10 @@ set(APP_SOURCES
         src/infrastructure/commbus/CommBusBridgeClient.cpp
         src/infrastructure/commbus/CommBusBridgeClient.h
         src/infrastructure/commbus/CommBusBridgeGateway.h
+        src/infrastructure/efb/EfbStatePublisher.cpp
+        src/infrastructure/efb/EfbStatePublisher.h
+        src/infrastructure/efb/EfbCommandReceiver.cpp
+        src/infrastructure/efb/EfbCommandReceiver.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
         src/infrastructure/pmdg/Pmdg777DataClient.cpp
@@ -208,6 +214,7 @@ set(APP_QML_FILES
         src/qml/components/HelpHint.qml
         src/qml/components/KeyValueRow.qml
         src/qml/components/SegmentedControl.qml
+        src/qml/components/SelectBox.qml
         src/qml/components/SettingRow.qml
         src/qml/components/SquareSwitch.qml
         src/qml/components/StatusChip.qml

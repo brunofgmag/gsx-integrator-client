@@ -1,4 +1,4 @@
-﻿#ifndef GSX_INTEGRATOR_CLIENT_GSXMENUGATEWAY_H
+#ifndef GSX_INTEGRATOR_CLIENT_GSXMENUGATEWAY_H
 #define GSX_INTEGRATOR_CLIENT_GSXMENUGATEWAY_H
 
 class GsxMenuGateway
@@ -13,6 +13,7 @@ public:
     virtual void RequestBoarding() = 0;
     virtual void RequestDeboarding() = 0;
     virtual void RequestPushback() = 0;
+    virtual void OpenPushbackPanel() = 0;
     virtual void RequestRefueling() = 0;
     virtual void CompleteRefuel() = 0;
     virtual void CompleteBoarding() = 0;
@@ -26,6 +27,9 @@ public:
     [[nodiscard]] virtual bool CompletePushback() = 0;
 
     virtual void DisableGsxMenu() = 0;
+
+    virtual void OnTurnaroundTurned() = 0;
+    virtual void OnPushbackStarted() = 0;
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_GSXMENUGATEWAY_H

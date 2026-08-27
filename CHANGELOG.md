@@ -1,5 +1,202 @@
 # Changelog
 
+## [1.24.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.23.0...v1.24.0) (2026-08-26)
+
+
+* open doors on approach, fix the cargo alert and the Fenix reset, and rework the header ([#86](https://github.com/brunofgmag/gsx-integrator-client/issues/86)) ([e6ee2ab](https://github.com/brunofgmag/gsx-integrator-client/commit/e6ee2abba53c8ca15bf52a8a2bff6ea91926deb0))
+
+
+### Features
+
+* **ui:** add a home button and let the window grow past 720px ([7db8857](https://github.com/brunofgmag/gsx-integrator-client/commit/7db885719c7933bc0b4e1831b14de3699ee20831)) ([e6ee2ab](https://github.com/brunofgmag/gsx-integrator-client/commit/e6ee2abba53c8ca15bf52a8a2bff6ea91926deb0))
+
+
+### Bug Fixes
+
+* **fenix:** empty the holds when the turnaround has no planned load yet ([bafbcb7](https://github.com/brunofgmag/gsx-integrator-client/commit/bafbcb73540cb3193f370b2cac15df928f8f32d3)) ([e6ee2ab](https://github.com/brunofgmag/gsx-integrator-client/commit/e6ee2abba53c8ca15bf52a8a2bff6ea91926deb0))
+* **gsx:** open the door while the vehicle is still positioning ([d3895a2](https://github.com/brunofgmag/gsx-integrator-client/commit/d3895a2f3cad06e4db5c8a3de49b889f8270070e)) ([e6ee2ab](https://github.com/brunofgmag/gsx-integrator-client/commit/e6ee2abba53c8ca15bf52a8a2bff6ea91926deb0))
+* **pmdg:** the stuck main deck door advisory belongs to the 737 alone ([51f3e53](https://github.com/brunofgmag/gsx-integrator-client/commit/51f3e53f8cc0498b3d5e371b928f52bcb3496c48)) ([e6ee2ab](https://github.com/brunofgmag/gsx-integrator-client/commit/e6ee2abba53c8ca15bf52a8a2bff6ea91926deb0))
+* **turnaround:** ask GSX to close boarding after 90s instead of 180s ([47c0de0](https://github.com/brunofgmag/gsx-integrator-client/commit/47c0de08b6531cf2c459e03542716fd127e4c231)) ([e6ee2ab](https://github.com/brunofgmag/gsx-integrator-client/commit/e6ee2abba53c8ca15bf52a8a2bff6ea91926deb0))
+
+## [1.23.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.22.0...v1.23.0) (2026-08-26)
+
+
+* open the panel on the wait for the push and drop keep closed ([#84](https://github.com/brunofgmag/gsx-integrator-client/issues/84)) ([34cd3f4](https://github.com/brunofgmag/gsx-integrator-client/commit/34cd3f4f1df7a2b066d846b1a9707700a3b74364))
+
+
+### Features
+
+* **gsx:** open the panel on the wait for the push and drop keep closed ([56f60d1](https://github.com/brunofgmag/gsx-integrator-client/commit/56f60d11653a7ac89dda514067f48f43174a264e)) ([34cd3f4](https://github.com/brunofgmag/gsx-integrator-client/commit/34cd3f4f1df7a2b066d846b1a9707700a3b74364))
+
+## [1.22.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.21.0...v1.22.0) (2026-08-26)
+
+
+* let the pilot choose when the client opens the GSX panel ([#82](https://github.com/brunofgmag/gsx-integrator-client/issues/82)) ([ca4e282](https://github.com/brunofgmag/gsx-integrator-client/commit/ca4e2823042507cedab9d5b48bea77c34bc29c7e))
+
+
+### Features
+
+* **gsx:** let the pilot choose when the client opens the GSX panel ([32cd1f7](https://github.com/brunofgmag/gsx-integrator-client/commit/32cd1f7f80abdff7dac31b9e5a3b17d38a854c24)) ([ca4e282](https://github.com/brunofgmag/gsx-integrator-client/commit/ca4e2823042507cedab9d5b48bea77c34bc29c7e))
+* **i18n:** update the catalogues for the panel choice and the new copy ([a5b3996](https://github.com/brunofgmag/gsx-integrator-client/commit/a5b39968814ac878f314db7cce2e70401632917f)) ([ca4e282](https://github.com/brunofgmag/gsx-integrator-client/commit/ca4e2823042507cedab9d5b48bea77c34bc29c7e))
+
+## [1.21.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.20.0...v1.21.0) (2026-08-26)
+
+
+* finish what was left of the wire readers, the plan error and the header hover ([#80](https://github.com/brunofgmag/gsx-integrator-client/issues/80)) ([dd903d5](https://github.com/brunofgmag/gsx-integrator-client/commit/dd903d561eb80243eb1338c8a6c55e9693ab849f))
+
+
+### Features
+
+* **gsx:** read the four wire facts the client was throwing away ([da2b0e5](https://github.com/brunofgmag/gsx-integrator-client/commit/da2b0e59145a7416e53c19deba153b9de902c98d)) ([dd903d5](https://github.com/brunofgmag/gsx-integrator-client/commit/dd903d561eb80243eb1338c8a6c55e9693ab849f))
+* **simbrief:** tell the pilot why the flight plan import failed ([8e73524](https://github.com/brunofgmag/gsx-integrator-client/commit/8e73524a8912871c180d0cb19f9da7edc77dfd94)) ([dd903d5](https://github.com/brunofgmag/gsx-integrator-client/commit/dd903d561eb80243eb1338c8a6c55e9693ab849f))
+* **ui:** give the header buttons the accent hover the rest of the app uses ([23287b8](https://github.com/brunofgmag/gsx-integrator-client/commit/23287b88003c5c3feabbfff5291e85b0cab36a57)) ([dd903d5](https://github.com/brunofgmag/gsx-integrator-client/commit/dd903d561eb80243eb1338c8a6c55e9693ab849f))
+
+## [1.20.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.19.0...v1.20.0) (2026-08-26)
+
+
+* give crew deboarding its own setting and close a panel left open ([#78](https://github.com/brunofgmag/gsx-integrator-client/issues/78)) ([f33b810](https://github.com/brunofgmag/gsx-integrator-client/commit/f33b8102e2a934f5c13968d315b3553751eeaf58))
+
+
+### Features
+
+* **gsx:** answer the crew deboarding menu with its own setting ([0609de9](https://github.com/brunofgmag/gsx-integrator-client/commit/0609de9f17d6f515732fe9abc9991a80a2f1c8a6)) ([f33b810](https://github.com/brunofgmag/gsx-integrator-client/commit/f33b8102e2a934f5c13968d315b3553751eeaf58))
+* **gsx:** close a GSX panel left open once per turnaround ([afe1e24](https://github.com/brunofgmag/gsx-integrator-client/commit/afe1e2427a07be2478d6686bae6c113e00f25234)) ([f33b810](https://github.com/brunofgmag/gsx-integrator-client/commit/f33b8102e2a934f5c13968d315b3553751eeaf58))
+
+## [1.19.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.18.0...v1.19.0) (2026-08-25)
+
+
+* settle five debts found in the in-sim run ([#76](https://github.com/brunofgmag/gsx-integrator-client/issues/76)) ([34c1d1c](https://github.com/brunofgmag/gsx-integrator-client/commit/34c1d1cdcefcf6f0017d01250600bb11787d1256))
+
+
+### Features
+
+* **pmdg:** log every door command the reconciler sends ([ed50262](https://github.com/brunofgmag/gsx-integrator-client/commit/ed50262a61077fd38ec50158689a2015f81c251b)) ([34c1d1c](https://github.com/brunofgmag/gsx-integrator-client/commit/34c1d1cdcefcf6f0017d01250600bb11787d1256))
+
+
+### Bug Fixes
+
+* **build:** drop locked outputs and disable msbuild node reuse ([69cc423](https://github.com/brunofgmag/gsx-integrator-client/commit/69cc423d19b03ea3a54e444447c832643d7485cf)) ([34c1d1c](https://github.com/brunofgmag/gsx-integrator-client/commit/34c1d1cdcefcf6f0017d01250600bb11787d1256))
+* **qml:** disable an action button by colour instead of opacity ([748c144](https://github.com/brunofgmag/gsx-integrator-client/commit/748c14485683e2dc2fe57a5b1b67bc4a5bd77300)) ([34c1d1c](https://github.com/brunofgmag/gsx-integrator-client/commit/34c1d1cdcefcf6f0017d01250600bb11787d1256))
+* **tools:** prune debug artefacts and name what overflows the package ([b80b9b9](https://github.com/brunofgmag/gsx-integrator-client/commit/b80b9b98fa639b1fa0d62c2df9791e93186bf0f6)) ([34c1d1c](https://github.com/brunofgmag/gsx-integrator-client/commit/34c1d1cdcefcf6f0017d01250600bb11787d1256))
+
+## [1.18.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.17.0...v1.18.0) (2026-08-25)
+
+
+* accept the pilot touch from the EFB app with the phase it saw ([#74](https://github.com/brunofgmag/gsx-integrator-client/issues/74)) ([1a058a7](https://github.com/brunofgmag/gsx-integrator-client/commit/1a058a7c9aa0bdc5fe16125fcaef95fdb31ee750))
+
+
+### Features
+
+* **app:** guard the pilot touch behind connection, flow and phase stamp ([9ec7765](https://github.com/brunofgmag/gsx-integrator-client/commit/9ec7765ad9ab86546b297afc9e512c52588f6411)) ([1a058a7](https://github.com/brunofgmag/gsx-integrator-client/commit/1a058a7c9aa0bdc5fe16125fcaef95fdb31ee750))
+* **efb:** publish the pilot touch button and act on its command ([5bccd63](https://github.com/brunofgmag/gsx-integrator-client/commit/5bccd638cf6b604d4a9cfac50221418c6723f7f1)) ([1a058a7](https://github.com/brunofgmag/gsx-integrator-client/commit/1a058a7c9aa0bdc5fe16125fcaef95fdb31ee750))
+* **turnaround:** accept a pilot touch from the EFB app alongside the smart switch ([d9d35bb](https://github.com/brunofgmag/gsx-integrator-client/commit/d9d35bbd51b63314cedb0cfc73e60796c40f5e61)) ([1a058a7](https://github.com/brunofgmag/gsx-integrator-client/commit/1a058a7c9aa0bdc5fe16125fcaef95fdb31ee750))
+
+## [1.17.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.16.0...v1.17.0) (2026-08-25)
+
+
+* act on the four flow buttons from inside the EFB app ([#72](https://github.com/brunofgmag/gsx-integrator-client/issues/72)) ([08e68bc](https://github.com/brunofgmag/gsx-integrator-client/commit/08e68bc7920e6e6bba8ac2f8465a952e61d7933d))
+
+
+### Features
+
+* **efb:** decide each flow button permission once and publish it ([2b47dad](https://github.com/brunofgmag/gsx-integrator-client/commit/2b47dad54578d4d3ba302b92a33b020382098d21)) ([08e68bc](https://github.com/brunofgmag/gsx-integrator-client/commit/08e68bc7920e6e6bba8ac2f8465a952e61d7933d))
+* **efb:** take the four flow commands back from the EFB app ([f550ef1](https://github.com/brunofgmag/gsx-integrator-client/commit/f550ef145271c62623e520f8b9ce53ceafbd90f9)) ([08e68bc](https://github.com/brunofgmag/gsx-integrator-client/commit/08e68bc7920e6e6bba8ac2f8465a952e61d7933d))
+
+
+### Bug Fixes
+
+* **efb:** publish a refused command so the EFB app shows the reason ([381fc5d](https://github.com/brunofgmag/gsx-integrator-client/commit/381fc5d0969a7e16002806dec56f204b36e71365)) ([08e68bc](https://github.com/brunofgmag/gsx-integrator-client/commit/08e68bc7920e6e6bba8ac2f8465a952e61d7933d))
+
+## [1.16.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.15.0...v1.16.0) (2026-08-24)
+
+
+* name the configured mode and whether it runs in the turnaround chip ([#70](https://github.com/brunofgmag/gsx-integrator-client/issues/70)) ([83f6d03](https://github.com/brunofgmag/gsx-integrator-client/commit/83f6d0349875a89407b709e078d71b4ff7e83b24))
+
+
+### Features
+
+* **efb:** name the configured mode and whether it runs in the turnaround chip ([3f46572](https://github.com/brunofgmag/gsx-integrator-client/commit/3f46572b0afdf7f7d33129918e0b52112e64b4e3)) ([83f6d03](https://github.com/brunofgmag/gsx-integrator-client/commit/83f6d0349875a89407b709e078d71b4ff7e83b24))
+
+## [1.15.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.14.0...v1.15.0) (2026-08-24)
+
+
+* publish the loading-mode flag the EFB app colours a chip with ([#68](https://github.com/brunofgmag/gsx-integrator-client/issues/68)) ([fea6a02](https://github.com/brunofgmag/gsx-integrator-client/commit/fea6a029fa52e8278f17e1ffe8bb01a6b957046c))
+
+
+### Features
+
+* **efb:** publish the loading-mode flag the EFB app colours a chip with ([7d56adb](https://github.com/brunofgmag/gsx-integrator-client/commit/7d56adb6da092b87587f4897dbdd8ae5e3a67bd9)) ([fea6a02](https://github.com/brunofgmag/gsx-integrator-client/commit/fea6a029fa52e8278f17e1ffe8bb01a6b957046c))
+
+## [1.14.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.13.0...v1.14.0) (2026-08-24)
+
+
+* keep the EFB app's view of the client in sync ([#66](https://github.com/brunofgmag/gsx-integrator-client/issues/66)) ([e325616](https://github.com/brunofgmag/gsx-integrator-client/commit/e325616a40697eccf8f734cdad35a9bb1f01c657))
+
+
+### Features
+
+* **efb:** answer the app and announce the client's departure ([704c864](https://github.com/brunofgmag/gsx-integrator-client/commit/704c8640b6610527601e68676f7e5e44aaf58c6b)) ([e325616](https://github.com/brunofgmag/gsx-integrator-client/commit/e325616a40697eccf8f734cdad35a9bb1f01c657))
+
+
+### Bug Fixes
+
+* **update:** find the bridge package in every Community folder ([de0addb](https://github.com/brunofgmag/gsx-integrator-client/commit/de0addb1ac1fd4b30727adf4a694eae93f2ab7bf)) ([e325616](https://github.com/brunofgmag/gsx-integrator-client/commit/e325616a40697eccf8f734cdad35a9bb1f01c657))
+
+## [1.13.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.12.0...v1.13.0) (2026-08-24)
+
+
+* move every operations screen phrase into the view model ([#64](https://github.com/brunofgmag/gsx-integrator-client/issues/64)) ([fa9a366](https://github.com/brunofgmag/gsx-integrator-client/commit/fa9a3662f0a3000c32d1b1365100850291342d0f))
+
+
+### Features
+
+* **efb:** move every operations screen phrase into the view model ([a02f5c5](https://github.com/brunofgmag/gsx-integrator-client/commit/a02f5c518a074057910279b5a76a27b213eea1b1)) ([fa9a366](https://github.com/brunofgmag/gsx-integrator-client/commit/fa9a3662f0a3000c32d1b1365100850291342d0f))
+
+
+### Bug Fixes
+
+* **ui:** redraw the operations screen when a display setting changes ([a685192](https://github.com/brunofgmag/gsx-integrator-client/commit/a6851929677ecee0fa0e9431569a3c934c478b8d)) ([fa9a366](https://github.com/brunofgmag/gsx-integrator-client/commit/fa9a3662f0a3000c32d1b1365100850291342d0f))
+
+## [1.12.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.11.0...v1.12.0) (2026-08-24)
+
+
+* publish the operations snapshot on the CommBus channel ([#62](https://github.com/brunofgmag/gsx-integrator-client/issues/62)) ([2e64738](https://github.com/brunofgmag/gsx-integrator-client/commit/2e647382f33d73c1252c87ce2a7245e38f9ef65b))
+
+
+### Features
+
+* **efb:** publish the operations snapshot on the CommBus channel ([8b621b5](https://github.com/brunofgmag/gsx-integrator-client/commit/8b621b5530b4e87adc09e05cba929a422ceec11a)) ([2e64738](https://github.com/brunofgmag/gsx-integrator-client/commit/2e647382f33d73c1252c87ce2a7245e38f9ef65b))
+
+
+### Bug Fixes
+
+* **turnaround:** hold chocks only for aircraft that can remove them ([7c312b6](https://github.com/brunofgmag/gsx-integrator-client/commit/7c312b62e37d1a66adceaf6ffe8d905ca911b8ea)) ([2e64738](https://github.com/brunofgmag/gsx-integrator-client/commit/2e647382f33d73c1252c87ce2a7245e38f9ef65b))
+
+## [1.11.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.10.0...v1.11.0) (2026-08-23)
+
+
+* let the pilot unlock the pushback gate with the smart switch ([#60](https://github.com/brunofgmag/gsx-integrator-client/issues/60)) ([98c2d88](https://github.com/brunofgmag/gsx-integrator-client/commit/98c2d88b70877e0188ca60707b5cc894d15383a7))
+* pay the sim debts the last run closed ([#58](https://github.com/brunofgmag/gsx-integrator-client/issues/58)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+
+
+### Features
+
+* **tools:** a versioned tap for the gsx wire ([a2fd227](https://github.com/brunofgmag/gsx-integrator-client/commit/a2fd227c276f26793b65f70a76ff2427f78cc9de)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* **tools:** launch the client on the couatl that just restarted ([9d7aac8](https://github.com/brunofgmag/gsx-integrator-client/commit/9d7aac8f83fc1616c5f78731953cb67d784d7297)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* **turnaround:** unlock the pushback gate with the pilot's smart switch ([5ceacbd](https://github.com/brunofgmag/gsx-integrator-client/commit/5ceacbdd5705d72cb6ea5b73310be2e294fa84dc)) ([98c2d88](https://github.com/brunofgmag/gsx-integrator-client/commit/98c2d88b70877e0188ca60707b5cc894d15383a7))
+* **ui:** mark a phase the pilot unlocked ([90b4985](https://github.com/brunofgmag/gsx-integrator-client/commit/90b49858c2498f64845f24b8b565e0255535f8bd)) ([98c2d88](https://github.com/brunofgmag/gsx-integrator-client/commit/98c2d88b70877e0188ca60707b5cc894d15383a7))
+
+
+### Bug Fixes
+
+* a rearmed request keeps its attempts and a stuck menu gets closed ([de88215](https://github.com/brunofgmag/gsx-integrator-client/commit/de88215701e54b110878e935439adbae3a677422)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* drop the socket that connects and never answers ([123e9bc](https://github.com/brunofgmag/gsx-integrator-client/commit/123e9bc4de461b0bfe0bbfd27a39822090cced07)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* **i18n:** the pushback prompt names the brake the gate already required ([b8f5714](https://github.com/brunofgmag/gsx-integrator-client/commit/b8f57148585669eb22807444a8e16565539960fb)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* observe the couatl restart from outside the gate it closes ([9f3999e](https://github.com/brunofgmag/gsx-integrator-client/commit/9f3999e1e9cebb1389d908d02ab63ddbe2e56167)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* the boarding completion asks again when the first ask is swallowed ([761052c](https://github.com/brunofgmag/gsx-integrator-client/commit/761052c4ec93c939abd0322298fc0836c743fc53)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* the smart switch counts only the side that springs back ([a00a189](https://github.com/brunofgmag/gsx-integrator-client/commit/a00a189670cfc42b7957642b446169a37370ea37)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+* the smart switch throws away the span a paused sim stretched ([b02320a](https://github.com/brunofgmag/gsx-integrator-client/commit/b02320a66dd7b14ee3737cf02c4b1135bd2a0083)) ([c8e756e](https://github.com/brunofgmag/gsx-integrator-client/commit/c8e756e1e5a6487a88e52b2becf051567fdf3ec0))
+
 ## [1.10.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.9.0...v1.10.0) (2026-08-22)
 
 

@@ -55,7 +55,6 @@ public:
     void HoldDoorsClosed(bool hold) override;
     void ClearOwnGroundEquipment() override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
-    [[nodiscard]] bool IsMainDeckCargoDoorStuck() const override;
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -77,6 +76,7 @@ public:
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override;
+    [[nodiscard]] bool SupportsChocksControl() const override { return true; }
     bool SetChocks(bool placed) override;
     [[nodiscard]] bool SupportsGroundPowerControl() const override { return true; }
     void SetGroundPower(bool on) override;
@@ -88,6 +88,7 @@ public:
 
 protected:
     [[nodiscard]] virtual bool HasVendorFlightPlan() const { return false; }
+    [[nodiscard]] bool MainDeckDoorStuck() const;
 
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;

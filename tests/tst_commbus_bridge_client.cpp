@@ -1,3 +1,4 @@
+#include <QtCore/QRegularExpression>
 #include <QtTest/QTest>
 
 #include <string>
@@ -138,11 +139,12 @@ void CommBusBridgeClientTest::oversizeEnvelopeDropped()
     constexpr double atProtocol = 2.0;
     client.OnReadyData(&atProtocol, sizeof(double));
 
-    client.Call("TabletToPlane", CommBusFlag::kWasm, "small");
+    QVERIFY(client.Call("TabletToPlane", CommBusFlag::kWasm, "small"));
     const std::size_t afterSmall = FakeSimConnectApi::writtenClientData.size();
     QVERIFY(afterSmall > 0);
 
-    client.Call("TabletToPlane", CommBusFlag::kWasm, std::string(9000, 'x'));
+    QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("oversize envelope")));
+    QVERIFY(!client.Call("TabletToPlane", CommBusFlag::kWasm, std::string(9000, 'x')));
     QCOMPARE(FakeSimConnectApi::writtenClientData.size(), afterSmall);
 }
 

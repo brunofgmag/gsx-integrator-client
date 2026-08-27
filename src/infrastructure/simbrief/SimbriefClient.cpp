@@ -34,7 +34,7 @@ void SimbriefClient::Poll()
     {
         LOG_ERROR("Simbrief fetch failed, error code %d", lastError_);
 
-        SetStatus(FlightPlanStatus::Error);
+        Fail(FlightPlanFailure::Http, lastError_);
 
         return;
     }
@@ -44,7 +44,7 @@ void SimbriefClient::Poll()
     {
         LOG_ERROR("Simbrief OFP parse failed (%zu bytes)", responseBody_.size());
 
-        SetStatus(FlightPlanStatus::Error);
+        Fail(FlightPlanFailure::Parse, 0);
 
         return;
     }
@@ -118,7 +118,7 @@ bool SimbriefClient::FetchData()
     {
         LOG_ERROR("Failed to issue Simbrief HTTP request.");
 
-        SetStatus(FlightPlanStatus::Error);
+        Fail(FlightPlanFailure::NotSent, 0);
 
         return false;
     }
@@ -135,6 +135,20 @@ void SimbriefClient::SetStatus(const FlightPlanStatus status)
 {
     status_ = status;
     automationStatus_->flightPlanStatus = status_;
+
+    if (status_ != FlightPlanStatus::Error)
+    {
+        automationStatus_->flightPlanFailure = FlightPlanFailure::None;
+        automationStatus_->flightPlanHttpStatus = 0;
+    }
+}
+
+void SimbriefClient::Fail(const FlightPlanFailure failure, const int httpStatus)
+{
+    SetStatus(FlightPlanStatus::Error);
+
+    automationStatus_->flightPlanFailure = failure;
+    automationStatus_->flightPlanHttpStatus = httpStatus;
 }
 
 void SimbriefClient::OnHttpFinished()

@@ -138,6 +138,11 @@ bool UpdateViewModel::IsCommbusUpdateAvailable() const
     return commbusUpdateAvailable_;
 }
 
+bool UpdateViewModel::IsCommbusInstallMissing() const
+{
+    return commbusInstallMissing_;
+}
+
 QString UpdateViewModel::GetCommbusInstalledVersion() const
 {
     return commbusInstalledVersion_;
@@ -265,6 +270,7 @@ void UpdateViewModel::OnCommbusCheckFinished(const bool ok,
     commbusInstalledVersion_ = installedVersion;
     commbusLatestVersion_ = latestVersion;
     commbusReleaseUrl_ = releaseUrl;
+    commbusInstallMissing_ = installedVersion.isEmpty();
     commbusUpdateAvailable_ = !installedVersion.isEmpty()
         && IsVersionNewer(latestVersion, installedVersion);
 
