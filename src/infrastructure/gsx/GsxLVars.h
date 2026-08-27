@@ -57,6 +57,10 @@ namespace gsx::lvars
 
     inline constexpr auto kAircraftCargo1Toggle = "FSDT_GSX_AIRCRAFT_CARGO_1_TOGGLE";
     inline constexpr auto kAircraftCargo2Toggle = "FSDT_GSX_AIRCRAFT_CARGO_2_TOGGLE";
+    inline constexpr auto kAircraftExit1Toggle = "FSDT_GSX_AIRCRAFT_EXIT_1_TOGGLE";
+    inline constexpr auto kAircraftExit4Toggle = "FSDT_GSX_AIRCRAFT_EXIT_4_TOGGLE";
+    inline constexpr auto kAircraftService1Toggle = "FSDT_GSX_AIRCRAFT_SERVICE_1_TOGGLE";
+    inline constexpr auto kAircraftService2Toggle = "FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE";
 
     inline constexpr auto kJetway = "FSDT_GSX_JETWAY";
     inline constexpr auto kStairs = "FSDT_GSX_STAIRS";
@@ -75,6 +79,7 @@ namespace gsx::states
     inline constexpr double kLoaderUnloading = 7.0;
     inline constexpr double kLoaderInPosition = 8.0;
     inline constexpr double kLoaderLoading = 9.0;
+    inline constexpr double kLoaderFinishing = 10.0;
     inline constexpr double kLoaderRetracting = 11.0;
     inline constexpr double kLoaderRemoving = 4.0;
     inline constexpr double kStairsWaitingForDoor = 6.0;
@@ -87,7 +92,8 @@ namespace gsx::states
         return state == kLoaderWaitingForDoor
             || state == kLoaderUnloading
             || state == kLoaderInPosition
-            || state == kLoaderLoading;
+            || state == kLoaderLoading
+            || state == kLoaderFinishing;
     }
 
     [[nodiscard]] inline bool IsLoaderPresent(const double state)
