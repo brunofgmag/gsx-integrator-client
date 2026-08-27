@@ -171,6 +171,8 @@ void TurnaroundStateMachine::PublishStatus() const
 
     context_.status->loadedFuelKg = context_.data.loadedFuelKg;
     context_.status->fuelRequestStalled = context_.data.fuelRequestStalled;
+    context_.status->servicesStalled = context_.data.servicesStalled;
+    context_.status->servicesWaitSeconds = context_.data.servicesWaitSeconds;
     context_.status->fuelProgress = context_.data.fuelProgress;
     context_.status->boardingProgress = context_.data.boardingProgress;
     context_.status->deboardingProgress = context_.data.deboardingProgress;

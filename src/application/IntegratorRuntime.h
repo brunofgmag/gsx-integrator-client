@@ -54,6 +54,8 @@ public:
     bool FixPmdgOptions();
     [[nodiscard]] bool IsCargoDoorStuck() const;
     [[nodiscard]] bool IsFuelRequestStalled() const;
+    [[nodiscard]] bool AreServicesStalled() const;
+    [[nodiscard]] bool AreDoorsHoldingPushback() const;
     void SetAutomationEnabled(bool enabled);
     void RestartFlow();
 #ifndef NDEBUG

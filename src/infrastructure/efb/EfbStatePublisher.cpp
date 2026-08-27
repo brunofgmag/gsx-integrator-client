@@ -134,11 +134,16 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("pmdgOptionsAdvisoryText"), OperationsViewModel::GetPmdgOptionsAdvisoryText());
     state.insert(QLatin1String("cargoDoorAdvisoryText"), OperationsViewModel::GetCargoDoorAdvisoryText());
     state.insert(QLatin1String("fuelRequestAdvisoryText"), OperationsViewModel::GetFuelRequestAdvisoryText());
+    state.insert(QLatin1String("servicesAdvisoryText"), view_->GetServicesAdvisoryText());
+    state.insert(QLatin1String("servicesWaitSeconds"), view_->GetServicesWaitSeconds());
+    state.insert(QLatin1String("openDoorAdvisoryText"), OperationsViewModel::GetOpenDoorAdvisoryText());
     state.insert(QLatin1String("gsxProfileFixable"), view_->IsGsxProfileFixable());
     state.insert(QLatin1String("pmdgOptionsConflict"), view_->HasPmdgOptionsConflict());
     state.insert(QLatin1String("pmdgOptionsFixable"), view_->IsPmdgOptionsFixable());
     state.insert(QLatin1String("cargoDoorStuck"), view_->IsCargoDoorStuck());
     state.insert(QLatin1String("fuelRequestStalled"), view_->IsFuelRequestStalled());
+    state.insert(QLatin1String("servicesStalled"), view_->AreServicesStalled());
+    state.insert(QLatin1String("doorsHoldingPushback"), view_->AreDoorsHoldingPushback());
 
     state.insert(QLatin1String("canStartFlow"), view_->CanStartFlow());
     state.insert(QLatin1String("canRestartFlow"), view_->CanRestartFlow());
