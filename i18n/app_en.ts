@@ -748,6 +748,16 @@
         <translation>GSX took the refuelling request but the truck has not arrived. Check the GSX menu, or another service may be holding it.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="545"/>
+        <source>GSX is reporting the wrong state. The client moves on in %1 s.</source>
+        <translation>GSX is reporting the wrong state. The client moves on in %1 s.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="545"/>
+        <source>A door is open. Close it, or use the SmartSwitch to unlock the pushback.</source>
+        <translation>A door is open. Close it, or use the SmartSwitch to unlock the pushback.</translation>
+    </message>
+    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="379"/>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="455"/>
         <source>Fuel</source>
@@ -1585,8 +1595,8 @@
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="71"/>
-        <source>Set the parking brake.</source>
-        <translation>Set the parking brake.</translation>
+        <source>Remember to set the Parking Brake.</source>
+        <translation>Remember to set the Parking Brake.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="73"/>

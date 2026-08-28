@@ -142,6 +142,18 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            visible: root.integratorVm.servicesStalled
+            text: root.integratorVm.servicesAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
+            visible: root.integratorVm.doorsHoldingPushback
+            text: root.integratorVm.openDoorAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             text: root.integratorVm.phaseTip
         }
 

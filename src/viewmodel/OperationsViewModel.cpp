@@ -68,7 +68,7 @@ namespace
             return QCoreApplication::translate("Turnaround", "Shut down the engines.");
         case TurnaroundPhase::RemoveGroundEquipment:
         case TurnaroundPhase::PlaceArrivalGroundEquipment:
-            return QCoreApplication::translate("Turnaround", "Set the parking brake.");
+            return QCoreApplication::translate("Turnaround", "Remember to set the Parking Brake.");
         case TurnaroundPhase::RequestDeboarding:
             return QCoreApplication::translate("Turnaround", "Turn off the beacon lights and set the parking brake.");
         case TurnaroundPhase::WaitingNewFlight:
@@ -546,6 +546,18 @@ QString OperationsViewModel::GetFuelRequestAdvisoryText()
                                        "GSX took the refuelling request but the truck has not arrived. Check the GSX menu, or another service may be holding it.");
 }
 
+QString OperationsViewModel::GetServicesAdvisoryText() const
+{
+    return QCoreApplication::translate("OperationsScreen", "GSX is reporting the wrong state. The client moves on in %1 s.")
+        .arg(snapshot_.servicesWaitSeconds);
+}
+
+QString OperationsViewModel::GetOpenDoorAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "A door is open. Close it, or use the SmartSwitch to unlock the pushback.");
+}
+
 QString OperationsViewModel::GetCommandErrorLabel()
 {
     return QCoreApplication::translate("OperationsScreen", "Error");
@@ -574,6 +586,21 @@ bool OperationsViewModel::IsCargoDoorStuck() const
 bool OperationsViewModel::IsFuelRequestStalled() const
 {
     return snapshot_.fuelRequestStalled;
+}
+
+bool OperationsViewModel::AreServicesStalled() const
+{
+    return snapshot_.servicesStalled;
+}
+
+int OperationsViewModel::GetServicesWaitSeconds() const
+{
+    return snapshot_.servicesWaitSeconds;
+}
+
+bool OperationsViewModel::AreDoorsHoldingPushback() const
+{
+    return snapshot_.doorsHoldingPushback;
 }
 
 bool OperationsViewModel::IsPmdgOptionsFixable() const

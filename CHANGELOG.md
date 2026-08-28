@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.25.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.24.0...v1.25.0) (2026-08-27)
+
+
+* drive the iFly doors from GSX equipment and tell the pilot why the client waits ([#89](https://github.com/brunofgmag/gsx-integrator-client/issues/89)) ([9e8fde1](https://github.com/brunofgmag/gsx-integrator-client/commit/9e8fde1cbb2c6f09c07044967be34248a2fc4e28))
+
+
+### Features
+
+* **turnaround:** say why the client is waiting instead of looking frozen ([f03c6f4](https://github.com/brunofgmag/gsx-integrator-client/commit/f03c6f4fbe7bd59997787d1e93fe7a3b052e9756)) ([9e8fde1](https://github.com/brunofgmag/gsx-integrator-client/commit/9e8fde1cbb2c6f09c07044967be34248a2fc4e28))
+
+
+### Bug Fixes
+
+* **ifly:** drive every door from the ground equipment that serves it ([b2f380a](https://github.com/brunofgmag/gsx-integrator-client/commit/b2f380af9cc9c5f15596fd8d34937c0fe8dd2dd9)) ([9e8fde1](https://github.com/brunofgmag/gsx-integrator-client/commit/9e8fde1cbb2c6f09c07044967be34248a2fc4e28))
+
 ## [1.24.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.23.0...v1.24.0) (2026-08-26)
 
 

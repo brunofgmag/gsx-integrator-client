@@ -86,10 +86,22 @@ private slots:
     static void closesDoorWhenLoaderVanishesWithoutRemovingState();
     static void ignoresStaleLoaderStateFromPreviousTurnaround();
     static void doesNotCloseDoorsWhenNoLoaderEverCame();
-    static void ignoresCargoDoorsWithoutDeboarding();
+    static void ignoresCargoDoorsOutsideALoadingCycle();
     static void leavesClosedCargoDoorsAlone();
     static void givesUpPulsingAfterMaxAttempts();
-    static void stopsClosingWhenBoardingStarts();
+    static void restartsClosingWhenBoardingStarts();
+    static void closesBothCargoDoorsOnceBoardingCompletes();
+    static void doesNotPulseWhileBoardingIsStillRunning();
+    static void waitsWhileALoaderIsStillFinishingAtTheDoor();
+    static void reopensACargoDoorThatShutWithItsLoaderStillAtTheDoor();
+    static void doesNotReopenOnceTheLoaderHasLeft();
+    static void leavesTheDoorAloneWhileItIsAlreadyClosing();
+    static void closesThePassengerDoorsWhenBoardingEndsHoldsThemClosed();
+    static void leavesPassengerDoorsAloneUntilTheHoldIsAsked();
+    static void opensThePassengerDoorWhenTheJetwayDocks();
+    static void keepsThePassengerDoorClosedForDepartureDespiteTheJetway();
+    static void leavesThePassengerDoorAloneWhileTheJetwayIsStillOperating();
+    static void theTurnaroundStartDoesNotRefillTheReopenBudget();
 };
 
 void IFly737MaxTest::reportsCargoVariant()
@@ -582,27 +594,23 @@ void IFly737MaxTest::closesEachCargoDoorAsItsLoaderFinishes()
     QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo2Toggle), -1.0);
 
     aircraft.OnTick();
+    gateway.lvars[kFwdCargoAnim] = 0.0;
 
     QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo1Toggle), 0.0);
 
-    gateway.lvars[kFwdCargoAnim] = 0.0;
     gateway.lvars[gsx::lvars::kBaggageLoaderRearState] = gsx::states::kLoaderRemoving;
-
-    for (int tick = 0; tick < 6; ++tick)
-    {
-        aircraft.OnTick();
-    }
+    aircraft.OnTick();
 
     QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo2Toggle), 1.0);
 
     aircraft.OnTick();
+    gateway.lvars[kAftCargoAnim] = 0.0;
 
     QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo2Toggle), 0.0);
 
-    gateway.lvars[kAftCargoAnim] = 0.0;
     const int callsAfterPulse = gateway.setLVarCalls;
 
-    for (int tick = 0; tick < 10; ++tick)
+    for (int tick = 0; tick < 40; ++tick)
     {
         aircraft.OnTick();
     }
@@ -679,13 +687,15 @@ void IFly737MaxTest::doesNotCloseDoorsWhenNoLoaderEverCame()
     QCOMPARE(gateway.setLVarCalls, 0);
 }
 
-void IFly737MaxTest::ignoresCargoDoorsWithoutDeboarding()
+void IFly737MaxTest::ignoresCargoDoorsOutsideALoadingCycle()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
     IFly737Max aircraft(&gateway, &status);
 
     gateway.lvars[gsx::lvars::kDeboardingState] = State(GsxStateStatus::Callable);
+    gateway.lvars[gsx::lvars::kBoardingState] = State(GsxStateStatus::Callable);
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderLoading;
     gateway.lvars[kFwdCargoAnim] = 100.0;
     gateway.lvars[kAftCargoAnim] = 100.0;
 
@@ -703,14 +713,17 @@ void IFly737MaxTest::leavesClosedCargoDoorsAlone()
 
     gateway.lvars[gsx::lvars::kDeboardingState] = State(GsxStateStatus::Active);
     gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderUnloading;
-    gateway.lvars[kFwdCargoAnim] = 50.0;
+    gateway.lvars[kFwdCargoAnim] = 100.0;
     gateway.lvars[kAftCargoAnim] = 0.0;
     aircraft.OnTick();
 
     gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderRemoving;
+    gateway.lvars[kFwdCargoAnim] = 50.0;
 
-    aircraft.OnTick();
-    aircraft.OnTick();
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        aircraft.OnTick();
+    }
 
     QCOMPARE(gateway.setLVarCalls, 0);
 }
@@ -730,15 +743,15 @@ void IFly737MaxTest::givesUpPulsingAfterMaxAttempts()
 
     gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderRemoving;
 
-    for (int tick = 0; tick < 60; ++tick)
+    for (int tick = 0; tick < 100; ++tick)
     {
         aircraft.OnTick();
     }
 
-    QCOMPARE(gateway.setLVarCalls, 6);
+    QCOMPARE(gateway.setLVarCalls, 10);
 }
 
-void IFly737MaxTest::stopsClosingWhenBoardingStarts()
+void IFly737MaxTest::restartsClosingWhenBoardingStarts()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -755,6 +768,377 @@ void IFly737MaxTest::stopsClosingWhenBoardingStarts()
 
     aircraft.OnTick();
     aircraft.OnTick();
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+}
+
+void IFly737MaxTest::closesBothCargoDoorsOnceBoardingCompletes()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kBoardingState] = State(GsxStateStatus::Active);
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderLoading;
+    gateway.lvars[gsx::lvars::kBaggageLoaderRearState] = gsx::states::kLoaderLoading;
+    gateway.lvars[kFwdCargoAnim] = 100.0;
+    gateway.lvars[kAftCargoAnim] = 100.0;
+
+    for (int tick = 0; tick < 15; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.lvars[gsx::lvars::kBoardingState] = State(GsxStateStatus::Completed);
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderRemoving;
+    gateway.lvars[gsx::lvars::kBaggageLoaderRearState] = gsx::states::kLoaderRemoving;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo1Toggle), 1.0);
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo2Toggle), 1.0);
+
+    aircraft.OnTick();
+    gateway.lvars[kFwdCargoAnim] = 0.0;
+    gateway.lvars[kAftCargoAnim] = 0.0;
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo1Toggle), 0.0);
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo2Toggle), 0.0);
+
+    const int callsAfterPulse = gateway.setLVarCalls;
+
+    for (int tick = 0; tick < 40; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, callsAfterPulse);
+}
+
+void IFly737MaxTest::doesNotPulseWhileBoardingIsStillRunning()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kBoardingState] = State(GsxStateStatus::Active);
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderWaitingForDoor;
+    gateway.lvars[gsx::lvars::kBaggageLoaderRearState] = 1.0;
+    gateway.lvars[kFwdCargoAnim] = 100.0;
+    gateway.lvars[kAftCargoAnim] = 100.0;
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+}
+
+void IFly737MaxTest::reopensACargoDoorThatShutWithItsLoaderStillAtTheDoor()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kDeboardingState] = State(GsxStateStatus::Active);
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderUnloading;
+    gateway.lvars[gsx::lvars::kBaggageLoaderRearState] = gsx::states::kLoaderUnloading;
+    gateway.lvars[kFwdCargoAnim] = 100.0;
+    gateway.lvars[kAftCargoAnim] = 100.0;
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.lvars[kFwdCargoAnim] = 0.0;
+    gateway.lvars[kAftCargoAnim] = 0.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo1Toggle), 1.0);
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo2Toggle), 1.0);
+
+    aircraft.OnTick();
+    gateway.lvars[kFwdCargoAnim] = 100.0;
+    gateway.lvars[kAftCargoAnim] = 100.0;
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo1Toggle), 0.0);
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo2Toggle), 0.0);
+}
+
+void IFly737MaxTest::doesNotReopenOnceTheLoaderHasLeft()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kDeboardingState] = State(GsxStateStatus::Active);
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderUnloading;
+    gateway.lvars[gsx::lvars::kBaggageLoaderRearState] = 1.0;
+    gateway.lvars[kFwdCargoAnim] = 100.0;
+    gateway.lvars[kAftCargoAnim] = 0.0;
+    aircraft.OnTick();
+
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderRemoving;
+    gateway.lvars[kFwdCargoAnim] = 0.0;
+
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+}
+
+void IFly737MaxTest::waitsWhileALoaderIsStillFinishingAtTheDoor()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kBoardingState] = State(GsxStateStatus::Active);
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderFinishing;
+    gateway.lvars[gsx::lvars::kBaggageLoaderRearState] = 1.0;
+    gateway.lvars[kFwdCargoAnim] = 100.0;
+    gateway.lvars[kAftCargoAnim] = 0.0;
+    aircraft.OnTick();
+
+    gateway.lvars[gsx::lvars::kBoardingState] = State(GsxStateStatus::Completed);
+
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderRemoving;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo1Toggle), 1.0);
+}
+
+void IFly737MaxTest::closesThePassengerDoorsWhenBoardingEndsHoldsThemClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[kFwdEntryAnim] = 100.0;
+    gateway.lvars[kAftServiceAnim] = 100.0;
+
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    aircraft.HoldDoorsClosed(true);
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftExit1Toggle), 1.0);
+
+    aircraft.OnTick();
+    gateway.lvars[kFwdEntryAnim] = 0.0;
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftExit1Toggle), 0.0);
+
+    for (int tick = 0; tick < 16; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftService2Toggle), 1.0);
+}
+
+void IFly737MaxTest::opensThePassengerDoorWhenTheJetwayDocks()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[kFwdEntryAnim] = 0.0;
+    aircraft.CloseAllDoors();
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.lvars[gsx::lvars::kJetway] = 5.0;
+
+    for (int tick = 0; tick < 9; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftExit1Toggle), 1.0);
+
+    aircraft.OnTick();
+    gateway.lvars[kFwdEntryAnim] = 100.0;
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftExit1Toggle), 0.0);
+
+    const int callsAfterPulse = gateway.setLVarCalls;
+
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, callsAfterPulse);
+}
+
+void IFly737MaxTest::theTurnaroundStartDoesNotRefillTheReopenBudget()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kJetway] = 5.0;
+    gateway.lvars[kFwdEntryAnim] = 0.0;
+
+    for (int tick = 0; tick < 11; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 2);
+
+    aircraft.CloseAllDoors();
+
+    for (int tick = 0; tick < 80; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 10);
+}
+
+void IFly737MaxTest::leavesThePassengerDoorAloneWhileTheJetwayIsStillOperating()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kJetway] = static_cast<double>(GsxStateStatus::Requested);
+    gateway.lvars[kFwdEntryAnim] = 100.0;
+
+    aircraft.CloseAllDoors();
+
+    for (int tick = 0; tick < 40; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.lvars[gsx::lvars::kJetway] = static_cast<double>(GsxStateStatus::Callable);
+    aircraft.CloseAllDoors();
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftExit1Toggle), 1.0);
+}
+
+void IFly737MaxTest::keepsThePassengerDoorClosedForDepartureDespiteTheJetway()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kJetway] = 5.0;
+    gateway.lvars[kFwdEntryAnim] = 100.0;
+
+    aircraft.HoldDoorsClosed(true);
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftExit1Toggle), 1.0);
+
+    aircraft.OnTick();
+    gateway.lvars[kFwdEntryAnim] = 0.0;
+
+    const int callsAfterPulse = gateway.setLVarCalls;
+
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, callsAfterPulse);
+}
+
+void IFly737MaxTest::leavesPassengerDoorsAloneUntilTheHoldIsAsked()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[kFwdEntryAnim] = 100.0;
+    gateway.lvars[kAftServiceAnim] = 100.0;
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    aircraft.HoldDoorsClosed(false);
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        aircraft.OnTick();
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+}
+
+void IFly737MaxTest::leavesTheDoorAloneWhileItIsAlreadyClosing()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kBoardingState] = State(GsxStateStatus::Active);
+    gateway.lvars[kFwdCargoAnim] = 100.0;
+    gateway.lvars[kAftCargoAnim] = 0.0;
+    aircraft.OnTick();
+
+    gateway.lvars[gsx::lvars::kBoardingState] = State(GsxStateStatus::Completed);
+    gateway.lvars[kFwdCargoAnim] = 98.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.lvars[kFwdCargoAnim] = 95.0;
+    aircraft.OnTick();
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.lvars[kFwdCargoAnim] = 20.0;
+    aircraft.OnTick();
+    gateway.lvars[kFwdCargoAnim] = 0.0;
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        aircraft.OnTick();
+    }
 
     QCOMPARE(gateway.setLVarCalls, 0);
 }

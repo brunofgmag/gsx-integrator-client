@@ -62,10 +62,14 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(QString pmdgOptionsActionLabel READ GetPmdgOptionsActionLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(QString cargoDoorAdvisoryText READ GetCargoDoorAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString fuelRequestAdvisoryText READ GetFuelRequestAdvisoryText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString servicesAdvisoryText READ GetServicesAdvisoryText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString openDoorAdvisoryText READ GetOpenDoorAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString commandErrorLabel READ GetCommandErrorLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(bool pmdgOptionsConflict READ HasPmdgOptionsConflict NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoDoorStuck READ IsCargoDoorStuck NOTIFY SnapshotChanged)
     Q_PROPERTY(bool fuelRequestStalled READ IsFuelRequestStalled NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool servicesStalled READ AreServicesStalled NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool doorsHoldingPushback READ AreDoorsHoldingPushback NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoAircraft READ IsCargoAircraft NOTIFY SnapshotChanged)
     Q_PROPERTY(QString simbriefStatusText READ GetSimbriefStatusText NOTIFY SnapshotChanged)
     Q_PROPERTY(bool simbriefReady READ IsSimbriefReady NOTIFY SnapshotChanged)
@@ -150,11 +154,16 @@ public:
     [[nodiscard]] QString GetPmdgOptionsActionLabel() const;
     [[nodiscard]] static QString GetCargoDoorAdvisoryText();
     [[nodiscard]] static QString GetFuelRequestAdvisoryText();
+    [[nodiscard]] QString GetServicesAdvisoryText() const;
+    [[nodiscard]] static QString GetOpenDoorAdvisoryText();
     [[nodiscard]] static QString GetCommandErrorLabel();
     [[nodiscard]] bool IsGsxProfileFixable() const;
     [[nodiscard]] bool HasPmdgOptionsConflict() const;
     [[nodiscard]] bool IsCargoDoorStuck() const;
     [[nodiscard]] bool IsFuelRequestStalled() const;
+    [[nodiscard]] bool AreServicesStalled() const;
+    [[nodiscard]] int GetServicesWaitSeconds() const;
+    [[nodiscard]] bool AreDoorsHoldingPushback() const;
     [[nodiscard]] bool IsPmdgOptionsFixable() const;
     [[nodiscard]] double GetPlannedZfwKg() const;
     [[nodiscard]] int GetPlannedPax() const;

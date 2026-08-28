@@ -380,6 +380,18 @@ bool IntegratorRuntime::IsFuelRequestStalled() const
     return status_.fuelRequestStalled && GetPhase() == TurnaroundPhase::RequestFuel;
 }
 
+bool IntegratorRuntime::AreServicesStalled() const
+{
+    return status_.servicesStalled && GetPhase() == TurnaroundPhase::CallServices;
+}
+
+bool IntegratorRuntime::AreDoorsHoldingPushback() const
+{
+    return aircraft_
+        && GetPhase() == TurnaroundPhase::WaitingReadyToPush
+        && aircraft_->GetDoorStatus() == DoorStatus::AnyOpen;
+}
+
 void IntegratorRuntime::UpdateSlow()
 {
     if (!IsSessionActive() || !aircraft_ || !status_.enabled || !IsSessionReady() || IsSessionPaused())
@@ -535,6 +547,9 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.pmdgOptionsFixable = CanFixPmdgOptions();
     snapshot.cargoDoorStuck = IsCargoDoorStuck();
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
+    snapshot.servicesStalled = AreServicesStalled();
+    snapshot.servicesWaitSeconds = status_.servicesWaitSeconds;
+    snapshot.doorsHoldingPushback = AreDoorsHoldingPushback();
     snapshot.phase = GetPhase();
     snapshot.flightPlanStatus = status_.flightPlanStatus;
     snapshot.flightPlanFailure = status_.flightPlanFailure;

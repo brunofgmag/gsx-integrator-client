@@ -8,6 +8,8 @@
 namespace
 {
     constexpr int kRetryTicks = 60;
+    constexpr int kStalledTicks = 20;
+    constexpr int kStuckTicks = 60;
     constexpr int kGiveUpTicks = 240;
 
     void CallJetwayOrStairs(const TurnaroundContext& ctx, const bool jetwayAvailable)
@@ -38,12 +40,33 @@ std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(Tur
     ctx.data.jetwayOrStairsCompleted = ctx.gsxGateway->AreStairsInPlace() || ctx.gsxGateway->IsJetwayInPlace();
     if (ctx.data.jetwayOrStairsCompleted)
     {
+        ctx.data.servicesStalled = false;
+
         return TurnaroundTransition{TurnaroundPhase::WaitingFlightPlan};
     }
 
     if (ctx.gsxGateway->IsJetwayOrStairsOperating())
     {
+        ++ctx.data.servicesOperatingTicks;
+        ctx.data.servicesStalled = ctx.data.servicesOperatingTicks >= kStalledTicks;
+        ctx.data.servicesWaitSeconds = kStuckTicks - ctx.data.servicesOperatingTicks;
+
+        if (ctx.data.servicesOperatingTicks >= kStuckTicks)
+        {
+            ctx.data.servicesStalled = false;
+
+            return TurnaroundTransition{TurnaroundPhase::WaitingFlightPlan};
+        }
+
         return std::nullopt;
+    }
+
+    ctx.data.servicesOperatingTicks = 0;
+    ctx.data.servicesStalled = false;
+
+    if (ctx.data.stateTickCount >= kGiveUpTicks)
+    {
+        return TurnaroundTransition{TurnaroundPhase::WaitingFlightPlan};
     }
 
     const bool jetwayAvailable = ctx.gsxGateway->IsJetwayAvailable();
@@ -59,11 +82,6 @@ std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(Tur
 
     if (ctx.TickCondition(kRetryTicks))
     {
-        if (ctx.data.stateTickCount >= kGiveUpTicks)
-        {
-            return TurnaroundTransition{TurnaroundPhase::WaitingFlightPlan};
-        }
-
         CallJetwayOrStairs(ctx, jetwayAvailable);
     }
 

@@ -17,6 +17,10 @@ private slots:
     static void advancesImmediatelyWhenJetwayAlreadyInPlace();
     static void givesUpWhenJetwayNeverArrives();
     static void holdsRetriesWhileStairsOperating();
+    static void givesUpEvenWhileGsxClaimsTheJetwayIsOperating();
+    static void flagsTheWaitAsStalledLongBeforeGivingUp();
+    static void staysQuietThroughALongHealthyWait();
+    static void countsTheStallFromTheStuckReadingAndNotFromThePhase();
 };
 
 void CallServicesStateTest::advancesWhenStairsAreAvailable()
@@ -173,6 +177,105 @@ void CallServicesStateTest::givesUpWhenJetwayNeverArrives()
     QCOMPARE(f.ctx.data.stateTickCount, 240);
 }
 
+void CallServicesStateTest::countsTheStallFromTheStuckReadingAndNotFromThePhase()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.gsxService.jetwayAvailable = true;
+
+    for (int tick = 0; tick < 100; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        (void)state.Evaluate(f.ctx);
+    }
+
+    QVERIFY(!f.ctx.data.servicesStalled);
+
+    f.gsxService.jetwayOrStairsOperating = true;
+
+    for (int tick = 0; tick < 19; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        (void)state.Evaluate(f.ctx);
+        QVERIFY(!f.ctx.data.servicesStalled);
+    }
+
+    ++f.ctx.data.stateTickCount;
+    (void)state.Evaluate(f.ctx);
+
+    QVERIFY(f.ctx.data.servicesStalled);
+}
+
+void CallServicesStateTest::staysQuietThroughALongHealthyWait()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.gsxService.jetwayAvailable = true;
+
+    for (int tick = 0; tick < 200; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+        QVERIFY(!f.ctx.data.servicesStalled);
+    }
+
+    f.gsxService.jetwayInPlace = true;
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingFlightPlan);
+}
+
+void CallServicesStateTest::flagsTheWaitAsStalledLongBeforeGivingUp()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.gsxService.jetwayAvailable = true;
+    f.gsxService.jetwayOrStairsOperating = true;
+
+    for (int tick = 0; tick < 19; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        (void)state.Evaluate(f.ctx);
+    }
+
+    QVERIFY(!f.ctx.data.servicesStalled);
+
+    ++f.ctx.data.stateTickCount;
+    (void)state.Evaluate(f.ctx);
+
+    QVERIFY(f.ctx.data.servicesStalled);
+
+    f.gsxService.jetwayInPlace = true;
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QVERIFY(!f.ctx.data.servicesStalled);
+}
+
+void CallServicesStateTest::givesUpEvenWhileGsxClaimsTheJetwayIsOperating()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.gsxService.jetwayAvailable = true;
+    f.gsxService.jetwayOrStairsOperating = true;
+
+    std::optional<TurnaroundTransition> transition;
+    for (int tick = 0; tick < 300 && !transition; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        transition = state.Evaluate(f.ctx);
+    }
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingFlightPlan);
+    QCOMPARE(f.ctx.data.stateTickCount, 60);
+}
+
 void CallServicesStateTest::holdsRetriesWhileStairsOperating()
 {
     TurnaroundStateFixture f;
@@ -186,7 +289,7 @@ void CallServicesStateTest::holdsRetriesWhileStairsOperating()
     QCOMPARE(f.menuGateway.callStairsCalls, 1);
 
     f.gsxService.jetwayOrStairsOperating = true;
-    for (int tick = 0; tick < 120; ++tick)
+    for (int tick = 0; tick < 50; ++tick)
     {
         ++f.ctx.data.stateTickCount;
         QVERIFY(!state.Evaluate(f.ctx).has_value());
