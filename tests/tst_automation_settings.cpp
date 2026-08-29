@@ -15,6 +15,7 @@ private slots:
     static void resolvesGlobalsWhenProfileUsesGlobal();
     static void customProfileOverridesAutomationFields();
     static void customProfileKeepsPilotIdAndAutoFlags();
+    static void aircraftRequiringOwnAirstairsOverridesTheSetting();
 };
 
 void AutomationSettingsTest::defaultsUseDefaultFuelRate()
@@ -54,7 +55,7 @@ void AutomationSettingsTest::resolvesGlobalsWhenProfileMissing()
     settings.callGpu = true;
     settings.callGpuOnArrival = true;
 
-    const AutomationSettings resolved = ResolveAutomationSettings(settings, "unknown-id");
+    const AutomationSettings resolved = ResolveAutomationSettings(settings, "unknown-id", false);
 
     QCOMPARE(resolved.fuelRateKgs, 25.0);
     QVERIFY(resolved.callGpu);
@@ -70,7 +71,7 @@ void AutomationSettingsTest::resolvesGlobalsWhenProfileUsesGlobal()
     profile.skipReposition = false;
     settings.profiles.emplace("toliss-a340", profile);
 
-    const AutomationSettings resolved = ResolveAutomationSettings(settings, "toliss-a340");
+    const AutomationSettings resolved = ResolveAutomationSettings(settings, "toliss-a340", false);
 
     QVERIFY(resolved.skipReposition);
 }
@@ -93,7 +94,7 @@ void AutomationSettingsTest::customProfileOverridesAutomationFields()
     profile.callCleaning = true;
     settings.profiles.emplace("toliss-a340", profile);
 
-    const AutomationSettings resolved = ResolveAutomationSettings(settings, "toliss-a340");
+    const AutomationSettings resolved = ResolveAutomationSettings(settings, "toliss-a340", false);
 
     QCOMPARE(resolved.fuelRateKgs, 12.5);
     QVERIFY(resolved.skipReposition);
@@ -120,7 +121,7 @@ void AutomationSettingsTest::customProfileKeepsPilotIdAndAutoFlags()
     profile.useGlobal = false;
     settings.profiles.emplace("toliss-a340", profile);
 
-    const AutomationSettings resolved = ResolveAutomationSettings(settings, "toliss-a340");
+    const AutomationSettings resolved = ResolveAutomationSettings(settings, "toliss-a340", false);
 
     QCOMPARE(resolved.simbriefPilotId, 42);
     QVERIFY(!resolved.autoSelectGsxChoice);
@@ -130,6 +131,15 @@ void AutomationSettingsTest::customProfileKeepsPilotIdAndAutoFlags()
     QCOMPARE(resolved.crewDeboarding, CrewChoice::Pilots);
     QVERIFY(resolved.autoStartFlow);
     QVERIFY(!resolved.autoStartLoading);
+}
+
+void AutomationSettingsTest::aircraftRequiringOwnAirstairsOverridesTheSetting()
+{
+    AppSettings settings;
+    settings.useAircraftStairs = false;
+
+    QVERIFY(!ResolveAutomationSettings(settings, "justflight-rj85", false).useAircraftStairs);
+    QVERIFY(ResolveAutomationSettings(settings, "justflight-rj85", true).useAircraftStairs);
 }
 
 QTEST_APPLESS_MAIN(AutomationSettingsTest)

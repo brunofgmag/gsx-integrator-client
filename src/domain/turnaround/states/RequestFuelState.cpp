@@ -1,8 +1,11 @@
 #include "RequestFuelState.h"
 
+#include <format>
+
 #include "../TurnaroundContext.h"
 #include "../../model/AutomationSettings.h"
 #include "../../ports/Aircraft.h"
+#include "../../ports/DomainLogger.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
@@ -26,6 +29,7 @@ std::optional<TurnaroundTransition> RequestFuelState::Evaluate(TurnaroundContext
     const GsxStateStatus refuelingState = ctx.gsxGateway->GetStateStatus(GsxState::Refueling);
     if (loadingAllowed && refuelingState == GsxStateStatus::Callable && !data.refuelingRequested)
     {
+        WarnWhenPlanExceedsCapacity(ctx);
         ctx.gsxGateway->TakeOverFuelAndPayload();
         ctx.menuGateway->RequestRefueling();
         data.refuelingRequested = true;
@@ -49,6 +53,21 @@ std::optional<TurnaroundTransition> RequestFuelState::Evaluate(TurnaroundContext
     TrackStalledRequest(ctx, refuelingState == GsxStateStatus::Callable);
 
     return std::nullopt;
+}
+
+void RequestFuelState::WarnWhenPlanExceedsCapacity(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+
+    const double capacityKg = ctx.aircraft->GetFuelCapacityKg();
+    data.fuelPlanOverCapacity = capacityKg > 0.0 && data.plannedFuelKg > capacityKg + 1.0;
+
+    if (data.fuelPlanOverCapacity)
+    {
+        ctx.logger->LogInfo(std::format(
+            "The plan asks for {:.0f} kg of fuel but this airframe holds {:.0f} kg; the tanks stop at capacity",
+            data.plannedFuelKg, capacityKg));
+    }
 }
 
 void RequestFuelState::TrackStalledRequest(TurnaroundContext& ctx, const bool gsxStillOffersService)

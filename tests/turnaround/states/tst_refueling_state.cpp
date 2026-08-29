@@ -20,6 +20,8 @@ private slots:
     static void selfHoldsLoadedWhenCounterZeroes();
     static void forcesCompleteRefuelWhenStalledAbove95();
     static void doesNotForceCompleteRefuelBelow95();
+    static void skipsTheForceWhileTheTruckIsAlreadyLeaving();
+    static void skipsTheForceWhenGsxAlreadyCompleted();
     static void notifiesAircraftOnceWhenGsxStartsWatching();
     static void externallyRefueledAircraftMirrorsSimFuel();
     static void externallyRefueledCompletesOnGsxEvenOffTarget();
@@ -327,6 +329,51 @@ void RefuelingStateTest::forcesCompleteRefuelWhenStalledAbove95()
 
     QCOMPARE(f.ctx.data.fuelProgress > 95.0, true);
     QCOMPARE(f.menuGateway.completeRefuelCalls, 1);
+}
+
+void RefuelingStateTest::skipsTheForceWhileTheTruckIsAlreadyLeaving()
+{
+    TurnaroundStateFixture f;
+    RefuelingState state;
+
+    f.aircraft.refuelMethod = RefuelBy::Self;
+    f.ctx.data.plannedFuelKg = 10000.0;
+    f.ctx.data.initialFuelKg = 0.0;
+    f.ctx.data.refuelBaselined = true;
+    f.ctx.data.loadingStartNotified = true;
+    f.gsxService.refuelingState = GsxStateStatus::Active;
+    f.gsxService.hoseConnected = false;
+    f.gsxService.refuelCounterGallons = 3200.0;
+
+    for (int tick = 0; tick < 70; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.ctx.data.fuelProgress > 95.0, true);
+    QCOMPARE(f.menuGateway.completeRefuelCalls, 0);
+}
+
+void RefuelingStateTest::skipsTheForceWhenGsxAlreadyCompleted()
+{
+    TurnaroundStateFixture f;
+    RefuelingState state;
+
+    f.aircraft.refuelMethod = RefuelBy::Self;
+    f.ctx.data.plannedFuelKg = 10000.0;
+    f.ctx.data.initialFuelKg = 0.0;
+    f.ctx.data.refuelBaselined = true;
+    f.ctx.data.loadingStartNotified = true;
+    f.gsxService.refuelingState = GsxStateStatus::Completed;
+    f.gsxService.hoseConnected = true;
+    f.gsxService.refuelCounterGallons = 3200.0;
+
+    for (int tick = 0; tick < 70; ++tick)
+    {
+        state.Evaluate(f.ctx);
+    }
+
+    QCOMPARE(f.menuGateway.completeRefuelCalls, 0);
 }
 
 void RefuelingStateTest::doesNotForceCompleteRefuelBelow95()

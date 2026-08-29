@@ -47,6 +47,7 @@ struct IntegratorSnapshot
     bool pmdgOptionsFixable = false;
     bool cargoDoorStuck = false;
     bool fuelRequestStalled = false;
+    bool fuelPlanOverCapacity = false;
     bool servicesStalled = false;
     bool doorsHoldingPushback = false;
     int servicesWaitSeconds = 0;

@@ -5,14 +5,15 @@
 #include "AppSettings.h"
 
 inline AutomationSettings ResolveAutomationSettings(const AppSettings& settings,
-                                                    const std::string& aircraftProfileId)
+                                                    const std::string& aircraftProfileId,
+                                                    const bool aircraftRequiresOwnAirstairs)
 {
     AutomationSettings result;
     result.simbriefPilotId = settings.simbriefPilotId;
     result.fuelRateKgs = settings.fuelRateKgs;
     result.autoSelectGsxChoice = settings.autoSelectGsxChoice;
     result.autoDeice = settings.autoDeice;
-    result.useAircraftStairs = settings.useAircraftStairs;
+    result.useAircraftStairs = settings.useAircraftStairs || aircraftRequiresOwnAirstairs;
     result.crewBoarding = static_cast<CrewChoice>(settings.crewBoarding);
     result.crewDeboarding = static_cast<CrewChoice>(settings.crewDeboarding);
     result.autoStartFlow = settings.autoStartFlow;

@@ -9,6 +9,7 @@ class CallServicesStateTest final : public QObject
 
 private slots:
     static void advancesWhenStairsAreAvailable();
+    static void ignoresATransientStairsInPlaceReading();
     static void advancesWhenJetwayIsAvailable();
     static void prefersJetwayWhenBothAreAvailable();
     static void callStairsWhenJetwayFailsToComplete();
@@ -21,6 +22,7 @@ private slots:
     static void flagsTheWaitAsStalledLongBeforeGivingUp();
     static void staysQuietThroughALongHealthyWait();
     static void countsTheStallFromTheStuckReadingAndNotFromThePhase();
+    static void holdsTheClockWhileAServiceVehicleIsWorking();
 };
 
 void CallServicesStateTest::advancesWhenStairsAreAvailable()
@@ -34,6 +36,9 @@ void CallServicesStateTest::advancesWhenStairsAreAvailable()
 
     f.gsxService.stairsInPlace = true;
 
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
@@ -41,6 +46,26 @@ void CallServicesStateTest::advancesWhenStairsAreAvailable()
     QCOMPARE(f.menuGateway.callStairsCalls, 1);
     QVERIFY(f.ctx.data.jetwayOrStairsRequested);
     QVERIFY(f.ctx.data.jetwayOrStairsCompleted);
+}
+
+void CallServicesStateTest::ignoresATransientStairsInPlaceReading()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.gsxService.stairsAvailable = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    f.gsxService.stairsInPlace = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    f.gsxService.stairsInPlace = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.ctx.data.jetwayOrStairsCompleted);
+    QCOMPARE(f.ctx.data.stairsInPlaceTicks, 0);
 }
 
 void CallServicesStateTest::advancesWhenJetwayIsAvailable()
@@ -207,6 +232,37 @@ void CallServicesStateTest::countsTheStallFromTheStuckReadingAndNotFromThePhase(
     QVERIFY(f.ctx.data.servicesStalled);
 }
 
+void CallServicesStateTest::holdsTheClockWhileAServiceVehicleIsWorking()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.gsxService.stairsAvailable = true;
+    f.gsxService.jetwayOrStairsOperating = true;
+    f.gsxService.serviceVehicleActive = true;
+
+    for (int tick = 0; tick < 100; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+        QVERIFY(!f.ctx.data.servicesStalled);
+    }
+
+    f.gsxService.serviceVehicleActive = false;
+
+    for (int tick = 0; tick < 19; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        (void)state.Evaluate(f.ctx);
+        QVERIFY(!f.ctx.data.servicesStalled);
+    }
+
+    ++f.ctx.data.stateTickCount;
+    (void)state.Evaluate(f.ctx);
+
+    QVERIFY(f.ctx.data.servicesStalled);
+}
+
 void CallServicesStateTest::staysQuietThroughALongHealthyWait()
 {
     TurnaroundStateFixture f;
@@ -299,6 +355,9 @@ void CallServicesStateTest::holdsRetriesWhileStairsOperating()
 
     f.gsxService.jetwayOrStairsOperating = false;
     f.gsxService.stairsInPlace = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
 
     const auto transition = state.Evaluate(f.ctx);
 

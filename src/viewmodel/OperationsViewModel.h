@@ -62,12 +62,14 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(QString pmdgOptionsActionLabel READ GetPmdgOptionsActionLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(QString cargoDoorAdvisoryText READ GetCargoDoorAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString fuelRequestAdvisoryText READ GetFuelRequestAdvisoryText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString fuelPlanAdvisoryText READ GetFuelPlanAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString servicesAdvisoryText READ GetServicesAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString openDoorAdvisoryText READ GetOpenDoorAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString commandErrorLabel READ GetCommandErrorLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(bool pmdgOptionsConflict READ HasPmdgOptionsConflict NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoDoorStuck READ IsCargoDoorStuck NOTIFY SnapshotChanged)
     Q_PROPERTY(bool fuelRequestStalled READ IsFuelRequestStalled NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool fuelPlanOverCapacity READ IsFuelPlanOverCapacity NOTIFY SnapshotChanged)
     Q_PROPERTY(bool servicesStalled READ AreServicesStalled NOTIFY SnapshotChanged)
     Q_PROPERTY(bool doorsHoldingPushback READ AreDoorsHoldingPushback NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoAircraft READ IsCargoAircraft NOTIFY SnapshotChanged)
@@ -154,6 +156,7 @@ public:
     [[nodiscard]] QString GetPmdgOptionsActionLabel() const;
     [[nodiscard]] static QString GetCargoDoorAdvisoryText();
     [[nodiscard]] static QString GetFuelRequestAdvisoryText();
+    [[nodiscard]] static QString GetFuelPlanAdvisoryText();
     [[nodiscard]] QString GetServicesAdvisoryText() const;
     [[nodiscard]] static QString GetOpenDoorAdvisoryText();
     [[nodiscard]] static QString GetCommandErrorLabel();
@@ -161,6 +164,7 @@ public:
     [[nodiscard]] bool HasPmdgOptionsConflict() const;
     [[nodiscard]] bool IsCargoDoorStuck() const;
     [[nodiscard]] bool IsFuelRequestStalled() const;
+    [[nodiscard]] bool IsFuelPlanOverCapacity() const;
     [[nodiscard]] bool AreServicesStalled() const;
     [[nodiscard]] int GetServicesWaitSeconds() const;
     [[nodiscard]] bool AreDoorsHoldingPushback() const;

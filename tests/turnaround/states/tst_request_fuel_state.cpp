@@ -21,6 +21,9 @@ private slots:
     static void doesNotNotifyAircraftWhileRequesting();
     static void flagsTheRequestGsxTookAndNeverServed();
     static void keepsQuietWhileGsxStillOffersTheService();
+    static void flagsAPlanThatExceedsTheAirframeCapacity();
+    static void staysQuietWhenThePlanFitsTheTanks();
+    static void staysQuietWhenTheAircraftDoesNotKnowItsCapacity();
 };
 
 void RequestFuelStateTest::doesNotRequestFuelWhenServiceIsUnavailable()
@@ -250,6 +253,48 @@ void RequestFuelStateTest::keepsQuietWhileGsxStillOffersTheService()
     }
 
     QVERIFY(!f.ctx.data.fuelRequestStalled);
+}
+
+void RequestFuelStateTest::flagsAPlanThatExceedsTheAirframeCapacity()
+{
+    TurnaroundStateFixture f;
+    RequestFuelState state;
+
+    f.gsxService.refuelingState = GsxStateStatus::Callable;
+    f.ctx.data.plannedFuelKg = 10360.0;
+    f.aircraft.fuelCapacityKg = 9418.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QVERIFY(f.ctx.data.fuelPlanOverCapacity);
+}
+
+void RequestFuelStateTest::staysQuietWhenThePlanFitsTheTanks()
+{
+    TurnaroundStateFixture f;
+    RequestFuelState state;
+
+    f.gsxService.refuelingState = GsxStateStatus::Callable;
+    f.ctx.data.plannedFuelKg = 5776.0;
+    f.aircraft.fuelCapacityKg = 9418.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QVERIFY(!f.ctx.data.fuelPlanOverCapacity);
+}
+
+void RequestFuelStateTest::staysQuietWhenTheAircraftDoesNotKnowItsCapacity()
+{
+    TurnaroundStateFixture f;
+    RequestFuelState state;
+
+    f.gsxService.refuelingState = GsxStateStatus::Callable;
+    f.ctx.data.plannedFuelKg = 10360.0;
+    f.aircraft.fuelCapacityKg = 0.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QVERIFY(!f.ctx.data.fuelPlanOverCapacity);
 }
 
 QTEST_APPLESS_MAIN(RequestFuelStateTest)

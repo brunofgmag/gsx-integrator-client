@@ -184,7 +184,8 @@ void RuntimeIntegratorService::ApplySettings(const AppSettings& settings)
 void RuntimeIntegratorService::PushEffectiveSettings()
 {
     appliedProfileId_ = runtime_->GetAircraftProfileId();
-    runtime_->ApplySettings(ResolveAutomationSettings(appSettings_, appliedProfileId_));
+    runtime_->ApplySettings(ResolveAutomationSettings(appSettings_, appliedProfileId_,
+                                                      runtime_->AircraftRequiresOwnAirstairs()));
 }
 
 void RuntimeIntegratorService::OnRuntimeUpdated()

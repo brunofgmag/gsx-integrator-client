@@ -47,6 +47,12 @@ std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& c
         data.loadedZfwKg,
         data.plannedZfwKg);
 
+    if (IsCargoPending(ctx))
+    {
+        data.boardingProgress = std::min(data.boardingProgress, 99.0);
+    }
+
+
     MaybeForceCompletion(ctx);
 
     return std::nullopt;

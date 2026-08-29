@@ -358,6 +358,7 @@ void IntegratorRuntime::Update()
     }
 
     probe_.Observe(*aircraft_, varGateway_, GetAircraftProfileId());
+    probe_.MaybeFireEvent(simConnect_);
 }
 
 bool IntegratorRuntime::IsLoadingCargoPhase() const
@@ -378,6 +379,12 @@ bool IntegratorRuntime::IsCargoDoorStuck() const
 bool IntegratorRuntime::IsFuelRequestStalled() const
 {
     return status_.fuelRequestStalled && GetPhase() == TurnaroundPhase::RequestFuel;
+}
+
+bool IntegratorRuntime::IsFuelPlanOverCapacity() const
+{
+    return status_.fuelPlanOverCapacity
+        && (GetPhase() == TurnaroundPhase::RequestFuel || GetPhase() == TurnaroundPhase::Refueling);
 }
 
 bool IntegratorRuntime::AreServicesStalled() const
@@ -547,6 +554,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.pmdgOptionsFixable = CanFixPmdgOptions();
     snapshot.cargoDoorStuck = IsCargoDoorStuck();
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
+    snapshot.fuelPlanOverCapacity = IsFuelPlanOverCapacity();
     snapshot.servicesStalled = AreServicesStalled();
     snapshot.servicesWaitSeconds = status_.servicesWaitSeconds;
     snapshot.doorsHoldingPushback = AreDoorsHoldingPushback();
@@ -673,6 +681,11 @@ QString IntegratorRuntime::GetAircraftName() const
 std::string IntegratorRuntime::GetAircraftProfileId() const
 {
     return aircraft_ && aircraftDescriptor_ ? aircraftDescriptor_->id : std::string();
+}
+
+bool IntegratorRuntime::AircraftRequiresOwnAirstairs() const
+{
+    return aircraft_ && aircraft_->RequiresOwnAirstairs();
 }
 
 bool IntegratorRuntime::IsAircraftRefuelByGsx() const

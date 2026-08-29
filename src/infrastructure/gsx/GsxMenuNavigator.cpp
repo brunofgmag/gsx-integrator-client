@@ -32,6 +32,7 @@ namespace
     constexpr auto kDeboardCrewQuestion = "deboard crew";
     constexpr auto kDeIceQuestion = "de-icing";
     constexpr auto kAirstairsQuestion = "own airstairs";
+    constexpr auto kJetwayAnswerText = "use jetway";
 
     const char* CrewChoiceEntry(const CrewChoice choice)
     {
@@ -130,7 +131,7 @@ void GsxMenuNavigator::RequestRefueling()
 
 void GsxMenuNavigator::ToggleGpu()
 {
-    TriggerService(gsx::services::Id(GroundService::Gpu));
+    TriggerService(gsx::services::Id(GroundService::Gpu), true);
 }
 
 void GsxMenuNavigator::RequestCatering()
@@ -435,6 +436,11 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
     if (Contains(menu.title, kAirstairsQuestion))
     {
         const bool ownStairs = settings_ != nullptr && settings_->useAircraftStairs;
+        if (ownStairs && PickByContains(kJetwayAnswerText))
+        {
+            return true;
+        }
+
         if (PickByContains(ownStairs ? "Yes" : "No"))
         {
             return true;
@@ -574,7 +580,7 @@ bool GsxMenuNavigator::HandleIntentPrompts()
     return false;
 }
 
-void GsxMenuNavigator::TriggerService(const char* serviceId)
+void GsxMenuNavigator::TriggerService(const char* serviceId, const bool toggles)
 {
     OpenIntent(Intent::Service);
     SyncGsxToolbar();
@@ -582,17 +588,20 @@ void GsxMenuNavigator::TriggerService(const char* serviceId)
     ArmRequest("service.trigger",
                QJsonObject{{"service", QString::fromLatin1(serviceId)}},
                serviceId,
-               serviceId);
+               serviceId,
+               toggles);
 }
 
-void GsxMenuNavigator::ArmRequest(QString verb, QJsonObject args, std::string label, std::string confirmId)
+void GsxMenuNavigator::ArmRequest(QString verb, QJsonObject args, std::string label, std::string confirmId,
+                                  const bool toggles)
 {
     const auto same = std::ranges::find_if(pending_, [&](const PendingRequest& request)
     {
         return request.verb == verb && request.label == label;
     });
 
-    PendingRequest request{std::move(verb), std::move(args), std::move(label), std::move(confirmId)};
+    PendingRequest request{std::move(verb), std::move(args), std::move(label), std::move(confirmId),
+                           0, 0, toggles};
 
     if (same != pending_.end())
     {
@@ -612,6 +621,14 @@ void GsxMenuNavigator::PumpRequests()
     {
         if (WasTaken(*it))
         {
+            it = pending_.erase(it);
+
+            continue;
+        }
+
+        if (IsAlreadyUnderway(*it))
+        {
+            logger_->LogInfo(std::format("RemoteAPI '{}' already underway; not requesting", it->label));
             it = pending_.erase(it);
 
             continue;
@@ -673,6 +690,23 @@ void GsxMenuNavigator::SendRequest(PendingRequest& request)
     logger_->LogInfo(std::format("RemoteAPI {} '{}'{}", request.verb.toStdString(), request.label, note));
 
     (void)client_->SendCommand(request.verb, request.args);
+}
+
+bool GsxMenuNavigator::IsAlreadyUnderway(const PendingRequest& request) const
+{
+    if (request.toggles || request.attempts > 0 || request.confirmId.empty())
+    {
+        return false;
+    }
+
+    const GsxRemoteService* service = FindService(*state_, request.confirmId);
+    if (service == nullptr)
+    {
+        return false;
+    }
+
+    return service->stateRaw == static_cast<int>(GsxStateStatus::Requested)
+        || service->stateRaw == static_cast<int>(GsxStateStatus::Active);
 }
 
 bool GsxMenuNavigator::WasTaken(const PendingRequest& request) const

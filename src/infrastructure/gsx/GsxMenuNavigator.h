@@ -78,15 +78,18 @@ private:
         std::string confirmId;
         long long lastSentMs = 0;
         int attempts = 0;
+        bool toggles = false;
     };
 
-    void TriggerService(const char* serviceId);
+    void TriggerService(const char* serviceId, bool toggles = false);
     void SyncGsxToolbar() const;
     [[nodiscard]] GsxPanelMode PanelMode() const;
     void ClosePanelAfterPushback();
     void RearmPanelLatches();
     [[nodiscard]] bool IsWaitingForThePanel();
-    void ArmRequest(QString verb, QJsonObject args, std::string label, std::string confirmId);
+    void ArmRequest(QString verb, QJsonObject args, std::string label, std::string confirmId,
+                    bool toggles = false);
+    [[nodiscard]] bool IsAlreadyUnderway(const PendingRequest& request) const;
     void PumpRequests();
     void SendRequest(PendingRequest& request);
     [[nodiscard]] bool WasTaken(const PendingRequest& request) const;

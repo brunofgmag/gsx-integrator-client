@@ -64,7 +64,7 @@ std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& 
 
     data.fuelProgress = turnaround::ProgressPercent(data.initialFuelKg, data.loadedFuelKg, data.plannedFuelKg);
 
-    MaybeForceCompletion(ctx);
+    MaybeForceCompletion(ctx, refuelingState);
 
     if (!IsWeightDone(ctx, refuelingState) || ctx.gsxGateway->IsFuelHoseConnected())
     {
@@ -135,10 +135,15 @@ void RefuelingState::AccumulateFuel(TurnaroundContext& ctx)
     }
 }
 
-void RefuelingState::MaybeForceCompletion(TurnaroundContext& ctx)
+void RefuelingState::MaybeForceCompletion(TurnaroundContext& ctx, const GsxStateStatus refuelingState)
 {
     auto& data = ctx.data;
     if (data.fuelProgress <= 95.0 || data.refuelCompletionForced)
+    {
+        return;
+    }
+
+    if (IsGsxRefuelDone(ctx, refuelingState) || !ctx.gsxGateway->IsFuelHoseConnected())
     {
         return;
     }

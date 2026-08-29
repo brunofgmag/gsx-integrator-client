@@ -62,9 +62,11 @@ ApplicationWindow {
         window.maximumHeight = h
     }
 
+    readonly property bool animatedHeight: window.settingsVm.activeRenderer !== "software"
+
     function applyLockedHeight() {
         const h = window.lockedHeight
-        if (window.heightReady) {
+        if (window.heightReady && window.animatedHeight) {
             window.minimumHeight = Math.min(window.height, h)
             window.maximumHeight = Math.max(window.height, h)
             window.height = h
@@ -75,7 +77,7 @@ ApplicationWindow {
     }
 
     Behavior on height {
-        enabled: window.heightReady && window.settingsVm.activeRenderer !== "software"
+        enabled: window.heightReady && window.animatedHeight
         NumberAnimation {
             duration: 140
             easing.type: Easing.OutCubic

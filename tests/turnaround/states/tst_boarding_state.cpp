@@ -13,6 +13,7 @@ private slots:
     static void boardPassengersProgressively();
     static void holdsDoorsClosedOnceBoardingFinishes();
     static void doesNotHoldDoorsWhileCargoStillPending();
+    static void barHoldsBelowOneHundredWhileCargoStillPending();
     static void boardCargoProgressively();
     static void snapsToPlannedWhenGsxCountersFallShort();
     static void rebaselinesInitialZfwWhenCapturedBeforeSimData();
@@ -132,6 +133,30 @@ void BoardingStateTest::doesNotHoldDoorsWhileCargoStillPending()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QVERIFY(!f.aircraft.doorsHeldClosed);
     QCOMPARE(f.aircraft.holdDoorsClosedCalls, 0);
+}
+
+void BoardingStateTest::barHoldsBelowOneHundredWhileCargoStillPending()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    f.aircraft.boardMethod = BoardBy::Self;
+    f.aircraft.emptyZfwKg = 100000.0;
+    f.ctx.data.initialZfwKg = 100000.0;
+    f.ctx.data.plannedZfwKg = 200000.0;
+    f.ctx.data.plannedPassengers = 100;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardedPassengers = 100;
+    f.gsxService.cargoPercent = 100.0;
+    f.gsxService.loadingCargo = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(f.ctx.data.boardingProgress <= 99.0);
+
+    f.gsxService.loadingCargo = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.boardingProgress, 100.0);
 }
 
 void BoardingStateTest::boardCargoProgressively()
