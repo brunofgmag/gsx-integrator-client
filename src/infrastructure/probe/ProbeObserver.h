@@ -6,12 +6,14 @@
 #include <QtCore/QString>
 
 class Aircraft;
+class SimConnectSession;
 class VariableGateway;
 
 class ProbeObserver
 {
 public:
     void Observe(const Aircraft& aircraft, VariableGateway& variables, const std::string& profileId);
+    void MaybeFireEvent(SimConnectSession& session);
 
 private:
     struct Track
@@ -28,6 +30,7 @@ private:
     std::unordered_map<std::string, Track> tracks_;
     long long lastObservedMs_ = 0;
     bool setLVarSent_ = false;
+    bool fireEventSent_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PROBEOBSERVER_H

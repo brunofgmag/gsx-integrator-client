@@ -142,6 +142,12 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            visible: root.integratorVm.fuelPlanOverCapacity
+            text: root.integratorVm.fuelPlanAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             visible: root.integratorVm.servicesStalled
             text: root.integratorVm.servicesAdvisoryText
         }

@@ -121,6 +121,11 @@ namespace gsx::states
     {
         return state == kStairsWaitingForDoor || state == kStairsFinalPosition;
     }
+
+    [[nodiscard]] inline bool AreStairsDocked(const double state)
+    {
+        return state == kStairsFinalPosition;
+    }
 }
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_GSXLVARS_H

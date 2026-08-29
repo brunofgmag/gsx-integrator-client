@@ -313,6 +313,19 @@ gsxi_add_qt_test(gsxi-gsx-aircraft-profile-tests gsx-aircraft-profile
         src/infrastructure/gsx/GsxAircraftProfile.cpp
         src/infrastructure/gsx/GsxAircraftProfile.h)
 
+gsxi_add_qt_test(gsxi-avro-rj-tests avro-rj
+        tests/TestDoubles.h
+        tests/tst_avro_rj.cpp
+        src/infrastructure/aircraft/AircraftIdentity.h
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/AvroRj.cpp
+        src/infrastructure/aircraft/AvroRj.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h)
+
 gsxi_add_qt_test(gsxi-toliss-a340-tests toliss-a340
         tests/TestDoubles.h
         tests/tst_toliss_a340.cpp
@@ -576,6 +589,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/AvroRj.cpp
+        src/infrastructure/aircraft/AvroRj.h
         src/infrastructure/aircraft/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
@@ -701,6 +716,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/AircraftFactory.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/AvroRj.cpp
+        src/infrastructure/aircraft/AvroRj.h
         src/infrastructure/aircraft/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h

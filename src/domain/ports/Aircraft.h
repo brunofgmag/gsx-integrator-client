@@ -31,6 +31,7 @@ public:
     [[nodiscard]] virtual std::optional<WeightUnit> GetNativeWeightUnit() const { return std::nullopt; }
 
     [[nodiscard]] virtual double GetCurrentFuelKg() const = 0;
+    [[nodiscard]] virtual double GetFuelCapacityKg() const { return 0.0; }
     virtual void SetCurrentFuelKg(double) {}
     [[nodiscard]] virtual double GetCurrentZfwKg() const = 0;
     virtual void SetCurrentZfwKg(double) {}
@@ -47,6 +48,7 @@ public:
     [[nodiscard]] virtual bool SupportsChocksControl() const { return false; }
     virtual bool SetChocks(bool) { return false; }
     [[nodiscard]] virtual bool SupportsGroundPowerControl() const { return false; }
+    [[nodiscard]] virtual bool RequiresOwnAirstairs() const { return false; }
     virtual void SetGroundPower(bool) {}
     virtual void CloseAllDoors() {}
     virtual void HoldDoorsClosed(bool) {}

@@ -34,6 +34,8 @@ private slots:
     static void cargoLoadingReadsLVars();
     static void jetwayAndStairsAvailability();
     static void jetwayAndStairsUnavailableUntilLVarsReceived();
+    static void jetwayAndStairsUnavailableWhileGsxStillEvaluatesTheParking();
+    static void serviceVehicleActiveFollowsTheStairsVehicles();
     static void goodEngineStartAssumedEnabledUntilLVarReceived();
     static void aircraftOnGroundFollowsSimVar();
     static void boardedPassengersAccumulatesAcrossResets();
@@ -315,6 +317,39 @@ void GsxInterfaceTest::jetwayAndStairsUnavailableUntilLVarsReceived()
 
     QVERIFY(gsx.IsJetwayAvailable());
     QVERIFY(gsx.AreStairsAvailable());
+}
+
+void GsxInterfaceTest::jetwayAndStairsUnavailableWhileGsxStillEvaluatesTheParking()
+{
+    FakeVariableGateway gateway;
+    const GsxStateService gsx(&gateway);
+
+    gateway.lvars[kJetway] = 0.0;
+    gateway.lvars[kStairs] = 0.0;
+
+    QVERIFY(!gsx.IsJetwayAvailable());
+    QVERIFY(!gsx.AreStairsAvailable());
+}
+
+void GsxInterfaceTest::serviceVehicleActiveFollowsTheStairsVehicles()
+{
+    FakeVariableGateway gateway;
+    const GsxStateService gsx(&gateway);
+
+    QVERIFY(!gsx.IsServiceVehicleActive());
+
+    gateway.lvars[kPassengerStairsRearState] = 1.0;
+
+    QVERIFY(!gsx.IsServiceVehicleActive());
+
+    gateway.lvars[kPassengerStairsRearState] = gsx::states::kVehicleApproaching;
+
+    QVERIFY(gsx.IsServiceVehicleActive());
+
+    gateway.lvars[kPassengerStairsRearState] = 0.0;
+    gateway.lvars[kPassengerStairsMiddleState] = gsx::states::kVehicleDispatched;
+
+    QVERIFY(gsx.IsServiceVehicleActive());
 }
 
 void GsxInterfaceTest::goodEngineStartAssumedEnabledUntilLVarReceived()

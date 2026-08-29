@@ -37,6 +37,7 @@ struct TurnaroundData
     bool refuelingRequested = false;
     int fuelRequestStallTicks = 0;
     bool fuelRequestStalled = false;
+    bool fuelPlanOverCapacity = false;
     bool servicesStalled = false;
     int servicesWaitSeconds = 0;
     int servicesOperatingTicks = 0;
@@ -45,6 +46,7 @@ struct TurnaroundData
     bool pushbackRequested = false;
     bool jetwayOrStairsRequested = false;
     bool jetwayOrStairsCompleted = false;
+    int stairsInPlaceTicks = 0;
     bool gpuRequested = false;
     bool chocksPlaced = false;
     bool chocksRemoved = false;

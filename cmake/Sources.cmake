@@ -95,6 +95,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/AvroRj.cpp
+        src/infrastructure/aircraft/AvroRj.h
         src/infrastructure/aircraft/FenixA32x.cpp
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp
