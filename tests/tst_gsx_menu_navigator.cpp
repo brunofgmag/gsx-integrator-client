@@ -156,6 +156,7 @@ private slots:
     static void boardCrewMenuIgnoresTheDeboardChoice();
     static void airstairsMenuPicksAirportStairsByDefault();
     static void airstairsMenuPicksAirplaneStairsWhenEnabled();
+    static void airstairsMenuYieldsToTheJetwayEvenWithOwnStairsEnabled();
     static void deIceMenuPicksYesWhenEnabled();
     static void deIceMenuDeclinedByDefault();
     static void picksSimbriefBlockFuelOnRefuelingLevelMenu();
@@ -186,6 +187,8 @@ private slots:
     static void stuckMenuIsClosedAfterResyncsAreExhausted();
     static void thePushbackDirectionMenuIsNeverDiscarded();
     static void resetAllowsClosingTheSameStuckMenuAgain();
+    static void aRequestForAServiceAlreadyUnderwayIsDroppedBeforeSending();
+    static void theGpuToggleStillFiresWhileTheServiceRuns();
 };
 
 void GsxMenuNavigatorTest::serviceTriggersUseCanonicalVerbs()
@@ -1138,6 +1141,26 @@ void GsxMenuNavigatorTest::airstairsMenuPicksAirplaneStairsWhenEnabled()
     QCOMPARE(pick->args.value("index").toInt(), 0);
 }
 
+void GsxMenuNavigatorTest::airstairsMenuYieldsToTheJetwayEvenWithOwnStairsEnabled()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.useAircraftStairs = true;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    ShowMenu(state, "Use airplane's own airstairs?",
+             {"Yes - Use airplane stairs (no jetway)", "No - Use jetway"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+
+    QCOMPARE(pick->args.value("index").toInt(), 1);
+}
+
 void GsxMenuNavigatorTest::deIceMenuPicksYesWhenEnabled()
 {
     FakeRemoteClient client;
@@ -2035,6 +2058,47 @@ void GsxMenuNavigatorTest::resetAllowsClosingTheSameStuckMenuAgain()
     driveToStuckMenu();
 
     QCOMPARE(client.Count("menu.close"), 2);
+}
+
+void GsxMenuNavigatorTest::aRequestForAServiceAlreadyUnderwayIsDroppedBeforeSending()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 0;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    MarkServiceTaken(state, "OperateStairs");
+
+    nav.CallStairs();
+    fakeNow += 1500;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 0);
+    QVERIFY(Logged(logger, "already underway"));
+}
+
+void GsxMenuNavigatorTest::theGpuToggleStillFiresWhileTheServiceRuns()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 0;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    MarkServiceTaken(state, "GPU");
+
+    nav.ToggleGpu();
+    fakeNow += 1500;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
 }
 
 QTEST_GUILESS_MAIN(GsxMenuNavigatorTest)

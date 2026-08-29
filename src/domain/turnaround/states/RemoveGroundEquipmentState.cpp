@@ -3,6 +3,7 @@
 #include "../TurnaroundContext.h"
 #include "../../model/AutomationSettings.h"
 #include "../../ports/Aircraft.h"
+#include "../../ports/DomainLogger.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
@@ -59,6 +60,16 @@ std::optional<TurnaroundTransition> RemoveGroundEquipmentState::Evaluate(Turnaro
 
     if (!ctx.data.gpuDismissRequested)
     {
+        const bool gpuIsOursToDismiss =
+            gpuBusy || ctx.data.gpuRequested || ctx.data.arrivalGpuRequested;
+        if (!gpuIsOursToDismiss)
+        {
+            ctx.logger->LogInfo(
+                "GPU reads connected but GSX offers it as callable and this turnaround never asked; leaving it alone");
+
+            return TurnaroundTransition{TurnaroundPhase::RequestPushback};
+        }
+
         ctx.menuGateway->ToggleGpu();
         ctx.data.gpuDismissRequested = true;
 

@@ -32,6 +32,12 @@ private slots:
     static void detectsTolissA340FromPresetTitle();
     static void detectsTolissA340ByAtcModel();
     static void detectsTolissA340CargoPreset();
+    static void detectsAvroRj70FromPresetTitle();
+    static void detectsAvroRj85FromPresetTitle();
+    static void detectsAvroRj100FromPresetTitle();
+    static void detectsAvroRjFreighterAsCargoVariantOfTheRj100();
+    static void doesNotDetectAvroRjByBareIcao();
+    static void detectionReportsAvroRjClientRefuel();
     static void detectsFenixA319FromPresetTitle();
     static void detectsFenixA320FromPresetTitle();
     static void detectsFenixA321FromPresetTitle();
@@ -284,6 +290,91 @@ void AircraftDetectionTest::detectsTolissA340CargoPreset()
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(aircraft->IsCargoVariant());
+}
+
+void AircraftDetectionTest::detectsAvroRj70FromPresetTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "Just Flight RJ70 SAS";
+
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+
+    QVERIFY(aircraft != nullptr);
+    QVERIFY(!aircraft->IsCargoVariant());
+    QCOMPARE(std::string(descriptor->id), std::string("justflight-rj70"));
+}
+
+void AircraftDetectionTest::detectsAvroRj85FromPresetTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "Just Flight RJ85 Lufthansa";
+
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+
+    QVERIFY(aircraft != nullptr);
+    QVERIFY(!aircraft->IsCargoVariant());
+    QCOMPARE(std::string(descriptor->id), std::string("justflight-rj85"));
+}
+
+void AircraftDetectionTest::detectsAvroRj100FromPresetTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "Just Flight RJ100 British Airways";
+
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+
+    QVERIFY(aircraft != nullptr);
+    QVERIFY(!aircraft->IsCargoVariant());
+    QCOMPARE(std::string(descriptor->id), std::string("justflight-rj100"));
+}
+
+void AircraftDetectionTest::detectsAvroRjFreighterAsCargoVariantOfTheRj100()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "Just Flight RJ100 QT TNT";
+
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+
+    QVERIFY(aircraft != nullptr);
+    QVERIFY(aircraft->IsCargoVariant());
+    QCOMPARE(std::string(descriptor->id), std::string("justflight-rj100"));
+}
+
+void AircraftDetectionTest::doesNotDetectAvroRjByBareIcao()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "Generic Regional Jet";
+    gateway.atcModel = "RJ85";
+
+    QVERIFY(DetectAircraft(&gateway, &status) == nullptr);
+}
+
+void AircraftDetectionTest::detectionReportsAvroRjClientRefuel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "Just Flight RJ85 CityJet";
+
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(descriptor->refuelBy, RefuelBy::Client);
 }
 
 void AircraftDetectionTest::detectsFenixA319FromPresetTitle()

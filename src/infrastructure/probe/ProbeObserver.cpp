@@ -8,6 +8,7 @@
 #include <QtCore/QStringList>
 #include "ProbeLog.h"
 #include "ProbeWatchList.h"
+#include "../simconnect/SimConnectSession.h"
 #include "../simvars/SimVars.h"
 #include "../simvars/VariableGateway.h"
 #include "../../domain/ports/Aircraft.h"
@@ -404,4 +405,39 @@ void ProbeObserver::MaybeSetLVar(VariableGateway& variables)
     probe::Line(QStringLiteral("probe set-lvar %1 %2 -> %3")
                 .arg(QString::fromStdString(write->name), Number(current), Number(write->value)));
     variables.SetLVar(write->name, write->value);
+}
+
+void ProbeObserver::MaybeFireEvent(SimConnectSession& session)
+{
+    if (fireEventSent_ || !probe::IsOn())
+    {
+        return;
+    }
+
+    const QString spec = qEnvironmentVariable("GSXI_PROBE_EVENT");
+    if (spec.isEmpty())
+    {
+        return;
+    }
+
+    const qsizetype equals = spec.indexOf(QLatin1Char('='));
+    const QString name = (equals < 0 ? spec : spec.left(equals)).trimmed();
+    if (name.isEmpty())
+    {
+        fireEventSent_ = true;
+        probe::Line(QStringLiteral("probe fire-event malformed '%1', expected NAME[=PARAM]").arg(spec));
+
+        return;
+    }
+
+    if (!session.IsConnected())
+    {
+        return;
+    }
+
+    const DWORD parameter = equals < 0 ? 0 : spec.mid(equals + 1).trimmed().toUInt();
+    fireEventSent_ = true;
+    const bool sent = session.TransmitEvent(name.toUtf8().constData(), parameter);
+    probe::Line(QStringLiteral("probe fire-event %1 param=%2 sent=%3")
+                .arg(name).arg(parameter).arg(sent ? 1 : 0));
 }

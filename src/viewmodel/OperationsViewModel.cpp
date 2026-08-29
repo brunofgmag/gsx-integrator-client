@@ -546,9 +546,15 @@ QString OperationsViewModel::GetFuelRequestAdvisoryText()
                                        "GSX took the refuelling request but the truck has not arrived. Check the GSX menu, or another service may be holding it.");
 }
 
+QString OperationsViewModel::GetFuelPlanAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "The flight plan asks for more fuel than this airframe can hold. The tanks will be filled to capacity and no further.");
+}
+
 QString OperationsViewModel::GetServicesAdvisoryText() const
 {
-    return QCoreApplication::translate("OperationsScreen", "GSX is reporting the wrong state. The client moves on in %1 s.")
+    return QCoreApplication::translate("OperationsScreen", "GSX has not answered the request yet and nothing is moving. The client moves on in %1 s.")
         .arg(snapshot_.servicesWaitSeconds);
 }
 
@@ -586,6 +592,11 @@ bool OperationsViewModel::IsCargoDoorStuck() const
 bool OperationsViewModel::IsFuelRequestStalled() const
 {
     return snapshot_.fuelRequestStalled;
+}
+
+bool OperationsViewModel::IsFuelPlanOverCapacity() const
+{
+    return snapshot_.fuelPlanOverCapacity;
 }
 
 bool OperationsViewModel::AreServicesStalled() const

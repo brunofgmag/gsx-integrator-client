@@ -38,6 +38,7 @@ public:
     [[nodiscard]] bool AreStairsAvailable() const override;
     [[nodiscard]] bool IsJetwayAvailable() const override;
     [[nodiscard]] bool IsJetwayOrStairsOperating() const override;
+    [[nodiscard]] bool IsServiceVehicleActive() const override;
     [[nodiscard]] bool IsAircraftOnGround() const override;
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override;
     [[nodiscard]] GroundPowerStatus GetGpuStatus() const override;

@@ -8,6 +8,7 @@
 namespace
 {
     constexpr int kRetryTicks = 60;
+    constexpr int kStairsInPlaceHoldTicks = 3;
     constexpr int kStalledTicks = 20;
     constexpr int kStuckTicks = 60;
     constexpr int kGiveUpTicks = 240;
@@ -37,7 +38,10 @@ std::optional<TurnaroundTransition> CallServicesState::Evaluate(TurnaroundContex
 
 std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(TurnaroundContext& ctx)
 {
-    ctx.data.jetwayOrStairsCompleted = ctx.gsxGateway->AreStairsInPlace() || ctx.gsxGateway->IsJetwayInPlace();
+    ctx.data.stairsInPlaceTicks = ctx.gsxGateway->AreStairsInPlace() ? ctx.data.stairsInPlaceTicks + 1 : 0;
+
+    ctx.data.jetwayOrStairsCompleted = ctx.data.stairsInPlaceTicks >= kStairsInPlaceHoldTicks
+        || ctx.gsxGateway->IsJetwayInPlace();
     if (ctx.data.jetwayOrStairsCompleted)
     {
         ctx.data.servicesStalled = false;
@@ -47,6 +51,14 @@ std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(Tur
 
     if (ctx.gsxGateway->IsJetwayOrStairsOperating())
     {
+        if (ctx.gsxGateway->IsServiceVehicleActive())
+        {
+            ctx.data.servicesOperatingTicks = 0;
+            ctx.data.servicesStalled = false;
+
+            return std::nullopt;
+        }
+
         ++ctx.data.servicesOperatingTicks;
         ctx.data.servicesStalled = ctx.data.servicesOperatingTicks >= kStalledTicks;
         ctx.data.servicesWaitSeconds = kStuckTicks - ctx.data.servicesOperatingTicks;

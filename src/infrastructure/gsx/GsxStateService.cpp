@@ -242,18 +242,36 @@ bool GsxStateService::IsServiceInProgress(const GroundService service) const
 
 bool GsxStateService::AreStairsAvailable() const
 {
-    return varManager_->GetLVar(kStairs, 2.0) != 2.0;
+    const double state = varManager_->GetLVar(kStairs, 0.0);
+
+    return state != 0.0 && state != 2.0;
 }
 
 bool GsxStateService::IsJetwayAvailable() const
 {
-    return varManager_->GetLVar(kJetway, 2.0) != 2.0;
+    const double state = varManager_->GetLVar(kJetway, 0.0);
+
+    return state != 0.0 && state != 2.0;
 }
 
 bool GsxStateService::IsJetwayOrStairsOperating() const
 {
     return varManager_->GetLVar(kJetway) == static_cast<double>(GsxStateStatus::Requested)
         || varManager_->GetLVar(kStairs) == static_cast<double>(GsxStateStatus::Requested);
+}
+
+bool GsxStateService::IsServiceVehicleActive() const
+{
+    for (const char* vehicle : {kPassengerStairsFrontState, kPassengerStairsMiddleState,
+                                kPassengerStairsRearState})
+    {
+        if (varManager_->GetLVar(vehicle, 0.0) >= gsx::states::kVehicleDispatched)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool GsxStateService::IsAircraftOnGround() const

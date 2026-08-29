@@ -145,6 +145,8 @@ namespace
 
             f.gsxService.stairsAvailable = false;
             f.gsxService.stairsInPlace = true;
+            TickHolding(TurnaroundPhase::CallServices);
+            TickHolding(TurnaroundPhase::CallServices);
             TickTo(TurnaroundPhase::WaitingFlightPlan);
         }
 

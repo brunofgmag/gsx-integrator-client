@@ -14,6 +14,7 @@ public:
     [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
 
 private:
+    static void WarnWhenPlanExceedsCapacity(TurnaroundContext& ctx);
     static void TrackStalledRequest(TurnaroundContext& ctx, bool gsxStillOffersService);
 };
 

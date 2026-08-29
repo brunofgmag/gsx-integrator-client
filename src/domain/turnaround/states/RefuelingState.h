@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_REFUELSTATE_H
 
 #include "TurnaroundState.h"
+#include "../../ports/GsxGateway.h"
 
 class RefuelingState final : public TurnaroundState
 {
@@ -18,7 +19,7 @@ private:
     static void EnsureBaseline(TurnaroundContext& ctx);
     static void NotifyLoadingStarted(TurnaroundContext& ctx);
     static void AccumulateFuel(TurnaroundContext& ctx);
-    static void MaybeForceCompletion(TurnaroundContext& ctx);
+    static void MaybeForceCompletion(TurnaroundContext& ctx, GsxStateStatus refuelingState);
     static void SnapToPlanned(TurnaroundContext& ctx);
     static void RefuelProgressively(TurnaroundContext& ctx);
 };

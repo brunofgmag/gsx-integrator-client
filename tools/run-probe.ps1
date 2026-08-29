@@ -2,7 +2,8 @@ param(
     [int]$ToggleEvent = 0,
     [int]$ToggleDoor = -1,
     [string]$PressGroundConn = '',
-    [string]$SetLVar = ''
+    [string]$SetLVar = '',
+    [string]$FireEvent = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -45,6 +46,14 @@ if ($SetLVar) {
 }
 else {
     Remove-Item Env:\GSXI_PROBE_SET_LVAR -ErrorAction SilentlyContinue
+}
+
+if ($FireEvent) {
+    $env:GSXI_PROBE_EVENT = $FireEvent
+    Write-Host "Will fire the sim event '$FireEvent' once, as NAME or NAME=PARAM, as soon as the session connects"
+}
+else {
+    Remove-Item Env:\GSXI_PROBE_EVENT -ErrorAction SilentlyContinue
 }
 
 $folder = Join-Path $env:LOCALAPPDATA 'brunofgmag\gsx-integrator-client\probe'

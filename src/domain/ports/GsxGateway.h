@@ -61,6 +61,7 @@ public:
     [[nodiscard]] virtual bool AreStairsAvailable() const = 0;
     [[nodiscard]] virtual bool IsJetwayAvailable() const = 0;
     [[nodiscard]] virtual bool IsJetwayOrStairsOperating() const = 0;
+    [[nodiscard]] virtual bool IsServiceVehicleActive() const = 0;
     [[nodiscard]] virtual bool IsSimbriefLoaded() const = 0;
     [[nodiscard]] virtual std::string GetSimbriefRefusal() const = 0;
     [[nodiscard]] virtual bool IsAircraftOnGround() const = 0;

@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.26.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.25.0...v1.26.0) (2026-08-29)
+
+
+* add the JustFlight Avro RJ and warn when the plan overfills the tanks ([#92](https://github.com/brunofgmag/gsx-integrator-client/issues/92)) ([d31aad8](https://github.com/brunofgmag/gsx-integrator-client/commit/d31aad877b5ff57b3cfd76047bcb13e9299087af))
+
+
+### Features
+
+* add the JustFlight Avro RJ and warn when the plan overfills the tanks ([a741572](https://github.com/brunofgmag/gsx-integrator-client/commit/a741572ebff64e2508506113061f4846ba1d8e66)) ([d31aad8](https://github.com/brunofgmag/gsx-integrator-client/commit/d31aad877b5ff57b3cfd76047bcb13e9299087af))
+
 ## [1.25.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.24.0...v1.25.0) (2026-08-27)
 
 
