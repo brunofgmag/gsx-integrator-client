@@ -155,7 +155,7 @@ private:
     static constexpr long long kResyncDelayMs = 1500;
     static constexpr int kMaxResyncs = 3;
     static constexpr long long kMenuSettleMs = 1500;
-    static constexpr long long kTriggerRetryMs = 10000;
+    static constexpr long long kTriggerRetryMs = 20000;
     static constexpr int kMaxTriggerAttempts = 3;
     static constexpr long long kPanelOpenWaitMs = 8000;
 };

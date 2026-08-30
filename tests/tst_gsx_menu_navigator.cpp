@@ -181,6 +181,7 @@ private slots:
     static void pendingResyncKeepsMenuUnsettled();
     static void triggerWaitsForTheMenuToSettle();
     static void triggerRetriesWhileGsxStillOffersTheService();
+    static void triggerWaitsOutASlowConfirmationInsteadOfFiringAgain();
     static void triggerStopsRetryingOnceGsxTakesIt();
     static void rearmedTriggerKeepsItsAttemptCount();
     static void rearmedTriggerIsDroppedOnceGsxTakesIt();
@@ -1835,26 +1836,56 @@ void GsxMenuNavigatorTest::triggerRetriesWhileGsxStillOffersTheService()
 
     QCOMPARE(client.Count("service.trigger"), 1);
 
-    fakeNow = 14999;
+    fakeNow = 24999;
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("service.trigger"), 1);
 
-    fakeNow = 15000;
+    fakeNow = 25000;
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("service.trigger"), 2);
 
-    fakeNow = 25000;
+    fakeNow = 45000;
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("service.trigger"), 3);
 
-    fakeNow = 35000;
+    fakeNow = 65000;
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("service.trigger"), 3);
     QVERIFY(Logged(logger, "never taken by GSX"));
+}
+
+void GsxMenuNavigatorTest::triggerWaitsOutASlowConfirmationInsteadOfFiringAgain()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "OperateStairs");
+
+    nav.CallStairs();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    fakeNow = 15990;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    MarkServiceTaken(state, "OperateStairs");
+
+    fakeNow = 25000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
 }
 
 void GsxMenuNavigatorTest::triggerStopsRetryingOnceGsxTakesIt()
@@ -1905,7 +1936,7 @@ void GsxMenuNavigatorTest::rearmedTriggerKeepsItsAttemptCount()
 
     QCOMPARE(client.Count("service.trigger"), 1);
 
-    fakeNow = 15000;
+    fakeNow = 25000;
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("service.trigger"), 2);
@@ -1914,12 +1945,12 @@ void GsxMenuNavigatorTest::rearmedTriggerKeepsItsAttemptCount()
 
     QCOMPARE(client.Count("service.trigger"), 2);
 
-    fakeNow = 25000;
+    fakeNow = 45000;
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("service.trigger"), 3);
 
-    fakeNow = 35000;
+    fakeNow = 65000;
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("service.trigger"), 3);
