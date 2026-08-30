@@ -2,8 +2,11 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_IFLY737MAX_H
 
 #include <array>
+#include <vector>
 
 #include "../SmartSwitch.h"
+#include "rules/IFly737MaxDoorRule.h"
+#include "rules/IFly737MaxPlanImportRule.h"
 #include "../../ifly/IFlyPlanFile.h"
 #include "../../../domain/ports/Aircraft.h"
 
@@ -17,8 +20,9 @@ public:
 
     [[nodiscard]] bool IsCargoVariant() const override;
 
-    void OnTick() override;
-    void OnSlowTick() override;
+    [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
+    void DriveDoors();
+    void ImportPlan();
     void OnLoadingStarted() override {}
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -74,7 +78,6 @@ private:
 
     [[nodiscard]] bool IsBeaconOn() const;
 
-    void DriveDoors();
     void ArmCargoDoorCloser(CargoCycle cycle);
     void DisarmCargoDoorCloser();
     static void ResetDoorTracking(CargoDoorCloser& door);
@@ -103,6 +106,9 @@ private:
 
     SmartSwitch smartSwitch_;
     IFlyPlanImport planImport_;
+    IFly737MaxDoorRule doorRule_;
+    IFly737MaxPlanImportRule planImportRule_;
+    std::vector<AircraftRule*> rules_;
     double lastZfwKg_ = -1.0;
 
     CargoDoorCloser fwdCargoDoor_;

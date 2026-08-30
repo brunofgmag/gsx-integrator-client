@@ -139,7 +139,10 @@ TolissA340::TolissA340(VariableGateway* variableGateway, const AutomationStatus*
                    {
                        return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral;
                    },
-                   kSmartSwitchNeutral)
+                   kSmartSwitchNeutral),
+      doorRule_(*this),
+      uplinkRule_(*this),
+      rules_{&doorRule_, &uplinkRule_}
 {
     smartSwitch_.Subscribe();
 
@@ -156,17 +159,9 @@ void TolissA340::Observe()
     doors_.Observe();
 }
 
-void TolissA340::OnTick()
+const std::vector<AircraftRule*>& TolissA340::Rules() const
 {
-    Observe();
-    UpdateDoors();
-
-    if (!IsPowered())
-    {
-        return;
-    }
-
-    AdvanceUplink();
+    return rules_;
 }
 
 void TolissA340::AdvanceUplink()
@@ -225,7 +220,7 @@ void TolissA340::CloseAllDoors()
     LOG_INFO("All doors commanded closed: door control is now manual");
 }
 
-void TolissA340::UpdateDoors()
+void TolissA340::DriveDoors()
 {
     doors_.Sync([this](const GsxDoor door, const bool open)
     {

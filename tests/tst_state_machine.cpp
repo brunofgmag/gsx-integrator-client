@@ -7,6 +7,7 @@
 #include "tests/turnaround/TurnaroundStateFixture.h"
 #include "src/domain/turnaround/PilotTouch.h"
 #include "src/domain/turnaround/PilotUnlock.h"
+#include "src/domain/ports/AircraftRule.h"
 #include "src/domain/turnaround/TurnaroundStateMachine.h"
 
 namespace
@@ -39,6 +40,44 @@ namespace
         TurnaroundPhase::CabinServices,
         TurnaroundPhase::WaitingNewFlight,
         TurnaroundPhase::WaitingSupportedAircraft,
+    };
+
+    class CountingRule : public AircraftRule
+    {
+    public:
+        int evaluateCalls = 0;
+        int actCalls = 0;
+
+        [[nodiscard]] const char* Name() const override
+        {
+            return "counting-rule";
+        }
+
+        [[nodiscard]] RuleVerdict Evaluate(const RuleContext&) override
+        {
+            ++evaluateCalls;
+
+            return RuleVerdict::Pass();
+        }
+
+        void Act(const RuleContext&, VariableWriter&) override
+        {
+            ++actCalls;
+        }
+    };
+
+    class SlowCountingRule final : public CountingRule
+    {
+    public:
+        [[nodiscard]] const char* Name() const override
+        {
+            return "slow-counting-rule";
+        }
+
+        [[nodiscard]] RuleCadence Cadence() const override
+        {
+            return RuleCadence::Slow;
+        }
     };
 
     void PrepareFlightPlan(FakeAircraft& aircraft)
@@ -354,6 +393,8 @@ private slots:
     static void resetReturnsToWaitingSupportedAircraft();
     static void holdsAtRequestFuelUntilLoadingConfirmed();
     static void waitsForRefuelingTransitionDelay();
+    static void aDelayedTransitionKeepsTheFastRulesRunning();
+    static void theSlowTickActsOnlyWhenTheMachineIsDriving();
     static void waitsForBoardingTransitionDelay();
     static void holdsBoardingWhileCargoIsPending();
     static void completesReachableWorkflowAndReturnsToStart();
@@ -881,6 +922,44 @@ void TurnaroundStateMachineTest::resetDiscardsAPendingAppTouch()
     workflow.machine.Tick();
 
     QVERIFY(!Logged(workflow, "Pilot touch"));
+}
+
+void TurnaroundStateMachineTest::aDelayedTransitionKeepsTheFastRulesRunning()
+{
+    TurnaroundWorkflow workflow;
+    ReachRefueling(workflow);
+
+    CountingRule rule;
+    workflow.f.aircraft.rules = {&rule};
+
+    workflow.BeginRefuelingDelay();
+
+    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 30);
+
+    const int actsAtDelayStart = rule.actCalls;
+
+    workflow.FinishDelay(29, TurnaroundPhase::Refueling);
+
+    QCOMPARE(rule.actCalls, actsAtDelayStart + 29);
+}
+
+void TurnaroundStateMachineTest::theSlowTickActsOnlyWhenTheMachineIsDriving()
+{
+    TurnaroundWorkflow workflow;
+    SlowCountingRule rule;
+
+    workflow.f.aircraft.rules = {&rule};
+    workflow.machine.AttachAircraft(&workflow.f.aircraft);
+
+    workflow.machine.ObserveSlowRules();
+
+    QCOMPARE(rule.evaluateCalls, 1);
+    QCOMPARE(rule.actCalls, 0);
+
+    workflow.machine.TickSlowRules();
+
+    QCOMPARE(rule.evaluateCalls, 2);
+    QCOMPARE(rule.actCalls, 1);
 }
 
 QTEST_APPLESS_MAIN(TurnaroundStateMachineTest)

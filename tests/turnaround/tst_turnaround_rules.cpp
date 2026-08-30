@@ -33,6 +33,35 @@ namespace
         }
     };
 
+    class SlowRule final : public AircraftRule
+    {
+    public:
+        int evaluateCalls = 0;
+        int actCalls = 0;
+
+        [[nodiscard]] const char* Name() const override
+        {
+            return "slow-rule";
+        }
+
+        [[nodiscard]] RuleCadence Cadence() const override
+        {
+            return RuleCadence::Slow;
+        }
+
+        [[nodiscard]] RuleVerdict Evaluate(const RuleContext&) override
+        {
+            ++evaluateCalls;
+
+            return RuleVerdict::Pass();
+        }
+
+        void Act(const RuleContext&, VariableWriter&) override
+        {
+            ++actCalls;
+        }
+    };
+
     class CountingState final : public TurnaroundState
     {
     public:
@@ -69,6 +98,9 @@ private slots:
     static void aPilotTouchBeatsTheHold();
     static void thePhaseReceivesItsOwnNeedsInTheRuleContext();
     static void aPassingRuleLetsThePhaseEvaluate();
+    static void aSlowRuleNeverRunsWhenThePhaseEvaluates();
+    static void theSlowPathRunsOnlyTheSlowRules();
+    static void observingTheSlowPathNeverLetsARuleAct();
 };
 
 void TurnaroundRulesTest::aHoldingRuleStopsThePhaseFromEvaluating()
@@ -171,6 +203,54 @@ void TurnaroundRulesTest::aPassingRuleLetsThePhaseEvaluate()
 
     QVERIFY(state.Evaluate(f.ctx).has_value());
     QCOMPARE(state.evaluateCalls, 1);
+}
+
+void TurnaroundRulesTest::aSlowRuleNeverRunsWhenThePhaseEvaluates()
+{
+    TurnaroundStateFixture f;
+    SlowRule rule;
+    CountingState state;
+
+    f.aircraft.rules = {&rule};
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(rule.evaluateCalls, 0);
+    QCOMPARE(rule.actCalls, 0);
+}
+
+void TurnaroundRulesTest::theSlowPathRunsOnlyTheSlowRules()
+{
+    TurnaroundStateFixture f;
+    SlowRule slowRule;
+    HoldingRule fastRule;
+    CountingState state;
+
+    f.aircraft.rules = {&slowRule, &fastRule};
+
+    state.ActOnRules(f.ctx, RuleCadence::Slow);
+
+    QCOMPARE(slowRule.evaluateCalls, 1);
+    QCOMPARE(slowRule.actCalls, 1);
+    QCOMPARE(fastRule.evaluateCalls, 0);
+    QCOMPARE(fastRule.actCalls, 0);
+}
+
+void TurnaroundRulesTest::observingTheSlowPathNeverLetsARuleAct()
+{
+    TurnaroundStateFixture f;
+    SlowRule rule;
+    CountingState state;
+
+    f.aircraft.rules = {&rule};
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        state.ObserveRules(f.ctx, RuleCadence::Slow);
+    }
+
+    QCOMPARE(rule.evaluateCalls, 3);
+    QCOMPARE(rule.actCalls, 0);
+    QCOMPARE(f.variableWriter.setLVarCalls + f.variableWriter.setAVarCalls, 0);
 }
 
 QTEST_MAIN(TurnaroundRulesTest)

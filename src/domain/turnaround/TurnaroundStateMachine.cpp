@@ -122,6 +122,12 @@ void TurnaroundStateMachine::Step()
         --ticksRemaining_;
         if (ticksRemaining_ > 0)
         {
+            TurnaroundState* const state = StateFor(phase_);
+            if (state != nullptr)
+            {
+                state->ActOnRules(context_, RuleCadence::Fast);
+            }
+
             return;
         }
 
@@ -265,6 +271,17 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
     context_.data.stateTickCount = 0;
 }
 
+void TurnaroundStateMachine::TickSlowRules()
+{
+    TurnaroundState* state = StateFor(phase_);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    state->ActOnRules(context_, RuleCadence::Slow);
+}
+
 void TurnaroundStateMachine::ObserveRules()
 {
     TurnaroundState* state = StateFor(phase_);
@@ -273,5 +290,16 @@ void TurnaroundStateMachine::ObserveRules()
         return;
     }
 
-    state->ObserveRules(context_);
+    state->ObserveRules(context_, RuleCadence::Fast);
+}
+
+void TurnaroundStateMachine::ObserveSlowRules()
+{
+    TurnaroundState* state = StateFor(phase_);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    state->ObserveRules(context_, RuleCadence::Slow);
 }

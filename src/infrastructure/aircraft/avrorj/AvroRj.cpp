@@ -131,8 +131,10 @@ AvroRj::AvroRj(VariableGateway* variableGateway, const bool cargoVariant)
                        return max > kSmartSwitchNeutral;
                    }),
       doors_(variableGateway),
+      doorRule_(*this),
       airstairRule_(*this),
-      rules_{&airstairRule_}
+      livenessRule_(*this),
+      rules_{&doorRule_, &airstairRule_, &livenessRule_}
 {
     smartSwitch_.Subscribe();
 
@@ -149,14 +151,10 @@ void AvroRj::Observe()
     doors_.Observe();
 }
 
-void AvroRj::OnTick()
+void AvroRj::DriveDoors()
 {
-    Observe();
-    UpdateAirstairTravel();
     UpdateDoors();
     UpdateAftDoorClosed();
-    UpdateAirstair();
-    UpdateModuleLiveness();
 }
 
 void AvroRj::HoldDoorsClosed(const bool hold)
@@ -211,7 +209,7 @@ void AvroRj::UpdateAftDoorClosed()
     variableGateway_->SetLVar(kAftPaxDoorLVar, kDoorClosed);
 }
 
-void AvroRj::UpdateModuleLiveness()
+void AvroRj::ObserveModuleLiveness()
 {
     const double simFuelKg = CurrentFuelKg(*variableGateway_);
     const bool firstSample = lastLivenessSimFuelKg_ < 0.0;
@@ -263,7 +261,7 @@ const std::vector<AircraftRule*>& AvroRj::Rules() const
     return rules_;
 }
 
-void AvroRj::UpdateAirstairTravel()
+void AvroRj::ObserveAirstairTravel()
 {
     if (!variableGateway_->HasReceivedLVar(kStairPositionLVar))
     {
@@ -296,7 +294,7 @@ bool AvroRj::AreAirstairsSettled() const
         && stairPositionStillTicks_ >= kStairSettledHoldTicks;
 }
 
-void AvroRj::UpdateAirstair()
+void AvroRj::DriveAirstair()
 {
     if (IsAirstairMoving())
     {

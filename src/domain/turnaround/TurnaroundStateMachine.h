@@ -21,8 +21,10 @@ public:
                            VariableWriter* variableWriter);
 
     void Tick();
+    void TickSlowRules();
     void AttachAircraft(Aircraft* aircraft);
     void ObserveRules();
+    void ObserveSlowRules();
     void Reset();
     void ConfirmLoading() { context_.data.loadingConfirmed = true; }
     void AcceptAppTouch() { appTouchPending_ = true; }

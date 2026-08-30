@@ -65,6 +65,9 @@ IFly737Max::IFly737Max(VariableGateway* variableGateway, const AutomationStatus*
                    {
                        return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral;
                    }),
+      doorRule_(*this),
+      planImportRule_(*this),
+      rules_{&doorRule_, &planImportRule_},
       fwdCargoDoor_{
           "FWD", kFwdCargoAnimLVar, gsx::lvars::kAircraftCargo1Toggle,
           gsx::lvars::kBaggageLoaderFrontState
@@ -97,12 +100,12 @@ IFly737Max::IFly737Max(VariableGateway* variableGateway, const AutomationStatus*
     LOG_INFO("Profile loaded: iFly 737 MAX 8");
 }
 
-void IFly737Max::OnTick()
+const std::vector<AircraftRule*>& IFly737Max::Rules() const
 {
-    DriveDoors();
+    return rules_;
 }
 
-void IFly737Max::OnSlowTick()
+void IFly737Max::ImportPlan()
 {
     planImport_.Observe(IFlyPlanFile::DirectoryFor(), status_->planGeneratedEpoch);
 }

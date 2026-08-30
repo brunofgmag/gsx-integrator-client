@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <memory>
+#include "AircraftTicks.h"
 #include "doubles/FakePmdg737DataGateway.h"
 #include "doubles/FakePmdgTabletGateway.h"
 #include "doubles/FakeVariableGateway.h"
@@ -126,9 +127,9 @@ void Pmdg737Test::nameAndCargoFlagFollowTheVariant()
 
 void Pmdg737Test::onTickPollsBothGateways()
 {
-    const Pmdg737Fixture fixture;
+    Pmdg737Fixture fixture;
 
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.data->pollCalls, 1);
     QCOMPARE(fixture.tablet->pollCalls, 1);
@@ -136,14 +137,14 @@ void Pmdg737Test::onTickPollsBothGateways()
 
 void Pmdg737Test::groundPowerUnknownUntilData()
 {
-    const Pmdg737Fixture fixture;
+    Pmdg737Fixture fixture;
 
     QCOMPARE(fixture.aircraft->GetGroundPowerStatus(), std::optional(GroundPowerStatus::Unknown));
 }
 
 void Pmdg737Test::groundPowerFollowsTheSingleAnnunciator()
 {
-    const Pmdg737Fixture fixture;
+    Pmdg737Fixture fixture;
 
     fixture.data->hasData = true;
 
@@ -173,21 +174,21 @@ void Pmdg737Test::poweredByMainBusOrRunningEngine()
 
 void Pmdg737Test::engineRunningConservativeUntilReceived()
 {
-    const Pmdg737Fixture fixture;
+    Pmdg737Fixture fixture;
 
     QVERIFY(fixture.aircraft->IsEngineRunning());
 }
 
 void Pmdg737Test::doorStatusUnknownUntilTheEfbAnswers()
 {
-    const Pmdg737Fixture fixture;
+    Pmdg737Fixture fixture;
 
     QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
 }
 
 void Pmdg737Test::doorStatusOpenWhenTheEfbReportsADoorOpen()
 {
-    const Pmdg737Fixture fixture;
+    Pmdg737Fixture fixture;
 
     for (const char* doorKey : kEfbDoorKeys)
     {
@@ -201,7 +202,7 @@ void Pmdg737Test::doorStatusOpenWhenTheEfbReportsADoorOpen()
 
 void Pmdg737Test::doorStatusUnknownWhileTheAirstairHasNoEfbReading()
 {
-    const Pmdg737Fixture fixture;
+    Pmdg737Fixture fixture;
 
     for (const char* doorKey : kEfbDoorKeys)
     {
@@ -275,11 +276,11 @@ namespace
             std::ranges::count(fixture.tablet->groundConnRequests, kPassengerEntryRequest));
     }
 
-    void Tick(const Pmdg737Fixture& fixture, const int times)
+    void Tick(Pmdg737Fixture& fixture, const int times)
     {
         for (int i = 0; i < times; ++i)
         {
-            fixture.aircraft->OnTick();
+            TickAircraft(*fixture.aircraft, fixture.gateway);
         }
     }
 }
@@ -430,7 +431,7 @@ void Pmdg737Test::mainCargoIsCommandedOnEdgeBecauseItCannotBeRead()
     const auto tick = [&fixture](const int times) {
         for (int i = 0; i < times; ++i)
         {
-            fixture.aircraft->OnTick();
+            TickAircraft(*fixture.aircraft, fixture.gateway);
         }
     };
 
@@ -461,7 +462,7 @@ void Pmdg737Test::paxVariantNeverTouchesMainCargo()
 
     for (int tick = 0; tick < 10; ++tick)
     {
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QVERIFY(std::ranges::find(fixture.data->toggledDoors, Pmdg737Door::MainCargo)
@@ -508,25 +509,25 @@ void Pmdg737Test::chocksReadFromTheLVarAndRetryWithCap()
     fixture.data->hasData = true;
 
     QVERIFY(fixture.aircraft->SetChocks(true));
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
     QCOMPARE(QString::fromStdString(fixture.tablet->groundConnRequests[0]), QString("wheel_chocks"));
 
     for (int tick = 0; tick < 9; ++tick)
     {
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
 
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(2));
 
     fixture.gateway.lvars[kChocksLVar] = 1.0;
     for (int tick = 0; tick < 20; ++tick)
     {
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(2));
@@ -538,7 +539,7 @@ void Pmdg737Test::groundPowerRequestStopsWhenAvailable()
 
     fixture.data->hasData = true;
     fixture.aircraft->SetGroundPower(true);
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
     QCOMPARE(QString::fromStdString(fixture.tablet->groundConnRequests[0]), QString("ground_power"));
@@ -546,7 +547,7 @@ void Pmdg737Test::groundPowerRequestStopsWhenAvailable()
     fixture.data->groundPowerAvailable = true;
     for (int tick = 0; tick < 20; ++tick)
     {
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
@@ -554,7 +555,7 @@ void Pmdg737Test::groundPowerRequestStopsWhenAvailable()
 
 void Pmdg737Test::setFuelSendsRoundedLbsOnce()
 {
-    const Pmdg737Fixture fixture;
+    Pmdg737Fixture fixture;
 
     fixture.aircraft->SetCurrentFuelKg(1000.0);
     fixture.aircraft->SetCurrentFuelKg(1000.0);
@@ -597,7 +598,7 @@ void Pmdg737Test::progressiveWriterDoesNotUndoTheTrim()
     for (int tick = 0; tick < 5; ++tick)
     {
         fixture.aircraft->SetCurrentZfwKg(60000.0);
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
@@ -607,7 +608,7 @@ void Pmdg737Test::progressiveWriterDoesNotUndoTheTrim()
     for (int tick = 0; tick < 3; ++tick)
     {
         fixture.aircraft->SetCurrentZfwKg(60000.0);
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
@@ -620,7 +621,7 @@ void Pmdg737Test::smartSwitchAtRestIsNotAPress()
 
     fixture.data->hasData = true;
     fixture.gateway.lvars[kSmartSwitchLVar] = kSmartSwitchNeutral;
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
@@ -632,7 +633,7 @@ void Pmdg737Test::smartSwitchAnswersEveryPressOfTheSession()
 
     fixture.data->hasData = true;
     fixture.gateway.lvars[kSmartSwitchLVar] = kSmartSwitchNeutral;
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchDown, kSmartSwitchNeutral, true};
     QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
@@ -650,7 +651,7 @@ void Pmdg737Test::smartSwitchIgnoresTheLatchingIcSide()
 
     fixture.data->hasData = true;
     fixture.gateway.lvars[kSmartSwitchLVar] = kSmartSwitchNeutral;
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     fixture.gateway.lvarSpans[kSmartSwitchLVar] = {kSmartSwitchNeutral, kSmartSwitchUp, true};
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
@@ -777,7 +778,7 @@ void Pmdg737Test::drivingTickWritesWhatObservationHeldBack()
     f.aircraft->Observe();
     const int afterObservation = f.gateway.setLVarCalls;
 
-    f.aircraft->OnTick();
+    TickAircraft(*f.aircraft, f.gateway);
 
     QVERIFY(f.gateway.setLVarCalls > afterObservation);
 }

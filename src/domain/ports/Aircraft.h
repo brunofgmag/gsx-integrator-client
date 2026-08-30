@@ -28,8 +28,6 @@ public:
 
         return none;
     }
-    virtual void OnTick() {}
-    virtual void OnSlowTick() {}
     virtual void OnLoadingStarted() = 0;
 
     [[nodiscard]] virtual bool RequiresEfbFlightPlan() const { return false; }

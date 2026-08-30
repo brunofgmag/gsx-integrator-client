@@ -5,6 +5,7 @@
 #include "../TurnaroundTransition.h"
 #include "../TurnaroundPhase.h"
 #include "../rules/PhaseNeeds.h"
+#include "../rules/RuleCadence.h"
 
 struct TurnaroundContext;
 
@@ -18,12 +19,22 @@ public:
 
     [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx);
 
-    void ObserveRules(TurnaroundContext& ctx);
+    void ActOnRules(TurnaroundContext& ctx, RuleCadence cadence);
+
+    void ObserveRules(TurnaroundContext& ctx, RuleCadence cadence);
 
 protected:
     [[nodiscard]] virtual std::optional<TurnaroundTransition> EvaluatePhase(TurnaroundContext& ctx) = 0;
 
 private:
+    struct RuleOutcome
+    {
+        bool holds = false;
+        int ticksAllowed = 0;
+        const char* reason = "";
+    };
+
+    [[nodiscard]] RuleOutcome RunRules(TurnaroundContext& ctx, RuleCadence cadence);
     [[nodiscard]] bool AnyRuleHolds(TurnaroundContext& ctx);
 
     int holdTicks_ = 0;

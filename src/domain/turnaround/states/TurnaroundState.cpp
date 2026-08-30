@@ -31,6 +31,46 @@ std::optional<TurnaroundTransition> TurnaroundState::Evaluate(TurnaroundContext&
     return EvaluatePhase(ctx);
 }
 
+TurnaroundState::RuleOutcome TurnaroundState::RunRules(TurnaroundContext& ctx, const RuleCadence cadence)
+{
+    RuleOutcome outcome;
+
+    if (ctx.aircraft == nullptr)
+    {
+        return outcome;
+    }
+
+    const RuleContext ruleContext = BuildRuleContext(*this, ctx);
+
+    for (AircraftRule* const rule : ctx.aircraft->Rules())
+    {
+        if (rule == nullptr || rule->Cadence() != cadence)
+        {
+            continue;
+        }
+
+        const RuleVerdict verdict = rule->Evaluate(ruleContext);
+        if (verdict.holds && !outcome.holds)
+        {
+            outcome.holds = true;
+            outcome.ticksAllowed = verdict.holdTicksAllowed;
+            outcome.reason = verdict.reason;
+        }
+
+        if (ctx.variableWriter != nullptr)
+        {
+            rule->Act(ruleContext, *ctx.variableWriter);
+        }
+    }
+
+    return outcome;
+}
+
+void TurnaroundState::ActOnRules(TurnaroundContext& ctx, const RuleCadence cadence)
+{
+    RunRules(ctx, cadence);
+}
+
 bool TurnaroundState::AnyRuleHolds(TurnaroundContext& ctx)
 {
     if (ctx.aircraft == nullptr)
@@ -40,34 +80,9 @@ bool TurnaroundState::AnyRuleHolds(TurnaroundContext& ctx)
         return false;
     }
 
-    const RuleContext ruleContext = BuildRuleContext(*this, ctx);
+    const RuleOutcome outcome = RunRules(ctx, RuleCadence::Fast);
 
-    bool holding = false;
-    int ticksAllowed = 0;
-    const char* reason = "";
-
-    for (AircraftRule* const rule : ctx.aircraft->Rules())
-    {
-        if (rule == nullptr)
-        {
-            continue;
-        }
-
-        const RuleVerdict verdict = rule->Evaluate(ruleContext);
-        if (verdict.holds && !holding)
-        {
-            holding = true;
-            ticksAllowed = verdict.holdTicksAllowed;
-            reason = verdict.reason;
-        }
-
-        if (ctx.variableWriter != nullptr)
-        {
-            rule->Act(ruleContext, *ctx.variableWriter);
-        }
-    }
-
-    if (!holding)
+    if (!outcome.holds)
     {
         holdTicks_ = 0;
 
@@ -83,13 +98,13 @@ bool TurnaroundState::AnyRuleHolds(TurnaroundContext& ctx)
 
     ++holdTicks_;
 
-    if (holdTicks_ > ticksAllowed)
+    if (holdTicks_ > outcome.ticksAllowed)
     {
         holdTicks_ = 0;
 
         if (ctx.logger != nullptr)
         {
-            ctx.logger->LogInfo(std::format("Rule hold expired: {}", reason));
+            ctx.logger->LogInfo(std::format("Rule hold expired: {}", outcome.reason));
         }
 
         return false;
@@ -98,7 +113,7 @@ bool TurnaroundState::AnyRuleHolds(TurnaroundContext& ctx)
     return true;
 }
 
-void TurnaroundState::ObserveRules(TurnaroundContext& ctx)
+void TurnaroundState::ObserveRules(TurnaroundContext& ctx, const RuleCadence cadence)
 {
     if (ctx.aircraft == nullptr || ctx.logger == nullptr)
     {
@@ -109,7 +124,7 @@ void TurnaroundState::ObserveRules(TurnaroundContext& ctx)
 
     for (AircraftRule* const rule : ctx.aircraft->Rules())
     {
-        if (rule == nullptr)
+        if (rule == nullptr || rule->Cadence() != cadence)
         {
             continue;
         }
