@@ -52,13 +52,15 @@ TurnaroundStateMachine::TurnaroundStateMachine(AutomationStatus* status,
                                                const AutomationSettings* settings,
                                                GsxGateway* gsxGateway,
                                                GsxMenuGateway* menuGateway,
-                                               DomainLogger* logger)
+                                               DomainLogger* logger,
+                                               VariableWriter* variableWriter)
 {
     context_.status = status;
     context_.settings = settings;
     context_.gsxGateway = gsxGateway;
     context_.menuGateway = menuGateway;
     context_.logger = logger;
+    context_.variableWriter = variableWriter;
 
     RegisterStates();
 }
@@ -261,4 +263,15 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
 
     phase_ = phase;
     context_.data.stateTickCount = 0;
+}
+
+void TurnaroundStateMachine::ObserveRules()
+{
+    TurnaroundState* state = StateFor(phase_);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    state->ObserveRules(context_);
 }

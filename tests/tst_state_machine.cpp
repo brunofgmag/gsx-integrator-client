@@ -73,7 +73,7 @@ namespace
         std::vector<TurnaroundPhase> visitedPhases;
 
         TurnaroundWorkflow()
-            : machine(&f.status, &f.settings, &f.gsxService, &f.menuGateway, &f.logger)
+            : machine(&f.status, &f.settings, &f.gsxService, &f.menuGateway, &f.logger, &f.variableWriter)
         {
             visitedPhases.push_back(machine.GetPhase());
         }

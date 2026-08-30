@@ -2,10 +2,13 @@
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_AIRCRAFT_H
 
 #include <optional>
+#include <vector>
 
 #include "../model/DoorStatus.h"
 #include "../model/GroundPowerStatus.h"
 #include "../support/Weight.h"
+
+class AircraftRule;
 
 enum class RefuelBy { Gsx, Self, Client };
 enum class BoardBy { Self, Client };
@@ -18,6 +21,13 @@ public:
     [[nodiscard]] virtual bool IsCargoVariant() const = 0;
 
     virtual void Observe() {}
+
+    [[nodiscard]] virtual const std::vector<AircraftRule*>& Rules() const
+    {
+        static const std::vector<AircraftRule*> none;
+
+        return none;
+    }
     virtual void OnTick() {}
     virtual void OnSlowTick() {}
     virtual void OnLoadingStarted() = 0;
@@ -48,9 +58,7 @@ public:
     [[nodiscard]] virtual bool SupportsChocksControl() const { return false; }
     virtual bool SetChocks(bool) { return false; }
     [[nodiscard]] virtual bool SupportsGroundPowerControl() const { return false; }
-    [[nodiscard]] virtual bool RequiresOwnAirstairs() const { return false; }
-    virtual void SetOwnAirstairs(bool) {}
-    [[nodiscard]] virtual bool AreOwnAirstairsExtended() const { return false; }
+    [[nodiscard]] virtual bool CarriesItsOwnStairs() const { return false; }
     virtual void SetGroundPower(bool) {}
     virtual void CloseAllDoors() {}
     virtual void HoldDoorsClosed(bool) {}

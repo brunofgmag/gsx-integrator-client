@@ -34,6 +34,7 @@ function(add_turnaround_state_test TARGET_NAME TEST_NAME TEST_FILE)
             tests/doubles/FakeDomainLogger.h
             tests/doubles/FakeGsxMenuGateway.h
             tests/doubles/FakeGsxService.h
+            tests/doubles/FakeVariableWriter.h
             ${TEST_FILE})
     target_link_libraries(${TARGET_NAME} PRIVATE gsxi-turnaround-state-test-support)
     configure_gsxi_test(${TARGET_NAME} ${TEST_NAME})
@@ -80,6 +81,17 @@ foreach (TURNAROUND_STATE_TEST_INDEX RANGE 0 ${TURNAROUND_STATE_TEST_LAST_INDEX}
             ${TURNAROUND_STATE_TEST_NAME}
             ${TURNAROUND_STATE_TEST_FILE})
 endforeach ()
+
+add_executable(gsxi-turnaround-rules-tests
+        tests/turnaround/TurnaroundStateFixture.h
+        tests/doubles/FakeAircraft.h
+        tests/doubles/FakeDomainLogger.h
+        tests/doubles/FakeGsxMenuGateway.h
+        tests/doubles/FakeGsxService.h
+        tests/doubles/FakeVariableWriter.h
+        tests/turnaround/tst_turnaround_rules.cpp)
+target_link_libraries(gsxi-turnaround-rules-tests PRIVATE gsxi-turnaround-state-test-support)
+configure_gsxi_test(gsxi-turnaround-rules-tests turnaround-rules)
 
 add_executable(gsxi-turnaround-workflow-tests
         tests/TestDoubles.h
@@ -316,11 +328,14 @@ gsxi_add_qt_test(gsxi-gsx-aircraft-profile-tests gsx-aircraft-profile
 gsxi_add_qt_test(gsxi-avro-rj-tests avro-rj
         tests/TestDoubles.h
         tests/tst_avro_rj.cpp
+        tests/doubles/FakeVariableWriter.h
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/AvroRj.cpp
         src/infrastructure/aircraft/AvroRj.h
+        src/infrastructure/aircraft/AvroRjAirstairRule.cpp
+        src/infrastructure/aircraft/AvroRjAirstairRule.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/gsx/GsxDoorSync.cpp
@@ -591,6 +606,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/AvroRj.cpp
         src/infrastructure/aircraft/AvroRj.h
+        src/infrastructure/aircraft/AvroRjAirstairRule.cpp
+        src/infrastructure/aircraft/AvroRjAirstairRule.h
         src/infrastructure/aircraft/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
@@ -718,6 +735,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/AvroRj.cpp
         src/infrastructure/aircraft/AvroRj.h
+        src/infrastructure/aircraft/AvroRjAirstairRule.cpp
+        src/infrastructure/aircraft/AvroRjAirstairRule.h
         src/infrastructure/aircraft/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h

@@ -4,6 +4,7 @@
 #include <string>
 #include "TestDoubles.h"
 #include "../src/infrastructure/aircraft/AvroRj.h"
+#include "doubles/FakeVariableWriter.h"
 
 namespace
 {
@@ -106,6 +107,7 @@ class AvroRjTest final : public QObject
     Q_OBJECT
 
 private slots:
+    static void evaluatingTheAirstairRuleWritesNoVariable();
     static void reportsCargoVariant();
     static void reportsLoadMethods();
     static void requiresTheEfbFlightPlan();
@@ -184,8 +186,8 @@ void AvroRjTest::reportsLoadMethods()
     QVERIFY(aircraft.GetRefuelMethod() == RefuelBy::Client);
     QVERIFY(aircraft.GetBoardMethod() == BoardBy::Self);
     QVERIFY(!aircraft.CompletesPushbackViaInterruptMenu());
-    QVERIFY(aircraft.SupportsStairsOrJetways());
-    QVERIFY(aircraft.RequiresOwnAirstairs());
+    QVERIFY(!aircraft.SupportsStairsOrJetways());
+    QVERIFY(aircraft.CarriesItsOwnStairs());
 }
 
 void AvroRjTest::requiresTheEfbFlightPlan()
@@ -661,7 +663,7 @@ void AvroRjTest::departureHoldShutsTheFrontDoor()
     gateway.lvars[kJetway] = kJetwayUnavailable;
     gateway.lvars["EXT_Door_stairs_pos"] = 50.0;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
 
     QCOMPARE(gateway.Written("EXT_Door_pax_1L"), 1.0);
@@ -698,7 +700,7 @@ void AvroRjTest::airstairExtendsWhenTheTurnaroundAsksWithPressure()
     gateway.lvars[kJetway] = kJetwayUnavailable;
     gateway.lvars[kStairAccumPressure] = kStairPressureFull;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
 
     QCOMPARE(gateway.Written("EXT_Door_pax_1L"), 1.0);
@@ -718,7 +720,7 @@ void AvroRjTest::airstairWaitsWithoutAccumulatorPressure()
     gateway.lvars[kJetway] = kJetwayUnavailable;
     gateway.lvars[kStairAccumPressure] = kStairPressureDepleted;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
     aircraft.OnTick();
 
@@ -735,7 +737,7 @@ void AvroRjTest::airstairIsNotArmedUnderAJetway()
     gateway.lvars[kJetway] = kJetwayDocked;
     gateway.lvars[kStairAccumPressure] = kStairPressureFull;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
     aircraft.OnTick();
 
@@ -752,7 +754,7 @@ void AvroRjTest::airstairStaysStowedWhileTheJetwayIsStillDriving()
     gateway.lvars[kJetway] = 1.0;
     gateway.lvars[kStairAccumPressure] = kStairPressureFull;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
     aircraft.OnTick();
 
@@ -769,7 +771,7 @@ void AvroRjTest::airstairIsNotArmedWhenGsxServesTheFrontDoor()
     gateway.lvars[kStairsFrontState] = kStairsWaitingForDoor;
     gateway.lvars[kStairAccumPressure] = kStairPressureFull;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
     aircraft.OnTick();
 
@@ -786,7 +788,7 @@ void AvroRjTest::airstairYieldsToAStairVehicleOnTheWay()
     gateway.lvars[kStairsFrontState] = 2.0;
     gateway.lvars[kStairAccumPressure] = kStairPressureFull;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
     aircraft.OnTick();
 
@@ -803,7 +805,7 @@ void AvroRjTest::airstairRetractsAndTheDoorClosesWhenTheRequestIsWithdrawn()
     gateway.lvars["EXT_Door_stairs_pos"] = 50.0;
     gateway.lvars[kStairAccumPressure] = kStairPressureFull;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
     aircraft.OnTick();
     aircraft.OnTick();
@@ -814,7 +816,7 @@ void AvroRjTest::airstairRetractsAndTheDoorClosesWhenTheRequestIsWithdrawn()
 
     QCOMPARE(gateway.Written(kStairExtendSwitch), 1.0);
 
-    aircraft.SetOwnAirstairs(false);
+    aircraft.WantAirstairs(false);
     aircraft.OnTick();
 
     QCOMPARE(gateway.Written(kStairExtendSwitch), 0.0);
@@ -834,12 +836,12 @@ void AvroRjTest::airstairStaysOutWhenPressureIsGoneAtDeparture()
     gateway.lvars[kJetway] = kJetwayUnavailable;
     gateway.lvars[kStairAccumPressure] = kStairPressureFull;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
     aircraft.OnTick();
 
     gateway.lvars[kStairAccumPressure] = kStairPressureDepleted;
-    aircraft.SetOwnAirstairs(false);
+    aircraft.WantAirstairs(false);
     aircraft.OnTick();
     aircraft.OnTick();
 
@@ -858,14 +860,14 @@ void AvroRjTest::airstairAdoptsAnExtensionMadeOnTheEfb()
     gateway.lvars[kStairExtendSwitch] = 1.0;
     gateway.lvars["EXT_Door_stairs_pos"] = 190.0;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
     aircraft.OnTick();
     aircraft.OnTick();
 
     QCOMPARE(gateway.Written(kStairArmClickspot), -1.0);
 
-    aircraft.SetOwnAirstairs(false);
+    aircraft.WantAirstairs(false);
     aircraft.OnTick();
 
     QCOMPARE(gateway.Written(kStairExtendSwitch), 0.0);
@@ -881,12 +883,12 @@ void AvroRjTest::frontDoorWaitsForThePhysicallyStowedStair()
     gateway.lvars[kStairAccumPressure] = kStairPressureFull;
     gateway.lvars["EXT_Door_stairs_pos"] = 190.0;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
     aircraft.OnTick();
 
     gateway.lvars[kStairExtendSwitch] = 0.0;
-    aircraft.SetOwnAirstairs(false);
+    aircraft.WantAirstairs(false);
     aircraft.OnTick();
     aircraft.OnTick();
 
@@ -908,28 +910,28 @@ void AvroRjTest::reportsTheAirstairExtendedOnlyAfterItStopsMoving()
     gateway.lvars[kStairAccumPressure] = kStairPressureFull;
     gateway.lvars["EXT_Door_stairs_pos"] = 50.0;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
     aircraft.OnTick();
     aircraft.OnTick();
     aircraft.OnTick();
 
-    QVERIFY(!aircraft.AreOwnAirstairsExtended());
+    QVERIFY(!aircraft.AreAirstairsSettled());
 
     gateway.lvars["EXT_Door_stairs_pos"] = 120.0;
     aircraft.OnTick();
 
-    QVERIFY(!aircraft.AreOwnAirstairsExtended());
+    QVERIFY(!aircraft.AreAirstairsSettled());
 
     gateway.lvars["EXT_Door_stairs_pos"] = 190.0;
     aircraft.OnTick();
 
-    QVERIFY(!aircraft.AreOwnAirstairsExtended());
+    QVERIFY(!aircraft.AreAirstairsSettled());
 
     aircraft.OnTick();
     aircraft.OnTick();
 
-    QVERIFY(aircraft.AreOwnAirstairsExtended());
+    QVERIFY(aircraft.AreAirstairsSettled());
 }
 
 void AvroRjTest::airstairIsNotCommandedWhileItIsStillMoving()
@@ -942,7 +944,7 @@ void AvroRjTest::airstairIsNotCommandedWhileItIsStillMoving()
     gateway.lvars[kStairAccumPressure] = kStairPressureFull;
     gateway.lvars["EXT_Door_stairs_pos"] = 50.0;
 
-    aircraft.SetOwnAirstairs(true);
+    aircraft.WantAirstairs(true);
     aircraft.OnTick();
 
     gateway.lvars["EXT_Door_stairs_pos"] = 100.0;
@@ -1079,6 +1081,34 @@ void AvroRjTest::moduleLivenessIgnoresDivergenceWhileFuelIsStill()
     }
 
     QVERIFY(aircraft.IsModuleMirroringFuel());
+}
+
+void AvroRjTest::evaluatingTheAirstairRuleWritesNoVariable()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+    FakeVariableWriter writer;
+
+    const auto& rules = aircraft.Rules();
+
+    QCOMPARE(rules.size(), std::size_t{1});
+
+    RuleContext context;
+    context.phase = TurnaroundPhase::CallServices;
+    context.needs.passengerAccess = true;
+
+    const int writesBefore = gateway.setLVarCalls + gateway.setAVarCalls;
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        const RuleVerdict verdict = rules.front()->Evaluate(context);
+
+        QVERIFY(verdict.holds);
+        QVERIFY(verdict.holdTicksAllowed > 0);
+    }
+
+    QCOMPARE(gateway.setLVarCalls + gateway.setAVarCalls, writesBefore);
+    QCOMPARE(writer.setLVarCalls + writer.setAVarCalls, 0);
 }
 
 QTEST_APPLESS_MAIN(AvroRjTest)

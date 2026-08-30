@@ -15,8 +15,7 @@ private slots:
     static void callStairsWhenJetwayFailsToComplete();
     static void retriesJetwayWhileItStaysAvailable();
     static void skipsWhenAircraftDoesNotSupportStairsOrJetways();
-    static void neverCallsStairsForAnAircraftThatCarriesItsOwn();
-    static void waitsForTheOwnAirstairToBeExtendedBeforeAdvancing();
+    static void neverCallsStairsForAnAircraftThatProvidesItsOwnAccess();
     static void stillCallsTheJetwayForAnAircraftThatCarriesItsOwnStairs();
     static void advancesImmediatelyWhenJetwayAlreadyInPlace();
     static void givesUpWhenJetwayNeverArrives();
@@ -167,38 +166,20 @@ void CallServicesStateTest::skipsWhenAircraftDoesNotSupportStairsOrJetways()
     QCOMPARE(f.menuGateway.callStairsCalls, 0);
 }
 
-void CallServicesStateTest::neverCallsStairsForAnAircraftThatCarriesItsOwn()
+void CallServicesStateTest::neverCallsStairsForAnAircraftThatProvidesItsOwnAccess()
 {
     TurnaroundStateFixture f;
     CallServicesState state;
 
-    f.aircraft.requiresOwnAirstairs = true;
+    f.aircraft.supportsStairsOrJetways = false;
     f.gsxService.stairsAvailable = true;
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QCOMPARE(f.menuGateway.callStairsCalls, 0);
-    QVERIFY(!f.ctx.data.jetwayOrStairsRequested);
-    QVERIFY(f.aircraft.ownAirstairsRequested);
-}
-
-void CallServicesStateTest::waitsForTheOwnAirstairToBeExtendedBeforeAdvancing()
-{
-    TurnaroundStateFixture f;
-    CallServicesState state;
-
-    f.aircraft.requiresOwnAirstairs = true;
-    f.gsxService.stairsAvailable = true;
-
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
-
-    f.aircraft.ownAirstairsExtended = true;
 
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingFlightPlan);
     QCOMPARE(f.menuGateway.callStairsCalls, 0);
+    QVERIFY(!f.ctx.data.jetwayOrStairsRequested);
 }
 
 void CallServicesStateTest::stillCallsTheJetwayForAnAircraftThatCarriesItsOwnStairs()
@@ -206,7 +187,6 @@ void CallServicesStateTest::stillCallsTheJetwayForAnAircraftThatCarriesItsOwnSta
     TurnaroundStateFixture f;
     CallServicesState state;
 
-    f.aircraft.requiresOwnAirstairs = true;
     f.gsxService.jetwayAvailable = true;
     f.gsxService.stairsAvailable = true;
 

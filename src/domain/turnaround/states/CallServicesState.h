@@ -11,6 +11,10 @@ public:
         return TurnaroundPhase::CallServices;
     }
 
+    [[nodiscard]] PhaseNeeds Needs() const override
+    {
+        return {true};
+    }
 
 protected:
     [[nodiscard]] std::optional<TurnaroundTransition> EvaluatePhase(TurnaroundContext& ctx) override;

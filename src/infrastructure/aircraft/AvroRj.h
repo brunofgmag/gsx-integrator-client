@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_AVRORJ_H
 
 #include "SmartSwitch.h"
+#include "AvroRjAirstairRule.h"
 #include "../gsx/GsxDoorSync.h"
 #include "../../domain/ports/Aircraft.h"
 
@@ -35,10 +36,12 @@ public:
     [[nodiscard]] double GetFuelCapacityKg() const override;
     [[nodiscard]] bool IsModuleMirroringFuel() const;
 
-    [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
-    [[nodiscard]] bool RequiresOwnAirstairs() const override { return true; }
-    void SetOwnAirstairs(bool extended) override;
-    [[nodiscard]] bool AreOwnAirstairsExtended() const override;
+    [[nodiscard]] bool SupportsStairsOrJetways() const override;
+    [[nodiscard]] bool CarriesItsOwnStairs() const override { return true; }
+    [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
+    [[nodiscard]] bool IsJetwayAvailable() const;
+    [[nodiscard]] bool AreAirstairsSettled() const;
+    void WantAirstairs(bool wanted);
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
     [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Client; }
     [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Self; }
@@ -89,6 +92,8 @@ private:
     bool heldForDeparture_ = false;
     double lastFrontDoorTarget_ = -1.0;
     double lastFuelKg_ = -1.0;
+    AvroRjAirstairRule airstairRule_;
+    std::vector<AircraftRule*> rules_;
     AirstairPhase airstairPhase_ = AirstairPhase::Stowed;
     bool stairPressureWaitLogged_ = false;
     bool ownAirstairsRequested_ = false;
