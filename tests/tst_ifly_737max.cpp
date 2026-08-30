@@ -7,7 +7,7 @@
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/domain/model/FlightPlan.h"
 #include "../src/domain/ports/GsxGateway.h"
-#include "../src/infrastructure/aircraft/IFly737Max.h"
+#include "../src/infrastructure/aircraft/ifly/IFly737Max.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
 
 namespace

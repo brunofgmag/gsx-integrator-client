@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 #include "TestDoubles.h"
-#include "../src/infrastructure/aircraft/FenixA32x.h"
+#include "../src/infrastructure/aircraft/fenix/FenixA32x.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
 
 namespace

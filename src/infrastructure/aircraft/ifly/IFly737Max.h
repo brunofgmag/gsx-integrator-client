@@ -3,9 +3,9 @@
 
 #include <array>
 
-#include "SmartSwitch.h"
-#include "../ifly/IFlyPlanFile.h"
-#include "../../domain/ports/Aircraft.h"
+#include "../SmartSwitch.h"
+#include "../../ifly/IFlyPlanFile.h"
+#include "../../../domain/ports/Aircraft.h"
 
 class VariableGateway;
 struct AutomationStatus;

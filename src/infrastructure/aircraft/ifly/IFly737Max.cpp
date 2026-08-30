@@ -1,19 +1,19 @@
 #include "IFly737Max.h"
 
-#include "../simvars/SimVars.h"
+#include "../../simvars/SimVars.h"
 
 #include <algorithm>
 #include <array>
 #include <memory>
 #include <string>
-#include "AircraftRegistry.h"
-#include "DoorReading.h"
-#include "../gsx/GsxLVars.h"
-#include "../logging/LogMacros.h"
-#include "../../domain/model/FlightPlan.h"
-#include "../../domain/model/AutomationStatus.h"
-#include "../../domain/ports/GsxGateway.h"
-#include "../../infrastructure/simvars/VariableGateway.h"
+#include "../AircraftRegistry.h"
+#include "../DoorReading.h"
+#include "../../gsx/GsxLVars.h"
+#include "../../logging/LogMacros.h"
+#include "../../../domain/model/FlightPlan.h"
+#include "../../../domain/model/AutomationStatus.h"
+#include "../../../domain/ports/GsxGateway.h"
+#include "../../../infrastructure/simvars/VariableGateway.h"
 
 using namespace simvars;
 

@@ -1,6 +1,6 @@
 #include "AvroRjAirstairRule.h"
 
-#include "AvroRj.h"
+#include "../AvroRj.h"
 
 namespace
 {

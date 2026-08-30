@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
-#include "../aircraft/Pmdg737.h"
-#include "../aircraft/Pmdg777.h"
+#include "../aircraft/pmdg/Pmdg737.h"
+#include "../aircraft/pmdg/Pmdg777.h"
 
 namespace
 {

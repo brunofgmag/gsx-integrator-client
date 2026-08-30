@@ -1,15 +1,15 @@
 #include "Pmdg737.h"
 
-#include "../simvars/SimVars.h"
+#include "../../simvars/SimVars.h"
 
 #include <memory>
 #include <utility>
-#include "AircraftRegistry.h"
-#include "../logging/LogMacros.h"
-#include "../pmdg/Pmdg737DataClient.h"
-#include "../pmdg/PmdgTabletClient.h"
-#include "../../domain/model/AutomationStatus.h"
-#include "../../infrastructure/simvars/VariableGateway.h"
+#include "../AircraftRegistry.h"
+#include "../../logging/LogMacros.h"
+#include "../../pmdg/Pmdg737DataClient.h"
+#include "../../pmdg/PmdgTabletClient.h"
+#include "../../../domain/model/AutomationStatus.h"
+#include "../../../infrastructure/simvars/VariableGateway.h"
 
 using namespace simvars;
 

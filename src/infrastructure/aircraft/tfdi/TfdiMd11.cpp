@@ -1,19 +1,19 @@
 #include "TfdiMd11.h"
 
-#include "../simvars/SimVars.h"
+#include "../../simvars/SimVars.h"
 
 #include <algorithm>
 #include <memory>
 #include <string>
 #include <array>
-#include "AircraftRegistry.h"
-#include "DoorReading.h"
-#include "../gsx/GsxLVars.h"
-#include "../../domain/support/Weight.h"
-#include "../logging/LogMacros.h"
-#include "../../domain/model/FlightPlan.h"
-#include "../../domain/model/AutomationStatus.h"
-#include "../../infrastructure/simvars/VariableGateway.h"
+#include "../AircraftRegistry.h"
+#include "../DoorReading.h"
+#include "../../gsx/GsxLVars.h"
+#include "../../../domain/support/Weight.h"
+#include "../../logging/LogMacros.h"
+#include "../../../domain/model/FlightPlan.h"
+#include "../../../domain/model/AutomationStatus.h"
+#include "../../../infrastructure/simvars/VariableGateway.h"
 
 using namespace simvars;
 

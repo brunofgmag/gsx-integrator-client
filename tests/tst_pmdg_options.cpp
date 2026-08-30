@@ -5,8 +5,8 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "../src/infrastructure/aircraft/Pmdg737.h"
-#include "../src/infrastructure/aircraft/Pmdg777.h"
+#include "../src/infrastructure/aircraft/pmdg/Pmdg737.h"
+#include "../src/infrastructure/aircraft/pmdg/Pmdg777.h"
 #include "../src/infrastructure/pmdg/PmdgOptions.h"
 
 namespace

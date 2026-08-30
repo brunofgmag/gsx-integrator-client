@@ -3,7 +3,7 @@
 #include <array>
 #include <string>
 #include "TestDoubles.h"
-#include "../src/infrastructure/aircraft/AvroRj.h"
+#include "../src/infrastructure/aircraft/avrorj/AvroRj.h"
 #include "doubles/FakeVariableWriter.h"
 
 namespace

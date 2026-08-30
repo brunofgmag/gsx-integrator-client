@@ -1,6 +1,6 @@
 #include "AvroRj.h"
 
-#include "../simvars/SimVars.h"
+#include "../../simvars/SimVars.h"
 
 #include <algorithm>
 #include <array>
@@ -8,12 +8,12 @@
 #include <memory>
 #include <span>
 #include <string>
-#include "AircraftRegistry.h"
-#include "DoorReading.h"
-#include "../gsx/GsxLVars.h"
-#include "../logging/LogMacros.h"
-#include "../probe/ProbeLog.h"
-#include "../../infrastructure/simvars/VariableGateway.h"
+#include "../AircraftRegistry.h"
+#include "../DoorReading.h"
+#include "../../gsx/GsxLVars.h"
+#include "../../logging/LogMacros.h"
+#include "../../probe/ProbeLog.h"
+#include "../../../infrastructure/simvars/VariableGateway.h"
 
 using namespace simvars;
 

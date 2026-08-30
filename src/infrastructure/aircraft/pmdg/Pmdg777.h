@@ -3,7 +3,7 @@
 
 #include <memory>
 #include "PmdgAircraft.h"
-#include "../pmdg/Pmdg777DataGateway.h"
+#include "../../pmdg/Pmdg777DataGateway.h"
 
 enum class Pmdg777Variant { Er200, Lr200, Freighter, Er300 };
 

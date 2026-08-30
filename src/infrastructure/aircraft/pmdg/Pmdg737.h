@@ -4,7 +4,7 @@
 #include <memory>
 #include <optional>
 #include "PmdgAircraft.h"
-#include "../pmdg/Pmdg737DataGateway.h"
+#include "../../pmdg/Pmdg737DataGateway.h"
 
 enum class Pmdg737Variant { Pax800, Bcf800, Bdsf800, Bbj2 };
 
