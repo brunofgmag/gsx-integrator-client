@@ -12,7 +12,7 @@ namespace
     constexpr int kRetryTicks = 60;
 }
 
-std::optional<TurnaroundTransition> RemoveGroundEquipmentState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> RemoveGroundEquipmentState::EvaluatePhase(TurnaroundContext& ctx)
 {
     const bool manageEquipment = ctx.settings != nullptr && (ctx.settings->callGpu || ctx.settings->callGpuOnArrival);
     const bool removeChocks = ctx.aircraft->SupportsChocksControl()

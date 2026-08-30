@@ -2,7 +2,7 @@
 
 #include "../TurnaroundContext.h"
 
-std::optional<TurnaroundTransition> WaitingNewFlightState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> WaitingNewFlightState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (ctx.ConsumePilotTouch())
     {

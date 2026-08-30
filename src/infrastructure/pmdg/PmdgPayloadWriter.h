@@ -4,13 +4,13 @@
 #include <optional>
 
 class PmdgTabletGateway;
-class VariableGateway;
+class VariableReader;
 struct AutomationStatus;
 
 class PmdgPayloadWriter
 {
 public:
-    PmdgPayloadWriter(PmdgTabletGateway& tablet, VariableGateway& variables,
+    PmdgPayloadWriter(PmdgTabletGateway& tablet, VariableReader& variables,
                       const AutomationStatus* status, bool cargoVariant);
 
     void Reset();
@@ -20,7 +20,7 @@ public:
 
 private:
     PmdgTabletGateway& tablet_;
-    VariableGateway& variables_;
+    VariableReader& variables_;
     const AutomationStatus* status_;
     bool cargoVariant_;
     int lastSentFuelLbs_ = -1;

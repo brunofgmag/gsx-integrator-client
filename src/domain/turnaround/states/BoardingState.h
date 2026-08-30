@@ -11,7 +11,9 @@ public:
         return TurnaroundPhase::Boarding;
     }
 
-    [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
+
+protected:
+    [[nodiscard]] std::optional<TurnaroundTransition> EvaluatePhase(TurnaroundContext& ctx) override;
 
 private:
     [[nodiscard]] static bool IsCargoPending(const TurnaroundContext& ctx);

@@ -9,7 +9,7 @@
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
-std::optional<TurnaroundTransition> DeboardingState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> DeboardingState::EvaluatePhase(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 

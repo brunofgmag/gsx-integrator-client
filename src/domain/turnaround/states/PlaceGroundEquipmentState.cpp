@@ -11,7 +11,7 @@ namespace
     constexpr int kGiveUpTicks = 240;
 }
 
-std::optional<TurnaroundTransition> PlaceGroundEquipmentState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> PlaceGroundEquipmentState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (!ctx.data.ownGroundEquipmentCleared)
     {

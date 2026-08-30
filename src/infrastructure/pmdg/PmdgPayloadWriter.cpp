@@ -17,7 +17,7 @@ namespace
     constexpr double kZfwTrimToleranceKg = 50.0;
 }
 
-PmdgPayloadWriter::PmdgPayloadWriter(PmdgTabletGateway& tablet, VariableGateway& variables,
+PmdgPayloadWriter::PmdgPayloadWriter(PmdgTabletGateway& tablet, VariableReader& variables,
                                      const AutomationStatus* status, const bool cargoVariant)
     : tablet_(tablet),
       variables_(variables),

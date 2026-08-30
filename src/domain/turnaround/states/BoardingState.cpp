@@ -14,7 +14,7 @@ namespace
     constexpr int kBoardingRetryTicks = 30;
 }
 
-std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> BoardingState::EvaluatePhase(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 

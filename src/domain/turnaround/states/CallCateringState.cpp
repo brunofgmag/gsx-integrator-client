@@ -11,7 +11,7 @@ namespace
     constexpr int kCateringGiveUpTicks = 30;
 }
 
-std::optional<TurnaroundTransition> CallCateringState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> CallCateringState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (RequestNextGroundService(ctx))
     {

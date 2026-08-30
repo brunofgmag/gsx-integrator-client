@@ -6,7 +6,7 @@
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
-std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (!ctx.data.arrivalDoorsClosed)
     {

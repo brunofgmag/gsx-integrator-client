@@ -60,7 +60,7 @@ namespace
     }
 }
 
-GsxDoorSync::GsxDoorSync(VariableGateway* variableGateway) : variableGateway_(variableGateway)
+GsxDoorSync::GsxDoorSync(VariableReader* variableGateway) : variableGateway_(variableGateway)
 {
     lastTargets_.fill(kDoorUnknown);
 }

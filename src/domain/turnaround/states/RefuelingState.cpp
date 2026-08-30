@@ -44,7 +44,7 @@ namespace
     }
 }
 
-std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> RefuelingState::EvaluatePhase(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 
