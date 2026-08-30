@@ -13,7 +13,7 @@ namespace
     constexpr int kRetryTicks = 10;
 }
 
-std::optional<TurnaroundTransition> WaitingFlightPlanState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> WaitingFlightPlanState::EvaluatePhase(TurnaroundContext& ctx)
 {
     ctx.aircraft->SetCurrentZfwKg(ctx.aircraft->GetEmptyZfwKg());
 

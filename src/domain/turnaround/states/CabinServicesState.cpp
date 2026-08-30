@@ -13,7 +13,7 @@ namespace
     constexpr int kMaxWaitIntervals = 30;
 }
 
-std::optional<TurnaroundTransition> CabinServicesState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> CabinServicesState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (ctx.settings == nullptr)
     {

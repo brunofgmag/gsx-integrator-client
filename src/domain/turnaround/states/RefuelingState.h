@@ -13,7 +13,9 @@ public:
     }
 
 
-    [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
+
+protected:
+    [[nodiscard]] std::optional<TurnaroundTransition> EvaluatePhase(TurnaroundContext& ctx) override;
 
 private:
     static void EnsureBaseline(TurnaroundContext& ctx);

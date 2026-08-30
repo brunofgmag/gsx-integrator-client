@@ -5,7 +5,7 @@
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
-std::optional<TurnaroundTransition> WaitingEnginesState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> WaitingEnginesState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (!ctx.gsxGateway->IsGoodEngineStartConfirmationEnabled() || ctx.gsxGateway->IsPushbackFinished())
     {

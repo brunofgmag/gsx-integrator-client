@@ -3,7 +3,7 @@
 #include "../TurnaroundContext.h"
 #include "../../ports/GsxGateway.h"
 
-std::optional<TurnaroundTransition> OnFlightState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> OnFlightState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (ctx.gsxGateway->IsAircraftOnGround())
     {

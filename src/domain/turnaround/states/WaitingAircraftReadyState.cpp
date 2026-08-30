@@ -3,7 +3,7 @@
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
 
-std::optional<TurnaroundTransition> WaitingAircraftReadyState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> WaitingAircraftReadyState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (ctx.aircraft->IsEngineRunning())
     {

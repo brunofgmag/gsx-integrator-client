@@ -10,7 +10,7 @@ namespace
     constexpr int kRetryTicks = 60;
 }
 
-std::optional<TurnaroundTransition> RequestDeboardingState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> RequestDeboardingState::EvaluatePhase(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 

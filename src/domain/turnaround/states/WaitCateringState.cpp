@@ -9,7 +9,7 @@ namespace
     constexpr int kMaxWaitIntervals = 5;
 }
 
-std::optional<TurnaroundTransition> WaitCateringState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> WaitCateringState::EvaluatePhase(TurnaroundContext& ctx)
 {
     const bool waitCatering = ctx.data.cateringRequested;
 

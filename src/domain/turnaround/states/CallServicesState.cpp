@@ -26,7 +26,7 @@ namespace
     }
 }
 
-std::optional<TurnaroundTransition> CallServicesState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> CallServicesState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (!ctx.aircraft->SupportsStairsOrJetways())
     {

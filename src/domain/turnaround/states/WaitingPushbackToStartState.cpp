@@ -4,7 +4,7 @@
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
-std::optional<TurnaroundTransition> WaitingPushbackToStartState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> WaitingPushbackToStartState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (ctx.gsxGateway->IsPushbackFinished() || ctx.gsxGateway->WasStateCompleted(GsxState::Pushback))
     {

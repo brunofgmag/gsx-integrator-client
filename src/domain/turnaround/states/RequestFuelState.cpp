@@ -15,7 +15,7 @@ namespace
     constexpr int kStalledRequestTicks = 600;
 }
 
-std::optional<TurnaroundTransition> RequestFuelState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> RequestFuelState::EvaluatePhase(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 

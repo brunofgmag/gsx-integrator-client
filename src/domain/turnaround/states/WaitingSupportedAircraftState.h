@@ -11,7 +11,9 @@ public:
         return TurnaroundPhase::WaitingSupportedAircraft;
     }
 
-    [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
+
+protected:
+    [[nodiscard]] std::optional<TurnaroundTransition> EvaluatePhase(TurnaroundContext& ctx) override;
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_WAITINGFORSUPPORTEDAIRCRAFTSTATE_H
