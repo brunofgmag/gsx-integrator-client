@@ -73,7 +73,6 @@ private:
         int settleTicks = 0;
         int wantsOpenTicks = 0;
         bool pulseHigh = false;
-        double lastAnim = -1.0;
     };
 
     [[nodiscard]] bool IsBeaconOn() const;

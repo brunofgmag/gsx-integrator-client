@@ -4,6 +4,7 @@
 #include <array>
 #include <string>
 #include <vector>
+#include "tests/doubles/FakeVariableGateway.h"
 #include "tests/turnaround/TurnaroundStateFixture.h"
 #include "src/domain/turnaround/PilotTouch.h"
 #include "src/domain/turnaround/PilotUnlock.h"
@@ -12,6 +13,8 @@
 
 namespace
 {
+    constexpr auto kWatchedLVar = "EXT_Door_stairs_pos";
+
     constexpr auto kReachableWorkflowPhases = std::array{
         TurnaroundPhase::WaitingSupportedAircraft,
         TurnaroundPhase::WaitingAircraftReady,
@@ -64,6 +67,71 @@ namespace
         {
             ++actCalls;
         }
+    };
+
+    class ChangeQueryRule final : public AircraftRule
+    {
+    public:
+        std::vector<bool> answers;
+
+        ChangeQueryRule(VariableReader& reader, const char* ruleName, const char* lvar)
+            : reader_(&reader), ruleName_(ruleName), lvar_(lvar)
+        {
+        }
+
+        [[nodiscard]] const char* Name() const override
+        {
+            return ruleName_;
+        }
+
+        [[nodiscard]] RuleVerdict Evaluate(const RuleContext&) override
+        {
+            answers.push_back(reader_->HasLVarChangedThisTick(lvar_));
+
+            return RuleVerdict::Pass();
+        }
+
+        void Act(const RuleContext&, VariableWriter&) override
+        {
+        }
+
+    private:
+        VariableReader* reader_;
+        const char* ruleName_;
+        const char* lvar_;
+    };
+
+    class SpanQueryRule final : public AircraftRule
+    {
+    public:
+        std::vector<double> swings;
+
+        SpanQueryRule(VariableReader& reader, const char* ruleName, const char* lvar)
+            : reader_(&reader), ruleName_(ruleName), lvar_(lvar)
+        {
+        }
+
+        [[nodiscard]] const char* Name() const override
+        {
+            return ruleName_;
+        }
+
+        [[nodiscard]] RuleVerdict Evaluate(const RuleContext&) override
+        {
+            const LVarSpan span = reader_->ConsumeLVarSpan(lvar_);
+            swings.push_back(span.max - span.min);
+
+            return RuleVerdict::Pass();
+        }
+
+        void Act(const RuleContext&, VariableWriter&) override
+        {
+        }
+
+    private:
+        VariableReader* reader_;
+        const char* ruleName_;
+        const char* lvar_;
     };
 
     class SlowCountingRule final : public CountingRule
@@ -415,6 +483,8 @@ private slots:
     static void bothSurfacesTouchingOnTheSameTickSpendOneEdge();
     static void theLogNamesTheSurfaceTheTouchCameFrom();
     static void resetDiscardsAPendingAppTouch();
+    static void twoRulesAskingAboutOneVariableGetTheSameAnswer();
+    static void theSpanPairAnswersTheSecondRuleDifferently();
 };
 
 void TurnaroundStateMachineTest::publishesCurrentTankFuelBeforeRefuel()
@@ -960,6 +1030,56 @@ void TurnaroundStateMachineTest::theSlowTickActsOnlyWhenTheMachineIsDriving()
 
     QCOMPARE(rule.evaluateCalls, 2);
     QCOMPARE(rule.actCalls, 1);
+}
+
+void TurnaroundStateMachineTest::twoRulesAskingAboutOneVariableGetTheSameAnswer()
+{
+    FakeVariableGateway gateway;
+    TurnaroundWorkflow workflow;
+    ChangeQueryRule first(gateway, "first-change-query", kWatchedLVar);
+    ChangeQueryRule second(gateway, "second-change-query", kWatchedLVar);
+
+    workflow.f.aircraft.rules = {&first, &second};
+    workflow.machine.AttachAircraft(&workflow.f.aircraft);
+
+    gateway.lvars[kWatchedLVar] = 50.0;
+    gateway.MarkTick();
+    workflow.machine.Tick();
+
+    QCOMPARE(first.answers, std::vector<bool>{true});
+    QCOMPARE(second.answers, first.answers);
+
+    gateway.MarkTick();
+    workflow.machine.Tick();
+
+    QCOMPARE(first.answers, (std::vector<bool>{true, false}));
+    QCOMPARE(second.answers, first.answers);
+
+    gateway.lvars[kWatchedLVar] = 120.0;
+    gateway.MarkTick();
+    workflow.machine.Tick();
+
+    QCOMPARE(first.answers, (std::vector<bool>{true, false, true}));
+    QCOMPARE(second.answers, first.answers);
+}
+
+void TurnaroundStateMachineTest::theSpanPairAnswersTheSecondRuleDifferently()
+{
+    FakeVariableGateway gateway;
+    TurnaroundWorkflow workflow;
+    SpanQueryRule first(gateway, "first-span-query", kWatchedLVar);
+    SpanQueryRule second(gateway, "second-span-query", kWatchedLVar);
+
+    workflow.f.aircraft.rules = {&first, &second};
+    workflow.machine.AttachAircraft(&workflow.f.aircraft);
+
+    gateway.lvars[kWatchedLVar] = 120.0;
+    gateway.lvarSpans[kWatchedLVar] = LVarSpan{50.0, 120.0, true};
+    gateway.MarkTick();
+    workflow.machine.Tick();
+
+    QCOMPARE(first.swings, std::vector<double>{70.0});
+    QCOMPARE(second.swings, std::vector<double>{0.0});
 }
 
 QTEST_APPLESS_MAIN(TurnaroundStateMachineTest)

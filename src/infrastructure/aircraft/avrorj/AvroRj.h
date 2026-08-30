@@ -102,7 +102,6 @@ private:
     AirstairPhase airstairPhase_ = AirstairPhase::Stowed;
     bool stairPressureWaitLogged_ = false;
     bool ownAirstairsRequested_ = false;
-    double lastStairPosition_ = -1.0;
     int stairPositionStillTicks_ = 0;
     bool aftDoorCloseWritten_ = false;
     double lastLivenessSimFuelKg_ = -1.0;

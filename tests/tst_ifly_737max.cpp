@@ -1071,6 +1071,7 @@ void IFly737MaxTest::keepsThePassengerDoorClosedForDepartureDespiteTheJetway()
 
     aircraft.HoldDoorsClosed(true);
     TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(gsx::lvars::kAircraftExit1Toggle), 1.0);
 

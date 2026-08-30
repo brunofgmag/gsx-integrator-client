@@ -345,6 +345,8 @@ void IntegratorRuntime::Update()
         return;
     }
 
+    varGateway_.MarkTick();
+
     if (mode == TickMode::Driving)
     {
         stateMachine_.AttachAircraft(aircraft_.get());
