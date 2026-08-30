@@ -46,8 +46,12 @@ private slots:
     static void takeOverFuelAndPayloadClearsAutomationLVars();
     static void reassertsTakeoverAfterCouatlReset();
     static void refuelCounterComesFromFuelCounterLvar();
+    static void gpuStatusPrefersTheRemoteApiOverALyingLVar();
+    static void gpuStatusFallsBackToTheLVarsWithoutTheRemoteApi();
     static void gpuStatusFollowsStateLVar();
     static void gpuStatusConnectedWhenConnectedFlagSetDespiteState();
+    static void gpuStatusIgnoresAConnectedFlagInheritedFromTheLastTurnaround();
+    static void gpuStatusDoesNotArmTheConnectedFlagBeforeItArrives();
     static void serviceInProgressFollowsRemoteStateRaw();
     static void serviceInProgressFalseWhenAbsentOrNoRemote();
 };
@@ -559,6 +563,40 @@ void GsxInterfaceTest::refuelCounterComesFromFuelCounterLvar()
     QCOMPARE(gsx.GetRefuelCounterGallons(), 9000.0);
 }
 
+void GsxInterfaceTest::gpuStatusPrefersTheRemoteApiOverALyingLVar()
+{
+    FakeVariableGateway gateway;
+    GsxRemoteState remote;
+
+    const GsxStateService gsx(&gateway, &remote);
+
+    gateway.lvars[kGpuState] = static_cast<double>(GsxStateStatus::Callable);
+    gateway.lvars[kGpuConnected] = 1.0;
+    remote.services.push_back(GsxRemoteService{"GPU", 1, true});
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Disconnected);
+
+    remote.services.front().stateRaw = 4;
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Disconnected);
+
+    remote.services.front().stateRaw = 5;
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Connected);
+}
+
+void GsxInterfaceTest::gpuStatusFallsBackToTheLVarsWithoutTheRemoteApi()
+{
+    FakeVariableGateway gateway;
+    GsxRemoteState remote;
+
+    const GsxStateService gsx(&gateway, &remote);
+
+    gateway.lvars[kGpuState] = static_cast<double>(GsxStateStatus::Active);
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Connected);
+}
+
 void GsxInterfaceTest::gpuStatusFollowsStateLVar()
 {
     FakeVariableGateway gateway;
@@ -581,12 +619,63 @@ void GsxInterfaceTest::gpuStatusConnectedWhenConnectedFlagSetDespiteState()
 {
     FakeVariableGateway gateway;
 
-    const GsxStateService gsx(&gateway);
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kGpuState] = static_cast<double>(GsxStateStatus::Requested);
+    gateway.lvars[kGpuConnected] = 0.0;
+    gsx.Observe();
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Disconnected);
+
+    gateway.lvars[kGpuConnected] = 1.0;
+    gsx.Observe();
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Connected);
+}
+
+void GsxInterfaceTest::gpuStatusIgnoresAConnectedFlagInheritedFromTheLastTurnaround()
+{
+    FakeVariableGateway gateway;
+
+    GsxStateService gsx(&gateway);
 
     gateway.lvars[kGpuState] = static_cast<double>(GsxStateStatus::Callable);
     gateway.lvars[kGpuConnected] = 1.0;
+    gsx.Observe();
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Disconnected);
+
+    gateway.lvars[kGpuState] = static_cast<double>(GsxStateStatus::Requested);
+    gsx.Observe();
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Disconnected);
+
+    gateway.lvars[kGpuConnected] = 0.0;
+    gsx.Observe();
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Disconnected);
+
+    gateway.lvars[kGpuConnected] = 1.0;
+    gsx.Observe();
 
     QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Connected);
+}
+
+void GsxInterfaceTest::gpuStatusDoesNotArmTheConnectedFlagBeforeItArrives()
+{
+    FakeVariableGateway gateway;
+
+    GsxStateService gsx(&gateway);
+
+    gsx.Observe();
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Unknown);
+
+    gateway.lvars[kGpuState] = static_cast<double>(GsxStateStatus::Callable);
+    gateway.lvars[kGpuConnected] = 1.0;
+    gsx.Observe();
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Disconnected);
 }
 
 void GsxInterfaceTest::serviceInProgressFollowsRemoteStateRaw()
