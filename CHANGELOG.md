@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.27.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.26.1...v1.27.0) (2026-08-30)
+
+
+* the aircraft carries its own rules and the phase base runs them ([#100](https://github.com/brunofgmag/gsx-integrator-client/issues/100)) ([17b1e87](https://github.com/brunofgmag/gsx-integrator-client/commit/17b1e875b63e4d9d430249b71d34662406e12274))
+
+
+### Features
+
+* the aircraft carries its own rules and the phase base runs them ([a4d23d5](https://github.com/brunofgmag/gsx-integrator-client/commit/a4d23d5f61b611118e2e0d40cc86b4ce33b3cb17)) ([17b1e87](https://github.com/brunofgmag/gsx-integrator-client/commit/17b1e875b63e4d9d430249b71d34662406e12274))
+
 ## [1.26.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.26.0...v1.26.1) (2026-08-30)
 
 
