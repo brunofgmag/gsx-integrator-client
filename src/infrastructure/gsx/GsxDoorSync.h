@@ -28,6 +28,7 @@ public:
     explicit GsxDoorSync(VariableGateway* variableGateway);
 
     void Observe();
+    void Report() const;
     void Sync(const DoorWriter& write);
     void CloseAll(const DoorWriter& write);
     void HoldClosedForDeparture(bool hold);
@@ -35,7 +36,6 @@ public:
 
 private:
     [[nodiscard]] bool IsDesiredOpen(GsxDoor door) const;
-    void ReportProbe() const;
 
     VariableGateway* variableGateway_;
     std::array<double, static_cast<std::size_t>(GsxDoor::Count)> lastTargets_{};

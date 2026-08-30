@@ -49,6 +49,8 @@ public:
     virtual bool SetChocks(bool) { return false; }
     [[nodiscard]] virtual bool SupportsGroundPowerControl() const { return false; }
     [[nodiscard]] virtual bool RequiresOwnAirstairs() const { return false; }
+    virtual void SetOwnAirstairs(bool) {}
+    [[nodiscard]] virtual bool AreOwnAirstairsExtended() const { return false; }
     virtual void SetGroundPower(bool) {}
     virtual void CloseAllDoors() {}
     virtual void HoldDoorsClosed(bool) {}

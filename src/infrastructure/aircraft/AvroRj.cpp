@@ -82,8 +82,7 @@ namespace
     constexpr double kStairSwitchExtended = 1.0;
     constexpr double kStairSwitchRetracted = 0.0;
     constexpr double kClickspotPressed = 1.0;
-    constexpr double kGsxStairsInPlace = 5.0;
-    constexpr int kStairsSettledHoldTicks = 3;
+    constexpr int kStairSettledHoldTicks = 2;
     constexpr auto kStairPositionLVar = "EXT_Door_stairs_pos";
     constexpr double kStairStowedPosition = 55.0;
 
@@ -91,11 +90,6 @@ namespace
     constexpr double kFuelMovingKgPerTick = 2.0;
     constexpr double kMirrorDivergenceKg = 50.0;
     constexpr int kModuleDeadTicks = 5;
-
-    const char* SyncedDoorLVar(const GsxDoor door)
-    {
-        return door == GsxDoor::AftPax ? kAftPaxDoorLVar : nullptr;
-    }
 
     constexpr int kEngineCount = 4;
 
@@ -156,9 +150,9 @@ void AvroRj::Observe()
 void AvroRj::OnTick()
 {
     Observe();
-    UpdateStairsSettled();
+    UpdateAirstairTravel();
     UpdateDoors();
-    UpdateJetwayBoardingDoor();
+    UpdateAftDoorClosed();
     UpdateAirstair();
     UpdateModuleLiveness();
 }
@@ -171,13 +165,7 @@ void AvroRj::HoldDoorsClosed(const bool hold)
 
 void AvroRj::UpdateDoors()
 {
-    doors_.Sync([this](const GsxDoor door, const bool open)
-    {
-        if (const char* lVar = SyncedDoorLVar(door); lVar != nullptr)
-        {
-            variableGateway_->SetLVar(lVar, open ? kDoorOpen : kDoorClosed);
-        }
-    });
+    doors_.Report();
 
     if (IsFrontDoorWanted())
     {
@@ -201,38 +189,23 @@ void AvroRj::UpdateDoors()
     }
 }
 
-void AvroRj::UpdateJetwayBoardingDoor()
+void AvroRj::UpdateAftDoorClosed()
 {
-    const bool boardingActive =
-        variableGateway_->GetLVar(gsx::lvars::kBoardingState, 0.0)
-        == static_cast<double>(GsxStateStatus::Active);
-    if (!boardingActive)
+    if (variableGateway_->GetLVar(kAftPaxDoorLVar, 0.0) != kDoorOpen)
     {
-        aftDoorClosedForJetwayBoarding_ = false;
+        aftDoorCloseWritten_ = false;
 
         return;
     }
 
-    if (aftDoorClosedForJetwayBoarding_)
+    if (aftDoorCloseWritten_)
     {
         return;
     }
 
-    const bool jetwayDocked =
-        doors_.VehicleState(gsx::lvars::kJetway, kJetwayUnavailable) == kJetwayDocked;
-    const bool rearStairsQuiet =
-        doors_.VehicleState(gsx::lvars::kPassengerStairsMiddleState, 0.0) < gsx::states::kVehicleDispatched
-        && doors_.VehicleState(gsx::lvars::kPassengerStairsRearState, 0.0) < gsx::states::kVehicleDispatched;
-    const bool aftDoorOpen = variableGateway_->GetLVar(kAftPaxDoorLVar, 0.0) == kDoorOpen;
-
-    if (!jetwayDocked || !rearStairsQuiet || !aftDoorOpen)
-    {
-        return;
-    }
-
-    aftDoorClosedForJetwayBoarding_ = true;
-    probe::Line(QStringLiteral("write aft AftPax open=0 (jetway boarding)"));
-    LOG_INFO("Closing the 2L the module opened: boarding runs through the jetway and no rear stairs are posted");
+    aftDoorCloseWritten_ = true;
+    probe::Line(QStringLiteral("write aft AftPax open=0"));
+    LOG_INFO("Closing the 2L: this aircraft boards through its own airstair at the 1L");
     variableGateway_->SetLVar(kAftPaxDoorLVar, kDoorClosed);
 }
 
@@ -268,30 +241,58 @@ bool AvroRj::IsModuleMirroringFuel() const
     return mirrorDivergentTicks_ < kModuleDeadTicks;
 }
 
-void AvroRj::UpdateStairsSettled()
+void AvroRj::SetOwnAirstairs(const bool extended)
 {
-    const bool inPlace = variableGateway_->GetLVar(gsx::lvars::kStairs, 0.0) == kGsxStairsInPlace;
-    const bool vehiclesQuiet =
-        doors_.VehicleState(gsx::lvars::kPassengerStairsFrontState, 0.0) < gsx::states::kVehicleDispatched
-        && doors_.VehicleState(gsx::lvars::kPassengerStairsMiddleState, 0.0) < gsx::states::kVehicleDispatched
-        && doors_.VehicleState(gsx::lvars::kPassengerStairsRearState, 0.0) < gsx::states::kVehicleDispatched;
-
-    stairsSettledTicks_ = inPlace && vehiclesQuiet ? stairsSettledTicks_ + 1 : 0;
+    ownAirstairsRequested_ = extended;
 }
 
-bool AvroRj::AreGsxStairsSettled() const
+void AvroRj::UpdateAirstairTravel()
 {
-    return stairsSettledTicks_ >= kStairsSettledHoldTicks;
+    if (!variableGateway_->HasReceivedLVar(kStairPositionLVar))
+    {
+        stairPositionStillTicks_ = 0;
+
+        return;
+    }
+
+    const double position = variableGateway_->GetLVar(kStairPositionLVar, 0.0);
+    stairPositionStillTicks_ = position == lastStairPosition_ ? stairPositionStillTicks_ + 1 : 0;
+    lastStairPosition_ = position;
+}
+
+bool AvroRj::IsAirstairOutOfItsWell() const
+{
+    return variableGateway_->HasReceivedLVar(kStairPositionLVar)
+        && variableGateway_->GetLVar(kStairPositionLVar, 0.0) > kStairStowedPosition;
+}
+
+bool AvroRj::IsAirstairMoving() const
+{
+    return variableGateway_->HasReceivedLVar(kStairPositionLVar)
+        && stairPositionStillTicks_ < kStairSettledHoldTicks;
+}
+
+bool AvroRj::AreOwnAirstairsExtended() const
+{
+    return airstairPhase_ == AirstairPhase::Extended
+        && IsAirstairOutOfItsWell()
+        && stairPositionStillTicks_ >= kStairSettledHoldTicks;
 }
 
 void AvroRj::UpdateAirstair()
 {
+    if (IsAirstairMoving())
+    {
+        return;
+    }
+
     const bool wanted = IsAirstairWanted();
 
     switch (airstairPhase_)
     {
     case AirstairPhase::Stowed:
-        if (variableGateway_->GetLVar(kStairExtendSwitchLVar, 0.0) == kStairSwitchExtended)
+        if (variableGateway_->GetLVar(kStairExtendSwitchLVar, 0.0) == kStairSwitchExtended
+            && IsAirstairOutOfItsWell())
         {
             airstairPhase_ = AirstairPhase::Extended;
             break;
@@ -346,7 +347,7 @@ void AvroRj::UpdateAirstair()
 
 bool AvroRj::IsAirstairWanted() const
 {
-    if (heldForDeparture_)
+    if (heldForDeparture_ || !ownAirstairsRequested_)
     {
         return false;
     }
@@ -361,14 +362,8 @@ bool AvroRj::IsAirstairWanted() const
         return false;
     }
 
-    if (gsx::states::AreStairsArriving(doors_.VehicleState(gsx::lvars::kPassengerStairsFrontState, 0.0)))
-    {
-        return false;
-    }
-
-    return gsx::states::AreStairsDocked(doors_.VehicleState(gsx::lvars::kPassengerStairsMiddleState, 0.0))
-        || gsx::states::AreStairsDocked(doors_.VehicleState(gsx::lvars::kPassengerStairsRearState, 0.0))
-        || AreGsxStairsSettled();
+    return doors_.VehicleState(gsx::lvars::kPassengerStairsFrontState, 0.0)
+        < gsx::states::kVehicleDispatched;
 }
 
 bool AvroRj::HasStairPressure() const
@@ -411,10 +406,8 @@ bool AvroRj::IsFrontDoorWanted() const
         return true;
     }
 
-    return gsx::states::AreStairsArriving(doors_.VehicleState(gsx::lvars::kPassengerStairsFrontState, 0.0))
-        || gsx::states::AreStairsArriving(doors_.VehicleState(gsx::lvars::kPassengerStairsMiddleState, 0.0))
-        || gsx::states::AreStairsArriving(doors_.VehicleState(gsx::lvars::kPassengerStairsRearState, 0.0))
-        || AreGsxStairsSettled();
+    return ownAirstairsRequested_
+        || gsx::states::AreStairsArriving(doors_.VehicleState(gsx::lvars::kPassengerStairsFrontState, 0.0));
 }
 
 void AvroRj::OnLoadingStarted()
