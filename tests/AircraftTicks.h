@@ -30,7 +30,7 @@ inline void RunAircraftRules(Aircraft& aircraft, VariableWriter& writer,
             continue;
         }
 
-        rule->Evaluate(context);
+        static_cast<void>(rule->Evaluate(context));
         rule->Act(context, writer);
     }
 }
