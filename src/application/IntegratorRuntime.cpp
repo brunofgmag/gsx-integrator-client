@@ -349,8 +349,8 @@ void IntegratorRuntime::Update()
     {
         stateMachine_.AttachAircraft(aircraft_.get());
         gsxMenu_.OnMenuChanged();
-        stateMachine_.Tick();
         aircraft_->OnTick();
+        stateMachine_.Tick();
     }
     else
     {
