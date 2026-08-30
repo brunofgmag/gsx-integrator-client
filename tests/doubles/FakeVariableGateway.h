@@ -14,6 +14,7 @@ public:
     std::unordered_map<std::string, double> lvars;
     std::unordered_map<std::string, LVarSpan> lvarSpans;
     std::unordered_map<std::string, double> avars;
+    std::unordered_map<std::string, int> lvarWrites;
     std::string aircraftName;
     bool aircraftNameAvailable = true;
     std::string atcModel;
@@ -54,6 +55,7 @@ public:
     void SetLVar(const std::string& name, const double value) override
     {
         ++setLVarCalls;
+        ++lvarWrites[name];
         lvars[name] = value;
     }
 
@@ -88,6 +90,12 @@ public:
     {
         const auto it = lvars.find(name);
         return it != lvars.end() ? it->second : fallback;
+    }
+
+    [[nodiscard]] int WriteCount(const std::string& name) const
+    {
+        const auto it = lvarWrites.find(name);
+        return it != lvarWrites.end() ? it->second : 0;
     }
 
 private:

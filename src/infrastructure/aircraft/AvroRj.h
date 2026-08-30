@@ -37,6 +37,8 @@ public:
 
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
     [[nodiscard]] bool RequiresOwnAirstairs() const override { return true; }
+    void SetOwnAirstairs(bool extended) override;
+    [[nodiscard]] bool AreOwnAirstairsExtended() const override;
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
     [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Client; }
     [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Self; }
@@ -66,13 +68,14 @@ private:
     };
 
     void UpdateDoors();
-    void UpdateJetwayBoardingDoor();
+    void UpdateAftDoorClosed();
     void UpdateAirstair();
-    void UpdateStairsSettled();
+    void UpdateAirstairTravel();
     void UpdateModuleLiveness();
     [[nodiscard]] bool IsFrontDoorWanted() const;
     [[nodiscard]] bool IsAirstairWanted() const;
-    [[nodiscard]] bool AreGsxStairsSettled() const;
+    [[nodiscard]] bool IsAirstairOutOfItsWell() const;
+    [[nodiscard]] bool IsAirstairMoving() const;
     [[nodiscard]] bool HasStairPressure() const;
     bool StairPressureReady();
     [[nodiscard]] bool IsBeaconOn() const;
@@ -88,8 +91,10 @@ private:
     double lastFuelKg_ = -1.0;
     AirstairPhase airstairPhase_ = AirstairPhase::Stowed;
     bool stairPressureWaitLogged_ = false;
-    int stairsSettledTicks_ = 0;
-    bool aftDoorClosedForJetwayBoarding_ = false;
+    bool ownAirstairsRequested_ = false;
+    double lastStairPosition_ = -1.0;
+    int stairPositionStillTicks_ = 0;
+    bool aftDoorCloseWritten_ = false;
     double lastLivenessSimFuelKg_ = -1.0;
     int mirrorDivergentTicks_ = 0;
     bool moduleDeadLogged_ = false;

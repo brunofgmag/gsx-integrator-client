@@ -83,6 +83,19 @@ std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(Tur
 
     const bool jetwayAvailable = ctx.gsxGateway->IsJetwayAvailable();
 
+    if (!jetwayAvailable && ctx.aircraft->RequiresOwnAirstairs()
+        && ctx.gsxGateway->AreStairsAvailable())
+    {
+        ctx.aircraft->SetOwnAirstairs(true);
+
+        if (ctx.aircraft->AreOwnAirstairsExtended())
+        {
+            return TurnaroundTransition{TurnaroundPhase::WaitingFlightPlan};
+        }
+
+        return std::nullopt;
+    }
+
     if (!ctx.data.jetwayOrStairsRequested
         && (jetwayAvailable || ctx.gsxGateway->AreStairsAvailable()))
     {
