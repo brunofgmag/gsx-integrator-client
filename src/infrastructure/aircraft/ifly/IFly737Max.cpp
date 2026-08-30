@@ -323,10 +323,7 @@ bool IFly737Max::HasPendingCargoDoorWork() const
 
 void IFly737Max::TrackDoorTravel(CargoDoorCloser& door) const
 {
-    const double anim = variableGateway_->GetLVar(door.animLVar, 0.0);
-
-    door.moving = door.lastAnim >= 0.0 && anim != door.lastAnim;
-    door.lastAnim = anim;
+    door.moving = variableGateway_->HasLVarChangedThisTick(door.animLVar);
 }
 
 void IFly737Max::TrackBaggageLoader(CargoDoorCloser& door) const

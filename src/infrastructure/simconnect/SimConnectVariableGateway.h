@@ -8,16 +8,19 @@
 #include <SimConnect.h>
 #include "../simvars/VariableGateway.h"
 
-class SimConnectVariableGateway final : public VariableGateway
+class SimConnectVariableGateway final : public VariableGateway, public VariableTickMarker
 {
 public:
     void Attach(HANDLE hSimConnect);
     void Detach();
 
+    void MarkTick() override;
+
     void SetFastRefresh(const std::string& name) override;
     double GetLVar(const std::string& name, double defaultValue) override;
     LVarSpan ConsumeLVarSpan(const std::string& name) override;
     [[nodiscard]] bool HasReceivedLVar(const std::string& name) override;
+    [[nodiscard]] bool HasLVarChangedThisTick(const std::string& name) override;
     void SetLVar(const std::string& name, double value) override;
     double GetAVar(const std::string& name, const std::string& unit, double defaultValue) override;
     [[nodiscard]] bool HasReceivedAVar(const std::string& name, const std::string& unit) override;
@@ -41,6 +44,9 @@ private:
         double value = 0.0;
         double spanMin = 0.0;
         double spanMax = 0.0;
+        double tickValue = 0.0;
+        bool tickMarked = false;
+        bool changedThisTick = true;
         char text[256] = {};
     };
 

@@ -5,10 +5,11 @@
 #include <cstring>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include "../../src/infrastructure/simvars/VariableGateway.h"
 
-class FakeVariableGateway final : public VariableGateway
+class FakeVariableGateway final : public VariableGateway, public VariableTickMarker
 {
 public:
     std::unordered_map<std::string, double> lvars;
@@ -22,6 +23,8 @@ public:
     int setLVarCalls = 0;
     int setAVarCalls = 0;
     std::vector<std::string> fastRefreshNames;
+    std::unordered_map<std::string, double> tickValues;
+    std::unordered_set<std::string> changedThisTick;
 
     void SetFastRefresh(const std::string& name) override
     {
@@ -50,6 +53,27 @@ public:
     bool HasReceivedLVar(const std::string& name) override
     {
         return lvars.contains(name);
+    }
+
+    void MarkTick() override
+    {
+        changedThisTick.clear();
+
+        for (const auto& [name, value] : lvars)
+        {
+            const auto marked = tickValues.find(name);
+            if (marked == tickValues.end() || marked->second != value)
+            {
+                changedThisTick.insert(name);
+            }
+        }
+
+        tickValues = lvars;
+    }
+
+    bool HasLVarChangedThisTick(const std::string& name) override
+    {
+        return changedThisTick.contains(name);
     }
 
     void SetLVar(const std::string& name, const double value) override

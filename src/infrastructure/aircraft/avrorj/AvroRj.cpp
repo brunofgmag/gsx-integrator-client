@@ -270,9 +270,9 @@ void AvroRj::ObserveAirstairTravel()
         return;
     }
 
-    const double position = variableGateway_->GetLVar(kStairPositionLVar, 0.0);
-    stairPositionStillTicks_ = position == lastStairPosition_ ? stairPositionStillTicks_ + 1 : 0;
-    lastStairPosition_ = position;
+    stairPositionStillTicks_ = variableGateway_->HasLVarChangedThisTick(kStairPositionLVar)
+                                   ? 0
+                                   : stairPositionStillTicks_ + 1;
 }
 
 bool AvroRj::IsAirstairOutOfItsWell() const

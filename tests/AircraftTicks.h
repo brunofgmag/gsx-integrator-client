@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "doubles/FakeVariableGateway.h"
 #include "../src/domain/ports/Aircraft.h"
 #include "../src/domain/ports/AircraftRule.h"
 #include "../src/infrastructure/simvars/VariableGateway.h"
@@ -35,10 +36,11 @@ inline void RunAircraftRules(Aircraft& aircraft, VariableWriter& writer,
     }
 }
 
-inline void TickAircraft(Aircraft& aircraft, VariableWriter& writer, const RuleContext& context = {})
+inline void TickAircraft(Aircraft& aircraft, FakeVariableGateway& gateway, const RuleContext& context = {})
 {
+    gateway.MarkTick();
     aircraft.Observe();
-    RunAircraftRules(aircraft, writer, RuleCadence::Fast, context);
+    RunAircraftRules(aircraft, gateway, RuleCadence::Fast, context);
 }
 
 inline void SlowTickAircraft(Aircraft& aircraft, VariableWriter& writer, const RuleContext& context = {})
