@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.26.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.26.0...v1.26.1) (2026-08-30)
+
+
+* extend the Avro RJ's own airstair and read ground services from the Remote API ([#96](https://github.com/brunofgmag/gsx-integrator-client/issues/96)) ([c61ee79](https://github.com/brunofgmag/gsx-integrator-client/commit/c61ee79d345e93160d1d85c26a933750c4551f35))
+
+
+### Bug Fixes
+
+* **avro-rj:** extend the aircraft's own airstair instead of calling gsx stairs ([c3028bd](https://github.com/brunofgmag/gsx-integrator-client/commit/c3028bd53f8962a58b80f954254bd11e84a86936)) ([c61ee79](https://github.com/brunofgmag/gsx-integrator-client/commit/c61ee79d345e93160d1d85c26a933750c4551f35))
+* **gsx:** read the gpu state from the remote api and wait for the cart ([659bc84](https://github.com/brunofgmag/gsx-integrator-client/commit/659bc84ab046a84ad78b13b8bf6187928b7d5d74)) ([c61ee79](https://github.com/brunofgmag/gsx-integrator-client/commit/c61ee79d345e93160d1d85c26a933750c4551f35))
+* **gsx:** wait twenty seconds before re-attacking a service trigger ([ed1a300](https://github.com/brunofgmag/gsx-integrator-client/commit/ed1a3007f8315afa20545787ef54853594ab6c54)) ([c61ee79](https://github.com/brunofgmag/gsx-integrator-client/commit/c61ee79d345e93160d1d85c26a933750c4551f35))
+
 ## [1.26.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.25.0...v1.26.0) (2026-08-29)
 
 
