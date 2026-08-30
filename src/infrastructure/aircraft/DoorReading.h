@@ -25,7 +25,7 @@ namespace doors
         return DoorStatus::AllClosed;
     }
 
-    inline std::optional<bool> OpenAboveZero(VariableGateway& variables, const char* lvar)
+    inline std::optional<bool> OpenAboveZero(VariableReader& variables, const char* lvar)
     {
         if (!variables.HasReceivedLVar(lvar))
         {

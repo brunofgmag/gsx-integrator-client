@@ -23,17 +23,17 @@ namespace simvars
     inline constexpr auto kSimEng3Combustion = "ENG COMBUSTION:3";
     inline constexpr auto kSimEng4Combustion = "ENG COMBUSTION:4";
 
-    inline double EmptyZfwKg(VariableGateway& variables)
+    inline double EmptyZfwKg(VariableReader& variables)
     {
         return variables.GetAVar(kSimEmptyWeight, kKgUnit, 0.0);
     }
 
-    inline double CurrentFuelKg(VariableGateway& variables)
+    inline double CurrentFuelKg(VariableReader& variables)
     {
         return variables.GetAVar(kSimFuelTotalKg, kKgUnit, 0.0);
     }
 
-    inline double CurrentZfwKg(VariableGateway& variables)
+    inline double CurrentZfwKg(VariableReader& variables)
     {
         const double emptyZfwKg = EmptyZfwKg(variables);
         const double totalWeightKg = variables.GetAVar(kSimTotalWeight, kKgUnit, emptyZfwKg);
@@ -42,7 +42,7 @@ namespace simvars
         return zfwKg < emptyZfwKg ? emptyZfwKg : zfwKg;
     }
 
-    inline bool AnyEngineCombusting(VariableGateway& variables, const double defaultValue,
+    inline bool AnyEngineCombusting(VariableReader& variables, const double defaultValue,
                                     const int engineCount)
     {
         constexpr std::array kEngineCombustion =
