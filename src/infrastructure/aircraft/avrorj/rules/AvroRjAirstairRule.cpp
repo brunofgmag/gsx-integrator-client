@@ -20,6 +20,8 @@ const char* AvroRjAirstairRule::Name() const
 
 RuleVerdict AvroRjAirstairRule::Evaluate(const RuleContext& context)
 {
+    aircraft_->ObserveAirstairTravel();
+
     if (!context.needs.passengerAccess || aircraft_->IsJetwayAvailable())
     {
         return RuleVerdict::Pass();
@@ -39,4 +41,6 @@ void AvroRjAirstairRule::Act(const RuleContext& context, VariableWriter&)
     {
         aircraft_->WantAirstairs(true);
     }
+
+    aircraft_->DriveAirstair();
 }

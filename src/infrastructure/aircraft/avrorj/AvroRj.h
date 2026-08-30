@@ -3,6 +3,8 @@
 
 #include "../SmartSwitch.h"
 #include "rules/AvroRjAirstairRule.h"
+#include "rules/AvroRjDoorRule.h"
+#include "rules/AvroRjModuleLivenessRule.h"
 #include "../../gsx/GsxDoorSync.h"
 #include "../../../domain/ports/Aircraft.h"
 
@@ -20,8 +22,12 @@ public:
     [[nodiscard]] bool IsCargoVariant() const override;
 
     void Observe() override;
-    void OnTick() override;
     void OnLoadingStarted() override;
+
+    void DriveDoors();
+    void ObserveAirstairTravel();
+    void DriveAirstair();
+    void ObserveModuleLiveness();
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -72,9 +78,6 @@ private:
 
     void UpdateDoors();
     void UpdateAftDoorClosed();
-    void UpdateAirstair();
-    void UpdateAirstairTravel();
-    void UpdateModuleLiveness();
     [[nodiscard]] bool IsFrontDoorWanted() const;
     [[nodiscard]] bool IsAirstairWanted() const;
     [[nodiscard]] bool IsAirstairOutOfItsWell() const;
@@ -92,7 +95,9 @@ private:
     bool heldForDeparture_ = false;
     double lastFrontDoorTarget_ = -1.0;
     double lastFuelKg_ = -1.0;
+    AvroRjDoorRule doorRule_;
     AvroRjAirstairRule airstairRule_;
+    AvroRjModuleLivenessRule livenessRule_;
     std::vector<AircraftRule*> rules_;
     AirstairPhase airstairPhase_ = AirstairPhase::Stowed;
     bool stairPressureWaitLogged_ = false;

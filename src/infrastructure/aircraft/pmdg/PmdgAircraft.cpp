@@ -40,7 +40,11 @@ PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationSta
       groundConn_(*this, *tablet_),
       payload_(*tablet_, *variableGateway, status, spec.cargoVariant),
       smartSwitch_(*variableGateway, std::move(spec.smartSwitchLVars),
-                   std::move(spec.smartSwitchPressed))
+                   std::move(spec.smartSwitchPressed)),
+      doorRule_(*this),
+      groundConnectionRule_(*this),
+      payloadRule_(*this),
+      rules_{&doorRule_, &groundConnectionRule_, &payloadRule_}
 {
 }
 
@@ -70,20 +74,38 @@ void PmdgAircraft::Observe()
     }
 }
 
-void PmdgAircraft::OnTick()
+const std::vector<AircraftRule*>& PmdgAircraft::Rules() const
 {
-    Observe();
+    return rules_;
+}
 
-    if (data_->HasData())
+void PmdgAircraft::ReconcileGroundConnection()
+{
+    if (!data_->HasData())
     {
-        SyncDoors();
-        groundConn_.Reconcile();
-        payload_.Trim();
+        return;
     }
+
+    groundConn_.Reconcile();
+}
+
+void PmdgAircraft::TrimPayload()
+{
+    if (!data_->HasData())
+    {
+        return;
+    }
+
+    payload_.Trim();
 }
 
 void PmdgAircraft::SyncDoors()
 {
+    if (!data_->HasData())
+    {
+        return;
+    }
+
     if (variableGateway_->GetLVar(gsx::lvars::kAutomationDoors, 1.0) != 0.0)
     {
         variableGateway_->SetLVar(gsx::lvars::kAutomationDoors, 0.0);

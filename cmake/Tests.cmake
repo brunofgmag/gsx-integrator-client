@@ -286,6 +286,8 @@ gsxi_add_qt_test(gsxi-smart-switch-tests smart-switch
 
 gsxi_add_qt_test(gsxi-tfdi-md11-tests tfdi-md11
         tests/TestDoubles.h
+        tests/AircraftTicks.h
+        tests/doubles/FakeVariableWriter.h
         tests/tst_tfdi_md11.cpp
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
@@ -294,17 +296,29 @@ gsxi_add_qt_test(gsxi-tfdi-md11-tests tfdi-md11
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/tfdi/TfdiMd11.cpp
         src/infrastructure/aircraft/tfdi/TfdiMd11.h
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11CargoDoorRule.cpp
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11CargoDoorRule.h
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11EfbTargetRule.cpp
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11EfbTargetRule.h
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11PaxDoorRule.cpp
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11PaxDoorRule.h
         src/domain/model/AutomationStatus.h
         src/domain/support/Weight.h)
 
 gsxi_add_qt_test(gsxi-ifly-737max-tests ifly-737max
         tests/TestDoubles.h
+        tests/AircraftTicks.h
+        tests/doubles/FakeVariableWriter.h
         tests/tst_ifly_737max.cpp
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/ifly/IFly737Max.cpp
         src/infrastructure/aircraft/ifly/IFly737Max.h
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorRule.cpp
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorRule.h
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxPlanImportRule.cpp
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxPlanImportRule.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/ifly/IFlyPlanFile.cpp
@@ -327,6 +341,7 @@ gsxi_add_qt_test(gsxi-gsx-aircraft-profile-tests gsx-aircraft-profile
 
 gsxi_add_qt_test(gsxi-avro-rj-tests avro-rj
         tests/TestDoubles.h
+        tests/AircraftTicks.h
         tests/tst_avro_rj.cpp
         tests/doubles/FakeVariableWriter.h
         src/infrastructure/aircraft/AircraftIdentity.h
@@ -334,6 +349,10 @@ gsxi_add_qt_test(gsxi-avro-rj-tests avro-rj
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/avrorj/AvroRj.cpp
         src/infrastructure/aircraft/avrorj/AvroRj.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjDoorRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjDoorRule.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjModuleLivenessRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjModuleLivenessRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjAirstairRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjAirstairRule.h
         src/infrastructure/aircraft/SmartSwitch.cpp
@@ -343,6 +362,8 @@ gsxi_add_qt_test(gsxi-avro-rj-tests avro-rj
 
 gsxi_add_qt_test(gsxi-toliss-a340-tests toliss-a340
         tests/TestDoubles.h
+        tests/AircraftTicks.h
+        tests/doubles/FakeVariableWriter.h
         tests/tst_toliss_a340.cpp
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
@@ -351,6 +372,10 @@ gsxi_add_qt_test(gsxi-toliss-a340-tests toliss-a340
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/toliss/TolissA340.cpp
         src/infrastructure/aircraft/toliss/TolissA340.h
+        src/infrastructure/aircraft/toliss/rules/TolissA340DoorRule.cpp
+        src/infrastructure/aircraft/toliss/rules/TolissA340DoorRule.h
+        src/infrastructure/aircraft/toliss/rules/TolissA340UplinkRule.cpp
+        src/infrastructure/aircraft/toliss/rules/TolissA340UplinkRule.h
         src/infrastructure/gsx/GsxDoorSync.cpp
         src/infrastructure/gsx/GsxDoorSync.h
         src/domain/model/AutomationStatus.h)
@@ -370,6 +395,8 @@ add_custom_command(TARGET gsxi-fenix-efb-client-tests POST_BUILD
 
 gsxi_add_qt_test(gsxi-fenix-a32x-tests fenix-a32x
         tests/TestDoubles.h
+        tests/AircraftTicks.h
+        tests/doubles/FakeVariableWriter.h
         tests/tst_fenix_a32x.cpp
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
@@ -378,6 +405,12 @@ gsxi_add_qt_test(gsxi-fenix-a32x-tests fenix-a32x
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
         src/infrastructure/aircraft/fenix/FenixA32x.h
+        src/infrastructure/aircraft/fenix/rules/FenixA32xDoorRule.cpp
+        src/infrastructure/aircraft/fenix/rules/FenixA32xDoorRule.h
+        src/infrastructure/aircraft/fenix/rules/FenixA32xEfbSetupRule.cpp
+        src/infrastructure/aircraft/fenix/rules/FenixA32xEfbSetupRule.h
+        src/infrastructure/aircraft/fenix/rules/FenixA32xRefuelSystemRule.cpp
+        src/infrastructure/aircraft/fenix/rules/FenixA32xRefuelSystemRule.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/fenix/FenixEfbClient.cpp
@@ -501,6 +534,8 @@ gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
         tests/doubles/FakeVariableGateway.h
         tests/doubles/FakeSimConnectApi.h
         tests/doubles/FakeSimConnectApi.cpp
+        tests/AircraftTicks.h
+        tests/doubles/FakeVariableWriter.h
         tests/tst_pmdg777.cpp
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
@@ -508,6 +543,12 @@ gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
         src/infrastructure/aircraft/pmdg/Pmdg777.h
         src/infrastructure/aircraft/pmdg/PmdgAircraft.cpp
         src/infrastructure/aircraft/pmdg/PmdgAircraft.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgDoorRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgDoorRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgGroundConnectionRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgGroundConnectionRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgPayloadRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgPayloadRule.h
         src/infrastructure/pmdg/PmdgPayloadWriter.cpp
         src/infrastructure/pmdg/PmdgPayloadWriter.h
         src/infrastructure/pmdg/PmdgDoorReconciler.cpp
@@ -543,6 +584,7 @@ gsxi_add_qt_test(gsxi-pmdg-737-tests pmdg-737
         tests/doubles/FakeVariableGateway.h
         tests/doubles/FakeSimConnectApi.h
         tests/doubles/FakeSimConnectApi.cpp
+        tests/AircraftTicks.h
         tests/tst_pmdg737.cpp
         src/infrastructure/pmdg/PmdgOptions.cpp
         src/infrastructure/pmdg/PmdgOptions.h
@@ -554,6 +596,12 @@ gsxi_add_qt_test(gsxi-pmdg-737-tests pmdg-737
         src/infrastructure/aircraft/pmdg/Pmdg737.h
         src/infrastructure/aircraft/pmdg/PmdgAircraft.cpp
         src/infrastructure/aircraft/pmdg/PmdgAircraft.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgDoorRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgDoorRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgGroundConnectionRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgGroundConnectionRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgPayloadRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgPayloadRule.h
         src/infrastructure/pmdg/PmdgPayloadWriter.cpp
         src/infrastructure/pmdg/PmdgPayloadWriter.h
         src/infrastructure/pmdg/PmdgDoorReconciler.cpp
@@ -606,14 +654,28 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/avrorj/AvroRj.cpp
         src/infrastructure/aircraft/avrorj/AvroRj.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjDoorRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjDoorRule.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjModuleLivenessRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjModuleLivenessRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjAirstairRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjAirstairRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
         src/infrastructure/aircraft/fenix/FenixA32x.h
+        src/infrastructure/aircraft/fenix/rules/FenixA32xDoorRule.cpp
+        src/infrastructure/aircraft/fenix/rules/FenixA32xDoorRule.h
+        src/infrastructure/aircraft/fenix/rules/FenixA32xEfbSetupRule.cpp
+        src/infrastructure/aircraft/fenix/rules/FenixA32xEfbSetupRule.h
+        src/infrastructure/aircraft/fenix/rules/FenixA32xRefuelSystemRule.cpp
+        src/infrastructure/aircraft/fenix/rules/FenixA32xRefuelSystemRule.h
         src/infrastructure/aircraft/ifly/IFly737Max.cpp
         src/infrastructure/aircraft/ifly/IFly737Max.h
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorRule.cpp
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorRule.h
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxPlanImportRule.cpp
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxPlanImportRule.h
         src/infrastructure/ifly/IFlyPlanFile.cpp
         src/infrastructure/ifly/IFlyPlanFile.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp
@@ -624,6 +686,12 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/pmdg/Pmdg777.h
         src/infrastructure/aircraft/pmdg/PmdgAircraft.cpp
         src/infrastructure/aircraft/pmdg/PmdgAircraft.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgDoorRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgDoorRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgGroundConnectionRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgGroundConnectionRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgPayloadRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgPayloadRule.h
         src/infrastructure/pmdg/PmdgPayloadWriter.cpp
         src/infrastructure/pmdg/PmdgPayloadWriter.h
         src/infrastructure/pmdg/PmdgDoorReconciler.cpp
@@ -636,8 +704,18 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/tfdi/TfdiMd11.cpp
         src/infrastructure/aircraft/tfdi/TfdiMd11.h
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11CargoDoorRule.cpp
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11CargoDoorRule.h
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11EfbTargetRule.cpp
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11EfbTargetRule.h
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11PaxDoorRule.cpp
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11PaxDoorRule.h
         src/infrastructure/aircraft/toliss/TolissA340.cpp
         src/infrastructure/aircraft/toliss/TolissA340.h
+        src/infrastructure/aircraft/toliss/rules/TolissA340DoorRule.cpp
+        src/infrastructure/aircraft/toliss/rules/TolissA340DoorRule.h
+        src/infrastructure/aircraft/toliss/rules/TolissA340UplinkRule.cpp
+        src/infrastructure/aircraft/toliss/rules/TolissA340UplinkRule.h
         src/infrastructure/commbus/CommBusBridgeClient.cpp
         src/infrastructure/commbus/CommBusBridgeClient.h
         src/infrastructure/commbus/CommBusBridgeGateway.h
@@ -735,20 +813,40 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/avrorj/AvroRj.cpp
         src/infrastructure/aircraft/avrorj/AvroRj.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjDoorRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjDoorRule.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjModuleLivenessRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjModuleLivenessRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjAirstairRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjAirstairRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
         src/infrastructure/aircraft/fenix/FenixA32x.h
+        src/infrastructure/aircraft/fenix/rules/FenixA32xDoorRule.cpp
+        src/infrastructure/aircraft/fenix/rules/FenixA32xDoorRule.h
+        src/infrastructure/aircraft/fenix/rules/FenixA32xEfbSetupRule.cpp
+        src/infrastructure/aircraft/fenix/rules/FenixA32xEfbSetupRule.h
+        src/infrastructure/aircraft/fenix/rules/FenixA32xRefuelSystemRule.cpp
+        src/infrastructure/aircraft/fenix/rules/FenixA32xRefuelSystemRule.h
         src/infrastructure/aircraft/ifly/IFly737Max.cpp
         src/infrastructure/aircraft/ifly/IFly737Max.h
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorRule.cpp
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorRule.h
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxPlanImportRule.cpp
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxPlanImportRule.h
         src/infrastructure/ifly/IFlyPlanFile.cpp
         src/infrastructure/ifly/IFlyPlanFile.h
         src/infrastructure/aircraft/pmdg/Pmdg777.cpp
         src/infrastructure/aircraft/pmdg/Pmdg777.h
         src/infrastructure/aircraft/pmdg/PmdgAircraft.cpp
         src/infrastructure/aircraft/pmdg/PmdgAircraft.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgDoorRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgDoorRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgGroundConnectionRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgGroundConnectionRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgPayloadRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgPayloadRule.h
         src/infrastructure/pmdg/PmdgPayloadWriter.cpp
         src/infrastructure/pmdg/PmdgPayloadWriter.h
         src/infrastructure/pmdg/PmdgDoorReconciler.cpp
@@ -761,8 +859,18 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/tfdi/TfdiMd11.cpp
         src/infrastructure/aircraft/tfdi/TfdiMd11.h
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11CargoDoorRule.cpp
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11CargoDoorRule.h
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11EfbTargetRule.cpp
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11EfbTargetRule.h
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11PaxDoorRule.cpp
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11PaxDoorRule.h
         src/infrastructure/aircraft/toliss/TolissA340.cpp
         src/infrastructure/aircraft/toliss/TolissA340.h
+        src/infrastructure/aircraft/toliss/rules/TolissA340DoorRule.cpp
+        src/infrastructure/aircraft/toliss/rules/TolissA340DoorRule.h
+        src/infrastructure/aircraft/toliss/rules/TolissA340UplinkRule.cpp
+        src/infrastructure/aircraft/toliss/rules/TolissA340UplinkRule.h
         src/infrastructure/commbus/CommBusBridgeClient.cpp
         src/infrastructure/commbus/CommBusBridgeClient.h
         src/infrastructure/commbus/CommBusBridgeGateway.h

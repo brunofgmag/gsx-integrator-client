@@ -349,7 +349,7 @@ void IntegratorRuntime::Update()
     {
         stateMachine_.AttachAircraft(aircraft_.get());
         gsxMenu_.OnMenuChanged();
-        aircraft_->OnTick();
+        aircraft_->Observe();
         stateMachine_.Tick();
     }
     else
@@ -408,7 +408,16 @@ void IntegratorRuntime::UpdateSlow()
         return;
     }
 
-    aircraft_->OnSlowTick();
+    stateMachine_.AttachAircraft(aircraft_.get());
+
+    if (ResolveTickMode(status_.enabled, gsxService_.IsAvailable()) == TickMode::Driving)
+    {
+        stateMachine_.TickSlowRules();
+    }
+    else
+    {
+        stateMachine_.ObserveSlowRules();
+    }
 
     gsxService_.ReassertTakeovers();
     CheckGsxProfile();

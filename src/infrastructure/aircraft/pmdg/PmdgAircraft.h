@@ -6,6 +6,9 @@
 #include <string>
 #include <vector>
 #include "../SmartSwitch.h"
+#include "rules/PmdgDoorRule.h"
+#include "rules/PmdgGroundConnectionRule.h"
+#include "rules/PmdgPayloadRule.h"
 #include "../../gsx/GsxDoorSync.h"
 #include "../../pmdg/PmdgDoorReconciler.h"
 #include "../../pmdg/PmdgDoorSource.h"
@@ -49,7 +52,10 @@ public:
     [[nodiscard]] bool IsCargoVariant() const override;
 
     void Observe() override;
-    void OnTick() override;
+    [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
+    void SyncDoors();
+    void ReconcileGroundConnection();
+    void TrimPayload();
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
@@ -96,7 +102,6 @@ protected:
     std::unique_ptr<PmdgTabletGateway> tablet_;
 
 private:
-    void SyncDoors();
     void SyncMainDeckDoor();
     void AdvanceMovingDoors();
     [[nodiscard]] int MovingDoorLimitTicks(int slot) const;
@@ -113,6 +118,10 @@ private:
     PmdgPayloadWriter payload_;
     PmdgRouteImport routeImport_;
     SmartSwitch smartSwitch_;
+    PmdgDoorRule doorRule_;
+    PmdgGroundConnectionRule groundConnectionRule_;
+    PmdgPayloadRule payloadRule_;
+    std::vector<AircraftRule*> rules_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGAIRCRAFT_H

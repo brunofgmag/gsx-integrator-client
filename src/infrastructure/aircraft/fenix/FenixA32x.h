@@ -4,7 +4,11 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 #include "../SmartSwitch.h"
+#include "rules/FenixA32xDoorRule.h"
+#include "rules/FenixA32xEfbSetupRule.h"
+#include "rules/FenixA32xRefuelSystemRule.h"
 #include "../../fenix/FenixEfbGateway.h"
 #include "../../gsx/GsxDoorSync.h"
 #include "../../../domain/ports/Aircraft.h"
@@ -27,7 +31,10 @@ public:
 
     void Observe() override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
-    void OnTick() override;
+    [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
+    void EnsureEfbInitialized();
+    void DriveDoors();
+    void DisarmRefuelSystemWhenDone();
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
@@ -65,12 +72,9 @@ public:
 
 private:
     [[nodiscard]] bool IsBeaconOn() const;
-    void EnsureEfbInitialized();
-    void UpdateDoors();
     [[nodiscard]] std::optional<bool> DoorOpen(const char* dataref) const;
     void AdvanceDoorSettle();
     void ReportProbe() const;
-    void DisarmRefuelSystemWhenDone();
     void SyncPassengersAndCargo(double zfwKg);
     void WriteSeatOccupation(int passengersOnBoard);
     void MaybeRequestFinalLoadsheet(double zfwKg);
@@ -83,6 +87,10 @@ private:
     std::map<std::string, double> lastDoorReading_;
     GsxDoorSync doors_;
     SmartSwitch smartSwitch_;
+    FenixA32xEfbSetupRule efbSetupRule_;
+    FenixA32xDoorRule doorRule_;
+    FenixA32xRefuelSystemRule refuelSystemRule_;
+    std::vector<AircraftRule*> rules_;
     bool efbInitialized_ = false;
     bool finalLoadsheetRequested_ = true;
     bool refuelSystemArmed_ = false;

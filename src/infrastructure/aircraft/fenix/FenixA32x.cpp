@@ -162,7 +162,11 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
       doors_(variableGateway),
       smartSwitch_(*variableGateway, {kSmartSwitchLVar},
                    [](const double min, double) { return min <= kSmartSwitchIntercom; },
-                   kSmartSwitchNeutral)
+                   kSmartSwitchNeutral),
+      efbSetupRule_(*this),
+      doorRule_(*this),
+      refuelSystemRule_(*this),
+      rules_{&efbSetupRule_, &doorRule_, &refuelSystemRule_}
 {
     smartSwitch_.Subscribe();
     efb_->Subscribe(kSimbriefImportedDataref);
@@ -210,12 +214,9 @@ void FenixA32x::Observe()
     ReportProbe();
 }
 
-void FenixA32x::OnTick()
+const std::vector<AircraftRule*>& FenixA32x::Rules() const
 {
-    Observe();
-    EnsureEfbInitialized();
-    UpdateDoors();
-    DisarmRefuelSystemWhenDone();
+    return rules_;
 }
 
 void FenixA32x::ReportProbe() const
@@ -371,7 +372,7 @@ void FenixA32x::AdvanceDoorSettle()
     }
 }
 
-void FenixA32x::UpdateDoors()
+void FenixA32x::DriveDoors()
 {
     if (!efb_->IsAvailable())
     {

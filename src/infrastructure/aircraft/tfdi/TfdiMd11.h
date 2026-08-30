@@ -1,7 +1,12 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11_H
 
+#include <vector>
+
 #include "../SmartSwitch.h"
+#include "rules/TfdiMd11CargoDoorRule.h"
+#include "rules/TfdiMd11EfbTargetRule.h"
+#include "rules/TfdiMd11PaxDoorRule.h"
 #include "../../../domain/ports/Aircraft.h"
 
 class VariableGateway;
@@ -16,8 +21,10 @@ public:
 
     [[nodiscard]] bool IsCargoVariant() const override;
 
-    void OnTick() override;
-    void OnSlowTick() override;
+    [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
+    void DriveCargoDoors();
+    void DrivePaxDoors();
+    void CommitPendingEfbTargets();
     void OnLoadingStarted() override {}
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -61,8 +68,6 @@ private:
     void CommitEfbTargets() const;
     void SeedTargetsIfNeeded();
 
-    void UpdateCargoDoors();
-    void UpdatePaxDoors();
     void DriveLoaderDoor(const char* loaderStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const;
     void DriveStairsDoor(const char* stairsStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const;
 
@@ -73,6 +78,10 @@ private:
 
     bool cargo_;
     SmartSwitch smartSwitch_;
+    TfdiMd11CargoDoorRule cargoDoorRule_;
+    TfdiMd11PaxDoorRule paxDoorRule_;
+    TfdiMd11EfbTargetRule efbTargetRule_;
+    std::vector<AircraftRule*> rules_;
     bool pendingEfbCommit_ = false;
     EfbTarget fuelTarget_;
     EfbTarget zfwTarget_;

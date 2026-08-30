@@ -6,6 +6,7 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/PilotTouch.h
         src/domain/turnaround/PilotUnlock.h
         src/domain/turnaround/rules/PhaseNeeds.h
+        src/domain/turnaround/rules/RuleCadence.h
         src/domain/turnaround/rules/RuleVerdict.h
         src/domain/turnaround/rules/RuleContext.h
         src/domain/ports/AircraftRule.h
@@ -104,10 +105,24 @@ set(APP_SOURCES
         src/infrastructure/aircraft/avrorj/AvroRj.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjAirstairRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjAirstairRule.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjDoorRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjDoorRule.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjModuleLivenessRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjModuleLivenessRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/aircraft/fenix/FenixA32x.h
+        src/infrastructure/aircraft/fenix/rules/FenixA32xDoorRule.cpp
+        src/infrastructure/aircraft/fenix/rules/FenixA32xDoorRule.h
+        src/infrastructure/aircraft/fenix/rules/FenixA32xEfbSetupRule.cpp
+        src/infrastructure/aircraft/fenix/rules/FenixA32xEfbSetupRule.h
+        src/infrastructure/aircraft/fenix/rules/FenixA32xRefuelSystemRule.cpp
+        src/infrastructure/aircraft/fenix/rules/FenixA32xRefuelSystemRule.h
         src/infrastructure/aircraft/ifly/IFly737Max.cpp
         src/infrastructure/aircraft/ifly/IFly737Max.h
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorRule.cpp
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorRule.h
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxPlanImportRule.cpp
+        src/infrastructure/aircraft/ifly/rules/IFly737MaxPlanImportRule.h
         src/infrastructure/ifly/IFlyPlanFile.cpp
         src/infrastructure/ifly/IFlyPlanFile.h
         src/infrastructure/aircraft/pmdg/PmdgAircraft.cpp
@@ -116,12 +131,28 @@ set(APP_SOURCES
         src/infrastructure/aircraft/pmdg/Pmdg737.h
         src/infrastructure/aircraft/pmdg/Pmdg777.cpp
         src/infrastructure/aircraft/pmdg/Pmdg777.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgDoorRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgDoorRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgGroundConnectionRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgGroundConnectionRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgPayloadRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgPayloadRule.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/tfdi/TfdiMd11.cpp
         src/infrastructure/aircraft/tfdi/TfdiMd11.h
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11CargoDoorRule.cpp
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11CargoDoorRule.h
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11EfbTargetRule.cpp
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11EfbTargetRule.h
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11PaxDoorRule.cpp
+        src/infrastructure/aircraft/tfdi/rules/TfdiMd11PaxDoorRule.h
         src/infrastructure/aircraft/toliss/TolissA340.cpp
         src/infrastructure/aircraft/toliss/TolissA340.h
+        src/infrastructure/aircraft/toliss/rules/TolissA340DoorRule.cpp
+        src/infrastructure/aircraft/toliss/rules/TolissA340DoorRule.h
+        src/infrastructure/aircraft/toliss/rules/TolissA340UplinkRule.cpp
+        src/infrastructure/aircraft/toliss/rules/TolissA340UplinkRule.h
         src/infrastructure/commbus/CommBusBridgeClient.cpp
         src/infrastructure/commbus/CommBusBridgeClient.h
         src/infrastructure/commbus/CommBusBridgeGateway.h

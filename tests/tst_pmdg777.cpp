@@ -3,9 +3,11 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include "AircraftTicks.h"
 #include "doubles/FakePmdg777DataGateway.h"
 #include "doubles/FakePmdgTabletGateway.h"
 #include "doubles/FakeVariableGateway.h"
+#include "doubles/FakeVariableWriter.h"
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/infrastructure/aircraft/pmdg/Pmdg777.h"
 
@@ -77,6 +79,9 @@ class Pmdg777Test final : public QObject
 
 private slots:
     static void groundPowerUnknownUntilData();
+    static void evaluatingTheDoorRuleWritesNothing();
+    static void evaluatingTheGroundConnectionRuleWritesNothing();
+    static void evaluatingThePayloadRuleWritesNothing();
     static void groundPowerFollowsExtPowerAnnunciator();
     static void onTickPollsGateways();
     static void observationTickWritesNothing();
@@ -134,14 +139,14 @@ private slots:
 
 void Pmdg777Test::groundPowerUnknownUntilData()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     QCOMPARE(fixture.aircraft->GetGroundPowerStatus().value(), GroundPowerStatus::Unknown);
 }
 
 void Pmdg777Test::groundPowerFollowsExtPowerAnnunciator()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     fixture.data->hasData = true;
     fixture.data->extPowerConnected = true;
@@ -155,9 +160,9 @@ void Pmdg777Test::groundPowerFollowsExtPowerAnnunciator()
 
 void Pmdg777Test::onTickPollsGateways()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.data->pollCalls, 1);
     QCOMPARE(fixture.tablet->pollCalls, 1);
@@ -166,7 +171,7 @@ void Pmdg777Test::onTickPollsGateways()
 
 void Pmdg777Test::notPoweredWhileNothingReceived()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     QVERIFY(!fixture.aircraft->IsPowered());
 }
@@ -183,7 +188,7 @@ void Pmdg777Test::notPoweredByTabletLvarWhileDark()
 
 void Pmdg777Test::poweredByApuOrExtPower()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     fixture.data->hasData = true;
     fixture.data->apuRunning = true;
@@ -226,7 +231,7 @@ void Pmdg777Test::engineRunningConservativeUntilReceived()
 
 void Pmdg777Test::parkingBrakeRequiresClientData()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     fixture.data->parkingBrakeOn = true;
 
@@ -265,14 +270,14 @@ void Pmdg777Test::heldInPlaceAcceptsChocksWithoutTheBrake()
 
 void Pmdg777Test::doorStatusUnknownUntilClientDataArrives()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     QVERIFY(fixture.aircraft->GetDoorStatus() == DoorStatus::Unknown);
 }
 
 void Pmdg777Test::doorStatusOpenWhenASdkDoorReadsOpen()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     fixture.data->hasData = true;
     fixture.data->doorStates[3] = kDoorStateOpen;
@@ -282,7 +287,7 @@ void Pmdg777Test::doorStatusOpenWhenASdkDoorReadsOpen()
 
 void Pmdg777Test::doorStatusUnknownWhileADoorIsMoving()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     fixture.data->hasData = true;
     fixture.data->doorStates[2] = kDoorStateClosing;
@@ -354,7 +359,7 @@ void Pmdg777Test::theMainDeckDoorGetsALongerMovingBudget()
 
 void Pmdg777Test::doorStatusAllClosedWhenEverySdkDoorReadsClosed()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     fixture.data->hasData = true;
     fixture.data->doorStates.fill(kDoorStateClosed);
@@ -367,7 +372,7 @@ void Pmdg777Test::smartSwitchEdgesOncePerPress()
     Pmdg777Fixture fixture;
 
     fixture.data->hasData = true;
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
 
@@ -394,7 +399,7 @@ void Pmdg777Test::smartSwitchWorksFromBothSeats()
     Pmdg777Fixture fixture;
 
     fixture.data->hasData = true;
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
     fixture.gateway.lvars[kSmartSwitchFoLVar] = 100.0;
 
     QVERIFY(fixture.aircraft->ConsumeSmartSwitch());
@@ -406,7 +411,7 @@ void Pmdg777Test::smartSwitchCatchesTransientPress()
     Pmdg777Fixture fixture;
 
     fixture.data->hasData = true;
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
     fixture.gateway.lvars[kSmartSwitchCaptLVar] = 50.0;
     fixture.gateway.lvarSpans[kSmartSwitchCaptLVar] = LVarSpan{50.0, 100.0, true};
 
@@ -419,7 +424,7 @@ void Pmdg777Test::smartSwitchIgnoresTheRadioSide()
     Pmdg777Fixture fixture;
 
     fixture.data->hasData = true;
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
     fixture.gateway.lvars[kSmartSwitchCaptLVar] = kSmartSwitchNeutral;
 
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
@@ -439,7 +444,7 @@ void Pmdg777Test::smartSwitchLVarsGetFastRefresh()
 {
     Pmdg777Fixture fixture;
 
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QVERIFY(fixture.gateway.fastRefreshNames.empty());
 
@@ -448,7 +453,7 @@ void Pmdg777Test::smartSwitchLVarsGetFastRefresh()
     QVERIFY(!fixture.aircraft->ConsumeSmartSwitch());
 
     fixture.data->hasData = true;
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     const auto& names = fixture.gateway.fastRefreshNames;
 
@@ -534,7 +539,7 @@ void Pmdg777Test::flightPlanWaitsForFmcPlan()
 
 void Pmdg777Test::setFuelSendsRoundedLbs()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     fixture.aircraft->SetCurrentFuelKg(10000.0);
     fixture.aircraft->SetCurrentFuelKg(9000.0);
@@ -546,7 +551,7 @@ void Pmdg777Test::setFuelSendsRoundedLbs()
 
 void Pmdg777Test::setFuelDedupsRepeatedValues()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     fixture.aircraft->SetCurrentFuelKg(10000.0);
     fixture.aircraft->SetCurrentFuelKg(10000.1);
@@ -557,7 +562,7 @@ void Pmdg777Test::setFuelDedupsRepeatedValues()
 
 void Pmdg777Test::setFuelHeldWhileTabletUnavailable()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     fixture.tablet->available = false;
     fixture.aircraft->SetCurrentFuelKg(10000.0);
@@ -572,7 +577,7 @@ void Pmdg777Test::setFuelHeldWhileTabletUnavailable()
 
 void Pmdg777Test::loadingStartResetsFuelDedup()
 {
-    const Pmdg777Fixture fixture;
+    Pmdg777Fixture fixture;
 
     fixture.aircraft->SetCurrentFuelKg(10000.0);
     fixture.aircraft->OnLoadingStarted();
@@ -656,7 +661,7 @@ void Pmdg777Test::doorsFollowGsxLoaders()
     fixture.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERFRONT_STATE"] = 8.0;
     fixture.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
 
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QVERIFY(std::ranges::find(fixture.data->toggledDoors, 10) != fixture.data->toggledDoors.end());
     QVERIFY(std::ranges::find(fixture.data->toggledDoors, 12) != fixture.data->toggledDoors.end());
@@ -665,7 +670,7 @@ void Pmdg777Test::doorsFollowGsxLoaders()
     fixture.data->doorStates[10] = 0;
     fixture.data->doorStates[12] = 0;
     fixture.data->toggledDoors.clear();
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QVERIFY(fixture.data->toggledDoors.empty());
 }
@@ -679,12 +684,12 @@ void Pmdg777Test::doorsSkipTogglesWhileMoving()
     fixture.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
     fixture.data->doorStates[12] = 4;
 
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QVERIFY(fixture.data->toggledDoors.empty());
 
     fixture.data->doorStates[12] = 1;
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.data->toggledDoors.size(), static_cast<std::size_t>(1));
     QCOMPARE(fixture.data->toggledDoors[0], 12);
@@ -696,12 +701,12 @@ void Pmdg777Test::doorsTakeOverGsxDoorAutomation()
 
     fixture.data->hasData = true;
 
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.gateway.Written("FSDT_GSX_AUTOMATION_DOORS"), 0.0);
 
     fixture.gateway.lvars["FSDT_GSX_AUTOMATION_DOORS"] = 1.0;
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.gateway.Written("FSDT_GSX_AUTOMATION_DOORS"), 0.0);
 }
@@ -713,7 +718,7 @@ void Pmdg777Test::doorsHoldBeforeClientData()
     fixture.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
     fixture.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
 
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QVERIFY(fixture.data->toggledDoors.empty());
 }
@@ -728,7 +733,7 @@ void Pmdg777Test::doorThatIgnoresTheCommandStopsAfterTwoRetries()
 
     for (int tick = 0; tick < 30; ++tick)
     {
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     const auto toggles = std::ranges::count(fixture.data->toggledDoors, 12);
@@ -746,7 +751,7 @@ void Pmdg777Test::theFreighterNeverReportsAStuckMainDeckDoor()
 
     for (int tick = 0; tick < 30; ++tick)
     {
-        freighter.aircraft->OnTick();
+        TickAircraft(*freighter.aircraft, freighter.gateway);
     }
 
     QVERIFY(!freighter.aircraft->IsMainDeckCargoDoorStuck());
@@ -754,7 +759,7 @@ void Pmdg777Test::theFreighterNeverReportsAStuckMainDeckDoor()
 
 void Pmdg777Test::closeAllDoorsTogglesOpenMappedDoors()
 {
-    const Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
     
     fixture.data->hasData = true;
     fixture.data->doorStates[10] = 0;
@@ -770,31 +775,31 @@ void Pmdg777Test::closeAllDoorsTogglesOpenMappedDoors()
 
 void Pmdg777Test::chocksReconcileWithRetryCap()
 {
-    const Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
 
     fixture.data->hasData = true;
 
     QVERIFY(fixture.aircraft->SetChocks(true));
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
     QCOMPARE(QString::fromStdString(fixture.tablet->groundConnRequests[0]), QString("wheel_chocks"));
 
     for (int tick = 0; tick < 9; ++tick)
     {
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
 
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(2));
 
     fixture.data->wheelChocksSet = true;
     for (int tick = 0; tick < 10; ++tick)
     {
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(2));
@@ -802,26 +807,26 @@ void Pmdg777Test::chocksReconcileWithRetryCap()
     for (int tick = 0; tick < 200; ++tick)
     {
         fixture.data->wheelChocksSet = false;
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
     QVERIFY(fixture.tablet->groundConnRequests.size() <= static_cast<std::size_t>(12));
 }
 
 void Pmdg777Test::groundPowerConnectFlow()
 {
-    const Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
 
     fixture.data->hasData = true;
 
     fixture.aircraft->SetGroundPower(true);
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
     QCOMPARE(QString::fromStdString(fixture.tablet->groundConnRequests[0]), QString("ground_power"));
 
     for (int tick = 0; tick < 4; ++tick)
     {
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
@@ -829,7 +834,7 @@ void Pmdg777Test::groundPowerConnectFlow()
     fixture.data->extPowerAvailable = true;
     for (int tick = 0; tick < 20; ++tick)
     {
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
@@ -837,20 +842,20 @@ void Pmdg777Test::groundPowerConnectFlow()
 
 void Pmdg777Test::groundPowerDisconnectFlow()
 {
-    const Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
 
     fixture.data->hasData = true;
     fixture.data->extPowerConnected = true;
 
     fixture.aircraft->SetGroundPower(false);
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
     QCOMPARE(QString::fromStdString(fixture.tablet->groundConnRequests[0]), QString("ground_power"));
 
     fixture.data->extPowerConnected = false;
     for (int tick = 0; tick < 20; ++tick)
     {
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
@@ -873,19 +878,19 @@ void Pmdg777Test::zfwTrimsCargoAgainstActualWeight()
 
     for (int tick = 0; tick < 4; ++tick)
     {
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(1));
 
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
     QCOMPARE(fixture.tablet->cargoSends[1], initialCargo - 2646);
 
     for (int tick = 0; tick < 100; ++tick)
     {
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
     QVERIFY(fixture.tablet->cargoSends.size() <= static_cast<std::size_t>(6));
 }
@@ -906,7 +911,7 @@ void Pmdg777Test::progressiveWriterDoesNotUndoTheTrim()
     for (int tick = 0; tick < 5; ++tick)
     {
         fixture.aircraft->SetCurrentZfwKg(200000.0);
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
@@ -916,7 +921,7 @@ void Pmdg777Test::progressiveWriterDoesNotUndoTheTrim()
     for (int tick = 0; tick < 3; ++tick)
     {
         fixture.aircraft->SetCurrentZfwKg(200000.0);
-        fixture.aircraft->OnTick();
+        TickAircraft(*fixture.aircraft, fixture.gateway);
     }
 
     QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(2));
@@ -931,13 +936,13 @@ void Pmdg777Test::jetwayDoorClosesAtItsOpenedIndex()
     fixture.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
     fixture.gateway.lvars["FSDT_GSX_JETWAY"] = 5.0;
 
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.data->toggledDoors, std::vector{2});
 
     fixture.data->doorStates[2] = 0;
     fixture.gateway.lvars["FSDT_GSX_JETWAY"] = 2.0;
-    fixture.aircraft->OnTick();
+    TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.data->toggledDoors, (std::vector{2, 2}));
 }
@@ -949,7 +954,7 @@ void Pmdg777Test::aftPaxDoorOpensFiveLeftOnlyOn300()
     er300.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
     er300.gateway.lvars["FSDT_GSX_VEHICLE_PASSENGERSTAIRSREAR_STATE"] = 3.0;
 
-    er300.aircraft->OnTick();
+    TickAircraft(*er300.aircraft, er300.gateway);
 
     QVERIFY(std::ranges::find(er300.data->toggledDoors, 8) != er300.data->toggledDoors.end());
     QVERIFY(std::ranges::find(er300.data->toggledDoors, 4) == er300.data->toggledDoors.end());
@@ -959,7 +964,7 @@ void Pmdg777Test::aftPaxDoorOpensFiveLeftOnlyOn300()
     er200.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
     er200.gateway.lvars["FSDT_GSX_VEHICLE_PASSENGERSTAIRSREAR_STATE"] = 3.0;
 
-    er200.aircraft->OnTick();
+    TickAircraft(*er200.aircraft, er200.gateway);
 
     QVERIFY(std::ranges::find(er200.data->toggledDoors, 6) != er200.data->toggledDoors.end());
     QVERIFY(std::ranges::find(er200.data->toggledDoors, 8) == er200.data->toggledDoors.end());
@@ -972,7 +977,7 @@ void Pmdg777Test::aftCateringDoorOpensFiveRightOnlyOn300()
     er300.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
     er300.gateway.lvars["FSDT_GSX_VEHICLE_CATERINGVEHICLEREAR_STATE"] = 7.0;
 
-    er300.aircraft->OnTick();
+    TickAircraft(*er300.aircraft, er300.gateway);
 
     QVERIFY(std::ranges::find(er300.data->toggledDoors, 9) != er300.data->toggledDoors.end());
     QVERIFY(std::ranges::find(er300.data->toggledDoors, 7) == er300.data->toggledDoors.end());
@@ -982,7 +987,7 @@ void Pmdg777Test::aftCateringDoorOpensFiveRightOnlyOn300()
     er200.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
     er200.gateway.lvars["FSDT_GSX_VEHICLE_CATERINGVEHICLEREAR_STATE"] = 7.0;
 
-    er200.aircraft->OnTick();
+    TickAircraft(*er200.aircraft, er200.gateway);
 
     QVERIFY(std::ranges::find(er200.data->toggledDoors, 7) != er200.data->toggledDoors.end());
     QVERIFY(std::ranges::find(er200.data->toggledDoors, 9) == er200.data->toggledDoors.end());
@@ -1014,7 +1019,7 @@ void Pmdg777Test::drivingTickWritesWhatObservationHeldBack()
     f.aircraft->Observe();
     const int afterObservation = f.gateway.setLVarCalls;
 
-    f.aircraft->OnTick();
+    TickAircraft(*f.aircraft, f.gateway);
 
     QVERIFY(f.gateway.setLVarCalls > afterObservation);
 }
@@ -1028,7 +1033,7 @@ void Pmdg777Test::mainDeckDoorOpenedByHandIsLeftAloneWithoutALoader()
 
     for (int tick = 0; tick < 10; ++tick)
     {
-        freighter.aircraft->OnTick();
+        TickAircraft(*freighter.aircraft, freighter.gateway);
     }
 
     freighter.data->doorStates[12] = 0;
@@ -1036,7 +1041,7 @@ void Pmdg777Test::mainDeckDoorOpenedByHandIsLeftAloneWithoutALoader()
 
     for (int tick = 0; tick < 30; ++tick)
     {
-        freighter.aircraft->OnTick();
+        TickAircraft(*freighter.aircraft, freighter.gateway);
     }
 
     QVERIFY(freighter.data->toggledDoors.empty());
@@ -1050,15 +1055,110 @@ void Pmdg777Test::mainDeckDoorStillClosesWhenTheLoaderLeavesAfterOpeningIt()
     freighter.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
     freighter.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 8.0;
 
-    freighter.aircraft->OnTick();
+    TickAircraft(*freighter.aircraft, freighter.gateway);
     freighter.data->doorStates[12] = 0;
-    freighter.aircraft->OnTick();
+    TickAircraft(*freighter.aircraft, freighter.gateway);
     freighter.data->toggledDoors.clear();
 
     freighter.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE"] = 0.0;
-    freighter.aircraft->OnTick();
+    TickAircraft(*freighter.aircraft, freighter.gateway);
 
     QCOMPARE(static_cast<int>(std::ranges::count(freighter.data->toggledDoors, 12)), 1);
+}
+
+void Pmdg777Test::evaluatingTheDoorRuleWritesNothing()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+    FakeVariableWriter writer;
+
+    fixture.data->hasData = true;
+    fixture.gateway.lvars["FSDT_GSX_COUATL_STARTED"] = 1.0;
+    fixture.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERFRONT_STATE"] = 8.0;
+    fixture.aircraft->Observe();
+
+    AircraftRule* const rule = FindRule(*fixture.aircraft, "pmdg-doors");
+
+    QVERIFY(rule != nullptr);
+
+    const RuleContext context{};
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        QVERIFY(!rule->Evaluate(context).holds);
+    }
+
+    QVERIFY(fixture.data->toggledDoors.empty());
+    QCOMPARE(fixture.gateway.setLVarCalls + fixture.gateway.setAVarCalls, 0);
+    QCOMPARE(writer.setLVarCalls + writer.setAVarCalls, 0);
+
+    rule->Act(context, writer);
+
+    QVERIFY(std::ranges::find(fixture.data->toggledDoors, 10) != fixture.data->toggledDoors.end());
+}
+
+void Pmdg777Test::evaluatingTheGroundConnectionRuleWritesNothing()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+    FakeVariableWriter writer;
+
+    fixture.data->hasData = true;
+
+    QVERIFY(fixture.aircraft->SetChocks(true));
+
+    AircraftRule* const rule = FindRule(*fixture.aircraft, "pmdg-ground-connection");
+
+    QVERIFY(rule != nullptr);
+
+    const RuleContext context{};
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        QVERIFY(!rule->Evaluate(context).holds);
+    }
+
+    QVERIFY(fixture.tablet->groundConnRequests.empty());
+    QCOMPARE(fixture.gateway.setLVarCalls + fixture.gateway.setAVarCalls, 0);
+    QCOMPARE(writer.setLVarCalls + writer.setAVarCalls, 0);
+
+    rule->Act(context, writer);
+
+    QCOMPARE(fixture.tablet->groundConnRequests.size(), static_cast<std::size_t>(1));
+    QCOMPARE(QString::fromStdString(fixture.tablet->groundConnRequests[0]), QString("wheel_chocks"));
+}
+
+void Pmdg777Test::evaluatingThePayloadRuleWritesNothing()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Er300);
+    FakeVariableWriter writer;
+
+    fixture.data->hasData = true;
+    fixture.SeedWeights(160000.0, 200000.0, 300);
+    fixture.gateway.avars["FUEL TOTAL QUANTITY WEIGHT"] = 0.0;
+    fixture.gateway.avars["TOTAL WEIGHT"] = 201200.0;
+    fixture.aircraft->SetCurrentZfwKg(200000.0);
+
+    const std::size_t sendsAfterSetter = fixture.tablet->cargoSends.size();
+
+    AircraftRule* const rule = FindRule(*fixture.aircraft, "pmdg-payload");
+
+    QVERIFY(rule != nullptr);
+
+    const RuleContext context{};
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        QVERIFY(!rule->Evaluate(context).holds);
+    }
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), sendsAfterSetter);
+    QCOMPARE(writer.setLVarCalls + writer.setAVarCalls, 0);
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        rule->Act(context, writer);
+    }
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), sendsAfterSetter + 1);
 }
 
 QTEST_APPLESS_MAIN(Pmdg777Test)

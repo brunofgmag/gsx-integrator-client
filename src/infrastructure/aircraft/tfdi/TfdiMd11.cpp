@@ -62,7 +62,11 @@ TfdiMd11::TfdiMd11(VariableGateway* variableGateway, const AutomationStatus* sta
     : variableGateway_(variableGateway), status_(status), cargo_(cargo),
       smartSwitch_(*variableGateway, {kSmartSwitch},
                    [](double, const double max) { return max > kSmartSwitchNeutral; },
-                   kSmartSwitchNeutral)
+                   kSmartSwitchNeutral),
+      cargoDoorRule_(*this),
+      paxDoorRule_(*this),
+      efbTargetRule_(*this),
+      rules_{&cargoDoorRule_, &paxDoorRule_, &efbTargetRule_}
 {
     smartSwitch_.Subscribe();
 
@@ -74,13 +78,12 @@ bool TfdiMd11::IsCargoVariant() const
     return cargo_;
 }
 
-void TfdiMd11::OnTick()
+const std::vector<AircraftRule*>& TfdiMd11::Rules() const
 {
-    UpdateCargoDoors();
-    UpdatePaxDoors();
+    return rules_;
 }
 
-void TfdiMd11::UpdateCargoDoors()
+void TfdiMd11::DriveCargoDoors()
 {
     if (variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
     {
@@ -108,7 +111,7 @@ void TfdiMd11::DriveLoaderDoor(const char* loaderStateLVar, const char* doorCmdL
     }
 }
 
-void TfdiMd11::UpdatePaxDoors()
+void TfdiMd11::DrivePaxDoors()
 {
     if (variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
     {
@@ -137,7 +140,7 @@ void TfdiMd11::DriveStairsDoor(const char* stairsStateLVar, const char* doorCmdL
     }
 }
 
-void TfdiMd11::OnSlowTick()
+void TfdiMd11::CommitPendingEfbTargets()
 {
     if (!pendingEfbCommit_ || !variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit))
     {
