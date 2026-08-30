@@ -1,10 +1,10 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_AVRORJ_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_AVRORJ_H
 
-#include "SmartSwitch.h"
-#include "AvroRjAirstairRule.h"
-#include "../gsx/GsxDoorSync.h"
-#include "../../domain/ports/Aircraft.h"
+#include "../SmartSwitch.h"
+#include "rules/AvroRjAirstairRule.h"
+#include "../../gsx/GsxDoorSync.h"
+#include "../../../domain/ports/Aircraft.h"
 
 class VariableGateway;
 

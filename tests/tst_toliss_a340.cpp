@@ -5,7 +5,7 @@
 #include "TestDoubles.h"
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/domain/model/FlightPlan.h"
-#include "../src/infrastructure/aircraft/TolissA340.h"
+#include "../src/infrastructure/aircraft/toliss/TolissA340.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
 
 namespace

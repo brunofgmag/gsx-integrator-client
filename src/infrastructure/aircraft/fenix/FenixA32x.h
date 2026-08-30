@@ -4,10 +4,10 @@
 #include <map>
 #include <memory>
 #include <string>
-#include "SmartSwitch.h"
-#include "../fenix/FenixEfbGateway.h"
-#include "../gsx/GsxDoorSync.h"
-#include "../../domain/ports/Aircraft.h"
+#include "../SmartSwitch.h"
+#include "../../fenix/FenixEfbGateway.h"
+#include "../../gsx/GsxDoorSync.h"
+#include "../../../domain/ports/Aircraft.h"
 
 class VariableGateway;
 

@@ -7,7 +7,7 @@
 #include "doubles/FakePmdgTabletGateway.h"
 #include "doubles/FakeVariableGateway.h"
 #include "../src/domain/model/AutomationStatus.h"
-#include "../src/infrastructure/aircraft/Pmdg777.h"
+#include "../src/infrastructure/aircraft/pmdg/Pmdg777.h"
 
 namespace
 {

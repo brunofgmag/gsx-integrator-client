@@ -5,16 +5,16 @@
 #include <optional>
 #include <string>
 #include <vector>
-#include "SmartSwitch.h"
-#include "../gsx/GsxDoorSync.h"
-#include "../pmdg/PmdgDoorReconciler.h"
-#include "../pmdg/PmdgDoorSource.h"
-#include "../pmdg/PmdgGroundConnReconciler.h"
-#include "../pmdg/PmdgGroundSource.h"
-#include "../pmdg/PmdgPayloadWriter.h"
-#include "../pmdg/PmdgRouteFile.h"
-#include "../pmdg/PmdgTabletGateway.h"
-#include "../../domain/ports/Aircraft.h"
+#include "../SmartSwitch.h"
+#include "../../gsx/GsxDoorSync.h"
+#include "../../pmdg/PmdgDoorReconciler.h"
+#include "../../pmdg/PmdgDoorSource.h"
+#include "../../pmdg/PmdgGroundConnReconciler.h"
+#include "../../pmdg/PmdgGroundSource.h"
+#include "../../pmdg/PmdgPayloadWriter.h"
+#include "../../pmdg/PmdgRouteFile.h"
+#include "../../pmdg/PmdgTabletGateway.h"
+#include "../../../domain/ports/Aircraft.h"
 
 class PmdgDataGateway;
 class VariableGateway;

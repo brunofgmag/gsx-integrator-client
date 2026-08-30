@@ -6,11 +6,11 @@
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
-#include "../aircraft/FenixA32x.h"
-#include "../aircraft/Pmdg737.h"
-#include "../aircraft/Pmdg777.h"
-#include "../aircraft/TolissA340.h"
-#include "../aircraft/TfdiMd11.h"
+#include "../aircraft/fenix/FenixA32x.h"
+#include "../aircraft/pmdg/Pmdg737.h"
+#include "../aircraft/pmdg/Pmdg777.h"
+#include "../aircraft/toliss/TolissA340.h"
+#include "../aircraft/tfdi/TfdiMd11.h"
 
 namespace
 {

@@ -1,7 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_AVRORJAIRSTAIRRULE_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_AVRORJAIRSTAIRRULE_H
 
-#include "../../domain/ports/AircraftRule.h"
+#include "../../../../domain/ports/AircraftRule.h"
 
 class AvroRj;
 

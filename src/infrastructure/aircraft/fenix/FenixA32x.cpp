@@ -1,8 +1,8 @@
 #include "FenixA32x.h"
 
-#include "DoorReading.h"
-#include "../probe/ProbeWatchList.h"
-#include "../simvars/SimVars.h"
+#include "../DoorReading.h"
+#include "../../probe/ProbeWatchList.h"
+#include "../../simvars/SimVars.h"
 
 #include <algorithm>
 #include <array>
@@ -15,14 +15,14 @@
 #include <utility>
 #include <vector>
 #include <QtCore/QStringList>
-#include "AircraftRegistry.h"
-#include "../fenix/FenixEfbClient.h"
-#include "../gsx/GsxLVars.h"
-#include "../logging/LogMacros.h"
-#include "../../domain/ports/GsxGateway.h"
-#include "../../domain/turnaround/TurnaroundMath.h"
-#include "../../infrastructure/simvars/VariableGateway.h"
-#include "../probe/ProbeLog.h"
+#include "../AircraftRegistry.h"
+#include "../../fenix/FenixEfbClient.h"
+#include "../../gsx/GsxLVars.h"
+#include "../../logging/LogMacros.h"
+#include "../../../domain/ports/GsxGateway.h"
+#include "../../../domain/turnaround/TurnaroundMath.h"
+#include "../../../infrastructure/simvars/VariableGateway.h"
+#include "../../probe/ProbeLog.h"
 
 using namespace simvars;
 

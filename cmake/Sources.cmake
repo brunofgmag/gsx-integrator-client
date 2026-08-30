@@ -100,28 +100,28 @@ set(APP_SOURCES
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
         src/infrastructure/aircraft/AircraftRegistry.h
-        src/infrastructure/aircraft/AvroRj.cpp
-        src/infrastructure/aircraft/AvroRj.h
-        src/infrastructure/aircraft/AvroRjAirstairRule.cpp
-        src/infrastructure/aircraft/AvroRjAirstairRule.h
-        src/infrastructure/aircraft/FenixA32x.cpp
-        src/infrastructure/aircraft/FenixA32x.h
-        src/infrastructure/aircraft/IFly737Max.cpp
-        src/infrastructure/aircraft/IFly737Max.h
+        src/infrastructure/aircraft/avrorj/AvroRj.cpp
+        src/infrastructure/aircraft/avrorj/AvroRj.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjAirstairRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjAirstairRule.h
+        src/infrastructure/aircraft/fenix/FenixA32x.cpp
+        src/infrastructure/aircraft/fenix/FenixA32x.h
+        src/infrastructure/aircraft/ifly/IFly737Max.cpp
+        src/infrastructure/aircraft/ifly/IFly737Max.h
         src/infrastructure/ifly/IFlyPlanFile.cpp
         src/infrastructure/ifly/IFlyPlanFile.h
-        src/infrastructure/aircraft/PmdgAircraft.cpp
-        src/infrastructure/aircraft/PmdgAircraft.h
-        src/infrastructure/aircraft/Pmdg737.cpp
-        src/infrastructure/aircraft/Pmdg737.h
-        src/infrastructure/aircraft/Pmdg777.cpp
-        src/infrastructure/aircraft/Pmdg777.h
+        src/infrastructure/aircraft/pmdg/PmdgAircraft.cpp
+        src/infrastructure/aircraft/pmdg/PmdgAircraft.h
+        src/infrastructure/aircraft/pmdg/Pmdg737.cpp
+        src/infrastructure/aircraft/pmdg/Pmdg737.h
+        src/infrastructure/aircraft/pmdg/Pmdg777.cpp
+        src/infrastructure/aircraft/pmdg/Pmdg777.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
-        src/infrastructure/aircraft/TfdiMd11.cpp
-        src/infrastructure/aircraft/TfdiMd11.h
-        src/infrastructure/aircraft/TolissA340.cpp
-        src/infrastructure/aircraft/TolissA340.h
+        src/infrastructure/aircraft/tfdi/TfdiMd11.cpp
+        src/infrastructure/aircraft/tfdi/TfdiMd11.h
+        src/infrastructure/aircraft/toliss/TolissA340.cpp
+        src/infrastructure/aircraft/toliss/TolissA340.h
         src/infrastructure/commbus/CommBusBridgeClient.cpp
         src/infrastructure/commbus/CommBusBridgeClient.h
         src/infrastructure/commbus/CommBusBridgeGateway.h

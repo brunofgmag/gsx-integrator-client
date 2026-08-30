@@ -1,9 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H
 
-#include "SmartSwitch.h"
-#include "../gsx/GsxDoorSync.h"
-#include "../../domain/ports/Aircraft.h"
+#include "../SmartSwitch.h"
+#include "../../gsx/GsxDoorSync.h"
+#include "../../../domain/ports/Aircraft.h"
 
 class VariableGateway;
 struct AutomationStatus;

@@ -1,12 +1,12 @@
 #include "PmdgAircraft.h"
 
 #include <utility>
-#include "DoorReading.h"
-#include "../gsx/GsxLVars.h"
-#include "../pmdg/PmdgDataGateway.h"
-#include "../simvars/SimVars.h"
-#include "../../domain/model/AutomationStatus.h"
-#include "../../domain/model/FlightPlan.h"
+#include "../DoorReading.h"
+#include "../../gsx/GsxLVars.h"
+#include "../../pmdg/PmdgDataGateway.h"
+#include "../../simvars/SimVars.h"
+#include "../../../domain/model/AutomationStatus.h"
+#include "../../../domain/model/FlightPlan.h"
 
 using namespace simvars;
 

@@ -5,7 +5,7 @@
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/domain/model/FlightPlan.h"
 #include "../src/domain/support/Weight.h"
-#include "../src/infrastructure/aircraft/TfdiMd11.h"
+#include "../src/infrastructure/aircraft/tfdi/TfdiMd11.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
 
 namespace
