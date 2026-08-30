@@ -15,7 +15,7 @@ private slots:
     static void resolvesGlobalsWhenProfileUsesGlobal();
     static void customProfileOverridesAutomationFields();
     static void customProfileKeepsPilotIdAndAutoFlags();
-    static void aircraftRequiringOwnAirstairsOverridesTheSetting();
+    static void aircraftCarryingItsOwnStairsOverridesTheSetting();
 };
 
 void AutomationSettingsTest::defaultsUseDefaultFuelRate()
@@ -133,7 +133,7 @@ void AutomationSettingsTest::customProfileKeepsPilotIdAndAutoFlags()
     QVERIFY(!resolved.autoStartLoading);
 }
 
-void AutomationSettingsTest::aircraftRequiringOwnAirstairsOverridesTheSetting()
+void AutomationSettingsTest::aircraftCarryingItsOwnStairsOverridesTheSetting()
 {
     AppSettings settings;
     settings.useAircraftStairs = false;

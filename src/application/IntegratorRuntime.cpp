@@ -56,7 +56,7 @@ IntegratorRuntime::IntegratorRuntime(QObject* parent)
       pluginClient_(&bridgeClient_),
       gsxService_(&varGateway_, &gsxRemoteState_),
       gsxMenu_(&gsxRemoteClient_, &gsxRemoteState_, &settings_, &qtLogger_, &pluginClient_),
-      stateMachine_(&status_, &settings_, &gsxService_, &gsxMenu_, &qtLogger_),
+      stateMachine_(&status_, &settings_, &gsxService_, &gsxMenu_, &qtLogger_, &varGateway_),
       simbriefClient_(&status_, &settings_, this)
 {
     dispatchTimer_.setInterval(kDispatchIntervalMs);
@@ -354,7 +354,9 @@ void IntegratorRuntime::Update()
     }
     else
     {
+        stateMachine_.AttachAircraft(aircraft_.get());
         aircraft_->Observe();
+        stateMachine_.ObserveRules();
     }
 
     probe_.Observe(*aircraft_, varGateway_, GetAircraftProfileId());
@@ -683,9 +685,9 @@ std::string IntegratorRuntime::GetAircraftProfileId() const
     return aircraft_ && aircraftDescriptor_ ? aircraftDescriptor_->id : std::string();
 }
 
-bool IntegratorRuntime::AircraftRequiresOwnAirstairs() const
+bool IntegratorRuntime::AircraftCarriesItsOwnStairs() const
 {
-    return aircraft_ && aircraft_->RequiresOwnAirstairs();
+    return aircraft_ && aircraft_->CarriesItsOwnStairs();
 }
 
 bool IntegratorRuntime::IsAircraftRefuelByGsx() const

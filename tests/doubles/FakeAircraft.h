@@ -24,9 +24,8 @@ public:
     bool parkingBrakeSet = false;
     DoorStatus doorStatus = DoorStatus::Unknown;
     bool supportsStairsOrJetways = true;
-    bool requiresOwnAirstairs = false;
-    bool ownAirstairsExtended = false;
-    bool ownAirstairsRequested = false;
+    bool carriesItsOwnStairs = false;
+    std::vector<AircraftRule*> rules;
     bool completesPushbackViaInterruptMenu = false;
     std::optional<GroundPowerStatus> groundPowerStatus = std::nullopt;
     bool supportsChocksControl = false;
@@ -64,9 +63,8 @@ public:
     [[nodiscard]] double GetCurrentZfwKg() const override { return currentZfwKg; }
     void SetCurrentZfwKg(const double value) override { currentZfwKg = value; }
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return supportsStairsOrJetways; }
-    [[nodiscard]] bool RequiresOwnAirstairs() const override { return requiresOwnAirstairs; }
-    void SetOwnAirstairs(const bool extended) override { ownAirstairsRequested = extended; }
-    [[nodiscard]] bool AreOwnAirstairsExtended() const override { return ownAirstairsExtended; }
+    [[nodiscard]] bool CarriesItsOwnStairs() const override { return carriesItsOwnStairs; }
+    [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override { return rules; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return completesPushbackViaInterruptMenu; }
     [[nodiscard]] RefuelBy GetRefuelMethod() const override { return refuelMethod; }
     [[nodiscard]] BoardBy GetBoardMethod() const override { return boardMethod; }

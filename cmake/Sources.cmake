@@ -5,7 +5,12 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/TurnaroundMath.h
         src/domain/turnaround/PilotTouch.h
         src/domain/turnaround/PilotUnlock.h
+        src/domain/turnaround/rules/PhaseNeeds.h
+        src/domain/turnaround/rules/RuleVerdict.h
+        src/domain/turnaround/rules/RuleContext.h
+        src/domain/ports/AircraftRule.h
         src/domain/turnaround/states/TurnaroundState.h
+        src/domain/turnaround/states/TurnaroundState.cpp
         src/domain/turnaround/states/WaitingFlightPlanState.cpp
         src/domain/turnaround/states/WaitingFlightPlanState.h
         src/domain/turnaround/states/RequestFuelState.cpp
@@ -97,6 +102,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/AircraftRegistry.h
         src/infrastructure/aircraft/AvroRj.cpp
         src/infrastructure/aircraft/AvroRj.h
+        src/infrastructure/aircraft/AvroRjAirstairRule.cpp
+        src/infrastructure/aircraft/AvroRjAirstairRule.h
         src/infrastructure/aircraft/FenixA32x.cpp
         src/infrastructure/aircraft/FenixA32x.h
         src/infrastructure/aircraft/IFly737Max.cpp

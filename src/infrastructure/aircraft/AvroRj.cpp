@@ -130,7 +130,9 @@ AvroRj::AvroRj(VariableGateway* variableGateway, const bool cargoVariant)
                    {
                        return max > kSmartSwitchNeutral;
                    }),
-      doors_(variableGateway)
+      doors_(variableGateway),
+      airstairRule_(*this),
+      rules_{&airstairRule_}
 {
     smartSwitch_.Subscribe();
 
@@ -241,9 +243,24 @@ bool AvroRj::IsModuleMirroringFuel() const
     return mirrorDivergentTicks_ < kModuleDeadTicks;
 }
 
-void AvroRj::SetOwnAirstairs(const bool extended)
+void AvroRj::WantAirstairs(const bool wanted)
 {
-    ownAirstairsRequested_ = extended;
+    ownAirstairsRequested_ = wanted;
+}
+
+bool AvroRj::SupportsStairsOrJetways() const
+{
+    return IsJetwayAvailable();
+}
+
+bool AvroRj::IsJetwayAvailable() const
+{
+    return doors_.VehicleState(gsx::lvars::kJetway, kJetwayUnavailable) != kJetwayUnavailable;
+}
+
+const std::vector<AircraftRule*>& AvroRj::Rules() const
+{
+    return rules_;
 }
 
 void AvroRj::UpdateAirstairTravel()
@@ -272,7 +289,7 @@ bool AvroRj::IsAirstairMoving() const
         && stairPositionStillTicks_ < kStairSettledHoldTicks;
 }
 
-bool AvroRj::AreOwnAirstairsExtended() const
+bool AvroRj::AreAirstairsSettled() const
 {
     return airstairPhase_ == AirstairPhase::Extended
         && IsAirstairOutOfItsWell()
@@ -357,7 +374,7 @@ bool AvroRj::IsAirstairWanted() const
         return false;
     }
 
-    if (doors_.VehicleState(gsx::lvars::kJetway, kJetwayUnavailable) != kJetwayUnavailable)
+    if (IsJetwayAvailable())
     {
         return false;
     }

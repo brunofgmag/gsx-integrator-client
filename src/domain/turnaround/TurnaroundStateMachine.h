@@ -17,10 +17,12 @@ public:
                            const AutomationSettings* settings,
                            GsxGateway* gsxGateway,
                            GsxMenuGateway* menuGateway,
-                           DomainLogger* logger);
+                           DomainLogger* logger,
+                           VariableWriter* variableWriter);
 
     void Tick();
     void AttachAircraft(Aircraft* aircraft);
+    void ObserveRules();
     void Reset();
     void ConfirmLoading() { context_.data.loadingConfirmed = true; }
     void AcceptAppTouch() { appTouchPending_ = true; }
