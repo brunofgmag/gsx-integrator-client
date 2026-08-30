@@ -35,11 +35,11 @@ The turnaround workflow lives in the domain and drives everything through interf
 
 ## Adding an aircraft
 
-The `src/infrastructure/aircraft/` folder has several adapters worth reading side by side with this section, because they solve the loading problem in different ways. `TfdiMd11.cpp` drives the airplane's own EFB: the setters store targets and `OnSlowTick` commits them to the EFB LVars. `IFly737Max.cpp` rides on top of GSX, letting the truck fill the native tanks while the adapter only writes payload into the native stations. `FenixA32x.cpp` talks to the Fenix EFB over its own HTTP client, and `Pmdg777.cpp` writes fuel and payload through the PMDG tablet over the shared CommBus bridge. Read the one closest to your airplane.
+Every airplane has a folder of its own under `src/infrastructure/aircraft/`, and several of those adapters are worth reading side by side with this section, because they solve the loading problem in different ways. `TfdiMd11.cpp` drives the airplane's own EFB: the setters store targets and `OnSlowTick` commits them to the EFB LVars. `IFly737Max.cpp` rides on top of GSX, letting the truck fill the native tanks while the adapter only writes payload into the native stations. `FenixA32x.cpp` talks to the Fenix EFB over its own HTTP client, and `Pmdg777.cpp` writes fuel and payload through the PMDG tablet over the shared CommBus bridge. Read the one closest to your airplane.
 
 ### 1. Create the adapter
 
-Add `YourAircraft.h` and `YourAircraft.cpp` under `src/infrastructure/aircraft/`, implementing the `Aircraft` interface from `src/domain/ports/Aircraft.h`. The interface has three groups of methods:
+Add `YourAircraft.h` and `YourAircraft.cpp` under `src/infrastructure/aircraft/yourvendor/`, a folder of its own named after the vendor in lowercase, implementing the `Aircraft` interface from `src/domain/ports/Aircraft.h`. The interface has three groups of methods:
 
 - Planned figures: `IsFlightPlanLoaded`, `GetPlannedFuelKg`, `GetPlannedZfwKg`, `GetPlannedPassengers` and `GetEmptyZfwKg`. These report what the airplane's own systems know about the flight.
 - Current figures: `GetCurrentFuelKg`, `SetCurrentFuelKg`, `GetCurrentZfwKg` and `SetCurrentZfwKg`. The workflow calls the setters while GSX refuels and boards.
