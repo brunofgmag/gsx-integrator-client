@@ -41,9 +41,10 @@ PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationSta
       payload_(*tablet_, *variableGateway, status, spec.cargoVariant),
       smartSwitch_(*variableGateway, std::move(spec.smartSwitchLVars),
                    std::move(spec.smartSwitchPressed)),
-      doorRule_(*this),
-      groundConnectionRule_(*this),
-      payloadRule_(*this),
+      doorRule_(*variableGateway, *data, doors_, doorReconciler_, spec.cargoVariant,
+                spec.mainDeckDoorSlot),
+      groundConnectionRule_(*data, groundConn_),
+      payloadRule_(*data, payload_),
       rules_{&doorRule_, &groundConnectionRule_, &payloadRule_}
 {
 }
@@ -79,65 +80,6 @@ const std::vector<AircraftRule*>& PmdgAircraft::Rules() const
     return rules_;
 }
 
-void PmdgAircraft::ReconcileGroundConnection()
-{
-    if (!data_->HasData())
-    {
-        return;
-    }
-
-    groundConn_.Reconcile();
-}
-
-void PmdgAircraft::TrimPayload()
-{
-    if (!data_->HasData())
-    {
-        return;
-    }
-
-    payload_.Trim();
-}
-
-void PmdgAircraft::SyncDoors()
-{
-    if (!data_->HasData())
-    {
-        return;
-    }
-
-    if (variableGateway_->GetLVar(gsx::lvars::kAutomationDoors, 1.0) != 0.0)
-    {
-        variableGateway_->SetLVar(gsx::lvars::kAutomationDoors, 0.0);
-    }
-
-    doors_.Sync([this](const GsxDoor door, const bool open) { doorReconciler_.SetDesired(door, open); });
-
-    if (cargoVariant_)
-    {
-        SyncMainDeckDoor();
-    }
-
-    doorReconciler_.Reconcile();
-}
-
-void PmdgAircraft::SyncMainDeckDoor()
-{
-    const bool loaderPresent = gsx::states::IsLoaderArriving(
-        doors_.VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0));
-
-    if (loaderPresent && mainDeckTarget_ != MainDeckTarget::Open)
-    {
-        doorReconciler_.SetSlotDesired(mainDeckDoorSlot_, true);
-        mainDeckTarget_ = MainDeckTarget::Open;
-    }
-    else if (!loaderPresent && mainDeckTarget_ == MainDeckTarget::Open)
-    {
-        doorReconciler_.SetSlotDesired(mainDeckDoorSlot_, false);
-        mainDeckTarget_ = MainDeckTarget::Closed;
-    }
-}
-
 void PmdgAircraft::OnLoadingStarted()
 {
     payload_.Reset();
@@ -150,7 +92,6 @@ void PmdgAircraft::CloseAllDoors()
     if (cargoVariant_)
     {
         doorReconciler_.SetSlotDesired(mainDeckDoorSlot_, false);
-        mainDeckTarget_ = MainDeckTarget::Closed;
     }
 
     doorReconciler_.Reconcile();

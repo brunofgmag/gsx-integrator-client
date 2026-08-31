@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "../SmartSwitch.h"
-#include "rules/TolissA340DoorRule.h"
-#include "rules/TolissA340UplinkRule.h"
+#include "rules/TolissA340AdvanceMcduUplinkRule.h"
+#include "rules/TolissA340DoorsFollowGsxRule.h"
 #include "../../gsx/GsxDoorSync.h"
 #include "../../../domain/ports/Aircraft.h"
 
@@ -23,12 +23,11 @@ public:
 
     void Observe() override;
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
-    void DriveDoors();
-    void AdvanceUplink();
-    void OnLoadingStarted() override;
+    void OnLoadingStarted() override {}
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
+    [[nodiscard]] const char* DoorModeLVar(GsxDoor door) const;
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
@@ -61,11 +60,9 @@ private:
     bool cargoVariant_;
     GsxDoorSync doors_;
     SmartSwitch smartSwitch_;
-    TolissA340DoorRule doorRule_;
-    TolissA340UplinkRule uplinkRule_;
+    TolissA340DoorsFollowGsxRule doorRule_;
+    TolissA340AdvanceMcduUplinkRule uplinkRule_;
     std::vector<AircraftRule*> rules_;
-    bool uplinkArmed_ = false;
-    int uplinkStep_ = -1;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H

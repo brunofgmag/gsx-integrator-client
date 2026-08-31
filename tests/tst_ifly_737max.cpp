@@ -1,7 +1,11 @@
 #include <QtTest/QTest>
 
+#include <QtCore/QTemporaryDir>
+
 #include <array>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include "AircraftTicks.h"
 #include "doubles/FakeVariableWriter.h"
@@ -26,6 +30,22 @@ namespace
     constexpr auto kSmartSwitch = "VC_ACP_1_Push_to_Talk_SW_VAL";
     constexpr auto kParkingBrake = "VC_Parking_Brake_SW_VAL";
     constexpr auto kChocks = "iFly_NLG_Chock_Display_VAL";
+
+    constexpr long long kOfpEpoch = 1786922025;
+
+    void WriteIFlyPlan(const std::filesystem::path& appData, const long long epoch)
+    {
+        const std::filesystem::path directory = appData
+            / "Microsoft Flight Simulator 2024" / "WASM" / "MSFS2020"
+            / "ifly-aircraft-737max8" / "work" / "navdata" / "FLTPLAN";
+
+        std::filesystem::create_directories(directory);
+
+        std::ofstream stream(directory / "activeflightplan.xml", std::ios::binary);
+        stream << "<?xml version=\"1.0\"?><OFP><params><time_generated>"
+            << epoch
+            << "</time_generated><units>kgs</units></params></OFP>";
+    }
 
     constexpr auto kFwdCargoAnim = "Animation_FWD_Cargo_VAL";
     constexpr auto kFwdEntryAnim = "ANIMATION_FWD_ENTRY_VAL";
@@ -56,6 +76,7 @@ private slots:
     static void reportsCargoVariant();
     static void evaluatingTheDoorRuleWritesNoVariable();
     static void evaluatingThePlanImportRuleWritesNoVariable();
+    static void planRuleReadsTheFileAndWaitsForTheMatchingEpoch();
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
@@ -1264,7 +1285,7 @@ void IFly737MaxTest::evaluatingTheDoorRuleWritesNoVariable()
     aircraft.CloseAllDoors();
     gateway.lvars[gsx::lvars::kJetway] = 5.0;
 
-    AircraftRule* const rule = FindRule(aircraft, "ifly-737max-doors");
+    AircraftRule* const rule = FindRule(aircraft, "ifly-737max-doors-follow-loader-cycle");
 
     QVERIFY(rule != nullptr);
 
@@ -1283,7 +1304,7 @@ void IFly737MaxTest::evaluatingTheDoorRuleWritesNoVariable()
         rule->Act(context, writer);
     }
 
-    QCOMPARE(gateway.Written(gsx::lvars::kAircraftExit1Toggle), 1.0);
+    QCOMPARE(writer.Written(gsx::lvars::kAircraftExit1Toggle), 1.0);
 }
 
 void IFly737MaxTest::evaluatingThePlanImportRuleWritesNoVariable()
@@ -1293,7 +1314,7 @@ void IFly737MaxTest::evaluatingThePlanImportRuleWritesNoVariable()
     IFly737Max aircraft(&gateway, &status);
     FakeVariableWriter writer;
 
-    AircraftRule* const rule = FindRule(aircraft, "ifly-737max-plan-import");
+    AircraftRule* const rule = FindRule(aircraft, "ifly-737max-watch-plan-file");
 
     QVERIFY(rule != nullptr);
     QVERIFY(rule->Cadence() == RuleCadence::Slow);
@@ -1307,6 +1328,37 @@ void IFly737MaxTest::evaluatingThePlanImportRuleWritesNoVariable()
 
     QCOMPARE(gateway.setLVarCalls + gateway.setAVarCalls, 0);
     QCOMPARE(writer.setLVarCalls + writer.setAVarCalls, 0);
+}
+
+void IFly737MaxTest::planRuleReadsTheFileAndWaitsForTheMatchingEpoch()
+{
+    const QTemporaryDir appData;
+    const std::filesystem::path root(appData.path().toStdWString());
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    status.flightPlanStatus = FlightPlanStatus::Ready;
+    status.planGeneratedEpoch = kOfpEpoch;
+
+    IFly737Max aircraft(&gateway, &status, root);
+
+    AircraftRule* const rule = FindRule(aircraft, "ifly-737max-watch-plan-file");
+
+    QVERIFY(rule != nullptr);
+
+    const RuleContext context{};
+
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+
+    WriteIFlyPlan(root, kOfpEpoch - 1);
+    static_cast<void>(rule->Evaluate(context));
+
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+
+    WriteIFlyPlan(root, kOfpEpoch);
+    static_cast<void>(rule->Evaluate(context));
+
+    QVERIFY(aircraft.IsFlightPlanLoaded());
 }
 
 QTEST_APPLESS_MAIN(IFly737MaxTest)

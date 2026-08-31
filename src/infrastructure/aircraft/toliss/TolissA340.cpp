@@ -5,8 +5,8 @@
 #include <algorithm>
 #include <array>
 #include <memory>
-#include <string>
 #include <optional>
+#include <string>
 #include "../AircraftRegistry.h"
 #include "../DoorReading.h"
 #include "../../gsx/GsxLVars.h"
@@ -19,30 +19,6 @@ using namespace simvars;
 
 namespace
 {
-
-    constexpr std::array kMcduUplinkKeys = {"AB_MCDU3_MENU", "AB_MCDU3_LSK6L", "AB_MCDU3_LSK1R", "AB_MCDU3_LSK1L"};
-
-    constexpr std::array kEngineFuelFlowLvars = {
-        "TLS_ENG1_FUEL_FLOW", "TLS_ENG2_FUEL_FLOW", "TLS_ENG3_FUEL_FLOW", "TLS_ENG4_FUEL_FLOW"
-    };
-
-    constexpr auto kSmartSwitchLVar = "AB_ACP_CPT_RTU_Switch";
-    constexpr double kSmartSwitchNeutral = 1.0;
-
-    constexpr auto kParkingBrakeLVar = "PARKINGBRAKE_POSITION";
-    constexpr double kParkingBrakeSetLVarValue = 100.0;
-
-    constexpr auto kExtPowerAPbLVar = "AB_VC_OVH_ELEC_EXTA_PB";
-    constexpr auto kExtPowerAAutoLVar = "AB_VC_OVH_ELEC_EXTA_AUTO";
-    constexpr auto kExtPowerAOnLVar = "AB_VC_OVH_ELEC_EXTA_ON";
-    constexpr auto kExtPowerBPbLVar = "AB_VC_OVH_ELEC_EXTB_PB";
-    constexpr auto kExtPowerBAutoLVar = "AB_VC_OVH_ELEC_EXTB_AUTO";
-    constexpr auto kExtPowerBOnLVar = "AB_VC_OVH_ELEC_EXTB_ON";
-    constexpr double kExtPowerEnergizedValue = 10.0;
-
-    constexpr auto kApuAvailLVar = "AB_VC_OVH_APU_START_AVAIL";
-    constexpr double kApuAvailableValue = 10.0;
-
     constexpr auto kCargoDoorModeFwdLVar = "TLS_CARGO_DOOR_MODE_FWD";
     constexpr auto kCargoDoorModeAftLVar = "TLS_CARGO_DOOR_MODE_AFT";
 
@@ -97,26 +73,26 @@ namespace
         return DoorOpenByMode(variables, modeLVar);
     }
 
-    const char* DoorModeLVar(const GsxDoor door)
-    {
-        switch (door)
-        {
-        case GsxDoor::FwdPax:
-            return kPaxDoorMode1LLVar;
-        case GsxDoor::MidPax:
-            return kPaxDoorMode2LLVar;
-        case GsxDoor::AftPax:
-            return kPaxDoorMode4LLVar;
-        case GsxDoor::FwdCatering:
-            return kPaxDoorMode1RLVar;
-        case GsxDoor::AftCatering:
-            return kPaxDoorMode4RLVar;
-        case GsxDoor::FwdCargo:
-            return kCargoDoorModeFwdLVar;
-        default:
-            return kCargoDoorModeAftLVar;
-        }
-    }
+    constexpr std::array kEngineFuelFlowLvars = {
+        "TLS_ENG1_FUEL_FLOW", "TLS_ENG2_FUEL_FLOW", "TLS_ENG3_FUEL_FLOW", "TLS_ENG4_FUEL_FLOW"
+    };
+
+    constexpr auto kSmartSwitchLVar = "AB_ACP_CPT_RTU_Switch";
+    constexpr double kSmartSwitchNeutral = 1.0;
+
+    constexpr auto kParkingBrakeLVar = "PARKINGBRAKE_POSITION";
+    constexpr double kParkingBrakeSetLVarValue = 100.0;
+
+    constexpr auto kExtPowerAPbLVar = "AB_VC_OVH_ELEC_EXTA_PB";
+    constexpr auto kExtPowerAAutoLVar = "AB_VC_OVH_ELEC_EXTA_AUTO";
+    constexpr auto kExtPowerAOnLVar = "AB_VC_OVH_ELEC_EXTA_ON";
+    constexpr auto kExtPowerBPbLVar = "AB_VC_OVH_ELEC_EXTB_PB";
+    constexpr auto kExtPowerBAutoLVar = "AB_VC_OVH_ELEC_EXTB_AUTO";
+    constexpr auto kExtPowerBOnLVar = "AB_VC_OVH_ELEC_EXTB_ON";
+    constexpr double kExtPowerEnergizedValue = 10.0;
+
+    constexpr auto kApuAvailLVar = "AB_VC_OVH_APU_START_AVAIL";
+    constexpr double kApuAvailableValue = 10.0;
 
     bool IsExternalPowerFeeding(VariableGateway* gateway,
                                 const char* pbLVar,
@@ -140,7 +116,7 @@ TolissA340::TolissA340(VariableGateway* variableGateway, const AutomationStatus*
                        return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral;
                    },
                    kSmartSwitchNeutral),
-      doorRule_(*this),
+      doorRule_(*this, doors_),
       uplinkRule_(*this),
       rules_{&doorRule_, &uplinkRule_}
 {
@@ -164,35 +140,6 @@ const std::vector<AircraftRule*>& TolissA340::Rules() const
     return rules_;
 }
 
-void TolissA340::AdvanceUplink()
-{
-    if (uplinkArmed_)
-    {
-        uplinkArmed_ = false;
-        uplinkStep_ = 0;
-
-        LOG_INFO("Starting SimBrief uplink through the center MCDU");
-    }
-
-    if (uplinkStep_ < 0 || uplinkStep_ >= static_cast<int>(kMcduUplinkKeys.size()))
-    {
-        uplinkStep_ = -1;
-
-        return;
-    }
-
-    variableGateway_->SetLVar(kMcduUplinkKeys[uplinkStep_], 1.0);
-    ++uplinkStep_;
-}
-
-void TolissA340::OnLoadingStarted()
-{
-    uplinkArmed_ = true;
-    uplinkStep_ = -1;
-
-    LOG_INFO("SimBrief uplink armed: waiting for the MCDU to be available");
-}
-
 DoorStatus TolissA340::GetDoorStatus() const
 {
     DoorStatus status = doors::kNoDoorsSeen;
@@ -204,6 +151,27 @@ DoorStatus TolissA340::GetDoorStatus() const
     }
 
     return status;
+}
+
+const char* TolissA340::DoorModeLVar(const GsxDoor door) const
+{
+    switch (door)
+    {
+    case GsxDoor::FwdPax:
+        return kPaxDoorMode1LLVar;
+    case GsxDoor::MidPax:
+        return kPaxDoorMode2LLVar;
+    case GsxDoor::AftPax:
+        return kPaxDoorMode4LLVar;
+    case GsxDoor::FwdCatering:
+        return kPaxDoorMode1RLVar;
+    case GsxDoor::AftCatering:
+        return kPaxDoorMode4RLVar;
+    case GsxDoor::FwdCargo:
+        return kCargoDoorModeFwdLVar;
+    default:
+        return kCargoDoorModeAftLVar;
+    }
 }
 
 void TolissA340::CloseAllDoors()
@@ -218,14 +186,6 @@ void TolissA340::CloseAllDoors()
     variableGateway_->SetLVar(kPaxDoorMode3RLVar, kDoorClosed);
 
     LOG_INFO("All doors commanded closed: door control is now manual");
-}
-
-void TolissA340::DriveDoors()
-{
-    doors_.Sync([this](const GsxDoor door, const bool open)
-    {
-        variableGateway_->SetLVar(DoorModeLVar(door), open ? kDoorOpen : kDoorClosed);
-    });
 }
 
 bool TolissA340::IsFlightPlanLoaded() const

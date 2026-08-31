@@ -28,7 +28,6 @@ using namespace simvars;
 
 namespace
 {
-
     constexpr auto kSmartSwitchLVar = "S_ASP_INTRAD";
     constexpr double kSmartSwitchNeutral = 1.0;
     constexpr double kSmartSwitchIntercom = 0.0;
@@ -44,22 +43,11 @@ namespace
     constexpr auto kApuRunningLVar = "I_OH_ELEC_APU_START_U";
     constexpr auto kGpuPlacedLVar = "B_CONFIG_GPU";
     constexpr auto kChocksLVar = "B_CONFIG_CHOCKS";
-    constexpr auto kThirdPartyRefuelLVar = "S_THIRD_PARTY_REFUELG";
 
     constexpr auto kChocksDataref = "fenix.efb.chocks";
     constexpr auto kGroundPowerDataref = "groundservice.groundpower";
 
     constexpr auto kWeightUnitDataref = "system.config.Units.Weight";
-
-    constexpr auto kFuelAmountDataref = "aircraft.fuel.total.amount.kg";
-    constexpr auto kFuelTargetDataref = "aircraft.refuel.fuelTarget.kg";
-    constexpr auto kCargoTargetDataref = "fenix.efb.plannedCargoKg";
-    constexpr auto kSimbriefImportedDataref = "fenix.efb.simbriefPlanImported";
-    constexpr auto kBookedSeatsDataref = "fenix.efb.passengers.booked";
-    constexpr auto kSeatOccupationStringDataref = "aircraft.passengers.seatOccupation.string";
-    constexpr auto kFwdCargoAmountDataref = "aircraft.cargo.forward.amount";
-    constexpr auto kAftCargoAmountDataref = "aircraft.cargo.aft.amount";
-    constexpr auto kBulkCargoAmountDataref = "aircraft.cargo.bulk.amount";
 
     constexpr auto kFwdPaxDoorDataref = "doors.entry.d1l";
     constexpr auto kMidPaxDoorDataref = "doors.entry.d2l";
@@ -82,9 +70,6 @@ namespace
         kThirdRightDoorCandidate, kBulkCargoDoorCandidate
     };
 
-    constexpr double kDoorUnanswered = -1.0;
-    constexpr int kDoorSettleTicks = 8;
-
     constexpr std::array kProbeDoorDatarefs = {
         kFwdPaxDoorDataref, kMidPaxDoorDataref, kAftPaxDoorDataref,
         kFwdCateringDoorDataref, kAftCateringDoorDataref,
@@ -93,37 +78,18 @@ namespace
         kThirdRightDoorCandidate, kBulkCargoDoorCandidate
     };
 
-    const char* DoorDataref(const GsxDoor door)
-    {
-        switch (door)
-        {
-        case GsxDoor::FwdPax:
-            return kFwdPaxDoorDataref;
-        case GsxDoor::MidPax:
-            return kMidPaxDoorDataref;
-        case GsxDoor::AftPax:
-            return kAftPaxDoorDataref;
-        case GsxDoor::FwdCatering:
-            return kFwdCateringDoorDataref;
-        case GsxDoor::AftCatering:
-            return kAftCateringDoorDataref;
-        case GsxDoor::FwdCargo:
-            return kFwdCargoDoorDataref;
-        default:
-            return kAftCargoDoorDataref;
-        }
-    }
+    constexpr double kDoorUnanswered = -1.0;
+    constexpr int kDoorSettleTicks = 8;
 
-    constexpr std::array kAutomationTogglesToDisable = {
-        "fenix.efb.autoDoor",
-        "fenix.efb.autoJetway",
-        "fenix.gsx.autoConnectGpu",
-        "fenix.gsx.autoDisconnectGpu",
-        "fenix.gsx.autoDeboard",
-        "fenix.gsx.autoCatering",
-        "fenix.gsx.autoPushback",
-        "fenix.gsx.autoSelectOperator"
-    };
+    constexpr auto kFuelAmountDataref = "aircraft.fuel.total.amount.kg";
+    constexpr auto kFuelTargetDataref = "aircraft.refuel.fuelTarget.kg";
+    constexpr auto kCargoTargetDataref = "fenix.efb.plannedCargoKg";
+    constexpr auto kSimbriefImportedDataref = "fenix.efb.simbriefPlanImported";
+    constexpr auto kBookedSeatsDataref = "fenix.efb.passengers.booked";
+    constexpr auto kSeatOccupationStringDataref = "aircraft.passengers.seatOccupation.string";
+    constexpr auto kFwdCargoAmountDataref = "aircraft.cargo.forward.amount";
+    constexpr auto kAftCargoAmountDataref = "aircraft.cargo.aft.amount";
+    constexpr auto kBulkCargoAmountDataref = "aircraft.cargo.bulk.amount";
 
     constexpr auto kLoadsheetPreliminary = "Preliminary";
     constexpr auto kLoadsheetFinal = "Final";
@@ -163,9 +129,9 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
       smartSwitch_(*variableGateway, {kSmartSwitchLVar},
                    [](const double min, double) { return min <= kSmartSwitchIntercom; },
                    kSmartSwitchNeutral),
-      efbSetupRule_(*this),
-      doorRule_(*this),
-      refuelSystemRule_(*this),
+      efbSetupRule_(*efb_),
+      doorRule_(*this, *efb_, doors_, variant),
+      refuelSystemRule_(*variableGateway),
       rules_{&efbSetupRule_, &doorRule_, &refuelSystemRule_}
 {
     smartSwitch_.Subscribe();
@@ -175,7 +141,7 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
     efb_->Subscribe(kCargoTargetDataref);
     efb_->Subscribe(kWeightUnitDataref);
 
-    for (const char* dataref : kSharedDoorDatarefs)
+    for (const char* const dataref : kSharedDoorDatarefs)
     {
         efb_->Subscribe(dataref);
     }
@@ -227,10 +193,10 @@ void FenixA32x::ReportProbe() const
     }
 
     QStringList doors;
-    for (const char* dataref : kProbeDoorDatarefs)
+    for (const char* const dataref : kProbeDoorDatarefs)
     {
         doors.append(QStringLiteral("%1=%2").arg(QLatin1String(dataref))
-                     .arg(efb_->GetNumber(dataref, -1.0), 0, 'f', 3));
+                     .arg(efb_->GetNumber(dataref, kDoorUnanswered), 0, 'f', 3));
     }
 
     probe::Change("fenix.doors", QStringLiteral("efb   fenix available=%1 %2")
@@ -251,36 +217,9 @@ void FenixA32x::ReportProbe() const
     }
 }
 
-void FenixA32x::EnsureEfbInitialized()
-{
-    if (!efb_->IsAvailable())
-    {
-        efbInitialized_ = false;
-
-        return;
-    }
-
-    if (efbInitialized_)
-    {
-        return;
-    }
-
-    efbInitialized_ = true;
-    for (const auto* toggle : kAutomationTogglesToDisable)
-    {
-        efb_->SetBool(toggle, false);
-    }
-
-    LOG_INFO("Fenix EFB automation disabled: the client now controls doors and GSX services");
-}
-
 void FenixA32x::OnLoadingStarted()
 {
     finalLoadsheetRequested_ = false;
-    refuelSystemArmed_ = true;
-    variableGateway_->SetLVar(kThirdPartyRefuelLVar, 1.0);
-
-    LOG_INFO("Fenix third-party refueling armed: GSX can connect the fuel hose");
 
     if (efb_->IsAvailable())
     {
@@ -288,16 +227,25 @@ void FenixA32x::OnLoadingStarted()
     }
 }
 
-void FenixA32x::DisarmRefuelSystemWhenDone()
+const char* FenixA32x::DoorDataref(const GsxDoor door) const
 {
-    if (!refuelSystemArmed_ || variableGateway_->GetLVar(gsx::lvars::kRefuelingState, 0.0)
-        != static_cast<double>(GsxStateStatus::Completed))
+    switch (door)
     {
-        return;
+    case GsxDoor::FwdPax:
+        return kFwdPaxDoorDataref;
+    case GsxDoor::MidPax:
+        return kMidPaxDoorDataref;
+    case GsxDoor::AftPax:
+        return kAftPaxDoorDataref;
+    case GsxDoor::FwdCatering:
+        return kFwdCateringDoorDataref;
+    case GsxDoor::AftCatering:
+        return kAftCateringDoorDataref;
+    case GsxDoor::FwdCargo:
+        return kFwdCargoDoorDataref;
+    default:
+        return kAftCargoDoorDataref;
     }
-
-    refuelSystemArmed_ = false;
-    variableGateway_->SetLVar(kThirdPartyRefuelLVar, 0.0);
 }
 
 void FenixA32x::CloseAllDoors()
@@ -314,7 +262,7 @@ DoorStatus FenixA32x::GetDoorStatus() const
 {
     DoorStatus status = doors::kNoDoorsSeen;
 
-    for (const char* dataref : kSharedDoorDatarefs)
+    for (const char* const dataref : kSharedDoorDatarefs)
     {
         status = doors::Combine(status, DoorOpen(dataref));
     }
@@ -349,7 +297,7 @@ std::optional<bool> FenixA32x::DoorOpen(const char* dataref) const
 
 void FenixA32x::AdvanceDoorSettle()
 {
-    for (const char* dataref : kProbeDoorDatarefs)
+    for (const char* const dataref : kProbeDoorDatarefs)
     {
         const double reading = efb_->GetNumber(dataref, kDoorUnanswered);
         int& settling = doorSettleTicks_[dataref];
@@ -370,24 +318,6 @@ void FenixA32x::AdvanceDoorSettle()
 
         last = reading;
     }
-}
-
-void FenixA32x::DriveDoors()
-{
-    if (!efb_->IsAvailable())
-    {
-        return;
-    }
-
-    doors_.Sync([this](const GsxDoor door, const bool open)
-    {
-        if (door == GsxDoor::MidPax && variant_ != FenixVariant::A321)
-        {
-            return;
-        }
-
-        efb_->SetBool(DoorDataref(door), open);
-    });
 }
 
 bool FenixA32x::IsFlightPlanLoaded() const

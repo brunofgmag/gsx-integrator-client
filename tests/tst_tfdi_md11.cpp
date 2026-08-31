@@ -880,7 +880,7 @@ void TfdiMd11Test::evaluatingTheCargoDoorRuleWritesNoVariable()
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kGsxLoaderFront] = 6.0;
 
-    AircraftRule* const rule = FindRule(aircraft, "tfdi-md11-cargo-doors");
+    AircraftRule* const rule = FindRule(aircraft, "tfdi-md11-cargo-doors-follow-loader");
 
     QVERIFY(rule != nullptr);
 
@@ -896,7 +896,7 @@ void TfdiMd11Test::evaluatingTheCargoDoorRuleWritesNoVariable()
 
     rule->Act(context, writer);
 
-    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
+    QCOMPARE(writer.Written(kCargoDoor1R), 100.0);
 }
 
 void TfdiMd11Test::evaluatingThePaxDoorRuleWritesNoVariable()
@@ -909,7 +909,7 @@ void TfdiMd11Test::evaluatingThePaxDoorRuleWritesNoVariable()
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kStairsFront] = 3.0;
 
-    AircraftRule* const rule = FindRule(aircraft, "tfdi-md11-pax-doors");
+    AircraftRule* const rule = FindRule(aircraft, "tfdi-md11-pax-doors-follow-stairs");
 
     QVERIFY(rule != nullptr);
 
@@ -925,7 +925,7 @@ void TfdiMd11Test::evaluatingThePaxDoorRuleWritesNoVariable()
 
     rule->Act(context, writer);
 
-    QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
+    QCOMPARE(writer.Written(kPaxDoor1L), 100.0);
 }
 
 void TfdiMd11Test::evaluatingTheEfbTargetRuleWritesNoVariable()
@@ -939,7 +939,7 @@ void TfdiMd11Test::evaluatingTheEfbTargetRuleWritesNoVariable()
     aircraft.SetCurrentFuelKg(20000.0);
     aircraft.SetCurrentZfwKg(160000.0);
 
-    AircraftRule* const rule = FindRule(aircraft, "tfdi-md11-efb-targets");
+    AircraftRule* const rule = FindRule(aircraft, "tfdi-md11-commit-efb-targets");
 
     QVERIFY(rule != nullptr);
     QVERIFY(rule->Cadence() == RuleCadence::Slow);
@@ -956,7 +956,7 @@ void TfdiMd11Test::evaluatingTheEfbTargetRuleWritesNoVariable()
 
     rule->Act(context, writer);
 
-    QVERIFY(qFuzzyCompare(gateway.Written(kEfbFuel), weight::KgToLb(20000.0)));
+    QVERIFY(qFuzzyCompare(writer.Written(kEfbFuel), weight::KgToLb(20000.0)));
 }
 
 QTEST_APPLESS_MAIN(TfdiMd11Test)

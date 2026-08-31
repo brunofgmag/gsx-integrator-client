@@ -8,6 +8,9 @@
 #include "../src/domain/ports/AircraftRule.h"
 #include "../src/infrastructure/simvars/VariableGateway.h"
 
+inline constexpr RuleContext kLoading{.needs = {.loading = true}};
+inline constexpr RuleContext kPassengerAccess{.needs = {.passengerAccess = true}};
+
 inline AircraftRule* FindRule(const Aircraft& aircraft, const std::string& name)
 {
     for (AircraftRule* const rule : aircraft.Rules())

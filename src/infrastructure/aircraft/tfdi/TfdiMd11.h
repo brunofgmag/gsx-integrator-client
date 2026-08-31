@@ -1,12 +1,13 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11_H
 
+#include <optional>
 #include <vector>
 
 #include "../SmartSwitch.h"
-#include "rules/TfdiMd11CargoDoorRule.h"
-#include "rules/TfdiMd11EfbTargetRule.h"
-#include "rules/TfdiMd11PaxDoorRule.h"
+#include "rules/TfdiMd11CargoDoorsFollowLoaderRule.h"
+#include "rules/TfdiMd11CommitEfbTargetsRule.h"
+#include "rules/TfdiMd11PaxDoorsFollowStairsRule.h"
 #include "../../../domain/ports/Aircraft.h"
 
 class VariableGateway;
@@ -22,9 +23,6 @@ public:
     [[nodiscard]] bool IsCargoVariant() const override;
 
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
-    void DriveCargoDoors();
-    void DrivePaxDoors();
-    void CommitPendingEfbTargets();
     void OnLoadingStarted() override {}
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -37,6 +35,8 @@ public:
     void SetCurrentFuelKg(double fuelKg) override;
     [[nodiscard]] double GetCurrentZfwKg() const override;
     void SetCurrentZfwKg(double zfwKg) override;
+    [[nodiscard]] std::optional<double> StagedFuelKg() const;
+    [[nodiscard]] std::optional<double> StagedZfwKg() const;
 
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
@@ -57,20 +57,6 @@ public:
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
 private:
-    struct EfbTarget
-    {
-        double target = 0.0;
-        double last = 0.0;
-        bool seeded = false;
-    };
-
-    void UpdateTarget(EfbTarget& efbTarget, double valueKg);
-    void CommitEfbTargets() const;
-    void SeedTargetsIfNeeded();
-
-    void DriveLoaderDoor(const char* loaderStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const;
-    void DriveStairsDoor(const char* stairsStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const;
-
     [[nodiscard]] bool IsBeaconOn() const;
 
     VariableGateway* variableGateway_;
@@ -78,19 +64,12 @@ private:
 
     bool cargo_;
     SmartSwitch smartSwitch_;
-    TfdiMd11CargoDoorRule cargoDoorRule_;
-    TfdiMd11PaxDoorRule paxDoorRule_;
-    TfdiMd11EfbTargetRule efbTargetRule_;
+    TfdiMd11CargoDoorsFollowLoaderRule cargoDoorRule_;
+    TfdiMd11PaxDoorsFollowStairsRule paxDoorRule_;
+    TfdiMd11CommitEfbTargetsRule efbTargetRule_;
     std::vector<AircraftRule*> rules_;
-    bool pendingEfbCommit_ = false;
-    EfbTarget fuelTarget_;
-    EfbTarget zfwTarget_;
-    double fwdCargoDoorTarget_ = -1.0;
-    double aftCargoDoorTarget_ = -1.0;
-    double mainCargoDoorTarget_ = -1.0;
-    double fwdPaxDoorTarget_ = -1.0;
-    double midPaxDoorTarget_ = -1.0;
-    double aftPaxDoorTarget_ = -1.0;
+    std::optional<double> stagedFuelKg_;
+    std::optional<double> stagedZfwKg_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11_H
