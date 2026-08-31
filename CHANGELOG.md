@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.28.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.27.0...v1.28.0) (2026-08-31)
+
+
+### Features
+
+* **turnaround:** warn when GSX drops a service it had already started ([e08f6dd](https://github.com/brunofgmag/gsx-integrator-client/commit/e08f6dd9e7730905d0dcfb2b4f4382cf4f4a8a99)) ([a27f982](https://github.com/brunofgmag/gsx-integrator-client/commit/a27f982e6037db521b1c3d78ae2e7fdb2c00f2bc))
+
 ## [1.27.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.26.1...v1.27.0) (2026-08-30)
 
 
