@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.29.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.28.0...v1.29.0) (2026-08-31)
+
+
+* show what stayed in the tanks and what blocks the smartswitch ([#108](https://github.com/brunofgmag/gsx-integrator-client/issues/108)) ([70de4e5](https://github.com/brunofgmag/gsx-integrator-client/commit/70de4e56925c454368dc90a598336496ef44e3d9))
+
+
+### Features
+
+* **operations:** show what stayed in the tanks and what blocks the smartswitch ([1e99fb0](https://github.com/brunofgmag/gsx-integrator-client/commit/1e99fb0f171c4ce71a2f66ed1923892fb1d5c497)) ([70de4e5](https://github.com/brunofgmag/gsx-integrator-client/commit/70de4e56925c454368dc90a598336496ef44e3d9))
+
+
+### Bug Fixes
+
+* **gsx:** close the stuck menu and let the last attempt be answered ([7e81c0a](https://github.com/brunofgmag/gsx-integrator-client/commit/7e81c0ae415c95bdca735b77f3675e80206b002c)) ([70de4e5](https://github.com/brunofgmag/gsx-integrator-client/commit/70de4e56925c454368dc90a598336496ef44e3d9))
+
 ## [1.28.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.27.0...v1.28.0) (2026-08-31)
 
 
