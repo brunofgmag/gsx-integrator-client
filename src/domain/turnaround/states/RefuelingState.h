@@ -23,6 +23,7 @@ private:
     static void AccumulateFuel(TurnaroundContext& ctx);
     static void MaybeForceCompletion(TurnaroundContext& ctx, GsxStateStatus refuelingState);
     static void SnapToPlanned(TurnaroundContext& ctx);
+    static void WarnWhenFuelDidNotStay(TurnaroundContext& ctx);
     static void RefuelProgressively(TurnaroundContext& ctx);
 };
 

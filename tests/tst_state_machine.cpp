@@ -485,6 +485,7 @@ private slots:
     static void resetDiscardsAPendingAppTouch();
     static void twoRulesAskingAboutOneVariableGetTheSameAnswer();
     static void theSpanPairAnswersTheSecondRuleDifferently();
+    static void theFuelStayAdvisoryClearsWhenThePilotDismissesIt();
 };
 
 void TurnaroundStateMachineTest::publishesCurrentTankFuelBeforeRefuel()
@@ -1080,6 +1081,26 @@ void TurnaroundStateMachineTest::theSpanPairAnswersTheSecondRuleDifferently()
 
     QCOMPARE(first.swings, std::vector<double>{70.0});
     QCOMPARE(second.swings, std::vector<double>{0.0});
+}
+
+void TurnaroundStateMachineTest::theFuelStayAdvisoryClearsWhenThePilotDismissesIt()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachRefueling(workflow);
+
+    workflow.f.aircraft.refuelMethod = RefuelBy::Gsx;
+    workflow.f.aircraft.fuelCapacityKg = 12000.0;
+    workflow.f.aircraft.currentFuelKg = 11000.0;
+    workflow.CompleteRefueling();
+
+    QVERIFY(workflow.f.status.fuelDidNotStay);
+    QCOMPARE(workflow.f.status.fuelShortfallKg, 1000.0);
+
+    workflow.machine.DismissFuelStayAdvisory();
+    workflow.machine.Tick();
+
+    QVERIFY(!workflow.f.status.fuelDidNotStay);
 }
 
 QTEST_APPLESS_MAIN(TurnaroundStateMachineTest)

@@ -59,6 +59,18 @@ CommandResult RuntimeIntegratorService::StartLoading()
     return CommandResult::Success();
 }
 
+CommandResult RuntimeIntegratorService::DismissFuelStayAdvisory()
+{
+    if (!runtime_->IsConnected())
+    {
+        return OfflineFailure();
+    }
+
+    runtime_->DismissFuelStayAdvisory();
+
+    return CommandResult::Success();
+}
+
 CommandResult RuntimeIntegratorService::RestartFlow()
 {
     if (!runtime_->IsConnected())

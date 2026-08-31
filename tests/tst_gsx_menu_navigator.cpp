@@ -187,6 +187,8 @@ private slots:
     static void rearmedTriggerIsDroppedOnceGsxTakesIt();
     static void stuckMenuIsClosedAfterResyncsAreExhausted();
     static void thePushbackDirectionMenuIsNeverDiscarded();
+    static void theStuckMenuIsDiscardedEvenWithARequestStillPending();
+    static void theLastAttemptGetsTheSameGraceAsTheOthers();
     static void resetAllowsClosingTheSameStuckMenuAgain();
     static void aRequestForAServiceAlreadyUnderwayIsDroppedBeforeSending();
     static void theGpuToggleStillFiresWhileTheServiceRuns();
@@ -2025,6 +2027,74 @@ void GsxMenuNavigatorTest::stuckMenuIsClosedAfterResyncsAreExhausted()
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("menu.close"), 1);
+}
+
+void GsxMenuNavigatorTest::theStuckMenuIsDiscardedEvenWithARequestStillPending()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Boarding");
+
+    nav.RequestBoarding();
+    nav.OnMenuChanged();
+
+    ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
+    nav.OnMenuChanged();
+
+    for (int resync = 0; resync < 3; ++resync)
+    {
+        fakeNow += 2000;
+        nav.OnMenuChanged();
+    }
+
+    QCOMPARE(client.Count("menu.close"), 0);
+
+    fakeNow += 2000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.close"), 1);
+    QVERIFY(Logged(logger, "the resyncs could not move"));
+}
+
+void GsxMenuNavigatorTest::theLastAttemptGetsTheSameGraceAsTheOthers()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Boarding");
+
+    nav.RequestBoarding();
+
+    fakeNow = 25000;
+    nav.OnMenuChanged();
+
+    fakeNow = 45000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 3);
+
+    fakeNow = 64999;
+    nav.OnMenuChanged();
+
+    QVERIFY(!Logged(logger, "never taken by GSX"));
+
+    fakeNow = 65000;
+    nav.OnMenuChanged();
+
+    QVERIFY(Logged(logger, "never taken by GSX"));
 }
 
 void GsxMenuNavigatorTest::thePushbackDirectionMenuIsNeverDiscarded()

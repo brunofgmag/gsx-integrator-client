@@ -75,6 +75,7 @@ private slots:
     static void thePilotTouchCarriesTheStampToTheService();
     static void aRefusedPilotTouchReportsTheReason();
     static void everyTouchablePhaseNamesItsTouchExceptTheOneAButtonAlreadyCovers();
+    static void theLoadedFuelShowsWhatSettledInTheTanks();
 };
 
 void OperationsViewModelTest::waitingForLoadingOverridesStateTextAndTip()
@@ -680,6 +681,23 @@ void OperationsViewModelTest::eachWeightTextReadsItsOwnSnapshotField()
     QCOMPARE(viewModel.GetTargetZfwText(), QLocale().toString(3000) + QStringLiteral(" kg"));
     QCOMPARE(viewModel.GetPlannedFuelText(), QLocale().toString(4000) + QStringLiteral(" kg"));
     QCOMPARE(viewModel.GetPlannedZfwText(), QLocale().toString(5000) + QStringLiteral(" kg"));
+}
+
+void OperationsViewModelTest::theLoadedFuelShowsWhatSettledInTheTanks()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.loadedFuelKg = 10360.0;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetLoadedFuelKg(), 10360.0);
+
+    service.snapshot.settledFuelKg = 9418.0;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetLoadedFuelKg(), 9418.0);
 }
 
 QTEST_APPLESS_MAIN(OperationsViewModelTest)

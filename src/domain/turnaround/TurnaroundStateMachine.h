@@ -27,6 +27,7 @@ public:
     void ObserveSlowRules();
     void Reset();
     void ConfirmLoading() { context_.data.loadingConfirmed = true; }
+    void DismissFuelStayAdvisory() { context_.data.fuelStayDismissed = true; }
     void AcceptAppTouch() { appTouchPending_ = true; }
 #ifndef NDEBUG
     void DebugSkipPhase(int delta);

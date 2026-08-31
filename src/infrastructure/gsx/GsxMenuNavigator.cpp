@@ -382,13 +382,17 @@ void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
 
 void GsxMenuNavigator::DiscardStuckMenu(const std::string& sig)
 {
-    if (!pending_.empty() || sig == discardedSig_)
+    if (sig == discardedSig_)
     {
         return;
     }
 
     if (Contains(state_->menu.title, kPushbackDirectionText))
     {
+        discardedSig_ = sig;
+        logger_->LogInfo(std::format("RemoteAPI leaving the pushback direction menu open: '{}'",
+                                     state_->menu.title));
+
         return;
     }
 
@@ -634,7 +638,7 @@ void GsxMenuNavigator::PumpRequests()
             continue;
         }
 
-        if (it->attempts >= kMaxTriggerAttempts)
+        if (it->attempts >= kMaxTriggerAttempts && (nowMs_() - it->lastSentMs) >= kTriggerRetryMs)
         {
             logger_->LogInfo(std::format("RemoteAPI '{}' never taken by GSX after {} attempts",
                                          it->label, it->attempts));

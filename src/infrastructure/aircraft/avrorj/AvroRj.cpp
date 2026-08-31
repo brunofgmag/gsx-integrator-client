@@ -23,10 +23,14 @@ namespace
 
     constexpr auto kSimFuelWeightPerGallon = "FUEL WEIGHT PER GALLON";
 
+    constexpr auto kLeftAuxFittedLVar = "OVHD_FUEL_L_aux_vis";
+    constexpr auto kRightAuxFittedLVar = "OVHD_FUEL_R_aux_vis";
+
     struct FuelTank
     {
         const char* quantity;
         const char* capacity;
+        const char* fitted = nullptr;
     };
 
     constexpr std::array kMainTanks = {
@@ -39,8 +43,8 @@ namespace
     };
 
     constexpr std::array kAuxTanks = {
-        FuelTank{"FUEL TANK LEFT AUX QUANTITY", "FUEL TANK LEFT AUX CAPACITY"},
-        FuelTank{"FUEL TANK RIGHT AUX QUANTITY", "FUEL TANK RIGHT AUX CAPACITY"}
+        FuelTank{"FUEL TANK LEFT AUX QUANTITY", "FUEL TANK LEFT AUX CAPACITY", kLeftAuxFittedLVar},
+        FuelTank{"FUEL TANK RIGHT AUX QUANTITY", "FUEL TANK RIGHT AUX CAPACITY", kRightAuxFittedLVar}
     };
 
     constexpr auto kPlannedBlockFuelLVar = "146_SimBrief_Block_Fuel";
@@ -76,11 +80,39 @@ namespace
 
     constexpr int kEngineCount = 4;
 
+    bool IsTankFitted(VariableGateway& variables, const FuelTank& tank)
+    {
+        if (tank.fitted == nullptr)
+        {
+            return true;
+        }
+
+        return variables.HasReceivedLVar(tank.fitted) && variables.GetLVar(tank.fitted, 0.0) != 0.0;
+    }
+
+    bool HaveFittedFlagsArrived(VariableGateway& variables, const std::span<const FuelTank> tanks)
+    {
+        for (const auto& tank : tanks)
+        {
+            if (tank.fitted != nullptr && !variables.HasReceivedLVar(tank.fitted))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     double GroupCapacityGallons(VariableGateway& variables, const std::span<const FuelTank> tanks)
     {
         double capacity = 0.0;
         for (const auto& tank : tanks)
         {
+            if (!IsTankFitted(variables, tank))
+            {
+                continue;
+            }
+
             capacity += variables.GetAVar(tank.capacity, kGallonsUnit, 0.0);
         }
 
@@ -95,6 +127,11 @@ namespace
 
         for (const auto& tank : tanks)
         {
+            if (!IsTankFitted(variables, tank))
+            {
+                continue;
+            }
+
             const double tankCapacity = variables.GetAVar(tank.capacity, kGallonsUnit, 0.0);
             const double tankShare = capacity > 0.0 ? share * tankCapacity / capacity : 0.0;
 
@@ -256,6 +293,13 @@ double AvroRj::GetCurrentZfwKg() const
 
 double AvroRj::GetFuelCapacityKg() const
 {
+    if (!HaveFittedFlagsArrived(*variableGateway_, kMainTanks)
+        || !HaveFittedFlagsArrived(*variableGateway_, kCenterTanks)
+        || !HaveFittedFlagsArrived(*variableGateway_, kAuxTanks))
+    {
+        return 0.0;
+    }
+
     const double capacityGallons = GroupCapacityGallons(*variableGateway_, kMainTanks)
         + GroupCapacityGallons(*variableGateway_, kCenterTanks)
         + GroupCapacityGallons(*variableGateway_, kAuxTanks);

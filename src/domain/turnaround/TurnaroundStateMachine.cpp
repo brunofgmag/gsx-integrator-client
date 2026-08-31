@@ -180,6 +180,10 @@ void TurnaroundStateMachine::PublishStatus() const
     context_.status->loadedFuelKg = context_.data.loadedFuelKg;
     context_.status->fuelRequestStalled = context_.data.fuelRequestStalled;
     context_.status->fuelPlanOverCapacity = context_.data.fuelPlanOverCapacity;
+    context_.status->fuelDidNotStay = context_.data.fuelDidNotStay && !context_.data.fuelStayDismissed;
+    context_.status->fuelShortfallKg = context_.data.fuelShortfallKg;
+    context_.status->settledFuelKg = context_.data.settledFuelKg;
+    context_.status->engineConfirmationBlock = context_.data.engineConfirmationBlock;
     context_.status->servicesStalled = context_.data.servicesStalled;
     context_.status->serviceInterrupted = context_.data.serviceInterrupted;
     context_.status->servicesWaitSeconds = context_.data.servicesWaitSeconds;

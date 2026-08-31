@@ -56,6 +56,9 @@ public:
     [[nodiscard]] bool IsCargoDoorStuck() const;
     [[nodiscard]] bool IsFuelRequestStalled() const;
     [[nodiscard]] bool IsFuelPlanOverCapacity() const;
+    [[nodiscard]] bool DidFuelNotStay() const;
+    void DismissFuelStayAdvisory();
+    [[nodiscard]] EngineConfirmationBlock GetEngineConfirmationBlock() const;
     [[nodiscard]] bool AreServicesStalled() const;
     [[nodiscard]] bool IsServiceInterrupted() const;
     [[nodiscard]] bool AreDoorsHoldingPushback() const;
