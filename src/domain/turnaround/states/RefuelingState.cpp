@@ -49,6 +49,10 @@ std::optional<TurnaroundTransition> RefuelingState::EvaluatePhase(TurnaroundCont
     auto& data = ctx.data;
 
     const GsxStateStatus refuelingState = ctx.gsxGateway->GetStateStatus(GsxState::Refueling);
+
+    NoteServiceInterruption(ctx, "refueling", refuelingState, data.refuelBaselined,
+                            IsGsxRefuelDone(ctx, refuelingState));
+
     if (!IsGsxRefuelReady(ctx, refuelingState))
     {
         return std::nullopt;

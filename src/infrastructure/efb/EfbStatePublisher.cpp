@@ -145,6 +145,7 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("fuelRequestStalled"), view_->IsFuelRequestStalled());
     state.insert(QLatin1String("fuelPlanOverCapacity"), view_->IsFuelPlanOverCapacity());
     state.insert(QLatin1String("servicesStalled"), view_->AreServicesStalled());
+    state.insert(QLatin1String("serviceInterrupted"), view_->IsServiceInterrupted());
     state.insert(QLatin1String("doorsHoldingPushback"), view_->AreDoorsHoldingPushback());
 
     state.insert(QLatin1String("canStartFlow"), view_->CanStartFlow());

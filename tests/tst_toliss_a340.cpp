@@ -278,22 +278,20 @@ void TolissA340Test::uplinkPressesMcduKeysInSequence()
     gateway.lvars[kExtAPb] = 1.0;
     gateway.lvars[kExtAAuto] = 10.0;
 
-    aircraft.OnLoadingStarted();
-
-    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway, kLoading);
 
     QCOMPARE(gateway.lvars[kMcduMenuKey], 1.0);
     QCOMPARE(gateway.setLVarCalls, 1);
 
-    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway, kLoading);
 
     QCOMPARE(gateway.lvars[kMcduAtsuKey], 1.0);
 
-    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway, kLoading);
 
     QCOMPARE(gateway.lvars[kMcduAocMenuKey], 1.0);
 
-    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway, kLoading);
 
     QCOMPARE(gateway.lvars[kMcduFlightInitKey], 1.0);
     QCOMPARE(gateway.setLVarCalls, 4);
@@ -307,10 +305,9 @@ void TolissA340Test::uplinkWaitsForPower()
 
     gateway.lvars[kBattery1] = 1.0;
 
-    aircraft.OnLoadingStarted();
     for (int tick = 0; tick < 5; ++tick)
     {
-        TickAircraft(aircraft, gateway);
+        TickAircraft(aircraft, gateway, kLoading);
     }
 
     QCOMPARE(gateway.setLVarCalls, 0);
@@ -318,7 +315,7 @@ void TolissA340Test::uplinkWaitsForPower()
     gateway.lvars[kExtAPb] = 1.0;
     gateway.lvars[kExtAAuto] = 10.0;
 
-    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway, kLoading);
 
     QCOMPARE(gateway.lvars[kMcduMenuKey], 1.0);
 }
@@ -331,9 +328,7 @@ void TolissA340Test::uplinkFiresOnApuPowerAlone()
 
     gateway.lvars[kApuAvail] = 10.0;
 
-    aircraft.OnLoadingStarted();
-
-    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway, kLoading);
 
     QCOMPARE(gateway.lvars[kMcduMenuKey], 1.0);
 }
@@ -354,9 +349,7 @@ void TolissA340Test::uplinkFiresImmediatelyWhenAlreadyPowered()
 
     QCOMPARE(gateway.setLVarCalls, 0);
 
-    aircraft.OnLoadingStarted();
-
-    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway, kLoading);
 
     QCOMPARE(gateway.lvars[kMcduMenuKey], 1.0);
 }
@@ -370,18 +363,18 @@ void TolissA340Test::uplinkRunsOncePerTrigger()
     gateway.lvars[kExtAPb] = 1.0;
     gateway.lvars[kExtAAuto] = 10.0;
 
-    aircraft.OnLoadingStarted();
     for (int tick = 0; tick < 10; ++tick)
     {
-        TickAircraft(aircraft, gateway);
+        TickAircraft(aircraft, gateway, kLoading);
     }
 
     QCOMPARE(gateway.setLVarCalls, 4);
 
-    aircraft.OnLoadingStarted();
+    TickAircraft(aircraft, gateway);
+
     for (int tick = 0; tick < 10; ++tick)
     {
-        TickAircraft(aircraft, gateway);
+        TickAircraft(aircraft, gateway, kLoading);
     }
 
     QCOMPARE(gateway.setLVarCalls, 8);
@@ -1088,7 +1081,7 @@ void TolissA340Test::evaluatingTheDoorRuleWritesNoVariable()
     gateway.lvars[kGsxLoaderFront] = 6.0;
     aircraft.Observe();
 
-    AircraftRule* const rule = FindRule(aircraft, "toliss-a340-doors");
+    AircraftRule* const rule = FindRule(aircraft, "toliss-a340-doors-follow-gsx");
 
     QVERIFY(rule != nullptr);
 
@@ -1104,7 +1097,7 @@ void TolissA340Test::evaluatingTheDoorRuleWritesNoVariable()
 
     rule->Act(context, writer);
 
-    QCOMPARE(gateway.Written(kCargoDoorModeFwd), 2.0);
+    QCOMPARE(writer.Written(kCargoDoorModeFwd), 2.0);
 }
 
 void TolissA340Test::evaluatingTheUplinkRuleWritesNoVariable()
@@ -1116,13 +1109,12 @@ void TolissA340Test::evaluatingTheUplinkRuleWritesNoVariable()
 
     gateway.lvars[kExtAPb] = 1.0;
     gateway.lvars[kExtAAuto] = 10.0;
-    aircraft.OnLoadingStarted();
 
-    AircraftRule* const rule = FindRule(aircraft, "toliss-a340-uplink");
+    AircraftRule* const rule = FindRule(aircraft, "toliss-a340-advance-mcdu-uplink");
 
     QVERIFY(rule != nullptr);
 
-    const RuleContext context{};
+    const RuleContext context = kLoading;
 
     for (int tick = 0; tick < 5; ++tick)
     {
@@ -1134,7 +1126,7 @@ void TolissA340Test::evaluatingTheUplinkRuleWritesNoVariable()
 
     rule->Act(context, writer);
 
-    QCOMPARE(gateway.Written(kMcduMenuKey), 1.0);
+    QCOMPARE(writer.Written(kMcduMenuKey), 1.0);
 }
 
 QTEST_APPLESS_MAIN(TolissA340Test)

@@ -15,9 +15,30 @@ namespace
         RuleContext context;
         context.phase = state.Phase();
         context.needs = state.Needs();
+        context.needs.loading = ctx.data.loadingStartNotified;
         context.phaseTickCount = ctx.data.stateTickCount;
 
         return context;
+    }
+}
+
+void TurnaroundState::NoteServiceInterruption(TurnaroundContext& ctx, const char* serviceName,
+                                              const GsxStateStatus state, const bool started,
+                                              const bool completed)
+{
+    const bool interrupted = started && !completed && state < GsxStateStatus::Requested;
+    if (interrupted == ctx.data.serviceInterrupted)
+    {
+        return;
+    }
+
+    ctx.data.serviceInterrupted = interrupted;
+
+    if (interrupted && ctx.logger != nullptr)
+    {
+        ctx.logger->LogInfo(std::format(
+            "GSX dropped the {} it had already started; the flow is waiting and will not re-request it",
+            serviceName));
     }
 }
 

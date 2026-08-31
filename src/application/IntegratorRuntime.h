@@ -57,6 +57,7 @@ public:
     [[nodiscard]] bool IsFuelRequestStalled() const;
     [[nodiscard]] bool IsFuelPlanOverCapacity() const;
     [[nodiscard]] bool AreServicesStalled() const;
+    [[nodiscard]] bool IsServiceInterrupted() const;
     [[nodiscard]] bool AreDoorsHoldingPushback() const;
     void SetAutomationEnabled(bool enabled);
     void RestartFlow();

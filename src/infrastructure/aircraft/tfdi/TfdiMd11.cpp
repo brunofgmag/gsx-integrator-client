@@ -9,7 +9,6 @@
 #include "../AircraftRegistry.h"
 #include "../DoorReading.h"
 #include "../../gsx/GsxLVars.h"
-#include "../../../domain/support/Weight.h"
 #include "../../logging/LogMacros.h"
 #include "../../../domain/model/FlightPlan.h"
 #include "../../../domain/model/AutomationStatus.h"
@@ -19,17 +18,6 @@ using namespace simvars;
 
 namespace
 {
-    constexpr auto kEfbGw = "MD11_EFB_PAYLOAD_GW";
-    constexpr auto kEfbZfw = "MD11_EFB_PAYLOAD_ZFW";
-    constexpr auto kEfbPayload = "MD11_EFB_PAYLOAD_PAYLOAD";
-    constexpr auto kEfbFuel = "MD11_EFB_PAYLOAD_FUEL";
-    constexpr auto kEfbLoad = "MD11_EFB_PAYLOAD_LOAD";
-    constexpr auto kEfbReadReady = "MD11_EFB_READ_READY";
-
-    constexpr int kEfbReadyMask = 0x1;
-    constexpr double kMtowKg = 283730.0;
-
-
     constexpr auto kSmartSwitch = "MD11_PED_CPT_AUDIO_PNL_INT_RADIO_SW";
     constexpr double kSmartSwitchNeutral = 1.0;
 
@@ -45,17 +33,9 @@ namespace
     constexpr auto kChocksLVar = "MD11_EXT_CHOCKS";
     constexpr auto kExtGpuLVar = "MD11_EXT_GPU";
 
-    constexpr auto kPaxDoor1LLVar = "MD11_EXT_DOOR_CMD_PAX_1L";
-    constexpr auto kPaxDoor2LLVar = "MD11_EXT_DOOR_CMD_PAX_2L";
-    constexpr auto kPaxDoor4LLVar = "MD11_EXT_DOOR_CMD_PAX_4L";
-    constexpr auto kCargoDoor1RLVar = "MD11_EXT_DOOR_CMD_CARGO_1R";
-    constexpr auto kCargoDoor2RLVar = "MD11_EXT_DOOR_CMD_CARGO_2R";
-    constexpr auto kCargoDoorMainLVar = "MD11_EXT_DOOR_CMD_CARGO_MAIN";
     constexpr std::array kDoorStateLVars =
         {"MD11_EXT_DOOR_PAX_1L", "MD11_EXT_DOOR_PAX_2L", "MD11_EXT_DOOR_PAX_4L",
          "MD11_EXT_DOOR_CARGO_1R", "MD11_EXT_DOOR_CARGO_2R", "MD11_EXT_DOOR_CARGO_MAIN"};
-    constexpr double kDoorOpen = 100.0;
-    constexpr double kDoorClosed = 0.0;
 }
 
 TfdiMd11::TfdiMd11(VariableGateway* variableGateway, const AutomationStatus* status, const bool cargo)
@@ -63,9 +43,9 @@ TfdiMd11::TfdiMd11(VariableGateway* variableGateway, const AutomationStatus* sta
       smartSwitch_(*variableGateway, {kSmartSwitch},
                    [](double, const double max) { return max > kSmartSwitchNeutral; },
                    kSmartSwitchNeutral),
-      cargoDoorRule_(*this),
-      paxDoorRule_(*this),
-      efbTargetRule_(*this),
+      cargoDoorRule_(*variableGateway, cargo),
+      paxDoorRule_(*variableGateway),
+      efbTargetRule_(*variableGateway, *this),
       rules_{&cargoDoorRule_, &paxDoorRule_, &efbTargetRule_}
 {
     smartSwitch_.Subscribe();
@@ -81,91 +61,6 @@ bool TfdiMd11::IsCargoVariant() const
 const std::vector<AircraftRule*>& TfdiMd11::Rules() const
 {
     return rules_;
-}
-
-void TfdiMd11::DriveCargoDoors()
-{
-    if (variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
-    {
-        return;
-    }
-
-    DriveLoaderDoor(gsx::lvars::kBaggageLoaderFrontState, kCargoDoor1RLVar, fwdCargoDoorTarget_);
-    DriveLoaderDoor(gsx::lvars::kBaggageLoaderRearState, kCargoDoor2RLVar, aftCargoDoorTarget_);
-
-    if (cargo_)
-    {
-        DriveLoaderDoor(gsx::lvars::kBaggageLoaderMainState, kCargoDoorMainLVar, mainCargoDoorTarget_);
-    }
-}
-
-void TfdiMd11::DriveLoaderDoor(const char* loaderStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const
-{
-    const double loaderState = variableGateway_->GetLVar(loaderStateLVar, 0.0);
-    const double doorTarget = gsx::states::IsLoaderArriving(loaderState) ? kDoorOpen : kDoorClosed;
-
-    if (doorTarget != lastDoorTarget)
-    {
-        variableGateway_->SetLVar(doorCmdLVar, doorTarget);
-        lastDoorTarget = doorTarget;
-    }
-}
-
-void TfdiMd11::DrivePaxDoors()
-{
-    if (variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
-    {
-        return;
-    }
-
-    DriveStairsDoor(gsx::lvars::kPassengerStairsFrontState, kPaxDoor1LLVar, fwdPaxDoorTarget_);
-    DriveStairsDoor(gsx::lvars::kPassengerStairsMiddleState, kPaxDoor2LLVar, midPaxDoorTarget_);
-    DriveStairsDoor(gsx::lvars::kPassengerStairsRearState, kPaxDoor4LLVar, aftPaxDoorTarget_);
-}
-
-void TfdiMd11::DriveStairsDoor(const char* stairsStateLVar, const char* doorCmdLVar, double& lastDoorTarget) const
-{
-    if (gsx::states::AreStairsArriving(variableGateway_->GetLVar(stairsStateLVar, 0.0)))
-    {
-        if (lastDoorTarget != kDoorOpen)
-        {
-            variableGateway_->SetLVar(doorCmdLVar, kDoorOpen);
-            lastDoorTarget = kDoorOpen;
-        }
-    }
-    else if (lastDoorTarget == kDoorOpen)
-    {
-        variableGateway_->SetLVar(doorCmdLVar, kDoorClosed);
-        lastDoorTarget = kDoorClosed;
-    }
-}
-
-void TfdiMd11::CommitPendingEfbTargets()
-{
-    if (!pendingEfbCommit_ || !variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit))
-    {
-        return;
-    }
-
-    SeedTargetsIfNeeded();
-    CommitEfbTargets();
-    pendingEfbCommit_ = false;
-}
-
-void TfdiMd11::SeedTargetsIfNeeded()
-{
-    if (!fuelTarget_.seeded && variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit))
-    {
-        fuelTarget_.target = GetCurrentFuelKg();
-        fuelTarget_.seeded = true;
-    }
-
-    if (!zfwTarget_.seeded && variableGateway_->HasReceivedAVar(kSimTotalWeight, kKgUnit)
-        && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit))
-    {
-        zfwTarget_.target = std::max(GetCurrentZfwKg(), GetEmptyZfwKg());
-        zfwTarget_.seeded = true;
-    }
 }
 
 bool TfdiMd11::IsFlightPlanLoaded() const
@@ -200,20 +95,12 @@ double TfdiMd11::GetCurrentFuelKg() const
 
 void TfdiMd11::SetCurrentFuelKg(const double fuelKg)
 {
-    UpdateTarget(fuelTarget_, fuelKg);
+    stagedFuelKg_ = fuelKg;
 }
 
-void TfdiMd11::UpdateTarget(EfbTarget& efbTarget, const double valueKg)
+std::optional<double> TfdiMd11::StagedFuelKg() const
 {
-    if (efbTarget.last == valueKg)
-    {
-        return;
-    }
-
-    efbTarget.last = valueKg;
-    efbTarget.target = valueKg;
-    efbTarget.seeded = true;
-    pendingEfbCommit_ = true;
+    return stagedFuelKg_;
 }
 
 double TfdiMd11::GetCurrentZfwKg() const
@@ -228,7 +115,12 @@ double TfdiMd11::GetCurrentZfwKg() const
 
 void TfdiMd11::SetCurrentZfwKg(const double zfwKg)
 {
-    UpdateTarget(zfwTarget_, zfwKg);
+    stagedZfwKg_ = zfwKg;
+}
+
+std::optional<double> TfdiMd11::StagedZfwKg() const
+{
+    return stagedZfwKg_;
 }
 
 DoorStatus TfdiMd11::GetDoorStatus() const
@@ -315,36 +207,6 @@ bool TfdiMd11::IsParkingBrakeSet() const
 bool TfdiMd11::IsBeaconOn() const
 {
     return variableGateway_->GetAVar(kSimBeaconLight, kBoolUnit, 0.0) > 0.0;
-}
-
-void TfdiMd11::CommitEfbTargets() const
-{
-    const double zfw = std::max(zfwTarget_.target, GetEmptyZfwKg());
-    const double fuel = std::max(fuelTarget_.target, 0.0);
-    const double payload = std::max(zfw - GetEmptyZfwKg(), 0.0);
-    const double grossWeight = zfw + fuel;
-    const double payloadCapacityKg = kMtowKg - GetEmptyZfwKg();
-    const double loadPercentage = std::clamp(
-        payload / payloadCapacityKg * 100.0,
-        0.0,
-        100.0);
-
-    variableGateway_->SetLVar(kEfbGw, weight::KgToLb(grossWeight));
-    variableGateway_->SetLVar(kEfbZfw, weight::KgToLb(zfw));
-    variableGateway_->SetLVar(kEfbPayload, weight::KgToLb(payload));
-    variableGateway_->SetLVar(kEfbFuel, weight::KgToLb(fuel));
-    variableGateway_->SetLVar(kEfbLoad, loadPercentage);
-
-    const int flags =
-        static_cast<int>(variableGateway_->GetLVar(kEfbReadReady, 0.0))
-        | kEfbReadyMask;
-    variableGateway_->SetLVar(kEfbReadReady, flags);
-
-    LOG_INFO(
-        "Committed EFB targets: fuel=%.0fkg zfw=%.0fkg payload=%.0fkg",
-        fuel,
-        zfw,
-        payload);
 }
 
 namespace

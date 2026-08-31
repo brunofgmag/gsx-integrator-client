@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 #include "../SmartSwitch.h"
-#include "rules/FenixA32xDoorRule.h"
-#include "rules/FenixA32xEfbSetupRule.h"
-#include "rules/FenixA32xRefuelSystemRule.h"
+#include "rules/FenixA32xDisarmRefuelWhenDoneRule.h"
+#include "rules/FenixA32xDoorsFollowGsxRule.h"
+#include "rules/FenixA32xInitializeEfbOnceRule.h"
 #include "../../fenix/FenixEfbGateway.h"
 #include "../../gsx/GsxDoorSync.h"
 #include "../../../domain/ports/Aircraft.h"
@@ -31,10 +31,8 @@ public:
 
     void Observe() override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
+    [[nodiscard]] const char* DoorDataref(GsxDoor door) const;
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
-    void EnsureEfbInitialized();
-    void DriveDoors();
-    void DisarmRefuelSystemWhenDone();
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
@@ -87,13 +85,11 @@ private:
     std::map<std::string, double> lastDoorReading_;
     GsxDoorSync doors_;
     SmartSwitch smartSwitch_;
-    FenixA32xEfbSetupRule efbSetupRule_;
-    FenixA32xDoorRule doorRule_;
-    FenixA32xRefuelSystemRule refuelSystemRule_;
+    FenixA32xInitializeEfbOnceRule efbSetupRule_;
+    FenixA32xDoorsFollowGsxRule doorRule_;
+    FenixA32xDisarmRefuelWhenDoneRule refuelSystemRule_;
     std::vector<AircraftRule*> rules_;
-    bool efbInitialized_ = false;
     bool finalLoadsheetRequested_ = true;
-    bool refuelSystemArmed_ = false;
     double lastFuelKg_ = -1.0;
     double lastZfwKg_ = -1.0;
     int lastPassengersOnBoard_ = -1;

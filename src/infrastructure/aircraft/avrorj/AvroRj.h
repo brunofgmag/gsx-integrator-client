@@ -2,13 +2,25 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_AVRORJ_H
 
 #include "../SmartSwitch.h"
-#include "rules/AvroRjAirstairRule.h"
-#include "rules/AvroRjDoorRule.h"
-#include "rules/AvroRjModuleLivenessRule.h"
+#include "rules/AvroRjHoldForOwnAirstairRule.h"
+#include "rules/AvroRjPaxDoorsServeTheAirstairRule.h"
+#include "rules/AvroRjWatchModuleFuelMirrorRule.h"
 #include "../../gsx/GsxDoorSync.h"
 #include "../../../domain/ports/Aircraft.h"
 
 class VariableGateway;
+
+struct AvroRjAirstairState
+{
+    bool requested = false;
+    bool stowed = true;
+    bool settled = false;
+};
+
+struct AvroRjModuleState
+{
+    bool mirroringFuel = true;
+};
 
 class AvroRj final : public Aircraft
 {
@@ -23,11 +35,6 @@ public:
 
     void Observe() override;
     void OnLoadingStarted() override;
-
-    void DriveDoors();
-    void ObserveAirstairTravel();
-    void DriveAirstair();
-    void ObserveModuleLiveness();
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -47,7 +54,7 @@ public:
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
     [[nodiscard]] bool IsJetwayAvailable() const;
     [[nodiscard]] bool AreAirstairsSettled() const;
-    void WantAirstairs(bool wanted);
+    [[nodiscard]] bool IsHeldForDeparture() const;
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
     [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Client; }
     [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Self; }
@@ -68,22 +75,6 @@ public:
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
 private:
-    enum class AirstairPhase
-    {
-        Stowed,
-        Arming,
-        Extended,
-        Unarming
-    };
-
-    void UpdateDoors();
-    void UpdateAftDoorClosed();
-    [[nodiscard]] bool IsFrontDoorWanted() const;
-    [[nodiscard]] bool IsAirstairWanted() const;
-    [[nodiscard]] bool IsAirstairOutOfItsWell() const;
-    [[nodiscard]] bool IsAirstairMoving() const;
-    [[nodiscard]] bool HasStairPressure() const;
-    bool StairPressureReady();
     [[nodiscard]] bool IsBeaconOn() const;
     [[nodiscard]] bool AreChocksSet() const;
     [[nodiscard]] double KgPerGallon() const;
@@ -92,21 +83,14 @@ private:
     bool cargoVariant_;
     SmartSwitch smartSwitch_;
     GsxDoorSync doors_;
+    AvroRjAirstairState airstair_;
+    AvroRjModuleState module_;
     bool heldForDeparture_ = false;
-    double lastFrontDoorTarget_ = -1.0;
     double lastFuelKg_ = -1.0;
-    AvroRjDoorRule doorRule_;
-    AvroRjAirstairRule airstairRule_;
-    AvroRjModuleLivenessRule livenessRule_;
+    AvroRjPaxDoorsServeTheAirstairRule doorRule_;
+    AvroRjHoldForOwnAirstairRule airstairRule_;
+    AvroRjWatchModuleFuelMirrorRule livenessRule_;
     std::vector<AircraftRule*> rules_;
-    AirstairPhase airstairPhase_ = AirstairPhase::Stowed;
-    bool stairPressureWaitLogged_ = false;
-    bool ownAirstairsRequested_ = false;
-    int stairPositionStillTicks_ = 0;
-    bool aftDoorCloseWritten_ = false;
-    double lastLivenessSimFuelKg_ = -1.0;
-    int mirrorDivergentTicks_ = 0;
-    bool moduleDeadLogged_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_AVRORJ_H

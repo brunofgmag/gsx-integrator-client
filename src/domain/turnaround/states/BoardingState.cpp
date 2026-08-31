@@ -21,6 +21,8 @@ std::optional<TurnaroundTransition> BoardingState::EvaluatePhase(TurnaroundConte
     const GsxStateStatus boardingState = ctx.gsxGateway->GetStateStatus(GsxState::Boarding);
     const bool isCompleted = boardingState == GsxStateStatus::Completed
         || ctx.gsxGateway->WasStateCompleted(GsxState::Boarding);
+    NoteServiceInterruption(ctx, "boarding", boardingState, data.boardingBaselined, isCompleted);
+
     if (boardingState != GsxStateStatus::Active && !isCompleted)
     {
         return std::nullopt;

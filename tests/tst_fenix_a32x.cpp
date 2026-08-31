@@ -400,7 +400,7 @@ void FenixA32xTest::loadingStartArmsThirdPartyRefueling()
 {
     FenixFixture fixture;
 
-    fixture.aircraft.OnLoadingStarted();
+    TickAircraft(fixture.aircraft, fixture.gateway, kLoading);
 
     QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 1.0);
 }
@@ -409,14 +409,13 @@ void FenixA32xTest::thirdPartyRefuelingDisarmsWhenGsxCompletes()
 {
     FenixFixture fixture;
 
-    fixture.aircraft.OnLoadingStarted();
     fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateActive;
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    TickAircraft(fixture.aircraft, fixture.gateway, kLoading);
 
     QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 1.0);
 
     fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCompleted;
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    TickAircraft(fixture.aircraft, fixture.gateway, kLoading);
 
     QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 0.0);
 }
@@ -1122,7 +1121,7 @@ void FenixA32xTest::evaluatingTheEfbSetupRuleWritesNothing()
     FenixFixture fixture;
     FakeVariableWriter writer;
 
-    AircraftRule* const rule = FindRule(fixture.aircraft, "fenix-a32x-efb-setup");
+    AircraftRule* const rule = FindRule(fixture.aircraft, "fenix-a32x-initialize-efb-once");
 
     QVERIFY(rule != nullptr);
 
@@ -1151,7 +1150,7 @@ void FenixA32xTest::evaluatingTheDoorRuleWritesNothing()
     fixture.gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = 6.0;
     fixture.aircraft.Observe();
 
-    AircraftRule* const rule = FindRule(fixture.aircraft, "fenix-a32x-doors");
+    AircraftRule* const rule = FindRule(fixture.aircraft, "fenix-a32x-doors-follow-gsx");
 
     QVERIFY(rule != nullptr);
 
@@ -1176,14 +1175,13 @@ void FenixA32xTest::evaluatingTheRefuelSystemRuleWritesNothing()
     FenixFixture fixture;
     FakeVariableWriter writer;
 
-    fixture.aircraft.OnLoadingStarted();
     fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCompleted;
 
-    AircraftRule* const rule = FindRule(fixture.aircraft, "fenix-a32x-refuel-system");
+    AircraftRule* const rule = FindRule(fixture.aircraft, "fenix-a32x-disarm-refuel-when-done");
 
     QVERIFY(rule != nullptr);
 
-    const RuleContext context{};
+    const RuleContext context = kLoading;
     const int writesBefore = fixture.gateway.setLVarCalls + fixture.gateway.setAVarCalls;
 
     for (int tick = 0; tick < 5; ++tick)
@@ -1196,7 +1194,12 @@ void FenixA32xTest::evaluatingTheRefuelSystemRuleWritesNothing()
 
     rule->Act(context, writer);
 
-    QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 0.0);
+    QCOMPARE(writer.Written(kThirdPartyRefuel), 1.0);
+
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCompleted;
+    rule->Act(context, writer);
+
+    QCOMPARE(writer.Written(kThirdPartyRefuel), 0.0);
 }
 
 QTEST_APPLESS_MAIN(FenixA32xTest)

@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 #include "../SmartSwitch.h"
-#include "rules/PmdgDoorRule.h"
-#include "rules/PmdgGroundConnectionRule.h"
-#include "rules/PmdgPayloadRule.h"
+#include "rules/PmdgDoorsFollowGsxRule.h"
+#include "rules/PmdgRetryGroundConnUntilSetRule.h"
+#include "rules/PmdgTrimPayloadRule.h"
 #include "../../gsx/GsxDoorSync.h"
 #include "../../pmdg/PmdgDoorReconciler.h"
 #include "../../pmdg/PmdgDoorSource.h"
@@ -33,13 +33,6 @@ struct PmdgAircraftSpec
     SmartSwitch::Predicate smartSwitchPressed;
 };
 
-enum class MainDeckTarget
-{
-    Unknown,
-    Open,
-    Closed
-};
-
 class PmdgAircraft : public Aircraft, protected PmdgDoorSource, protected PmdgGroundSource
 {
 public:
@@ -53,9 +46,6 @@ public:
 
     void Observe() override;
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
-    void SyncDoors();
-    void ReconcileGroundConnection();
-    void TrimPayload();
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
@@ -102,7 +92,6 @@ protected:
     std::unique_ptr<PmdgTabletGateway> tablet_;
 
 private:
-    void SyncMainDeckDoor();
     void AdvanceMovingDoors();
     [[nodiscard]] int MovingDoorLimitTicks(int slot) const;
     [[nodiscard]] std::optional<bool> DoorOpenAt(int slot) const;
@@ -111,16 +100,15 @@ private:
     int doorSlots_;
     int mainDeckDoorSlot_;
     std::vector<int> movingTicks_;
-    MainDeckTarget mainDeckTarget_ = MainDeckTarget::Unknown;
     GsxDoorSync doors_;
     PmdgDoorReconciler doorReconciler_;
     PmdgGroundConnReconciler groundConn_;
     PmdgPayloadWriter payload_;
     PmdgRouteImport routeImport_;
     SmartSwitch smartSwitch_;
-    PmdgDoorRule doorRule_;
-    PmdgGroundConnectionRule groundConnectionRule_;
-    PmdgPayloadRule payloadRule_;
+    PmdgDoorsFollowGsxRule doorRule_;
+    PmdgRetryGroundConnUntilSetRule groundConnectionRule_;
+    PmdgTrimPayloadRule payloadRule_;
     std::vector<AircraftRule*> rules_;
 };
 

@@ -6,6 +6,7 @@
 #include "../TurnaroundPhase.h"
 #include "../rules/PhaseNeeds.h"
 #include "../rules/RuleCadence.h"
+#include "../../ports/GsxGateway.h"
 
 struct TurnaroundContext;
 
@@ -25,6 +26,9 @@ public:
 
 protected:
     [[nodiscard]] virtual std::optional<TurnaroundTransition> EvaluatePhase(TurnaroundContext& ctx) = 0;
+
+    static void NoteServiceInterruption(TurnaroundContext& ctx, const char* serviceName,
+                                        GsxStateStatus state, bool started, bool completed);
 
 private:
     struct RuleOutcome

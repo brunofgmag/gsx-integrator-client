@@ -49,6 +49,7 @@ struct IntegratorSnapshot
     bool fuelRequestStalled = false;
     bool fuelPlanOverCapacity = false;
     bool servicesStalled = false;
+    bool serviceInterrupted = false;
     bool doorsHoldingPushback = false;
     int servicesWaitSeconds = 0;
     bool cargoAircraft = false;

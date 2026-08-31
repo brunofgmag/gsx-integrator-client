@@ -1,12 +1,13 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_IFLY737MAX_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_IFLY737MAX_H
 
-#include <array>
+#include <filesystem>
+#include <optional>
 #include <vector>
 
 #include "../SmartSwitch.h"
-#include "rules/IFly737MaxDoorRule.h"
-#include "rules/IFly737MaxPlanImportRule.h"
+#include "rules/IFly737MaxDoorsFollowLoaderCycleRule.h"
+#include "rules/IFly737MaxWatchPlanFileRule.h"
 #include "../../ifly/IFlyPlanFile.h"
 #include "../../../domain/ports/Aircraft.h"
 
@@ -16,13 +17,12 @@ struct AutomationStatus;
 class IFly737Max final : public Aircraft
 {
 public:
-    IFly737Max(VariableGateway* variableGateway, const AutomationStatus* status);
+    IFly737Max(VariableGateway* variableGateway, const AutomationStatus* status,
+               std::optional<std::filesystem::path> planAppDataRoot = std::nullopt);
 
     [[nodiscard]] bool IsCargoVariant() const override;
 
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
-    void DriveDoors();
-    void ImportPlan();
     void OnLoadingStarted() override {}
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -46,6 +46,8 @@ public:
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
+    [[nodiscard]] bool IsHeldForDeparture() const;
+    [[nodiscard]] bool WasCloseRequested() const;
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;
     [[nodiscard]] bool IsEngineRunning() const override;
@@ -53,70 +55,19 @@ public:
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
 private:
-    enum class CargoCycle { None, Deboarding, Boarding };
-
-    enum class DoorKind { Cargo, JetwayOrStairs, Stairs, Catering };
-
-    struct CargoDoorCloser
-    {
-        const char* doorName;
-        const char* animLVar;
-        const char* toggleLVar;
-        const char* loaderLVar;
-        DoorKind kind = DoorKind::Cargo;
-        bool closeRequested = false;
-        bool servedSeen = false;
-        bool loaderDone = false;
-        bool moving = false;
-        int attempts = 0;
-        int openAttempts = 0;
-        int settleTicks = 0;
-        int wantsOpenTicks = 0;
-        bool pulseHigh = false;
-    };
-
     [[nodiscard]] bool IsBeaconOn() const;
-
-    void ArmCargoDoorCloser(CargoCycle cycle);
-    void DisarmCargoDoorCloser();
-    static void ResetDoorTracking(CargoDoorCloser& door);
-    void LatchCycleCompletion();
-    void TrackDoor(CargoDoorCloser& door) const;
-    void TrackDoorTravel(CargoDoorCloser& door) const;
-    void TrackBaggageLoader(CargoDoorCloser& door) const;
-    bool AdvanceDoorPulse();
-    bool AdvanceDoorPulse(CargoDoorCloser& door);
-    [[nodiscard]] CargoCycle CurrentCargoCycle() const;
-    [[nodiscard]] bool IsStateActive(const char* stateLVar) const;
-    [[nodiscard]] bool IsStateCompleted(const char* stateLVar) const;
-    [[nodiscard]] bool HasPendingCargoDoorWork() const;
-    [[nodiscard]] bool IsBaggageLoaderPresent(const char* loaderLVar) const;
-    [[nodiscard]] bool IsLoaderAtDoorNow(const CargoDoorCloser& door) const;
-    [[nodiscard]] bool IsDoorReleased(const CargoDoorCloser& door) const;
-    [[nodiscard]] bool IsDoorCloseable(const CargoDoorCloser& door) const;
-    [[nodiscard]] bool IsDoorOpenable(const CargoDoorCloser& door) const;
-    [[nodiscard]] bool IsDoorClosePending(const CargoDoorCloser& door) const;
-    bool PulseDoor(CargoDoorCloser& door, int& attempts, const char* verb);
-    [[nodiscard]] std::array<CargoDoorCloser*, 6> AllDoors();
-    [[nodiscard]] bool WantsOpen(const CargoDoorCloser& door) const;
 
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;
 
     SmartSwitch smartSwitch_;
     IFlyPlanImport planImport_;
-    IFly737MaxDoorRule doorRule_;
-    IFly737MaxPlanImportRule planImportRule_;
+    IFly737MaxDoorsFollowLoaderCycleRule doorRule_;
+    IFly737MaxWatchPlanFileRule planImportRule_;
     std::vector<AircraftRule*> rules_;
     double lastZfwKg_ = -1.0;
-
-    CargoDoorCloser fwdCargoDoor_;
-    CargoDoorCloser aftCargoDoor_;
-    std::array<CargoDoorCloser, 4> paxDoors_;
     bool heldForDeparture_ = false;
-    CargoCycle armedCycle_ = CargoCycle::None;
-    bool boardingCompleteSeen_ = false;
-    bool deboardingCompleteSeen_ = false;
+    bool closeRequested_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_IFLY737MAX_H

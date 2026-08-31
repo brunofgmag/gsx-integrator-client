@@ -1076,7 +1076,7 @@ void Pmdg777Test::evaluatingTheDoorRuleWritesNothing()
     fixture.gateway.lvars["FSDT_GSX_VEHICLE_BAGGAGELOADERFRONT_STATE"] = 8.0;
     fixture.aircraft->Observe();
 
-    AircraftRule* const rule = FindRule(*fixture.aircraft, "pmdg-doors");
+    AircraftRule* const rule = FindRule(*fixture.aircraft, "pmdg-doors-follow-gsx");
 
     QVERIFY(rule != nullptr);
 
@@ -1105,7 +1105,7 @@ void Pmdg777Test::evaluatingTheGroundConnectionRuleWritesNothing()
 
     QVERIFY(fixture.aircraft->SetChocks(true));
 
-    AircraftRule* const rule = FindRule(*fixture.aircraft, "pmdg-ground-connection");
+    AircraftRule* const rule = FindRule(*fixture.aircraft, "pmdg-retry-ground-conn-until-set");
 
     QVERIFY(rule != nullptr);
 
@@ -1139,7 +1139,7 @@ void Pmdg777Test::evaluatingThePayloadRuleWritesNothing()
 
     const std::size_t sendsAfterSetter = fixture.tablet->cargoSends.size();
 
-    AircraftRule* const rule = FindRule(*fixture.aircraft, "pmdg-payload");
+    AircraftRule* const rule = FindRule(*fixture.aircraft, "pmdg-trim-payload");
 
     QVERIFY(rule != nullptr);
 
