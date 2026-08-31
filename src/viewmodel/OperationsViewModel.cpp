@@ -564,6 +564,12 @@ QString OperationsViewModel::GetOpenDoorAdvisoryText()
                                        "A door is open. Close it, or use the SmartSwitch to unlock the pushback.");
 }
 
+QString OperationsViewModel::GetServiceInterruptedAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "GSX dropped a service it had already started. Ask for it again from the GSX menu; the client will pick the turnaround back up.");
+}
+
 QString OperationsViewModel::GetCommandErrorLabel()
 {
     return QCoreApplication::translate("OperationsScreen", "Error");
@@ -607,6 +613,11 @@ bool OperationsViewModel::AreServicesStalled() const
 int OperationsViewModel::GetServicesWaitSeconds() const
 {
     return snapshot_.servicesWaitSeconds;
+}
+
+bool OperationsViewModel::IsServiceInterrupted() const
+{
+    return snapshot_.serviceInterrupted;
 }
 
 bool OperationsViewModel::AreDoorsHoldingPushback() const

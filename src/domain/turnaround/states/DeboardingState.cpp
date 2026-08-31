@@ -16,6 +16,8 @@ std::optional<TurnaroundTransition> DeboardingState::EvaluatePhase(TurnaroundCon
     const GsxStateStatus deboardingState = ctx.gsxGateway->GetStateStatus(GsxState::Deboarding);
     const bool isCompleted = deboardingState == GsxStateStatus::Completed
         || ctx.gsxGateway->WasStateCompleted(GsxState::Deboarding);
+    NoteServiceInterruption(ctx, "deboarding", deboardingState, data.deboardingBaselined, isCompleted);
+
     if (deboardingState != GsxStateStatus::Active && !isCompleted)
     {
         return std::nullopt;

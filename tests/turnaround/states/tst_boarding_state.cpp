@@ -23,6 +23,7 @@ private slots:
     static void stopsAskingOnceTheServiceCloses();
     static void doesNotAskGsxToCompleteWhileTheLoaderIsStillWorking();
     static void doesNotAskGsxToCompleteWhilePassengersAreMissing();
+    static void warnsWhenGsxDropsTheBoardingItHadStarted();
 };
 
 void BoardingStateTest::holdsUntilGsxActive()
@@ -380,6 +381,36 @@ void BoardingStateTest::doesNotAskGsxToCompleteWhilePassengersAreMissing()
     }
 
     QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
+}
+
+void BoardingStateTest::warnsWhenGsxDropsTheBoardingItHadStarted()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    f.aircraft.cargo = false;
+    f.aircraft.boardMethod = BoardBy::Self;
+    f.ctx.data.initialZfwKg = 130000.0;
+    f.ctx.data.plannedZfwKg = 180000.0;
+    f.ctx.data.plannedPassengers = 55;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardedPassengers = 55;
+    f.gsxService.cargoPercent = 67.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.ctx.data.serviceInterrupted);
+
+    f.gsxService.boardingState = GsxStateStatus::Callable;
+    f.gsxService.boardedPassengers = 0;
+    f.gsxService.cargoPercent = 0.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(f.ctx.data.serviceInterrupted);
+
+    f.gsxService.boardingState = GsxStateStatus::Active;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.ctx.data.serviceInterrupted);
 }
 
 QTEST_APPLESS_MAIN(BoardingStateTest)

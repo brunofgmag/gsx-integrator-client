@@ -396,6 +396,11 @@ bool IntegratorRuntime::AreServicesStalled() const
     return status_.servicesStalled && GetPhase() == TurnaroundPhase::CallServices;
 }
 
+bool IntegratorRuntime::IsServiceInterrupted() const
+{
+    return status_.serviceInterrupted;
+}
+
 bool IntegratorRuntime::AreDoorsHoldingPushback() const
 {
     return aircraft_
@@ -569,6 +574,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
     snapshot.fuelPlanOverCapacity = IsFuelPlanOverCapacity();
     snapshot.servicesStalled = AreServicesStalled();
+    snapshot.serviceInterrupted = IsServiceInterrupted();
     snapshot.servicesWaitSeconds = status_.servicesWaitSeconds;
     snapshot.doorsHoldingPushback = AreDoorsHoldingPushback();
     snapshot.phase = GetPhase();

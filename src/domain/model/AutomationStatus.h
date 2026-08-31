@@ -12,6 +12,7 @@ struct AutomationStatus
     bool fuelRequestStalled = false;
     bool fuelPlanOverCapacity = false;
     bool servicesStalled = false;
+    bool serviceInterrupted = false;
     int servicesWaitSeconds = 0;
     double fuelProgress = 0.0;
     double boardingProgress = 0.0;

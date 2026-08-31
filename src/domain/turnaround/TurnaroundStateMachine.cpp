@@ -181,6 +181,7 @@ void TurnaroundStateMachine::PublishStatus() const
     context_.status->fuelRequestStalled = context_.data.fuelRequestStalled;
     context_.status->fuelPlanOverCapacity = context_.data.fuelPlanOverCapacity;
     context_.status->servicesStalled = context_.data.servicesStalled;
+    context_.status->serviceInterrupted = context_.data.serviceInterrupted;
     context_.status->servicesWaitSeconds = context_.data.servicesWaitSeconds;
     context_.status->fuelProgress = context_.data.fuelProgress;
     context_.status->boardingProgress = context_.data.boardingProgress;
@@ -269,6 +270,7 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
 
     phase_ = phase;
     context_.data.stateTickCount = 0;
+    context_.data.serviceInterrupted = false;
 }
 
 void TurnaroundStateMachine::TickSlowRules()

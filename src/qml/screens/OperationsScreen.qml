@@ -160,6 +160,12 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            visible: root.integratorVm.serviceInterrupted
+            text: root.integratorVm.serviceInterruptedAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             text: root.integratorVm.phaseTip
         }
 
