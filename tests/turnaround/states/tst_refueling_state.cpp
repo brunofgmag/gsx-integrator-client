@@ -27,6 +27,8 @@ private slots:
     static void externallyRefueledCompletesOnGsxEvenOffTarget();
     static void externallyDefueledAircraftMirrorsSimFuel();
     static void rebaselinesInitialFuelWhenCapturedBeforeSimData();
+    static void staysQuietWhenThePlanSimplyDidNotFit();
+    static void warnsWhenTheAircraftRefusedFuelThatWasWritten();
 };
 
 void RefuelingStateTest::holdsUntilGsxIsReady()
@@ -526,6 +528,42 @@ void RefuelingStateTest::rebaselinesInitialFuelWhenCapturedBeforeSimData()
 
     QCOMPARE(f.ctx.data.initialFuelKg, 5000.0);
     QCOMPARE(f.ctx.data.fuelProgress, 0.0);
+}
+
+void RefuelingStateTest::staysQuietWhenThePlanSimplyDidNotFit()
+{
+    TurnaroundStateFixture f;
+    RefuelingState state;
+
+    f.aircraft.refuelMethod = RefuelBy::Gsx;
+    f.aircraft.fuelCapacityKg = 9418.0;
+    f.aircraft.currentFuelKg = 9418.0;
+    f.ctx.data.plannedFuelKg = 10360.0;
+    f.ctx.data.initialFuelKg = 2000.0;
+    f.ctx.data.loadedFuelKg = 9418.0;
+    f.gsxService.refuelingState = GsxStateStatus::Completed;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.ctx.data.fuelDidNotStay);
+    QCOMPARE(f.ctx.data.fuelShortfallKg, 0.0);
+}
+
+void RefuelingStateTest::warnsWhenTheAircraftRefusedFuelThatWasWritten()
+{
+    TurnaroundStateFixture f;
+    RefuelingState state;
+
+    f.aircraft.refuelMethod = RefuelBy::Gsx;
+    f.aircraft.fuelCapacityKg = 10360.0;
+    f.aircraft.currentFuelKg = 9418.0;
+    f.ctx.data.plannedFuelKg = 10360.0;
+    f.ctx.data.initialFuelKg = 2000.0;
+    f.ctx.data.loadedFuelKg = 9418.0;
+    f.gsxService.refuelingState = GsxStateStatus::Completed;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QVERIFY(f.ctx.data.fuelDidNotStay);
+    QCOMPARE(f.ctx.data.fuelShortfallKg, 942.0);
 }
 
 QTEST_APPLESS_MAIN(RefuelingStateTest)

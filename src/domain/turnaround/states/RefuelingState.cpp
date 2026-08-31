@@ -2,16 +2,19 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include "../TurnaroundMath.h"
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 #include "../../model/AutomationSettings.h"
+#include "../../ports/DomainLogger.h"
 
 namespace
 {
     constexpr int kRefuelStallTicks = 60;
+    constexpr double kFuelShortfallToleranceKg = 100.0;
 
     bool IsGsxRefuelDone(const TurnaroundContext& ctx, const GsxStateStatus refuelingState)
     {
@@ -77,6 +80,7 @@ std::optional<TurnaroundTransition> RefuelingState::EvaluatePhase(TurnaroundCont
 
     SnapToPlanned(ctx);
     data.fuelProgress = 100.0;
+    WarnWhenFuelDidNotStay(ctx);
 
     if (IsGsxRefuelDone(ctx, refuelingState))
     {
@@ -179,6 +183,41 @@ void RefuelingState::SnapToPlanned(TurnaroundContext& ctx)
         data.loadedFuelKg = data.plannedFuelKg;
         ctx.aircraft->SetCurrentFuelKg(data.plannedFuelKg);
         break;
+    }
+}
+
+void RefuelingState::WarnWhenFuelDidNotStay(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+
+    if (data.fuelStayChecked)
+    {
+        return;
+    }
+
+    const double settledKg = ctx.aircraft->GetCurrentFuelKg();
+    if (settledKg <= 0.0)
+    {
+        return;
+    }
+
+    data.fuelStayChecked = true;
+    data.settledFuelKg = settledKg;
+
+    const double capacityKg = ctx.aircraft->GetFuelCapacityKg();
+    const double writtenKg = capacityKg > 0.0
+                                 ? std::min(data.plannedFuelKg, capacityKg)
+                                 : data.plannedFuelKg;
+
+    const double shortfallKg = writtenKg - settledKg;
+    data.fuelDidNotStay = shortfallKg > kFuelShortfallToleranceKg;
+    data.fuelShortfallKg = data.fuelDidNotStay ? shortfallKg : 0.0;
+
+    if (data.fuelDidNotStay)
+    {
+        ctx.logger->LogInfo(std::format(
+            "The client wrote {1:.0f} kg of fuel but the tanks hold {0:.0f} kg; {2:.0f} kg did not stay",
+            settledKg, writtenKg, shortfallKg));
     }
 }
 

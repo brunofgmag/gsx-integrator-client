@@ -391,6 +391,23 @@ bool IntegratorRuntime::IsFuelPlanOverCapacity() const
         && (GetPhase() == TurnaroundPhase::RequestFuel || GetPhase() == TurnaroundPhase::Refueling);
 }
 
+bool IntegratorRuntime::DidFuelNotStay() const
+{
+    return status_.fuelDidNotStay && GetPhase() < TurnaroundPhase::WaitingDeparture;
+}
+
+void IntegratorRuntime::DismissFuelStayAdvisory()
+{
+    stateMachine_.DismissFuelStayAdvisory();
+}
+
+EngineConfirmationBlock IntegratorRuntime::GetEngineConfirmationBlock() const
+{
+    return GetPhase() == TurnaroundPhase::WaitingForEngines
+               ? status_.engineConfirmationBlock
+               : EngineConfirmationBlock::None;
+}
+
 bool IntegratorRuntime::AreServicesStalled() const
 {
     return status_.servicesStalled && GetPhase() == TurnaroundPhase::CallServices;
@@ -573,6 +590,9 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.cargoDoorStuck = IsCargoDoorStuck();
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
     snapshot.fuelPlanOverCapacity = IsFuelPlanOverCapacity();
+    snapshot.fuelDidNotStay = DidFuelNotStay();
+    snapshot.fuelShortfallKg = status_.fuelShortfallKg;
+    snapshot.engineConfirmationBlock = GetEngineConfirmationBlock();
     snapshot.servicesStalled = AreServicesStalled();
     snapshot.serviceInterrupted = IsServiceInterrupted();
     snapshot.servicesWaitSeconds = status_.servicesWaitSeconds;
@@ -587,6 +607,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.deboardingProgress = status_.deboardingProgress;
     snapshot.plannedFuelKg = status_.plannedFuelKg;
     snapshot.loadedFuelKg = status_.loadedFuelKg;
+    snapshot.settledFuelKg = status_.settledFuelKg;
     snapshot.plannedZfwKg = status_.plannedZfwKg;
     snapshot.plannedPax = status_.plannedPassengers;
     snapshot.boardedPax = status_.boardedPassengers;

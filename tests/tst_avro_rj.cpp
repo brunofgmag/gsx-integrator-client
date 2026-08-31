@@ -28,6 +28,9 @@ namespace
     constexpr auto kLeftAuxCapacity = "FUEL TANK LEFT AUX CAPACITY";
     constexpr auto kRightAuxCapacity = "FUEL TANK RIGHT AUX CAPACITY";
 
+    constexpr auto kLeftAuxFitted = "OVHD_FUEL_L_aux_vis";
+    constexpr auto kRightAuxFitted = "OVHD_FUEL_R_aux_vis";
+
     constexpr auto kPlannedBlockFuel = "146_SimBrief_Block_Fuel";
     constexpr auto kPlannedZfw = "146_SimBrief_ZFW";
     constexpr auto kPlannedPassengers = "146_SimBrief_PaxQt";
@@ -84,6 +87,8 @@ namespace
         gateway.avars[kCenterCapacity] = kCenterCapacityGallons;
         gateway.avars[kLeftAuxCapacity] = kAuxCapacityGallons;
         gateway.avars[kRightAuxCapacity] = kAuxCapacityGallons;
+        gateway.lvars[kLeftAuxFitted] = 1.0;
+        gateway.lvars[kRightAuxFitted] = 1.0;
     }
 
     void AllEnginesStopped(FakeVariableGateway& gateway)
@@ -166,6 +171,9 @@ private slots:
     static void parkingBrakeReadsTheAnnunciatorAndNotTheSimVar();
     static void fuelCapacitySumsTheTanksInKg();
     static void fuelCapacityWaitsForTheFuelDensity();
+    static void fuelCapacityWaitsForTheAuxTankFlags();
+    static void fuelCapacityLeavesOutAnAuxTankTheAircraftDoesNotHave();
+    static void fuelSetterSkipsAnAuxTankTheAircraftDoesNotHave();
     static void moduleLivenessTripsWhenTheFuelMirrorFreezes();
     static void moduleLivenessHoldsWhileTheMirrorFollows();
     static void moduleLivenessIgnoresDivergenceWhileFuelIsStill();
@@ -1015,6 +1023,51 @@ void AvroRjTest::fuelCapacityWaitsForTheFuelDensity()
     gateway.avars[kRightMainCapacity] = kMainCapacityGallons;
 
     QCOMPARE(aircraft.GetFuelCapacityKg(), 0.0);
+}
+
+void AvroRjTest::fuelCapacityWaitsForTheAuxTankFlags()
+{
+    FakeVariableGateway gateway;
+    const AvroRj aircraft(&gateway, false);
+
+    gateway.avars[kSimFuelWeightPerGallon] = kKgPerGallon;
+    gateway.avars[kLeftMainCapacity] = kMainCapacityGallons;
+    gateway.avars[kRightMainCapacity] = kMainCapacityGallons;
+    gateway.avars[kCenterCapacity] = kCenterCapacityGallons;
+    gateway.avars[kLeftAuxCapacity] = kAuxCapacityGallons;
+    gateway.avars[kRightAuxCapacity] = kAuxCapacityGallons;
+
+    QCOMPARE(aircraft.GetFuelCapacityKg(), 0.0);
+}
+
+void AvroRjTest::fuelCapacityLeavesOutAnAuxTankTheAircraftDoesNotHave()
+{
+    FakeVariableGateway gateway;
+    const AvroRj aircraft(&gateway, false);
+
+    GiveTanks(gateway);
+    gateway.lvars[kLeftAuxFitted] = 0.0;
+    gateway.lvars[kRightAuxFitted] = 0.0;
+
+    QCOMPARE(aircraft.GetFuelCapacityKg(), 7500.0);
+}
+
+void AvroRjTest::fuelSetterSkipsAnAuxTankTheAircraftDoesNotHave()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    GiveTanks(gateway);
+    gateway.lvars[kLeftAuxFitted] = 0.0;
+    gateway.lvars[kRightAuxFitted] = 0.0;
+
+    aircraft.SetCurrentFuelKg(9000.0);
+
+    QCOMPARE(gateway.avars[kLeftMainQuantity], kMainCapacityGallons);
+    QCOMPARE(gateway.avars[kRightMainQuantity], kMainCapacityGallons);
+    QCOMPARE(gateway.avars[kCenterQuantity], kCenterCapacityGallons);
+    QVERIFY(!gateway.avars.contains(kLeftAuxQuantity));
+    QVERIFY(!gateway.avars.contains(kRightAuxQuantity));
 }
 
 void AvroRjTest::moduleLivenessTripsWhenTheFuelMirrorFreezes()

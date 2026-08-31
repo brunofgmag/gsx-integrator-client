@@ -758,6 +758,31 @@
         <translation>Uma porta está aberta. Feche ou libere o pushback com o SmartSwitch.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="0"/>
+        <source>%1 kg of the fuel did not stay in the tanks. Check the aircraft fuel before you depart.</source>
+        <translation>%1 kg do combustível não ficou nos tanques. Confira o combustível da aeronave antes de decolar.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="0"/>
+        <source>The engines are not running, so the SmartSwitch will not confirm the start yet.</source>
+        <translation>Os motores não estão rodando, então o SmartSwitch ainda não confirma a partida.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="0"/>
+        <source>GSX has not asked for the confirmation, so the SmartSwitch will not confirm the start yet.</source>
+        <translation>O GSX ainda não pediu a confirmação, então o SmartSwitch ainda não confirma a partida.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="0"/>
+        <source>The parking brake is not set, so the SmartSwitch will not confirm the start yet.</source>
+        <translation>O freio de estacionamento não está acionado, então o SmartSwitch ainda não confirma a partida.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="0"/>
+        <source>Dismiss</source>
+        <translation>Dispensar</translation>
+    </message>
+    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="379"/>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="455"/>
         <source>Fuel</source>

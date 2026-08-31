@@ -18,6 +18,8 @@ private slots:
     static void confirmsAndProceedsWhenAllConditionsMet();
     static void usesCompletePushbackForInterruptMenuAircraft();
     static void proceedsWhenConfirmationNotRequired();
+    static void namesTheGateThatIsHoldingTheSmartSwitch();
+    static void staysQuietAfterTheConfirmationWasSent();
     static void proceedsWhenPushbackFinished();
 };
 
@@ -189,6 +191,41 @@ void WaitingEnginesStateTest::proceedsWhenPushbackFinished()
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingDeparture);
     QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 0);
+}
+
+void WaitingEnginesStateTest::namesTheGateThatIsHoldingTheSmartSwitch()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    ArmConfirmationScenario(f);
+    f.aircraft.engineRunning = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.engineConfirmationBlock, EngineConfirmationBlock::EnginesStopped);
+
+    f.aircraft.engineRunning = true;
+    f.gsxService.waitingForEngines = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.engineConfirmationBlock, EngineConfirmationBlock::GsxNotAsking);
+}
+
+void WaitingEnginesStateTest::staysQuietAfterTheConfirmationWasSent()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    ArmConfirmationScenario(f);
+    f.menuGateway.confirmGoodEnginesResult = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.engineConfirmationBlock, EngineConfirmationBlock::None);
+
+    f.gsxService.waitingForEngines = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.engineConfirmationBlock, EngineConfirmationBlock::None);
 }
 
 QTEST_APPLESS_MAIN(WaitingEnginesStateTest)

@@ -63,6 +63,9 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(QString cargoDoorAdvisoryText READ GetCargoDoorAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString fuelRequestAdvisoryText READ GetFuelRequestAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString fuelPlanAdvisoryText READ GetFuelPlanAdvisoryText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString fuelStayAdvisoryText READ GetFuelStayAdvisoryText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString dismissAdvisoryLabel READ GetDismissAdvisoryLabel CONSTANT)
+    Q_PROPERTY(QString engineConfirmationAdvisoryText READ GetEngineConfirmationAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString servicesAdvisoryText READ GetServicesAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString openDoorAdvisoryText READ GetOpenDoorAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString serviceInterruptedAdvisoryText READ GetServiceInterruptedAdvisoryText NOTIFY SnapshotChanged)
@@ -71,6 +74,8 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(bool cargoDoorStuck READ IsCargoDoorStuck NOTIFY SnapshotChanged)
     Q_PROPERTY(bool fuelRequestStalled READ IsFuelRequestStalled NOTIFY SnapshotChanged)
     Q_PROPERTY(bool fuelPlanOverCapacity READ IsFuelPlanOverCapacity NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool fuelDidNotStay READ DidFuelNotStay NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool engineConfirmationBlocked READ IsEngineConfirmationBlocked NOTIFY SnapshotChanged)
     Q_PROPERTY(bool servicesStalled READ AreServicesStalled NOTIFY SnapshotChanged)
     Q_PROPERTY(bool serviceInterrupted READ IsServiceInterrupted NOTIFY SnapshotChanged)
     Q_PROPERTY(bool doorsHoldingPushback READ AreDoorsHoldingPushback NOTIFY SnapshotChanged)
@@ -159,6 +164,9 @@ public:
     [[nodiscard]] static QString GetCargoDoorAdvisoryText();
     [[nodiscard]] static QString GetFuelRequestAdvisoryText();
     [[nodiscard]] static QString GetFuelPlanAdvisoryText();
+    [[nodiscard]] QString GetFuelStayAdvisoryText() const;
+    [[nodiscard]] static QString GetDismissAdvisoryLabel();
+    [[nodiscard]] QString GetEngineConfirmationAdvisoryText() const;
     [[nodiscard]] QString GetServicesAdvisoryText() const;
     [[nodiscard]] static QString GetOpenDoorAdvisoryText();
     [[nodiscard]] static QString GetServiceInterruptedAdvisoryText();
@@ -168,6 +176,8 @@ public:
     [[nodiscard]] bool IsCargoDoorStuck() const;
     [[nodiscard]] bool IsFuelRequestStalled() const;
     [[nodiscard]] bool IsFuelPlanOverCapacity() const;
+    [[nodiscard]] bool DidFuelNotStay() const;
+    [[nodiscard]] bool IsEngineConfirmationBlocked() const;
     [[nodiscard]] bool AreServicesStalled() const;
     [[nodiscard]] bool IsServiceInterrupted() const;
     [[nodiscard]] int GetServicesWaitSeconds() const;
@@ -209,6 +219,7 @@ public:
     Q_INVOKABLE void reloadSimbrief();
     Q_INVOKABLE void fixGsxProfile();
     Q_INVOKABLE void fixPmdgOptions();
+    Q_INVOKABLE void dismissFuelStayAdvisory();
     Q_INVOKABLE void debugSkipPhase(int delta);
 
     void AcceptPilotTouch(TurnaroundPhase stamped);

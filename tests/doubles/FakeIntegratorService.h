@@ -23,6 +23,7 @@ public:
     int applySettingsCalls = 0;
     int fixGsxProfileCalls = 0;
     int fixPmdgOptionsCalls = 0;
+    int dismissFuelStayCalls = 0;
     int pilotTouchCalls = 0;
     TurnaroundPhase pilotTouchStamp = TurnaroundPhase::Count;
 
@@ -82,6 +83,15 @@ public:
         }
 
         return fixGsxProfileResult;
+    }
+
+    [[nodiscard]] CommandResult DismissFuelStayAdvisory() override
+    {
+        ++dismissFuelStayCalls;
+        snapshot.fuelDidNotStay = false;
+        Notify();
+
+        return CommandResult::Success();
     }
 
     [[nodiscard]] CommandResult FixPmdgOptions() override
