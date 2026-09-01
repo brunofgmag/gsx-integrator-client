@@ -28,6 +28,11 @@ namespace
     {
         return lvarValue == static_cast<double>(state);
     }
+
+    bool IsServiceRunning(const double state)
+    {
+        return IsState(state, GsxStateStatus::Requested) || IsState(state, GsxStateStatus::Active);
+    }
 }
 
 IFly737MaxDoorsFollowLoaderCycleRule::IFly737MaxDoorsFollowLoaderCycleRule(VariableReader& variables,
@@ -132,6 +137,8 @@ void IFly737MaxDoorsFollowLoaderCycleRule::ArmCloser(const CargoCycle cycle)
     armedCycle_ = cycle;
     boardingCompleteSeen_ = false;
     deboardingCompleteSeen_ = false;
+    boardingWasRunning_ = false;
+    deboardingWasRunning_ = false;
     ResetTracking(fwdCargoDoor_);
     ResetTracking(aftCargoDoor_);
 }
@@ -143,12 +150,13 @@ void IFly737MaxDoorsFollowLoaderCycleRule::DisarmCloser()
 
 void IFly737MaxDoorsFollowLoaderCycleRule::LatchCycleCompletion()
 {
-    if (armedCycle_ == CargoCycle::Boarding && IsStateCompleted(gsx::lvars::kBoardingState))
+    if (armedCycle_ == CargoCycle::Boarding && HasCycleEnded(gsx::lvars::kBoardingState, boardingWasRunning_))
     {
         boardingCompleteSeen_ = true;
     }
 
-    if (armedCycle_ == CargoCycle::Deboarding && IsStateCompleted(gsx::lvars::kDeboardingState))
+    if (armedCycle_ == CargoCycle::Deboarding
+        && HasCycleEnded(gsx::lvars::kDeboardingState, deboardingWasRunning_))
     {
         deboardingCompleteSeen_ = true;
     }
@@ -279,9 +287,30 @@ bool IFly737MaxDoorsFollowLoaderCycleRule::IsStateActive(const char* stateLVar) 
     return IsState(variables_->GetLVar(stateLVar, 0.0), GsxStateStatus::Active);
 }
 
-bool IFly737MaxDoorsFollowLoaderCycleRule::IsStateCompleted(const char* stateLVar) const
+bool IFly737MaxDoorsFollowLoaderCycleRule::HasCycleEnded(const char* stateLVar, bool& wasRunning)
 {
-    return IsState(variables_->GetLVar(stateLVar, 0.0), GsxStateStatus::Completed);
+    const double state = variables_->GetLVar(stateLVar, 0.0);
+
+    if (IsState(state, GsxStateStatus::Completed))
+    {
+        return true;
+    }
+
+    if (IsServiceRunning(state))
+    {
+        wasRunning = true;
+
+        return false;
+    }
+
+    return wasRunning;
+}
+
+bool IFly737MaxDoorsFollowLoaderCycleRule::IsJetwayOnItsWay() const
+{
+    const double state = variables_->GetLVar(gsx::lvars::kOperateJetwaysState, 0.0);
+
+    return IsServiceRunning(state);
 }
 
 bool IFly737MaxDoorsFollowLoaderCycleRule::HasPendingCargoDoorWork() const
@@ -355,6 +384,7 @@ bool IFly737MaxDoorsFollowLoaderCycleRule::WantsOpen(const Door& door) const
     {
     case DoorKind::JetwayOrStairs:
         return variables_->GetLVar(gsx::lvars::kJetway, 0.0) >= kJetwayAtAircraft
+            || IsJetwayOnItsWay()
             || gsx::states::AreStairsArriving(equipment);
     case DoorKind::Stairs:
         return gsx::states::AreStairsArriving(equipment);
