@@ -52,7 +52,8 @@ private:
     bool Pulse(Door& door, VariableWriter& writer, int& attempts, const char* verb) const;
     [[nodiscard]] CargoCycle CurrentCargoCycle() const;
     [[nodiscard]] bool IsStateActive(const char* stateLVar) const;
-    [[nodiscard]] bool IsStateCompleted(const char* stateLVar) const;
+    [[nodiscard]] bool HasCycleEnded(const char* stateLVar, bool& wasRunning);
+    [[nodiscard]] bool IsJetwayOnItsWay() const;
     [[nodiscard]] bool HasPendingCargoDoorWork() const;
     [[nodiscard]] bool IsBaggageLoaderPresent(const char* loaderLVar) const;
     [[nodiscard]] bool IsLoaderAtDoorNow(const Door& door) const;
@@ -71,6 +72,8 @@ private:
     CargoCycle armedCycle_ = CargoCycle::None;
     bool boardingCompleteSeen_ = false;
     bool deboardingCompleteSeen_ = false;
+    bool boardingWasRunning_ = false;
+    bool deboardingWasRunning_ = false;
     bool heldSeen_ = false;
     bool closeRequestSeen_ = false;
     bool closeRequested_ = false;

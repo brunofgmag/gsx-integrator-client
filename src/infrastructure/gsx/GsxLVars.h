@@ -1,6 +1,8 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_GSXLVARS_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_GSXLVARS_H
 
+#include <string_view>
+
 #include "../../domain/ports/GsxGateway.h"
 
 namespace gsx::services
@@ -17,6 +19,13 @@ namespace gsx::services
         case GroundService::Departure: return "Departure";
         default: return nullptr;
         }
+    }
+
+    [[nodiscard]] inline bool ASecondPickUndoesIt(const std::string_view serviceId)
+    {
+        return serviceId == "OperateStairs"
+            || serviceId == "OperateJetways"
+            || serviceId == "GPU";
     }
 }
 
@@ -63,6 +72,7 @@ namespace gsx::lvars
     inline constexpr auto kAircraftService2Toggle = "FSDT_GSX_AIRCRAFT_SERVICE_2_TOGGLE";
 
     inline constexpr auto kJetway = "FSDT_GSX_JETWAY";
+    inline constexpr auto kOperateJetwaysState = "FSDT_GSX_OPERATEJETWAYS_STATE";
     inline constexpr auto kStairs = "FSDT_GSX_STAIRS";
     inline constexpr auto kRepositioning = "FSDT_GSX_REPOSITIONING";
     inline constexpr auto kGpuConnected = "FSDT_GSX_GPU_CONNECTED";
