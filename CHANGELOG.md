@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.29.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.2...v1.29.3) (2026-09-01)
+
+
+* complete a stalled refuel on the defuel entry and keep retrying ([#114](https://github.com/brunofgmag/gsx-integrator-client/issues/114)) ([fd53943](https://github.com/brunofgmag/gsx-integrator-client/commit/fd5394357827218ca621c21ec47e7752abcc62e3))
+
+
+### Bug Fixes
+
+* **gsx:** complete a stalled refuel on the defuel entry and keep retrying ([cbccb5a](https://github.com/brunofgmag/gsx-integrator-client/commit/cbccb5a4e071abb6c6ec44528b52ec0230bd084e)) ([fd53943](https://github.com/brunofgmag/gsx-integrator-client/commit/fd5394357827218ca621c21ec47e7752abcc62e3))
+
 ## [1.29.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.1...v1.29.2) (2026-09-01)
 
 
