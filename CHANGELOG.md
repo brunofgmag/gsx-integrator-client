@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.29.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.0...v1.29.1) (2026-09-01)
+
+
+* act on what gsx reports instead of the signal it may never send ([#110](https://github.com/brunofgmag/gsx-integrator-client/issues/110)) ([2243812](https://github.com/brunofgmag/gsx-integrator-client/commit/2243812e94ca6780a10bee67bc0487acb31b0390))
+
+
+### Bug Fixes
+
+* **gsx:** answer the airstairs menu by prefix and never repeat a service that toggles ([f4aaa46](https://github.com/brunofgmag/gsx-integrator-client/commit/f4aaa46a98a2f2daf4b77b911148ffadd33f355f)) ([2243812](https://github.com/brunofgmag/gsx-integrator-client/commit/2243812e94ca6780a10bee67bc0487acb31b0390))
+* **ifly:** follow the doors by the cycle and the equipment gsx really reports ([db5fd5a](https://github.com/brunofgmag/gsx-integrator-client/commit/db5fd5a30ff922f7040093fba6bb5487d3ededd2)) ([2243812](https://github.com/brunofgmag/gsx-integrator-client/commit/2243812e94ca6780a10bee67bc0487acb31b0390))
+* **turnaround:** wait out a gpu dismissal instead of triggering it again ([02154b3](https://github.com/brunofgmag/gsx-integrator-client/commit/02154b367c637011aff6f1e5a7338406535d2fa1)) ([2243812](https://github.com/brunofgmag/gsx-integrator-client/commit/2243812e94ca6780a10bee67bc0487acb31b0390))
+
 ## [1.29.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.28.0...v1.29.0) (2026-08-31)
 
 
