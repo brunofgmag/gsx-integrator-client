@@ -25,7 +25,7 @@ namespace
     constexpr auto kCompletePushbackText = "complete pushback procedure";
     constexpr auto kServiceInProgressTitle = "Service in progress";
     constexpr auto kCompleteNowText = "Complete now";
-    constexpr auto kRefuelingLoadedText = "loaded";
+    constexpr auto kRefuelingEntryText = "Refueling:";
     constexpr auto kLoadingInProgressText = "loading in progress";
     constexpr auto kBoardingPassengersText = "Boarding passengers now";
     constexpr auto kBoardCrewQuestion = "board crew";
@@ -527,7 +527,7 @@ bool GsxMenuNavigator::HandlePendingCompletions()
             return true;
         }
 
-        if (PickByContains(kRefuelingLoadedText))
+        if (PickByContains(kRefuelingEntryText))
         {
             return true;
         }

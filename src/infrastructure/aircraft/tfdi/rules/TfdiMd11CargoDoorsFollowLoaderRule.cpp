@@ -1,6 +1,9 @@
 #include "TfdiMd11CargoDoorsFollowLoaderRule.h"
 
+#include <QtCore/QString>
+
 #include "../../../gsx/GsxLVars.h"
+#include "../../../probe/ProbeLog.h"
 #include "../../../simvars/VariableGateway.h"
 
 namespace
@@ -55,6 +58,12 @@ void TfdiMd11CargoDoorsFollowLoaderRule::FollowLoader(VariableWriter& writer, co
 
     if (doorTarget != lastDoorTarget)
     {
+        probe::Line(QStringLiteral("write cargo %1=%2 %3=%4 received=%5")
+                        .arg(QLatin1String(doorCmdLVar))
+                        .arg(doorTarget)
+                        .arg(QLatin1String(loaderStateLVar))
+                        .arg(loaderState)
+                        .arg(variables_->HasReceivedLVar(loaderStateLVar) ? 1 : 0));
         writer.SetLVar(doorCmdLVar, doorTarget);
         lastDoorTarget = doorTarget;
     }

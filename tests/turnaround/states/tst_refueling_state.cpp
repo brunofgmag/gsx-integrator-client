@@ -19,6 +19,7 @@ private slots:
     static void selfDefuelFollowsFuelCounterWithoutJumping();
     static void selfHoldsLoadedWhenCounterZeroes();
     static void forcesCompleteRefuelWhenStalledAbove95();
+    static void forcesCompleteRefuelAgainWhileStillStalled();
     static void doesNotForceCompleteRefuelBelow95();
     static void skipsTheForceWhileTheTruckIsAlreadyLeaving();
     static void skipsTheForceWhenGsxAlreadyCompleted();
@@ -331,6 +332,35 @@ void RefuelingStateTest::forcesCompleteRefuelWhenStalledAbove95()
 
     QCOMPARE(f.ctx.data.fuelProgress > 95.0, true);
     QCOMPARE(f.menuGateway.completeRefuelCalls, 1);
+}
+
+void RefuelingStateTest::forcesCompleteRefuelAgainWhileStillStalled()
+{
+    TurnaroundStateFixture f;
+    RefuelingState state;
+
+    f.aircraft.refuelMethod = RefuelBy::Self;
+    f.ctx.data.plannedFuelKg = 10000.0;
+    f.ctx.data.initialFuelKg = 0.0;
+    f.ctx.data.refuelBaselined = true;
+    f.ctx.data.loadingStartNotified = true;
+    f.gsxService.refuelingState = GsxStateStatus::Active;
+    f.gsxService.hoseConnected = true;
+    f.gsxService.refuelCounterGallons = 3200.0;
+
+    for (int tick = 0; tick < 70; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeRefuelCalls, 1);
+
+    for (int tick = 0; tick < 60; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeRefuelCalls, 2);
 }
 
 void RefuelingStateTest::skipsTheForceWhileTheTruckIsAlreadyLeaving()

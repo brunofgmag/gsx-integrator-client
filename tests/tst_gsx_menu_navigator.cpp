@@ -138,6 +138,7 @@ private slots:
     static void completeRefuelPicksCompleteNowViaServiceMenu();
     static void completeRefuelIntentExpiresAfterTtl();
     static void completeRefuelMatchesLbsLoadedEntry();
+    static void completeRefuelMatchesTheDefueledEntry();
     static void completeBoardingPicksCompleteNowViaCargoEntry();
     static void completeBoardingMatchesThePassengerEntry();
     static void completePushbackPicksEntryWithoutInterruptTitle();
@@ -797,6 +798,27 @@ void GsxMenuNavigatorTest::completeRefuelMatchesLbsLoadedEntry()
 
     QVERIFY(pick != nullptr);
     QCOMPARE(pick->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::completeRefuelMatchesTheDefueledEntry()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.CompleteRefuel();
+
+    ShowMenu(state, "Activate Services at ZZZZ",
+             {"Request Deboarding", "Request Catering service", "Refueling: 22718 kg defueled",
+              "Request Boarding"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+    QCOMPARE(pick->args.value("index").toInt(), 2);
 }
 
 void GsxMenuNavigatorTest::completePushbackPicksEntryWithoutInterruptTitle()
