@@ -146,7 +146,7 @@ void RefuelingState::AccumulateFuel(TurnaroundContext& ctx)
 void RefuelingState::MaybeForceCompletion(TurnaroundContext& ctx, const GsxStateStatus refuelingState)
 {
     auto& data = ctx.data;
-    if (data.fuelProgress <= 95.0 || data.refuelCompletionForced)
+    if (data.fuelProgress <= 95.0)
     {
         return;
     }
@@ -163,7 +163,7 @@ void RefuelingState::MaybeForceCompletion(TurnaroundContext& ctx, const GsxState
     }
     else if (++data.refuelStallTicks >= kRefuelStallTicks)
     {
-        data.refuelCompletionForced = true;
+        data.refuelStallTicks = 0;
         ctx.menuGateway->CompleteRefuel();
     }
 }
