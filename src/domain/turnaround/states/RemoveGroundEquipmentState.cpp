@@ -76,14 +76,9 @@ std::optional<TurnaroundTransition> RemoveGroundEquipmentState::EvaluatePhase(Tu
         return std::nullopt;
     }
 
-    if (ctx.TickCondition(kRetryTicks))
+    if (ctx.TickCondition(kRetryTicks) && !gpuBusy)
     {
-        if (!gpuBusy)
-        {
-            return TurnaroundTransition{TurnaroundPhase::RequestPushback};
-        }
-
-        ctx.data.gpuDismissRequested = false;
+        return TurnaroundTransition{TurnaroundPhase::RequestPushback};
     }
 
     return std::nullopt;
