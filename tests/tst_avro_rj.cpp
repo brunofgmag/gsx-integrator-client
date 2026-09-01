@@ -825,8 +825,12 @@ void AvroRjTest::airstairRetractsAndTheDoorClosesWhenTheRequestIsWithdrawn()
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kStairExtendSwitch), 0.0);
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 1);
 
     TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 2);
+
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written("EXT_Door_pax_1L"), 0.0);
