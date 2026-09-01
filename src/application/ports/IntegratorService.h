@@ -25,6 +25,7 @@ public:
     [[nodiscard]] virtual CommandResult ReloadSimbrief() = 0;
     [[nodiscard]] virtual CommandResult FixGsxProfile() = 0;
     [[nodiscard]] virtual CommandResult FixPmdgOptions() = 0;
+    [[nodiscard]] virtual CommandResult DismissFuelStayAdvisory() = 0;
     [[nodiscard]] virtual CommandResult AcceptPilotTouch(TurnaroundPhase stamped) = 0;
 
     virtual void ApplySettings(const AppSettings& settings) = 0;

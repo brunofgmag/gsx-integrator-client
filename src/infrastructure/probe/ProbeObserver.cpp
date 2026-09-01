@@ -226,7 +226,7 @@ namespace
     }
 }
 
-const ProbeObserver::Track& ProbeObserver::Follow(VariableGateway& variables, const char* name)
+const ProbeObserver::Track& ProbeObserver::Follow(VariableReader& variables, const char* name)
 {
     const double value = variables.GetLVar(name, 0.0);
     Track& track = tracks_[name];
@@ -245,7 +245,7 @@ const ProbeObserver::Track& ProbeObserver::Follow(VariableGateway& variables, co
     return track;
 }
 
-void ProbeObserver::ReportWatchList(VariableGateway& variables, const QString& id)
+void ProbeObserver::ReportWatchList(VariableReader& variables, const QString& id)
 {
     for (const probe::WatchedVariable& watched : probe::WatchList())
     {

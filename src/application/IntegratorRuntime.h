@@ -48,7 +48,7 @@ public:
     [[nodiscard]] bool IsSessionActive() const { return isSessionActive_; }
     [[nodiscard]] TurnaroundPhase GetPhase() const { return stateMachine_.GetPhase(); }
     [[nodiscard]] std::string GetAircraftProfileId() const;
-    [[nodiscard]] bool AircraftRequiresOwnAirstairs() const;
+    [[nodiscard]] bool AircraftCarriesItsOwnStairs() const;
     [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfile_.conflict; }
     bool FixGsxProfile();
     [[nodiscard]] bool HasPmdgOptionsConflict() const { return pmdgOptions_.conflict; }
@@ -56,7 +56,11 @@ public:
     [[nodiscard]] bool IsCargoDoorStuck() const;
     [[nodiscard]] bool IsFuelRequestStalled() const;
     [[nodiscard]] bool IsFuelPlanOverCapacity() const;
+    [[nodiscard]] bool DidFuelNotStay() const;
+    void DismissFuelStayAdvisory();
+    [[nodiscard]] EngineConfirmationBlock GetEngineConfirmationBlock() const;
     [[nodiscard]] bool AreServicesStalled() const;
+    [[nodiscard]] bool IsServiceInterrupted() const;
     [[nodiscard]] bool AreDoorsHoldingPushback() const;
     void SetAutomationEnabled(bool enabled);
     void RestartFlow();

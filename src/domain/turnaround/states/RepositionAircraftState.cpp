@@ -12,7 +12,7 @@ namespace
     constexpr int kGiveUpTicks = 60;
 }
 
-std::optional<TurnaroundTransition> RepositionAircraftState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> RepositionAircraftState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (ctx.settings != nullptr && ctx.settings->skipReposition && !ctx.data.repositionRequested)
     {

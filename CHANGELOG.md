@@ -1,5 +1,82 @@
 # Changelog
 
+## [1.29.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.2...v1.29.3) (2026-09-01)
+
+
+* complete a stalled refuel on the defuel entry and keep retrying ([#114](https://github.com/brunofgmag/gsx-integrator-client/issues/114)) ([fd53943](https://github.com/brunofgmag/gsx-integrator-client/commit/fd5394357827218ca621c21ec47e7752abcc62e3))
+
+
+### Bug Fixes
+
+* **gsx:** complete a stalled refuel on the defuel entry and keep retrying ([cbccb5a](https://github.com/brunofgmag/gsx-integrator-client/commit/cbccb5a4e071abb6c6ec44528b52ec0230bd084e)) ([fd53943](https://github.com/brunofgmag/gsx-integrator-client/commit/fd5394357827218ca621c21ec47e7752abcc62e3))
+
+## [1.29.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.1...v1.29.2) (2026-09-01)
+
+
+* read the cable, not the switch, and yield the stairs spot ([#112](https://github.com/brunofgmag/gsx-integrator-client/issues/112)) ([5393d50](https://github.com/brunofgmag/gsx-integrator-client/commit/5393d5093df60be30965266202e2bb6e83c60f3d))
+
+
+### Bug Fixes
+
+* **gsx:** yield the stairs spot when a vehicle is waiting for it ([e4a2056](https://github.com/brunofgmag/gsx-integrator-client/commit/e4a20566faf31fb037f5c92fd17508bf78c13752)) ([5393d50](https://github.com/brunofgmag/gsx-integrator-client/commit/5393d5093df60be30965266202e2bb6e83c60f3d))
+* **pmdg:** gate the ground equipment phase on power present, not power on ([ca7dd78](https://github.com/brunofgmag/gsx-integrator-client/commit/ca7dd7827ff9750ad0c0ca56d9d4b9043c3a9dea)) ([5393d50](https://github.com/brunofgmag/gsx-integrator-client/commit/5393d5093df60be30965266202e2bb6e83c60f3d))
+
+## [1.29.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.0...v1.29.1) (2026-09-01)
+
+
+* act on what gsx reports instead of the signal it may never send ([#110](https://github.com/brunofgmag/gsx-integrator-client/issues/110)) ([2243812](https://github.com/brunofgmag/gsx-integrator-client/commit/2243812e94ca6780a10bee67bc0487acb31b0390))
+
+
+### Bug Fixes
+
+* **gsx:** answer the airstairs menu by prefix and never repeat a service that toggles ([f4aaa46](https://github.com/brunofgmag/gsx-integrator-client/commit/f4aaa46a98a2f2daf4b77b911148ffadd33f355f)) ([2243812](https://github.com/brunofgmag/gsx-integrator-client/commit/2243812e94ca6780a10bee67bc0487acb31b0390))
+* **ifly:** follow the doors by the cycle and the equipment gsx really reports ([db5fd5a](https://github.com/brunofgmag/gsx-integrator-client/commit/db5fd5a30ff922f7040093fba6bb5487d3ededd2)) ([2243812](https://github.com/brunofgmag/gsx-integrator-client/commit/2243812e94ca6780a10bee67bc0487acb31b0390))
+* **turnaround:** wait out a gpu dismissal instead of triggering it again ([02154b3](https://github.com/brunofgmag/gsx-integrator-client/commit/02154b367c637011aff6f1e5a7338406535d2fa1)) ([2243812](https://github.com/brunofgmag/gsx-integrator-client/commit/2243812e94ca6780a10bee67bc0487acb31b0390))
+
+## [1.29.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.28.0...v1.29.0) (2026-08-31)
+
+
+* show what stayed in the tanks and what blocks the smartswitch ([#108](https://github.com/brunofgmag/gsx-integrator-client/issues/108)) ([70de4e5](https://github.com/brunofgmag/gsx-integrator-client/commit/70de4e56925c454368dc90a598336496ef44e3d9))
+
+
+### Features
+
+* **operations:** show what stayed in the tanks and what blocks the smartswitch ([1e99fb0](https://github.com/brunofgmag/gsx-integrator-client/commit/1e99fb0f171c4ce71a2f66ed1923892fb1d5c497)) ([70de4e5](https://github.com/brunofgmag/gsx-integrator-client/commit/70de4e56925c454368dc90a598336496ef44e3d9))
+
+
+### Bug Fixes
+
+* **gsx:** close the stuck menu and let the last attempt be answered ([7e81c0a](https://github.com/brunofgmag/gsx-integrator-client/commit/7e81c0ae415c95bdca735b77f3675e80206b002c)) ([70de4e5](https://github.com/brunofgmag/gsx-integrator-client/commit/70de4e56925c454368dc90a598336496ef44e3d9))
+
+## [1.28.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.27.0...v1.28.0) (2026-08-31)
+
+
+### Features
+
+* **turnaround:** warn when GSX drops a service it had already started ([e08f6dd](https://github.com/brunofgmag/gsx-integrator-client/commit/e08f6dd9e7730905d0dcfb2b4f4382cf4f4a8a99)) ([a27f982](https://github.com/brunofgmag/gsx-integrator-client/commit/a27f982e6037db521b1c3d78ae2e7fdb2c00f2bc))
+
+## [1.27.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.26.1...v1.27.0) (2026-08-30)
+
+
+* the aircraft carries its own rules and the phase base runs them ([#100](https://github.com/brunofgmag/gsx-integrator-client/issues/100)) ([17b1e87](https://github.com/brunofgmag/gsx-integrator-client/commit/17b1e875b63e4d9d430249b71d34662406e12274))
+
+
+### Features
+
+* the aircraft carries its own rules and the phase base runs them ([a4d23d5](https://github.com/brunofgmag/gsx-integrator-client/commit/a4d23d5f61b611118e2e0d40cc86b4ce33b3cb17)) ([17b1e87](https://github.com/brunofgmag/gsx-integrator-client/commit/17b1e875b63e4d9d430249b71d34662406e12274))
+
+## [1.26.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.26.0...v1.26.1) (2026-08-30)
+
+
+* extend the Avro RJ's own airstair and read ground services from the Remote API ([#96](https://github.com/brunofgmag/gsx-integrator-client/issues/96)) ([c61ee79](https://github.com/brunofgmag/gsx-integrator-client/commit/c61ee79d345e93160d1d85c26a933750c4551f35))
+
+
+### Bug Fixes
+
+* **avro-rj:** extend the aircraft's own airstair instead of calling gsx stairs ([c3028bd](https://github.com/brunofgmag/gsx-integrator-client/commit/c3028bd53f8962a58b80f954254bd11e84a86936)) ([c61ee79](https://github.com/brunofgmag/gsx-integrator-client/commit/c61ee79d345e93160d1d85c26a933750c4551f35))
+* **gsx:** read the gpu state from the remote api and wait for the cart ([659bc84](https://github.com/brunofgmag/gsx-integrator-client/commit/659bc84ab046a84ad78b13b8bf6187928b7d5d74)) ([c61ee79](https://github.com/brunofgmag/gsx-integrator-client/commit/c61ee79d345e93160d1d85c26a933750c4551f35))
+* **gsx:** wait twenty seconds before re-attacking a service trigger ([ed1a300](https://github.com/brunofgmag/gsx-integrator-client/commit/ed1a3007f8315afa20545787ef54853594ab6c54)) ([c61ee79](https://github.com/brunofgmag/gsx-integrator-client/commit/c61ee79d345e93160d1d85c26a933750c4551f35))
+
 ## [1.26.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.25.0...v1.26.0) (2026-08-29)
 
 

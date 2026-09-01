@@ -7,6 +7,7 @@
 
 class Aircraft;
 class SimConnectSession;
+class VariableReader;
 class VariableGateway;
 
 class ProbeObserver
@@ -23,8 +24,8 @@ private:
         bool seen = false;
     };
 
-    const Track& Follow(VariableGateway& variables, const char* name);
-    void ReportWatchList(VariableGateway& variables, const QString& id);
+    const Track& Follow(VariableReader& variables, const char* name);
+    void ReportWatchList(VariableReader& variables, const QString& id);
     void MaybeSetLVar(VariableGateway& variables);
 
     std::unordered_map<std::string, Track> tracks_;

@@ -20,6 +20,8 @@ void SimConnectVariableGateway::Attach(HANDLE hSimConnect)
     {
         slot.registered = false;
         slot.received = false;
+        slot.tickMarked = false;
+        slot.changedThisTick = true;
         if (!RegisterSlot(slot))
         {
             LOG_WARN("Failed to re-register variable '%s'", slot.datumName.c_str());
@@ -34,6 +36,23 @@ void SimConnectVariableGateway::Detach()
     {
         slot.registered = false;
         slot.received = false;
+        slot.tickMarked = false;
+        slot.changedThisTick = true;
+    }
+}
+
+void SimConnectVariableGateway::MarkTick()
+{
+    for (auto& slot : slots_)
+    {
+        if (slot.isString)
+        {
+            continue;
+        }
+
+        slot.changedThisTick = !slot.tickMarked || slot.value != slot.tickValue;
+        slot.tickValue = slot.value;
+        slot.tickMarked = true;
     }
 }
 
@@ -159,6 +178,11 @@ LVarSpan SimConnectVariableGateway::ConsumeLVarSpan(const std::string& name)
 bool SimConnectVariableGateway::HasReceivedLVar(const std::string& name)
 {
     return EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false).received;
+}
+
+bool SimConnectVariableGateway::HasLVarChangedThisTick(const std::string& name)
+{
+    return EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false).changedThisTick;
 }
 
 void SimConnectVariableGateway::SetLVar(const std::string& name, const double value)

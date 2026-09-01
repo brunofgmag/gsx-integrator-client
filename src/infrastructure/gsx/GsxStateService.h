@@ -52,6 +52,7 @@ public:
 
 private:
     bool fuelAndPayloadTakenOver_ = false;
+    bool gpuConnectedSeenClear_ = false;
     struct StateTrack
     {
         GsxStateStatus status = GsxStateStatus::Unavailable;
@@ -69,6 +70,7 @@ private:
     };
 
     void ObserveState(GsxState gsxState);
+    void ObserveGpuConnected();
 
     VariableGateway* varManager_;
     const GsxRemoteState* remote_;

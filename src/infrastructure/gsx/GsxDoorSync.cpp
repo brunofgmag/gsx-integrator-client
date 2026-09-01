@@ -60,14 +60,14 @@ namespace
     }
 }
 
-GsxDoorSync::GsxDoorSync(VariableGateway* variableGateway) : variableGateway_(variableGateway)
+GsxDoorSync::GsxDoorSync(VariableReader* variableGateway) : variableGateway_(variableGateway)
 {
     lastTargets_.fill(kDoorUnknown);
 }
 
 void GsxDoorSync::Sync(const DoorWriter& write)
 {
-    ReportProbe();
+    Report();
 
     if (variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
     {
@@ -140,7 +140,7 @@ double GsxDoorSync::VehicleState(const char* lVar, const double absent) const
     return absent;
 }
 
-void GsxDoorSync::ReportProbe() const
+void GsxDoorSync::Report() const
 {
     if (!probe::IsOn())
     {

@@ -9,13 +9,15 @@
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
-std::optional<TurnaroundTransition> DeboardingState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> DeboardingState::EvaluatePhase(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 
     const GsxStateStatus deboardingState = ctx.gsxGateway->GetStateStatus(GsxState::Deboarding);
     const bool isCompleted = deboardingState == GsxStateStatus::Completed
         || ctx.gsxGateway->WasStateCompleted(GsxState::Deboarding);
+    NoteServiceInterruption(ctx, "deboarding", deboardingState, data.deboardingBaselined, isCompleted);
+
     if (deboardingState != GsxStateStatus::Active && !isCompleted)
     {
         return std::nullopt;

@@ -148,6 +148,20 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            visible: root.integratorVm.fuelDidNotStay
+            text: root.integratorVm.fuelStayAdvisoryText
+            actionText: root.integratorVm.dismissAdvisoryLabel
+            onActionTriggered: root.integratorVm.dismissFuelStayAdvisory()
+        }
+
+        Advisory {
+            Layout.fillWidth: true
+            visible: root.integratorVm.engineConfirmationBlocked
+            text: root.integratorVm.engineConfirmationAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             visible: root.integratorVm.servicesStalled
             text: root.integratorVm.servicesAdvisoryText
         }
@@ -156,6 +170,12 @@ ColumnLayout {
             Layout.fillWidth: true
             visible: root.integratorVm.doorsHoldingPushback
             text: root.integratorVm.openDoorAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
+            visible: root.integratorVm.serviceInterrupted
+            text: root.integratorVm.serviceInterruptedAdvisoryText
         }
 
         Advisory {

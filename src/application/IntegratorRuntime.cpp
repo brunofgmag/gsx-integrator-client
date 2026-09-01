@@ -56,7 +56,7 @@ IntegratorRuntime::IntegratorRuntime(QObject* parent)
       pluginClient_(&bridgeClient_),
       gsxService_(&varGateway_, &gsxRemoteState_),
       gsxMenu_(&gsxRemoteClient_, &gsxRemoteState_, &settings_, &qtLogger_, &pluginClient_),
-      stateMachine_(&status_, &settings_, &gsxService_, &gsxMenu_, &qtLogger_),
+      stateMachine_(&status_, &settings_, &gsxService_, &gsxMenu_, &qtLogger_, &varGateway_),
       simbriefClient_(&status_, &settings_, this)
 {
     dispatchTimer_.setInterval(kDispatchIntervalMs);
@@ -345,16 +345,20 @@ void IntegratorRuntime::Update()
         return;
     }
 
+    varGateway_.MarkTick();
+
     if (mode == TickMode::Driving)
     {
         stateMachine_.AttachAircraft(aircraft_.get());
         gsxMenu_.OnMenuChanged();
+        aircraft_->Observe();
         stateMachine_.Tick();
-        aircraft_->OnTick();
     }
     else
     {
+        stateMachine_.AttachAircraft(aircraft_.get());
         aircraft_->Observe();
+        stateMachine_.ObserveRules();
     }
 
     probe_.Observe(*aircraft_, varGateway_, GetAircraftProfileId());
@@ -387,9 +391,31 @@ bool IntegratorRuntime::IsFuelPlanOverCapacity() const
         && (GetPhase() == TurnaroundPhase::RequestFuel || GetPhase() == TurnaroundPhase::Refueling);
 }
 
+bool IntegratorRuntime::DidFuelNotStay() const
+{
+    return status_.fuelDidNotStay && GetPhase() < TurnaroundPhase::WaitingDeparture;
+}
+
+void IntegratorRuntime::DismissFuelStayAdvisory()
+{
+    stateMachine_.DismissFuelStayAdvisory();
+}
+
+EngineConfirmationBlock IntegratorRuntime::GetEngineConfirmationBlock() const
+{
+    return GetPhase() == TurnaroundPhase::WaitingForEngines
+               ? status_.engineConfirmationBlock
+               : EngineConfirmationBlock::None;
+}
+
 bool IntegratorRuntime::AreServicesStalled() const
 {
     return status_.servicesStalled && GetPhase() == TurnaroundPhase::CallServices;
+}
+
+bool IntegratorRuntime::IsServiceInterrupted() const
+{
+    return status_.serviceInterrupted;
 }
 
 bool IntegratorRuntime::AreDoorsHoldingPushback() const
@@ -406,7 +432,16 @@ void IntegratorRuntime::UpdateSlow()
         return;
     }
 
-    aircraft_->OnSlowTick();
+    stateMachine_.AttachAircraft(aircraft_.get());
+
+    if (ResolveTickMode(status_.enabled, gsxService_.IsAvailable()) == TickMode::Driving)
+    {
+        stateMachine_.TickSlowRules();
+    }
+    else
+    {
+        stateMachine_.ObserveSlowRules();
+    }
 
     gsxService_.ReassertTakeovers();
     CheckGsxProfile();
@@ -555,7 +590,11 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.cargoDoorStuck = IsCargoDoorStuck();
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
     snapshot.fuelPlanOverCapacity = IsFuelPlanOverCapacity();
+    snapshot.fuelDidNotStay = DidFuelNotStay();
+    snapshot.fuelShortfallKg = status_.fuelShortfallKg;
+    snapshot.engineConfirmationBlock = GetEngineConfirmationBlock();
     snapshot.servicesStalled = AreServicesStalled();
+    snapshot.serviceInterrupted = IsServiceInterrupted();
     snapshot.servicesWaitSeconds = status_.servicesWaitSeconds;
     snapshot.doorsHoldingPushback = AreDoorsHoldingPushback();
     snapshot.phase = GetPhase();
@@ -568,6 +607,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.deboardingProgress = status_.deboardingProgress;
     snapshot.plannedFuelKg = status_.plannedFuelKg;
     snapshot.loadedFuelKg = status_.loadedFuelKg;
+    snapshot.settledFuelKg = status_.settledFuelKg;
     snapshot.plannedZfwKg = status_.plannedZfwKg;
     snapshot.plannedPax = status_.plannedPassengers;
     snapshot.boardedPax = status_.boardedPassengers;
@@ -683,9 +723,9 @@ std::string IntegratorRuntime::GetAircraftProfileId() const
     return aircraft_ && aircraftDescriptor_ ? aircraftDescriptor_->id : std::string();
 }
 
-bool IntegratorRuntime::AircraftRequiresOwnAirstairs() const
+bool IntegratorRuntime::AircraftCarriesItsOwnStairs() const
 {
-    return aircraft_ && aircraft_->RequiresOwnAirstairs();
+    return aircraft_ && aircraft_->CarriesItsOwnStairs();
 }
 
 bool IntegratorRuntime::IsAircraftRefuelByGsx() const

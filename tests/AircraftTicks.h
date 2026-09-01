@@ -1,0 +1,54 @@
+#ifndef GSX_INTEGRATOR_CLIENT_TESTS_AIRCRAFTTICKS_H
+#define GSX_INTEGRATOR_CLIENT_TESTS_AIRCRAFTTICKS_H
+
+#include <string>
+
+#include "doubles/FakeVariableGateway.h"
+#include "../src/domain/ports/Aircraft.h"
+#include "../src/domain/ports/AircraftRule.h"
+#include "../src/infrastructure/simvars/VariableGateway.h"
+
+inline constexpr RuleContext kLoading{.needs = {.loading = true}};
+inline constexpr RuleContext kPassengerAccess{.needs = {.passengerAccess = true}};
+
+inline AircraftRule* FindRule(const Aircraft& aircraft, const std::string& name)
+{
+    for (AircraftRule* const rule : aircraft.Rules())
+    {
+        if (rule != nullptr && name == rule->Name())
+        {
+            return rule;
+        }
+    }
+
+    return nullptr;
+}
+
+inline void RunAircraftRules(Aircraft& aircraft, VariableWriter& writer,
+                             const RuleCadence cadence, const RuleContext& context)
+{
+    for (AircraftRule* const rule : aircraft.Rules())
+    {
+        if (rule == nullptr || rule->Cadence() != cadence)
+        {
+            continue;
+        }
+
+        static_cast<void>(rule->Evaluate(context));
+        rule->Act(context, writer);
+    }
+}
+
+inline void TickAircraft(Aircraft& aircraft, FakeVariableGateway& gateway, const RuleContext& context = {})
+{
+    gateway.MarkTick();
+    aircraft.Observe();
+    RunAircraftRules(aircraft, gateway, RuleCadence::Fast, context);
+}
+
+inline void SlowTickAircraft(Aircraft& aircraft, VariableWriter& writer, const RuleContext& context = {})
+{
+    RunAircraftRules(aircraft, writer, RuleCadence::Slow, context);
+}
+
+#endif // GSX_INTEGRATOR_CLIENT_TESTS_AIRCRAFTTICKS_H

@@ -94,7 +94,9 @@ private:
     void SendRequest(PendingRequest& request);
     [[nodiscard]] bool WasTaken(const PendingRequest& request) const;
     void HandleMenu();
+    bool PickFirstMatching(const std::function<bool(const std::string&)>& matches);
     bool PickByContains(const std::string& needle);
+    bool PickByPrefix(const std::string& needle);
     bool PickNowOrArm(const char* entry, TimedIntent& intent);
     [[nodiscard]] std::string MenuSignature() const;
     void OnCommandRejected();
@@ -155,7 +157,8 @@ private:
     static constexpr long long kResyncDelayMs = 1500;
     static constexpr int kMaxResyncs = 3;
     static constexpr long long kMenuSettleMs = 1500;
-    static constexpr long long kTriggerRetryMs = 10000;
+    static constexpr long long kTriggerRetryMs = 20000;
+    static constexpr long long kToggleGiveUpMs = 90000;
     static constexpr int kMaxTriggerAttempts = 3;
     static constexpr long long kPanelOpenWaitMs = 8000;
 };

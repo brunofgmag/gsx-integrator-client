@@ -1,11 +1,13 @@
 #include <QtTest/QTest>
 
 #include <array>
+#include "AircraftTicks.h"
+#include "doubles/FakeVariableWriter.h"
 #include "TestDoubles.h"
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/domain/model/FlightPlan.h"
 #include "../src/domain/support/Weight.h"
-#include "../src/infrastructure/aircraft/TfdiMd11.h"
+#include "../src/infrastructure/aircraft/tfdi/TfdiMd11.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
 
 namespace
@@ -75,6 +77,9 @@ class TfdiMd11Test final : public QObject
 
 private slots:
     static void reportsCargoVariant();
+    static void evaluatingTheCargoDoorRuleWritesNoVariable();
+    static void evaluatingThePaxDoorRuleWritesNoVariable();
+    static void evaluatingTheEfbTargetRuleWritesNoVariable();
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
@@ -187,12 +192,12 @@ void TfdiMd11Test::commitWaitsForEmptyWeightToArrive()
 
     aircraft.SetCurrentFuelKg(20000.0);
     aircraft.SetCurrentZfwKg(160000.0);
-    aircraft.OnSlowTick();
+    SlowTickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.setLVarCalls, 0);
 
     gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
-    aircraft.OnSlowTick();
+    SlowTickAircraft(aircraft, gateway);
 
     constexpr double payload = 160000.0 - kEmptyOperatingZfwKg;
 
@@ -411,7 +416,7 @@ void TfdiMd11Test::slowTickWithoutPendingCommitDoesNothing()
     AutomationStatus status;
     TfdiMd11 aircraft(&gateway, &status, false);
 
-    aircraft.OnSlowTick();
+    SlowTickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.setLVarCalls, 0);
 }
@@ -425,7 +430,7 @@ void TfdiMd11Test::commitWritesEfbTargetsInPounds()
     gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     aircraft.SetCurrentFuelKg(20000.0);
     aircraft.SetCurrentZfwKg(160000.0);
-    aircraft.OnSlowTick();
+    SlowTickAircraft(aircraft, gateway);
 
     constexpr double zfw = 160000.0;
     constexpr double fuel = 20000.0;
@@ -440,7 +445,7 @@ void TfdiMd11Test::commitWritesEfbTargetsInPounds()
     QVERIFY(qFuzzyCompare(gateway.Written(kEfbLoad), loadPct));
 
     const int callsAfterCommit = gateway.setLVarCalls;
-    aircraft.OnSlowTick();
+    SlowTickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.setLVarCalls, callsAfterCommit);
 }
@@ -454,7 +459,7 @@ void TfdiMd11Test::commitClampsEfbTargetsBeforeWriting()
     gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     aircraft.SetCurrentFuelKg(-500.0);
     aircraft.SetCurrentZfwKg(100000.0);
-    aircraft.OnSlowTick();
+    SlowTickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kEfbGw), weight::KgToLb(kEmptyOperatingZfwKg));
     QCOMPARE(gateway.Written(kEfbZfw), weight::KgToLb(kEmptyOperatingZfwKg));
@@ -472,7 +477,7 @@ void TfdiMd11Test::commitSetsReadReadyMask()
     gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     gateway.lvars[kEfbReadReady] = 2.0;
     aircraft.SetCurrentFuelKg(15000.0);
-    aircraft.OnSlowTick();
+    SlowTickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kEfbReadReady), 3.0);
 }
@@ -487,7 +492,7 @@ void TfdiMd11Test::seedsUnsetFuelTargetFromReceivedSimValue()
     gateway.avars[kSimTotalWeight] = 200000.0;
     gateway.avars[kSimFuelTotalKg] = 18500.0;
     aircraft.SetCurrentZfwKg(160000.0);
-    aircraft.OnSlowTick();
+    SlowTickAircraft(aircraft, gateway);
 
     QVERIFY(qFuzzyCompare(gateway.Written(kEfbFuel), weight::KgToLb(18500.0)));
 }
@@ -501,7 +506,7 @@ void TfdiMd11Test::doesNotSeedFuelTargetBeforeSimDataArrives()
     gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     gateway.avars[kSimTotalWeight] = 200000.0;
     aircraft.SetCurrentZfwKg(160000.0);
-    aircraft.OnSlowTick();
+    SlowTickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kEfbFuel), 0.0);
 }
@@ -670,7 +675,7 @@ void TfdiMd11Test::cargoDoorsClosedByDefaultWhenGsxAvailable()
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
-    aircraft.OnTick();
+    TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
     QCOMPARE(gateway.Written(kCargoDoor2R), 0.0);
@@ -684,25 +689,25 @@ void TfdiMd11Test::cargoDoorsOpenPerLoaderAndCloseWhenDone()
 
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kGsxLoaderFront] = 6.0;
-    aircraft.OnTick();
+    TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
     QCOMPARE(gateway.Written(kCargoDoor2R), 0.0);
 
     gateway.lvars[kGsxLoaderRear] = 8.0;
-    aircraft.OnTick();
+    TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kCargoDoor2R), 100.0);
 
     const int callsAfterOpen = gateway.setLVarCalls;
     gateway.lvars[kGsxLoaderFront] = 9.0;
-    aircraft.OnTick();
+    TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.setLVarCalls, callsAfterOpen);
     QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
 
     gateway.lvars[kGsxLoaderFront] = 4.0;
-    aircraft.OnTick();
+    TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
 }
@@ -715,7 +720,7 @@ void TfdiMd11Test::mainCargoDoorOpensOnlyOnFreighter()
 
     passengerGateway.lvars[kCouatlStarted] = 1.0;
     passengerGateway.lvars[kGsxLoaderMain] = 6.0;
-    passenger.OnTick();
+    TickAircraft(passenger, passengerGateway);
 
     QVERIFY(!passengerGateway.HasReceivedLVar(kCargoDoorMain));
 
@@ -725,7 +730,7 @@ void TfdiMd11Test::mainCargoDoorOpensOnlyOnFreighter()
 
     freighterGateway.lvars[kCouatlStarted] = 1.0;
     freighterGateway.lvars[kGsxLoaderMain] = 6.0;
-    freighter.OnTick();
+    TickAircraft(freighter, freighterGateway);
 
     QCOMPARE(freighterGateway.Written(kCargoDoorMain), 100.0);
 }
@@ -740,7 +745,7 @@ void TfdiMd11Test::cargoDoorsUntouchedWithoutGsx()
 
     for (int tick = 0; tick < 5; ++tick)
     {
-        aircraft.OnTick();
+        TickAircraft(aircraft, gateway);
     }
 
     QVERIFY(!gateway.HasReceivedLVar(kCargoDoor1R));
@@ -756,7 +761,7 @@ void TfdiMd11Test::paxDoorsOpenPerStairsAndCloseWhenGone()
     gateway.lvars[kCouatlStarted] = 1.0;
 
     gateway.lvars[kStairsFront] = 3.0;
-    aircraft.OnTick();
+    TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
     QVERIFY(!gateway.HasReceivedLVar(kPaxDoor2L));
@@ -764,13 +769,13 @@ void TfdiMd11Test::paxDoorsOpenPerStairsAndCloseWhenGone()
 
     gateway.lvars[kStairsMiddle] = 3.0;
     gateway.lvars[kStairsRear] = 3.0;
-    aircraft.OnTick();
+    TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoor2L), 100.0);
     QCOMPARE(gateway.Written(kPaxDoor4L), 100.0);
 
     gateway.lvars[kStairsFront] = 2.0;
-    aircraft.OnTick();
+    TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoor1L), 0.0);
 }
@@ -784,17 +789,17 @@ void TfdiMd11Test::paxDoorsOpenOnceTheStairsAreOnFinalApproach()
     gateway.lvars[kCouatlStarted] = 1.0;
 
     gateway.lvars[kStairsFront] = 5.0;
-    aircraft.OnTick();
+    TickAircraft(aircraft, gateway);
 
     QVERIFY(!gateway.HasReceivedLVar(kPaxDoor1L));
 
     gateway.lvars[kStairsFront] = 6.0;
-    aircraft.OnTick();
+    TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
 
     gateway.lvars[kStairsFront] = 3.0;
-    aircraft.OnTick();
+    TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
 }
@@ -809,7 +814,7 @@ void TfdiMd11Test::paxDoorsUntouchedWithoutGsx()
 
     for (int tick = 0; tick < 5; ++tick)
     {
-        aircraft.OnTick();
+        TickAircraft(aircraft, gateway);
     }
 
     QVERIFY(!gateway.HasReceivedLVar(kPaxDoor1L));
@@ -863,6 +868,95 @@ void TfdiMd11Test::doorStatusAllClosedWhenEveryStateReadsClosed()
     }
 
     QVERIFY(aircraft.GetDoorStatus() == DoorStatus::AllClosed);
+}
+
+void TfdiMd11Test::evaluatingTheCargoDoorRuleWritesNoVariable()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+    FakeVariableWriter writer;
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kGsxLoaderFront] = 6.0;
+
+    AircraftRule* const rule = FindRule(aircraft, "tfdi-md11-cargo-doors-follow-loader");
+
+    QVERIFY(rule != nullptr);
+
+    const RuleContext context{};
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        QVERIFY(!rule->Evaluate(context).holds);
+    }
+
+    QCOMPARE(gateway.setLVarCalls + gateway.setAVarCalls, 0);
+    QCOMPARE(writer.setLVarCalls + writer.setAVarCalls, 0);
+
+    rule->Act(context, writer);
+
+    QCOMPARE(writer.Written(kCargoDoor1R), 100.0);
+}
+
+void TfdiMd11Test::evaluatingThePaxDoorRuleWritesNoVariable()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+    FakeVariableWriter writer;
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kStairsFront] = 3.0;
+
+    AircraftRule* const rule = FindRule(aircraft, "tfdi-md11-pax-doors-follow-stairs");
+
+    QVERIFY(rule != nullptr);
+
+    const RuleContext context{};
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        QVERIFY(!rule->Evaluate(context).holds);
+    }
+
+    QCOMPARE(gateway.setLVarCalls + gateway.setAVarCalls, 0);
+    QCOMPARE(writer.setLVarCalls + writer.setAVarCalls, 0);
+
+    rule->Act(context, writer);
+
+    QCOMPARE(writer.Written(kPaxDoor1L), 100.0);
+}
+
+void TfdiMd11Test::evaluatingTheEfbTargetRuleWritesNoVariable()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+    FakeVariableWriter writer;
+
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+    aircraft.SetCurrentFuelKg(20000.0);
+    aircraft.SetCurrentZfwKg(160000.0);
+
+    AircraftRule* const rule = FindRule(aircraft, "tfdi-md11-commit-efb-targets");
+
+    QVERIFY(rule != nullptr);
+    QVERIFY(rule->Cadence() == RuleCadence::Slow);
+
+    const RuleContext context{};
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        QVERIFY(!rule->Evaluate(context).holds);
+    }
+
+    QCOMPARE(gateway.setLVarCalls + gateway.setAVarCalls, 0);
+    QCOMPARE(writer.setLVarCalls + writer.setAVarCalls, 0);
+
+    rule->Act(context, writer);
+
+    QVERIFY(qFuzzyCompare(writer.Written(kEfbFuel), weight::KgToLb(20000.0)));
 }
 
 QTEST_APPLESS_MAIN(TfdiMd11Test)

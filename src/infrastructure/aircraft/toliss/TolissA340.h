@@ -1,0 +1,68 @@
+#ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H
+#define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H
+
+#include <vector>
+
+#include "../SmartSwitch.h"
+#include "rules/TolissA340AdvanceMcduUplinkRule.h"
+#include "rules/TolissA340DoorsFollowGsxRule.h"
+#include "../../gsx/GsxDoorSync.h"
+#include "../../../domain/ports/Aircraft.h"
+
+class VariableGateway;
+struct AutomationStatus;
+
+class TolissA340 final : public Aircraft
+{
+public:
+    static constexpr auto kName = "ToLiss A340-600";
+
+    TolissA340(VariableGateway* variableGateway, const AutomationStatus* status, bool cargoVariant);
+
+    [[nodiscard]] bool IsCargoVariant() const override;
+
+    void Observe() override;
+    [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
+    void OnLoadingStarted() override {}
+    void CloseAllDoors() override;
+    void HoldDoorsClosed(bool hold) override;
+    [[nodiscard]] DoorStatus GetDoorStatus() const override;
+    [[nodiscard]] const char* DoorModeLVar(GsxDoor door) const;
+
+    [[nodiscard]] bool IsFlightPlanLoaded() const override;
+    [[nodiscard]] double GetPlannedFuelKg() const override;
+    [[nodiscard]] double GetPlannedZfwKg() const override;
+    [[nodiscard]] int GetPlannedPassengers() const override;
+    [[nodiscard]] double GetEmptyZfwKg() const override;
+
+    [[nodiscard]] double GetCurrentFuelKg() const override;
+    [[nodiscard]] double GetCurrentZfwKg() const override;
+
+    [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
+    [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return true; }
+    [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Self; }
+    [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Self; }
+
+    [[nodiscard]] bool ConsumeSmartSwitch() override;
+    [[nodiscard]] bool IsPowered() const override;
+    [[nodiscard]] bool IsReadyToPush() const override;
+    [[nodiscard]] bool IsReadyToDeboard() const override;
+    [[nodiscard]] bool IsEngineRunning() const override;
+    [[nodiscard]] bool IsHeldInPlace() const override;
+    [[nodiscard]] bool IsParkingBrakeSet() const override;
+
+private:
+    [[nodiscard]] bool IsBeaconOn() const;
+    [[nodiscard]] bool IsExternalPowerOn() const;
+
+    VariableGateway* variableGateway_;
+    const AutomationStatus* status_;
+    bool cargoVariant_;
+    GsxDoorSync doors_;
+    SmartSwitch smartSwitch_;
+    TolissA340DoorsFollowGsxRule doorRule_;
+    TolissA340AdvanceMcduUplinkRule uplinkRule_;
+    std::vector<AircraftRule*> rules_;
+};
+
+#endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340_H

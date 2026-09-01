@@ -41,6 +41,10 @@ private slots:
     static void fastRefreshPromotesAlreadyReadSlotToFrameRate();
     static void fastRefreshKeepsFrameRateWhenAskedTwice();
     static void consumeLVarSpanCatchesTransient();
+    static void everyAskerSeesTheSameChangeInOneTick();
+    static void theSpanPairAnswersTheSecondAskerDifferently();
+    static void aVariableWithoutABaselineCountsAsChanged();
+    static void detachForgetsTheTickBaseline();
 };
 
 void VariableGatewayTest::lvarReturnsDefaultUntilDataArrives()
@@ -143,6 +147,85 @@ void VariableGatewayTest::consumeLVarSpanCatchesTransient()
     const LVarSpan down = gateway.ConsumeLVarSpan(kEng1N1);
     QCOMPARE(down.min, 0.0);
     QCOMPARE(down.max, 1.0);
+}
+
+void VariableGatewayTest::everyAskerSeesTheSameChangeInOneTick()
+{
+    SimConnectVariableGateway gateway;
+    gateway.GetLVar(kEng3N1, 0.0);
+
+    DeliverDouble(gateway, kFirstDefineId, 10.0);
+    gateway.MarkTick();
+
+    DeliverDouble(gateway, kFirstDefineId, 20.0);
+    gateway.MarkTick();
+
+    QVERIFY(gateway.HasLVarChangedThisTick(kEng3N1));
+    QVERIFY(gateway.HasLVarChangedThisTick(kEng3N1));
+    QVERIFY(gateway.HasLVarChangedThisTick(kEng3N1));
+
+    gateway.MarkTick();
+
+    QVERIFY(!gateway.HasLVarChangedThisTick(kEng3N1));
+    QVERIFY(!gateway.HasLVarChangedThisTick(kEng3N1));
+}
+
+void VariableGatewayTest::theSpanPairAnswersTheSecondAskerDifferently()
+{
+    SimConnectVariableGateway gateway;
+    gateway.GetLVar(kEng3N1, 0.0);
+
+    DeliverDouble(gateway, kFirstDefineId, 10.0);
+    gateway.MarkTick();
+
+    DeliverDouble(gateway, kFirstDefineId, 20.0);
+    gateway.MarkTick();
+
+    const LVarSpan first = gateway.ConsumeLVarSpan(kEng3N1);
+    const LVarSpan second = gateway.ConsumeLVarSpan(kEng3N1);
+
+    QCOMPARE(first.max - first.min, 10.0);
+    QCOMPARE(second.max - second.min, 0.0);
+
+    QVERIFY(gateway.HasLVarChangedThisTick(kEng3N1));
+}
+
+void VariableGatewayTest::aVariableWithoutABaselineCountsAsChanged()
+{
+    SimConnectVariableGateway gateway;
+
+    QVERIFY(gateway.HasLVarChangedThisTick(kEng3N1));
+
+    DeliverDouble(gateway, kFirstDefineId, 10.0);
+    gateway.MarkTick();
+
+    QVERIFY(gateway.HasLVarChangedThisTick(kEng3N1));
+
+    gateway.MarkTick();
+
+    QVERIFY(!gateway.HasLVarChangedThisTick(kEng3N1));
+
+    DeliverDouble(gateway, kFirstDefineId, 11.0);
+    gateway.MarkTick();
+
+    QVERIFY(gateway.HasLVarChangedThisTick(kEng3N1));
+}
+
+void VariableGatewayTest::detachForgetsTheTickBaseline()
+{
+    SimConnectVariableGateway gateway;
+    gateway.GetLVar(kEng3N1, 0.0);
+
+    DeliverDouble(gateway, kFirstDefineId, 10.0);
+    gateway.MarkTick();
+    gateway.MarkTick();
+
+    QVERIFY(!gateway.HasLVarChangedThisTick(kEng3N1));
+
+    gateway.Detach();
+    gateway.MarkTick();
+
+    QVERIFY(gateway.HasLVarChangedThisTick(kEng3N1));
 }
 
 void VariableGatewayTest::fastRefreshSharesSlotWithGetLVar()

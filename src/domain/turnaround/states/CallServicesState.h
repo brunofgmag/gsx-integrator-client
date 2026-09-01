@@ -11,7 +11,13 @@ public:
         return TurnaroundPhase::CallServices;
     }
 
-    [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
+    [[nodiscard]] PhaseNeeds Needs() const override
+    {
+        return {true};
+    }
+
+protected:
+    [[nodiscard]] std::optional<TurnaroundTransition> EvaluatePhase(TurnaroundContext& ctx) override;
 
 private:
     static std::optional<TurnaroundTransition> ResolveJetwayOrStairs(TurnaroundContext& ctx);

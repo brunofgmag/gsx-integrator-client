@@ -43,6 +43,7 @@ private slots:
     static void noDataBeforeFirstPacket();
     static void receivesClientDataThroughSession();
     static void exposesTypedFields();
+    static void theTwoExternalPowerAnnunciatorsAreReadApart();
     static void firstPollWaitsOneIntervalBeforeKicking();
     static void kickFiredWhenStale();
     static void kickReleasesSwitchOnNextPoll();
@@ -103,6 +104,25 @@ void Pmdg777DataClientTest::exposesTypedFields()
     QVERIFY(client.ApuRunning());
     QVERIFY(client.WheelChocksSet());
     QCOMPARE(client.DoorState(0), 0);
+}
+
+void Pmdg777DataClientTest::theTwoExternalPowerAnnunciatorsAreReadApart()
+{
+    Pmdg777DataClient client;
+
+    client.SetClockForTest([] { return 0LL; });
+
+    client.Poll();
+
+    PMDG_777X_Data sample = MakeSampleData();
+    sample.ELEC_annunExtPowr_ON[0] = false;
+    sample.ELEC_annunExtPowr_ON[1] = false;
+    sample.ELEC_annunExtPowr_AVAIL[1] = true;
+    FakeSimConnectApi::PushClientData(PMDG_777X_DATA_DEFINITION, &sample, sizeof(sample));
+    client.Poll();
+
+    QVERIFY(client.ExtPowerAvailable());
+    QVERIFY(!client.ExtPowerConnected());
 }
 
 void Pmdg777DataClientTest::firstPollWaitsOneIntervalBeforeKicking()

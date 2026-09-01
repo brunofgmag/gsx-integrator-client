@@ -2,16 +2,19 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include "../TurnaroundMath.h"
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 #include "../../model/AutomationSettings.h"
+#include "../../ports/DomainLogger.h"
 
 namespace
 {
     constexpr int kRefuelStallTicks = 60;
+    constexpr double kFuelShortfallToleranceKg = 100.0;
 
     bool IsGsxRefuelDone(const TurnaroundContext& ctx, const GsxStateStatus refuelingState)
     {
@@ -44,11 +47,15 @@ namespace
     }
 }
 
-std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> RefuelingState::EvaluatePhase(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 
     const GsxStateStatus refuelingState = ctx.gsxGateway->GetStateStatus(GsxState::Refueling);
+
+    NoteServiceInterruption(ctx, "refueling", refuelingState, data.refuelBaselined,
+                            IsGsxRefuelDone(ctx, refuelingState));
+
     if (!IsGsxRefuelReady(ctx, refuelingState))
     {
         return std::nullopt;
@@ -73,6 +80,7 @@ std::optional<TurnaroundTransition> RefuelingState::Evaluate(TurnaroundContext& 
 
     SnapToPlanned(ctx);
     data.fuelProgress = 100.0;
+    WarnWhenFuelDidNotStay(ctx);
 
     if (IsGsxRefuelDone(ctx, refuelingState))
     {
@@ -138,7 +146,7 @@ void RefuelingState::AccumulateFuel(TurnaroundContext& ctx)
 void RefuelingState::MaybeForceCompletion(TurnaroundContext& ctx, const GsxStateStatus refuelingState)
 {
     auto& data = ctx.data;
-    if (data.fuelProgress <= 95.0 || data.refuelCompletionForced)
+    if (data.fuelProgress <= 95.0)
     {
         return;
     }
@@ -155,7 +163,7 @@ void RefuelingState::MaybeForceCompletion(TurnaroundContext& ctx, const GsxState
     }
     else if (++data.refuelStallTicks >= kRefuelStallTicks)
     {
-        data.refuelCompletionForced = true;
+        data.refuelStallTicks = 0;
         ctx.menuGateway->CompleteRefuel();
     }
 }
@@ -175,6 +183,41 @@ void RefuelingState::SnapToPlanned(TurnaroundContext& ctx)
         data.loadedFuelKg = data.plannedFuelKg;
         ctx.aircraft->SetCurrentFuelKg(data.plannedFuelKg);
         break;
+    }
+}
+
+void RefuelingState::WarnWhenFuelDidNotStay(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+
+    if (data.fuelStayChecked)
+    {
+        return;
+    }
+
+    const double settledKg = ctx.aircraft->GetCurrentFuelKg();
+    if (settledKg <= 0.0)
+    {
+        return;
+    }
+
+    data.fuelStayChecked = true;
+    data.settledFuelKg = settledKg;
+
+    const double capacityKg = ctx.aircraft->GetFuelCapacityKg();
+    const double writtenKg = capacityKg > 0.0
+                                 ? std::min(data.plannedFuelKg, capacityKg)
+                                 : data.plannedFuelKg;
+
+    const double shortfallKg = writtenKg - settledKg;
+    data.fuelDidNotStay = shortfallKg > kFuelShortfallToleranceKg;
+    data.fuelShortfallKg = data.fuelDidNotStay ? shortfallKg : 0.0;
+
+    if (data.fuelDidNotStay)
+    {
+        ctx.logger->LogInfo(std::format(
+            "The client wrote {1:.0f} kg of fuel but the tanks hold {0:.0f} kg; {2:.0f} kg did not stay",
+            settledKg, writtenKg, shortfallKg));
     }
 }
 

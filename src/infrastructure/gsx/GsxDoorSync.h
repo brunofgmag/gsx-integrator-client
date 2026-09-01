@@ -6,7 +6,7 @@
 #include <map>
 #include <string>
 
-class VariableGateway;
+class VariableReader;
 
 enum class GsxDoor
 {
@@ -25,9 +25,10 @@ class GsxDoorSync
 public:
     using DoorWriter = std::function<void(GsxDoor door, bool open)>;
 
-    explicit GsxDoorSync(VariableGateway* variableGateway);
+    explicit GsxDoorSync(VariableReader* variableGateway);
 
     void Observe();
+    void Report() const;
     void Sync(const DoorWriter& write);
     void CloseAll(const DoorWriter& write);
     void HoldClosedForDeparture(bool hold);
@@ -35,9 +36,8 @@ public:
 
 private:
     [[nodiscard]] bool IsDesiredOpen(GsxDoor door) const;
-    void ReportProbe() const;
 
-    VariableGateway* variableGateway_;
+    VariableReader* variableGateway_;
     std::array<double, static_cast<std::size_t>(GsxDoor::Count)> lastTargets_{};
     bool heldForDeparture_ = false;
     bool couatlSeenStarted_ = false;

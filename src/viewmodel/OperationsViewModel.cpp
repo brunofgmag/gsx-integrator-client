@@ -492,7 +492,7 @@ double OperationsViewModel::GetPlannedFuelKg() const
 
 double OperationsViewModel::GetLoadedFuelKg() const
 {
-    return snapshot_.loadedFuelKg;
+    return snapshot_.settledFuelKg > 0.0 ? snapshot_.settledFuelKg : snapshot_.loadedFuelKg;
 }
 
 bool OperationsViewModel::RefuelByGsx() const
@@ -552,6 +552,33 @@ QString OperationsViewModel::GetFuelPlanAdvisoryText()
                                        "The flight plan asks for more fuel than this airframe can hold. The tanks will be filled to capacity and no further.");
 }
 
+QString OperationsViewModel::GetFuelStayAdvisoryText() const
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "%1 kg of the fuel did not stay in the tanks. Check the aircraft fuel before you depart.")
+        .arg(QString::number(snapshot_.fuelShortfallKg, 'f', 0));
+}
+
+QString OperationsViewModel::GetEngineConfirmationAdvisoryText() const
+{
+    switch (snapshot_.engineConfirmationBlock)
+    {
+    case EngineConfirmationBlock::EnginesStopped:
+        return QCoreApplication::translate("OperationsScreen",
+                                           "The engines are not running, so the SmartSwitch will not confirm the start yet.");
+    case EngineConfirmationBlock::GsxNotAsking:
+        return QCoreApplication::translate("OperationsScreen",
+                                           "GSX has not asked for the confirmation, so the SmartSwitch will not confirm the start yet.");
+    case EngineConfirmationBlock::ParkingBrakeReleased:
+        return QCoreApplication::translate("OperationsScreen",
+                                           "The parking brake is not set, so the SmartSwitch will not confirm the start yet.");
+    case EngineConfirmationBlock::None:
+        break;
+    }
+
+    return {};
+}
+
 QString OperationsViewModel::GetServicesAdvisoryText() const
 {
     return QCoreApplication::translate("OperationsScreen", "GSX has not answered the request yet and nothing is moving. The client moves on in %1 s.")
@@ -562,6 +589,12 @@ QString OperationsViewModel::GetOpenDoorAdvisoryText()
 {
     return QCoreApplication::translate("OperationsScreen",
                                        "A door is open. Close it, or use the SmartSwitch to unlock the pushback.");
+}
+
+QString OperationsViewModel::GetServiceInterruptedAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "GSX dropped a service it had already started. Ask for it again from the GSX menu; the client will pick the turnaround back up.");
 }
 
 QString OperationsViewModel::GetCommandErrorLabel()
@@ -599,6 +632,16 @@ bool OperationsViewModel::IsFuelPlanOverCapacity() const
     return snapshot_.fuelPlanOverCapacity;
 }
 
+bool OperationsViewModel::DidFuelNotStay() const
+{
+    return snapshot_.fuelDidNotStay;
+}
+
+bool OperationsViewModel::IsEngineConfirmationBlocked() const
+{
+    return snapshot_.engineConfirmationBlock != EngineConfirmationBlock::None;
+}
+
 bool OperationsViewModel::AreServicesStalled() const
 {
     return snapshot_.servicesStalled;
@@ -607,6 +650,11 @@ bool OperationsViewModel::AreServicesStalled() const
 int OperationsViewModel::GetServicesWaitSeconds() const
 {
     return snapshot_.servicesWaitSeconds;
+}
+
+bool OperationsViewModel::IsServiceInterrupted() const
+{
+    return snapshot_.serviceInterrupted;
 }
 
 bool OperationsViewModel::AreDoorsHoldingPushback() const
@@ -804,6 +852,17 @@ void OperationsViewModel::reloadSimbrief()
 void OperationsViewModel::fixPmdgOptions()
 {
     SetCommandError(service_->FixPmdgOptions());
+}
+
+void OperationsViewModel::dismissFuelStayAdvisory()
+{
+    SetCommandError(service_->DismissFuelStayAdvisory());
+    Refresh();
+}
+
+QString OperationsViewModel::GetDismissAdvisoryLabel()
+{
+    return QCoreApplication::translate("OperationsScreen", "Dismiss");
 }
 
 void OperationsViewModel::fixGsxProfile()

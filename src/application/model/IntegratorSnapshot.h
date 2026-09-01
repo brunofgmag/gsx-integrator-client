@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <string>
+#include "../../domain/model/AutomationStatus.h"
 #include "../../domain/model/FlightPlan.h"
 #include "../../domain/turnaround/TurnaroundPhase.h"
 #include "../../domain/turnaround/TurnaroundTransition.h"
@@ -48,9 +49,13 @@ struct IntegratorSnapshot
     bool cargoDoorStuck = false;
     bool fuelRequestStalled = false;
     bool fuelPlanOverCapacity = false;
+    bool fuelDidNotStay = false;
     bool servicesStalled = false;
+    bool serviceInterrupted = false;
     bool doorsHoldingPushback = false;
     int servicesWaitSeconds = 0;
+    SnapshotDouble fuelShortfallKg = 0.0;
+    EngineConfirmationBlock engineConfirmationBlock = EngineConfirmationBlock::None;
     bool cargoAircraft = false;
     bool efbFlightPlan = false;
 
@@ -67,6 +72,7 @@ struct IntegratorSnapshot
     SnapshotDouble deboardingProgress;
     SnapshotDouble plannedFuelKg;
     SnapshotDouble loadedFuelKg;
+    SnapshotDouble settledFuelKg;
     SnapshotDouble plannedZfwKg;
     int plannedPax = 0;
     int boardedPax = 0;

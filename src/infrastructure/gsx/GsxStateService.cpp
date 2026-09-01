@@ -44,6 +44,7 @@ void GsxStateService::Reset()
     boarding_ = {};
     deboarding_ = {};
     fuelAndPayloadTakenOver_ = false;
+    gpuConnectedSeenClear_ = false;
 
     for (auto& track : states_ | std::views::values)
     {
@@ -63,6 +64,18 @@ void GsxStateService::Observe()
     {
         ObserveState(gsxState);
     }
+
+    ObserveGpuConnected();
+}
+
+void GsxStateService::ObserveGpuConnected()
+{
+    if (!varManager_->HasReceivedLVar(kGpuConnected))
+    {
+        return;
+    }
+
+    gpuConnectedSeenClear_ = gpuConnectedSeenClear_ || varManager_->GetLVar(kGpuConnected) != 1.0;
 }
 
 GsxStateStatus GsxStateService::GetStateStatus(const GsxState gsxState) const
@@ -205,14 +218,24 @@ bool GsxStateService::IsJetwayInPlace() const
 
 GroundPowerStatus GsxStateService::GetGpuStatus() const
 {
+    if (const GsxRemoteService* service =
+            remote_ != nullptr ? FindService(*remote_, gsx::services::Id(GroundService::Gpu)) : nullptr;
+        service != nullptr)
+    {
+        return service->stateRaw == static_cast<int>(GsxStateStatus::Active)
+            ? GroundPowerStatus::Connected
+            : GroundPowerStatus::Disconnected;
+    }
+
     if (!varManager_->HasReceivedLVar(kGpuState))
     {
         return GroundPowerStatus::Unknown;
     }
 
-    const bool connected =
-        varManager_->GetLVar(kGpuState) == static_cast<double>(GsxStateStatus::Active)
-        || varManager_->GetLVar(kGpuConnected) == 1.0;
+    const double state = varManager_->GetLVar(kGpuState);
+
+    const bool connected = state == static_cast<double>(GsxStateStatus::Active)
+        || (gpuConnectedSeenClear_ && varManager_->GetLVar(kGpuConnected) == 1.0);
 
     return connected ? GroundPowerStatus::Connected : GroundPowerStatus::Disconnected;
 }

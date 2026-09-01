@@ -52,13 +52,15 @@ TurnaroundStateMachine::TurnaroundStateMachine(AutomationStatus* status,
                                                const AutomationSettings* settings,
                                                GsxGateway* gsxGateway,
                                                GsxMenuGateway* menuGateway,
-                                               DomainLogger* logger)
+                                               DomainLogger* logger,
+                                               VariableWriter* variableWriter)
 {
     context_.status = status;
     context_.settings = settings;
     context_.gsxGateway = gsxGateway;
     context_.menuGateway = menuGateway;
     context_.logger = logger;
+    context_.variableWriter = variableWriter;
 
     RegisterStates();
 }
@@ -120,6 +122,12 @@ void TurnaroundStateMachine::Step()
         --ticksRemaining_;
         if (ticksRemaining_ > 0)
         {
+            TurnaroundState* const state = StateFor(phase_);
+            if (state != nullptr)
+            {
+                state->ActOnRules(context_, RuleCadence::Fast);
+            }
+
             return;
         }
 
@@ -172,7 +180,12 @@ void TurnaroundStateMachine::PublishStatus() const
     context_.status->loadedFuelKg = context_.data.loadedFuelKg;
     context_.status->fuelRequestStalled = context_.data.fuelRequestStalled;
     context_.status->fuelPlanOverCapacity = context_.data.fuelPlanOverCapacity;
+    context_.status->fuelDidNotStay = context_.data.fuelDidNotStay && !context_.data.fuelStayDismissed;
+    context_.status->fuelShortfallKg = context_.data.fuelShortfallKg;
+    context_.status->settledFuelKg = context_.data.settledFuelKg;
+    context_.status->engineConfirmationBlock = context_.data.engineConfirmationBlock;
     context_.status->servicesStalled = context_.data.servicesStalled;
+    context_.status->serviceInterrupted = context_.data.serviceInterrupted;
     context_.status->servicesWaitSeconds = context_.data.servicesWaitSeconds;
     context_.status->fuelProgress = context_.data.fuelProgress;
     context_.status->boardingProgress = context_.data.boardingProgress;
@@ -261,4 +274,38 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
 
     phase_ = phase;
     context_.data.stateTickCount = 0;
+    context_.data.serviceInterrupted = false;
+}
+
+void TurnaroundStateMachine::TickSlowRules()
+{
+    TurnaroundState* state = StateFor(phase_);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    state->ActOnRules(context_, RuleCadence::Slow);
+}
+
+void TurnaroundStateMachine::ObserveRules()
+{
+    TurnaroundState* state = StateFor(phase_);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    state->ObserveRules(context_, RuleCadence::Fast);
+}
+
+void TurnaroundStateMachine::ObserveSlowRules()
+{
+    TurnaroundState* state = StateFor(phase_);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    state->ObserveRules(context_, RuleCadence::Slow);
 }

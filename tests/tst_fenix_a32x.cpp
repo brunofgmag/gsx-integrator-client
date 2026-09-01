@@ -6,8 +6,10 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "AircraftTicks.h"
+#include "doubles/FakeVariableWriter.h"
 #include "TestDoubles.h"
-#include "../src/infrastructure/aircraft/FenixA32x.h"
+#include "../src/infrastructure/aircraft/fenix/FenixA32x.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
 
 namespace
@@ -134,6 +136,9 @@ private slots:
     static void reportsNamePerVariant();
     static void reportsLoadMethodsAndCapabilities();
     static void observationTickWritesNothing();
+    static void evaluatingTheEfbSetupRuleWritesNothing();
+    static void evaluatingTheDoorRuleWritesNothing();
+    static void evaluatingTheRefuelSystemRuleWritesNothing();
     static void drivingTickWritesWhatObservationHeldBack();
     static void doorStatusUnknownUntilTheEfbAnswers();
     static void doorStatusAllClosedOnceEveryDoorReadsShut();
@@ -246,9 +251,9 @@ void FenixA32xTest::pollsEfbEveryTick()
 {
     FenixFixture fixture;
 
-    fixture.aircraft.OnTick();
-    fixture.aircraft.OnTick();
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
+    TickAircraft(fixture.aircraft, fixture.gateway);
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.pollCalls, 3);
 }
@@ -257,8 +262,8 @@ void FenixA32xTest::disablesEfbAutomationOnceAvailable()
 {
     FenixFixture fixture;
 
-    fixture.aircraft.OnTick();
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.setBoolCalls, 8);
     QCOMPARE(fixture.efb.WrittenBool("fenix.efb.autoDoor"), 0);
@@ -275,11 +280,11 @@ void FenixA32xTest::reinitializesEfbAutomationAfterOutage()
 {
     FenixFixture fixture;
 
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
     fixture.efb.available = false;
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
     fixture.efb.available = true;
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.setBoolCalls, 16);
 }
@@ -290,7 +295,7 @@ void FenixA32xTest::leavesEfbUntouchedWhileUnavailable()
 
     fixture.efb.available = false;
 
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.setBoolCalls, 0);
     QCOMPARE(fixture.efb.setFloatCalls, 0);
@@ -395,7 +400,7 @@ void FenixA32xTest::loadingStartArmsThirdPartyRefueling()
 {
     FenixFixture fixture;
 
-    fixture.aircraft.OnLoadingStarted();
+    TickAircraft(fixture.aircraft, fixture.gateway, kLoading);
 
     QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 1.0);
 }
@@ -404,14 +409,13 @@ void FenixA32xTest::thirdPartyRefuelingDisarmsWhenGsxCompletes()
 {
     FenixFixture fixture;
 
-    fixture.aircraft.OnLoadingStarted();
     fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateActive;
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway, kLoading);
 
     QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 1.0);
 
     fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCompleted;
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway, kLoading);
 
     QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 0.0);
 }
@@ -628,13 +632,13 @@ void FenixA32xTest::cargoDoorsFollowBaggageLoaders()
     fixture.gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = 6.0;
     fixture.gateway.lvars[gsx::lvars::kBaggageLoaderRearState] = 9.0;
 
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdCargoDoor), 1);
     QCOMPARE(fixture.efb.WrittenBool(kAftCargoDoor), 1);
 
     fixture.gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = 1.0;
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdCargoDoor), 0);
     QCOMPARE(fixture.efb.WrittenBool(kAftCargoDoor), 1);
@@ -647,18 +651,18 @@ void FenixA32xTest::paxDoorOpensForJetwayOrFrontStairs()
     fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     fixture.gateway.lvars[gsx::lvars::kJetway] = 5.0;
 
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 1);
 
     fixture.gateway.lvars[gsx::lvars::kJetway] = 2.0;
     fixture.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = 3.0;
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 1);
 
     fixture.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = 4.0;
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 0);
 }
@@ -670,7 +674,7 @@ void FenixA32xTest::midPaxDoorDrivenOnlyOnA321()
     a320.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     a320.gateway.lvars[gsx::lvars::kPassengerStairsMiddleState] = 3.0;
 
-    a320.aircraft.OnTick();
+    TickAircraft(a320.aircraft, a320.gateway);
 
     QCOMPARE(a320.efb.WrittenBool(kMidPaxDoor), -1);
 
@@ -678,7 +682,7 @@ void FenixA32xTest::midPaxDoorDrivenOnlyOnA321()
     a321.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     a321.gateway.lvars[gsx::lvars::kPassengerStairsMiddleState] = 3.0;
 
-    a321.aircraft.OnTick();
+    TickAircraft(a321.aircraft, a321.gateway);
 
     QCOMPARE(a321.efb.WrittenBool(kMidPaxDoor), 1);
 }
@@ -691,13 +695,13 @@ void FenixA32xTest::cateringDoorsFollowCateringVehicles()
     fixture.gateway.lvars[gsx::lvars::kCateringFrontState] = 6.0;
     fixture.gateway.lvars[gsx::lvars::kCateringRearState] = 7.0;
 
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdCateringDoor), 1);
     QCOMPARE(fixture.efb.WrittenBool(kAftCateringDoor), 1);
 
     fixture.gateway.lvars[gsx::lvars::kCateringRearState] = 8.0;
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.WrittenBool(kAftCateringDoor), 0);
 }
@@ -709,7 +713,7 @@ void FenixA32xTest::doorsUntouchedWithoutGsx()
     fixture.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = 3.0;
     fixture.gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = 6.0;
 
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), -1);
     QCOMPARE(fixture.efb.WrittenBool(kFwdCargoDoor), -1);
@@ -723,7 +727,7 @@ void FenixA32xTest::doorsUntouchedWhileEfbUnavailable()
     fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     fixture.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = 3.0;
 
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.setBoolCalls, 0);
 }
@@ -750,9 +754,9 @@ void FenixA32xTest::stairsReopenDoorAfterCloseAllDoors()
     fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     fixture.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = 3.0;
 
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
     fixture.aircraft.CloseAllDoors();
-    fixture.aircraft.OnTick();
+    TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 1);
 }
@@ -1107,9 +1111,95 @@ void FenixA32xTest::drivingTickWritesWhatObservationHeldBack()
     f.aircraft.Observe();
     const int afterObservation = f.efb.setBoolCalls;
 
-    f.aircraft.OnTick();
+    TickAircraft(f.aircraft, f.gateway);
 
     QVERIFY(f.efb.setBoolCalls > afterObservation);
+}
+
+void FenixA32xTest::evaluatingTheEfbSetupRuleWritesNothing()
+{
+    FenixFixture fixture;
+    FakeVariableWriter writer;
+
+    AircraftRule* const rule = FindRule(fixture.aircraft, "fenix-a32x-initialize-efb-once");
+
+    QVERIFY(rule != nullptr);
+
+    const RuleContext context{};
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        QVERIFY(!rule->Evaluate(context).holds);
+    }
+
+    QCOMPARE(fixture.efb.setBoolCalls, 0);
+    QCOMPARE(fixture.gateway.setLVarCalls + fixture.gateway.setAVarCalls, 0);
+    QCOMPARE(writer.setLVarCalls + writer.setAVarCalls, 0);
+
+    rule->Act(context, writer);
+
+    QCOMPARE(fixture.efb.setBoolCalls, 8);
+}
+
+void FenixA32xTest::evaluatingTheDoorRuleWritesNothing()
+{
+    FenixFixture fixture;
+    FakeVariableWriter writer;
+
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = 6.0;
+    fixture.aircraft.Observe();
+
+    AircraftRule* const rule = FindRule(fixture.aircraft, "fenix-a32x-doors-follow-gsx");
+
+    QVERIFY(rule != nullptr);
+
+    const RuleContext context{};
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        QVERIFY(!rule->Evaluate(context).holds);
+    }
+
+    QCOMPARE(fixture.efb.setBoolCalls, 0);
+    QCOMPARE(fixture.gateway.setLVarCalls + fixture.gateway.setAVarCalls, 0);
+    QCOMPARE(writer.setLVarCalls + writer.setAVarCalls, 0);
+
+    rule->Act(context, writer);
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdCargoDoor), 1);
+}
+
+void FenixA32xTest::evaluatingTheRefuelSystemRuleWritesNothing()
+{
+    FenixFixture fixture;
+    FakeVariableWriter writer;
+
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCompleted;
+
+    AircraftRule* const rule = FindRule(fixture.aircraft, "fenix-a32x-disarm-refuel-when-done");
+
+    QVERIFY(rule != nullptr);
+
+    const RuleContext context = kLoading;
+    const int writesBefore = fixture.gateway.setLVarCalls + fixture.gateway.setAVarCalls;
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        QVERIFY(!rule->Evaluate(context).holds);
+    }
+
+    QCOMPARE(fixture.gateway.setLVarCalls + fixture.gateway.setAVarCalls, writesBefore);
+    QCOMPARE(writer.setLVarCalls + writer.setAVarCalls, 0);
+
+    rule->Act(context, writer);
+
+    QCOMPARE(writer.Written(kThirdPartyRefuel), 1.0);
+
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCompleted;
+    rule->Act(context, writer);
+
+    QCOMPARE(writer.Written(kThirdPartyRefuel), 0.0);
 }
 
 QTEST_APPLESS_MAIN(FenixA32xTest)

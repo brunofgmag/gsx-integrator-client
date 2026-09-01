@@ -3,7 +3,7 @@
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
 
-std::optional<TurnaroundTransition> WaitingPowerOnState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> WaitingPowerOnState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (ctx.aircraft->IsPowered())
     {

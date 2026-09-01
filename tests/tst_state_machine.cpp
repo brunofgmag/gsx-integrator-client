@@ -4,13 +4,17 @@
 #include <array>
 #include <string>
 #include <vector>
+#include "tests/doubles/FakeVariableGateway.h"
 #include "tests/turnaround/TurnaroundStateFixture.h"
 #include "src/domain/turnaround/PilotTouch.h"
 #include "src/domain/turnaround/PilotUnlock.h"
+#include "src/domain/ports/AircraftRule.h"
 #include "src/domain/turnaround/TurnaroundStateMachine.h"
 
 namespace
 {
+    constexpr auto kWatchedLVar = "EXT_Door_stairs_pos";
+
     constexpr auto kReachableWorkflowPhases = std::array{
         TurnaroundPhase::WaitingSupportedAircraft,
         TurnaroundPhase::WaitingAircraftReady,
@@ -39,6 +43,109 @@ namespace
         TurnaroundPhase::CabinServices,
         TurnaroundPhase::WaitingNewFlight,
         TurnaroundPhase::WaitingSupportedAircraft,
+    };
+
+    class CountingRule : public AircraftRule
+    {
+    public:
+        int evaluateCalls = 0;
+        int actCalls = 0;
+
+        [[nodiscard]] const char* Name() const override
+        {
+            return "counting-rule";
+        }
+
+        [[nodiscard]] RuleVerdict Evaluate(const RuleContext&) override
+        {
+            ++evaluateCalls;
+
+            return RuleVerdict::Pass();
+        }
+
+        void Act(const RuleContext&, VariableWriter&) override
+        {
+            ++actCalls;
+        }
+    };
+
+    class ChangeQueryRule final : public AircraftRule
+    {
+    public:
+        std::vector<bool> answers;
+
+        ChangeQueryRule(VariableReader& reader, const char* ruleName, const char* lvar)
+            : reader_(&reader), ruleName_(ruleName), lvar_(lvar)
+        {
+        }
+
+        [[nodiscard]] const char* Name() const override
+        {
+            return ruleName_;
+        }
+
+        [[nodiscard]] RuleVerdict Evaluate(const RuleContext&) override
+        {
+            answers.push_back(reader_->HasLVarChangedThisTick(lvar_));
+
+            return RuleVerdict::Pass();
+        }
+
+        void Act(const RuleContext&, VariableWriter&) override
+        {
+        }
+
+    private:
+        VariableReader* reader_;
+        const char* ruleName_;
+        const char* lvar_;
+    };
+
+    class SpanQueryRule final : public AircraftRule
+    {
+    public:
+        std::vector<double> swings;
+
+        SpanQueryRule(VariableReader& reader, const char* ruleName, const char* lvar)
+            : reader_(&reader), ruleName_(ruleName), lvar_(lvar)
+        {
+        }
+
+        [[nodiscard]] const char* Name() const override
+        {
+            return ruleName_;
+        }
+
+        [[nodiscard]] RuleVerdict Evaluate(const RuleContext&) override
+        {
+            const LVarSpan span = reader_->ConsumeLVarSpan(lvar_);
+            swings.push_back(span.max - span.min);
+
+            return RuleVerdict::Pass();
+        }
+
+        void Act(const RuleContext&, VariableWriter&) override
+        {
+        }
+
+    private:
+        VariableReader* reader_;
+        const char* ruleName_;
+        const char* lvar_;
+    };
+
+    class SlowCountingRule final : public CountingRule
+    {
+    public:
+        [[nodiscard]] const char* Name() const override
+        {
+            return "slow-counting-rule";
+        }
+
+        [[nodiscard]] RuleCadence Cadence() const override
+        {
+            return RuleCadence::Slow;
+        }
     };
 
     void PrepareFlightPlan(FakeAircraft& aircraft)
@@ -73,7 +180,7 @@ namespace
         std::vector<TurnaroundPhase> visitedPhases;
 
         TurnaroundWorkflow()
-            : machine(&f.status, &f.settings, &f.gsxService, &f.menuGateway, &f.logger)
+            : machine(&f.status, &f.settings, &f.gsxService, &f.menuGateway, &f.logger, &f.variableWriter)
         {
             visitedPhases.push_back(machine.GetPhase());
         }
@@ -354,6 +461,8 @@ private slots:
     static void resetReturnsToWaitingSupportedAircraft();
     static void holdsAtRequestFuelUntilLoadingConfirmed();
     static void waitsForRefuelingTransitionDelay();
+    static void aDelayedTransitionKeepsTheFastRulesRunning();
+    static void theSlowTickActsOnlyWhenTheMachineIsDriving();
     static void waitsForBoardingTransitionDelay();
     static void holdsBoardingWhileCargoIsPending();
     static void completesReachableWorkflowAndReturnsToStart();
@@ -374,6 +483,9 @@ private slots:
     static void bothSurfacesTouchingOnTheSameTickSpendOneEdge();
     static void theLogNamesTheSurfaceTheTouchCameFrom();
     static void resetDiscardsAPendingAppTouch();
+    static void twoRulesAskingAboutOneVariableGetTheSameAnswer();
+    static void theSpanPairAnswersTheSecondRuleDifferently();
+    static void theFuelStayAdvisoryClearsWhenThePilotDismissesIt();
 };
 
 void TurnaroundStateMachineTest::publishesCurrentTankFuelBeforeRefuel()
@@ -881,6 +993,114 @@ void TurnaroundStateMachineTest::resetDiscardsAPendingAppTouch()
     workflow.machine.Tick();
 
     QVERIFY(!Logged(workflow, "Pilot touch"));
+}
+
+void TurnaroundStateMachineTest::aDelayedTransitionKeepsTheFastRulesRunning()
+{
+    TurnaroundWorkflow workflow;
+    ReachRefueling(workflow);
+
+    CountingRule rule;
+    workflow.f.aircraft.rules = {&rule};
+
+    workflow.BeginRefuelingDelay();
+
+    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 30);
+
+    const int actsAtDelayStart = rule.actCalls;
+
+    workflow.FinishDelay(29, TurnaroundPhase::Refueling);
+
+    QCOMPARE(rule.actCalls, actsAtDelayStart + 29);
+}
+
+void TurnaroundStateMachineTest::theSlowTickActsOnlyWhenTheMachineIsDriving()
+{
+    TurnaroundWorkflow workflow;
+    SlowCountingRule rule;
+
+    workflow.f.aircraft.rules = {&rule};
+    workflow.machine.AttachAircraft(&workflow.f.aircraft);
+
+    workflow.machine.ObserveSlowRules();
+
+    QCOMPARE(rule.evaluateCalls, 1);
+    QCOMPARE(rule.actCalls, 0);
+
+    workflow.machine.TickSlowRules();
+
+    QCOMPARE(rule.evaluateCalls, 2);
+    QCOMPARE(rule.actCalls, 1);
+}
+
+void TurnaroundStateMachineTest::twoRulesAskingAboutOneVariableGetTheSameAnswer()
+{
+    FakeVariableGateway gateway;
+    TurnaroundWorkflow workflow;
+    ChangeQueryRule first(gateway, "first-change-query", kWatchedLVar);
+    ChangeQueryRule second(gateway, "second-change-query", kWatchedLVar);
+
+    workflow.f.aircraft.rules = {&first, &second};
+    workflow.machine.AttachAircraft(&workflow.f.aircraft);
+
+    gateway.lvars[kWatchedLVar] = 50.0;
+    gateway.MarkTick();
+    workflow.machine.Tick();
+
+    QCOMPARE(first.answers, std::vector<bool>{true});
+    QCOMPARE(second.answers, first.answers);
+
+    gateway.MarkTick();
+    workflow.machine.Tick();
+
+    QCOMPARE(first.answers, (std::vector<bool>{true, false}));
+    QCOMPARE(second.answers, first.answers);
+
+    gateway.lvars[kWatchedLVar] = 120.0;
+    gateway.MarkTick();
+    workflow.machine.Tick();
+
+    QCOMPARE(first.answers, (std::vector<bool>{true, false, true}));
+    QCOMPARE(second.answers, first.answers);
+}
+
+void TurnaroundStateMachineTest::theSpanPairAnswersTheSecondRuleDifferently()
+{
+    FakeVariableGateway gateway;
+    TurnaroundWorkflow workflow;
+    SpanQueryRule first(gateway, "first-span-query", kWatchedLVar);
+    SpanQueryRule second(gateway, "second-span-query", kWatchedLVar);
+
+    workflow.f.aircraft.rules = {&first, &second};
+    workflow.machine.AttachAircraft(&workflow.f.aircraft);
+
+    gateway.lvars[kWatchedLVar] = 120.0;
+    gateway.lvarSpans[kWatchedLVar] = LVarSpan{50.0, 120.0, true};
+    gateway.MarkTick();
+    workflow.machine.Tick();
+
+    QCOMPARE(first.swings, std::vector<double>{70.0});
+    QCOMPARE(second.swings, std::vector<double>{0.0});
+}
+
+void TurnaroundStateMachineTest::theFuelStayAdvisoryClearsWhenThePilotDismissesIt()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachRefueling(workflow);
+
+    workflow.f.aircraft.refuelMethod = RefuelBy::Gsx;
+    workflow.f.aircraft.fuelCapacityKg = 12000.0;
+    workflow.f.aircraft.currentFuelKg = 11000.0;
+    workflow.CompleteRefueling();
+
+    QVERIFY(workflow.f.status.fuelDidNotStay);
+    QCOMPARE(workflow.f.status.fuelShortfallKg, 1000.0);
+
+    workflow.machine.DismissFuelStayAdvisory();
+    workflow.machine.Tick();
+
+    QVERIFY(!workflow.f.status.fuelDidNotStay);
 }
 
 QTEST_APPLESS_MAIN(TurnaroundStateMachineTest)

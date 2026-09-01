@@ -9,7 +9,7 @@ namespace
     constexpr int kRetryTicks = 60;
 }
 
-std::optional<TurnaroundTransition> RequestPushbackState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> RequestPushbackState::EvaluatePhase(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 

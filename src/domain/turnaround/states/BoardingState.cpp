@@ -14,13 +14,15 @@ namespace
     constexpr int kBoardingRetryTicks = 30;
 }
 
-std::optional<TurnaroundTransition> BoardingState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> BoardingState::EvaluatePhase(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 
     const GsxStateStatus boardingState = ctx.gsxGateway->GetStateStatus(GsxState::Boarding);
     const bool isCompleted = boardingState == GsxStateStatus::Completed
         || ctx.gsxGateway->WasStateCompleted(GsxState::Boarding);
+    NoteServiceInterruption(ctx, "boarding", boardingState, data.boardingBaselined, isCompleted);
+
     if (boardingState != GsxStateStatus::Active && !isCompleted)
     {
         return std::nullopt;

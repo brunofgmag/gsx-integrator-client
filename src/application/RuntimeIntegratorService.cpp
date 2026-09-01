@@ -59,6 +59,18 @@ CommandResult RuntimeIntegratorService::StartLoading()
     return CommandResult::Success();
 }
 
+CommandResult RuntimeIntegratorService::DismissFuelStayAdvisory()
+{
+    if (!runtime_->IsConnected())
+    {
+        return OfflineFailure();
+    }
+
+    runtime_->DismissFuelStayAdvisory();
+
+    return CommandResult::Success();
+}
+
 CommandResult RuntimeIntegratorService::RestartFlow()
 {
     if (!runtime_->IsConnected())
@@ -185,7 +197,7 @@ void RuntimeIntegratorService::PushEffectiveSettings()
 {
     appliedProfileId_ = runtime_->GetAircraftProfileId();
     runtime_->ApplySettings(ResolveAutomationSettings(appSettings_, appliedProfileId_,
-                                                      runtime_->AircraftRequiresOwnAirstairs()));
+                                                      runtime_->AircraftCarriesItsOwnStairs()));
 }
 
 void RuntimeIntegratorService::OnRuntimeUpdated()

@@ -6,7 +6,12 @@
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
-std::optional<TurnaroundTransition> PlaceGroundEquipmentState::Evaluate(TurnaroundContext& ctx)
+namespace
+{
+    constexpr int kGiveUpTicks = 240;
+}
+
+std::optional<TurnaroundTransition> PlaceGroundEquipmentState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (!ctx.data.ownGroundEquipmentCleared)
     {
@@ -34,12 +39,17 @@ std::optional<TurnaroundTransition> PlaceGroundEquipmentState::Evaluate(Turnarou
     const GroundPowerStatus gpu =
         ctx.aircraft->GetGroundPowerStatus().value_or(ctx.gsxGateway->GetGpuStatus());
 
-    if (gpu == GroundPowerStatus::Connected || ctx.data.gpuRequested)
+    if (gpu == GroundPowerStatus::Connected)
     {
         return TurnaroundTransition{TurnaroundPhase::CallServices};
     }
 
-    if (gpu == GroundPowerStatus::Unknown)
+    if (ctx.data.stateTickCount >= kGiveUpTicks)
+    {
+        return TurnaroundTransition{TurnaroundPhase::CallServices};
+    }
+
+    if (gpu == GroundPowerStatus::Unknown || ctx.data.gpuRequested)
     {
         return std::nullopt;
     }
@@ -49,11 +59,11 @@ std::optional<TurnaroundTransition> PlaceGroundEquipmentState::Evaluate(Turnarou
         ctx.aircraft->SetGroundPower(true);
         ctx.data.gpuRequested = true;
 
-        return TurnaroundTransition{TurnaroundPhase::CallServices};
+        return std::nullopt;
     }
 
     ctx.menuGateway->ToggleGpu();
     ctx.data.gpuRequested = true;
 
-    return TurnaroundTransition{TurnaroundPhase::CallServices};
+    return std::nullopt;
 }

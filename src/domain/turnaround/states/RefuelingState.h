@@ -13,7 +13,9 @@ public:
     }
 
 
-    [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx) override;
+
+protected:
+    [[nodiscard]] std::optional<TurnaroundTransition> EvaluatePhase(TurnaroundContext& ctx) override;
 
 private:
     static void EnsureBaseline(TurnaroundContext& ctx);
@@ -21,6 +23,7 @@ private:
     static void AccumulateFuel(TurnaroundContext& ctx);
     static void MaybeForceCompletion(TurnaroundContext& ctx, GsxStateStatus refuelingState);
     static void SnapToPlanned(TurnaroundContext& ctx);
+    static void WarnWhenFuelDidNotStay(TurnaroundContext& ctx);
     static void RefuelProgressively(TurnaroundContext& ctx);
 };
 

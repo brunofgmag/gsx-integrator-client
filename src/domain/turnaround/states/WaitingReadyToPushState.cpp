@@ -4,7 +4,7 @@
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
 
-std::optional<TurnaroundTransition> WaitingReadyToPushState::Evaluate(TurnaroundContext& ctx)
+std::optional<TurnaroundTransition> WaitingReadyToPushState::EvaluatePhase(TurnaroundContext& ctx)
 {
     if (!ctx.aircraft->IsReadyToPush() || !ctx.aircraft->IsParkingBrakeSet())
     {

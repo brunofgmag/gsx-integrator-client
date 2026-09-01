@@ -11,7 +11,7 @@ private slots:
     static void skipsWhenGpuManagementDisabled();
     static void skipsWhenGpuNotConnected();
     static void dismissesConnectedGpuThenAdvances();
-    static void retriesWhileGpuServiceBusy();
+    static void dismissesOnceAndWaitsWhileGpuServiceIsBusy();
     static void advancesWhenGpuServiceIdlesWhileConnected();
     static void dismissesGpuStillEnRoute();
     static void dismissesWhenAircraftReportsConnected();
@@ -91,7 +91,7 @@ void RemoveGroundEquipmentStateTest::dismissesConnectedGpuThenAdvances()
     QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
 }
 
-void RemoveGroundEquipmentStateTest::retriesWhileGpuServiceBusy()
+void RemoveGroundEquipmentStateTest::dismissesOnceAndWaitsWhileGpuServiceIsBusy()
 {
     TurnaroundStateFixture f;
     RemoveGroundEquipmentState state;
@@ -108,7 +108,7 @@ void RemoveGroundEquipmentStateTest::retriesWhileGpuServiceBusy()
         QVERIFY(!state.Evaluate(f.ctx).has_value());
     }
 
-    QCOMPARE(f.menuGateway.toggleGpuCalls, 4);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
 
     f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
     f.gsxService.gpuInProgress = false;

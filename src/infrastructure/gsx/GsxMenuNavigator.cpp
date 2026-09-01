@@ -25,7 +25,7 @@ namespace
     constexpr auto kCompletePushbackText = "complete pushback procedure";
     constexpr auto kServiceInProgressTitle = "Service in progress";
     constexpr auto kCompleteNowText = "Complete now";
-    constexpr auto kRefuelingLoadedText = "loaded";
+    constexpr auto kRefuelingEntryText = "Refueling:";
     constexpr auto kLoadingInProgressText = "loading in progress";
     constexpr auto kBoardingPassengersText = "Boarding passengers now";
     constexpr auto kBoardCrewQuestion = "board crew";
@@ -33,6 +33,8 @@ namespace
     constexpr auto kDeIceQuestion = "de-icing";
     constexpr auto kAirstairsQuestion = "own airstairs";
     constexpr auto kJetwayAnswerText = "use jetway";
+    constexpr auto kBlockedSpotText = "waiting for the spot";
+    constexpr auto kRemoveStairsText = "Remove the stairs";
 
     const char* CrewChoiceEntry(const CrewChoice choice)
     {
@@ -44,6 +46,22 @@ namespace
         case CrewChoice::Both: return "Both";
         }
         return "Both";
+    }
+
+    bool StartsWithFold(const std::string& hay, const std::string& needle)
+    {
+        if (needle.size() > hay.size())
+        {
+            return false;
+        }
+
+        return std::ranges::equal(hay.begin(), hay.begin() + static_cast<long long>(needle.size()),
+                                  needle.begin(), needle.end(),
+                                  [](const char x, const char y)
+                                  {
+                                      return std::tolower(static_cast<unsigned char>(x)) == std::tolower(
+                                          static_cast<unsigned char>(y));
+                                  });
     }
 
     bool Contains(const std::string& hay, const std::string& needle)
@@ -382,13 +400,17 @@ void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
 
 void GsxMenuNavigator::DiscardStuckMenu(const std::string& sig)
 {
-    if (!pending_.empty() || sig == discardedSig_)
+    if (sig == discardedSig_)
     {
         return;
     }
 
     if (Contains(state_->menu.title, kPushbackDirectionText))
     {
+        discardedSig_ = sig;
+        logger_->LogInfo(std::format("RemoteAPI leaving the pushback direction menu open: '{}'",
+                                     state_->menu.title));
+
         return;
     }
 
@@ -441,10 +463,17 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
             return true;
         }
 
-        if (PickByContains(ownStairs ? "Yes" : "No"))
+        if (PickByPrefix(ownStairs ? "Yes" : "No"))
         {
             return true;
         }
+    }
+
+    if (Contains(menu.title, kBlockedSpotText)
+        && Contains(menu.title, kRemoveStairsText)
+        && PickByPrefix("Yes"))
+    {
+        return true;
     }
 
     if ((settings_ == nullptr || settings_->autoSelectGsxChoice)
@@ -498,7 +527,7 @@ bool GsxMenuNavigator::HandlePendingCompletions()
             return true;
         }
 
-        if (PickByContains(kRefuelingLoadedText))
+        if (PickByContains(kRefuelingEntryText))
         {
             return true;
         }
@@ -634,7 +663,18 @@ void GsxMenuNavigator::PumpRequests()
             continue;
         }
 
-        if (it->attempts >= kMaxTriggerAttempts)
+        if (gsx::services::ASecondPickUndoesIt(it->confirmId) && it->attempts > 0
+            && (nowMs_() - it->lastSentMs) >= kToggleGiveUpMs)
+        {
+            logger_->LogInfo(std::format(
+                "RemoteAPI stopped waiting for '{}'; a service that toggles is never sent twice, so the request is dropped",
+                it->label));
+            it = pending_.erase(it);
+
+            continue;
+        }
+
+        if (it->attempts >= kMaxTriggerAttempts && (nowMs_() - it->lastSentMs) >= kTriggerRetryMs)
         {
             logger_->LogInfo(std::format("RemoteAPI '{}' never taken by GSX after {} attempts",
                                          it->label, it->attempts));
@@ -653,7 +693,9 @@ void GsxMenuNavigator::PumpRequests()
 
     for (PendingRequest& request : pending_)
     {
-        if (request.attempts > 0 && (nowMs_() - request.lastSentMs) < kTriggerRetryMs)
+        if (request.attempts > 0
+            && (gsx::services::ASecondPickUndoesIt(request.confirmId)
+                || (nowMs_() - request.lastSentMs) < kTriggerRetryMs))
         {
             continue;
         }
@@ -854,7 +896,7 @@ bool GsxMenuNavigator::IsMenuSettled() const
     return !resyncPending_ && (nowMs_() - lastActionMs_) >= kMenuSettleMs;
 }
 
-bool GsxMenuNavigator::PickByContains(const std::string& needle)
+bool GsxMenuNavigator::PickFirstMatching(const std::function<bool(const std::string&)>& matches)
 {
     const auto& e = state_->menu.entries;
     const auto& disabled = state_->menu.disabled;
@@ -865,7 +907,7 @@ bool GsxMenuNavigator::PickByContains(const std::string& needle)
             continue;
         }
 
-        if (Contains(e[i], needle))
+        if (matches(e[i]))
         {
             lastActionMs_ = nowMs_();
             client_->SendCommand("menu.pick", QJsonObject{{"index", static_cast<int>(i)}});
@@ -877,6 +919,16 @@ bool GsxMenuNavigator::PickByContains(const std::string& needle)
     }
 
     return false;
+}
+
+bool GsxMenuNavigator::PickByContains(const std::string& needle)
+{
+    return PickFirstMatching([&needle](const std::string& entry) { return Contains(entry, needle); });
+}
+
+bool GsxMenuNavigator::PickByPrefix(const std::string& needle)
+{
+    return PickFirstMatching([&needle](const std::string& entry) { return StartsWithFold(entry, needle); });
 }
 
 std::string GsxMenuNavigator::MenuSignature() const

@@ -15,6 +15,8 @@ private slots:
     static void callStairsWhenJetwayFailsToComplete();
     static void retriesJetwayWhileItStaysAvailable();
     static void skipsWhenAircraftDoesNotSupportStairsOrJetways();
+    static void neverCallsStairsForAnAircraftThatProvidesItsOwnAccess();
+    static void stillCallsTheJetwayForAnAircraftThatCarriesItsOwnStairs();
     static void advancesImmediatelyWhenJetwayAlreadyInPlace();
     static void givesUpWhenJetwayNeverArrives();
     static void holdsRetriesWhileStairsOperating();
@@ -161,6 +163,35 @@ void CallServicesStateTest::skipsWhenAircraftDoesNotSupportStairsOrJetways()
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingFlightPlan);
     QCOMPARE(f.menuGateway.callJetwayCalls, 0);
+    QCOMPARE(f.menuGateway.callStairsCalls, 0);
+}
+
+void CallServicesStateTest::neverCallsStairsForAnAircraftThatProvidesItsOwnAccess()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.aircraft.supportsStairsOrJetways = false;
+    f.gsxService.stairsAvailable = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingFlightPlan);
+    QCOMPARE(f.menuGateway.callStairsCalls, 0);
+    QVERIFY(!f.ctx.data.jetwayOrStairsRequested);
+}
+
+void CallServicesStateTest::stillCallsTheJetwayForAnAircraftThatCarriesItsOwnStairs()
+{
+    TurnaroundStateFixture f;
+    CallServicesState state;
+
+    f.gsxService.jetwayAvailable = true;
+    f.gsxService.stairsAvailable = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.callJetwayCalls, 1);
     QCOMPARE(f.menuGateway.callStairsCalls, 0);
 }
 

@@ -1,6 +1,8 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDDATA_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDDATA_H
 
+#include "../model/AutomationStatus.h"
+
 struct CabinServiceProgress
 {
     bool asked = false;
@@ -29,7 +31,6 @@ struct TurnaroundData
     bool refuelBaselined = false;
     double refuelStallSampleKg = 0.0;
     int refuelStallTicks = 0;
-    bool refuelCompletionForced = false;
     bool boardingBaselined = false;
     int boardingStallTicks = 0;
     int boardingCompletionAttempts = 0;
@@ -38,7 +39,15 @@ struct TurnaroundData
     int fuelRequestStallTicks = 0;
     bool fuelRequestStalled = false;
     bool fuelPlanOverCapacity = false;
+    bool fuelDidNotStay = false;
+    bool fuelStayChecked = false;
+    bool fuelStayDismissed = false;
+    double fuelShortfallKg = 0.0;
+    double settledFuelKg = 0.0;
+    EngineConfirmationBlock engineConfirmationBlock = EngineConfirmationBlock::None;
+    bool engineConfirmationSent = false;
     bool servicesStalled = false;
+    bool serviceInterrupted = false;
     int servicesWaitSeconds = 0;
     int servicesOperatingTicks = 0;
     bool boardingRequested = false;
