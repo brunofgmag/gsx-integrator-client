@@ -157,6 +157,7 @@ private slots:
     static void airstairsMenuPicksAirportStairsByDefault();
     static void airstairsMenuPicksAirplaneStairsWhenEnabled();
     static void airstairsMenuYieldsToTheJetwayEvenWithOwnStairsEnabled();
+    static void airstairsMenuTakesTheJetwayWhenOwnStairsAreOff();
     static void deIceMenuPicksYesWhenEnabled();
     static void deIceMenuDeclinedByDefault();
     static void picksSimbriefBlockFuelOnRefuelingLevelMenu();
@@ -192,6 +193,8 @@ private slots:
     static void resetAllowsClosingTheSameStuckMenuAgain();
     static void aRequestForAServiceAlreadyUnderwayIsDroppedBeforeSending();
     static void theGpuToggleStillFiresWhileTheServiceRuns();
+    static void aServiceThatTogglesIsNeverSentTwice();
+    static void theStairsAreNeverAskedForASecondTime();
 };
 
 void GsxMenuNavigatorTest::serviceTriggersUseCanonicalVerbs()
@@ -1150,6 +1153,25 @@ void GsxMenuNavigatorTest::airstairsMenuYieldsToTheJetwayEvenWithOwnStairsEnable
     GsxRemoteState state;
     AutomationSettings settings;
     settings.useAircraftStairs = true;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    ShowMenu(state, "Use airplane's own airstairs?",
+             {"Yes - Use airplane stairs (no jetway)", "No - Use jetway"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+
+    QCOMPARE(pick->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::airstairsMenuTakesTheJetwayWhenOwnStairsAreOff()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
@@ -2200,6 +2222,78 @@ void GsxMenuNavigatorTest::theGpuToggleStillFiresWhileTheServiceRuns()
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("service.trigger"), 1);
+}
+
+void GsxMenuNavigatorTest::aServiceThatTogglesIsNeverSentTwice()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+
+    nav.ToggleGpu();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    fakeNow = 30000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "stopped waiting"));
+
+    fakeNow = 60000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "stopped waiting"));
+
+    fakeNow = 100000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(Logged(logger, "stopped waiting"));
+}
+
+void GsxMenuNavigatorTest::theStairsAreNeverAskedForASecondTime()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "OperateStairs");
+
+    nav.CallStairs();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    fakeNow = 30000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "stopped waiting"));
+
+    fakeNow = 60000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "stopped waiting"));
+
+    fakeNow = 100000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(Logged(logger, "stopped waiting"));
 }
 
 QTEST_GUILESS_MAIN(GsxMenuNavigatorTest)
