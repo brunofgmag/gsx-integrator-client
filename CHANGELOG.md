@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.29.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.1...v1.29.2) (2026-09-01)
+
+
+* read the cable, not the switch, and yield the stairs spot ([#112](https://github.com/brunofgmag/gsx-integrator-client/issues/112)) ([5393d50](https://github.com/brunofgmag/gsx-integrator-client/commit/5393d5093df60be30965266202e2bb6e83c60f3d))
+
+
+### Bug Fixes
+
+* **gsx:** yield the stairs spot when a vehicle is waiting for it ([e4a2056](https://github.com/brunofgmag/gsx-integrator-client/commit/e4a20566faf31fb037f5c92fd17508bf78c13752)) ([5393d50](https://github.com/brunofgmag/gsx-integrator-client/commit/5393d5093df60be30965266202e2bb6e83c60f3d))
+* **pmdg:** gate the ground equipment phase on power present, not power on ([ca7dd78](https://github.com/brunofgmag/gsx-integrator-client/commit/ca7dd7827ff9750ad0c0ca56d9d4b9043c3a9dea)) ([5393d50](https://github.com/brunofgmag/gsx-integrator-client/commit/5393d5093df60be30965266202e2bb6e83c60f3d))
+
 ## [1.29.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.0...v1.29.1) (2026-09-01)
 
 
