@@ -83,6 +83,7 @@ private slots:
     static void evaluatingTheGroundConnectionRuleWritesNothing();
     static void evaluatingThePayloadRuleWritesNothing();
     static void groundPowerFollowsExtPowerAnnunciator();
+    static void groundPowerReadsTheCableBeforeTheSwitch();
     static void onTickPollsGateways();
     static void observationTickWritesNothing();
     static void drivingTickWritesWhatObservationHeldBack();
@@ -156,6 +157,17 @@ void Pmdg777Test::groundPowerFollowsExtPowerAnnunciator()
     fixture.data->extPowerConnected = false;
 
     QCOMPARE(fixture.aircraft->GetGroundPowerStatus().value(), GroundPowerStatus::Disconnected);
+}
+
+void Pmdg777Test::groundPowerReadsTheCableBeforeTheSwitch()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->hasData = true;
+    fixture.data->extPowerAvailable = true;
+    fixture.data->extPowerConnected = false;
+
+    QCOMPARE(fixture.aircraft->GetGroundPowerStatus().value(), GroundPowerStatus::Connected);
 }
 
 void Pmdg777Test::onTickPollsGateways()

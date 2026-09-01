@@ -183,7 +183,7 @@ std::optional<GroundPowerStatus> PmdgAircraft::GetGroundPowerStatus() const
         return GroundPowerStatus::Unknown;
     }
 
-    return GroundPowerConnected() ? GroundPowerStatus::Connected : GroundPowerStatus::Disconnected;
+    return GroundPowerPresent() ? GroundPowerStatus::Connected : GroundPowerStatus::Disconnected;
 }
 
 bool PmdgAircraft::SetChocks(const bool placed)

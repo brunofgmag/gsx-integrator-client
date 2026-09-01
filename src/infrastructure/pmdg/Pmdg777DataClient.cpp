@@ -188,10 +188,14 @@ void Pmdg777DataClient::ReportProbe() const
         states.append(QString::number(channel_.Data().DOOR_state[index]));
     }
 
+    const PMDG_777X_Data& data = channel_.Data();
     probe::Change("pmdg777.doors",
-                  QStringLiteral("sdk   pmdg-777 DOOR_state=[%1] cockpit=%2 chocks=%3 brake=%4")
+                  QStringLiteral("sdk   pmdg-777 DOOR_state=[%1] cockpit=%2 chocks=%3 brake=%4 "
+                                 "extAvail=[%5,%6] extOn=[%7,%8]")
                   .arg(states.join(QLatin1Char(',')))
-                  .arg(channel_.Data().DOOR_CockpitDoorOpen)
-                  .arg(channel_.Data().WheelChocksSet)
-                  .arg(ParkingBrakeOn()));
+                  .arg(data.DOOR_CockpitDoorOpen)
+                  .arg(data.WheelChocksSet)
+                  .arg(ParkingBrakeOn())
+                  .arg(data.ELEC_annunExtPowr_AVAIL[0]).arg(data.ELEC_annunExtPowr_AVAIL[1])
+                  .arg(data.ELEC_annunExtPowr_ON[0]).arg(data.ELEC_annunExtPowr_ON[1]));
 }
