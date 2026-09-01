@@ -158,6 +158,9 @@ private slots:
     static void airstairsMenuPicksAirplaneStairsWhenEnabled();
     static void airstairsMenuYieldsToTheJetwayEvenWithOwnStairsEnabled();
     static void airstairsMenuTakesTheJetwayWhenOwnStairsAreOff();
+    static void theBlockedFuelTruckGetsTheSpotYielded();
+    static void theBlockedCargoLoaderGetsTheSpotYieldedToo();
+    static void aStairsMenuWithoutTheBlockedSpotIsLeftAlone();
     static void deIceMenuPicksYesWhenEnabled();
     static void deIceMenuDeclinedByDefault();
     static void picksSimbriefBlockFuelOnRefuelingLevelMenu();
@@ -1184,6 +1187,62 @@ void GsxMenuNavigatorTest::airstairsMenuTakesTheJetwayWhenOwnStairsAreOff()
     QVERIFY(pick != nullptr);
 
     QCOMPARE(pick->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::theBlockedFuelTruckGetsTheSpotYielded()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    ShowMenu(state,
+             "The fuel truck is waiting for the spot where the stairs at L Entry 5 are parked. Remove the stairs?",
+             {"Yes, remove the stairs", "No, keep the stairs"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+
+    QCOMPARE(pick->args.value("index").toInt(), 0);
+}
+
+void GsxMenuNavigatorTest::theBlockedCargoLoaderGetsTheSpotYieldedToo()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    ShowMenu(state,
+             "The front cargo loader is waiting for the spot where the stairs at AFT Pax are parked. Remove the stairs?",
+             {"No, keep the stairs", "Yes, remove the stairs"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+
+    QCOMPARE(pick->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::aStairsMenuWithoutTheBlockedSpotIsLeftAlone()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    ShowMenu(state,
+             "The stairs at L Entry 5 are no longer needed. Remove the stairs?",
+             {"Yes, remove the stairs", "No, keep the stairs"});
+    nav.OnMenuChanged();
+
+    QVERIFY(client.Last("menu.pick") == nullptr);
 }
 
 void GsxMenuNavigatorTest::deIceMenuPicksYesWhenEnabled()

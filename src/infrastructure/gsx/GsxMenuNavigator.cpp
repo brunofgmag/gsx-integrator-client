@@ -33,6 +33,8 @@ namespace
     constexpr auto kDeIceQuestion = "de-icing";
     constexpr auto kAirstairsQuestion = "own airstairs";
     constexpr auto kJetwayAnswerText = "use jetway";
+    constexpr auto kBlockedSpotText = "waiting for the spot";
+    constexpr auto kRemoveStairsText = "Remove the stairs";
 
     const char* CrewChoiceEntry(const CrewChoice choice)
     {
@@ -465,6 +467,13 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
         {
             return true;
         }
+    }
+
+    if (Contains(menu.title, kBlockedSpotText)
+        && Contains(menu.title, kRemoveStairsText)
+        && PickByPrefix("Yes"))
+    {
+        return true;
     }
 
     if ((settings_ == nullptr || settings_->autoSelectGsxChoice)
