@@ -27,6 +27,7 @@ public:
 
     explicit GsxDoorSync(VariableReader* variableGateway);
 
+    void WatchExit(GsxDoor door, int exitIndex);
     void Observe();
     void Report() const;
     void Sync(const DoorWriter& write);
@@ -35,10 +36,21 @@ public:
     [[nodiscard]] double VehicleState(const char* lVar, double absent) const;
 
 private:
+    struct ExitWatch
+    {
+        int index = -1;
+        double lastPosition = 0.0;
+        bool sampled = false;
+        bool moving = false;
+    };
+
     [[nodiscard]] bool IsDesiredOpen(GsxDoor door) const;
+    [[nodiscard]] bool IsMoving(GsxDoor door) const;
+    void SampleExits();
 
     VariableReader* variableGateway_;
     std::array<double, static_cast<std::size_t>(GsxDoor::Count)> lastTargets_{};
+    std::array<ExitWatch, static_cast<std::size_t>(GsxDoor::Count)> exits_{};
     bool heldForDeparture_ = false;
     bool couatlSeenStarted_ = false;
     bool couatlRestarting_ = false;

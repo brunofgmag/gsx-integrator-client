@@ -2,6 +2,7 @@
 
 #include "GsxLVars.h"
 #include "../probe/ProbeLog.h"
+#include "../simvars/SimVars.h"
 #include "../simvars/VariableGateway.h"
 
 #include <algorithm>
@@ -65,6 +66,16 @@ GsxDoorSync::GsxDoorSync(VariableReader* variableGateway) : variableGateway_(var
     lastTargets_.fill(kDoorUnknown);
 }
 
+void GsxDoorSync::WatchExit(const GsxDoor door, const int exitIndex)
+{
+    exits_[static_cast<std::size_t>(door)] = ExitWatch{exitIndex};
+}
+
+bool GsxDoorSync::IsMoving(const GsxDoor door) const
+{
+    return exits_[static_cast<std::size_t>(door)].moving;
+}
+
 void GsxDoorSync::Sync(const DoorWriter& write)
 {
     Report();
@@ -77,26 +88,29 @@ void GsxDoorSync::Sync(const DoorWriter& write)
     for (const GsxDoor door : kAllDoors)
     {
         double& lastTarget = lastTargets_[static_cast<std::size_t>(door)];
-        if (IsDesiredOpen(door))
+        const bool wantsOpen = IsDesiredOpen(door);
+        const bool pending = wantsOpen ? lastTarget != kDoorOpen : lastTarget == kDoorOpen;
+        if (!pending)
         {
-            if (lastTarget != kDoorOpen)
-            {
-                probe::Line(QStringLiteral("write sync  %1 open=1").arg(QLatin1String(DoorName(door))));
-                write(door, true);
-                lastTarget = kDoorOpen;
-            }
+            continue;
         }
-        else if (lastTarget == kDoorOpen)
+
+        if (IsMoving(door))
         {
-            probe::Line(QStringLiteral("write sync  %1 open=0").arg(QLatin1String(DoorName(door))));
-            write(door, false);
-            lastTarget = kDoorClosed;
+            probe::Line(QStringLiteral("hold  sync  %1 moving").arg(QLatin1String(DoorName(door))));
+            continue;
         }
+
+        probe::Line(QStringLiteral("write sync  %1 open=%2").arg(QLatin1String(DoorName(door))).arg(wantsOpen ? 1 : 0));
+        write(door, wantsOpen);
+        lastTarget = wantsOpen ? kDoorOpen : kDoorClosed;
     }
 }
 
 void GsxDoorSync::Observe()
 {
+    SampleExits();
+
     const bool started = variableGateway_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) >= 1.0;
 
     if (!started)
@@ -118,6 +132,29 @@ void GsxDoorSync::Observe()
     }
 
     couatlSeenStarted_ = true;
+}
+
+void GsxDoorSync::SampleExits()
+{
+    for (ExitWatch& exit : exits_)
+    {
+        if (exit.index < 0)
+        {
+            continue;
+        }
+
+        const std::string name = simvars::SimExitOpen(exit.index);
+        if (!variableGateway_->HasReceivedAVar(name, simvars::kPercentUnit))
+        {
+            exit.moving = false;
+            continue;
+        }
+
+        const double position = variableGateway_->GetAVar(name, simvars::kPercentUnit);
+        exit.moving = exit.sampled && position != exit.lastPosition;
+        exit.lastPosition = position;
+        exit.sampled = true;
+    }
 }
 
 double GsxDoorSync::VehicleState(const char* lVar, const double absent) const
