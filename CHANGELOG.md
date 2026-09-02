@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.29.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.3...v1.29.4) (2026-09-02)
+
+
+* keep the stairs during boarding, complete the boarding they hold up and open the doors when the vehicle is at them ([#117](https://github.com/brunofgmag/gsx-integrator-client/issues/117)) ([c7a058d](https://github.com/brunofgmag/gsx-integrator-client/commit/c7a058d03aa8dac63c9756d91591b7f41ff39cfe))
+
+
+### Bug Fixes
+
+* **gsx:** keep the stairs during boarding, complete the boarding they hold up and skip the tug where there is none ([4976d9e](https://github.com/brunofgmag/gsx-integrator-client/commit/4976d9eb1b511bdf495fe35b2b3c15d7c6d88cd8)) ([c7a058d](https://github.com/brunofgmag/gsx-integrator-client/commit/c7a058d03aa8dac63c9756d91591b7f41ff39cfe))
+* **gsx:** open the pax door as the stairs approach and the cargo door once the loader waits at it ([c9f1942](https://github.com/brunofgmag/gsx-integrator-client/commit/c9f194254fa6e21775f838f79ee0e7cda6dc3b37)) ([c7a058d](https://github.com/brunofgmag/gsx-integrator-client/commit/c7a058d03aa8dac63c9756d91591b7f41ff39cfe))
+* **turnaround:** log an observed rule verdict once until it changes ([54a3174](https://github.com/brunofgmag/gsx-integrator-client/commit/54a317489708854af8171e956e1486e77031c590)) ([c7a058d](https://github.com/brunofgmag/gsx-integrator-client/commit/c7a058d03aa8dac63c9756d91591b7f41ff39cfe))
+
 ## [1.29.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.2...v1.29.3) (2026-09-01)
 
 
