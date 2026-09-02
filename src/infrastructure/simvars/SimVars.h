@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstddef>
+#include <string>
 
 #include "VariableGateway.h"
 
@@ -10,6 +11,7 @@ namespace simvars
 {
     inline constexpr auto kKgUnit = "kg";
     inline constexpr auto kBoolUnit = "Bool";
+    inline constexpr auto kPercentUnit = "percent";
 
     inline constexpr auto kSimFuelTotalKg = "FUEL TOTAL QUANTITY WEIGHT";
     inline constexpr auto kSimTotalWeight = "TOTAL WEIGHT";
@@ -22,6 +24,13 @@ namespace simvars
     inline constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
     inline constexpr auto kSimEng3Combustion = "ENG COMBUSTION:3";
     inline constexpr auto kSimEng4Combustion = "ENG COMBUSTION:4";
+
+    inline constexpr auto kSimExitOpen = "EXIT OPEN:";
+
+    inline std::string SimExitOpen(const int exit)
+    {
+        return std::string(kSimExitOpen) + std::to_string(exit);
+    }
 
     inline double EmptyZfwKg(VariableReader& variables)
     {
