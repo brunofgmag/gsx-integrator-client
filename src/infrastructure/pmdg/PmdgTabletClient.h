@@ -39,6 +39,7 @@ public:
     [[nodiscard]] static std::string BuildGroundConn(const std::string& key);
     [[nodiscard]] static std::string BuildGroundVehicle(const std::string& key);
     [[nodiscard]] static bool IsSimbriefFetchSuccess(const std::string& json);
+    [[nodiscard]] static std::string ProbeSignature(const std::string& json);
     struct DoorSnapshot
     {
         std::map<std::string, bool> settled;

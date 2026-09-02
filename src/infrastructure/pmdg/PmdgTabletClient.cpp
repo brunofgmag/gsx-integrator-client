@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <optional>
 #include <utility>
 #include <QtCore/QByteArray>
+#include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QJsonValue>
@@ -41,6 +43,39 @@ namespace
     constexpr auto kGroundPowerRequestKey = "ground_power";
     constexpr std::array kGroundConnMoving = {"CONNECTING", "DISCONNECTING"};
     constexpr std::array kDoorMoving = {"OPENING", "CLOSING"};
+
+    QJsonValue RoundedToUnit(const QJsonValue& value)
+    {
+        if (value.isDouble())
+        {
+            return QJsonValue(std::round(value.toDouble()));
+        }
+
+        if (value.isObject())
+        {
+            QJsonObject rounded;
+            const QJsonObject object = value.toObject();
+            for (auto it = object.constBegin(); it != object.constEnd(); ++it)
+            {
+                rounded.insert(it.key(), RoundedToUnit(it.value()));
+            }
+
+            return rounded;
+        }
+
+        if (value.isArray())
+        {
+            QJsonArray rounded;
+            for (const QJsonValue& item : value.toArray())
+            {
+                rounded.append(RoundedToUnit(item));
+            }
+
+            return rounded;
+        }
+
+        return value;
+    }
 
     std::string BuildEnvelope(const char* tag, const QJsonObject& data)
     {
@@ -347,7 +382,20 @@ void PmdgTabletClient::ReportProbe(const std::string& payload)
     }
 
     probe::Change("efb." + tag.toStdString(),
+                  QString::fromStdString(ProbeSignature(payload)),
                   QStringLiteral("efb   %1").arg(QString::fromStdString(payload)));
+}
+
+std::string PmdgTabletClient::ProbeSignature(const std::string& json)
+{
+    const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(json));
+    if (!document.isObject())
+    {
+        return json;
+    }
+
+    return QJsonDocument(RoundedToUnit(document.object()).toObject())
+        .toJson(QJsonDocument::Compact).toStdString();
 }
 
 void PmdgTabletClient::OnInbound(const std::string& payload)
