@@ -1,6 +1,7 @@
 #include "RequestPushbackState.h"
 
 #include "../TurnaroundContext.h"
+#include "../../ports/DomainLogger.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
@@ -17,6 +18,18 @@ std::optional<TurnaroundTransition> RequestPushbackState::EvaluatePhase(Turnarou
     if (deiceState == GsxStateStatus::Requested || deiceState == GsxStateStatus::Active)
     {
         return std::nullopt;
+    }
+
+    if (!ctx.gsxGateway->OffersPushback())
+    {
+        if (!data.pushbackRequested)
+        {
+            ctx.logger->LogInfo("GSX offers no pushback at this parking; asking for the departure clearance instead of a tug");
+            ctx.menuGateway->RequestDepartureClearance();
+            data.pushbackRequested = true;
+        }
+
+        return TurnaroundTransition{TurnaroundPhase::WaitingDeparture};
     }
 
     const GsxStateStatus departureState = ctx.gsxGateway->GetStateStatus(GsxState::Pushback);

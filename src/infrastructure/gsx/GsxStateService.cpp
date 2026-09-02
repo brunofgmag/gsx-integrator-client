@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <ranges>
+#include <string_view>
 
 #include "GsxLVars.h"
 #include "../logging/LogMacros.h"
@@ -12,6 +13,16 @@ using namespace gsx::lvars;
 
 namespace
 {
+    constexpr auto kNoPushbackVerdict = "no pushback";
+
+    bool EqualsFold(const std::string& lhs, const std::string_view rhs)
+    {
+        return std::ranges::equal(lhs, rhs, [](const char x, const char y)
+        {
+            return std::tolower(static_cast<unsigned char>(x)) == std::tolower(static_cast<unsigned char>(y));
+        });
+    }
+
     const char* StateLVarName(const GsxState gsxState)
     {
         switch (gsxState)
@@ -261,6 +272,19 @@ bool GsxStateService::IsServiceInProgress(const GroundService service) const
 
     return svc->stateRaw == static_cast<int>(GsxStateStatus::Requested)
         || svc->stateRaw == static_cast<int>(GsxStateStatus::Active);
+}
+
+bool GsxStateService::OffersPushback() const
+{
+    if (remote_ == nullptr)
+    {
+        return true;
+    }
+
+    return std::ranges::none_of(remote_->apronVerdict, [](const std::string& descriptor)
+    {
+        return EqualsFold(descriptor, kNoPushbackVerdict);
+    });
 }
 
 bool GsxStateService::AreStairsAvailable() const

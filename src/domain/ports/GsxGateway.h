@@ -68,6 +68,7 @@ public:
     [[nodiscard]] virtual bool IsGoodEngineStartConfirmationEnabled() const = 0;
     [[nodiscard]] virtual GroundPowerStatus GetGpuStatus() const = 0;
     [[nodiscard]] virtual bool IsServiceInProgress(GroundService service) const = 0;
+    [[nodiscard]] virtual bool OffersPushback() const = 0;
 
     virtual void TakeOverFuelAndPayload() = 0;
 };
