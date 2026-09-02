@@ -50,6 +50,7 @@ public:
     bool cleaningInProgress = false;
     bool gpuInProgress = false;
     bool departureInProgress = false;
+    bool offersPushback = true;
 
 
     int observeCalls = 0;
@@ -179,6 +180,8 @@ public:
             return false;
         }
     }
+
+    [[nodiscard]] bool OffersPushback() const override { return offersPushback; }
 
     void TakeOverFuelAndPayload() override
     {

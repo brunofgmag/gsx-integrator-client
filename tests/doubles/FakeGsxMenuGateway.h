@@ -8,6 +8,7 @@ class FakeGsxMenuGateway final : public GsxMenuGateway
 public:
     bool confirmGoodEnginesResult = true;
     bool completePushbackResult = true;
+    bool stairsKeptForPassengers = false;
 
     int callJetwayCalls = 0;
     int callStairsCalls = 0;
@@ -16,6 +17,7 @@ public:
     int boardingCalls = 0;
     int deboardingCalls = 0;
     int pushbackCalls = 0;
+    int departureClearanceCalls = 0;
     int openPushbackPanelCalls = 0;
     int refuelingCalls = 0;
     int confirmGoodEnginesCalls = 0;
@@ -43,6 +45,8 @@ public:
     void RequestDeboarding() override { ++deboardingCalls; }
 
     void RequestPushback() override { ++pushbackCalls; }
+
+    void RequestDepartureClearance() override { ++departureClearanceCalls; }
 
     void OpenPushbackPanel() override { ++openPushbackPanelCalls; }
 
@@ -73,6 +77,8 @@ public:
         ++completePushbackCalls;
         return completePushbackResult;
     }
+
+    [[nodiscard]] bool WereStairsKeptForPassengers() const override { return stairsKeptForPassengers; }
 
     void DisableGsxMenu() override {}
 

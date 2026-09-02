@@ -152,8 +152,17 @@ void TurnaroundState::ObserveRules(TurnaroundContext& ctx, const RuleCadence cad
 
         const RuleVerdict verdict = rule->Evaluate(ruleContext);
 
-        ctx.logger->LogInfo(std::format("Rule {} would {}{}", rule->Name(),
-                                        verdict.holds ? "hold" : "pass",
-                                        verdict.holds ? std::format(": {}", verdict.reason) : std::string{}));
+        std::string message = std::format("Rule {} would {}{}", rule->Name(),
+                                          verdict.holds ? "hold" : "pass",
+                                          verdict.holds ? std::format(": {}", verdict.reason) : std::string{});
+
+        std::string& lastLogged = observedVerdicts_[rule->Name()];
+        if (lastLogged == message)
+        {
+            continue;
+        }
+
+        lastLogged = std::move(message);
+        ctx.logger->LogInfo(lastLogged);
     }
 }

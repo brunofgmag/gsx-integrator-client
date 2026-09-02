@@ -35,6 +35,8 @@ namespace
     constexpr auto kJetwayAnswerText = "use jetway";
     constexpr auto kBlockedSpotText = "waiting for the spot";
     constexpr auto kRemoveStairsText = "Remove the stairs";
+    constexpr auto kBoardingServiceId = "Boarding";
+    constexpr auto kDeboardingServiceId = "Deboarding";
 
     const char* CrewChoiceEntry(const CrewChoice choice)
     {
@@ -129,17 +131,31 @@ void GsxMenuNavigator::RequestSimbriefLoad()
 
 void GsxMenuNavigator::RequestBoarding()
 {
-    TriggerService("Boarding");
+    stairsKeptForPassengers_ = false;
+    TriggerService(kBoardingServiceId);
 }
 
 void GsxMenuNavigator::RequestDeboarding()
 {
-    TriggerService("Deboarding");
+    stairsKeptForPassengers_ = false;
+    TriggerService(kDeboardingServiceId);
 }
 
 void GsxMenuNavigator::RequestPushback()
 {
     TriggerService(gsx::services::Id(GroundService::Departure));
+}
+
+void GsxMenuNavigator::RequestDepartureClearance()
+{
+    OpenIntent(Intent::Service);
+    SyncGsxToolbar();
+
+    const char* departure = gsx::services::Id(GroundService::Departure);
+    ArmRequest("service.trigger",
+               QJsonObject{{"service", QString::fromLatin1(departure)}},
+               departure,
+               {});
 }
 
 void GsxMenuNavigator::RequestRefueling()
@@ -230,6 +246,7 @@ void GsxMenuNavigator::Reset()
     completingRefuel_ = {};
     completingBoarding_ = {};
     confirmingEngines_ = {};
+    stairsKeptForPassengers_ = false;
     intent_ = Intent::None;
     intentSinceMs_ = 0;
     lastPickedSig_.clear();
@@ -469,11 +486,19 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
         }
     }
 
-    if (Contains(menu.title, kBlockedSpotText)
-        && Contains(menu.title, kRemoveStairsText)
-        && PickByPrefix("Yes"))
+    if (Contains(menu.title, kBlockedSpotText) && Contains(menu.title, kRemoveStairsText))
     {
-        return true;
+        const bool passengersNeedThem = PassengersAreFlowing();
+        if (PickByPrefix(passengersNeedThem ? "No" : "Yes"))
+        {
+            if (passengersNeedThem)
+            {
+                stairsKeptForPassengers_ = true;
+                logger_->LogInfo("RemoteAPI keeping the stairs: passengers are still using them");
+            }
+
+            return true;
+        }
     }
 
     if ((settings_ == nullptr || settings_->autoSelectGsxChoice)
@@ -741,7 +766,12 @@ bool GsxMenuNavigator::IsAlreadyUnderway(const PendingRequest& request) const
         return false;
     }
 
-    const GsxRemoteService* service = FindService(*state_, request.confirmId);
+    return IsServiceUnderway(request.confirmId);
+}
+
+bool GsxMenuNavigator::IsServiceUnderway(const std::string& serviceId) const
+{
+    const GsxRemoteService* service = FindService(*state_, serviceId);
     if (service == nullptr)
     {
         return false;
@@ -749,6 +779,28 @@ bool GsxMenuNavigator::IsAlreadyUnderway(const PendingRequest& request) const
 
     return service->stateRaw == static_cast<int>(GsxStateStatus::Requested)
         || service->stateRaw == static_cast<int>(GsxStateStatus::Active);
+}
+
+bool GsxMenuNavigator::PassengersAreFlowing() const
+{
+    for (const char* serviceId : {kBoardingServiceId, kDeboardingServiceId})
+    {
+        if (IsServiceUnderway(serviceId))
+        {
+            return true;
+        }
+
+        const bool requestOutstanding = std::ranges::any_of(pending_, [serviceId](const PendingRequest& request)
+        {
+            return request.label == serviceId && request.attempts > 0;
+        });
+        if (requestOutstanding)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool GsxMenuNavigator::WasTaken(const PendingRequest& request) const
@@ -872,7 +924,13 @@ void GsxMenuNavigator::RearmPanelLatches()
 
 void GsxMenuNavigator::OnTurnaroundTurned()
 {
+    stairsKeptForPassengers_ = false;
     RearmPanelLatches();
+}
+
+bool GsxMenuNavigator::WereStairsKeptForPassengers() const
+{
+    return stairsKeptForPassengers_;
 }
 
 void GsxMenuNavigator::OnPushbackStarted()

@@ -1,7 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDSTATE_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDSTATE_H
 
+#include <map>
 #include <optional>
+#include <string>
 #include "../TurnaroundTransition.h"
 #include "../TurnaroundPhase.h"
 #include "../rules/PhaseNeeds.h"
@@ -42,6 +44,7 @@ private:
     [[nodiscard]] bool AnyRuleHolds(TurnaroundContext& ctx);
 
     int holdTicks_ = 0;
+    std::map<std::string, std::string> observedVerdicts_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDSTATE_H

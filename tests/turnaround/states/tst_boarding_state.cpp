@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <QtTest/QTest>
 
 #include "../TurnaroundStateFixture.h"
@@ -23,6 +24,12 @@ private slots:
     static void stopsAskingOnceTheServiceCloses();
     static void doesNotAskGsxToCompleteWhileTheLoaderIsStillWorking();
     static void doesNotAskGsxToCompleteWhilePassengersAreMissing();
+    static void asksGsxToCompleteWhenTheLoadersAreHeldBehindTheStairs();
+    static void keepsAskingWhileTheLoadersStayHeldBehindTheStairs();
+    static void doesNotAskGsxToCompleteWhenCargoIsMerelySlow();
+    static void doesNotAskGsxToCompleteWhilePassengersStillUseTheKeptStairs();
+    static void doesNotAskGsxToCompleteOnceTheHeldCargoStartsMoving();
+    static void doesNotAskGsxToCompleteWhileTheHeldLoaderReachesADoor();
     static void warnsWhenGsxDropsTheBoardingItHadStarted();
 };
 
@@ -381,6 +388,137 @@ void BoardingStateTest::doesNotAskGsxToCompleteWhilePassengersAreMissing()
     }
 
     QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
+}
+
+namespace
+{
+    void ArrangeCargoHeldBehindTheStairs(TurnaroundStateFixture& f)
+    {
+        f.aircraft.cargo = false;
+        f.aircraft.boardMethod = BoardBy::Client;
+        f.ctx.data.initialZfwKg = 40000.0;
+        f.ctx.data.plannedZfwKg = 60000.0;
+        f.ctx.data.plannedPassengers = 151;
+        f.gsxService.boardingState = GsxStateStatus::Active;
+        f.gsxService.boardedPassengers = 151;
+        f.gsxService.cargoPercent = 0.0;
+        f.menuGateway.stairsKeptForPassengers = true;
+    }
+}
+
+void BoardingStateTest::asksGsxToCompleteWhenTheLoadersAreHeldBehindTheStairs()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeCargoHeldBehindTheStairs(f);
+
+    for (int tick = 0; tick < 89; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
+    QVERIFY(std::ranges::any_of(f.logger.messages, [](const std::string& message)
+    {
+        return message.find("held behind the stairs") != std::string::npos;
+    }));
+}
+
+void BoardingStateTest::keepsAskingWhileTheLoadersStayHeldBehindTheStairs()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeCargoHeldBehindTheStairs(f);
+
+    for (int tick = 0; tick < 120; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 2);
+
+    f.gsxService.boardingState = GsxStateStatus::Completed;
+
+    const auto transition = state.Evaluate(f.ctx);
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingReadyToPush);
+    QCOMPARE(f.aircraft.currentZfwKg, 60000.0);
+}
+
+void BoardingStateTest::doesNotAskGsxToCompleteWhenCargoIsMerelySlow()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeCargoHeldBehindTheStairs(f);
+    f.menuGateway.stairsKeptForPassengers = false;
+
+    for (int tick = 0; tick < 400; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
+}
+
+void BoardingStateTest::doesNotAskGsxToCompleteWhilePassengersStillUseTheKeptStairs()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeCargoHeldBehindTheStairs(f);
+    f.gsxService.boardedPassengers = 150;
+
+    for (int tick = 0; tick < 400; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
+}
+
+void BoardingStateTest::doesNotAskGsxToCompleteOnceTheHeldCargoStartsMoving()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeCargoHeldBehindTheStairs(f);
+
+    for (int tick = 0; tick < 80; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    f.gsxService.cargoPercent = 5.0;
+
+    for (int tick = 0; tick < 400; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
+    QCOMPARE(f.ctx.data.boardingStallTicks, 0);
+}
+
+void BoardingStateTest::doesNotAskGsxToCompleteWhileTheHeldLoaderReachesADoor()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeCargoHeldBehindTheStairs(f);
+    f.gsxService.loaderWaitingForDoor = true;
+
+    for (int tick = 0; tick < 400; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
 }
 
 void BoardingStateTest::warnsWhenGsxDropsTheBoardingItHadStarted()

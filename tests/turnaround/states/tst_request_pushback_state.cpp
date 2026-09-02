@@ -19,6 +19,8 @@ private slots:
     static void holdsWhileDeiceActive();
     static void doesNotRetryWhileDeiceActive();
     static void resumesAfterDeiceCompletes();
+    static void asksForTheClearanceAndSkipsTheTugWhereGsxOffersNoPushback();
+    static void theClearanceWaitsForDeiceToFinish();
 };
 
 void RequestPushbackStateTest::requestsPushbackWhenCallable()
@@ -186,6 +188,50 @@ void RequestPushbackStateTest::resumesAfterDeiceCompletes()
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingPushbackToStart);
+}
+
+void RequestPushbackStateTest::asksForTheClearanceAndSkipsTheTugWhereGsxOffersNoPushback()
+{
+    TurnaroundStateFixture f;
+    RequestPushbackState state;
+
+    f.gsxService.offersPushback = false;
+    f.gsxService.departureState = GsxStateStatus::Callable;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingDeparture);
+    QCOMPARE(f.menuGateway.departureClearanceCalls, 1);
+    QCOMPARE(f.menuGateway.pushbackCalls, 0);
+    QVERIFY(f.ctx.data.pushbackRequested);
+
+    const auto again = state.Evaluate(f.ctx);
+
+    QVERIFY(again.has_value());
+    QCOMPARE(again->next, TurnaroundPhase::WaitingDeparture);
+    QCOMPARE(f.menuGateway.departureClearanceCalls, 1);
+}
+
+void RequestPushbackStateTest::theClearanceWaitsForDeiceToFinish()
+{
+    TurnaroundStateFixture f;
+    RequestPushbackState state;
+
+    f.gsxService.offersPushback = false;
+    f.gsxService.departureState = GsxStateStatus::Callable;
+    f.gsxService.deiceState = GsxStateStatus::Active;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.departureClearanceCalls, 0);
+
+    f.gsxService.deiceState = GsxStateStatus::Completed;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingDeparture);
+    QCOMPARE(f.menuGateway.departureClearanceCalls, 1);
 }
 
 QTEST_APPLESS_MAIN(RequestPushbackStateTest)

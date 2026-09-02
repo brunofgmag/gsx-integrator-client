@@ -5,6 +5,7 @@
 #include "../TurnaroundMath.h"
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
+#include "../../ports/DomainLogger.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
@@ -75,7 +76,8 @@ void BoardingState::MaybeForceCompletion(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 
-    if (IsCargoPending(ctx) || !IsBarFull(ctx))
+    const bool heldBehindTheStairs = IsCargoHeldBehindTheStairs(ctx);
+    if (IsCargoPending(ctx) || (!IsBarFull(ctx) && !heldBehindTheStairs))
     {
         data.boardingStallTicks = 0;
         data.boardingCompletionAttempts = 0;
@@ -91,8 +93,27 @@ void BoardingState::MaybeForceCompletion(TurnaroundContext& ctx)
     {
         data.boardingStallTicks = 0;
         ++data.boardingCompletionAttempts;
+        if (heldBehindTheStairs && data.boardingCompletionAttempts == 1)
+        {
+            ctx.logger->LogInfo(
+                "Boarding: every passenger is aboard and the loaders are held behind the stairs; asking GSX to complete");
+        }
         ctx.menuGateway->CompleteBoarding();
     }
+}
+
+bool BoardingState::IsCargoHeldBehindTheStairs(const TurnaroundContext& ctx)
+{
+    if (!ctx.menuGateway->WereStairsKeptForPassengers() || ctx.aircraft->IsCargoVariant())
+    {
+        return false;
+    }
+
+    const auto& data = ctx.data;
+
+    return data.plannedPassengers > 0
+        && data.boardedPassengers >= data.plannedPassengers
+        && ctx.gsxGateway->GetBoardingCargoPercent() <= 0.0;
 }
 
 bool BoardingState::IsCargoPending(const TurnaroundContext& ctx)

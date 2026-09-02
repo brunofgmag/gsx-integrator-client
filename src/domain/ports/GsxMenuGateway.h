@@ -13,6 +13,7 @@ public:
     virtual void RequestBoarding() = 0;
     virtual void RequestDeboarding() = 0;
     virtual void RequestPushback() = 0;
+    virtual void RequestDepartureClearance() = 0;
     virtual void OpenPushbackPanel() = 0;
     virtual void RequestRefueling() = 0;
     virtual void CompleteRefuel() = 0;
@@ -25,6 +26,7 @@ public:
 
     [[nodiscard]] virtual bool ConfirmGoodEngines() = 0;
     [[nodiscard]] virtual bool CompletePushback() = 0;
+    [[nodiscard]] virtual bool WereStairsKeptForPassengers() const = 0;
 
     virtual void DisableGsxMenu() = 0;
 
