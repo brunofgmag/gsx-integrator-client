@@ -22,6 +22,10 @@ namespace
     constexpr double kJetwayDocked = 5.0;
     constexpr double kJetwayUnavailable = 2.0;
     constexpr double kStairStowedPosition = 55.0;
+
+    constexpr auto kBoardsByJetway = "passengers board through the jetway at the 1L";
+    constexpr auto kBoardsByGsxStairs = "passengers board through the GSX stairs at the 1L";
+    constexpr auto kBoardsByOwnAirstair = "this aircraft boards through its own airstair at the 1L";
 }
 
 AvroRjPaxDoorsServeTheAirstairRule::AvroRjPaxDoorsServeTheAirstairRule(VariableReader& variables,
@@ -70,6 +74,21 @@ bool AvroRjPaxDoorsServeTheAirstairRule::IsFrontDoorWanted() const
             doors_->VehicleState(gsx::lvars::kPassengerStairsFrontState, 0.0));
 }
 
+const char* AvroRjPaxDoorsServeTheAirstairRule::WhatServesTheFrontDoor() const
+{
+    if (doors_->VehicleState(gsx::lvars::kJetway, kJetwayUnavailable) == kJetwayDocked)
+    {
+        return kBoardsByJetway;
+    }
+
+    if (gsx::states::AreStairsArriving(doors_->VehicleState(gsx::lvars::kPassengerStairsFrontState, 0.0)))
+    {
+        return kBoardsByGsxStairs;
+    }
+
+    return kBoardsByOwnAirstair;
+}
+
 void AvroRjPaxDoorsServeTheAirstairRule::DriveFrontDoor(VariableWriter& writer)
 {
     doors_->Report();
@@ -112,6 +131,6 @@ void AvroRjPaxDoorsServeTheAirstairRule::KeepAftDoorClosed(VariableWriter& write
 
     aftDoorCloseWritten_ = true;
     probe::Line(QStringLiteral("write aft AftPax open=0"));
-    LOG_INFO("Closing the 2L: this aircraft boards through its own airstair at the 1L");
+    LOG_INFO("Closing the 2L: %s", WhatServesTheFrontDoor());
     writer.SetLVar(kAftPaxDoorLVar, kDoorClosed);
 }

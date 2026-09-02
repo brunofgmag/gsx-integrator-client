@@ -186,6 +186,11 @@ void AvroRjHoldForOwnAirstairRule::Drive(VariableWriter& writer)
     case Phase::Extended:
         if (variables_->GetLVar(kStairExtendSwitchLVar, 0.0) == kStairSwitchRetracted)
         {
+            if (wanted)
+            {
+                LOG_INFO("Something else stowed the airstair while passengers still need it; putting it back out");
+            }
+
             phase_ = Phase::Stowed;
             break;
         }
