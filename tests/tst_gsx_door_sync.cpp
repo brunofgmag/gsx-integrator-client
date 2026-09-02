@@ -64,6 +64,10 @@ class GsxDoorSyncTest final : public QObject
 
 private slots:
     static void followsVehicleStateWhileCouatlKeepsRunning();
+    static void opensThePaxDoorWhileTheStairsAreStillApproaching();
+    static void keepsThePaxDoorShutWhileTheStairsAreMerelyDispatched();
+    static void keepsTheCargoDoorShutWhileTheLoaderIsMerelyDispatched();
+    static void opensTheCargoDoorOnceTheLoaderWaitsAtIt();
     static void distrustsVehicleStateInheritedAcrossACouatlRestart();
     static void distrustsAnInheritedJetwayDownToUnavailable();
     static void trustsTheVehicleStateAgainOnceItActuallyMoves();
@@ -84,6 +88,66 @@ void GsxDoorSyncTest::followsVehicleStateWhileCouatlKeepsRunning()
     Tick(sync, gateway, recorder);
 
     QVERIFY(recorder.Opened(GsxDoor::AftPax));
+}
+
+void GsxDoorSyncTest::opensThePaxDoorWhileTheStairsAreStillApproaching()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kPassengerStairsRearState] = gsx::states::kVehicleApproaching;
+
+    GsxDoorSync sync(&gateway);
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(recorder.Opened(GsxDoor::AftPax));
+}
+
+void GsxDoorSyncTest::keepsThePaxDoorShutWhileTheStairsAreMerelyDispatched()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kPassengerStairsRearState] = gsx::states::kVehicleDispatched;
+
+    GsxDoorSync sync(&gateway);
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(!recorder.Opened(GsxDoor::AftPax));
+}
+
+void GsxDoorSyncTest::keepsTheCargoDoorShutWhileTheLoaderIsMerelyDispatched()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kBaggageLoaderFrontState] = gsx::states::kVehicleDispatched;
+
+    GsxDoorSync sync(&gateway);
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(!recorder.Opened(GsxDoor::FwdCargo));
+}
+
+void GsxDoorSyncTest::opensTheCargoDoorOnceTheLoaderWaitsAtIt()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kBaggageLoaderFrontState] = gsx::states::kLoaderWaitingForDoor;
+
+    GsxDoorSync sync(&gateway);
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(recorder.Opened(GsxDoor::FwdCargo));
 }
 
 void GsxDoorSyncTest::distrustsVehicleStateInheritedAcrossACouatlRestart()

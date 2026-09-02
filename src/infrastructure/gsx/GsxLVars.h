@@ -119,7 +119,7 @@ namespace gsx::states
 
     [[nodiscard]] inline bool IsLoaderArriving(const double state)
     {
-        return state == kVehicleDispatched || IsLoaderAtDoor(state);
+        return IsLoaderAtDoor(state);
     }
 
     [[nodiscard]] inline bool IsCateringArriving(const double state)
@@ -129,7 +129,9 @@ namespace gsx::states
 
     [[nodiscard]] inline bool AreStairsArriving(const double state)
     {
-        return state == kStairsWaitingForDoor || state == kStairsFinalPosition;
+        return state == kVehicleApproaching
+            || state == kStairsWaitingForDoor
+            || state == kStairsFinalPosition;
     }
 
     [[nodiscard]] inline bool AreStairsDocked(const double state)
