@@ -22,6 +22,7 @@ private slots:
     static void doorWithoutSlotIsIgnored();
     static void unavailableDoorIsLeftUntouched();
     static void movingDoorIsLeftUntouched();
+    static void closeArrivingMidOpeningWaitsForTheDoorToSettle();
     static void commandIsSentOnceWhenTheDoorDisagrees();
     static void agreeingDoorIsNeverCommanded();
     static void retryStopsAtTheAttemptCap();
@@ -72,6 +73,38 @@ void PmdgDoorReconcilerTest::movingDoorIsLeftUntouched()
     }
 
     QVERIFY(source.toggled.empty());
+}
+
+void PmdgDoorReconcilerTest::closeArrivingMidOpeningWaitsForTheDoorToSettle()
+{
+    FakePmdgDoorSource source;
+    source.doorSlots[GsxDoor::AftPax] = 7;
+    source.observations[7] = DoorObservation::Closed;
+    PmdgDoorReconciler reconciler(source, kSlots, DoorBaseline::Unknown);
+
+    reconciler.SetDesired(GsxDoor::AftPax, true);
+    reconciler.Reconcile();
+    QCOMPARE(ToggleCount(source, 7), 1);
+
+    source.observations[7] = DoorObservation::Moving;
+    reconciler.SetDesired(GsxDoor::AftPax, false);
+    reconciler.Reconcile();
+    reconciler.Reconcile();
+    QCOMPARE(ToggleCount(source, 7), 1);
+
+    source.observations[7] = DoorObservation::Open;
+    reconciler.Reconcile();
+    QCOMPARE(ToggleCount(source, 7), 2);
+
+    source.observations[7] = DoorObservation::Moving;
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+    source.observations[7] = DoorObservation::Closed;
+    reconciler.Reconcile();
+
+    QCOMPARE(ToggleCount(source, 7), 2);
 }
 
 void PmdgDoorReconcilerTest::commandIsSentOnceWhenTheDoorDisagrees()

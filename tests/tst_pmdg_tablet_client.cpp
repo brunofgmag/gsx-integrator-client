@@ -34,6 +34,7 @@ private slots:
     static void sendsGroundConnWhenAvailable();
     static void subscribesPlaneToTabletWithJsFlag();
     static void latchesEfbPlanImportOnFetchSuccess();
+    static void probeSignatureIgnoresDriftBelowTheUnit();
     static void readsDoorStatesFromStateReply();
     static void doorInMotionHasNoState();
     static void readsThePassengerEntryMethodFromStateReply();
@@ -146,6 +147,23 @@ void PmdgTabletClientTest::latchesEfbPlanImportOnFetchSuccess()
     bridge.Deliver("PlaneToTablet",
                    R"({"message_tag":"simbrief_fetch_result","data":{"result":200},"tablet_side":"CA"})");
     QVERIFY(client.EfbPlanImported());
+}
+
+void PmdgTabletClientTest::probeSignatureIgnoresDriftBelowTheUnit()
+{
+    const auto reply = [](const char* fuel, const char* door)
+    {
+        return std::string(R"({"message_tag":"state_reply","weight_balance":{"fuel_total_lbs":)") + fuel
+            + R"(,"gwcg":[22.4,)" + fuel + R"(]},"doors":{"individual_doors":{"entry2_left":")" + door
+            + R"("}}})";
+    };
+
+    const std::string first = PmdgTabletClient::ProbeSignature(reply("7213.059", "OPENING"));
+
+    QCOMPARE(PmdgTabletClient::ProbeSignature(reply("7212.947", "OPENING")), first);
+    QVERIFY(PmdgTabletClient::ProbeSignature(reply("7213.6", "OPENING")) != first);
+    QVERIFY(PmdgTabletClient::ProbeSignature(reply("7213.059", "CLOSE")) != first);
+    QCOMPARE(PmdgTabletClient::ProbeSignature("not json"), std::string("not json"));
 }
 
 void PmdgTabletClientTest::readsDoorStatesFromStateReply()
