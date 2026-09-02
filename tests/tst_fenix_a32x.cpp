@@ -184,6 +184,7 @@ private slots:
     static void doorsUntouchedWhileEfbUnavailable();
     static void closeAllDoorsForcesEveryDoorClosed();
     static void stairsReopenDoorAfterCloseAllDoors();
+    static void holdsTheAftPaxDoorWhileItsExitIsStillMoving();
     static void groundPowerWritesEfbDataref();
     static void groundPowerStatusFollowsGpuAndExtPower();
     static void chocksWriteEfbDataref();
@@ -1200,6 +1201,34 @@ void FenixA32xTest::evaluatingTheRefuelSystemRuleWritesNothing()
     rule->Act(context, writer);
 
     QCOMPARE(writer.Written(kThirdPartyRefuel), 0.0);
+}
+
+void FenixA32xTest::holdsTheAftPaxDoorWhileItsExitIsStillMoving()
+{
+    FenixFixture fixture;
+
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kPassengerStairsRearState] = 3.0;
+    fixture.gateway.avars["EXIT OPEN:3"] = 0.0;
+
+    TickAircraft(fixture.aircraft, fixture.gateway);
+
+    QCOMPARE(fixture.efb.WrittenBool(kAftPaxDoor), 1);
+
+    fixture.gateway.avars["EXIT OPEN:3"] = 40.0;
+    fixture.gateway.lvars[gsx::lvars::kPassengerStairsRearState] = 1.0;
+    TickAircraft(fixture.aircraft, fixture.gateway);
+
+    QCOMPARE(fixture.efb.WrittenBool(kAftPaxDoor), 1);
+
+    fixture.gateway.avars["EXIT OPEN:3"] = 100.0;
+    TickAircraft(fixture.aircraft, fixture.gateway);
+
+    QCOMPARE(fixture.efb.WrittenBool(kAftPaxDoor), 1);
+
+    TickAircraft(fixture.aircraft, fixture.gateway);
+
+    QCOMPARE(fixture.efb.WrittenBool(kAftPaxDoor), 0);
 }
 
 QTEST_APPLESS_MAIN(FenixA32xTest)

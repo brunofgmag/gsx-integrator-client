@@ -98,6 +98,18 @@ namespace
     constexpr double kCargoShareForward = 0.4237;
     constexpr double kCargoShareAft = 0.4237;
 
+    struct MeasuredExit
+    {
+        GsxDoor door;
+        int exit;
+    };
+
+    constexpr std::array kMeasuredExits = {
+        MeasuredExit{GsxDoor::FwdPax, 0},
+        MeasuredExit{GsxDoor::AftPax, 3},
+        MeasuredExit{GsxDoor::FwdCatering, 4}
+    };
+
     std::string BuildSeatString(const std::vector<bool>& bookedSeats, const int occupiedCount)
     {
         std::string seats;
@@ -149,6 +161,11 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
     if (variant_ == FenixVariant::A321)
     {
         efb_->Subscribe(kMidPaxDoorDataref);
+    }
+
+    for (const MeasuredExit& exit : kMeasuredExits)
+    {
+        doors_.WatchExit(exit.door, exit.exit);
     }
 
     LOG_INFO("Profile loaded: %s", GetName());
