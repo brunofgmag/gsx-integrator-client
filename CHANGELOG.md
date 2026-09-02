@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.29.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.4...v1.29.5) (2026-09-02)
+
+
+* hold a door command while the door is still moving, with the Fenix exits measured ([#120](https://github.com/brunofgmag/gsx-integrator-client/issues/120)) ([1b94b00](https://github.com/brunofgmag/gsx-integrator-client/commit/1b94b00383b89241cd6d5b5aeff406e3d4b3b5cb))
+
+
+### Bug Fixes
+
+* **fenix:** watch the three measured exits so door commands wait for the door ([ae227b1](https://github.com/brunofgmag/gsx-integrator-client/commit/ae227b1bf1b565faf83a42f2dbc4501eb3546375)) ([1b94b00](https://github.com/brunofgmag/gsx-integrator-client/commit/1b94b00383b89241cd6d5b5aeff406e3d4b3b5cb))
+* **gsx:** hold a door command while the watched exit is still moving ([391c24b](https://github.com/brunofgmag/gsx-integrator-client/commit/391c24bd59f1bc1f500de03b5d757cfad66e4ed3)) ([1b94b00](https://github.com/brunofgmag/gsx-integrator-client/commit/1b94b00383b89241cd6d5b5aeff406e3d4b3b5cb))
+
 ## [1.29.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.3...v1.29.4) (2026-09-02)
 
 
