@@ -54,6 +54,7 @@ private slots:
     static void gpuStatusDoesNotArmTheConnectedFlagBeforeItArrives();
     static void serviceInProgressFollowsRemoteStateRaw();
     static void serviceInProgressFalseWhenAbsentOrNoRemote();
+    static void pushbackIsOfferedUnlessTheApronVerdictSaysOtherwise();
 };
 
 void GsxInterfaceTest::availabilityFollowsCouatlFlag()
@@ -738,6 +739,25 @@ void GsxInterfaceTest::readingTheStatusDoesNotAdvanceTheLatch()
     QCOMPARE(gsx.GetStateStatus(GsxState::Boarding), GsxStateStatus::Callable);
 
     QVERIFY(!gsx.WasStateCompleted(GsxState::Boarding));
+}
+
+void GsxInterfaceTest::pushbackIsOfferedUnlessTheApronVerdictSaysOtherwise()
+{
+    FakeVariableGateway gateway;
+    GsxRemoteState remote;
+    remote.apronVerdict = {"Gate Medium", "no pushback", "no bus"};
+
+    const GsxStateService withVerdict(&gateway, &remote);
+
+    QVERIFY(!withVerdict.OffersPushback());
+
+    remote.apronVerdict = {"Gate Medium", "no bus"};
+
+    QVERIFY(withVerdict.OffersPushback());
+
+    const GsxStateService noRemote(&gateway);
+
+    QVERIFY(noRemote.OffersPushback());
 }
 
 QTEST_APPLESS_MAIN(GsxInterfaceTest)

@@ -162,6 +162,13 @@ private slots:
     static void theBlockedFuelTruckGetsTheSpotYielded();
     static void theBlockedCargoLoaderGetsTheSpotYieldedToo();
     static void aStairsMenuWithoutTheBlockedSpotIsLeftAlone();
+    static void theStairsAreKeptWhilePassengersAreBoarding();
+    static void theStairsAreKeptWhilePassengersAreDeboarding();
+    static void theStairsAreKeptWhileTheBoardingRequestIsStillOutstanding();
+    static void theKeptStairsAreRememberedUntilTheNextBoardingRequest();
+    static void theRemovedStairsAreNotRemembered();
+    static void theTurnaroundTurnForgetsTheKeptStairs();
+    static void theDepartureClearanceIsAskedForOnce();
     static void deIceMenuPicksYesWhenEnabled();
     static void deIceMenuDeclinedByDefault();
     static void picksSimbriefBlockFuelOnRefuelingLevelMenu();
@@ -1265,6 +1272,171 @@ void GsxMenuNavigatorTest::aStairsMenuWithoutTheBlockedSpotIsLeftAlone()
     nav.OnMenuChanged();
 
     QVERIFY(client.Last("menu.pick") == nullptr);
+}
+
+void GsxMenuNavigatorTest::theStairsAreKeptWhilePassengersAreBoarding()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    MarkServiceTaken(state, "Boarding");
+    ShowMenu(state,
+             "The rear cargo loader is waiting for the spot where the stairs at L Entry FWD are parked. Remove the stairs?",
+             {"Yes, remove the stairs", "No, keep the stairs"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+    QCOMPARE(pick->args.value("index").toInt(), 1);
+    QVERIFY(Logged(logger, "keeping the stairs"));
+}
+
+void GsxMenuNavigatorTest::theStairsAreKeptWhilePassengersAreDeboarding()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    state.services.push_back(GsxRemoteService{"Deboarding", 4, false});
+    ShowMenu(state,
+             "The front cargo loader is waiting for the spot where the stairs at AFT Pax are parked. Remove the stairs?",
+             {"No, keep the stairs", "Yes, remove the stairs"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+    QCOMPARE(pick->args.value("index").toInt(), 0);
+}
+
+void GsxMenuNavigatorTest::theStairsAreKeptWhileTheBoardingRequestIsStillOutstanding()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 0;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Boarding");
+    nav.RequestBoarding();
+    fakeNow += 1500;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    ShowMenu(state,
+             "The rear cargo loader is waiting for the spot where the stairs at L Entry FWD are parked. Remove the stairs?",
+             {"Yes, remove the stairs", "No, keep the stairs"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+    QCOMPARE(pick->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::theKeptStairsAreRememberedUntilTheNextBoardingRequest()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    QVERIFY(!nav.WereStairsKeptForPassengers());
+
+    MarkServiceTaken(state, "Boarding");
+    ShowMenu(state,
+             "The rear cargo loader is waiting for the spot where the stairs at L Entry FWD are parked. Remove the stairs?",
+             {"Yes, remove the stairs", "No, keep the stairs"});
+    nav.OnMenuChanged();
+
+    QVERIFY(nav.WereStairsKeptForPassengers());
+
+    nav.RequestBoarding();
+
+    QVERIFY(!nav.WereStairsKeptForPassengers());
+}
+
+void GsxMenuNavigatorTest::theRemovedStairsAreNotRemembered()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    ShowMenu(state,
+             "The catering vehicle front is waiting for the spot where the stairs at L Entry AFT are parked. Remove the stairs?",
+             {"Yes, remove the stairs", "No, keep the stairs"});
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+    QCOMPARE(pick->args.value("index").toInt(), 0);
+    QVERIFY(!nav.WereStairsKeptForPassengers());
+}
+
+void GsxMenuNavigatorTest::theTurnaroundTurnForgetsTheKeptStairs()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    MarkServiceTaken(state, "Boarding");
+    ShowMenu(state,
+             "The rear cargo loader is waiting for the spot where the stairs at L Entry FWD are parked. Remove the stairs?",
+             {"Yes, remove the stairs", "No, keep the stairs"});
+    nav.OnMenuChanged();
+
+    QVERIFY(nav.WereStairsKeptForPassengers());
+
+    nav.OnTurnaroundTurned();
+
+    QVERIFY(!nav.WereStairsKeptForPassengers());
+}
+
+void GsxMenuNavigatorTest::theDepartureClearanceIsAskedForOnce()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 0;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Departure");
+    nav.RequestDepartureClearance();
+    fakeNow += 1500;
+    nav.OnMenuChanged();
+
+    const Sent* trigger = client.Last("service.trigger");
+
+    QVERIFY(trigger != nullptr);
+    QCOMPARE(trigger->args.value("service").toString(), QStringLiteral("Departure"));
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    fakeNow += 30000;
+    nav.OnMenuChanged();
+    fakeNow += 30000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "never taken by GSX"));
 }
 
 void GsxMenuNavigatorTest::deIceMenuPicksYesWhenEnabled()

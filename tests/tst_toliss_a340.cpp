@@ -133,7 +133,7 @@ private slots:
     static void cargoDoorsOpenPerLoaderAndCloseWhenDone();
     static void cargoDoorsUntouchedWithoutGsx();
     static void paxDoorsOpenPerStairsAndCloseWhenGone();
-    static void paxDoorsOpenOnceTheStairsAreOnFinalApproach();
+    static void paxDoorsOpenOnceTheStairsAreApproaching();
     static void jetwayOpensOnlyDoor1L();
     static void jetwayAndStairsEitherHoldsDoor1LOpen();
     static void closeAllDoorsForcesEveryDoorClosed();
@@ -775,7 +775,7 @@ void TolissA340Test::paxDoorsOpenPerStairsAndCloseWhenGone()
     QCOMPARE(gateway.Written(kPaxDoorMode1L), 0.0);
 }
 
-void TolissA340Test::paxDoorsOpenOnceTheStairsAreOnFinalApproach()
+void TolissA340Test::paxDoorsOpenOnceTheStairsAreApproaching()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -783,10 +783,15 @@ void TolissA340Test::paxDoorsOpenOnceTheStairsAreOnFinalApproach()
 
     gateway.lvars[kCouatlStarted] = 1.0;
 
-    gateway.lvars[kStairsFront] = 5.0;
+    gateway.lvars[kStairsFront] = 2.0;
     TickAircraft(aircraft, gateway);
 
     QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode1L));
+
+    gateway.lvars[kStairsFront] = 5.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), 2.0);
 
     gateway.lvars[kStairsFront] = 6.0;
     TickAircraft(aircraft, gateway);

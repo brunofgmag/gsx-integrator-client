@@ -36,6 +36,7 @@ public:
     void RequestBoarding() override;
     void RequestDeboarding() override;
     void RequestPushback() override;
+    void RequestDepartureClearance() override;
     void RequestRefueling() override;
     void CompleteRefuel() override;
     void CompleteBoarding() override;
@@ -47,6 +48,7 @@ public:
 
     [[nodiscard]] bool ConfirmGoodEngines() override;
     [[nodiscard]] bool CompletePushback() override;
+    [[nodiscard]] bool WereStairsKeptForPassengers() const override;
 
     [[nodiscard]] bool IsMenuSettled() const;
 
@@ -90,6 +92,8 @@ private:
     void ArmRequest(QString verb, QJsonObject args, std::string label, std::string confirmId,
                     bool toggles = false);
     [[nodiscard]] bool IsAlreadyUnderway(const PendingRequest& request) const;
+    [[nodiscard]] bool IsServiceUnderway(const std::string& serviceId) const;
+    [[nodiscard]] bool PassengersAreFlowing() const;
     void PumpRequests();
     void SendRequest(PendingRequest& request);
     [[nodiscard]] bool WasTaken(const PendingRequest& request) const;
@@ -150,6 +154,7 @@ private:
     bool panelOpenSpent_ = false;
     bool panelCloseSpent_ = false;
     bool panelOpenedByUs_ = false;
+    bool stairsKeptForPassengers_ = false;
     long long panelOpenSentMs_ = 0;
 
     static constexpr long long kIntentTtlMs = 60000;

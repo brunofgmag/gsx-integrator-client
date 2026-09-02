@@ -112,7 +112,7 @@ private slots:
     static void mainCargoDoorOpensOnlyOnFreighter();
     static void cargoDoorsUntouchedWithoutGsx();
     static void paxDoorsOpenPerStairsAndCloseWhenGone();
-    static void paxDoorsOpenOnceTheStairsAreOnFinalApproach();
+    static void paxDoorsOpenOnceTheStairsAreApproaching();
     static void paxDoorsUntouchedWithoutGsx();
     static void doorStatusReadsStateFamilyAndNotTheCommandEcho();
     static void doorStatusUnknownUntilDoorDataArrives();
@@ -780,7 +780,7 @@ void TfdiMd11Test::paxDoorsOpenPerStairsAndCloseWhenGone()
     QCOMPARE(gateway.Written(kPaxDoor1L), 0.0);
 }
 
-void TfdiMd11Test::paxDoorsOpenOnceTheStairsAreOnFinalApproach()
+void TfdiMd11Test::paxDoorsOpenOnceTheStairsAreApproaching()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -788,10 +788,15 @@ void TfdiMd11Test::paxDoorsOpenOnceTheStairsAreOnFinalApproach()
 
     gateway.lvars[kCouatlStarted] = 1.0;
 
-    gateway.lvars[kStairsFront] = 5.0;
+    gateway.lvars[kStairsFront] = 2.0;
     TickAircraft(aircraft, gateway);
 
     QVERIFY(!gateway.HasReceivedLVar(kPaxDoor1L));
+
+    gateway.lvars[kStairsFront] = 5.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
 
     gateway.lvars[kStairsFront] = 6.0;
     TickAircraft(aircraft, gateway);
