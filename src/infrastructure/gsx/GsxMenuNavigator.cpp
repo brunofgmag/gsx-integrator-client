@@ -300,7 +300,7 @@ void GsxMenuNavigator::HandleMenu()
         return;
     }
 
-    if (HandlePendingCompletions())
+    if (HandlePendingCompletions(sig))
     {
         return;
     }
@@ -524,8 +524,13 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
     return false;
 }
 
-bool GsxMenuNavigator::HandlePendingCompletions()
+bool GsxMenuNavigator::HandlePendingCompletions(const std::string& sig)
 {
+    if (sig == lastPickedSig_)
+    {
+        return false;
+    }
+
     if (completingPushback_.active && PickByContains(kCompletePushbackText))
     {
         completingPushback_ = {};

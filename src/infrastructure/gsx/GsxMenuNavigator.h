@@ -113,7 +113,7 @@ private:
     void DiscardStuckMenu(const std::string& sig);
     bool MaybeCloseStaleMenu();
     bool HandleAutoPicks(const std::string& sig);
-    bool HandlePendingCompletions();
+    bool HandlePendingCompletions(const std::string& sig);
     [[nodiscard]] bool RepositionWalking() const;
     bool HandleRepositionFlow();
     bool HandleIntentPrompts();
