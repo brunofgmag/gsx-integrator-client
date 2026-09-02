@@ -38,6 +38,7 @@ namespace
     public:
         int evaluateCalls = 0;
         int actCalls = 0;
+        bool holds = false;
 
         [[nodiscard]] const char* Name() const override
         {
@@ -53,7 +54,7 @@ namespace
         {
             ++evaluateCalls;
 
-            return RuleVerdict::Pass();
+            return holds ? RuleVerdict::Hold(5, "slow rule holds") : RuleVerdict::Pass();
         }
 
         void Act(const RuleContext&, VariableWriter&) override
@@ -101,6 +102,7 @@ private slots:
     static void aSlowRuleNeverRunsWhenThePhaseEvaluates();
     static void theSlowPathRunsOnlyTheSlowRules();
     static void observingTheSlowPathNeverLetsARuleAct();
+    static void observingLogsEachVerdictOnceUntilItChanges();
 };
 
 void TurnaroundRulesTest::aHoldingRuleStopsThePhaseFromEvaluating()
@@ -251,6 +253,38 @@ void TurnaroundRulesTest::observingTheSlowPathNeverLetsARuleAct()
     QCOMPARE(rule.evaluateCalls, 3);
     QCOMPARE(rule.actCalls, 0);
     QCOMPARE(f.variableWriter.setLVarCalls + f.variableWriter.setAVarCalls, 0);
+}
+
+void TurnaroundRulesTest::observingLogsEachVerdictOnceUntilItChanges()
+{
+    TurnaroundStateFixture f;
+    SlowRule rule;
+    CountingState state;
+
+    f.aircraft.rules = {&rule};
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        state.ObserveRules(f.ctx, RuleCadence::Slow);
+    }
+
+    QCOMPARE(f.logger.messages.size(), static_cast<std::size_t>(1));
+    QVERIFY(f.logger.messages.front().find("would pass") != std::string::npos);
+
+    rule.holds = true;
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        state.ObserveRules(f.ctx, RuleCadence::Slow);
+    }
+
+    QCOMPARE(f.logger.messages.size(), static_cast<std::size_t>(2));
+    QVERIFY(f.logger.messages.back().find("would hold") != std::string::npos);
+
+    rule.holds = false;
+    state.ObserveRules(f.ctx, RuleCadence::Slow);
+
+    QCOMPARE(f.logger.messages.size(), static_cast<std::size_t>(3));
 }
 
 QTEST_MAIN(TurnaroundRulesTest)
