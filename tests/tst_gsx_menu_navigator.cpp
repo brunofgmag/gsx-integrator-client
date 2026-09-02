@@ -141,6 +141,7 @@ private slots:
     static void completeRefuelMatchesTheDefueledEntry();
     static void completeBoardingPicksCompleteNowViaCargoEntry();
     static void completeBoardingMatchesThePassengerEntry();
+    static void completeBoardingDoesNotRepeatThePickWhenASnapshotRepeatsTheMenu();
     static void completePushbackPicksEntryWithoutInterruptTitle();
     static void staleRepositionClearedByServiceIntent();
     static void picksGsxChoiceDuringServiceIntent();
@@ -826,6 +827,36 @@ void GsxMenuNavigatorTest::completeRefuelMatchesTheDefueledEntry()
 
     QVERIFY(pick != nullptr);
     QCOMPARE(pick->args.value("index").toInt(), 2);
+}
+
+void GsxMenuNavigatorTest::completeBoardingDoesNotRepeatThePickWhenASnapshotRepeatsTheMenu()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.CompleteBoarding();
+
+    ShowMenu(state, "Activate Services at ENSB/Longyear",
+             {"Request Deboarding", "Request Catering service", "Request Refueling",
+              "Baggage loading in progress", "Prepare for Push-back and Departure"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 1);
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 3);
+
+    nav.OnSnapshot();
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 1);
+
+    ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 2);
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 0);
 }
 
 void GsxMenuNavigatorTest::completePushbackPicksEntryWithoutInterruptTitle()

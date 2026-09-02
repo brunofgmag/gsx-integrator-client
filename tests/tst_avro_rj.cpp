@@ -1,7 +1,10 @@
 #include <QtTest/QTest>
 
+#include <algorithm>
 #include <array>
 #include <string>
+#include <QtCore/QStringList>
+#include <QtCore/QtLogging>
 #include "AircraftTicks.h"
 #include "TestDoubles.h"
 #include "../src/infrastructure/aircraft/avrorj/AvroRj.h"
@@ -106,6 +109,34 @@ namespace
             gateway.lvars[doorLVar] = 0.0;
         }
     }
+
+    class LogCapture
+    {
+    public:
+        LogCapture() : previous_(qInstallMessageHandler(Collect)) { Lines().clear(); }
+        ~LogCapture() { qInstallMessageHandler(previous_); }
+
+        [[nodiscard]] static bool Contains(const char* fragment)
+        {
+            return std::ranges::any_of(Lines(), [fragment](const QString& line)
+                                       { return line.contains(QLatin1String(fragment)); });
+        }
+
+    private:
+        static QStringList& Lines()
+        {
+            static QStringList lines;
+
+            return lines;
+        }
+
+        static void Collect(QtMsgType, const QMessageLogContext&, const QString& message)
+        {
+            Lines().append(message);
+        }
+
+        QtMessageHandler previous_;
+    };
 }
 
 class AvroRjTest final : public QObject
@@ -151,6 +182,8 @@ private slots:
     static void aftDoorStaysClosedEvenWhenGsxParksAStairAtIt();
     static void aftDoorIsClosedAgainEveryTimeSomethingOpensIt();
     static void aftDoorIsNotWrittenWhileItReadsClosed();
+    static void aftDoorCloseNamesTheJetwayWhenOneIsDocked();
+    static void aftDoorCloseNamesTheOwnAirstairWithoutAJetway();
     static void frontDoorOpensWithADockedJetway();
     static void departureHoldShutsTheFrontDoor();
     static void airstairStaysStowedUntilTheTurnaroundAsks();
@@ -163,6 +196,8 @@ private slots:
     static void airstairRetractsAndTheDoorClosesWhenTheRequestIsWithdrawn();
     static void airstairStaysOutWhenPressureIsGoneAtDeparture();
     static void airstairAdoptsAnExtensionMadeOnTheEfb();
+    static void airstairIsPutBackOutWhenSomethingElseStowsItMidBoarding();
+    static void airstairIsLeftStowedWhenSomethingElseStowsItAtDeparture();
     static void frontDoorWaitsForThePhysicallyStowedStair();
     static void reportsTheAirstairExtendedOnlyAfterItStopsMoving();
     static void airstairIsNotCommandedWhileItIsStillMoving();
@@ -652,6 +687,39 @@ void AvroRjTest::aftDoorIsNotWrittenWhileItReadsClosed()
     QCOMPARE(gateway.WriteCount(kAftPaxDoor), 0);
 }
 
+void AvroRjTest::aftDoorCloseNamesTheJetwayWhenOneIsDocked()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+    const LogCapture log;
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    gateway.lvars[kAftPaxDoor] = 1.0;
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kAftPaxDoor), 0.0);
+    QVERIFY(LogCapture::Contains("Closing the 2L: passengers board through the jetway"));
+    QVERIFY(!LogCapture::Contains("own airstair"));
+}
+
+void AvroRjTest::aftDoorCloseNamesTheOwnAirstairWithoutAJetway()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+    const LogCapture log;
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars[kAftPaxDoor] = 1.0;
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kAftPaxDoor), 0.0);
+    QVERIFY(LogCapture::Contains("Closing the 2L: this aircraft boards through its own airstair"));
+}
+
 void AvroRjTest::frontDoorOpensWithADockedJetway()
 {
     FakeVariableGateway gateway;
@@ -878,6 +946,68 @@ void AvroRjTest::airstairAdoptsAnExtensionMadeOnTheEfb()
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kStairExtendSwitch), 0.0);
+}
+
+void AvroRjTest::airstairIsPutBackOutWhenSomethingElseStowsItMidBoarding()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+    const LogCapture log;
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars["EXT_Door_stairs_pos"] = 50.0;
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 1);
+    QCOMPARE(gateway.Written(kStairExtendSwitch), 1.0);
+
+    gateway.lvars[kStairExtendSwitch] = 0.0;
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+
+    QVERIFY(LogCapture::Contains("Something else stowed the airstair while passengers still need it"));
+
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 2);
+    QCOMPARE(gateway.WriteCount(kStairExtendSwitch), 2);
+    QCOMPARE(gateway.Written(kStairExtendSwitch), 1.0);
+}
+
+void AvroRjTest::airstairIsLeftStowedWhenSomethingElseStowsItAtDeparture()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+    const LogCapture log;
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars["EXT_Door_stairs_pos"] = 50.0;
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+
+    QCOMPARE(gateway.Written(kStairExtendSwitch), 1.0);
+
+    aircraft.HoldDoorsClosed(true);
+    gateway.lvars[kStairExtendSwitch] = 0.0;
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QVERIFY(!LogCapture::Contains("Something else stowed the airstair"));
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 1);
+    QCOMPARE(gateway.WriteCount(kStairExtendSwitch), 1);
 }
 
 void AvroRjTest::frontDoorWaitsForThePhysicallyStowedStair()

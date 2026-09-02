@@ -20,6 +20,7 @@ public:
 
 private:
     [[nodiscard]] bool IsFrontDoorWanted() const;
+    [[nodiscard]] const char* WhatServesTheFrontDoor() const;
     void DriveFrontDoor(VariableWriter& writer);
     void KeepAftDoorClosed(VariableWriter& writer);
 

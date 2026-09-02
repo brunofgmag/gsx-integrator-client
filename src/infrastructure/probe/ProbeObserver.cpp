@@ -263,11 +263,17 @@ void ProbeObserver::ReportWatchList(VariableReader& variables, const QString& id
             : variables.HasReceivedAVar(watched.name, watched.unit);
         const Track& track = isLVar ? Follow(variables, watched.name.c_str()) : Track{};
 
+        const auto line = [&](const double shown, const double low, const double high)
+        {
+            return QStringLiteral("watch %1 %2=%3 recv=%4 span=[%5..%6]")
+                .arg(id, QString::fromStdString(watched.name), Number(shown))
+                .arg(received ? 1 : 0)
+                .arg(Number(low), Number(high));
+        };
+
         probe::Change("watch." + watched.name,
-                      QStringLiteral("watch %1 %2=%3 recv=%4 span=[%5..%6]")
-                      .arg(id, QString::fromStdString(watched.name), Number(value))
-                      .arg(received ? 1 : 0)
-                      .arg(Number(track.min), Number(track.max)));
+                      line(std::round(value), std::round(track.min), std::round(track.max)),
+                      line(value, track.min, track.max));
     }
 }
 

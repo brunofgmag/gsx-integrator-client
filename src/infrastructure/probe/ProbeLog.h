@@ -138,7 +138,7 @@ namespace probe
         detail::Append(detail::SessionFile(), text);
     }
 
-    inline void Change(const std::string& key, const QString& text)
+    inline void Change(const std::string& key, const QString& signature, const QString& text)
     {
         if (!IsOn())
         {
@@ -147,7 +147,7 @@ namespace probe
 
         struct Memo
         {
-            QString text;
+            QString signature;
             qint64 at = 0;
         };
 
@@ -155,14 +155,19 @@ namespace probe
 
         const qint64 now = QDateTime::currentSecsSinceEpoch();
         Memo& previous = memo[key];
-        if (previous.text == text && now - previous.at < kRepeatSeconds)
+        if (previous.signature == signature && now - previous.at < kRepeatSeconds)
         {
             return;
         }
 
-        previous.text = text;
+        previous.signature = signature;
         previous.at = now;
         detail::Append(detail::SessionFile(), text);
+    }
+
+    inline void Change(const std::string& key, const QString& text)
+    {
+        Change(key, text, text);
     }
 
     inline void Wire(const QString& text)
