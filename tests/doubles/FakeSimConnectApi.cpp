@@ -82,9 +82,14 @@ SIMCONNECTAPI SimConnect_CallDispatch(HANDLE, const DispatchProc pfcnDispatch, v
     return S_OK;
 }
 
-SIMCONNECTAPI SimConnect_AddToDataDefinition(HANDLE, SIMCONNECT_DATA_DEFINITION_ID, const char*, const char*,
-                                             SIMCONNECT_DATATYPE, float, DWORD)
+SIMCONNECTAPI SimConnect_AddToDataDefinition(HANDLE, const SIMCONNECT_DATA_DEFINITION_ID DefineID,
+                                             const char* DatumName, const char*, SIMCONNECT_DATATYPE, float, DWORD)
 {
+    if (DatumName != nullptr)
+    {
+        FakeSimConnectApi::dataDefinitions.emplace_back(DefineID, DatumName);
+    }
+
     return S_OK;
 }
 

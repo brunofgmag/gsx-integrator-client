@@ -10,6 +10,26 @@
 
 namespace
 {
+    constexpr DWORD kOneSecondEvent = 1;
+    constexpr DWORD kSimStateRequest = 0x0FFFFFFF;
+    constexpr double kWorldMapCamera = 12.0;
+    constexpr double kCockpitCamera = 2.0;
+
+    void PushSimRunning(const int running)
+    {
+        SIMCONNECT_RECV_SYSTEM_STATE state{};
+        state.dwRequestID = kSimStateRequest;
+        state.dwInteger = running;
+        FakeSimConnectApi::Push(state, SIMCONNECT_RECV_ID_SYSTEM_STATE);
+    }
+
+    void PushOneSecondTick()
+    {
+        SIMCONNECT_RECV_EVENT tick{};
+        tick.uEventID = kOneSecondEvent;
+        FakeSimConnectApi::Push(tick, SIMCONNECT_RECV_ID_EVENT);
+    }
+
     struct RecordingObserver final : IntegratorServiceObserver
     {
         int notifications = 0;
@@ -45,6 +65,7 @@ private slots:
     static void aTouchStampedWithAnotherPhaseIsRefusedAndNothingMoves();
     static void aTouchStampedWithAPhaseThatTakesNoneIsRefused();
     static void aTouchStampedWithTheCurrentPhaseReachesTheFlow();
+    static void aWorldMapCameraDuringTheLoadDoesNotLeaveTheFlowOff();
 };
 
 void RuntimeIntegratorServiceTest::init()
@@ -374,6 +395,40 @@ void RuntimeIntegratorServiceTest::aTouchStampedWithTheCurrentPhaseReachesTheFlo
 #else
     QSKIP("DebugSkipPhase is compiled out of Release builds");
 #endif
+}
+
+void RuntimeIntegratorServiceTest::aWorldMapCameraDuringTheLoadDoesNotLeaveTheFlowOff()
+{
+    IntegratorRuntime runtime;
+    const RuntimeIntegratorService service(&runtime);
+
+    AutomationSettings settings;
+    settings.autoStartFlow = true;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    PushSimRunning(1);
+    PushOneSecondTick();
+    QVERIFY(updated.wait(2000));
+
+    QVERIFY(runtime.IsSessionActive());
+    QVERIFY(service.GetSnapshot().automationEnabled);
+
+    const DWORD camera = FakeSimConnectApi::DefineIdOf("CAMERA STATE");
+    QVERIFY(camera != 0);
+
+    FakeSimConnectApi::PushSimObjectDouble(camera, kWorldMapCamera);
+    PushOneSecondTick();
+    QVERIFY(updated.wait(2000));
+
+    FakeSimConnectApi::PushSimObjectDouble(camera, kCockpitCamera);
+    PushOneSecondTick();
+    QVERIFY(updated.wait(2000));
+
+    QVERIFY(runtime.IsSessionActive());
+    QVERIFY(service.GetSnapshot().automationEnabled);
 }
 
 QTEST_GUILESS_MAIN(RuntimeIntegratorServiceTest)
