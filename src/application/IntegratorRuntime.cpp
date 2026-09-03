@@ -322,7 +322,17 @@ void IntegratorRuntime::Update()
 
     ProbeGates();
 
-    if (!IsSessionReady() || IsSessionPaused())
+    if (!IsSessionReady())
+    {
+        return;
+    }
+
+    if (!isSessionActive_)
+    {
+        OnFlightStart();
+    }
+
+    if (IsSessionPaused())
     {
         return;
     }
