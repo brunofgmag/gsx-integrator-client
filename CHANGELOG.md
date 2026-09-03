@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.29.7](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.6...v1.29.7) (2026-09-03)
+
+
+### Bug Fixes
+
+* **runtime:** start the session from sim readiness, not only from the Sim event ([#127](https://github.com/brunofgmag/gsx-integrator-client/issues/127)) ([32dc649](https://github.com/brunofgmag/gsx-integrator-client/commit/32dc64963790f5ae1d52aa5a5e2b270352ca48d7))
+
 ## [1.29.6](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.5...v1.29.6) (2026-09-02)
 
 
