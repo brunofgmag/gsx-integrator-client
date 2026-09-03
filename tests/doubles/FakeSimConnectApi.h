@@ -30,6 +30,7 @@ struct FakeSimConnectApi
     };
 
     static inline std::vector<DataRequest> dataRequests;
+    static inline std::vector<std::pair<DWORD, std::string>> dataDefinitions;
 
     static void Reset()
     {
@@ -44,6 +45,33 @@ struct FakeSimConnectApi
         transmittedNamedEvents.clear();
         writtenClientData.clear();
         dataRequests.clear();
+        dataDefinitions.clear();
+    }
+
+    static DWORD DefineIdOf(const std::string& datumName)
+    {
+        for (const auto& [defineId, name] : dataDefinitions)
+        {
+            if (name == datumName)
+            {
+                return defineId;
+            }
+        }
+
+        return 0;
+    }
+
+    static void PushSimObjectDouble(const DWORD requestId, const double value)
+    {
+        std::vector<char> bytes(sizeof(SIMCONNECT_RECV_SIMOBJECT_DATA) + sizeof(double), 0);
+        const auto data = reinterpret_cast<SIMCONNECT_RECV_SIMOBJECT_DATA*>(bytes.data());
+        data->dwSize = static_cast<DWORD>(bytes.size());
+        data->dwVersion = 0;
+        data->dwID = SIMCONNECT_RECV_ID_SIMOBJECT_DATA;
+        data->dwRequestID = requestId;
+        data->dwDefineID = requestId;
+        std::memcpy(&data->dwData, &value, sizeof(double));
+        pendingMessages.push_back(std::move(bytes));
     }
 
     static void PushClientData(const DWORD requestId, const void* payload, const std::size_t payloadSize)
