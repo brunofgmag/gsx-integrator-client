@@ -28,17 +28,33 @@ namespace
     };
 
     constexpr auto kAcPowerAvailableLVar = "FSS_B727_FE_ELEC_AC_PWR_AVAIL";
+    constexpr auto kGpuAvailableLVar = "FSS_B727_GPU_AVAIL";
 
     constexpr int kEngineCount = 3;
     constexpr double kEngineRunningDefault = 1.0;
 
     constexpr auto kParkBrakeLeverLVar = "FSS_B727_PDSTL_PARK_BRAKE_LEVER";
     constexpr auto kChocksLVar = "FSS_B727_EFB_CHOCKS_VISIBLE";
+    constexpr auto kConesLVar = "FSS_B727_EFB_CONES_VISIBLE";
+    constexpr auto kEngineCoversLVar = "FSS_B727_EFB_COVER_ENGINE_VISIBLE";
+    constexpr auto kBoardingStairLVar = "FSS_B727_EFB_BOARDING_STAIR";
+
+    constexpr std::array kOwnGroundEquipmentLVars = {
+        kChocksLVar, kConesLVar, kEngineCoversLVar, kBoardingStairLVar
+    };
+
+    constexpr double kEquipmentStowed = 0.0;
+    constexpr double kEquipmentPlaced = 1.0;
 
     constexpr auto kPhoneLVar = "FSS_B727_PDSTL_PHONE_PICK_UP";
     constexpr double kPhoneAtRest = 0.0;
 
     constexpr auto kPercentOver100Unit = "percent over 100";
+    constexpr std::size_t kMainDeckPoint = 1;
+    constexpr std::array kGoalsClosedWithEveryDoor = {
+        "INTERACTIVE POINT GOAL:0", "INTERACTIVE POINT GOAL:2", "INTERACTIVE POINT GOAL:3"
+    };
+    constexpr double kDoorGoalClosed = 0.0;
     constexpr double kDoorPointClosedAtMost = 0.05;
     constexpr double kDoorPointOpenAtLeast = 0.95;
 
@@ -50,26 +66,6 @@ namespace
         Fss727DoorPoint{"INTERACTIVE POINT OPEN:4", doors::kPaxDoorMovingLimitTicks}
     };
 
-    constexpr std::array kPassengerDoorPoints = {
-        Fss727DoorPoint{"INTERACTIVE POINT OPEN:0", doors::kPaxDoorMovingLimitTicks},
-        Fss727DoorPoint{"INTERACTIVE POINT OPEN:1", doors::kPaxDoorMovingLimitTicks},
-        Fss727DoorPoint{"INTERACTIVE POINT OPEN:2", doors::kPaxDoorMovingLimitTicks},
-        Fss727DoorPoint{"INTERACTIVE POINT OPEN:3", doors::kPaxDoorMovingLimitTicks},
-        Fss727DoorPoint{"INTERACTIVE POINT OPEN:4", doors::kCargoDoorMovingLimitTicks},
-        Fss727DoorPoint{"INTERACTIVE POINT OPEN:5", doors::kCargoDoorMovingLimitTicks},
-        Fss727DoorPoint{"INTERACTIVE POINT OPEN:6", doors::kPaxDoorMovingLimitTicks}
-    };
-
-    std::span<const Fss727DoorPoint> DoorPointsFor(const bool cargoVariant)
-    {
-        if (cargoVariant)
-        {
-            return kFreighterDoorPoints;
-        }
-
-        return kPassengerDoorPoints;
-    }
-
     bool IsTravelling(const double position)
     {
         return position > kDoorPointClosedAtMost && position < kDoorPointOpenAtLeast;
@@ -77,19 +73,22 @@ namespace
 }
 
 Fss727::Fss727(VariableGateway* variableGateway, const AutomationStatus* status, const char* name,
-               const bool cargoVariant)
+               const GsxGateway* gsxGateway)
     : variableGateway_(variableGateway),
       status_(status),
-      cargoVariant_(cargoVariant),
       smartSwitch_(*variableGateway, {kPhoneLVar},
                    [](double, const double max)
                    {
                        return max > kPhoneAtRest;
                    }),
-      doorPoints_(DoorPointsFor(cargoVariant)),
+      doorPoints_(kFreighterDoorPoints),
       movingTicks_(doorPoints_.size(), 0),
+      doors_(variableGateway),
       automodeRule_(*variableGateway),
-      rules_{&automodeRule_}
+      groundPowerRule_(gsxGateway),
+      frontEntryRule_(*variableGateway, *this, doors_),
+      mainDeckRule_(*this, gsxGateway),
+      rules_{&automodeRule_, &groundPowerRule_, &frontEntryRule_, &mainDeckRule_}
 {
     smartSwitch_.Subscribe();
 
@@ -98,7 +97,7 @@ Fss727::Fss727(VariableGateway* variableGateway, const AutomationStatus* status,
 
 bool Fss727::IsCargoVariant() const
 {
-    return cargoVariant_;
+    return true;
 }
 
 const std::vector<AircraftRule*>& Fss727::Rules() const
@@ -108,6 +107,8 @@ const std::vector<AircraftRule*>& Fss727::Rules() const
 
 void Fss727::Observe()
 {
+    doors_.Observe();
+
     for (std::size_t point = 0; point < doorPoints_.size(); ++point)
     {
         const std::optional<double> position = DoorPointPosition(point);
@@ -182,6 +183,70 @@ double Fss727::GetCurrentZfwKg() const
 bool Fss727::ConsumeSmartSwitch()
 {
     return smartSwitch_.Consume();
+}
+
+void Fss727::ClearOwnGroundEquipment()
+{
+    for (const char* lVar : kOwnGroundEquipmentLVars)
+    {
+        variableGateway_->SetLVar(lVar, kEquipmentStowed);
+    }
+}
+
+bool Fss727::SetChocks(const bool placed)
+{
+    variableGateway_->SetLVar(kChocksLVar, placed ? kEquipmentPlaced : kEquipmentStowed);
+
+    return true;
+}
+
+std::optional<GroundPowerStatus> Fss727::GetGroundPowerStatus() const
+{
+    if (!variableGateway_->HasReceivedLVar(kGpuAvailableLVar))
+    {
+        return GroundPowerStatus::Unknown;
+    }
+
+    return variableGateway_->GetLVar(kGpuAvailableLVar, 0.0) > 0.0
+               ? GroundPowerStatus::Connected
+               : GroundPowerStatus::Disconnected;
+}
+
+void Fss727::CloseAllDoors()
+{
+    for (const char* goal : kGoalsClosedWithEveryDoor)
+    {
+        variableGateway_->SetAVar(goal, kPercentOver100Unit, kDoorGoalClosed);
+    }
+
+    ++mainDeckCloseRequests_;
+}
+
+void Fss727::HoldDoorsClosed(const bool hold)
+{
+    heldForDeparture_ = hold;
+    doors_.HoldClosedForDeparture(hold);
+}
+
+bool Fss727::IsHeldForDeparture() const
+{
+    return heldForDeparture_;
+}
+
+int Fss727::MainDeckCloseRequests() const
+{
+    return mainDeckCloseRequests_;
+}
+
+std::optional<bool> Fss727::IsMainDeckClosed() const
+{
+    const std::optional<double> position = DoorPointPosition(kMainDeckPoint);
+    if (!position.has_value())
+    {
+        return std::nullopt;
+    }
+
+    return *position <= kDoorPointClosedAtMost;
 }
 
 bool Fss727::IsPowered() const
@@ -267,17 +332,14 @@ namespace
 {
     std::unique_ptr<Aircraft> CreateFss727200F(const AircraftContext& context, const AircraftIdentity&)
     {
-        return std::make_unique<Fss727>(context.variableGateway, context.status, Fss727::kName200F, true);
+        return std::make_unique<Fss727>(context.variableGateway, context.status, Fss727::kName200F,
+                                       context.gsxGateway);
     }
 
     std::unique_ptr<Aircraft> CreateFss727200ReFreighter(const AircraftContext& context, const AircraftIdentity&)
     {
-        return std::make_unique<Fss727>(context.variableGateway, context.status, Fss727::kName200ReFreighter, true);
-    }
-
-    std::unique_ptr<Aircraft> CreateFss727200RePassenger(const AircraftContext& context, const AircraftIdentity&)
-    {
-        return std::make_unique<Fss727>(context.variableGateway, context.status, Fss727::kName200RePassenger, false);
+        return std::make_unique<Fss727>(context.variableGateway, context.status, Fss727::kName200ReFreighter,
+                                       context.gsxGateway);
     }
 
     const AircraftDescriptor kFss727200FDescriptor{
@@ -298,16 +360,6 @@ namespace
         &CreateFss727200ReFreighter, "fss-727-200re", "R72F", RefuelBy::Client
     };
 
-    const AircraftDescriptor kFss727200RePassengerDescriptor{
-        Fss727::kName200RePassenger,
-        {
-            {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200RE Passenger"},
-            {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200RE Super 27 Passenger"}
-        },
-        &CreateFss727200RePassenger, "fss-727-200rep", "R72P", RefuelBy::Client
-    };
-
     [[maybe_unused]] const AircraftRegistration kFss727200FRegistration{kFss727200FDescriptor};
     [[maybe_unused]] const AircraftRegistration kFss727200ReFreighterRegistration{kFss727200ReFreighterDescriptor};
-    [[maybe_unused]] const AircraftRegistration kFss727200RePassengerRegistration{kFss727200RePassengerDescriptor};
 }

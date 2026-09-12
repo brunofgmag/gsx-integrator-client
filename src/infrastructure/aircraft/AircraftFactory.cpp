@@ -25,6 +25,7 @@ namespace
 std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway,
                                          const AutomationStatus* status,
                                          CommBusBridgeGateway* commBusBridge,
+                                         const GsxGateway* gsxGateway,
                                          const AircraftDescriptor** outDescriptor)
 {
     char title[64] = {};
@@ -56,7 +57,7 @@ std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway,
         *outDescriptor = descriptor;
     }
 
-    const AircraftContext context{variableGateway, status, commBusBridge};
+    const AircraftContext context{variableGateway, status, commBusBridge, gsxGateway};
     std::unique_ptr<Aircraft> aircraft = descriptor->create(context, identity);
 
     LOG_INFO("Aircraft detected: %s", descriptor->name);

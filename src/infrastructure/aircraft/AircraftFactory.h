@@ -10,10 +10,12 @@ class VariableGateway;
 struct AutomationStatus;
 struct AircraftDescriptor;
 class CommBusBridgeGateway;
+class GsxGateway;
 
 [[nodiscard]] std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway,
                                                        const AutomationStatus* status,
                                                        CommBusBridgeGateway* commBusBridge = nullptr,
+                                                       const GsxGateway* gsxGateway = nullptr,
                                                        const AircraftDescriptor** outDescriptor = nullptr);
 
 [[nodiscard]] std::vector<AircraftProfileInfo> SupportedAircraftProfiles();
