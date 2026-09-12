@@ -2,6 +2,7 @@
 
 #include "../../simvars/SimVars.h"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <memory>
@@ -25,6 +26,9 @@ namespace
     constexpr auto kSimFuelWeightPerGallon = "FUEL WEIGHT PER GALLON";
     constexpr std::array kTankCapacities = {
         "FUELSYSTEM TANK CAPACITY:1", "FUELSYSTEM TANK CAPACITY:2", "FUELSYSTEM TANK CAPACITY:3"
+    };
+    constexpr std::array kTankLevels = {
+        "FUELSYSTEM TANK LEVEL:1", "FUELSYSTEM TANK LEVEL:2", "FUELSYSTEM TANK LEVEL:3"
     };
 
     constexpr auto kAcPowerAvailableLVar = "FSS_B727_FE_ELEC_AC_PWR_AVAIL";
@@ -69,6 +73,32 @@ namespace
     bool IsTravelling(const double position)
     {
         return position > kDoorPointClosedAtMost && position < kDoorPointOpenAtLeast;
+    }
+
+    std::optional<double> PoundsPerGallon(VariableGateway& variables)
+    {
+        if (!variables.HasReceivedAVar(kSimFuelWeightPerGallon, kPoundsUnit))
+        {
+            return std::nullopt;
+        }
+
+        return variables.GetAVar(kSimFuelWeightPerGallon, kPoundsUnit, 0.0);
+    }
+
+    std::optional<double> TankCapacityGallons(VariableGateway& variables)
+    {
+        double capacityGallons = 0.0;
+        for (const char* tankCapacity : kTankCapacities)
+        {
+            if (!variables.HasReceivedAVar(tankCapacity, kGallonsUnit))
+            {
+                return std::nullopt;
+            }
+
+            capacityGallons += variables.GetAVar(tankCapacity, kGallonsUnit, 0.0);
+        }
+
+        return capacityGallons;
     }
 }
 
@@ -149,25 +179,35 @@ double Fss727::GetCurrentFuelKg() const
 
 double Fss727::GetFuelCapacityKg() const
 {
-    if (!variableGateway_->HasReceivedAVar(kSimFuelWeightPerGallon, kPoundsUnit))
+    const std::optional<double> poundsPerGallon = PoundsPerGallon(*variableGateway_);
+    const std::optional<double> capacityGallons = TankCapacityGallons(*variableGateway_);
+    if (!poundsPerGallon.has_value() || !capacityGallons.has_value())
     {
         return 0.0;
     }
 
-    double capacityGallons = 0.0;
-    for (const char* tankCapacity : kTankCapacities)
-    {
-        if (!variableGateway_->HasReceivedAVar(tankCapacity, kGallonsUnit))
-        {
-            return 0.0;
-        }
+    return weight::LbToKg(*capacityGallons * *poundsPerGallon);
+}
 
-        capacityGallons += variableGateway_->GetAVar(tankCapacity, kGallonsUnit, 0.0);
+void Fss727::SetCurrentFuelKg(const double fuelKg)
+{
+    const std::optional<double> poundsPerGallon = PoundsPerGallon(*variableGateway_);
+    const std::optional<double> capacityGallons = TankCapacityGallons(*variableGateway_);
+    if (!poundsPerGallon.has_value() || *poundsPerGallon <= 0.0
+        || !capacityGallons.has_value() || *capacityGallons <= 0.0
+        || fuelKg == lastFuelKg_)
+    {
+        return;
     }
 
-    const double poundsPerGallon = variableGateway_->GetAVar(kSimFuelWeightPerGallon, kPoundsUnit, 0.0);
+    lastFuelKg_ = fuelKg;
 
-    return weight::LbToKg(capacityGallons * poundsPerGallon);
+    const double level = std::clamp(weight::KgToLb(fuelKg) / *poundsPerGallon / *capacityGallons, 0.0, 1.0);
+
+    for (const char* tankLevel : kTankLevels)
+    {
+        variableGateway_->SetAVar(tankLevel, kPercentOver100Unit, level);
+    }
 }
 
 double Fss727::GetCurrentZfwKg() const

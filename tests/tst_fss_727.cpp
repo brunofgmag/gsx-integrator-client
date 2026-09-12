@@ -81,6 +81,15 @@ namespace
     constexpr double kFuelCapacityKg = 24586.067;
     constexpr double kCapacityToleranceKg = 0.01;
 
+    constexpr std::array kTankLevels = {
+        "FUELSYSTEM TANK LEVEL:1", "FUELSYSTEM TANK LEVEL:2", "FUELSYSTEM TANK LEVEL:3"
+    };
+    constexpr std::array kTankQuantities = {
+        "FUELSYSTEM TANK QUANTITY:1", "FUELSYSTEM TANK QUANTITY:2", "FUELSYSTEM TANK QUANTITY:3"
+    };
+    constexpr auto kPercentOver100Unit = "percent over 100";
+    constexpr double kLevelTolerance = 1e-6;
+
     constexpr auto kAutomodeRule = "fss-727-keep-vendor-gsx-automode-off";
     constexpr auto kAutomodeDisabled = "FSS_B727_GSX_AUTOMODE_DISABLED";
     constexpr std::array kWasmKeysBornAtZero = {
@@ -188,6 +197,10 @@ private slots:
     static void emptyZfwReadsSimEmptyWeight();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwHoldsAtZeroUntilEmptyWeightArrives();
+    static void refuelWritesTheSameLevelFractionInTheThreeTanks();
+    static void refuelKeepsTheTankLevelBetweenEmptyAndFull();
+    static void refuelWritesNothingUntilTheWeightPerGallonAndTheThreeCapacitiesArrive();
+    static void refuelWritesTheSameTargetOnlyOnce();
     static void registersThePedestalPhoneForFastRefresh();
     static void aPhoneTouchFiresOnceFromItsFirstThird();
     static void aHeldPhoneFiresOnceAcrossThreeTicks();
@@ -517,6 +530,113 @@ void Fss727Test::currentZfwHoldsAtZeroUntilEmptyWeightArrives()
     gateway.avars[kSimTotalWeight] = 60000.0;
 
     QCOMPARE(aircraft.GetCurrentZfwKg(), 0.0);
+}
+
+void Fss727Test::refuelWritesTheSameLevelFractionInTheThreeTanks()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    GiveTanks(gateway);
+
+    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
+
+    for (const char* level : kTankLevels)
+    {
+        QCOMPARE(gateway.AVarWriteCount(level), 1);
+        QVERIFY(std::abs(gateway.WrittenAVar(level) - 0.5) < kLevelTolerance);
+        QCOMPARE(gateway.AVarWriteUnit(level), std::string(kPercentOver100Unit));
+    }
+
+    QCOMPARE(gateway.AVarWriteCount(kSimFuelTotalKg), 0);
+    for (const char* quantity : kTankQuantities)
+    {
+        QCOMPARE(gateway.AVarWriteCount(quantity), 0);
+    }
+}
+
+void Fss727Test::refuelKeepsTheTankLevelBetweenEmptyAndFull()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    GiveTanks(gateway);
+
+    aircraft.SetCurrentFuelKg(kFuelCapacityKg * 2.0);
+
+    for (const char* level : kTankLevels)
+    {
+        QCOMPARE(gateway.WrittenAVar(level), 1.0);
+    }
+
+    aircraft.SetCurrentFuelKg(-5000.0);
+
+    for (const char* level : kTankLevels)
+    {
+        QCOMPARE(gateway.WrittenAVar(level), 0.0);
+    }
+}
+
+void Fss727Test::refuelWritesNothingUntilTheWeightPerGallonAndTheThreeCapacitiesArrive()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
+
+    QCOMPARE(gateway.setAVarCalls, 0);
+
+    gateway.avars[kLeftTankCapacity] = kWingTankGallons;
+    gateway.avars[kCentreTankCapacity] = kCentreTankGallons;
+    gateway.avars[kRightTankCapacity] = kWingTankGallons;
+
+    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
+
+    QCOMPARE(gateway.setAVarCalls, 0);
+
+    gateway.avars.erase(kRightTankCapacity);
+    gateway.avars[kSimFuelWeightPerGallon] = kFuelPoundsPerGallon;
+
+    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
+
+    QCOMPARE(gateway.setAVarCalls, 0);
+
+    gateway.avars[kRightTankCapacity] = kWingTankGallons;
+
+    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
+
+    for (const char* level : kTankLevels)
+    {
+        QCOMPARE(gateway.AVarWriteCount(level), 1);
+    }
+}
+
+void Fss727Test::refuelWritesTheSameTargetOnlyOnce()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    GiveTanks(gateway);
+
+    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
+    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
+
+    for (const char* level : kTankLevels)
+    {
+        QCOMPARE(gateway.AVarWriteCount(level), 1);
+    }
+
+    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 4.0);
+
+    for (const char* level : kTankLevels)
+    {
+        QCOMPARE(gateway.AVarWriteCount(level), 2);
+        QVERIFY(std::abs(gateway.WrittenAVar(level) - 0.25) < kLevelTolerance);
+    }
 }
 
 void Fss727Test::registersThePedestalPhoneForFastRefresh()
@@ -1067,7 +1187,6 @@ void Fss727Test::observingEvaluatingAndReadingWriteNoVariable()
         static_cast<void>(aircraft.ConsumeSmartSwitch());
 
         aircraft.OnLoadingStarted();
-        aircraft.SetCurrentFuelKg(9000.0);
         aircraft.SetCurrentZfwKg(61000.0);
         aircraft.HoldDoorsClosed(true);
 
