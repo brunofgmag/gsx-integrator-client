@@ -10,6 +10,10 @@ namespace doors
 {
     inline constexpr DoorStatus kNoDoorsSeen = DoorStatus::AllClosed;
 
+    inline constexpr int kPaxDoorMovingLimitTicks = 15;
+    inline constexpr int kCargoDoorMovingLimitTicks = 60;
+    inline constexpr int kMainDeckDoorMovingLimitTicks = 120;
+
     inline DoorStatus Combine(const DoorStatus soFar, const std::optional<bool> open)
     {
         if (soFar == DoorStatus::AnyOpen || open.value_or(false))

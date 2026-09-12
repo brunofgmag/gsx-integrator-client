@@ -18,10 +18,6 @@ namespace
 
     constexpr double kEngineRunningDefault = 1.0;
     constexpr double kEngineCombustionDefault = 0.0;
-
-    constexpr int kPaxDoorMovingLimitTicks = 15;
-    constexpr int kCargoDoorMovingLimitTicks = 60;
-    constexpr int kMainDeckDoorMovingLimitTicks = 120;
 }
 
 PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationStatus* status,
@@ -236,15 +232,15 @@ int PmdgAircraft::MovingDoorLimitTicks(const int slot) const
 {
     if (cargoVariant_ && slot == mainDeckDoorSlot_)
     {
-        return kMainDeckDoorMovingLimitTicks;
+        return doors::kMainDeckDoorMovingLimitTicks;
     }
 
     if (slot == DoorSlotFor(GsxDoor::FwdCargo) || slot == DoorSlotFor(GsxDoor::AftCargo))
     {
-        return kCargoDoorMovingLimitTicks;
+        return doors::kCargoDoorMovingLimitTicks;
     }
 
-    return kPaxDoorMovingLimitTicks;
+    return doors::kPaxDoorMovingLimitTicks;
 }
 
 std::optional<bool> PmdgAircraft::DoorOpenAt(const int slot) const
