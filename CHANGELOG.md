@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.32.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.31.0...v1.32.0) (2026-09-12)
+
+
+* refuel by tank level and load the cargo stations from the plan ([#134](https://github.com/brunofgmag/gsx-integrator-client/issues/134)) ([29cf27b](https://github.com/brunofgmag/gsx-integrator-client/commit/29cf27b54ba6ad330f345d90113206b5cbc8e084))
+
+
+### Features
+
+* **fss-727:** load the cargo stations from the planned zero-fuel weight ([3da20ee](https://github.com/brunofgmag/gsx-integrator-client/commit/3da20ee100e5925bd430dd09fddd5a24dd363a40)) ([29cf27b](https://github.com/brunofgmag/gsx-integrator-client/commit/29cf27b54ba6ad330f345d90113206b5cbc8e084))
+* **fss-727:** refuel the three tanks by level fraction ([91e592f](https://github.com/brunofgmag/gsx-integrator-client/commit/91e592fb9a51278df51a983ac4c39412c85e64ec)) ([29cf27b](https://github.com/brunofgmag/gsx-integrator-client/commit/29cf27b54ba6ad330f345d90113206b5cbc8e084))
+
 ## [1.31.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.30.0...v1.31.0) (2026-09-12)
 
 
