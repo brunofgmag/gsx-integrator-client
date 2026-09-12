@@ -2,11 +2,13 @@
 
 #include "../../simvars/SimVars.h"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <memory>
 #include <optional>
 #include <span>
+#include <string>
 #include "../AircraftRegistry.h"
 #include "../DoorReading.h"
 #include "../../logging/LogMacros.h"
@@ -26,6 +28,17 @@ namespace
     constexpr std::array kTankCapacities = {
         "FUELSYSTEM TANK CAPACITY:1", "FUELSYSTEM TANK CAPACITY:2", "FUELSYSTEM TANK CAPACITY:3"
     };
+    constexpr std::array kTankLevels = {
+        "FUELSYSTEM TANK LEVEL:1", "FUELSYSTEM TANK LEVEL:2", "FUELSYSTEM TANK LEVEL:3"
+    };
+
+    constexpr auto kSimPayloadStationPrefix = "PAYLOAD STATION WEIGHT:";
+    constexpr int kFirstCargoStation = 4;
+    constexpr std::array kCargoStationCapacitiesLb = {
+        0.0, 0.0, 5671.5, 5671.5, 6301.5, 6301.5, 7500.0, 7500.0, 8327.0,
+        7769.0, 7769.0, 4000.0, 2335.55, 3805.0, 4557.0, 3653.0, 3649.0, 4026.0
+    };
+    constexpr std::array kCrewStations = {1, 2, 3};
 
     constexpr auto kAcPowerAvailableLVar = "FSS_B727_FE_ELEC_AC_PWR_AVAIL";
     constexpr auto kGpuAvailableLVar = "FSS_B727_GPU_AVAIL";
@@ -69,6 +82,54 @@ namespace
     bool IsTravelling(const double position)
     {
         return position > kDoorPointClosedAtMost && position < kDoorPointOpenAtLeast;
+    }
+
+    std::optional<double> PoundsPerGallon(VariableGateway& variables)
+    {
+        if (!variables.HasReceivedAVar(kSimFuelWeightPerGallon, kPoundsUnit))
+        {
+            return std::nullopt;
+        }
+
+        return variables.GetAVar(kSimFuelWeightPerGallon, kPoundsUnit, 0.0);
+    }
+
+    std::optional<double> TankCapacityGallons(VariableGateway& variables)
+    {
+        double capacityGallons = 0.0;
+        for (const char* tankCapacity : kTankCapacities)
+        {
+            if (!variables.HasReceivedAVar(tankCapacity, kGallonsUnit))
+            {
+                return std::nullopt;
+            }
+
+            capacityGallons += variables.GetAVar(tankCapacity, kGallonsUnit, 0.0);
+        }
+
+        return capacityGallons;
+    }
+
+    std::string PayloadStationVar(const int station)
+    {
+        return kSimPayloadStationPrefix + std::to_string(station);
+    }
+
+    double CrewOnBoardLb(VariableGateway& variables)
+    {
+        double crewLb = 0.0;
+        for (const int crewStation : kCrewStations)
+        {
+            const std::string station = PayloadStationVar(crewStation);
+            if (!variables.HasReceivedAVar(station, kPoundsUnit))
+            {
+                return 0.0;
+            }
+
+            crewLb += variables.GetAVar(station, kPoundsUnit, 0.0);
+        }
+
+        return crewLb;
     }
 }
 
@@ -149,25 +210,35 @@ double Fss727::GetCurrentFuelKg() const
 
 double Fss727::GetFuelCapacityKg() const
 {
-    if (!variableGateway_->HasReceivedAVar(kSimFuelWeightPerGallon, kPoundsUnit))
+    const std::optional<double> poundsPerGallon = PoundsPerGallon(*variableGateway_);
+    const std::optional<double> capacityGallons = TankCapacityGallons(*variableGateway_);
+    if (!poundsPerGallon.has_value() || !capacityGallons.has_value())
     {
         return 0.0;
     }
 
-    double capacityGallons = 0.0;
-    for (const char* tankCapacity : kTankCapacities)
-    {
-        if (!variableGateway_->HasReceivedAVar(tankCapacity, kGallonsUnit))
-        {
-            return 0.0;
-        }
+    return weight::LbToKg(*capacityGallons * *poundsPerGallon);
+}
 
-        capacityGallons += variableGateway_->GetAVar(tankCapacity, kGallonsUnit, 0.0);
+void Fss727::SetCurrentFuelKg(const double fuelKg)
+{
+    const std::optional<double> poundsPerGallon = PoundsPerGallon(*variableGateway_);
+    const std::optional<double> capacityGallons = TankCapacityGallons(*variableGateway_);
+    if (!poundsPerGallon.has_value() || *poundsPerGallon <= 0.0
+        || !capacityGallons.has_value() || *capacityGallons <= 0.0
+        || fuelKg == lastFuelKg_)
+    {
+        return;
     }
 
-    const double poundsPerGallon = variableGateway_->GetAVar(kSimFuelWeightPerGallon, kPoundsUnit, 0.0);
+    lastFuelKg_ = fuelKg;
 
-    return weight::LbToKg(capacityGallons * poundsPerGallon);
+    const double level = std::clamp(weight::KgToLb(fuelKg) / *poundsPerGallon / *capacityGallons, 0.0, 1.0);
+
+    for (const char* tankLevel : kTankLevels)
+    {
+        variableGateway_->SetAVar(tankLevel, kPercentOver100Unit, level);
+    }
 }
 
 double Fss727::GetCurrentZfwKg() const
@@ -178,6 +249,33 @@ double Fss727::GetCurrentZfwKg() const
     }
 
     return CurrentZfwKg(*variableGateway_);
+}
+
+void Fss727::SetCurrentZfwKg(const double zfwKg)
+{
+    if (!variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit) || zfwKg == lastZfwKg_)
+    {
+        return;
+    }
+
+    lastZfwKg_ = zfwKg;
+
+    const double cargoLb = std::max(
+        weight::KgToLb(zfwKg - GetEmptyZfwKg()) - CrewOnBoardLb(*variableGateway_), 0.0);
+
+    double capacitiesLb = 0.0;
+    for (const double capacityLb : kCargoStationCapacitiesLb)
+    {
+        capacitiesLb += capacityLb;
+    }
+
+    for (std::size_t station = 0; station < kCargoStationCapacitiesLb.size(); ++station)
+    {
+        const double stationLb = cargoLb * kCargoStationCapacitiesLb[station] / capacitiesLb;
+
+        variableGateway_->SetAVar(
+            PayloadStationVar(static_cast<int>(station) + kFirstCargoStation), kPoundsUnit, stationLb);
+    }
 }
 
 bool Fss727::ConsumeSmartSwitch()

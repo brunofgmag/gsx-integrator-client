@@ -17,6 +17,7 @@ public:
     std::unordered_map<std::string, double> avars;
     std::unordered_map<std::string, int> lvarWrites;
     std::unordered_map<std::string, int> avarWrites;
+    std::unordered_map<std::string, std::string> avarWriteUnits;
     std::string aircraftName;
     bool aircraftNameAvailable = true;
     std::string atcModel;
@@ -95,10 +96,11 @@ public:
         return avars.contains(name);
     }
 
-    void SetAVar(const std::string& name, const std::string& /*unit*/, const double value) override
+    void SetAVar(const std::string& name, const std::string& unit, const double value) override
     {
         ++setAVarCalls;
         ++avarWrites[name];
+        avarWriteUnits[name] = unit;
         avars[name] = value;
     }
 
@@ -134,6 +136,12 @@ public:
     {
         const auto it = avarWrites.find(name);
         return it != avarWrites.end() ? it->second : 0;
+    }
+
+    [[nodiscard]] std::string AVarWriteUnit(const std::string& name) const
+    {
+        const auto it = avarWriteUnits.find(name);
+        return it != avarWriteUnits.end() ? it->second : std::string();
     }
 
 private:

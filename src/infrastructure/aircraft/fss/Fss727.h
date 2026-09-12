@@ -48,7 +48,9 @@ public:
 
     [[nodiscard]] double GetCurrentFuelKg() const override;
     [[nodiscard]] double GetFuelCapacityKg() const override;
+    void SetCurrentFuelKg(double fuelKg) override;
     [[nodiscard]] double GetCurrentZfwKg() const override;
+    void SetCurrentZfwKg(double zfwKg) override;
 
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
@@ -89,6 +91,8 @@ private:
     GsxDoorSync doors_;
     bool heldForDeparture_ = false;
     int mainDeckCloseRequests_ = 0;
+    double lastFuelKg_ = -1.0;
+    double lastZfwKg_ = -1.0;
     Fss727KeepVendorGsxAutomodeOffRule automodeRule_;
     Fss727OwnGpuFollowsTheGsxUnitRule groundPowerRule_;
     Fss727FrontEntryServesTheGroundAccessRule frontEntryRule_;
