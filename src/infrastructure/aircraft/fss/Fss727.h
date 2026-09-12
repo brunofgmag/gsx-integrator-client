@@ -7,9 +7,14 @@
 #include <vector>
 
 #include "../SmartSwitch.h"
+#include "rules/Fss727FrontEntryServesTheGroundAccessRule.h"
 #include "rules/Fss727KeepVendorGsxAutomodeOffRule.h"
+#include "rules/Fss727MainDeckClosesByTheCargoPanelRule.h"
+#include "rules/Fss727OwnGpuFollowsTheGsxUnitRule.h"
+#include "../../gsx/GsxDoorSync.h"
 #include "../../../domain/ports/Aircraft.h"
 
+class GsxGateway;
 class VariableGateway;
 struct AutomationStatus;
 
@@ -24,9 +29,9 @@ class Fss727 final : public Aircraft
 public:
     static constexpr auto kName200F = "FSS Boeing 727-200F";
     static constexpr auto kName200ReFreighter = "FSS Boeing 727-200RE Freighter";
-    static constexpr auto kName200RePassenger = "FSS Boeing 727-200RE Passenger";
 
-    Fss727(VariableGateway* variableGateway, const AutomationStatus* status, const char* name, bool cargoVariant);
+    Fss727(VariableGateway* variableGateway, const AutomationStatus* status, const char* name,
+           const GsxGateway* gsxGateway = nullptr);
 
     [[nodiscard]] bool IsCargoVariant() const override;
 
@@ -52,6 +57,16 @@ public:
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
 
+    [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override;
+    void CloseAllDoors() override;
+    void HoldDoorsClosed(bool hold) override;
+    [[nodiscard]] bool IsHeldForDeparture() const;
+    [[nodiscard]] int MainDeckCloseRequests() const;
+    [[nodiscard]] std::optional<bool> IsMainDeckClosed() const;
+    [[nodiscard]] bool SupportsChocksControl() const override { return true; }
+    bool SetChocks(bool placed) override;
+    void ClearOwnGroundEquipment() override;
+
     [[nodiscard]] bool IsPowered() const override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
     [[nodiscard]] bool IsReadyToPush() const override;
@@ -68,11 +83,16 @@ private:
 
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;
-    bool cargoVariant_;
     SmartSwitch smartSwitch_;
     std::span<const Fss727DoorPoint> doorPoints_;
     std::vector<int> movingTicks_;
+    GsxDoorSync doors_;
+    bool heldForDeparture_ = false;
+    int mainDeckCloseRequests_ = 0;
     Fss727KeepVendorGsxAutomodeOffRule automodeRule_;
+    Fss727OwnGpuFollowsTheGsxUnitRule groundPowerRule_;
+    Fss727FrontEntryServesTheGroundAccessRule frontEntryRule_;
+    Fss727MainDeckClosesByTheCargoPanelRule mainDeckRule_;
     std::vector<AircraftRule*> rules_;
 };
 

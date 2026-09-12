@@ -363,6 +363,7 @@ gsxi_add_qt_test(gsxi-avro-rj-tests avro-rj
 gsxi_add_qt_test(gsxi-fss-727-tests fss-727
         tests/TestDoubles.h
         tests/AircraftTicks.h
+        tests/doubles/FakeGsxService.h
         tests/tst_fss_727.cpp
         src/infrastructure/aircraft/AircraftIdentity.h
         src/infrastructure/aircraft/AircraftRegistry.cpp
@@ -371,8 +372,16 @@ gsxi_add_qt_test(gsxi-fss-727-tests fss-727
         src/infrastructure/aircraft/fss/Fss727.h
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727OwnGpuFollowsTheGsxUnitRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727OwnGpuFollowsTheGsxUnitRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
         src/domain/model/AutomationStatus.h
         src/domain/support/Weight.h)
 
@@ -680,6 +689,12 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/fss/Fss727.h
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727OwnGpuFollowsTheGsxUnitRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727OwnGpuFollowsTheGsxUnitRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
@@ -843,6 +858,12 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/fss/Fss727.h
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727OwnGpuFollowsTheGsxUnitRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727OwnGpuFollowsTheGsxUnitRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
