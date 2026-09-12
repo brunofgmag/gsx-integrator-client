@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.31.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.30.0...v1.31.0) (2026-09-12)
+
+
+* drive the ground equipment, power and doors, and drop the passenger variant ([#132](https://github.com/brunofgmag/gsx-integrator-client/issues/132)) ([e003301](https://github.com/brunofgmag/gsx-integrator-client/commit/e0033019ac69ec0ab9d5d6b42fa06d20b7575501))
+
+
+### Features
+
+* **fss-727:** drive the ground equipment, power and doors, and drop the passenger variant ([61cc3cc](https://github.com/brunofgmag/gsx-integrator-client/commit/61cc3cc382ce181f0f3ca1e351cbbf0e3f955c0a)) ([e003301](https://github.com/brunofgmag/gsx-integrator-client/commit/e0033019ac69ec0ab9d5d6b42fa06d20b7575501))
+
 ## [1.30.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.7...v1.30.0) (2026-09-12)
 
 
