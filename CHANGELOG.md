@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.30.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.7...v1.30.0) (2026-09-12)
+
+
+* read the three 727 variants and keep the vendor GSX auto mode off ([#130](https://github.com/brunofgmag/gsx-integrator-client/issues/130)) ([171bbd9](https://github.com/brunofgmag/gsx-integrator-client/commit/171bbd906478771fde207f648ef0b0a3e0c6d964))
+
+
+### Features
+
+* **fss-727:** read the three variants and keep the vendor GSX auto mode off ([7bdd0b4](https://github.com/brunofgmag/gsx-integrator-client/commit/7bdd0b4470100c091d7a5527a53ec9fcd4f561a6)) ([171bbd9](https://github.com/brunofgmag/gsx-integrator-client/commit/171bbd906478771fde207f648ef0b0a3e0c6d964))
+
 ## [1.29.7](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.6...v1.29.7) (2026-09-03)
 
 
