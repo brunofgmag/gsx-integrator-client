@@ -8,6 +8,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <string>
 #include "../AircraftRegistry.h"
 #include "../DoorReading.h"
 #include "../../logging/LogMacros.h"
@@ -30,6 +31,14 @@ namespace
     constexpr std::array kTankLevels = {
         "FUELSYSTEM TANK LEVEL:1", "FUELSYSTEM TANK LEVEL:2", "FUELSYSTEM TANK LEVEL:3"
     };
+
+    constexpr auto kSimPayloadStationPrefix = "PAYLOAD STATION WEIGHT:";
+    constexpr int kFirstCargoStation = 4;
+    constexpr std::array kCargoStationCapacitiesLb = {
+        0.0, 0.0, 5671.5, 5671.5, 6301.5, 6301.5, 7500.0, 7500.0, 8327.0,
+        7769.0, 7769.0, 4000.0, 2335.55, 3805.0, 4557.0, 3653.0, 3649.0, 4026.0
+    };
+    constexpr std::array kCrewStations = {1, 2, 3};
 
     constexpr auto kAcPowerAvailableLVar = "FSS_B727_FE_ELEC_AC_PWR_AVAIL";
     constexpr auto kGpuAvailableLVar = "FSS_B727_GPU_AVAIL";
@@ -99,6 +108,28 @@ namespace
         }
 
         return capacityGallons;
+    }
+
+    std::string PayloadStationVar(const int station)
+    {
+        return kSimPayloadStationPrefix + std::to_string(station);
+    }
+
+    double CrewOnBoardLb(VariableGateway& variables)
+    {
+        double crewLb = 0.0;
+        for (const int crewStation : kCrewStations)
+        {
+            const std::string station = PayloadStationVar(crewStation);
+            if (!variables.HasReceivedAVar(station, kPoundsUnit))
+            {
+                return 0.0;
+            }
+
+            crewLb += variables.GetAVar(station, kPoundsUnit, 0.0);
+        }
+
+        return crewLb;
     }
 }
 
@@ -218,6 +249,33 @@ double Fss727::GetCurrentZfwKg() const
     }
 
     return CurrentZfwKg(*variableGateway_);
+}
+
+void Fss727::SetCurrentZfwKg(const double zfwKg)
+{
+    if (!variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit) || zfwKg == lastZfwKg_)
+    {
+        return;
+    }
+
+    lastZfwKg_ = zfwKg;
+
+    const double cargoLb = std::max(
+        weight::KgToLb(zfwKg - GetEmptyZfwKg()) - CrewOnBoardLb(*variableGateway_), 0.0);
+
+    double capacitiesLb = 0.0;
+    for (const double capacityLb : kCargoStationCapacitiesLb)
+    {
+        capacitiesLb += capacityLb;
+    }
+
+    for (std::size_t station = 0; station < kCargoStationCapacitiesLb.size(); ++station)
+    {
+        const double stationLb = cargoLb * kCargoStationCapacitiesLb[station] / capacitiesLb;
+
+        variableGateway_->SetAVar(
+            PayloadStationVar(static_cast<int>(station) + kFirstCargoStation), kPoundsUnit, stationLb);
+    }
 }
 
 bool Fss727::ConsumeSmartSwitch()

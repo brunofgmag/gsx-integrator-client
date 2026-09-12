@@ -11,6 +11,7 @@
 #include "doubles/FakeGsxService.h"
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/domain/model/FlightPlan.h"
+#include "../src/domain/support/Weight.h"
 #include "../src/infrastructure/aircraft/fss/Fss727.h"
 
 namespace
@@ -88,7 +89,42 @@ namespace
         "FUELSYSTEM TANK QUANTITY:1", "FUELSYSTEM TANK QUANTITY:2", "FUELSYSTEM TANK QUANTITY:3"
     };
     constexpr auto kPercentOver100Unit = "percent over 100";
+    constexpr auto kPoundsUnit = "pounds";
     constexpr double kLevelTolerance = 1e-6;
+
+    constexpr auto kStationPrefix = "PAYLOAD STATION WEIGHT:";
+    constexpr double kEmptyWeightKg = 42306.0;
+    constexpr double kCrewStationLb = 200.0;
+    constexpr std::array kCrewStations = {1, 2, 3};
+    constexpr double kPoundTolerance = 1e-3;
+
+    struct CargoStation
+    {
+        int index;
+        double efbCapacityLb;
+        double ratio;
+
+        [[nodiscard]] constexpr double EffectiveCapacityLb() const { return efbCapacityLb * ratio; }
+    };
+
+    constexpr std::array kCargoStations = {
+        CargoStation{4, 4000.0, 0.0}, CargoStation{5, 7562.0, 0.0},
+        CargoStation{6, 7562.0, 0.75}, CargoStation{7, 7562.0, 0.75},
+        CargoStation{8, 8402.0, 0.75}, CargoStation{9, 8402.0, 0.75},
+        CargoStation{10, 10000.0, 0.75}, CargoStation{11, 10000.0, 0.75},
+        CargoStation{12, 8327.0, 1.0}, CargoStation{13, 7769.0, 1.0},
+        CargoStation{14, 7769.0, 1.0}, CargoStation{15, 4000.0, 1.0},
+        CargoStation{16, 6673.0, 0.35}, CargoStation{17, 3805.0, 1.0},
+        CargoStation{18, 4557.0, 1.0}, CargoStation{19, 3653.0, 1.0},
+        CargoStation{20, 3649.0, 1.0}, CargoStation{21, 4026.0, 1.0}
+    };
+
+    constexpr double kEffectiveCapacitiesLb = 88836.55;
+
+    std::string StationVar(const int station)
+    {
+        return std::string(kStationPrefix) + std::to_string(station);
+    }
 
     constexpr auto kAutomodeRule = "fss-727-keep-vendor-gsx-automode-off";
     constexpr auto kAutomodeDisabled = "FSS_B727_GSX_AUTOMODE_DISABLED";
@@ -201,6 +237,10 @@ private slots:
     static void refuelKeepsTheTankLevelBetweenEmptyAndFull();
     static void refuelWritesNothingUntilTheWeightPerGallonAndTheThreeCapacitiesArrive();
     static void refuelWritesTheSameTargetOnlyOnce();
+    static void loadingSpreadsThePayloadOverTheEffectiveCapacitiesInPounds();
+    static void loadingWritesNothingUntilTheEmptyWeightArrives();
+    static void loadingWritesTheSameTargetOnlyOnce();
+    static void loadingDiscountsTheCrewStationsOnceTheThreeHaveArrived();
     static void registersThePedestalPhoneForFastRefresh();
     static void aPhoneTouchFiresOnceFromItsFirstThird();
     static void aHeldPhoneFiresOnceAcrossThreeTicks();
@@ -636,6 +676,115 @@ void Fss727Test::refuelWritesTheSameTargetOnlyOnce()
     {
         QCOMPARE(gateway.AVarWriteCount(level), 2);
         QVERIFY(std::abs(gateway.WrittenAVar(level) - 0.25) < kLevelTolerance);
+    }
+}
+
+void Fss727Test::loadingSpreadsThePayloadOverTheEffectiveCapacitiesInPounds()
+{
+    double effectiveCapacitiesLb = 0.0;
+    for (const CargoStation& station : kCargoStations)
+    {
+        effectiveCapacitiesLb += station.EffectiveCapacityLb();
+    }
+
+    QVERIFY(std::abs(effectiveCapacitiesLb - kEffectiveCapacitiesLb) < kPoundTolerance);
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
+
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + weight::LbToKg(effectiveCapacitiesLb / 2.0));
+
+    for (const CargoStation& station : kCargoStations)
+    {
+        const std::string name = StationVar(station.index);
+
+        QCOMPARE(gateway.AVarWriteCount(name), 1);
+        QCOMPARE(gateway.AVarWriteUnit(name), std::string(kPoundsUnit));
+        QVERIFY(std::abs(gateway.WrittenAVar(name) - station.EffectiveCapacityLb() / 2.0) < kPoundTolerance);
+    }
+
+    for (const int crewStation : kCrewStations)
+    {
+        QCOMPARE(gateway.AVarWriteCount(StationVar(crewStation)), 0);
+    }
+}
+
+void Fss727Test::loadingWritesNothingUntilTheEmptyWeightArrives()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + 20000.0);
+
+    QCOMPARE(gateway.setAVarCalls, 0);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
+
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + 20000.0);
+
+    QCOMPARE(gateway.setAVarCalls, static_cast<int>(kCargoStations.size()));
+}
+
+void Fss727Test::loadingWritesTheSameTargetOnlyOnce()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
+
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + 20000.0);
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + 20000.0);
+
+    QCOMPARE(gateway.AVarWriteCount(StationVar(kCargoStations.back().index)), 1);
+
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + 21000.0);
+
+    QCOMPARE(gateway.AVarWriteCount(StationVar(kCargoStations.back().index)), 2);
+}
+
+void Fss727Test::loadingDiscountsTheCrewStationsOnceTheThreeHaveArrived()
+{
+    constexpr double kPayloadLb = 20000.0;
+
+    const auto writtenPayloadLb = [](const FakeVariableGateway& gateway)
+    {
+        double writtenLb = 0.0;
+        for (const CargoStation& station : kCargoStations)
+        {
+            writtenLb += gateway.WrittenAVar(StationVar(station.index), 0.0);
+        }
+
+        return writtenLb;
+    };
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
+    gateway.avars[StationVar(1)] = kCrewStationLb;
+    gateway.avars[StationVar(2)] = kCrewStationLb;
+
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + weight::LbToKg(kPayloadLb));
+
+    QVERIFY(std::abs(writtenPayloadLb(gateway) - kPayloadLb) < kPoundTolerance);
+
+    gateway.avars[StationVar(3)] = kCrewStationLb;
+
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + weight::LbToKg(kPayloadLb + 1.0));
+
+    const double crewLb = kCrewStationLb * static_cast<double>(kCrewStations.size());
+
+    QVERIFY(std::abs(writtenPayloadLb(gateway) - (kPayloadLb + 1.0 - crewLb)) < kPoundTolerance);
+
+    for (const int crewStation : kCrewStations)
+    {
+        QCOMPARE(gateway.AVarWriteCount(StationVar(crewStation)), 0);
     }
 }
 
@@ -1187,7 +1336,6 @@ void Fss727Test::observingEvaluatingAndReadingWriteNoVariable()
         static_cast<void>(aircraft.ConsumeSmartSwitch());
 
         aircraft.OnLoadingStarted();
-        aircraft.SetCurrentZfwKg(61000.0);
         aircraft.HoldDoorsClosed(true);
 
         QCOMPARE(gateway.setLVarCalls, 0);
