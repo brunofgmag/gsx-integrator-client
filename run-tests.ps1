@@ -2,9 +2,7 @@ param(
     [ValidateSet('Debug', 'Release', 'RelWithDebInfo')]
     [string]$Config = 'Debug',
 
-    [string]$Filter = '',
-
-    [switch]$Reconfigure
+    [string]$Filter = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,7 +34,6 @@ if ($Filter -and ($Filter -like '*\*' -or $Filter -like '*/*' -or $Filter -like 
     }
 }
 
-# ── Find cmake ──────────────────────────────────────────────────────────
 $cmakeCmd = Get-Command cmake -ErrorAction SilentlyContinue
 if ($cmakeCmd)
 {
@@ -58,7 +55,6 @@ if (-not (Test-Path -LiteralPath $ctest))
 { throw 'ctest.exe não encontrado ao lado do cmake.'
 }
 
-# ── Qt ─────────────
 if (-not $env:QT_ROOT_DIR)
 {
     $kit = Get-ChildItem -LiteralPath 'C:\Qt' -Directory -ErrorAction SilentlyContinue |
@@ -78,18 +74,16 @@ if (-not $env:QT_ROOT_DIR)
 $preset  = $Config.ToLowerInvariant()
 $buildDir = Join-Path $PSScriptRoot "build/$preset"
 
-# ── Configure ───────────────────────────────────────────────
-$cacheFile = Join-Path $buildDir 'CMakeCache.txt'
-if ($Reconfigure -or -not (Test-Path -LiteralPath $cacheFile))
-{
-    Write-Host "==> Configurando preset '$preset'..."
-    & $cmake --preset $preset
-    if ($LASTEXITCODE -ne 0)
-    { exit $LASTEXITCODE
-    }
+$env:MSBUILDDISABLENODEREUSE = '1'
+
+& (Join-Path $PSScriptRoot 'tools/remove-locked-build-outputs.ps1') -Directory $buildDir
+
+Write-Host "==> Configurando preset '$preset'..."
+& $cmake --preset $preset
+if ($LASTEXITCODE -ne 0)
+{ exit $LASTEXITCODE
 }
 
-# ── Compile targets ──────────────────────────────────────────────
 if ($Filter)
 {
     if ($Filter -like 'turnaround-state-*')
@@ -101,17 +95,16 @@ if ($Filter)
         $targetToBuild = "gsxi-$Filter-tests"
     }
     Write-Host "==> Compilando apenas o alvo de teste correspondente: $targetToBuild ($Config)..."
-    & $cmake --build --preset $preset --target $targetToBuild --parallel
+    & $cmake --build --preset $preset --target $targetToBuild --parallel -- '-nodeReuse:false'
 } else
 {
     Write-Host "==> Compilando todos os alvos ($Config)..."
-    & $cmake --build --preset $preset --parallel
+    & $cmake --build --preset $preset --parallel -- '-nodeReuse:false'
 }
 if ($LASTEXITCODE -ne 0)
 { exit $LASTEXITCODE
 }
 
-# ── Run CTest ─────────────────────────────────────────────────────────────
 Write-Host "`n==> Rodando testes..."
 $ctestArgs = @(
     '--test-dir', $buildDir
