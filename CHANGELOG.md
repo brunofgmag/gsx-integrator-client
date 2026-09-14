@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.34.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.1...v1.34.2) (2026-09-14)
+
+
+* keep the deck master on until the door rests and point the power-on tip at the engineer panel ([#148](https://github.com/brunofgmag/gsx-integrator-client/issues/148)) ([66034af](https://github.com/brunofgmag/gsx-integrator-client/commit/66034af8d86d723c949e1e4d55b5f319c2920239))
+
+
+### Bug Fixes
+
+* **fss-727:** end the main deck travel once the door rests instead of at a position threshold ([c78f50e](https://github.com/brunofgmag/gsx-integrator-client/commit/c78f50e417f7aec74e1ae7184ff0e510f82c7f0a)) ([66034af](https://github.com/brunofgmag/gsx-integrator-client/commit/66034af8d86d723c949e1e4d55b5f319c2920239))
+* **operations:** point the 727 power-on tip at the engineer panel ext power switch ([78a52bb](https://github.com/brunofgmag/gsx-integrator-client/commit/78a52bb11b4448b11cf32f044e63871b83ca689e)) ([66034af](https://github.com/brunofgmag/gsx-integrator-client/commit/66034af8d86d723c949e1e4d55b5f319c2920239))
+
 ## [1.34.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.0...v1.34.1) (2026-09-14)
 
 
