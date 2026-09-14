@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.32.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.32.1...v1.32.2) (2026-09-14)
+
+
+* give up on a loader that never gets its door and name it on screen ([#140](https://github.com/brunofgmag/gsx-integrator-client/issues/140)) ([2a3ff8e](https://github.com/brunofgmag/gsx-integrator-client/commit/2a3ff8e6301e700995cea0364b335b74b6a36976))
+
+
+### Bug Fixes
+
+* **boarding:** give up on a loader that never gets its door and name it on screen ([518041c](https://github.com/brunofgmag/gsx-integrator-client/commit/518041cdbd1cb15d14e474a9067c9526a8985405)) ([2a3ff8e](https://github.com/brunofgmag/gsx-integrator-client/commit/2a3ff8e6301e700995cea0364b335b74b6a36976))
+* **gsx:** hold a service counter at zero until its lvar moves off the last turnaround ([12d7629](https://github.com/brunofgmag/gsx-integrator-client/commit/12d7629f5afc89b07443ccf39080bc29cb3703ab)) ([2a3ff8e](https://github.com/brunofgmag/gsx-integrator-client/commit/2a3ff8e6301e700995cea0364b335b74b6a36976))
+
 ## [1.32.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.32.0...v1.32.1) (2026-09-14)
 
 
