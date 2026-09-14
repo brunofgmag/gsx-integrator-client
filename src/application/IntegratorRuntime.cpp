@@ -593,6 +593,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.refuelBySelf = IsAircraftRefuelBySelf();
     snapshot.cargoAircraft = IsAircraftCargoVariant();
     snapshot.efbFlightPlan = AircraftRequiresEfbFlightPlan();
+    snapshot.engineerPanelExternalPower = AircraftTakesExternalPowerAtTheEngineerPanel();
     snapshot.gsxProfileConflict = HasGsxProfileConflict();
     snapshot.gsxProfileFixable = CanFixGsxProfile();
     snapshot.pmdgOptionsConflict = HasPmdgOptionsConflict();
@@ -760,6 +761,11 @@ bool IntegratorRuntime::IsAircraftCargoVariant() const
 bool IntegratorRuntime::AircraftRequiresEfbFlightPlan() const
 {
     return aircraft_ && aircraft_->RequiresEfbFlightPlan();
+}
+
+bool IntegratorRuntime::AircraftTakesExternalPowerAtTheEngineerPanel() const
+{
+    return aircraft_ && aircraft_->TakesExternalPowerAtTheEngineerPanel();
 }
 
 WeightUnit IntegratorRuntime::GetAutoWeightUnit() const

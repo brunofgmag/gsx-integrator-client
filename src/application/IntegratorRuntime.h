@@ -119,6 +119,7 @@ private:
     [[nodiscard]] bool IsAircraftCargoVariant() const;
     [[nodiscard]] bool IsLoadingCargoPhase() const;
     [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
+    [[nodiscard]] bool AircraftTakesExternalPowerAtTheEngineerPanel() const;
     [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
     [[nodiscard]] bool CanFixGsxProfile() const;
     [[nodiscard]] bool CanFixPmdgOptions() const;

@@ -33,6 +33,7 @@ private slots:
     static void successfulCommandClearsPreviousError();
     static void exposesPhaseIndexCountAndTip();
     static void flightPlanTipFollowsPlanSource();
+    static void powerOnTipNamesTheEngineerPanelWhereTheAircraftTakesExternalPowerThere();
     static void theBoardingTipNamesTheForwardLoaderWaitingForItsDoor();
     static void theBoardingTipNamesTheAftLoaderWaitingForItsDoor();
     static void theBoardingTipNamesTheMainDeckLoaderWaitingForItsDoor();
@@ -380,6 +381,25 @@ void OperationsViewModelTest::flightPlanTipFollowsPlanSource()
 
     QCOMPARE(viewModel.GetPhaseTip(),
              QStringLiteral("Import your SimBrief flight plan on the aircraft EFB."));
+}
+
+void OperationsViewModelTest::powerOnTipNamesTheEngineerPanelWhereTheAircraftTakesExternalPowerThere()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingPowerOn;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Connect the GPU and switch on the batteries so the aircraft has power."));
+
+    service.snapshot.engineerPanelExternalPower = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power."));
 }
 
 namespace

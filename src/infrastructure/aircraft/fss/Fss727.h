@@ -69,6 +69,7 @@ public:
     [[nodiscard]] bool IsHeldForDeparture() const;
     [[nodiscard]] int MainDeckCloseRequests() const;
     [[nodiscard]] int HoldCloseRequests() const;
+    [[nodiscard]] std::optional<double> MainDeckPosition() const;
     [[nodiscard]] std::optional<bool> IsMainDeckClosed() const;
     [[nodiscard]] std::optional<bool> IsMainDeckOpen() const;
     [[nodiscard]] bool SupportsChocksControl() const override { return true; }
@@ -76,6 +77,7 @@ public:
     void ClearOwnGroundEquipment() override;
 
     [[nodiscard]] bool IsPowered() const override;
+    [[nodiscard]] bool TakesExternalPowerAtTheEngineerPanel() const override { return true; }
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;

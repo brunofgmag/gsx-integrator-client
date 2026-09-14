@@ -98,6 +98,7 @@ void RuntimeIntegratorServiceTest::freshSnapshotHasDisconnectedDefaults()
     QVERIFY(!snapshot.pmdgOptionsConflict);
     QVERIFY(!snapshot.pmdgOptionsFixable);
     QVERIFY(!snapshot.cargoAircraft);
+    QVERIFY(!snapshot.engineerPanelExternalPower);
     QCOMPARE(snapshot.aircraftName, std::string{});
     QCOMPARE(snapshot.aircraftProfileId, std::string{});
     QCOMPARE(snapshot.phase, TurnaroundPhase::WaitingSupportedAircraft);
@@ -240,6 +241,7 @@ void RuntimeIntegratorServiceTest::runtimeGettersOnEmptyRuntime()
     QVERIFY(!snapshot.refuelByGsx);
     QVERIFY(!snapshot.refuelBySelf);
     QVERIFY(!snapshot.cargoAircraft);
+    QVERIFY(!snapshot.engineerPanelExternalPower);
     QVERIFY(!snapshot.gsxProfileConflict);
     QVERIFY(!snapshot.gsxProfileFixable);
     QVERIFY(!snapshot.pmdgOptionsConflict);
