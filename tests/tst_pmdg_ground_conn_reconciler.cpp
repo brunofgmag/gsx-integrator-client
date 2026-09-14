@@ -16,12 +16,10 @@ namespace
     {
     public:
         bool aircraftPowered = false;
-        bool groundPowerConnected = false;
         bool groundPowerPresent = false;
         bool chocksSet = false;
 
         [[nodiscard]] bool HasAircraftPower() const override { return aircraftPowered; }
-        [[nodiscard]] bool GroundPowerConnected() const override { return groundPowerConnected; }
         [[nodiscard]] bool GroundPowerPresent() const override { return groundPowerPresent; }
         [[nodiscard]] bool ChocksSet() const override { return chocksSet; }
     };
@@ -45,7 +43,7 @@ private slots:
     static void quietUntilSomethingIsAsked();
     static void chocksAreRequestedUntilTheyAppear();
     static void chocksStopAtTheAttemptCap();
-    static void groundPowerCountsAsPresentNotConnected();
+    static void groundPowerAlreadyPresentIsNeverRequested();
     static void groundPowerIsRequestedUntilItAppears();
     static void groundPowerIsNotPressedAgainWhileConnecting();
     static void groundPowerIsPressedAgainOnceTheTransitEnds();
@@ -109,7 +107,7 @@ void PmdgGroundConnReconcilerTest::chocksStopAtTheAttemptCap()
     QCOMPARE(RequestCount(tablet, kChocksRequest), 10);
 }
 
-void PmdgGroundConnReconcilerTest::groundPowerCountsAsPresentNotConnected()
+void PmdgGroundConnReconcilerTest::groundPowerAlreadyPresentIsNeverRequested()
 {
     FakeGroundSource source;
     source.groundPowerPresent = true;

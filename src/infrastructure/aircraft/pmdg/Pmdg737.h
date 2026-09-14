@@ -32,7 +32,7 @@ private:
     [[nodiscard]] DoorObservation ObserveAirstair() const;
 
     [[nodiscard]] bool HasAircraftPower() const override;
-    [[nodiscard]] bool GroundPowerConnected() const override;
+    [[nodiscard]] bool GroundPowerPresent() const override;
     [[nodiscard]] bool ChocksSet() const override;
 
     Pmdg737Variant variant_;
