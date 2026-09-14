@@ -413,6 +413,7 @@ private slots:
     static void aSampleRepeatedEveryThirdTickIsNotTheEndOfTheTravel();
     static void aRestThatWobblesInsideTheToleranceIsStillARest();
     static void aDeckReadingThatStopsArrivingNeverEndsTheTravel();
+    static void takesExternalPowerAtTheEngineerPanel();
     static void automodeRuleNeverHoldsThePhase();
     static void observingEvaluatingAndReadingWriteNoVariable();
     static void writesOnlyTheAutomodeKeyOnceAcrossFiftyTicks();
@@ -2184,6 +2185,18 @@ void Fss727Test::aDeckReadingThatStopsArrivingNeverEndsTheTravel()
 
     QCOMPARE(gateway.WriteCount(kPanelMaster), 2);
     QCOMPARE(gateway.Written(kPanelMaster), 0.0);
+}
+
+void Fss727Test::takesExternalPowerAtTheEngineerPanel()
+{
+    for (const char* variantName : kVariants)
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        const Fss727 aircraft(&gateway, &status, variantName);
+
+        QVERIFY(aircraft.TakesExternalPowerAtTheEngineerPanel());
+    }
 }
 
 void Fss727Test::observingEvaluatingAndReadingWriteNoVariable()

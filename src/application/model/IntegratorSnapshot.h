@@ -63,6 +63,7 @@ struct IntegratorSnapshot
     EngineConfirmationBlock engineConfirmationBlock = EngineConfirmationBlock::None;
     bool cargoAircraft = false;
     bool efbFlightPlan = false;
+    bool engineerPanelExternalPower = false;
 
     std::string aircraftName;
     std::string aircraftProfileId;

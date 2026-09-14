@@ -77,6 +77,7 @@ public:
     void ClearOwnGroundEquipment() override;
 
     [[nodiscard]] bool IsPowered() const override;
+    [[nodiscard]] bool TakesExternalPowerAtTheEngineerPanel() const override { return true; }
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;

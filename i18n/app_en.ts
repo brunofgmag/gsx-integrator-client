@@ -1638,7 +1638,12 @@
         <translation>Check that SimBrief is loaded in GSX and in this app.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="117"/>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="118"/>
+        <source>With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power.</source>
+        <translation>With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="119"/>
         <source>Connect the GPU and switch on the batteries so the aircraft has power.</source>
         <translation>Connect the GPU and switch on the batteries so the aircraft has power.</translation>
     </message>

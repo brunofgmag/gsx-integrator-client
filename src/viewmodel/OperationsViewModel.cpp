@@ -114,7 +114,9 @@ namespace
                        ? QCoreApplication::translate("Turnaround", "Import your SimBrief flight plan on the aircraft EFB.")
                        : QCoreApplication::translate("Turnaround", "Check that SimBrief is loaded in GSX and in this app.");
         case TurnaroundPhase::WaitingPowerOn:
-            return QCoreApplication::translate("Turnaround", "Connect the GPU and switch on the batteries so the aircraft has power.");
+            return snapshot.engineerPanelExternalPower
+                       ? QCoreApplication::translate("Turnaround", "With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power.")
+                       : QCoreApplication::translate("Turnaround", "Connect the GPU and switch on the batteries so the aircraft has power.");
         case TurnaroundPhase::RequestPushback:
             return QCoreApplication::translate("Turnaround", "Remember to remove additional services (like the GPU).");
         case TurnaroundPhase::WaitingReadyToPush:
