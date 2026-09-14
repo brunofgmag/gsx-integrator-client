@@ -44,6 +44,34 @@ namespace
         }
     }
 
+    QString BoardingTip(const IntegratorSnapshot& snapshot)
+    {
+        if (snapshot.cargoDoorStuck)
+        {
+            return {};
+        }
+
+        switch (snapshot.loaderHoldingBoarding)
+        {
+        case CargoLoader::Front:
+            return QCoreApplication::translate("Turnaround",
+                                               "A GSX loader is waiting for the forward cargo door. "
+                                               "Open it, or the client will finish the boarding without waiting for the loader.");
+        case CargoLoader::Rear:
+            return QCoreApplication::translate("Turnaround",
+                                               "A GSX loader is waiting for the aft cargo door. "
+                                               "Open it, or the client will finish the boarding without waiting for the loader.");
+        case CargoLoader::MainDeck:
+            return QCoreApplication::translate("Turnaround",
+                                               "A GSX loader is waiting for the main deck cargo door. "
+                                               "Open it, or the client will finish the boarding without waiting for the loader.");
+        case CargoLoader::None:
+            break;
+        }
+
+        return {};
+    }
+
     QString WaitingSupportedAircraftTip(const IntegratorSnapshot& snapshot)
     {
         if (!snapshot.automationEnabled)
@@ -77,6 +105,8 @@ namespace
     {
         switch (snapshot.phase)
         {
+        case TurnaroundPhase::Boarding:
+            return BoardingTip(snapshot);
         case TurnaroundPhase::WaitingSupportedAircraft:
             return WaitingSupportedAircraftTip(snapshot);
         case TurnaroundPhase::WaitingAircraftReady:

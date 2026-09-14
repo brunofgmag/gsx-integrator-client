@@ -186,6 +186,7 @@ void TurnaroundStateMachine::PublishStatus() const
     context_.status->engineConfirmationBlock = context_.data.engineConfirmationBlock;
     context_.status->servicesStalled = context_.data.servicesStalled;
     context_.status->serviceInterrupted = context_.data.serviceInterrupted;
+    context_.status->loaderHoldingBoarding = context_.data.loaderHoldingBoarding;
     context_.status->servicesWaitSeconds = context_.data.servicesWaitSeconds;
     context_.status->fuelProgress = context_.data.fuelProgress;
     context_.status->boardingProgress = context_.data.boardingProgress;

@@ -29,9 +29,9 @@ public:
     [[nodiscard]] int GetPlannedPassengers() const override;
     [[nodiscard]] int GetBoardedPassengers() override;
     [[nodiscard]] int GetDeboardedPassengers() override;
-    [[nodiscard]] double GetBoardingCargoPercent() const override;
+    [[nodiscard]] double GetBoardingCargoPercent() override;
     [[nodiscard]] bool IsLoadingCargo() const override;
-    [[nodiscard]] bool IsLoaderWaitingForDoor() const override;
+    [[nodiscard]] CargoLoader GetLoaderWaitingForDoor() const override;
     [[nodiscard]] double GetDeboardingCargoPercent() const override;
     [[nodiscard]] bool AreStairsInPlace() const override;
     [[nodiscard]] bool IsJetwayInPlace() const override;
@@ -65,9 +65,19 @@ private:
         int last = 0;
         int total = 0;
         bool counting = false;
+        bool moved = false;
         bool grown = false;
 
         int Update(int current, bool active);
+    };
+
+    struct CargoPercentReading
+    {
+        double first = 0.0;
+        bool counting = false;
+        bool moved = false;
+
+        double Update(double current, bool active);
     };
 
     void ObserveState(GsxState gsxState);
@@ -78,5 +88,6 @@ private:
     std::map<GsxState, StateTrack> states_;
     PassengerCounter boarding_;
     PassengerCounter deboarding_;
+    CargoPercentReading boardingCargo_;
 };
 #endif //GSX_INTEGRATOR_CLIENT_GSXSTATESERVICE_H

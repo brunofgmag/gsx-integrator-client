@@ -33,6 +33,12 @@ private slots:
     static void successfulCommandClearsPreviousError();
     static void exposesPhaseIndexCountAndTip();
     static void flightPlanTipFollowsPlanSource();
+    static void theBoardingTipNamesTheForwardLoaderWaitingForItsDoor();
+    static void theBoardingTipNamesTheAftLoaderWaitingForItsDoor();
+    static void theBoardingTipNamesTheMainDeckLoaderWaitingForItsDoor();
+    static void theBoardingTipStandsDownForThePmdgCargoDoorAdvisory();
+    static void theBoardingTipStaysQuietWhileNoLoaderWaits();
+    static void theBoardingTipOnlyShowsDuringTheBoardingPhase();
     static void theInitialTipNamesTheAutomationThatIsOff();
     static void theInitialTipNamesTheFlightStillOutsideTheCockpit();
     static void theInitialTipNamesTheUnsupportedAircraft();
@@ -369,6 +375,92 @@ void OperationsViewModelTest::flightPlanTipFollowsPlanSource()
 
     QCOMPARE(viewModel.GetPhaseTip(),
              QStringLiteral("Import your SimBrief flight plan on the aircraft EFB."));
+}
+
+namespace
+{
+    void ArrangeBoardingHeldByALoader(FakeIntegratorService& service, const CargoLoader loader)
+    {
+        service.snapshot.phase = TurnaroundPhase::Boarding;
+        service.snapshot.loaderHoldingBoarding = loader;
+        service.Notify();
+    }
+}
+
+void OperationsViewModelTest::theBoardingTipNamesTheForwardLoaderWaitingForItsDoor()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingHeldByALoader(service, CargoLoader::Front);
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("A GSX loader is waiting for the forward cargo door. "
+                            "Open it, or the client will finish the boarding without waiting for the loader."));
+}
+
+void OperationsViewModelTest::theBoardingTipNamesTheAftLoaderWaitingForItsDoor()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingHeldByALoader(service, CargoLoader::Rear);
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("A GSX loader is waiting for the aft cargo door. "
+                            "Open it, or the client will finish the boarding without waiting for the loader."));
+}
+
+void OperationsViewModelTest::theBoardingTipNamesTheMainDeckLoaderWaitingForItsDoor()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingHeldByALoader(service, CargoLoader::MainDeck);
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("A GSX loader is waiting for the main deck cargo door. "
+                            "Open it, or the client will finish the boarding without waiting for the loader."));
+}
+
+void OperationsViewModelTest::theBoardingTipStandsDownForThePmdgCargoDoorAdvisory()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.cargoDoorStuck = true;
+    ArrangeBoardingHeldByALoader(service, CargoLoader::MainDeck);
+
+    QVERIFY(viewModel.GetPhaseTip().isEmpty());
+}
+
+void OperationsViewModelTest::theBoardingTipStaysQuietWhileNoLoaderWaits()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingHeldByALoader(service, CargoLoader::None);
+
+    QVERIFY(viewModel.GetPhaseTip().isEmpty());
+}
+
+void OperationsViewModelTest::theBoardingTipOnlyShowsDuringTheBoardingPhase()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingReadyToPush;
+    service.snapshot.loaderHoldingBoarding = CargoLoader::MainDeck;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Turn on the beacon lights and set the parking brake."));
 }
 
 void OperationsViewModelTest::theInitialTipNamesTheAutomationThatIsOff()

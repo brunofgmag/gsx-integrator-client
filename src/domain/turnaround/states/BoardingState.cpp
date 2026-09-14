@@ -13,6 +13,8 @@ namespace
 {
     constexpr int kBoardingStallTicks = 90;
     constexpr int kBoardingRetryTicks = 30;
+    constexpr int kLoaderDoorNoticeTicks = 30;
+    constexpr int kLoaderDoorGiveUpTicks = 120;
 }
 
 std::optional<TurnaroundTransition> BoardingState::EvaluatePhase(TurnaroundContext& ctx)
@@ -26,10 +28,13 @@ std::optional<TurnaroundTransition> BoardingState::EvaluatePhase(TurnaroundConte
 
     if (boardingState != GsxStateStatus::Active && !isCompleted)
     {
+        data.loaderHoldingBoarding = CargoLoader::None;
+
         return std::nullopt;
     }
 
     EnsureBaseline(ctx);
+    NoteLoaderAwaitingDoor(ctx);
 
     if (isCompleted && !IsCargoPending(ctx))
     {
@@ -77,7 +82,11 @@ void BoardingState::MaybeForceCompletion(TurnaroundContext& ctx)
     auto& data = ctx.data;
 
     const bool heldBehindTheStairs = IsCargoHeldBehindTheStairs(ctx);
-    if (IsCargoPending(ctx) || (!IsBarFull(ctx) && !heldBehindTheStairs))
+    const bool abandonedLoader = HasGivenUpOnTheLoader(ctx);
+    const bool nothingToForce = IsCargoPending(ctx)
+        || (!IsBarFull(ctx) && !heldBehindTheStairs && !abandonedLoader);
+
+    if (nothingToForce)
     {
         data.boardingStallTicks = 0;
         data.boardingCompletionAttempts = 0;
@@ -116,9 +125,44 @@ bool BoardingState::IsCargoHeldBehindTheStairs(const TurnaroundContext& ctx)
         && ctx.gsxGateway->GetBoardingCargoPercent() <= 0.0;
 }
 
+void BoardingState::NoteLoaderAwaitingDoor(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+    const CargoLoader awaiting = ctx.gsxGateway->GetLoaderWaitingForDoor();
+
+    if (awaiting != data.loaderAwaitingDoor)
+    {
+        data.loaderAwaitingDoor = awaiting;
+        data.loaderDoorWaitTicks = 0;
+        data.loaderHoldingBoarding = CargoLoader::None;
+    }
+
+    if (awaiting == CargoLoader::None)
+    {
+        return;
+    }
+
+    ++data.loaderDoorWaitTicks;
+    if (data.loaderDoorWaitTicks >= kLoaderDoorNoticeTicks)
+    {
+        data.loaderHoldingBoarding = awaiting;
+    }
+}
+
+bool BoardingState::HasGivenUpOnTheLoader(const TurnaroundContext& ctx)
+{
+    return ctx.data.loaderAwaitingDoor != CargoLoader::None
+        && ctx.data.loaderDoorWaitTicks >= kLoaderDoorGiveUpTicks;
+}
+
 bool BoardingState::IsCargoPending(const TurnaroundContext& ctx)
 {
-    return ctx.gsxGateway->IsLoadingCargo() || ctx.gsxGateway->IsLoaderWaitingForDoor();
+    if (ctx.gsxGateway->IsLoadingCargo())
+    {
+        return true;
+    }
+
+    return ctx.data.loaderAwaitingDoor != CargoLoader::None && !HasGivenUpOnTheLoader(ctx);
 }
 
 void BoardingState::EnsureBaseline(TurnaroundContext& ctx)

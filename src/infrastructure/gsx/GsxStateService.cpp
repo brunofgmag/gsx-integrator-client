@@ -1,9 +1,11 @@
 #include "GsxStateService.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <ranges>
 #include <string_view>
+#include <utility>
 
 #include "GsxLVars.h"
 #include "../logging/LogMacros.h"
@@ -14,6 +16,12 @@ using namespace gsx::lvars;
 namespace
 {
     constexpr auto kNoPushbackVerdict = "no pushback";
+
+    constexpr std::array kBaggageLoaders = {
+        std::pair{kBaggageLoaderFrontState, CargoLoader::Front},
+        std::pair{kBaggageLoaderRearState, CargoLoader::Rear},
+        std::pair{kBaggageLoaderMainState, CargoLoader::MainDeck},
+    };
 
     bool EqualsFold(const std::string& lhs, const std::string_view rhs)
     {
@@ -54,6 +62,7 @@ void GsxStateService::Reset()
 {
     boarding_ = {};
     deboarding_ = {};
+    boardingCargo_ = {};
     fuelAndPayloadTakenOver_ = false;
     gpuConnectedSeenClear_ = false;
 
@@ -167,7 +176,17 @@ int GsxStateService::PassengerCounter::Update(const int current, const bool acti
         counting = true;
         last = current;
 
-        return total + current;
+        return 0;
+    }
+
+    if (!moved)
+    {
+        if (current == last)
+        {
+            return 0;
+        }
+
+        moved = true;
     }
 
     if (current < last)
@@ -189,9 +208,31 @@ int GsxStateService::PassengerCounter::Update(const int current, const bool acti
     return total + current;
 }
 
-double GsxStateService::GetBoardingCargoPercent() const
+double GsxStateService::GetBoardingCargoPercent()
 {
-    return varManager_->GetLVar(kBoardingCargoPercent);
+    const bool active = varManager_->GetLVar(kBoardingState) == static_cast<double>(GsxStateStatus::Active);
+
+    return boardingCargo_.Update(varManager_->GetLVar(kBoardingCargoPercent), active);
+}
+
+double GsxStateService::CargoPercentReading::Update(const double current, const bool active)
+{
+    if (!counting)
+    {
+        if (!active)
+        {
+            return 0.0;
+        }
+
+        counting = true;
+        first = current;
+
+        return 0.0;
+    }
+
+    moved = moved || current != first;
+
+    return moved ? current : 0.0;
 }
 
 bool GsxStateService::IsLoadingCargo() const
@@ -199,17 +240,17 @@ bool GsxStateService::IsLoadingCargo() const
     return varManager_->GetLVar(kBoardingCargo) == 1.0;
 }
 
-bool GsxStateService::IsLoaderWaitingForDoor() const
+CargoLoader GsxStateService::GetLoaderWaitingForDoor() const
 {
-    for (const char* state : {kBaggageLoaderFrontState, kBaggageLoaderRearState, kBaggageLoaderMainState})
+    for (const auto& [state, loader] : kBaggageLoaders)
     {
         if (varManager_->GetLVar(state) == gsx::states::kLoaderWaitingForDoor)
         {
-            return true;
+            return loader;
         }
     }
 
-    return false;
+    return CargoLoader::None;
 }
 
 double GsxStateService::GetDeboardingCargoPercent() const
