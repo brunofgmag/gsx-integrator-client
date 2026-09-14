@@ -3,6 +3,7 @@
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
+#include "doubles/FakeGsxRemoteApiClient.h"
 #include "doubles/FakeSimConnectApi.h"
 #include "../src/application/IntegratorRuntime.h"
 #include "../src/domain/turnaround/PilotTouch.h"
@@ -57,6 +58,7 @@ private slots:
     static void automationToggleEmitsOncePerChange();
     static void runtimeGettersOnEmptyRuntime();
     static void setupConnectsThroughFakeSimConnect();
+    static void setupStartsTheRemoteApiClientWithoutOpeningASocket();
     static void connectedCommandsFollowGuardOrder();
     static void subscribeFailureDisconnects();
     static void subscribeFailureKeepsRetrying();
@@ -71,6 +73,7 @@ private slots:
 void RuntimeIntegratorServiceTest::init()
 {
     FakeSimConnectApi::Reset();
+    FakeGsxRemoteApi::Reset();
 }
 
 void RuntimeIntegratorServiceTest::freshSnapshotHasDisconnectedDefaults()
@@ -262,6 +265,18 @@ void RuntimeIntegratorServiceTest::setupConnectsThroughFakeSimConnect()
 
     QVERIFY(snapshot.connected);
     QVERIFY(snapshot.canToggleAutomation);
+}
+
+void RuntimeIntegratorServiceTest::setupStartsTheRemoteApiClientWithoutOpeningASocket()
+{
+    IntegratorRuntime runtime;
+
+    QCOMPARE(FakeGsxRemoteApi::startCalls, 0);
+
+    runtime.Setup();
+
+    QCOMPARE(FakeGsxRemoteApi::startCalls, 1);
+    QVERIFY(FakeGsxRemoteApi::commandVerbs.empty());
 }
 
 void RuntimeIntegratorServiceTest::connectedCommandsFollowGuardOrder()

@@ -830,6 +830,8 @@ gsxi_add_qt_test(gsxi-integrator-snapshot-tests integrator-snapshot
 gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-service
         tests/doubles/FakeSimConnectApi.h
         tests/doubles/FakeSimConnectApi.cpp
+        tests/doubles/FakeGsxRemoteApiClient.h
+        tests/doubles/FakeGsxRemoteApiClient.cpp
         tests/tst_runtime_integrator_service.cpp
         src/application/IntegratorRuntime.cpp
         src/application/IntegratorRuntime.h
@@ -942,7 +944,6 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/gsx/GsxDoorSync.h
         src/infrastructure/gsx/GsxMenuNavigator.cpp
         src/infrastructure/gsx/GsxMenuNavigator.h
-        src/infrastructure/gsx/GsxRemoteApiClient.cpp
         src/infrastructure/gsx/GsxRemoteApiClient.h
         src/infrastructure/gsx/GsxRemoteStateReducer.cpp
         src/infrastructure/gsx/GsxRemoteStateReducer.h
@@ -960,13 +961,11 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_link_libraries(gsxi-runtime-integrator-service-tests PRIVATE
         gsxi-turnaround-state-test-support
-        Qt6::Network
-        Qt6::WebSockets)
+        Qt6::Network)
 target_include_directories(gsxi-runtime-integrator-service-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
 add_custom_command(TARGET gsxi-runtime-integrator-service-tests POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::WebSockets>"
         "$<TARGET_FILE:Qt6::Network>"
         "$<TARGET_FILE_DIR:gsxi-runtime-integrator-service-tests>"
         VERBATIM)
@@ -1015,7 +1014,8 @@ set(GSXI_GUARD_CHECKS
         check-viewmodel-property-unbound
         check-infra-gateway-uncalled
         check-state-predicate-lvar-default
-        check-remote-state-field-unread)
+        check-remote-state-field-unread
+        check-avar-unit)
 
 foreach (GSXI_GUARD_CHECK ${GSXI_GUARD_CHECKS})
     add_test(NAME ${GSXI_GUARD_CHECK}

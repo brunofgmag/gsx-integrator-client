@@ -18,6 +18,8 @@ public:
     std::unordered_map<std::string, int> lvarWrites;
     std::unordered_map<std::string, int> avarWrites;
     std::unordered_map<std::string, std::string> avarWriteUnits;
+    std::unordered_map<std::string, std::string> avarAccessUnits;
+    int avarUnitMismatches = 0;
     std::string aircraftName;
     bool aircraftNameAvailable = true;
     std::string atcModel;
@@ -85,15 +87,20 @@ public:
         lvars[name] = value;
     }
 
-    double GetAVar(const std::string& name, const std::string& /*unit*/, const double defaultValue = 0.0) override
+    double GetAVar(const std::string& name, const std::string& unit, const double defaultValue = 0.0) override
     {
+        if (!ServesTheSameSlot(name, unit))
+        {
+            return defaultValue;
+        }
+
         const auto it = avars.find(name);
         return it != avars.end() ? it->second : defaultValue;
     }
 
-    bool HasReceivedAVar(const std::string& name, const std::string& /*unit*/) override
+    bool HasReceivedAVar(const std::string& name, const std::string& unit) override
     {
-        return avars.contains(name);
+        return ServesTheSameSlot(name, unit) && avars.contains(name);
     }
 
     void SetAVar(const std::string& name, const std::string& unit, const double value) override
@@ -101,6 +108,12 @@ public:
         ++setAVarCalls;
         ++avarWrites[name];
         avarWriteUnits[name] = unit;
+
+        if (!ServesTheSameSlot(name, unit))
+        {
+            return;
+        }
+
         avars[name] = value;
     }
 
@@ -145,6 +158,26 @@ public:
     }
 
 private:
+    bool ServesTheSameSlot(const std::string& name, const std::string& unit)
+    {
+        const auto it = avarAccessUnits.find(name);
+        if (it == avarAccessUnits.end())
+        {
+            avarAccessUnits.emplace(name, unit);
+
+            return true;
+        }
+
+        if (it->second == unit)
+        {
+            return true;
+        }
+
+        ++avarUnitMismatches;
+
+        return false;
+    }
+
     static bool CopyString(const std::string& source, const bool available, char* buffer, const int bufferSize)
     {
         if (!available || buffer == nullptr || bufferSize <= 0)
