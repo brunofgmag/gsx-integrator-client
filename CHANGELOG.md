@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.34.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.0...v1.34.1) (2026-09-14)
+
+
+* stop the cmake regeneration race by configuring in both scripts ([#146](https://github.com/brunofgmag/gsx-integrator-client/issues/146)) ([475a5b6](https://github.com/brunofgmag/gsx-integrator-client/commit/475a5b6f6ce4ee9dd81cf65b521d497a4dd7882e))
+
+
+### Bug Fixes
+
+* **build:** stop the cmake regeneration race by configuring in both scripts ([5aee05d](https://github.com/brunofgmag/gsx-integrator-client/commit/5aee05d172f50b64ab6183b37fb034d11e4e9b51)) ([475a5b6](https://github.com/brunofgmag/gsx-integrator-client/commit/475a5b6f6ce4ee9dd81cf65b521d497a4dd7882e))
+
 ## [1.34.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.33.0...v1.34.0) (2026-09-14)
 
 
