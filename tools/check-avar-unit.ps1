@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'guard-check-lib.ps1')
 
-$script:KnownUnits = @('kg', 'pounds', 'gallons', 'number', 'bool', 'percent', 'percent over 100', 'volts')
+$script:KnownUnits = @('kg', 'pounds', 'gallons', 'number', 'bool', 'percent', 'percent over 100', 'volts', 'knots')
 
 function Get-StringConstants
 {
