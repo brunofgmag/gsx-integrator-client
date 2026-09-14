@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.34.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.33.0...v1.34.0) (2026-09-14)
+
+
+* load the simbrief cargo line and tell the pilot when the plan leaves out the crew ([#144](https://github.com/brunofgmag/gsx-integrator-client/issues/144)) ([b1564c5](https://github.com/brunofgmag/gsx-integrator-client/commit/b1564c54813aa06f2689f53e946bc7a2eecefd54))
+
+
+### Features
+
+* **fss-727:** load the plan cargo line whole and hold the plan until the crew reads parked ([60b0a24](https://github.com/brunofgmag/gsx-integrator-client/commit/60b0a245bbf6203ea778b387f43a12ae8dcc5c7e)) ([b1564c5](https://github.com/brunofgmag/gsx-integrator-client/commit/b1564c54813aa06f2689f53e946bc7a2eecefd54))
+* **operations:** tell the pilot the empty weight simbrief needs to count the crew ([93a88c6](https://github.com/brunofgmag/gsx-integrator-client/commit/93a88c6071574cf7891a007fa94a504ec5f6f99b)) ([b1564c5](https://github.com/brunofgmag/gsx-integrator-client/commit/b1564c54813aa06f2689f53e946bc7a2eecefd54))
+* **simbrief:** read the operating empty weight and the payload line from the ofp ([8026dfd](https://github.com/brunofgmag/gsx-integrator-client/commit/8026dfd179f0db051a41de21a412a16cb978936a)) ([b1564c5](https://github.com/brunofgmag/gsx-integrator-client/commit/b1564c54813aa06f2689f53e946bc7a2eecefd54))
+* **turnaround:** flag a plan whose operating empty weight leaves out the crew ([f13a31b](https://github.com/brunofgmag/gsx-integrator-client/commit/f13a31bff9ca49ebab7fccbbf762c1801f974480)) ([b1564c5](https://github.com/brunofgmag/gsx-integrator-client/commit/b1564c54813aa06f2689f53e946bc7a2eecefd54))
+
 ## [1.33.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.32.2...v1.33.0) (2026-09-14)
 
 
