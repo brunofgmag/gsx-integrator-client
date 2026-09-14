@@ -33,6 +33,12 @@ private slots:
     static void successfulCommandClearsPreviousError();
     static void exposesPhaseIndexCountAndTip();
     static void flightPlanTipFollowsPlanSource();
+    static void theInitialTipNamesTheAutomationThatIsOff();
+    static void theInitialTipNamesTheFlightStillOutsideTheCockpit();
+    static void theInitialTipNamesTheUnsupportedAircraft();
+    static void theInitialTipNamesTheGsxThatIsNotThere();
+    static void theInitialTipNamesTheAutomationFirstWhenEverythingIsStillDown();
+    static void theInitialTipStandsDownOnceNothingHoldsTheTurnaround();
     static void exposesGsxProfileConflictFromSnapshot();
     static void fixGsxProfileDelegatesToService();
     static void fixGsxProfileReportsRejectedCommands();
@@ -363,6 +369,107 @@ void OperationsViewModelTest::flightPlanTipFollowsPlanSource()
 
     QCOMPARE(viewModel.GetPhaseTip(),
              QStringLiteral("Import your SimBrief flight plan on the aircraft EFB."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesTheAutomationThatIsOff()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = false;
+    service.snapshot.sessionActive = true;
+    service.snapshot.aircraftSupported = true;
+    service.snapshot.gsxAvailable = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("The automation is off, so the client is not driving this turnaround."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesTheFlightStillOutsideTheCockpit()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = false;
+    service.snapshot.aircraftSupported = true;
+    service.snapshot.gsxAvailable = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("The flight has not reached the cockpit yet, so the client is still waiting for the sim."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesTheUnsupportedAircraft()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.aircraftSupported = false;
+    service.snapshot.gsxAvailable = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("This aircraft is not supported, so the client cannot drive its turnaround."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesTheGsxThatIsNotThere()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.aircraftSupported = true;
+    service.snapshot.gsxAvailable = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("GSX Pro is not answering, so the client is watching without driving the turnaround."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesTheAutomationFirstWhenEverythingIsStillDown()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = false;
+    service.snapshot.sessionActive = false;
+    service.snapshot.aircraftSupported = false;
+    service.snapshot.gsxAvailable = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("The automation is off, so the client is not driving this turnaround."));
+}
+
+void OperationsViewModelTest::theInitialTipStandsDownOnceNothingHoldsTheTurnaround()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.aircraftSupported = true;
+    service.snapshot.gsxAvailable = true;
+    service.Notify();
+
+    QVERIFY(viewModel.GetPhaseTip().isEmpty());
 }
 
 void OperationsViewModelTest::exposesGsxProfileConflictFromSnapshot()
