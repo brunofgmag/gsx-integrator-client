@@ -69,6 +69,7 @@ public:
     [[nodiscard]] bool IsHeldForDeparture() const;
     [[nodiscard]] int MainDeckCloseRequests() const;
     [[nodiscard]] int HoldCloseRequests() const;
+    [[nodiscard]] std::optional<double> MainDeckPosition() const;
     [[nodiscard]] std::optional<bool> IsMainDeckClosed() const;
     [[nodiscard]] std::optional<bool> IsMainDeckOpen() const;
     [[nodiscard]] bool SupportsChocksControl() const override { return true; }

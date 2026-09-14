@@ -1,6 +1,8 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727MAINDECKMOVESBYTHECARGOPANELRULE_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727MAINDECKMOVESBYTHECARGOPANELRULE_H
 
+#include <optional>
+
 #include "../../../../domain/ports/AircraftRule.h"
 
 class Fss727;
@@ -26,9 +28,18 @@ private:
         Closing
     };
 
+    struct TravelWatch
+    {
+        std::optional<double> lastPosition;
+        bool moved = false;
+        int stillTicks = 0;
+    };
+
     void StartTravel(VariableWriter& writer, Travel travel);
     void FinishTravel(VariableWriter& writer);
-    void TurnThePanelMasterOff(VariableWriter& writer);
+    void Follow(double position);
+    [[nodiscard]] bool HasComeToRest() const;
+    void TurnThePanelMasterOff(VariableWriter& writer, double position);
     [[nodiscard]] bool IsCloseRequestServable() const;
     [[nodiscard]] bool IsTheMainLoaderWaitingForTheDeck() const;
     [[nodiscard]] bool IsGsxWorkingTheCargoDoors() const;
@@ -39,6 +50,7 @@ private:
     const GsxDoorSync* doors_;
     int servedRequests_ = 0;
     Travel travel_ = Travel::None;
+    TravelWatch watch_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727MAINDECKMOVESBYTHECARGOPANELRULE_H

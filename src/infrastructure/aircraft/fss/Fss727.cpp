@@ -381,6 +381,11 @@ int Fss727::HoldCloseRequests() const
     return holdCloseRequests_;
 }
 
+std::optional<double> Fss727::MainDeckPosition() const
+{
+    return DoorPointPosition(kMainDeckPoint);
+}
+
 std::optional<bool> Fss727::IsMainDeckClosed() const
 {
     const std::optional<double> position = DoorPointPosition(kMainDeckPoint);

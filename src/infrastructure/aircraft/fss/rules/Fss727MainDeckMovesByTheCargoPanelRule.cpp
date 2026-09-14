@@ -1,5 +1,6 @@
 #include "Fss727MainDeckMovesByTheCargoPanelRule.h"
 
+#include <cmath>
 #include <optional>
 #include <QtCore/QString>
 
@@ -22,9 +23,21 @@ namespace
     constexpr double kSwitchOn = 1.0;
     constexpr double kSwitchOff = 0.0;
 
+    constexpr int kRestingTicks = 3;
+    constexpr double kStillWithin = 0.001;
+    constexpr double kRestsClosedAtMost = 0.02;
+    constexpr double kRestsOpenAtLeast = 0.98;
+    constexpr double kPercentPerFraction = 100.0;
+    constexpr int kProbePositionDecimals = 4;
+
     bool IsUnderway(const GsxStateStatus state)
     {
         return state == GsxStateStatus::Requested || state == GsxStateStatus::Active;
+    }
+
+    bool IsAtAnEnd(const double position)
+    {
+        return position <= kRestsClosedAtMost || position >= kRestsOpenAtLeast;
     }
 }
 
@@ -94,40 +107,67 @@ void Fss727MainDeckMovesByTheCargoPanelRule::StartTravel(VariableWriter& writer,
     writer.SetLVar(kMasterPowerLVar, kSwitchOn);
     writer.SetLVar(kCargoDoorSwitchLVar, opening ? kSwitchOn : kSwitchOff);
     travel_ = travel;
+    watch_ = TravelWatch{.lastPosition = aircraft_->MainDeckPosition()};
 }
 
 void Fss727MainDeckMovesByTheCargoPanelRule::FinishTravel(VariableWriter& writer)
 {
-    if (travel_ == Travel::Opening)
-    {
-        if (!aircraft_->IsMainDeckOpen().value_or(false))
-        {
-            return;
-        }
-
-        TurnThePanelMasterOff(writer);
-
-        LOG_INFO("FSS 727 main deck door open: the cargo panel master goes off");
-
-        return;
-    }
-
-    if (!aircraft_->IsMainDeckClosed().value_or(false))
+    const std::optional<double> position = aircraft_->MainDeckPosition();
+    if (!position.has_value())
     {
         return;
     }
 
-    TurnThePanelMasterOff(writer);
-    servedRequests_ = aircraft_->MainDeckCloseRequests();
+    Follow(*position);
+    if (!HasComeToRest())
+    {
+        return;
+    }
 
-    LOG_INFO("FSS 727 main deck door closed: the cargo panel master goes off");
+    if (travel_ == Travel::Closing)
+    {
+        servedRequests_ = aircraft_->MainDeckCloseRequests();
+    }
+
+    travel_ = Travel::None;
+
+    if (!IsAtAnEnd(*position))
+    {
+        LOG_INFO("FSS 727 main deck door came to rest at %.1f%%, short of both ends, so the cargo panel master is left as it is",
+                 *position * kPercentPerFraction);
+
+        return;
+    }
+
+    TurnThePanelMasterOff(writer, *position);
 }
 
-void Fss727MainDeckMovesByTheCargoPanelRule::TurnThePanelMasterOff(VariableWriter& writer)
+void Fss727MainDeckMovesByTheCargoPanelRule::Follow(const double position)
 {
-    probe::Line(QStringLiteral("write panel master=0"));
+    if (watch_.lastPosition.has_value() && std::abs(position - *watch_.lastPosition) <= kStillWithin)
+    {
+        ++watch_.stillTicks;
+    }
+    else
+    {
+        watch_.moved = watch_.moved || watch_.lastPosition.has_value();
+        watch_.stillTicks = 0;
+    }
+
+    watch_.lastPosition = position;
+}
+
+bool Fss727MainDeckMovesByTheCargoPanelRule::HasComeToRest() const
+{
+    return watch_.moved && watch_.stillTicks >= kRestingTicks;
+}
+
+void Fss727MainDeckMovesByTheCargoPanelRule::TurnThePanelMasterOff(VariableWriter& writer, const double position)
+{
+    probe::Line(QStringLiteral("write panel master=0 rest=%1").arg(position, 0, 'f', kProbePositionDecimals));
     writer.SetLVar(kMasterPowerLVar, kSwitchOff);
-    travel_ = Travel::None;
+
+    LOG_INFO("FSS 727 main deck door at rest at %.1f%%: the cargo panel master goes off", position * kPercentPerFraction);
 }
 
 bool Fss727MainDeckMovesByTheCargoPanelRule::IsCloseRequestServable() const
