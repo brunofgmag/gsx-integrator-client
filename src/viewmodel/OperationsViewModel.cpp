@@ -44,14 +44,44 @@ namespace
         }
     }
 
-    QString PhaseTip(const TurnaroundPhase phase, const bool efbFlightPlan)
+    QString BoardingTip(const IntegratorSnapshot& snapshot)
     {
-        switch (phase)
+        if (snapshot.cargoDoorStuck)
         {
+            return {};
+        }
+
+        switch (snapshot.loaderHoldingBoarding)
+        {
+        case CargoLoader::Front:
+            return QCoreApplication::translate("Turnaround",
+                                               "A GSX loader is waiting for the forward cargo door. "
+                                               "Open it, or the client will finish the boarding without waiting for the loader.");
+        case CargoLoader::Rear:
+            return QCoreApplication::translate("Turnaround",
+                                               "A GSX loader is waiting for the aft cargo door. "
+                                               "Open it, or the client will finish the boarding without waiting for the loader.");
+        case CargoLoader::MainDeck:
+            return QCoreApplication::translate("Turnaround",
+                                               "A GSX loader is waiting for the main deck cargo door. "
+                                               "Open it, or the client will finish the boarding without waiting for the loader.");
+        case CargoLoader::None:
+            break;
+        }
+
+        return {};
+    }
+
+    QString PhaseTip(const IntegratorSnapshot& snapshot)
+    {
+        switch (snapshot.phase)
+        {
+        case TurnaroundPhase::Boarding:
+            return BoardingTip(snapshot);
         case TurnaroundPhase::WaitingAircraftReady:
             return QCoreApplication::translate("Turnaround", "Check that the aircraft engines are shut down.");
         case TurnaroundPhase::WaitingFlightPlan:
-            return efbFlightPlan
+            return snapshot.efbFlightPlan
                        ? QCoreApplication::translate("Turnaround", "Import your SimBrief flight plan on the aircraft EFB.")
                        : QCoreApplication::translate("Turnaround", "Check that SimBrief is loaded in GSX and in this app.");
         case TurnaroundPhase::WaitingPowerOn:
@@ -356,7 +386,7 @@ QString OperationsViewModel::GetHoldCountdownText() const
 
 QString OperationsViewModel::GetPhaseTip() const
 {
-    return IsAwaitingStartLoading() ? StartLoadingTip() : PhaseTip(snapshot_.phase, snapshot_.efbFlightPlan);
+    return IsAwaitingStartLoading() ? StartLoadingTip() : PhaseTip(snapshot_);
 }
 
 bool OperationsViewModel::IsAwaitingStartLoading() const

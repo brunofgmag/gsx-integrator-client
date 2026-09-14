@@ -676,14 +676,14 @@ void TurnaroundStateMachineTest::holdsBoardingWhileCargoIsPending()
     TurnaroundWorkflow workflow;
     ReachBoarding(workflow);
 
-    workflow.f.gsxService.loaderWaitingForDoor = true;
+    workflow.f.gsxService.loaderWaitingForDoor = CargoLoader::Rear;
     workflow.f.gsxService.cargoPercent = 67.0;
     workflow.f.gsxService.boardingState = GsxStateStatus::Completed;
 
     workflow.TickHolding(TurnaroundPhase::Boarding);
     QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 0);
 
-    workflow.f.gsxService.loaderWaitingForDoor = false;
+    workflow.f.gsxService.loaderWaitingForDoor = CargoLoader::None;
     workflow.f.gsxService.loadingCargo = true;
 
     workflow.TickHolding(TurnaroundPhase::Boarding);

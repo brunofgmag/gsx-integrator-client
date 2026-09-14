@@ -605,6 +605,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.engineConfirmationBlock = GetEngineConfirmationBlock();
     snapshot.servicesStalled = AreServicesStalled();
     snapshot.serviceInterrupted = IsServiceInterrupted();
+    snapshot.loaderHoldingBoarding = status_.loaderHoldingBoarding;
     snapshot.servicesWaitSeconds = status_.servicesWaitSeconds;
     snapshot.doorsHoldingPushback = AreDoorsHoldingPushback();
     snapshot.phase = GetPhase();

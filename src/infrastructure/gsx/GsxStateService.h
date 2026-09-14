@@ -31,7 +31,7 @@ public:
     [[nodiscard]] int GetDeboardedPassengers() override;
     [[nodiscard]] double GetBoardingCargoPercent() override;
     [[nodiscard]] bool IsLoadingCargo() const override;
-    [[nodiscard]] bool IsLoaderWaitingForDoor() const override;
+    [[nodiscard]] CargoLoader GetLoaderWaitingForDoor() const override;
     [[nodiscard]] double GetDeboardingCargoPercent() const override;
     [[nodiscard]] bool AreStairsInPlace() const override;
     [[nodiscard]] bool IsJetwayInPlace() const override;

@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_AUTOMATIONSTATUS_H
 
 #include <string>
+#include "CargoLoader.h"
 #include "FlightPlan.h"
 
 enum class EngineConfirmationBlock : int
@@ -22,6 +23,7 @@ struct AutomationStatus
     bool fuelDidNotStay = false;
     bool servicesStalled = false;
     bool serviceInterrupted = false;
+    CargoLoader loaderHoldingBoarding = CargoLoader::None;
     int servicesWaitSeconds = 0;
     double fuelProgress = 0.0;
     double boardingProgress = 0.0;

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <string>
 #include "../../domain/model/AutomationStatus.h"
+#include "../../domain/model/CargoLoader.h"
 #include "../../domain/model/FlightPlan.h"
 #include "../../domain/turnaround/TurnaroundPhase.h"
 #include "../../domain/turnaround/TurnaroundTransition.h"
@@ -53,6 +54,7 @@ struct IntegratorSnapshot
     bool servicesStalled = false;
     bool serviceInterrupted = false;
     bool doorsHoldingPushback = false;
+    CargoLoader loaderHoldingBoarding = CargoLoader::None;
     int servicesWaitSeconds = 0;
     SnapshotDouble fuelShortfallKg = 0.0;
     EngineConfirmationBlock engineConfirmationBlock = EngineConfirmationBlock::None;
