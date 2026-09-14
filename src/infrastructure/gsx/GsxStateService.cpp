@@ -62,6 +62,7 @@ void GsxStateService::Reset()
         track = {};
     }
 }
+    boardingCargo_ = {};
 
 bool GsxStateService::IsAvailable() const
 {
@@ -167,7 +168,17 @@ int GsxStateService::PassengerCounter::Update(const int current, const bool acti
         counting = true;
         last = current;
 
-        return total + current;
+        return 0;
+    }
+
+    if (!moved)
+    {
+        if (current == last)
+        {
+            return 0;
+        }
+
+        moved = true;
     }
 
     if (current < last)
@@ -189,9 +200,31 @@ int GsxStateService::PassengerCounter::Update(const int current, const bool acti
     return total + current;
 }
 
-double GsxStateService::GetBoardingCargoPercent() const
+double GsxStateService::GetBoardingCargoPercent()
 {
-    return varManager_->GetLVar(kBoardingCargoPercent);
+    const bool active = varManager_->GetLVar(kBoardingState) == static_cast<double>(GsxStateStatus::Active);
+
+    return boardingCargo_.Update(varManager_->GetLVar(kBoardingCargoPercent), active);
+}
+
+double GsxStateService::CargoPercentReading::Update(const double current, const bool active)
+{
+    if (!counting)
+    {
+        if (!active)
+        {
+            return 0.0;
+        }
+
+        counting = true;
+        first = current;
+
+        return 0.0;
+    }
+
+    moved = moved || current != first;
+
+    return moved ? current : 0.0;
 }
 
 bool GsxStateService::IsLoadingCargo() const

@@ -52,7 +52,7 @@ public:
     [[nodiscard]] virtual int GetPlannedPassengers() const = 0;
     [[nodiscard]] virtual int GetBoardedPassengers() = 0;
     [[nodiscard]] virtual int GetDeboardedPassengers() = 0;
-    [[nodiscard]] virtual double GetBoardingCargoPercent() const = 0;
+    [[nodiscard]] virtual double GetBoardingCargoPercent() = 0;
     [[nodiscard]] virtual bool IsLoadingCargo() const = 0;
     [[nodiscard]] virtual bool IsLoaderWaitingForDoor() const = 0;
     [[nodiscard]] virtual double GetDeboardingCargoPercent() const = 0;

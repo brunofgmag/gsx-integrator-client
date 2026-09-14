@@ -145,7 +145,7 @@ public:
     [[nodiscard]] int GetPlannedPassengers() const override { return plannedPassengers; }
     [[nodiscard]] int GetBoardedPassengers() override { return boardedPassengers; }
     [[nodiscard]] int GetDeboardedPassengers() override { return deboardedPassengers; }
-    [[nodiscard]] double GetBoardingCargoPercent() const override { return cargoPercent; }
+    [[nodiscard]] double GetBoardingCargoPercent() override { return cargoPercent; }
     [[nodiscard]] bool IsLoadingCargo() const override { return loadingCargo; }
     [[nodiscard]] bool IsLoaderWaitingForDoor() const override { return loaderWaitingForDoor; }
     [[nodiscard]] double GetDeboardingCargoPercent() const override { return deboardingCargoPercent; }
