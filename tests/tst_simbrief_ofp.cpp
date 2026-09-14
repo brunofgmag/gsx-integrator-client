@@ -1,5 +1,6 @@
 #include <QtTest/QTest>
 
+#include <string>
 #include "../src/infrastructure/simbrief/SimbriefOfpParser.h"
 
 class SimbriefOfpTest final : public QObject
@@ -20,6 +21,10 @@ private slots:
     static void defaultsPassengersToZeroWhenMissing();
     static void defaultsToKilogramsWhenUnitsMissing();
     static void ignoresUnknownUnitsAsKilograms();
+    static void readsTheOperatingEmptyWeightAndThePayloadLine();
+    static void convertsTheOperatingEmptyWeightAndThePayloadLineFromPounds();
+    static void keepsAPlanWithoutAPayloadLineAndLeavesTheLineAbsent();
+    static void leavesAnUnreadablePayloadLineAbsent();
 };
 
 void SimbriefOfpTest::parsesKilograms()
@@ -155,6 +160,63 @@ void SimbriefOfpTest::ignoresUnknownUnitsAsKilograms()
     QVERIFY(plan.has_value());
     QCOMPARE(plan->fuelKg, 12000.0);
     QCOMPARE(plan->unit, WeightUnit::Kg);
+}
+
+void SimbriefOfpTest::readsTheOperatingEmptyWeightAndThePayloadLine()
+{
+    constexpr char payload[] =
+        "<params><units>kgs</units></params><fuel><plan_ramp>10127</plan_ramp></fuel>"
+        "<weights><oew>42306</oew><pax_count>12</pax_count><freight_added>2000</freight_added>"
+        "<cargo>2000</cargo><payload>3252</payload><est_zfw>45558</est_zfw>"
+        "<max_zfw>61689</max_zfw></weights>";
+
+    const auto plan = ParseSimbriefOfp(payload);
+
+    QVERIFY(plan.has_value());
+    QCOMPARE(plan->operatingEmptyKg, 42306.0);
+    QVERIFY(plan->payloadKg.has_value());
+    QCOMPARE(*plan->payloadKg, 3252.0);
+}
+
+void SimbriefOfpTest::convertsTheOperatingEmptyWeightAndThePayloadLineFromPounds()
+{
+    constexpr char payload[] =
+        "<units>lbs</units><plan_ramp>22046.2262185</plan_ramp><oew>93268.7646399</oew>"
+        "<payload>36376.2732605</payload><est_zfw>129645.0379004</est_zfw>";
+
+    const auto plan = ParseSimbriefOfp(payload);
+
+    QVERIFY(plan.has_value());
+    QVERIFY(qAbs(plan->operatingEmptyKg - 42306.0) < 0.01);
+    QVERIFY(plan->payloadKg.has_value());
+    QVERIFY(qAbs(*plan->payloadKg - 16500.0) < 0.01);
+}
+
+void SimbriefOfpTest::keepsAPlanWithoutAPayloadLineAndLeavesTheLineAbsent()
+{
+    constexpr char payload[] =
+        "<units>kgs</units><plan_ramp>12000</plan_ramp><est_zfw>180000</est_zfw>";
+
+    const auto plan = ParseSimbriefOfp(payload);
+
+    QVERIFY(plan.has_value());
+    QCOMPARE(plan->operatingEmptyKg, 0.0);
+    QVERIFY(!plan->payloadKg.has_value());
+}
+
+void SimbriefOfpTest::leavesAnUnreadablePayloadLineAbsent()
+{
+    for (const char* line : {"<payload>abc</payload>", "<payload>-1</payload>"})
+    {
+        const std::string payload =
+            std::string("<units>kgs</units><plan_ramp>12000</plan_ramp><est_zfw>180000</est_zfw>")
+            + "<oew>90000</oew>" + line;
+
+        const auto plan = ParseSimbriefOfp(payload);
+
+        QVERIFY2(plan.has_value(), line);
+        QVERIFY2(!plan->payloadKg.has_value(), line);
+    }
 }
 
 QTEST_APPLESS_MAIN(SimbriefOfpTest)
