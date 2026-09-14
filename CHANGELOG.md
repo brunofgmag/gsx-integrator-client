@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.33.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.32.2...v1.33.0) (2026-09-14)
+
+
+* drive the aircraft's own ground power, main deck and holds ([#142](https://github.com/brunofgmag/gsx-integrator-client/issues/142)) ([801745c](https://github.com/brunofgmag/gsx-integrator-client/commit/801745c60443f54adaea77edad5d392f26483d8d))
+
+
+### Features
+
+* **fss-727:** open the main deck for the waiting main loader and close it when boarding ends ([3dabf94](https://github.com/brunofgmag/gsx-integrator-client/commit/3dabf94865efe11186f5210af6d080862cb389dc)) ([801745c](https://github.com/brunofgmag/gsx-integrator-client/commit/801745c60443f54adaea77edad5d392f26483d8d))
+* **fss-727:** raise the aircraft's own ground power through the port and stop calling the gsx unit ([1acf10b](https://github.com/brunofgmag/gsx-integrator-client/commit/1acf10bd29cfdf65977d85b2d5e54b4090924e51)) ([801745c](https://github.com/brunofgmag/gsx-integrator-client/commit/801745c60443f54adaea77edad5d392f26483d8d))
+
+
+### Bug Fixes
+
+* **fss-727:** close each hold only once its loader has left ([28206f9](https://github.com/brunofgmag/gsx-integrator-client/commit/28206f965e8bba23032b2723d8922c076e2f1952)) ([801745c](https://github.com/brunofgmag/gsx-integrator-client/commit/801745c60443f54adaea77edad5d392f26483d8d))
+
 ## [1.32.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.32.1...v1.32.2) (2026-09-14)
 
 
