@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.32.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.32.0...v1.32.1) (2026-09-14)
+
+
+* name what holds the initial turnaround phase ([#138](https://github.com/brunofgmag/gsx-integrator-client/issues/138)) ([af7ceab](https://github.com/brunofgmag/gsx-integrator-client/commit/af7ceabfde2d50aa884d4a023670b1e1a2b6fbea))
+
+
+### Bug Fixes
+
+* **operations:** name what holds the initial turnaround phase ([7ee8664](https://github.com/brunofgmag/gsx-integrator-client/commit/7ee8664090f9c65edd557eebe6009ee54704bb2e)) ([af7ceab](https://github.com/brunofgmag/gsx-integrator-client/commit/af7ceabfde2d50aa884d4a023670b1e1a2b6fbea))
+
 ## [1.32.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.31.0...v1.32.0) (2026-09-12)
 
 
