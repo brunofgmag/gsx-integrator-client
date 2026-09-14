@@ -85,6 +85,23 @@ namespace
 
         return static_cast<int>(value);
     }
+
+    std::optional<double> ParseWeightKg(const std::string_view xml, const std::string_view tag, const bool pounds)
+    {
+        const auto text = ExtractTag(xml, tag);
+        if (!text)
+        {
+            return std::nullopt;
+        }
+
+        const auto parsed = ParseDouble(*text);
+        if (!parsed || *parsed < 0.0)
+        {
+            return std::nullopt;
+        }
+
+        return pounds ? weight::LbToKg(*parsed) : *parsed;
+    }
 }
 
 long long ParseSimbriefPlanEpoch(const std::string_view xml)
@@ -99,25 +116,16 @@ std::optional<FlightPlan> ParseSimbriefOfp(const std::string_view xml)
         return std::nullopt;
     }
 
-    const auto fuelValue = ExtractTag(xml, "plan_ramp");
-    const auto zfwValue = ExtractTag(xml, "est_zfw");
-    if (!fuelValue || !zfwValue)
-    {
-        return std::nullopt;
-    }
-
-    const auto parsedFuel = ParseDouble(*fuelValue);
-    const auto parsedZfw = ParseDouble(*zfwValue);
-    if (!parsedFuel || !parsedZfw)
-    {
-        return std::nullopt;
-    }
-
     const auto units = ExtractTag(xml, "units");
     const bool ofpInPounds = units && *units == "lbs";
     const auto unit = ofpInPounds ? WeightUnit::Lb : WeightUnit::Kg;
-    const double fuelKg = ofpInPounds ? weight::LbToKg(*parsedFuel) : *parsedFuel;
-    const double zfwKg = ofpInPounds ? weight::LbToKg(*parsedZfw) : *parsedZfw;
+
+    const auto fuelKg = ParseWeightKg(xml, "plan_ramp", ofpInPounds);
+    const auto zfwKg = ParseWeightKg(xml, "est_zfw", ofpInPounds);
+    if (!fuelKg || !zfwKg)
+    {
+        return std::nullopt;
+    }
 
     int passengers = 0;
     if (const auto passengerValue = ExtractTag(xml, "pax_count"); passengerValue)
@@ -130,15 +138,17 @@ std::optional<FlightPlan> ParseSimbriefOfp(const std::string_view xml)
         passengers = *parsedPax;
     }
 
-    if (fuelKg <= 0.0 || zfwKg <= 0.0 || passengers < 0)
+    if (*fuelKg <= 0.0 || *zfwKg <= 0.0 || passengers < 0)
     {
         return std::nullopt;
     }
 
-    FlightPlan plan{fuelKg, zfwKg, passengers, unit};
+    FlightPlan plan{*fuelKg, *zfwKg, passengers, unit};
     plan.origin = ExtractNestedTag(xml, "origin", "icao_code").value_or(std::string{});
     plan.destination = ExtractNestedTag(xml, "destination", "icao_code").value_or(std::string{});
     plan.generatedEpoch = ParseSimbriefPlanEpoch(xml);
+    plan.operatingEmptyKg = ParseWeightKg(xml, "oew", ofpInPounds).value_or(0.0);
+    plan.payloadKg = ParseWeightKg(xml, "payload", ofpInPounds);
 
     return plan;
 }

@@ -1,8 +1,10 @@
 #include "WaitingFlightPlanState.h"
 
+#include <cmath>
 #include <format>
 #include <string>
 #include "../TurnaroundContext.h"
+#include "../TurnaroundMath.h"
 #include "../../ports/Aircraft.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
@@ -75,5 +77,28 @@ void WaitingFlightPlanState::CaptureFlightPlan(TurnaroundContext& ctx)
     if (data.plannedPassengers == 0)
     {
         data.plannedPassengers = ctx.gsxGateway->GetPlannedPassengers();
+    }
+
+    NoteCrewLeftOutOfThePlan(ctx);
+}
+
+void WaitingFlightPlanState::NoteCrewLeftOutOfThePlan(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+
+    const double crewKg = ctx.aircraft->GetCrewOnBoardKg();
+    const double plannedOperatingEmptyKg = ctx.aircraft->GetPlannedOperatingEmptyKg();
+
+    data.planOmitsCrew = crewKg > 0.0
+        && std::abs(plannedOperatingEmptyKg - data.initialZfwKg) <= turnaround::kWeightEpsilonKg;
+    data.omittedCrewKg = data.planOmitsCrew ? crewKg : 0.0;
+    data.operatingEmptyWithCrewKg = data.planOmitsCrew ? plannedOperatingEmptyKg + crewKg : 0.0;
+
+    if (data.planOmitsCrew)
+    {
+        ctx.logger->LogInfo(std::format(
+            "The plan's operating empty weight of {:.0f} kg leaves out {:.0f} kg of crew; "
+            "the ZFW target is {:.0f} kg, and SimBrief needs {:.0f} kg to count the crew",
+            plannedOperatingEmptyKg, crewKg, data.plannedZfwKg, data.operatingEmptyWithCrewKg));
     }
 }

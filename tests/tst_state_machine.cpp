@@ -470,6 +470,7 @@ private slots:
     static void theStartOfThePushMovementNotifiesTheMenuGateway();
     static void publishesCurrentTankFuelBeforeRefuel();
     static void publishesLoadingTargetsAfterFlightPlanCapture();
+    static void publishesTheCrewThePlanLeftOutAfterFlightPlanCapture();
     static void debugSkipPhaseClampsToEnumRange();
     static void theClosedListHoldsOnlyTheGateTheSliceNamed();
     static void theSmartSwitchUnlocksThePushbackGateHeldByADoor();
@@ -515,6 +516,24 @@ void TurnaroundStateMachineTest::publishesLoadingTargetsAfterFlightPlanCapture()
     QCOMPARE(workflow.f.status.targetFuelKg, 12000.0);
     QCOMPARE(workflow.f.status.targetZfwKg, 180000.0);
     QCOMPARE(workflow.f.status.targetPassengers, 210);
+}
+
+void TurnaroundStateMachineTest::publishesTheCrewThePlanLeftOutAfterFlightPlanCapture()
+{
+    TurnaroundWorkflow workflow;
+    workflow.f.aircraft.crewOnBoardKg = 195.0;
+    workflow.f.aircraft.plannedOperatingEmptyKg = 130000.0;
+    workflow.AttachAircraft();
+    workflow.CompleteReposition();
+    workflow.CompleteGroundServiceSetup();
+
+    QVERIFY(!workflow.f.status.planOmitsCrew);
+
+    workflow.LoadFlightPlan();
+
+    QVERIFY(workflow.f.status.planOmitsCrew);
+    QCOMPARE(workflow.f.status.omittedCrewKg, 195.0);
+    QCOMPARE(workflow.f.status.operatingEmptyWithCrewKg, 130195.0);
 }
 
 void TurnaroundStateMachineTest::startsInWaitingSupportedAircraft()

@@ -9,9 +9,13 @@
 #include "AircraftTicks.h"
 #include "TestDoubles.h"
 #include "doubles/FakeGsxService.h"
+#include "../src/domain/model/AutomationSettings.h"
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/domain/model/FlightPlan.h"
 #include "../src/domain/support/Weight.h"
+#include "../src/domain/turnaround/TurnaroundContext.h"
+#include "../src/domain/turnaround/states/BoardingState.h"
+#include "../src/domain/turnaround/states/WaitingFlightPlanState.h"
 #include "../src/infrastructure/aircraft/fss/Fss727.h"
 
 namespace
@@ -104,9 +108,24 @@ namespace
 
     constexpr auto kStationPrefix = "PAYLOAD STATION WEIGHT:";
     constexpr double kEmptyWeightKg = 42306.0;
-    constexpr double kCrewStationLb = 200.0;
     constexpr std::array kCrewStations = {1, 2, 3};
+    constexpr std::array kMeasuredCrewLb = {200.0, 180.0, 50.0};
+    constexpr double kMeasuredCrewTotalLb = 430.0;
+    constexpr double kVendorNoseWheelLb = 5000.0;
     constexpr double kPoundTolerance = 1e-3;
+    constexpr double kKgTolerance = 1e-6;
+
+    constexpr auto kSimGroundVelocity = "GROUND VELOCITY";
+    constexpr auto kKnotsUnit = "Knots";
+    constexpr double kParked = 0.0;
+    constexpr double kVendorStoppedBelowKnots = 1.0;
+    constexpr double kCreeping = 0.9;
+    constexpr double kTaxiing = 3.0;
+
+    constexpr double kPlanFuelKg = 9627.0;
+    constexpr double kPlanZfwKg = 58806.0;
+    constexpr double kPlanOperatingEmptyKg = 42306.0;
+    constexpr double kPlanPayloadKg = 16500.0;
 
     struct CargoStation
     {
@@ -178,6 +197,36 @@ namespace
 
         QtMessageHandler previous_;
     };
+
+    void PlanTheMeasuredFlight(AutomationStatus& status)
+    {
+        status.flightPlanStatus = FlightPlanStatus::Ready;
+        status.plannedFuelKg = kPlanFuelKg;
+        status.plannedZfwKg = kPlanZfwKg;
+        status.plannedOperatingEmptyKg = kPlanOperatingEmptyKg;
+        status.plannedPayloadKg = kPlanPayloadKg;
+    }
+
+    void ParkWithTheMeasuredCrew(FakeVariableGateway& gateway)
+    {
+        gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
+        gateway.avars[kSimGroundVelocity] = kParked;
+        for (std::size_t crew = 0; crew < kCrewStations.size(); ++crew)
+        {
+            gateway.avars[StationVar(kCrewStations[crew])] = kMeasuredCrewLb[crew];
+        }
+    }
+
+    double WrittenCargoLb(const FakeVariableGateway& gateway)
+    {
+        double writtenLb = 0.0;
+        for (const CargoStation& station : kCargoStations)
+        {
+            writtenLb += gateway.WrittenAVar(StationVar(station.index), 0.0);
+        }
+
+        return writtenLb;
+    }
 
     void GiveTanks(FakeVariableGateway& gateway)
     {
@@ -268,7 +317,15 @@ private slots:
     static void loadingSpreadsThePayloadOverTheEffectiveCapacitiesInPounds();
     static void loadingWritesNothingUntilTheEmptyWeightArrives();
     static void loadingWritesTheSameTargetOnlyOnce();
-    static void loadingDiscountsTheCrewStationsOnceTheThreeHaveArrived();
+    static void loadingNeverPutsMoreThanThePlanCargoLineAboard();
+    static void loadingIgnoresWhatTheCrewStationsRead();
+    static void unloadsEveryCargoStationWhileThePlanHasNoCargoLine();
+    static void holdsThePlanUntilTheCargoLineTheEmptyWeightTheCrewAndTheGroundSpeedArrive();
+    static void holdsThePlanWhileTheAircraftRolls();
+    static void targetsTheEmptyWeightPlusTheCrewPlusThePlanCargoLine();
+    static void crewOnBoardSumsTheThreeCrewStationsOnlyWithTheAircraftStopped();
+    static void plannedOperatingEmptyWeightComesFromTheClientOfp();
+    static void theTargetTheBoardingBarAndTheFinalWriteAgreeOnThePlanCargoLine();
     static void registersThePedestalPhoneForFastRefresh();
     static void aPhoneTouchFiresOnceFromItsFirstThird();
     static void aHeldPhoneFiresOnceAcrossThreeTicks();
@@ -754,6 +811,7 @@ void Fss727Test::loadingSpreadsThePayloadOverTheEffectiveCapacitiesInPounds()
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+    status.plannedPayloadKg = weight::LbToKg(effectiveCapacitiesLb);
     gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
 
     aircraft.SetCurrentZfwKg(kEmptyWeightKg + weight::LbToKg(effectiveCapacitiesLb / 2.0));
@@ -779,6 +837,8 @@ void Fss727Test::loadingWritesNothingUntilTheEmptyWeightArrives()
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+    status.plannedPayloadKg = kPlanPayloadKg;
+
     aircraft.SetCurrentZfwKg(kEmptyWeightKg + 20000.0);
 
     QCOMPARE(gateway.setAVarCalls, 0);
@@ -796,57 +856,268 @@ void Fss727Test::loadingWritesTheSameTargetOnlyOnce()
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+    status.plannedPayloadKg = kPlanPayloadKg;
     gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
 
-    aircraft.SetCurrentZfwKg(kEmptyWeightKg + 20000.0);
-    aircraft.SetCurrentZfwKg(kEmptyWeightKg + 20000.0);
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + 10000.0);
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + 10000.0);
 
     QCOMPARE(gateway.AVarWriteCount(StationVar(kCargoStations.back().index)), 1);
 
-    aircraft.SetCurrentZfwKg(kEmptyWeightKg + 21000.0);
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + 11000.0);
 
     QCOMPARE(gateway.AVarWriteCount(StationVar(kCargoStations.back().index)), 2);
 }
 
-void Fss727Test::loadingDiscountsTheCrewStationsOnceTheThreeHaveArrived()
+void Fss727Test::loadingNeverPutsMoreThanThePlanCargoLineAboard()
 {
-    constexpr double kPayloadLb = 20000.0;
-
-    const auto writtenPayloadLb = [](const FakeVariableGateway& gateway)
-    {
-        double writtenLb = 0.0;
-        for (const CargoStation& station : kCargoStations)
-        {
-            writtenLb += gateway.WrittenAVar(StationVar(station.index), 0.0);
-        }
-
-        return writtenLb;
-    };
-
     FakeVariableGateway gateway;
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
-    gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
-    gateway.avars[StationVar(1)] = kCrewStationLb;
-    gateway.avars[StationVar(2)] = kCrewStationLb;
+    PlanTheMeasuredFlight(status);
+    ParkWithTheMeasuredCrew(gateway);
 
-    aircraft.SetCurrentZfwKg(kEmptyWeightKg + weight::LbToKg(kPayloadLb));
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + weight::LbToKg(kMeasuredCrewTotalLb) + kPlanPayloadKg);
 
-    QVERIFY(std::abs(writtenPayloadLb(gateway) - kPayloadLb) < kPoundTolerance);
+    QVERIFY(std::abs(WrittenCargoLb(gateway) - weight::KgToLb(kPlanPayloadKg)) < kPoundTolerance);
 
-    gateway.avars[StationVar(3)] = kCrewStationLb;
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + kPlanPayloadKg + 5000.0);
 
-    aircraft.SetCurrentZfwKg(kEmptyWeightKg + weight::LbToKg(kPayloadLb + 1.0));
-
-    const double crewLb = kCrewStationLb * static_cast<double>(kCrewStations.size());
-
-    QVERIFY(std::abs(writtenPayloadLb(gateway) - (kPayloadLb + 1.0 - crewLb)) < kPoundTolerance);
+    QVERIFY(std::abs(WrittenCargoLb(gateway) - weight::KgToLb(kPlanPayloadKg)) < kPoundTolerance);
 
     for (const int crewStation : kCrewStations)
     {
         QCOMPARE(gateway.AVarWriteCount(StationVar(crewStation)), 0);
     }
+}
+
+void Fss727Test::loadingIgnoresWhatTheCrewStationsRead()
+{
+    constexpr double kHalfwayZfwKg = kEmptyWeightKg + 8000.0;
+
+    FakeVariableGateway parked;
+    AutomationStatus parkedStatus;
+    Fss727 parkedAircraft(&parked, &parkedStatus, Fss727::kName200F);
+
+    PlanTheMeasuredFlight(parkedStatus);
+    ParkWithTheMeasuredCrew(parked);
+    parkedAircraft.SetCurrentZfwKg(kHalfwayZfwKg);
+
+    FakeVariableGateway rolling;
+    AutomationStatus rollingStatus;
+    Fss727 rollingAircraft(&rolling, &rollingStatus, Fss727::kName200F);
+
+    PlanTheMeasuredFlight(rollingStatus);
+    rolling.avars[kSimEmptyWeight] = kEmptyWeightKg;
+    rolling.avars[kSimGroundVelocity] = kTaxiing;
+    rolling.avars[StationVar(1)] = kVendorNoseWheelLb;
+    rollingAircraft.SetCurrentZfwKg(kHalfwayZfwKg);
+
+    QVERIFY(std::abs(WrittenCargoLb(parked) - weight::KgToLb(8000.0)) < kPoundTolerance);
+
+    for (const CargoStation& station : kCargoStations)
+    {
+        const std::string name = StationVar(station.index);
+
+        QCOMPARE(rolling.AVarWriteCount(name), 1);
+        QCOMPARE(rolling.WrittenAVar(name), parked.WrittenAVar(name));
+    }
+}
+
+void Fss727Test::unloadsEveryCargoStationWhileThePlanHasNoCargoLine()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    ParkWithTheMeasuredCrew(gateway);
+
+    aircraft.SetCurrentZfwKg(kEmptyWeightKg + 20000.0);
+
+    for (const CargoStation& station : kCargoStations)
+    {
+        const std::string name = StationVar(station.index);
+
+        QCOMPARE(gateway.AVarWriteCount(name), 1);
+        QCOMPARE(gateway.WrittenAVar(name), 0.0);
+    }
+}
+
+void Fss727Test::holdsThePlanUntilTheCargoLineTheEmptyWeightTheCrewAndTheGroundSpeedArrive()
+{
+    const std::array readings = {
+        std::string(kSimEmptyWeight), StationVar(1), StationVar(2), StationVar(3), std::string(kSimGroundVelocity)
+    };
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    PlanTheMeasuredFlight(status);
+    status.plannedPayloadKg.reset();
+    ParkWithTheMeasuredCrew(gateway);
+
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+
+    status.plannedPayloadKg = kPlanPayloadKg;
+
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+
+    for (const std::string& reading : readings)
+    {
+        const double value = gateway.avars.at(reading);
+        gateway.avars.erase(reading);
+
+        QVERIFY2(!aircraft.IsFlightPlanLoaded(), reading.c_str());
+
+        gateway.avars[reading] = value;
+
+        QVERIFY2(aircraft.IsFlightPlanLoaded(), reading.c_str());
+    }
+
+    status.flightPlanStatus = FlightPlanStatus::Fetching;
+
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+}
+
+void Fss727Test::holdsThePlanWhileTheAircraftRolls()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    PlanTheMeasuredFlight(status);
+    ParkWithTheMeasuredCrew(gateway);
+
+    gateway.avars[kSimGroundVelocity] = kVendorStoppedBelowKnots;
+
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+
+    gateway.avars[kSimGroundVelocity] = kCreeping;
+
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+
+    gateway.avars[kSimGroundVelocity] = kTaxiing;
+    gateway.avars[StationVar(1)] = kVendorNoseWheelLb;
+
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+    QCOMPARE(gateway.AVarWriteUnit(kSimGroundVelocity), std::string{});
+    QCOMPARE(gateway.avarAccessUnits.at(kSimGroundVelocity), std::string(kKnotsUnit));
+}
+
+void Fss727Test::targetsTheEmptyWeightPlusTheCrewPlusThePlanCargoLine()
+{
+    const double expectedKg = kEmptyWeightKg + weight::LbToKg(kMeasuredCrewTotalLb) + kPlanPayloadKg;
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    PlanTheMeasuredFlight(status);
+    ParkWithTheMeasuredCrew(gateway);
+
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+    QVERIFY(std::abs(aircraft.GetPlannedZfwKg() - expectedKg) < kKgTolerance);
+
+    status.plannedOperatingEmptyKg = kPlanOperatingEmptyKg + weight::LbToKg(kMeasuredCrewTotalLb);
+    status.plannedZfwKg = status.plannedOperatingEmptyKg + kPlanPayloadKg;
+
+    QVERIFY(std::abs(aircraft.GetPlannedZfwKg() - expectedKg) < kKgTolerance);
+}
+
+void Fss727Test::crewOnBoardSumsTheThreeCrewStationsOnlyWithTheAircraftStopped()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    ParkWithTheMeasuredCrew(gateway);
+
+    QVERIFY(std::abs(aircraft.GetCrewOnBoardKg() - weight::LbToKg(kMeasuredCrewTotalLb)) < kKgTolerance);
+
+    gateway.avars.erase(StationVar(2));
+
+    QCOMPARE(aircraft.GetCrewOnBoardKg(), 0.0);
+
+    ParkWithTheMeasuredCrew(gateway);
+    gateway.avars[kSimGroundVelocity] = kTaxiing;
+    gateway.avars[StationVar(1)] = kVendorNoseWheelLb;
+
+    QCOMPARE(aircraft.GetCrewOnBoardKg(), 0.0);
+}
+
+void Fss727Test::plannedOperatingEmptyWeightComesFromTheClientOfp()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    QCOMPARE(aircraft.GetPlannedOperatingEmptyKg(), 0.0);
+
+    PlanTheMeasuredFlight(status);
+
+    QCOMPARE(aircraft.GetPlannedOperatingEmptyKg(), kPlanOperatingEmptyKg);
+}
+
+void Fss727Test::theTargetTheBoardingBarAndTheFinalWriteAgreeOnThePlanCargoLine()
+{
+    const double crewKg = weight::LbToKg(kMeasuredCrewTotalLb);
+    const double cargoLineLb = weight::KgToLb(kPlanPayloadKg);
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    AutomationSettings settings;
+    FakeGsxService gsx;
+    FakeGsxMenuGateway menu;
+    FakeDomainLogger logger;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
+
+    PlanTheMeasuredFlight(status);
+    ParkWithTheMeasuredCrew(gateway);
+    gsx.simbriefLoaded = true;
+
+    TurnaroundContext ctx;
+    ctx.status = &status;
+    ctx.settings = &settings;
+    ctx.gsxGateway = &gsx;
+    ctx.menuGateway = &menu;
+    ctx.aircraft = &aircraft;
+    ctx.logger = &logger;
+
+    WaitingFlightPlanState waitingFlightPlan;
+
+    QVERIFY(waitingFlightPlan.Evaluate(ctx).has_value());
+    QVERIFY(std::abs(ctx.data.plannedZfwKg - (kEmptyWeightKg + crewKg + kPlanPayloadKg)) < kKgTolerance);
+    QVERIFY(std::abs(ctx.data.plannedZfwKg - kPlanZfwKg - crewKg) < kKgTolerance);
+    QVERIFY(ctx.data.planOmitsCrew);
+    QCOMPARE(WrittenCargoLb(gateway), 0.0);
+
+    BoardingState boarding;
+    gsx.boardingState = GsxStateStatus::Active;
+
+    for (const double cargoPercent : {25.0, 50.0, 90.0, 99.0})
+    {
+        gsx.cargoPercent = cargoPercent;
+
+        QVERIFY(!boarding.Evaluate(ctx).has_value());
+        QVERIFY(ctx.data.loadedZfwKg < ctx.data.plannedZfwKg);
+        QVERIFY(std::abs(ctx.data.boardingProgress - cargoPercent) < kKgTolerance);
+        QVERIFY(WrittenCargoLb(gateway) <= cargoLineLb + kPoundTolerance);
+    }
+
+    gsx.cargoPercent = 100.0;
+    gsx.boardingState = GsxStateStatus::Completed;
+
+    QVERIFY(boarding.Evaluate(ctx).has_value());
+    QCOMPARE(ctx.data.boardingProgress, 100.0);
+    QCOMPARE(ctx.data.loadedZfwKg, ctx.data.plannedZfwKg);
+    QVERIFY(std::abs(WrittenCargoLb(gateway) - cargoLineLb) < kPoundTolerance);
+
+    const double zfwTheSimulatorSumsKg = kEmptyWeightKg + crewKg + weight::LbToKg(WrittenCargoLb(gateway));
+
+    QVERIFY(std::abs(zfwTheSimulatorSumsKg - status.plannedZfwKg - crewKg) < kKgTolerance);
+    QVERIFY(std::abs(zfwTheSimulatorSumsKg - ctx.data.plannedZfwKg) < kKgTolerance);
 }
 
 void Fss727Test::registersThePedestalPhoneForFastRefresh()
@@ -904,14 +1175,12 @@ void Fss727Test::readsThePlanFromTheClientOfp()
     QVERIFY(!aircraft.RequiresEfbFlightPlan());
     QVERIFY(!aircraft.IsFlightPlanLoaded());
 
-    status.flightPlanStatus = FlightPlanStatus::Ready;
-    status.plannedFuelKg = 9000.0;
-    status.plannedZfwKg = 61000.0;
+    PlanTheMeasuredFlight(status);
+    ParkWithTheMeasuredCrew(gateway);
     status.plannedPassengers = 2;
 
     QVERIFY(aircraft.IsFlightPlanLoaded());
-    QCOMPARE(aircraft.GetPlannedFuelKg(), 9000.0);
-    QCOMPARE(aircraft.GetPlannedZfwKg(), 61000.0);
+    QCOMPARE(aircraft.GetPlannedFuelKg(), kPlanFuelKg);
     QCOMPARE(aircraft.GetPlannedPassengers(), 2);
 }
 
@@ -1707,9 +1976,9 @@ void Fss727Test::observingEvaluatingAndReadingWriteNoVariable()
         gateway.lvars[kAcPowerAvailable] = 1.0;
         gateway.lvars[kParkBrakeLever] = 1.0;
         gateway.lvars[kChocks] = 1.0;
-        gateway.avars[kSimEmptyWeight] = 42306.0;
+        ParkWithTheMeasuredCrew(gateway);
         gateway.lvarSpans[kPhone] = LVarSpan{0.0, 1.0, true};
-        status.flightPlanStatus = FlightPlanStatus::Ready;
+        PlanTheMeasuredFlight(status);
 
         for (int tick = 0; tick < kFiftyTicks; ++tick)
         {
@@ -1730,6 +1999,9 @@ void Fss727Test::observingEvaluatingAndReadingWriteNoVariable()
         static_cast<void>(aircraft.IsReadyToDeboard());
         static_cast<void>(aircraft.GetDoorStatus());
         static_cast<void>(aircraft.IsFlightPlanLoaded());
+        static_cast<void>(aircraft.GetPlannedZfwKg());
+        static_cast<void>(aircraft.GetPlannedOperatingEmptyKg());
+        static_cast<void>(aircraft.GetCrewOnBoardKg());
         static_cast<void>(aircraft.GetCurrentFuelKg());
         static_cast<void>(aircraft.GetCurrentZfwKg());
         static_cast<void>(aircraft.GetFuelCapacityKg());

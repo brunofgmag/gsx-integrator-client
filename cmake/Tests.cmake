@@ -384,6 +384,7 @@ gsxi_add_qt_test(gsxi-fss-727-tests fss-727
         src/infrastructure/gsx/GsxDoorSync.h
         src/domain/model/AutomationStatus.h
         src/domain/support/Weight.h)
+target_link_libraries(gsxi-fss-727-tests PRIVATE gsxi-turnaround-state-test-support)
 
 gsxi_add_qt_test(gsxi-toliss-a340-tests toliss-a340
         tests/TestDoubles.h

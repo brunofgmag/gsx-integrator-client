@@ -1,6 +1,7 @@
 #include <QtTest/QTest>
 
 #include <algorithm>
+#include <cmath>
 #include <string>
 
 #include "../TurnaroundStateFixture.h"
@@ -19,7 +20,107 @@ private slots:
     static void logsTheReasonGsxRefusedThePlan();
     static void keepsTheSilentSentenceWhenGsxGaveNoReason();
     static void unloadsPayloadWhileWaiting();
+    static void flagsAPlanWhoseOperatingEmptyWeightLeavesOutTheCrew();
+    static void trustsAPlanWhoseOperatingEmptyWeightCountsTheCrew();
+    static void callsAnOperatingEmptyWeightWithinTheWeightEpsilonTheAircraftEmptyWeight();
+    static void staysQuietForAnAircraftThatReportsNoCrew();
 };
+
+namespace
+{
+    constexpr double kEmptyWeightKg = 42306.0;
+    constexpr double kCrewKg = 195.044719;
+    constexpr double kPayloadKg = 16500.0;
+    constexpr double kTolerance = 1e-6;
+
+    void ArrangeTheMeasuredPlan(TurnaroundStateFixture& f, const double plannedOperatingEmptyKg)
+    {
+        f.aircraft.flightPlanLoaded = true;
+        f.aircraft.emptyZfwKg = kEmptyWeightKg;
+        f.aircraft.crewOnBoardKg = kCrewKg;
+        f.aircraft.plannedOperatingEmptyKg = plannedOperatingEmptyKg;
+        f.aircraft.plannedZfwKg = kEmptyWeightKg + kCrewKg + kPayloadKg;
+        f.gsxService.simbriefLoaded = true;
+    }
+
+    bool LoggedTheOmittedCrew(const TurnaroundStateFixture& f)
+    {
+        return std::ranges::any_of(f.logger.messages, [](const std::string& message)
+        {
+            return message.find("The plan's operating empty weight of 42306 kg leaves out 195 kg of crew; "
+                                "the ZFW target is 59001 kg, and SimBrief needs 42501 kg to count the crew")
+                != std::string::npos;
+        });
+    }
+}
+
+void WaitingFlightPlanStateTest::flagsAPlanWhoseOperatingEmptyWeightLeavesOutTheCrew()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    ArrangeTheMeasuredPlan(f, kEmptyWeightKg);
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QVERIFY(f.ctx.data.planOmitsCrew);
+    QVERIFY(std::abs(f.ctx.data.omittedCrewKg - kCrewKg) < kTolerance);
+    QVERIFY(std::abs(f.ctx.data.operatingEmptyWithCrewKg - (kEmptyWeightKg + kCrewKg)) < kTolerance);
+    QVERIFY(LoggedTheOmittedCrew(f));
+}
+
+void WaitingFlightPlanStateTest::trustsAPlanWhoseOperatingEmptyWeightCountsTheCrew()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    ArrangeTheMeasuredPlan(f, kEmptyWeightKg + kCrewKg);
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.ctx.data.planOmitsCrew);
+    QCOMPARE(f.ctx.data.omittedCrewKg, 0.0);
+    QCOMPARE(f.ctx.data.operatingEmptyWithCrewKg, 0.0);
+    QVERIFY(!LoggedTheOmittedCrew(f));
+}
+
+void WaitingFlightPlanStateTest::callsAnOperatingEmptyWeightWithinTheWeightEpsilonTheAircraftEmptyWeight()
+{
+    for (const double offsetKg : {-49.0, 49.0})
+    {
+        TurnaroundStateFixture f;
+        WaitingFlightPlanState state;
+
+        ArrangeTheMeasuredPlan(f, kEmptyWeightKg + offsetKg);
+
+        QVERIFY(state.Evaluate(f.ctx).has_value());
+        QVERIFY(f.ctx.data.planOmitsCrew);
+        QVERIFY(std::abs(f.ctx.data.operatingEmptyWithCrewKg - (kEmptyWeightKg + offsetKg + kCrewKg)) < kTolerance);
+    }
+
+    for (const double offsetKg : {-51.0, 51.0})
+    {
+        TurnaroundStateFixture f;
+        WaitingFlightPlanState state;
+
+        ArrangeTheMeasuredPlan(f, kEmptyWeightKg + offsetKg);
+
+        QVERIFY(state.Evaluate(f.ctx).has_value());
+        QVERIFY(!f.ctx.data.planOmitsCrew);
+    }
+}
+
+void WaitingFlightPlanStateTest::staysQuietForAnAircraftThatReportsNoCrew()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    ArrangeTheMeasuredPlan(f, kEmptyWeightKg);
+    f.aircraft.crewOnBoardKg = 0.0;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.ctx.data.planOmitsCrew);
+    QCOMPARE(f.ctx.data.omittedCrewKg, 0.0);
+    QVERIFY(f.logger.messages.empty());
+}
 
 void WaitingFlightPlanStateTest::holdsWithoutAircraftFlightPlan()
 {

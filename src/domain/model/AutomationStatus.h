@@ -21,6 +21,7 @@ struct AutomationStatus
     bool fuelRequestStalled = false;
     bool fuelPlanOverCapacity = false;
     bool fuelDidNotStay = false;
+    bool planOmitsCrew = false;
     bool servicesStalled = false;
     bool serviceInterrupted = false;
     CargoLoader loaderHoldingBoarding = CargoLoader::None;
@@ -33,6 +34,10 @@ struct AutomationStatus
     double fuelShortfallKg = 0.0;
     double settledFuelKg = 0.0;
     double plannedZfwKg = 0.0;
+    double plannedOperatingEmptyKg = 0.0;
+    std::optional<double> plannedPayloadKg;
+    double omittedCrewKg = 0.0;
+    double operatingEmptyWithCrewKg = 0.0;
     int plannedPassengers = 0;
     int boardedPassengers = 0;
     double targetFuelKg = 0.0;

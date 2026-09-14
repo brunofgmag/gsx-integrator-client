@@ -43,6 +43,9 @@ struct TurnaroundData
     int fuelRequestStallTicks = 0;
     bool fuelRequestStalled = false;
     bool fuelPlanOverCapacity = false;
+    bool planOmitsCrew = false;
+    double omittedCrewKg = 0.0;
+    double operatingEmptyWithCrewKg = 0.0;
     bool fuelDidNotStay = false;
     bool fuelStayChecked = false;
     bool fuelStayDismissed = false;

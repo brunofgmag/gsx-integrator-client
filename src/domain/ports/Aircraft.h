@@ -36,6 +36,8 @@ public:
     [[nodiscard]] virtual double GetPlannedZfwKg() const = 0;
     [[nodiscard]] virtual int GetPlannedPassengers() const = 0;
     [[nodiscard]] virtual double GetEmptyZfwKg() const = 0;
+    [[nodiscard]] virtual double GetPlannedOperatingEmptyKg() const { return 0.0; }
+    [[nodiscard]] virtual double GetCrewOnBoardKg() const { return 0.0; }
     [[nodiscard]] virtual std::optional<WeightUnit> GetNativeWeightUnit() const { return std::nullopt; }
 
     [[nodiscard]] virtual double GetCurrentFuelKg() const = 0;

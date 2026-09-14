@@ -44,7 +44,7 @@ namespace
         }
     }
 
-    QString BoardingTip(const IntegratorSnapshot& snapshot)
+    QString LoaderTip(const IntegratorSnapshot& snapshot)
     {
         if (snapshot.cargoDoorStuck)
         {
@@ -105,8 +105,6 @@ namespace
     {
         switch (snapshot.phase)
         {
-        case TurnaroundPhase::Boarding:
-            return BoardingTip(snapshot);
         case TurnaroundPhase::WaitingSupportedAircraft:
             return WaitingSupportedAircraftTip(snapshot);
         case TurnaroundPhase::WaitingAircraftReady:
@@ -417,7 +415,26 @@ QString OperationsViewModel::GetHoldCountdownText() const
 
 QString OperationsViewModel::GetPhaseTip() const
 {
-    return IsAwaitingStartLoading() ? StartLoadingTip() : PhaseTip(snapshot_);
+    if (IsAwaitingStartLoading())
+    {
+        return StartLoadingTip();
+    }
+
+    return snapshot_.phase == TurnaroundPhase::Boarding ? BoardingTip() : PhaseTip(snapshot_);
+}
+
+QString OperationsViewModel::BoardingTip() const
+{
+    if (QString loaderTip = LoaderTip(snapshot_); !loaderTip.isEmpty() || !snapshot_.planOmitsCrew)
+    {
+        return loaderTip;
+    }
+
+    return QCoreApplication::translate("Turnaround",
+                                       "The SimBrief airframe leaves the crew out of its empty weight, "
+                                       "so the aircraft will weigh %1 more than the SimBrief ZFW. "
+                                       "Set the airframe's empty weight to %2 to count the crew.")
+        .arg(WeightText(snapshot_.omittedCrewKg), WeightText(snapshot_.operatingEmptyWithCrewKg));
 }
 
 bool OperationsViewModel::IsAwaitingStartLoading() const

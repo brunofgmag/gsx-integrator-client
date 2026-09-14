@@ -42,6 +42,10 @@ namespace
     };
     constexpr std::array kCrewStations = {1, 2, 3};
 
+    constexpr auto kSimGroundVelocity = "GROUND VELOCITY";
+    constexpr auto kKnotsUnit = "Knots";
+    constexpr double kVendorStoppedBelowKnots = 1.0;
+
     constexpr auto kAcPowerAvailableLVar = "FSS_B727_FE_ELEC_AC_PWR_AVAIL";
     constexpr auto kGpuAvailableLVar = "FSS_B727_GPU_AVAIL";
     constexpr double kGpuRaised = 1.0;
@@ -117,15 +121,25 @@ namespace
         return kSimPayloadStationPrefix + std::to_string(station);
     }
 
-    double CrewOnBoardLb(VariableGateway& variables)
+    bool IsStopped(VariableGateway& variables)
     {
+        return variables.GetAVar(kSimGroundVelocity, kKnotsUnit, kVendorStoppedBelowKnots) < kVendorStoppedBelowKnots;
+    }
+
+    std::optional<double> CrewOnBoardLb(VariableGateway& variables)
+    {
+        if (!IsStopped(variables))
+        {
+            return std::nullopt;
+        }
+
         double crewLb = 0.0;
         for (const int crewStation : kCrewStations)
         {
             const std::string station = PayloadStationVar(crewStation);
             if (!variables.HasReceivedAVar(station, kPoundsUnit))
             {
-                return 0.0;
+                return std::nullopt;
             }
 
             crewLb += variables.GetAVar(station, kPoundsUnit, 0.0);
@@ -182,7 +196,10 @@ void Fss727::Observe()
 
 bool Fss727::IsFlightPlanLoaded() const
 {
-    return status_->flightPlanStatus == FlightPlanStatus::Ready;
+    return status_->flightPlanStatus == FlightPlanStatus::Ready
+        && status_->plannedPayloadKg.has_value()
+        && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit)
+        && CrewOnBoardLb(*variableGateway_).has_value();
 }
 
 double Fss727::GetPlannedFuelKg() const
@@ -192,7 +209,17 @@ double Fss727::GetPlannedFuelKg() const
 
 double Fss727::GetPlannedZfwKg() const
 {
-    return status_->plannedZfwKg;
+    return GetEmptyZfwKg() + GetCrewOnBoardKg() + status_->plannedPayloadKg.value_or(0.0);
+}
+
+double Fss727::GetPlannedOperatingEmptyKg() const
+{
+    return status_->plannedOperatingEmptyKg;
+}
+
+double Fss727::GetCrewOnBoardKg() const
+{
+    return weight::LbToKg(CrewOnBoardLb(*variableGateway_).value_or(0.0));
 }
 
 int Fss727::GetPlannedPassengers() const
@@ -262,8 +289,8 @@ void Fss727::SetCurrentZfwKg(const double zfwKg)
 
     lastZfwKg_ = zfwKg;
 
-    const double cargoLb = std::max(
-        weight::KgToLb(zfwKg - GetEmptyZfwKg()) - CrewOnBoardLb(*variableGateway_), 0.0);
+    const double cargoLineLb = weight::KgToLb(status_->plannedPayloadKg.value_or(0.0));
+    const double cargoLb = std::clamp(weight::KgToLb(zfwKg - GetEmptyZfwKg()), 0.0, cargoLineLb);
 
     double capacitiesLb = 0.0;
     for (const double capacityLb : kCargoStationCapacitiesLb)

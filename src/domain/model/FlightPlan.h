@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H
 
+#include <optional>
 #include <string>
 #include "../support/Weight.h"
 
@@ -29,6 +30,8 @@ struct FlightPlan
     std::string origin;
     std::string destination;
     long long generatedEpoch = 0;
+    double operatingEmptyKg = 0.0;
+    std::optional<double> payloadKg;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H

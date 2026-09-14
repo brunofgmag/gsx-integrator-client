@@ -1,5 +1,7 @@
 #include "SimbriefClient.h"
 
+#include <format>
+#include <string>
 #include <QtCore/QUrl>
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
@@ -61,14 +63,21 @@ void SimbriefClient::ApplyFlightPlan(const FlightPlan& flightPlan)
 {
     automationStatus_->plannedFuelKg = flightPlan.fuelKg;
     automationStatus_->plannedZfwKg = flightPlan.zfwKg;
+    automationStatus_->plannedOperatingEmptyKg = flightPlan.operatingEmptyKg;
+    automationStatus_->plannedPayloadKg = flightPlan.payloadKg;
     automationStatus_->plannedPassengers = flightPlan.passengers;
     automationStatus_->simbriefUnit = flightPlan.unit;
     automationStatus_->plannedOrigin = flightPlan.origin;
     automationStatus_->plannedDestination = flightPlan.destination;
     automationStatus_->planGeneratedEpoch = flightPlan.generatedEpoch;
 
-    LOG_INFO("SimBrief OFP loaded: fuel=%.0fkg zfw=%.0fkg pax=%d",
-             flightPlan.fuelKg, flightPlan.zfwKg, flightPlan.passengers);
+    const std::string payloadText = flightPlan.payloadKg.has_value()
+                                        ? std::format("{:.0f}kg", *flightPlan.payloadKg)
+                                        : std::string("absent");
+
+    LOG_INFO("SimBrief OFP loaded: fuel=%.0fkg zfw=%.0fkg oew=%.0fkg payload=%s pax=%d",
+             flightPlan.fuelKg, flightPlan.zfwKg, flightPlan.operatingEmptyKg, payloadText.c_str(),
+             flightPlan.passengers);
 
     SetStatus(FlightPlanStatus::Ready);
 }
