@@ -113,8 +113,6 @@ set(APP_SOURCES
         src/infrastructure/aircraft/fss/Fss727.h
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
-        src/infrastructure/aircraft/fss/rules/Fss727OwnGpuFollowsTheGsxUnitRule.cpp
-        src/infrastructure/aircraft/fss/rules/Fss727OwnGpuFollowsTheGsxUnitRule.h
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.cpp

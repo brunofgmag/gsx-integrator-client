@@ -9,9 +9,11 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <QtCore/QString>
 #include "../AircraftRegistry.h"
 #include "../DoorReading.h"
 #include "../../logging/LogMacros.h"
+#include "../../probe/ProbeLog.h"
 #include "../../simvars/VariableGateway.h"
 #include "../../../domain/model/AutomationStatus.h"
 #include "../../../domain/model/FlightPlan.h"
@@ -42,6 +44,8 @@ namespace
 
     constexpr auto kAcPowerAvailableLVar = "FSS_B727_FE_ELEC_AC_PWR_AVAIL";
     constexpr auto kGpuAvailableLVar = "FSS_B727_GPU_AVAIL";
+    constexpr double kGpuRaised = 1.0;
+    constexpr double kGpuStowed = 0.0;
 
     constexpr int kEngineCount = 3;
     constexpr double kEngineRunningDefault = 1.0;
@@ -146,10 +150,9 @@ Fss727::Fss727(VariableGateway* variableGateway, const AutomationStatus* status,
       movingTicks_(doorPoints_.size(), 0),
       doors_(variableGateway),
       automodeRule_(*variableGateway),
-      groundPowerRule_(gsxGateway),
       frontEntryRule_(*variableGateway, *this, doors_),
       mainDeckRule_(*this, gsxGateway),
-      rules_{&automodeRule_, &groundPowerRule_, &frontEntryRule_, &mainDeckRule_}
+      rules_{&automodeRule_, &frontEntryRule_, &mainDeckRule_}
 {
     smartSwitch_.Subscribe();
 
@@ -308,6 +311,14 @@ std::optional<GroundPowerStatus> Fss727::GetGroundPowerStatus() const
     return variableGateway_->GetLVar(kGpuAvailableLVar, 0.0) > 0.0
                ? GroundPowerStatus::Connected
                : GroundPowerStatus::Disconnected;
+}
+
+void Fss727::SetGroundPower(const bool on)
+{
+    probe::Line(QStringLiteral("write gpu FSS_B727_GPU_AVAIL=%1").arg(on ? 1 : 0));
+    variableGateway_->SetLVar(kGpuAvailableLVar, on ? kGpuRaised : kGpuStowed);
+
+    LOG_INFO("FSS 727 own ground power %s; the EXT POWER switch is the pilot's", on ? "raised" : "stowed");
 }
 
 void Fss727::CloseAllDoors()

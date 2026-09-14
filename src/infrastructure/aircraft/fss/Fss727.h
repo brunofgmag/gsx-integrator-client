@@ -10,7 +10,6 @@
 #include "rules/Fss727FrontEntryServesTheGroundAccessRule.h"
 #include "rules/Fss727KeepVendorGsxAutomodeOffRule.h"
 #include "rules/Fss727MainDeckClosesByTheCargoPanelRule.h"
-#include "rules/Fss727OwnGpuFollowsTheGsxUnitRule.h"
 #include "../../gsx/GsxDoorSync.h"
 #include "../../../domain/ports/Aircraft.h"
 
@@ -59,7 +58,9 @@ public:
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
 
+    [[nodiscard]] bool SupportsGroundPowerControl() const override { return true; }
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override;
+    void SetGroundPower(bool on) override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
     [[nodiscard]] bool IsHeldForDeparture() const;
@@ -94,7 +95,6 @@ private:
     double lastFuelKg_ = -1.0;
     double lastZfwKg_ = -1.0;
     Fss727KeepVendorGsxAutomodeOffRule automodeRule_;
-    Fss727OwnGpuFollowsTheGsxUnitRule groundPowerRule_;
     Fss727FrontEntryServesTheGroundAccessRule frontEntryRule_;
     Fss727MainDeckClosesByTheCargoPanelRule mainDeckRule_;
     std::vector<AircraftRule*> rules_;

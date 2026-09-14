@@ -256,10 +256,9 @@ private slots:
     static void clearsTheFourOwnGroundEquipmentObjectsOnce();
     static void placesAndRemovesTheChocksByTheEfbLVar();
     static void groundPowerStatusFollowsTheAircraftOwnGpu();
-    static void raisesItsOwnGpuOnceWhenTheGsxUnitConnectsAndStowsItWhenItLeaves();
-    static void neverStowsAGroundPowerUnitItDidNotRaise();
-    static void waitsForTheGsxUnitToBeKnownBeforeTouchingItsOwnGpu();
-    static void leavesTheGroundPowerUnitCallToTheGsxMenu();
+    static void commandsItsOwnGroundPowerUnitThroughThePort();
+    static void writesItsOwnGpuInLevelAndNeverTheExtPowerSwitch();
+    static void neverMirrorsTheGsxUnitIntoItsOwnGpu();
     static void theFrontEntryFollowsTheGsxStairs();
     static void theFrontEntryFollowsTheJetway();
     static void theFrontEntryStaysClosedOnceHeldForDeparture();
@@ -1035,71 +1034,58 @@ void Fss727Test::groundPowerStatusFollowsTheAircraftOwnGpu()
     QVERIFY(aircraft.GetGroundPowerStatus() == GroundPowerStatus::Connected);
 }
 
-void Fss727Test::raisesItsOwnGpuOnceWhenTheGsxUnitConnectsAndStowsItWhenItLeaves()
-{
-    FakeVariableGateway gateway;
-    AutomationStatus status;
-    FakeGsxService gsx;
-    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
-
-    gsx.gpuStatus = GroundPowerStatus::Disconnected;
-    TickTimes(aircraft, gateway, kThreeTicks);
-
-    QCOMPARE(gateway.WriteCount(kGpuAvailable), 0);
-
-    gsx.gpuStatus = GroundPowerStatus::Connected;
-    TickTimes(aircraft, gateway, kThreeTicks);
-
-    QCOMPARE(gateway.WriteCount(kGpuAvailable), 1);
-    QCOMPARE(gateway.Written(kGpuAvailable), 1.0);
-    QVERIFY(aircraft.GetGroundPowerStatus() == GroundPowerStatus::Connected);
-
-    gsx.gpuStatus = GroundPowerStatus::Disconnected;
-    TickTimes(aircraft, gateway, kThreeTicks);
-
-    QCOMPARE(gateway.WriteCount(kGpuAvailable), 2);
-    QCOMPARE(gateway.Written(kGpuAvailable), 0.0);
-
-    QCOMPARE(gateway.WriteCount(kExtPowerSwitch), 0);
-}
-
-void Fss727Test::neverStowsAGroundPowerUnitItDidNotRaise()
-{
-    FakeVariableGateway gateway;
-    AutomationStatus status;
-    FakeGsxService gsx;
-    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
-
-    gsx.gpuStatus = GroundPowerStatus::Disconnected;
-    gateway.lvars[kGpuAvailable] = 1.0;
-    TickTimes(aircraft, gateway, kFiftyTicks);
-
-    QCOMPARE(gateway.WriteCount(kGpuAvailable), 0);
-    QVERIFY(aircraft.GetGroundPowerStatus() == GroundPowerStatus::Connected);
-}
-
-void Fss727Test::waitsForTheGsxUnitToBeKnownBeforeTouchingItsOwnGpu()
-{
-    FakeVariableGateway gateway;
-    AutomationStatus status;
-    FakeGsxService gsx;
-    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
-
-    gsx.gpuStatus = GroundPowerStatus::Unknown;
-    TickTimes(aircraft, gateway, kFiftyTicks);
-
-    QCOMPARE(gateway.WriteCount(kGpuAvailable), 0);
-    QCOMPARE(gateway.WriteCount(kExtPowerSwitch), 0);
-}
-
-void Fss727Test::leavesTheGroundPowerUnitCallToTheGsxMenu()
+void Fss727Test::commandsItsOwnGroundPowerUnitThroughThePort()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
     FakeGsxService gsx;
     const Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
 
-    QVERIFY(!aircraft.SupportsGroundPowerControl());
+    QVERIFY(aircraft.SupportsGroundPowerControl());
+}
+
+void Fss727Test::writesItsOwnGpuInLevelAndNeverTheExtPowerSwitch()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    aircraft.SetGroundPower(true);
+
+    QCOMPARE(gateway.WriteCount(kGpuAvailable), 1);
+    QCOMPARE(gateway.Written(kGpuAvailable), 1.0);
+    QVERIFY(aircraft.GetGroundPowerStatus() == GroundPowerStatus::Connected);
+
+    aircraft.SetGroundPower(true);
+
+    QCOMPARE(gateway.WriteCount(kGpuAvailable), 2);
+    QCOMPARE(gateway.Written(kGpuAvailable), 1.0);
+
+    aircraft.SetGroundPower(false);
+
+    QCOMPARE(gateway.WriteCount(kGpuAvailable), 3);
+    QCOMPARE(gateway.Written(kGpuAvailable), 0.0);
+    QVERIFY(aircraft.GetGroundPowerStatus() == GroundPowerStatus::Disconnected);
+
+    QCOMPARE(gateway.WriteCount(kExtPowerSwitch), 0);
+}
+
+void Fss727Test::neverMirrorsTheGsxUnitIntoItsOwnGpu()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FakeGsxService gsx;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
+
+    for (const GroundPowerStatus unit : {GroundPowerStatus::Connected, GroundPowerStatus::Disconnected,
+                                         GroundPowerStatus::Unknown, GroundPowerStatus::Connected})
+    {
+        gsx.gpuStatus = unit;
+        TickTimes(aircraft, gateway, kTwentyTicks);
+    }
+
+    QCOMPARE(gateway.WriteCount(kGpuAvailable), 0);
+    QCOMPARE(gateway.WriteCount(kExtPowerSwitch), 0);
 }
 
 void Fss727Test::theFrontEntryFollowsTheGsxStairs()
