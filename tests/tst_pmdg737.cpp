@@ -72,6 +72,7 @@ private slots:
     static void drivingTickWritesWhatObservationHeldBack();
     static void groundPowerUnknownUntilData();
     static void groundPowerFollowsTheSingleAnnunciator();
+    static void groundPowerIsPresentWhileTheAircraftIsUnpowered();
     static void poweredByMainBusOrRunningEngine();
     static void engineRunningConservativeUntilReceived();
     static void parkingBrakeReadsTheSdkBlockAndIgnoresTheSimVar();
@@ -153,6 +154,19 @@ void Pmdg737Test::groundPowerFollowsTheSingleAnnunciator()
     fixture.data->groundPowerAvailable = true;
 
     QCOMPARE(fixture.aircraft->GetGroundPowerStatus(), std::optional(GroundPowerStatus::Connected));
+}
+
+void Pmdg737Test::groundPowerIsPresentWhileTheAircraftIsUnpowered()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.SeedEnginesOff();
+    fixture.data->hasData = true;
+    fixture.data->groundPowerAvailable = true;
+    fixture.data->anyMainBusPowered = false;
+
+    QCOMPARE(fixture.aircraft->GetGroundPowerStatus(), std::optional(GroundPowerStatus::Connected));
+    QVERIFY(!fixture.aircraft->IsPowered());
 }
 
 void Pmdg737Test::poweredByMainBusOrRunningEngine()

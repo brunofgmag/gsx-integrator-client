@@ -171,7 +171,7 @@ bool Pmdg737::HasAircraftPower() const
     return ownedData_->AnyMainBusPowered();
 }
 
-bool Pmdg737::GroundPowerConnected() const
+bool Pmdg737::GroundPowerPresent() const
 {
     return ownedData_->GroundPowerAvailable();
 }

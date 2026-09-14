@@ -27,7 +27,6 @@ private:
     void RefreshDoors() override;
 
     [[nodiscard]] bool HasAircraftPower() const override;
-    [[nodiscard]] bool GroundPowerConnected() const override;
     [[nodiscard]] bool GroundPowerPresent() const override;
     [[nodiscard]] bool ChocksSet() const override;
 
