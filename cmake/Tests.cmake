@@ -374,6 +374,8 @@ gsxi_add_qt_test(gsxi-fss-727-tests fss-727
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.h
         src/infrastructure/aircraft/SmartSwitch.cpp
@@ -689,6 +691,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
@@ -858,6 +862,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp

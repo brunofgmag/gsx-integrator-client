@@ -68,9 +68,7 @@ namespace
 
     constexpr auto kPercentOver100Unit = "percent over 100";
     constexpr std::size_t kMainDeckPoint = 1;
-    constexpr std::array kGoalsClosedWithEveryDoor = {
-        "INTERACTIVE POINT GOAL:0", "INTERACTIVE POINT GOAL:2", "INTERACTIVE POINT GOAL:3"
-    };
+    constexpr auto kFrontEntryGoal = "INTERACTIVE POINT GOAL:0";
     constexpr double kDoorGoalClosed = 0.0;
     constexpr double kDoorPointClosedAtMost = 0.05;
     constexpr double kDoorPointOpenAtLeast = 0.95;
@@ -151,8 +149,9 @@ Fss727::Fss727(VariableGateway* variableGateway, const AutomationStatus* status,
       doors_(variableGateway),
       automodeRule_(*variableGateway),
       frontEntryRule_(*variableGateway, *this, doors_),
+      holdsRule_(*variableGateway, *this, doors_),
       mainDeckRule_(*this, gsxGateway),
-      rules_{&automodeRule_, &frontEntryRule_, &mainDeckRule_}
+      rules_{&automodeRule_, &frontEntryRule_, &holdsRule_, &mainDeckRule_}
 {
     smartSwitch_.Subscribe();
 
@@ -323,11 +322,9 @@ void Fss727::SetGroundPower(const bool on)
 
 void Fss727::CloseAllDoors()
 {
-    for (const char* goal : kGoalsClosedWithEveryDoor)
-    {
-        variableGateway_->SetAVar(goal, kPercentOver100Unit, kDoorGoalClosed);
-    }
+    variableGateway_->SetAVar(kFrontEntryGoal, kPercentOver100Unit, kDoorGoalClosed);
 
+    ++holdCloseRequests_;
     ++mainDeckCloseRequests_;
 }
 
@@ -345,6 +342,11 @@ bool Fss727::IsHeldForDeparture() const
 int Fss727::MainDeckCloseRequests() const
 {
     return mainDeckCloseRequests_;
+}
+
+int Fss727::HoldCloseRequests() const
+{
+    return holdCloseRequests_;
 }
 
 std::optional<bool> Fss727::IsMainDeckClosed() const
