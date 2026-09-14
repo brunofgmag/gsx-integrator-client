@@ -602,6 +602,9 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.fuelPlanOverCapacity = IsFuelPlanOverCapacity();
     snapshot.fuelDidNotStay = DidFuelNotStay();
     snapshot.fuelShortfallKg = status_.fuelShortfallKg;
+    snapshot.planOmitsCrew = status_.planOmitsCrew;
+    snapshot.omittedCrewKg = status_.omittedCrewKg;
+    snapshot.operatingEmptyWithCrewKg = status_.operatingEmptyWithCrewKg;
     snapshot.engineConfirmationBlock = GetEngineConfirmationBlock();
     snapshot.servicesStalled = AreServicesStalled();
     snapshot.serviceInterrupted = IsServiceInterrupted();

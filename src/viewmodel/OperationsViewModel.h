@@ -235,6 +235,7 @@ signals:
 private:
     [[nodiscard]] bool IsAwaitingStartLoading() const;
     [[nodiscard]] QString WeightText(double kilograms) const;
+    [[nodiscard]] QString BoardingTip() const;
     void Refresh();
     void SetCommandError(const CommandResult& result);
 
