@@ -150,7 +150,7 @@ Fss727::Fss727(VariableGateway* variableGateway, const AutomationStatus* status,
       automodeRule_(*variableGateway),
       frontEntryRule_(*variableGateway, *this, doors_),
       holdsRule_(*variableGateway, *this, doors_),
-      mainDeckRule_(*this, gsxGateway),
+      mainDeckRule_(*this, gsxGateway, doors_),
       rules_{&automodeRule_, &frontEntryRule_, &holdsRule_, &mainDeckRule_}
 {
     smartSwitch_.Subscribe();
@@ -332,6 +332,11 @@ void Fss727::HoldDoorsClosed(const bool hold)
 {
     heldForDeparture_ = hold;
     doors_.HoldClosedForDeparture(hold);
+
+    if (hold)
+    {
+        ++mainDeckCloseRequests_;
+    }
 }
 
 bool Fss727::IsHeldForDeparture() const
@@ -358,6 +363,17 @@ std::optional<bool> Fss727::IsMainDeckClosed() const
     }
 
     return *position <= kDoorPointClosedAtMost;
+}
+
+std::optional<bool> Fss727::IsMainDeckOpen() const
+{
+    const std::optional<double> position = DoorPointPosition(kMainDeckPoint);
+    if (!position.has_value())
+    {
+        return std::nullopt;
+    }
+
+    return *position >= kDoorPointOpenAtLeast;
 }
 
 bool Fss727::IsPowered() const

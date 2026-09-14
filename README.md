@@ -127,7 +127,7 @@ A few tips:
 - Planned fuel and ZFW come from your Simbrief OFP, so dispatch before you board, not after.
 - On the Fenix, the iFly and the Avro RJ, import your SimBrief plan in the aircraft's EFB; the turnaround waits at "Waiting for flight plan" until it is in. On the iFly, use the Balance & Payload page and load only the flight plan, not the weights.
 - On the Avro RJ, the client asks GSX for the aircraft's own airstairs; at a jetway stand it boards through the finger instead.
-- On the 727 the client loads from its own OFP and never reads the tablet, so there is nothing to import there. If you do import a plan into the 727 tablet, keep it the same one you dispatched: the client cannot see it and will not warn you that the two disagree. Leave the tablet's fuel player alone once loading starts, because pressing Play drains the tanks to whatever the tablet has.
+- On the 727 the client loads from its own OFP and never reads the tablet, so there is nothing to import there. If you do import a plan into the 727 tablet, keep it the same one you dispatched: the client cannot see it and will not warn you that the two disagree. Leave the tablet's fuel player alone once loading starts, because pressing Play drains the tanks to whatever the tablet has. During boarding the client opens the main deck door from the cargo door panel when the GSX loader is waiting at it, and closes it once boarding is done. Leave that panel alone while the door moves: switching its master power off halfway freezes the door where it is.
 - If nothing happens after you load in, check that you are flying one of the supported aircraft and that GSX itself is running normally.
 
 ## Problems and feedback

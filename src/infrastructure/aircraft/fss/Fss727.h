@@ -10,7 +10,7 @@
 #include "rules/Fss727FrontEntryServesTheGroundAccessRule.h"
 #include "rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h"
 #include "rules/Fss727KeepVendorGsxAutomodeOffRule.h"
-#include "rules/Fss727MainDeckClosesByTheCargoPanelRule.h"
+#include "rules/Fss727MainDeckMovesByTheCargoPanelRule.h"
 #include "../../gsx/GsxDoorSync.h"
 #include "../../../domain/ports/Aircraft.h"
 
@@ -68,6 +68,7 @@ public:
     [[nodiscard]] int MainDeckCloseRequests() const;
     [[nodiscard]] int HoldCloseRequests() const;
     [[nodiscard]] std::optional<bool> IsMainDeckClosed() const;
+    [[nodiscard]] std::optional<bool> IsMainDeckOpen() const;
     [[nodiscard]] bool SupportsChocksControl() const override { return true; }
     bool SetChocks(bool placed) override;
     void ClearOwnGroundEquipment() override;
@@ -100,7 +101,7 @@ private:
     Fss727KeepVendorGsxAutomodeOffRule automodeRule_;
     Fss727FrontEntryServesTheGroundAccessRule frontEntryRule_;
     Fss727HoldsCloseOnceTheirLoaderLeavesRule holdsRule_;
-    Fss727MainDeckClosesByTheCargoPanelRule mainDeckRule_;
+    Fss727MainDeckMovesByTheCargoPanelRule mainDeckRule_;
     std::vector<AircraftRule*> rules_;
 };
 

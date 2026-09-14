@@ -117,8 +117,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
         src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
-        src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.cpp
-        src/infrastructure/aircraft/fss/rules/Fss727MainDeckClosesByTheCargoPanelRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/aircraft/fenix/FenixA32x.h
         src/infrastructure/aircraft/fenix/rules/FenixA32xDoorsFollowGsxRule.cpp
