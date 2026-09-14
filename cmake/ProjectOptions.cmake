@@ -1,4 +1,5 @@
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_SUPPRESS_REGENERATION ON)
 
 set(APP_NAME "gsx-integrator-client")
 
