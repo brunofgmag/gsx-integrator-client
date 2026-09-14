@@ -72,12 +72,43 @@ namespace
         return {};
     }
 
+    QString WaitingSupportedAircraftTip(const IntegratorSnapshot& snapshot)
+    {
+        if (!snapshot.automationEnabled)
+        {
+            return QCoreApplication::translate("Turnaround",
+                                               "The automation is off, so the client is not driving this turnaround.");
+        }
+
+        if (!snapshot.sessionActive)
+        {
+            return QCoreApplication::translate("Turnaround",
+                                               "The flight has not reached the cockpit yet, so the client is still waiting for the sim.");
+        }
+
+        if (!snapshot.aircraftSupported)
+        {
+            return QCoreApplication::translate("Turnaround",
+                                               "This aircraft is not supported, so the client cannot drive its turnaround.");
+        }
+
+        if (!snapshot.gsxAvailable)
+        {
+            return QCoreApplication::translate("Turnaround",
+                                               "GSX Pro is not answering, so the client is watching without driving the turnaround.");
+        }
+
+        return {};
+    }
+
     QString PhaseTip(const IntegratorSnapshot& snapshot)
     {
         switch (snapshot.phase)
         {
         case TurnaroundPhase::Boarding:
             return BoardingTip(snapshot);
+        case TurnaroundPhase::WaitingSupportedAircraft:
+            return WaitingSupportedAircraftTip(snapshot);
         case TurnaroundPhase::WaitingAircraftReady:
             return QCoreApplication::translate("Turnaround", "Check that the aircraft engines are shut down.");
         case TurnaroundPhase::WaitingFlightPlan:
