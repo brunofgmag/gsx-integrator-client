@@ -8,9 +8,9 @@
 
 #include "../SmartSwitch.h"
 #include "rules/Fss727FrontEntryServesTheGroundAccessRule.h"
+#include "rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h"
 #include "rules/Fss727KeepVendorGsxAutomodeOffRule.h"
-#include "rules/Fss727MainDeckClosesByTheCargoPanelRule.h"
-#include "rules/Fss727OwnGpuFollowsTheGsxUnitRule.h"
+#include "rules/Fss727MainDeckMovesByTheCargoPanelRule.h"
 #include "../../gsx/GsxDoorSync.h"
 #include "../../../domain/ports/Aircraft.h"
 
@@ -59,12 +59,16 @@ public:
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
 
+    [[nodiscard]] bool SupportsGroundPowerControl() const override { return true; }
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override;
+    void SetGroundPower(bool on) override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
     [[nodiscard]] bool IsHeldForDeparture() const;
     [[nodiscard]] int MainDeckCloseRequests() const;
+    [[nodiscard]] int HoldCloseRequests() const;
     [[nodiscard]] std::optional<bool> IsMainDeckClosed() const;
+    [[nodiscard]] std::optional<bool> IsMainDeckOpen() const;
     [[nodiscard]] bool SupportsChocksControl() const override { return true; }
     bool SetChocks(bool placed) override;
     void ClearOwnGroundEquipment() override;
@@ -91,12 +95,13 @@ private:
     GsxDoorSync doors_;
     bool heldForDeparture_ = false;
     int mainDeckCloseRequests_ = 0;
+    int holdCloseRequests_ = 0;
     double lastFuelKg_ = -1.0;
     double lastZfwKg_ = -1.0;
     Fss727KeepVendorGsxAutomodeOffRule automodeRule_;
-    Fss727OwnGpuFollowsTheGsxUnitRule groundPowerRule_;
     Fss727FrontEntryServesTheGroundAccessRule frontEntryRule_;
-    Fss727MainDeckClosesByTheCargoPanelRule mainDeckRule_;
+    Fss727HoldsCloseOnceTheirLoaderLeavesRule holdsRule_;
+    Fss727MainDeckMovesByTheCargoPanelRule mainDeckRule_;
     std::vector<AircraftRule*> rules_;
 };
 
