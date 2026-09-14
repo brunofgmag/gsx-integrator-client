@@ -90,6 +90,7 @@ namespace
     };
     constexpr auto kPercentOver100Unit = "percent over 100";
     constexpr auto kPoundsUnit = "pounds";
+    constexpr auto kKgUnit = "kg";
     constexpr double kLevelTolerance = 1e-6;
 
     constexpr auto kStationPrefix = "PAYLOAD STATION WEIGHT:";
@@ -229,6 +230,7 @@ private slots:
     static void fuelCapacityWaitsForTheWeightPerGallon();
     static void fuelCapacityWaitsForTheThreeTankCapacities();
     static void fuelCapacitySumsTheThreeTanksInKg();
+    static void fuelCapacityHoldsWhenAnotherUnitTookTheWeightPerGallonSlot();
     static void readsCurrentFuelFromSim();
     static void emptyZfwReadsSimEmptyWeight();
     static void currentZfwSubtractsFuelFromTotalWeight();
@@ -524,6 +526,28 @@ void Fss727Test::fuelCapacitySumsTheThreeTanksInKg()
     GiveTanks(gateway);
 
     QVERIFY(std::abs(aircraft.GetFuelCapacityKg() - kFuelCapacityKg) < kCapacityToleranceKg);
+}
+
+void Fss727Test::fuelCapacityHoldsWhenAnotherUnitTookTheWeightPerGallonSlot()
+{
+    FakeVariableGateway matched;
+    AutomationStatus matchedStatus;
+    const Fss727 matchedAircraft(&matched, &matchedStatus, Fss727::kName200F);
+
+    GiveTanks(matched);
+
+    QVERIFY(std::abs(matchedAircraft.GetFuelCapacityKg() - kFuelCapacityKg) < kCapacityToleranceKg);
+    QCOMPARE(matched.avarUnitMismatches, 0);
+
+    FakeVariableGateway crossed;
+    AutomationStatus crossedStatus;
+    const Fss727 crossedAircraft(&crossed, &crossedStatus, Fss727::kName200F);
+
+    GiveTanks(crossed);
+    crossed.GetAVar(kSimFuelWeightPerGallon, kKgUnit, 0.0);
+
+    QCOMPARE(crossedAircraft.GetFuelCapacityKg(), 0.0);
+    QCOMPARE(crossed.avarUnitMismatches, 1);
 }
 
 void Fss727Test::readsCurrentFuelFromSim()
