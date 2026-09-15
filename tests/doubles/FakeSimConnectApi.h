@@ -22,6 +22,7 @@ struct FakeSimConnectApi
     static inline std::vector<std::string> mappedEventNames;
     static inline std::vector<std::pair<DWORD, std::string>> transmittedNamedEvents;
     static inline std::vector<std::vector<char>> writtenClientData;
+    static inline std::vector<std::pair<DWORD, double>> writtenSimObjectData;
 
     struct DataRequest
     {
@@ -45,6 +46,7 @@ struct FakeSimConnectApi
         mappedEventNames.clear();
         transmittedNamedEvents.clear();
         writtenClientData.clear();
+        writtenSimObjectData.clear();
         dataRequests.clear();
         dataDefinitions.clear();
     }
