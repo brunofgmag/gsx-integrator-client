@@ -43,6 +43,16 @@ void Fss727FrontEntryServesTheGroundAccessRule::Act(const RuleContext&, Variable
     doors_->Report();
 
     const double target = IsFrontEntryWanted() ? kDoorOpen : kDoorClosed;
+    const int closeRequests = aircraft_->FrontEntryCloseRequests();
+
+    if (target == kDoorClosed && closeRequests != servedCloseRequests_)
+    {
+        servedCloseRequests_ = closeRequests;
+        Command(writer, kDoorClosed);
+
+        return;
+    }
+
     const bool neverCommanded = lastTarget_ < kDoorClosed;
 
     if (target == lastTarget_ || (neverCommanded && target == kDoorClosed))
@@ -50,6 +60,11 @@ void Fss727FrontEntryServesTheGroundAccessRule::Act(const RuleContext&, Variable
         return;
     }
 
+    Command(writer, target);
+}
+
+void Fss727FrontEntryServesTheGroundAccessRule::Command(VariableWriter& writer, const double target)
+{
     lastTarget_ = target;
 
     probe::Line(QStringLiteral("write front FwdPax open=%1").arg(target == kDoorOpen ? 1 : 0));

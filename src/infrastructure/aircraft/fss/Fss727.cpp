@@ -72,8 +72,6 @@ namespace
 
     constexpr auto kPercentOver100Unit = "percent over 100";
     constexpr std::size_t kMainDeckPoint = 1;
-    constexpr auto kFrontEntryGoal = "INTERACTIVE POINT GOAL:0";
-    constexpr double kDoorGoalClosed = 0.0;
     constexpr double kDoorPointClosedAtMost = 0.05;
     constexpr double kDoorPointOpenAtLeast = 0.95;
 
@@ -349,8 +347,7 @@ void Fss727::SetGroundPower(const bool on)
 
 void Fss727::CloseAllDoors()
 {
-    variableGateway_->SetAVar(kFrontEntryGoal, kPercentOver100Unit, kDoorGoalClosed);
-
+    ++frontEntryCloseRequests_;
     ++holdCloseRequests_;
     ++mainDeckCloseRequests_;
 }
@@ -369,6 +366,11 @@ void Fss727::HoldDoorsClosed(const bool hold)
 bool Fss727::IsHeldForDeparture() const
 {
     return heldForDeparture_;
+}
+
+int Fss727::FrontEntryCloseRequests() const
+{
+    return frontEntryCloseRequests_;
 }
 
 int Fss727::MainDeckCloseRequests() const

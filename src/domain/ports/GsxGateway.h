@@ -15,6 +15,7 @@ enum class GsxStateStatus : int
     Requested = 4,
     Active = 5,
     Completed = 6,
+    Completing = 7,
 };
 
 enum class GsxState : int

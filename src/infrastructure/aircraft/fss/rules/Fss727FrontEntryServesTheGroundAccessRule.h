@@ -18,12 +18,14 @@ public:
     void Act(const RuleContext& context, VariableWriter& writer) override;
 
 private:
+    void Command(VariableWriter& writer, double target);
     [[nodiscard]] bool IsFrontEntryWanted() const;
 
     VariableReader* variables_;
     const Fss727* aircraft_;
     GsxDoorSync* doors_;
     double lastTarget_ = -1.0;
+    int servedCloseRequests_ = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727FRONTENTRYSERVESTHEGROUNDACCESSRULE_H

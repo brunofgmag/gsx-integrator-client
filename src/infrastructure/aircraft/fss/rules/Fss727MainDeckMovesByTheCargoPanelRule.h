@@ -44,6 +44,7 @@ private:
     [[nodiscard]] bool IsTheMainLoaderWaitingForTheDeck() const;
     [[nodiscard]] bool IsGsxWorkingTheCargoDoors() const;
     [[nodiscard]] bool IsGsxUnderway(GsxState state) const;
+    [[nodiscard]] bool IsGsxWorkingTheDoors(GsxState state) const;
 
     const Fss727* aircraft_;
     const GsxGateway* gsxGateway_;
