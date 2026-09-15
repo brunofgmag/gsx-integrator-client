@@ -37,6 +37,8 @@
 
 namespace
 {
+    constexpr int kLoaderDoorGiveUpTicks = 120;
+
     constexpr const char* TouchSurface(const bool fromSwitch, const bool fromApp)
     {
         if (fromSwitch && fromApp)
@@ -190,6 +192,9 @@ void TurnaroundStateMachine::PublishStatus() const
     context_.status->servicesStalled = context_.data.servicesStalled;
     context_.status->serviceInterrupted = context_.data.serviceInterrupted;
     context_.status->loaderHoldingBoarding = context_.data.loaderHoldingBoarding;
+    context_.status->loaderDoorWaitSeconds = context_.data.loaderAwaitingDoor == CargoLoader::None
+        ? 0
+        : std::max(0, kLoaderDoorGiveUpTicks - context_.data.loaderDoorWaitTicks);
     context_.status->servicesWaitSeconds = context_.data.servicesWaitSeconds;
     context_.status->fuelProgress = context_.data.fuelProgress;
     context_.status->boardingProgress = context_.data.boardingProgress;

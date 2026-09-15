@@ -43,7 +43,9 @@ public:
     bool goodEngineStartConfirmation = false;
     GroundPowerStatus gpuStatus = GroundPowerStatus::Disconnected;
     int takeOverCalls = 0;
+    bool couatlAlive = true;
     std::array<GsxStateStatus, 5> lastObserved{};
+    std::array<bool, 5> couatlDiedDuringRun{};
     bool cateringInProgress = false;
     bool lavatoryInProgress = false;
     bool waterInProgress = false;
@@ -64,11 +66,23 @@ public:
         {
             const GsxStateStatus status = GetStateStatus(state);
             GsxStateStatus& last = lastObserved[static_cast<std::size_t>(state)];
+            bool& diedDuringRun = couatlDiedDuringRun[static_cast<std::size_t>(state)];
+
+            if (!couatlAlive)
+            {
+                diedDuringRun = true;
+            }
+            else if (status == GsxStateStatus::Active && last != GsxStateStatus::Active)
+            {
+                diedDuringRun = false;
+            }
 
             const bool endsWithoutCompleted = state == GsxState::Pushback || state == GsxState::Deice;
-            const bool returnedToIdle = endsWithoutCompleted
-                && (status == GsxStateStatus::Callable || status == GsxStateStatus::Bypassed)
+            const bool leftActiveWithoutCompleting =
+                (status == GsxStateStatus::Callable || status == GsxStateStatus::Bypassed)
                 && last == GsxStateStatus::Active;
+            const bool returnedToIdle = leftActiveWithoutCompleting
+                && (endsWithoutCompleted || !diedDuringRun);
 
             if (status == GsxStateStatus::Completed || returnedToIdle)
             {
