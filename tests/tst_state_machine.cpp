@@ -461,6 +461,7 @@ private slots:
     static void resetReturnsToWaitingSupportedAircraft();
     static void holdsAtRequestFuelUntilLoadingConfirmed();
     static void waitsForRefuelingTransitionDelay();
+    static void waitsWithTheWarningWhenTheCouatlDropsTheRefueling();
     static void aDelayedTransitionKeepsTheFastRulesRunning();
     static void theSlowTickActsOnlyWhenTheMachineIsDriving();
     static void waitsForBoardingTransitionDelay();
@@ -1120,6 +1121,47 @@ void TurnaroundStateMachineTest::theFuelStayAdvisoryClearsWhenThePilotDismissesI
     workflow.machine.Tick();
 
     QVERIFY(!workflow.f.status.fuelDidNotStay);
+}
+
+void TurnaroundStateMachineTest::waitsWithTheWarningWhenTheCouatlDropsTheRefueling()
+{
+    TurnaroundWorkflow workflow;
+    ReachRefueling(workflow);
+
+    const int refuelRequests = workflow.f.menuGateway.refuelingCalls;
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        workflow.TickHolding(TurnaroundPhase::Refueling);
+    }
+
+    workflow.f.gsxService.hoseConnected = false;
+
+    for (int tick = 0; tick < 17; ++tick)
+    {
+        workflow.TickHolding(TurnaroundPhase::Refueling);
+    }
+
+    QVERIFY(!workflow.f.status.serviceInterrupted);
+
+    workflow.f.gsxService.refuelingState = GsxStateStatus::Callable;
+
+    for (int tick = 0; tick < 120; ++tick)
+    {
+        workflow.TickHolding(TurnaroundPhase::Refueling);
+    }
+
+    QVERIFY(workflow.f.status.serviceInterrupted);
+    QVERIFY(Logged(workflow, "GSX dropped the refueling it had already started"));
+    QCOMPARE(workflow.f.menuGateway.refuelingCalls, refuelRequests);
+
+    workflow.f.gsxService.refuelingState = GsxStateStatus::Requested;
+    workflow.TickHolding(TurnaroundPhase::Refueling);
+
+    QVERIFY(!workflow.f.status.serviceInterrupted);
+
+    workflow.StartRefueling();
+    workflow.CompleteRefueling();
 }
 
 QTEST_APPLESS_MAIN(TurnaroundStateMachineTest)
