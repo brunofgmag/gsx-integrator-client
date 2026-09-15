@@ -81,6 +81,7 @@ namespace
 
     constexpr int kMainDeckRestingTicks = 3;
     constexpr int kMasterCutGuardTicks = 3;
+    constexpr int kMainLoaderDeadlineTicks = 120;
     constexpr int kMeasuredCompletingTicks = 22;
     constexpr double kMeasuredMainDeckTravelPerTick = 0.02;
     constexpr double kMeasuredMainDeckClosedRest = 0.0069;
@@ -410,6 +411,8 @@ private slots:
     static void neverTurnsTheCargoDoorSwitchOffWhileTheGsxIsLoading();
     static void servesAPendingCloseOnlyOnceTheGsxLeavesItsCompletingState();
     static void keepsTheMainDeckOpenUnderItsLoaderWhenTheServiceDropsFromFiveToOne();
+    static void closesTheMainDeckOnceTheMainLoaderHasOutstayedItsDeadline();
+    static void restartsTheMainLoaderDeadlineWhenTheGsxTakesTheCargoDoorsBack();
     static void waitsForTheMainLoaderStateToArriveBeforeClosingTheMainDeck();
     static void closesTheMainDeckOnceTheGsxIsDoneWithTheCargoDoors();
     static void leavesTheCargoPanelAloneWhenTheMainDeckIsAlreadyClosed();
@@ -429,6 +432,7 @@ private slots:
     static void aDeckFrozenJustShortOfClosedLeavesTheMasterAlone();
     static void aDeckFrozenJustShortOfOpenLeavesTheMasterAlone();
     static void putsThePanelMasterBackOnWhenTheDeckTurnsOutShortOfTheEnd();
+    static void finishesTheTravelTheMasterCutInterruptedAndThenCutsTheMasterAtTheEnd();
     static void leavesThePanelMasterOffOnceTheGuardWindowHasClosed();
     static void aSampleRepeatedEveryThirdTickIsNotTheEndOfTheTravel();
     static void aRestThatWobblesInsideTheToleranceIsStillARest();
@@ -1927,6 +1931,65 @@ void Fss727Test::keepsTheMainDeckOpenUnderItsLoaderWhenTheServiceDropsFromFiveTo
     QCOMPARE(gateway.Written(kPanelMaster), 1.0);
 }
 
+void Fss727Test::closesTheMainDeckOnceTheMainLoaderHasOutstayedItsDeadline()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FakeGsxService gsx;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
+
+    MainDeckOpen(gateway);
+    HoldLoadersIdle(gateway);
+    gateway.lvars[kMainLoaderState] = kLoaderLoading;
+    gsx.boardingState = GsxStateStatus::Completed;
+    TickAircraft(aircraft, gateway);
+
+    aircraft.CloseAllDoors();
+    TickTimes(aircraft, gateway, kMainLoaderDeadlineTicks - 1);
+
+    QCOMPARE(PanelWrites(gateway), 0);
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPanelDoorSwitch), 1);
+    QCOMPARE(gateway.Written(kPanelDoorSwitch), 0.0);
+    QCOMPARE(gateway.Written(kPanelMaster), 1.0);
+}
+
+void Fss727Test::restartsTheMainLoaderDeadlineWhenTheGsxTakesTheCargoDoorsBack()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FakeGsxService gsx;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
+
+    MainDeckOpen(gateway);
+    HoldLoadersIdle(gateway);
+    gateway.lvars[kMainLoaderState] = kLoaderInPosition;
+    gsx.boardingState = GsxStateStatus::Completed;
+    TickAircraft(aircraft, gateway);
+
+    aircraft.CloseAllDoors();
+    TickTimes(aircraft, gateway, kMainLoaderDeadlineTicks - 1);
+
+    QCOMPARE(PanelWrites(gateway), 0);
+
+    gsx.boardingState = GsxStateStatus::Active;
+    TickTimes(aircraft, gateway, kMainLoaderDeadlineTicks + kTwentyTicks);
+
+    QCOMPARE(PanelWrites(gateway), 0);
+
+    gsx.boardingState = GsxStateStatus::Completed;
+    TickTimes(aircraft, gateway, kMainLoaderDeadlineTicks - 1);
+
+    QCOMPARE(PanelWrites(gateway), 0);
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPanelDoorSwitch), 1);
+    QCOMPARE(gateway.Written(kPanelDoorSwitch), 0.0);
+}
+
 void Fss727Test::waitsForTheMainLoaderStateToArriveBeforeClosingTheMainDeck()
 {
     FakeVariableGateway gateway;
@@ -2469,6 +2532,40 @@ void Fss727Test::putsThePanelMasterBackOnWhenTheDeckTurnsOutShortOfTheEnd()
 
     QCOMPARE(gateway.WriteCount(kPanelMaster), 3);
     QCOMPARE(gateway.Written(kPanelMaster), 1.0);
+}
+
+void Fss727Test::finishesTheTravelTheMasterCutInterruptedAndThenCutsTheMasterAtTheEnd()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FakeGsxService gsx;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
+
+    CommandTheMainDeckOpen(aircraft, gateway, gsx);
+
+    gateway.avars[kMainDeckDoorPoint] = kStaleRestInsideTheClosedEnd;
+    TickTimes(aircraft, gateway, 1 + kMainDeckRestingTicks);
+
+    QCOMPARE(gateway.WriteCount(kPanelMaster), 2);
+    QCOMPARE(gateway.Written(kPanelMaster), 0.0);
+
+    gateway.avars[kMainDeckDoorPoint] = kWhereTheDeckReallyWas;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPanelMaster), 3);
+    QCOMPARE(gateway.Written(kPanelMaster), 1.0);
+
+    MoveMainDeckTo(aircraft, gateway, kMeasuredMainDeckOpenRest);
+    TickTimes(aircraft, gateway, kMainDeckRestingTicks);
+
+    QCOMPARE(gateway.WriteCount(kPanelMaster), 4);
+    QCOMPARE(gateway.Written(kPanelMaster), 0.0);
+
+    gateway.avars[kMainDeckDoorPoint] = kMainDeckFrozenHalfOpen;
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.WriteCount(kPanelMaster), 4);
+    QCOMPARE(gateway.Written(kPanelMaster), 0.0);
 }
 
 void Fss727Test::leavesThePanelMasterOffOnceTheGuardWindowHasClosed()
