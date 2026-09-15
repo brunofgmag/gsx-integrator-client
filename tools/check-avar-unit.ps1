@@ -252,7 +252,7 @@ $plant = {
         '}'
     )
 
-    return 'PLANTED WEIGHT as furlongs and kg'
+    return @("unit 'furlongs'", 'PLANTED WEIGHT as furlongs and kg')
 }
 
 $allowlist = @(

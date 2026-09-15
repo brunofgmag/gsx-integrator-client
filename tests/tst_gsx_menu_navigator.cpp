@@ -1323,7 +1323,8 @@ void GsxMenuNavigatorTest::theStairsAreKeptWhilePassengersAreBoarding()
 
     QVERIFY(pick != nullptr);
     QCOMPARE(pick->args.value("index").toInt(), 1);
-    QVERIFY(Logged(logger, "keeping the stairs"));
+    QVERIFY(Logged(logger, "RemoteAPI keeping the stairs: boarding or deboarding is underway"));
+    QVERIFY(!Logged(logger, "passengers"));
 }
 
 void GsxMenuNavigatorTest::theStairsAreKeptWhilePassengersAreDeboarding()

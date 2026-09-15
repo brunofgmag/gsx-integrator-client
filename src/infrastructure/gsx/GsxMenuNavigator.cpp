@@ -494,7 +494,7 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
             if (passengersNeedThem)
             {
                 stairsKeptForPassengers_ = true;
-                logger_->LogInfo("RemoteAPI keeping the stairs: passengers are still using them");
+                logger_->LogInfo("RemoteAPI keeping the stairs: boarding or deboarding is underway");
             }
 
             return true;
