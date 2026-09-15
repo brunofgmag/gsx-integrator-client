@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_TESTS_FAKESIMCONNECTAPI_H
 #define GSX_INTEGRATOR_CLIENT_TESTS_FAKESIMCONNECTAPI_H
 
+#include <algorithm>
 #include <cstddef>
 #include <cstring>
 #include <string>
@@ -71,6 +72,21 @@ struct FakeSimConnectApi
         data->dwRequestID = requestId;
         data->dwDefineID = requestId;
         std::memcpy(&data->dwData, &value, sizeof(double));
+        pendingMessages.push_back(std::move(bytes));
+    }
+
+    static void PushSimObjectString(const DWORD requestId, const std::string& text)
+    {
+        constexpr std::size_t kString256 = 256;
+
+        std::vector<char> bytes(sizeof(SIMCONNECT_RECV_SIMOBJECT_DATA) + kString256, 0);
+        const auto data = reinterpret_cast<SIMCONNECT_RECV_SIMOBJECT_DATA*>(bytes.data());
+        data->dwSize = static_cast<DWORD>(bytes.size());
+        data->dwVersion = 0;
+        data->dwID = SIMCONNECT_RECV_ID_SIMOBJECT_DATA;
+        data->dwRequestID = requestId;
+        data->dwDefineID = requestId;
+        std::memcpy(&data->dwData, text.c_str(), (std::min)(text.size(), kString256 - 1));
         pendingMessages.push_back(std::move(bytes));
     }
 

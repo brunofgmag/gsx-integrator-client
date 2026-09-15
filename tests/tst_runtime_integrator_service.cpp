@@ -8,6 +8,8 @@
 #include "../src/application/IntegratorRuntime.h"
 #include "../src/domain/turnaround/PilotTouch.h"
 #include "../src/application/RuntimeIntegratorService.h"
+#include "../src/infrastructure/gsx/GsxLVars.h"
+#include "../src/infrastructure/simvars/SimVars.h"
 
 namespace
 {
@@ -17,6 +19,11 @@ namespace
     constexpr double kWorldMapCamera = 12.0;
     constexpr double kCockpitCamera = 2.0;
     constexpr auto kMsfs2024AppName = "SunRise";
+    constexpr auto kTitleDatum = "TITLE";
+    constexpr auto kMd11Title = "TFDi Design MD-11 PAX";
+    constexpr auto kMd11ProfileId = "tfdi-md11";
+    constexpr int kFlowTickBudget = 12;
+    constexpr int kLoaderNoticeTickBudget = 120;
 
     void PushSimRunning(const int running)
     {
@@ -46,6 +53,69 @@ namespace
         pause.uEventID = kPauseEvent;
         pause.dwData = 0;
         FakeSimConnectApi::Push(pause, SIMCONNECT_RECV_ID_EVENT);
+    }
+
+    bool PushDatum(const std::string& datumName, const double value)
+    {
+        const DWORD defineId = FakeSimConnectApi::DefineIdOf(datumName);
+        if (defineId == 0)
+        {
+            return false;
+        }
+
+        FakeSimConnectApi::PushSimObjectDouble(defineId, value);
+
+        return true;
+    }
+
+    bool PushLVar(const std::string& name, const double value)
+    {
+        return PushDatum("L:" + name, value);
+    }
+
+    bool TickAndWait(QSignalSpy& updated)
+    {
+        PushOneSecondTick();
+
+        return updated.wait(2000);
+    }
+
+    bool DetectTheMd11WithTheGsxUp(const IntegratorRuntime& runtime, QSignalSpy& updated)
+    {
+        PushUnpaused();
+        if (!TickAndWait(updated))
+        {
+            return false;
+        }
+
+        const DWORD title = FakeSimConnectApi::DefineIdOf(kTitleDatum);
+        if (title == 0 || !PushLVar(gsx::lvars::kCouatlStarted, 1.0))
+        {
+            return false;
+        }
+
+        FakeSimConnectApi::PushSimObjectString(title, kMd11Title);
+
+        return TickAndWait(updated) && runtime.GetAircraftProfileId() == kMd11ProfileId;
+    }
+
+    bool DriveTheFlowInto(const TurnaroundPhase phase, const IntegratorRuntime& runtime, QSignalSpy& updated)
+    {
+        for (int tick = 0; tick < kFlowTickBudget && runtime.GetPhase() != phase; ++tick)
+        {
+            for (const char* engine : {simvars::kSimEng1Combustion, simvars::kSimEng2Combustion,
+                                       simvars::kSimEng3Combustion})
+            {
+                PushDatum(engine, 0.0);
+            }
+
+            if (!TickAndWait(updated))
+            {
+                return false;
+            }
+        }
+
+        return runtime.GetPhase() == phase;
     }
 
     struct RecordingObserver final : IntegratorServiceObserver
@@ -86,6 +156,8 @@ private slots:
     static void aTouchStampedWithTheCurrentPhaseReachesTheFlow();
     static void aWorldMapCameraDuringTheLoadDoesNotLeaveTheFlowOff();
     static void theGsxChipFollowsTheGsxWhileThePilotIsOnFoot();
+    static void theSnapshotCountsTheJetwayWaitDownWithTheFlow();
+    static void theSnapshotCarriesTheLoaderCountdownWhileTheLoaderHoldsBoarding();
 };
 
 void RuntimeIntegratorServiceTest::init()
@@ -506,6 +578,63 @@ void RuntimeIntegratorServiceTest::theGsxChipFollowsTheGsxWhileThePilotIsOnFoot(
     QVERIFY(!service.GetSnapshot().sessionReady);
     QVERIFY(service.GetSnapshot().pilotOnFoot);
     QVERIFY(service.GetSnapshot().gsxAvailable);
+}
+
+void RuntimeIntegratorServiceTest::theSnapshotCountsTheJetwayWaitDownWithTheFlow()
+{
+    IntegratorRuntime runtime;
+
+    AutomationSettings settings;
+    settings.skipReposition = true;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(DriveTheFlowInto(TurnaroundPhase::CallServices, runtime, updated));
+
+    QVERIFY(PushLVar(gsx::lvars::kJetway, static_cast<double>(GsxStateStatus::Requested)));
+    QVERIFY(TickAndWait(updated));
+
+    const int firstWaitSeconds = runtime.Snapshot().servicesWaitSeconds;
+    QVERIFY(firstWaitSeconds > 0);
+
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.Snapshot().servicesWaitSeconds, firstWaitSeconds - 1);
+}
+
+void RuntimeIntegratorServiceTest::theSnapshotCarriesTheLoaderCountdownWhileTheLoaderHoldsBoarding()
+{
+#ifndef NDEBUG
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+
+    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::Boarding) - static_cast<int>(runtime.GetPhase()));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::Boarding);
+
+    QVERIFY(PushLVar(gsx::lvars::kBoardingState, static_cast<double>(GsxStateStatus::Active)));
+    QVERIFY(TickAndWait(updated));
+
+    QVERIFY(PushLVar(gsx::lvars::kBaggageLoaderMainState, gsx::states::kLoaderWaitingForDoor));
+    for (int tick = 0; tick < kLoaderNoticeTickBudget
+         && runtime.Snapshot().loaderHoldingBoarding == CargoLoader::None; ++tick)
+    {
+        QVERIFY(TickAndWait(updated));
+    }
+
+    const IntegratorSnapshot snapshot = runtime.Snapshot();
+
+    QCOMPARE(snapshot.loaderHoldingBoarding, CargoLoader::MainDeck);
+    QVERIFY(snapshot.loaderDoorWaitSeconds > 0);
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
 }
 
 QTEST_GUILESS_MAIN(RuntimeIntegratorServiceTest)
