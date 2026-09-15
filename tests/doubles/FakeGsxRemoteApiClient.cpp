@@ -2,11 +2,26 @@
 
 #include "../../src/infrastructure/gsx/GsxRemoteApiClient.h"
 
-GsxRemoteApiClient::GsxRemoteApiClient(QObject* parent) : QObject(parent)
+void FakeGsxRemoteApi::AnnounceConnection(const bool connected)
 {
+    if (liveClient != nullptr)
+    {
+        emit liveClient->ConnectionChanged(connected);
+    }
 }
 
-GsxRemoteApiClient::~GsxRemoteApiClient() = default;
+GsxRemoteApiClient::GsxRemoteApiClient(QObject* parent) : QObject(parent)
+{
+    FakeGsxRemoteApi::liveClient = this;
+}
+
+GsxRemoteApiClient::~GsxRemoteApiClient()
+{
+    if (FakeGsxRemoteApi::liveClient == this)
+    {
+        FakeGsxRemoteApi::liveClient = nullptr;
+    }
+}
 
 void GsxRemoteApiClient::Start()
 {
