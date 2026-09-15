@@ -1,14 +1,22 @@
+set(GSXI_TEST_RUNTIME_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>")
+
+add_custom_target(gsxi-test-qt-runtime
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${GSXI_TEST_RUNTIME_DIR}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "$<TARGET_FILE:Qt6::Core>"
+        "$<TARGET_FILE:Qt6::Test>"
+        "$<TARGET_FILE:Qt6::Network>"
+        "$<TARGET_FILE:Qt6::WebSockets>"
+        "${GSXI_TEST_RUNTIME_DIR}"
+        VERBATIM)
+
 function(configure_gsxi_test TARGET_NAME TEST_NAME)
     target_link_libraries(${TARGET_NAME} PRIVATE Qt6::Core Qt6::Test)
     target_include_directories(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
+    set_target_properties(${TARGET_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${GSXI_TEST_RUNTIME_DIR}")
     add_test(NAME ${TEST_NAME} COMMAND ${TARGET_NAME})
-
-    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-            "$<TARGET_FILE:Qt6::Core>"
-            "$<TARGET_FILE:Qt6::Test>"
-            "$<TARGET_FILE_DIR:${TARGET_NAME}>"
-            VERBATIM)
+    add_dependencies(${TARGET_NAME} gsxi-test-qt-runtime)
 endfunction()
 
 function(gsxi_add_qt_test TARGET_NAME TEST_NAME)
@@ -195,13 +203,6 @@ gsxi_add_qt_test(gsxi-gsx-menu-navigator-tests gsx-menu-navigator
         src/domain/model/AutomationSettings.h)
 target_link_libraries(gsxi-gsx-menu-navigator-tests PRIVATE Qt6::WebSockets)
 
-add_custom_command(TARGET gsxi-gsx-menu-navigator-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::WebSockets>"
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-gsx-menu-navigator-tests>"
-        VERBATIM)
-
 gsxi_add_qt_test(gsxi-gsx-door-sync-tests gsx-door-sync
         tests/tst_gsx_door_sync.cpp
         src/infrastructure/gsx/GsxDoorSync.cpp
@@ -226,13 +227,6 @@ gsxi_add_qt_test(gsxi-gsx-remote-api-client-tests gsx-remote-api-client
         src/infrastructure/gsx/GsxRemoteApiClient.h)
 target_link_libraries(gsxi-gsx-remote-api-client-tests PRIVATE Qt6::WebSockets)
 
-add_custom_command(TARGET gsxi-gsx-remote-api-client-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::WebSockets>"
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-gsx-remote-api-client-tests>"
-        VERBATIM)
-
 gsxi_add_qt_test(gsxi-github-update-service-tests github-update-service
         tests/tst_github_update_service.cpp
         src/infrastructure/update/GithubUpdateService.cpp
@@ -244,12 +238,6 @@ gsxi_add_qt_test(gsxi-github-update-service-tests github-update-service
         src/application/ports/UpdateService.h
         src/application/model/UpdateInfo.h)
 target_link_libraries(gsxi-github-update-service-tests PRIVATE Qt6::Network)
-
-add_custom_command(TARGET gsxi-github-update-service-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-github-update-service-tests>"
-        VERBATIM)
 
 gsxi_add_qt_test(gsxi-qsettings-repository-tests qsettings-repository
         tests/tst_qsettings_repository.cpp
@@ -413,12 +401,6 @@ gsxi_add_qt_test(gsxi-fenix-efb-client-tests fenix-efb-client
         src/infrastructure/fenix/FenixEfbGateway.h)
 target_link_libraries(gsxi-fenix-efb-client-tests PRIVATE Qt6::Network)
 
-add_custom_command(TARGET gsxi-fenix-efb-client-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-fenix-efb-client-tests>"
-        VERBATIM)
-
 gsxi_add_qt_test(gsxi-fenix-a32x-tests fenix-a32x
         tests/TestDoubles.h
         tests/AircraftTicks.h
@@ -446,12 +428,6 @@ gsxi_add_qt_test(gsxi-fenix-a32x-tests fenix-a32x
         src/infrastructure/gsx/GsxDoorSync.h
         src/domain/model/AutomationStatus.h)
 target_link_libraries(gsxi-fenix-a32x-tests PRIVATE Qt6::Network)
-
-add_custom_command(TARGET gsxi-fenix-a32x-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-fenix-a32x-tests>"
-        VERBATIM)
 
 gsxi_add_qt_test(gsxi-commbus-bridge-client-tests commbus-bridge-client
         tests/doubles/FakeVariableGateway.h
@@ -785,12 +761,6 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
 target_link_libraries(gsxi-aircraft-detection-tests PRIVATE Qt6::Network)
 target_include_directories(gsxi-aircraft-detection-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
-add_custom_command(TARGET gsxi-aircraft-detection-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-aircraft-detection-tests>"
-        VERBATIM)
-
 gsxi_add_qt_test(gsxi-github-release-parser-tests github-release-parser
         tests/tst_github_release_parser.cpp
         src/application/model/UpdateInfo.h
@@ -964,12 +934,6 @@ target_link_libraries(gsxi-runtime-integrator-service-tests PRIVATE
         gsxi-turnaround-state-test-support
         Qt6::Network)
 target_include_directories(gsxi-runtime-integrator-service-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
-
-add_custom_command(TARGET gsxi-runtime-integrator-service-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-runtime-integrator-service-tests>"
-        VERBATIM)
 
 if (NOT GSXI_TESTS_ONLY)
     qt_add_executable(gsxi-qml-tests tests/qml/main.cpp)
