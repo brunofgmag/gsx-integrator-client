@@ -34,7 +34,7 @@ This is a work in progress, currently in a testing phase. Expect bugs, and expec
 | PMDG 777-300ER / F / -200ER / -200LR        | Any | Client (progressive)  | Client (progressive)  | MIC/INT switch | Chocks + GPU | Supported |
 | PMDG 737-800 / BBJ2 / BCF / BDSF            | Any | Client (progressive)  | Client (progressive)  | R/T-I/C switch | Chocks + GPU | Supported |
 | JustFlight Avro RJ70 / RJ85 / RJ100 (incl. QT) | Any | GSX (progressive) | GSX (progressive)     | R/T-INT switch | Chocks + GPU | Beta |
-| FSS Boeing 727-200F / 200RE Freighter       | Any | Client (progressive)  | Client (progressive)  | Pedestal interphone | Chocks + GPU | Beta |
+| FSS Boeing 727-200F / 200RE Freighter       | Any | Client (progressive)  | Client (progressive)  | SERV INT switch | Chocks + GPU | Beta |
 
 Every aircraft gets the same progress bars during refueling and boarding; the Fuel and Payload columns say how each one loads. On the Fenix, the PMDG 777 and 737, and the Avro RJ, fuel goes in at the rate set in the fuel card while the GSX hose is connected, and passengers and cargo follow GSX's boarding. On the freighters the whole payload goes in as cargo, spread over the main deck and the holds. On the iFly the GSX truck pumps the tanks at its own pace, so the rate in the fuel card reads Auto; if it feels slow, GSX has a Fuel Time Acceleration option. The MD-11 and the A340 load fuel and payload in one step, and the progress bars follow GSX. GSX ships its own automation for the PMDG that types fuel and payload into the FMC; the client turns it off so the two never fight over the numbers.
 
@@ -53,7 +53,7 @@ The smart switch is the cockpit control you flip to tell the client "go ahead". 
 - PMDG 777: the MIC/INT switch on either pilot's audio control panel, center pedestal. Push it down to INT; it springs back on its own. The up position is your radio push-to-talk and the client leaves it alone, so transmitting on VATSIM never triggers anything.
 - PMDG 737: the R/T-I/C switch on the captain's audio control panel, center pedestal. Flick it to R/T and let go. The client ignores the I/C side, which latches where you leave it. R/T is also your radio transmit position, so talking on VATSIM with this switch, rather than a joystick button, counts as a go-ahead.
 - JustFlight Avro RJ: the R/T-INT rocker on the captain's audio control panel. Flick it to INT. The R/T side is your radio transmit and the client ignores it, so transmitting on VATSIM never triggers anything.
-- FSS 727: the interphone handset on the center pedestal. Lift it and hang it back up; a quick lift is enough, and the client leaves the handset where you left it.
+- FSS 727: the SERV INT switch on the audio control panel. The captain's, first officer's and flight engineer's panels share it, so any of the three works. Flip it on and the client switches it back off.
 
 More aircraft are on the way. If you fly something else, the client connects but does not automate anything.
 

@@ -27,6 +27,7 @@ signals:
     void SnapshotReceived(const QJsonObject& snapshot);
     void PatchReceived(const QString& path, const QJsonValue& value);
     void ResultReceived(bool ok, const QString& errorCode);
+    void ConnectionChanged(bool connected);
 
 private slots:
     void OnConnected();
@@ -39,6 +40,7 @@ private:
     static quint16 ResolvePort();
     void SendSubscribe() const;
     void ScheduleReconnect();
+    void ForgetHandshake();
     void HandleResult(const QJsonObject& msg);
 
     static constexpr int kHandshakeTimeoutMs = 5000;

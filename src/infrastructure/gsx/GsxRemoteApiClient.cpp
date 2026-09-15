@@ -2,6 +2,7 @@
 #include "../probe/ProbeLog.h"
 
 #include <algorithm>
+#include <utility>
 
 #include <QDir>
 #include <QFileInfo>
@@ -76,7 +77,7 @@ void GsxRemoteApiClient::OnReconnect()
 void GsxRemoteApiClient::OnConnected()
 {
     connected_ = true;
-    handshakeDone_ = false;
+    ForgetHandshake();
     handshakeTimer_->start(handshakeTimeoutMs_);
 
     SendSubscribe();
@@ -86,10 +87,22 @@ void GsxRemoteApiClient::OnConnected()
 void GsxRemoteApiClient::OnDisconnected()
 {
     connected_ = false;
-    handshakeDone_ = false;
+    ForgetHandshake();
     handshakeTimer_->stop();
 
     ScheduleReconnect();
+}
+
+void GsxRemoteApiClient::ForgetHandshake()
+{
+    if (!std::exchange(handshakeDone_, false))
+    {
+        return;
+    }
+
+    LOG_WARN("GSX RemoteAPI: the connection dropped after GSX had answered.");
+
+    emit ConnectionChanged(false);
 }
 
 void GsxRemoteApiClient::OnHandshakeTimeout()
@@ -152,6 +165,8 @@ void GsxRemoteApiClient::OnTextMessage(const QString& text)
         handshakeDone_ = true;
         handshakeTimer_->stop();
         backoffMs_ = 1000;
+
+        emit ConnectionChanged(true);
     }
 
     const QJsonDocument doc = QJsonDocument::fromJson(text.toUtf8());

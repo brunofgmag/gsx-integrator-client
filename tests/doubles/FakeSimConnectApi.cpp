@@ -103,9 +103,17 @@ SIMCONNECTAPI SimConnect_RequestDataOnSimObject(HANDLE, SIMCONNECT_DATA_REQUEST_
     return S_OK;
 }
 
-SIMCONNECTAPI SimConnect_SetDataOnSimObject(HANDLE, SIMCONNECT_DATA_DEFINITION_ID, SIMCONNECT_OBJECT_ID,
-                                            SIMCONNECT_DATA_SET_FLAG, DWORD, DWORD, void*)
+SIMCONNECTAPI SimConnect_SetDataOnSimObject(HANDLE, const SIMCONNECT_DATA_DEFINITION_ID DefineID, SIMCONNECT_OBJECT_ID,
+                                            SIMCONNECT_DATA_SET_FLAG, DWORD, const DWORD cbUnitSize,
+                                            void* pDataSet)
 {
+    if (cbUnitSize == sizeof(double) && pDataSet != nullptr)
+    {
+        double value = 0.0;
+        std::memcpy(&value, pDataSet, sizeof(double));
+        FakeSimConnectApi::writtenSimObjectData.emplace_back(DefineID, value);
+    }
+
     return S_OK;
 }
 

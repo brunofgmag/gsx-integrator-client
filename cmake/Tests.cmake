@@ -15,7 +15,8 @@ function(configure_gsxi_test TARGET_NAME TEST_NAME)
     target_include_directories(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
     set_target_properties(${TARGET_NAME} PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "${GSXI_TEST_RUNTIME_DIR}")
-    add_test(NAME ${TEST_NAME} COMMAND ${TARGET_NAME})
+    add_test(NAME ${TEST_NAME} COMMAND ${TARGET_NAME} ${ARGN})
+    set_property(TEST ${TEST_NAME} PROPERTY ENVIRONMENT QT_FORCE_STDERR_LOGGING=1)
     add_dependencies(${TARGET_NAME} gsxi-test-qt-runtime)
 endfunction()
 
@@ -961,7 +962,7 @@ if (NOT GSXI_TESTS_ONLY)
     target_compile_definitions(gsxi-qml-tests PRIVATE
             QUICK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}/tests/qml")
 
-    add_test(NAME qml-components COMMAND gsxi-qml-tests -platform offscreen)
+    configure_gsxi_test(gsxi-qml-tests qml-components -platform offscreen)
 
     get_target_property(GSXI_QT_CORE_DLL Qt6::Core IMPORTED_LOCATION_DEBUG)
     if (NOT GSXI_QT_CORE_DLL)
@@ -969,8 +970,11 @@ if (NOT GSXI_TESTS_ONLY)
     endif ()
     get_filename_component(GSXI_QT_BIN_DIR "${GSXI_QT_CORE_DLL}" DIRECTORY)
     get_filename_component(GSXI_QT_PREFIX "${GSXI_QT_BIN_DIR}" DIRECTORY)
-    set_tests_properties(qml-components PROPERTIES ENVIRONMENT
-            "PATH=${GSXI_QT_BIN_DIR};$ENV{PATH};QT_PLUGIN_PATH=${GSXI_QT_PREFIX}/plugins;QML_IMPORT_PATH=${GSXI_QT_PREFIX}/qml;QML2_IMPORT_PATH=${GSXI_QT_PREFIX}/qml")
+    set_property(TEST qml-components APPEND PROPERTY ENVIRONMENT
+            "PATH=${GSXI_QT_BIN_DIR}"
+            "QT_PLUGIN_PATH=${GSXI_QT_PREFIX}/plugins"
+            "QML_IMPORT_PATH=${GSXI_QT_PREFIX}/qml"
+            "QML2_IMPORT_PATH=${GSXI_QT_PREFIX}/qml")
 endif ()
 
 set(GSXI_GUARD_CHECKS

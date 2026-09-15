@@ -30,6 +30,11 @@ namespace
 
     bool IsGsxRefuelReady(const TurnaroundContext& ctx, const GsxStateStatus refuelingState)
     {
+        if (!ctx.gsxGateway->IsRemoteApiConnected())
+        {
+            return false;
+        }
+
         if (ctx.gsxGateway->IsFuelHoseConnected() || IsGsxRefuelDone(ctx, refuelingState))
         {
             return true;

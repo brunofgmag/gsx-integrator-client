@@ -44,6 +44,7 @@ public:
     [[nodiscard]] GroundPowerStatus GetGpuStatus() const override;
     [[nodiscard]] bool IsServiceInProgress(GroundService service) const override;
     [[nodiscard]] bool OffersPushback() const override;
+    [[nodiscard]] bool IsRemoteApiConnected() const override;
 
     void TakeOverFuelAndPayload() override;
     void ReassertTakeovers() const;

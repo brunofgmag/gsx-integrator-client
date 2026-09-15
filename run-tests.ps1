@@ -9,7 +9,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-if ($Filter -and ($Filter -like '*\*' -or $Filter -like '*/*' -or $Filter -like '*.cpp' -or $Filter -like '*.ps1'))
+if ($Filter -and ($Filter -like '*\*' -or $Filter -like '*/*' -or $Filter -like '*.cpp' -or $Filter -like '*.qml' -or $Filter -like '*.ps1'))
 {
     $fileName = Split-Path -Leaf $Filter
     Write-Host "==> Detectado caminho de arquivo no filtro: $fileName"
@@ -24,6 +24,9 @@ if ($Filter -and ($Filter -like '*\*' -or $Filter -like '*/*' -or $Filter -like 
     } elseif ($fileName -like 'tst_*.cpp')
     {
         $Filter = $fileName -replace '^tst_', '' -replace '\.cpp$', '' -replace '_', '-'
+    } elseif ($fileName -like 'tst_*.qml')
+    {
+        $Filter = 'qml-components'
     } elseif ($fileName -like 'check-*.ps1')
     {
         $Filter = $fileName -replace '\.ps1$', ''
@@ -156,6 +159,9 @@ if ($filterIsGuard)
         {
             $stateName = $Filter -replace '^turnaround-state-', ''
             $targetToBuild = "gsxi-turnaround-$stateName-state-tests"
+        } elseif ($Filter -eq 'qml-components')
+        {
+            $targetToBuild = 'gsxi-qml-tests'
         } else
         {
             $targetToBuild = "gsxi-$Filter-tests"

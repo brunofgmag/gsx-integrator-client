@@ -15,6 +15,7 @@ namespace
     constexpr int kBoardingRetryTicks = 30;
     constexpr int kLoaderDoorNoticeTicks = 45;
     constexpr int kLoaderDoorGiveUpTicks = 120;
+    constexpr int kCargoFlagGiveUpTicks = kLoaderDoorGiveUpTicks;
 }
 
 std::optional<TurnaroundTransition> BoardingState::EvaluatePhase(TurnaroundContext& ctx)
@@ -35,6 +36,7 @@ std::optional<TurnaroundTransition> BoardingState::EvaluatePhase(TurnaroundConte
 
     EnsureBaseline(ctx);
     NoteLoaderAwaitingDoor(ctx);
+    NoteCargoFlagAfterTheService(ctx, isCompleted);
 
     if (isCompleted && !IsCargoPending(ctx))
     {
@@ -134,6 +136,7 @@ void BoardingState::NoteLoaderAwaitingDoor(TurnaroundContext& ctx)
     {
         data.loaderAwaitingDoor = CargoLoader::None;
         data.loaderDoorWaitTicks = 0;
+        data.loaderDoorWaitSeconds = 0;
         data.loaderHoldingBoarding = CargoLoader::None;
 
         return;
@@ -147,6 +150,7 @@ void BoardingState::NoteLoaderAwaitingDoor(TurnaroundContext& ctx)
     data.loaderAwaitingDoor = awaiting;
 
     ++data.loaderDoorWaitTicks;
+    data.loaderDoorWaitSeconds = std::max(0, kLoaderDoorGiveUpTicks - data.loaderDoorWaitTicks);
     if (data.loaderDoorWaitTicks >= kLoaderDoorNoticeTicks)
     {
         data.loaderHoldingBoarding = awaiting;
@@ -159,9 +163,32 @@ bool BoardingState::HasGivenUpOnTheLoader(const TurnaroundContext& ctx)
         && ctx.data.loaderDoorWaitTicks >= kLoaderDoorGiveUpTicks;
 }
 
+void BoardingState::NoteCargoFlagAfterTheService(TurnaroundContext& ctx, const bool serviceClosed)
+{
+    auto& data = ctx.data;
+
+    if (!serviceClosed || !ctx.gsxGateway->IsLoadingCargo())
+    {
+        data.cargoFlagAfterServiceTicks = 0;
+
+        return;
+    }
+
+    if (++data.cargoFlagAfterServiceTicks == kCargoFlagGiveUpTicks)
+    {
+        ctx.logger->LogInfo(
+            "Boarding: GSX closed the service and still flags cargo loading; the client stops waiting for it");
+    }
+}
+
+bool BoardingState::HasGivenUpOnTheCargoFlag(const TurnaroundContext& ctx)
+{
+    return ctx.data.cargoFlagAfterServiceTicks >= kCargoFlagGiveUpTicks;
+}
+
 bool BoardingState::IsCargoPending(const TurnaroundContext& ctx)
 {
-    if (ctx.gsxGateway->IsLoadingCargo())
+    if (ctx.gsxGateway->IsLoadingCargo() && !HasGivenUpOnTheCargoFlag(ctx))
     {
         return true;
     }

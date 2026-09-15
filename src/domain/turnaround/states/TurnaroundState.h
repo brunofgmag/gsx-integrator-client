@@ -33,14 +33,6 @@ protected:
                                         GsxStateStatus state, bool started, bool completed);
 
 private:
-    struct RuleOutcome
-    {
-        bool holds = false;
-        int ticksAllowed = 0;
-        const char* reason = "";
-    };
-
-    [[nodiscard]] RuleOutcome RunRules(TurnaroundContext& ctx, RuleCadence cadence);
     [[nodiscard]] bool AnyRuleHolds(TurnaroundContext& ctx);
 
     int holdTicks_ = 0;

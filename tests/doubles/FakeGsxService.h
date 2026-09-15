@@ -53,7 +53,7 @@ public:
     bool gpuInProgress = false;
     bool departureInProgress = false;
     bool offersPushback = true;
-
+    bool remoteApiConnected = true;
 
     int observeCalls = 0;
 
@@ -197,6 +197,7 @@ public:
     }
 
     [[nodiscard]] bool OffersPushback() const override { return offersPushback; }
+    [[nodiscard]] bool IsRemoteApiConnected() const override { return remoteApiConnected; }
 
     void TakeOverFuelAndPayload() override
     {

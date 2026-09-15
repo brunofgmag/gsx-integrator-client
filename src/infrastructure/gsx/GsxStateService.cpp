@@ -335,6 +335,11 @@ bool GsxStateService::OffersPushback() const
     });
 }
 
+bool GsxStateService::IsRemoteApiConnected() const
+{
+    return remote_ != nullptr && remote_->connected;
+}
+
 bool GsxStateService::AreStairsAvailable() const
 {
     const double state = varManager_->GetLVar(kStairs, 0.0);
