@@ -186,8 +186,7 @@ namespace
 
     constexpr std::array kVariants = {Fss727::kName200F, Fss727::kName200ReFreighter};
 
-    constexpr auto kPhone = "FSS_B727_PDSTL_PHONE_PICK_UP";
-    constexpr double kPhoneFirstThird = 0.333;
+    constexpr auto kServiceInterphone = "FSS_B727_ADP_SERV_INT_SWITCH";
     constexpr auto kSimBeaconLight = "LIGHT BEACON";
 
     class LogCapture
@@ -379,9 +378,10 @@ private slots:
     static void crewOnBoardSumsTheThreeCrewStationsOnlyWithTheAircraftStopped();
     static void plannedOperatingEmptyWeightComesFromTheClientOfp();
     static void theTargetTheBoardingBarAndTheFinalWriteAgreeOnThePlanCargoLine();
-    static void registersThePedestalPhoneForFastRefresh();
-    static void aPhoneTouchFiresOnceFromItsFirstThird();
-    static void aHeldPhoneFiresOnceAcrossThreeTicks();
+    static void registersTheServiceInterphoneSwitchForFastRefresh();
+    static void aServiceInterphoneFlipFiresOnceAndIsSwitchedBackOff();
+    static void aServiceInterphoneLeftOnFiresOnceAcrossThreeTicks();
+    static void aServiceInterphoneLeftOffNeverFiresNorWrites();
     static void readsThePlanFromTheClientOfp();
     static void loadsThroughTheClientAndBoardsByGsxStairs();
     static void showsWeightsInPounds();
@@ -1219,47 +1219,66 @@ void Fss727Test::theTargetTheBoardingBarAndTheFinalWriteAgreeOnThePlanCargoLine(
     QVERIFY(std::abs(zfwTheSimulatorSumsKg - ctx.data.plannedZfwKg) < kKgTolerance);
 }
 
-void Fss727Test::registersThePedestalPhoneForFastRefresh()
+void Fss727Test::registersTheServiceInterphoneSwitchForFastRefresh()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
     const Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
     QCOMPARE(gateway.fastRefreshNames.size(), std::size_t{1});
-    QCOMPARE(gateway.fastRefreshNames.front(), std::string{kPhone});
+    QCOMPARE(gateway.fastRefreshNames.front(), std::string{kServiceInterphone});
 }
 
-void Fss727Test::aPhoneTouchFiresOnceFromItsFirstThird()
+void Fss727Test::aServiceInterphoneFlipFiresOnceAndIsSwitchedBackOff()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
-    gateway.lvarSpans[kPhone] = LVarSpan{0.0, kPhoneFirstThird, true};
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{0.0, 1.0, true};
 
     QVERIFY(aircraft.ConsumeSmartSwitch());
+    QCOMPARE(gateway.lvarWrites[kServiceInterphone], 1);
+    QCOMPARE(gateway.lvars[kServiceInterphone], 0.0);
 
-    gateway.lvarSpans[kPhone] = LVarSpan{0.0, 0.0, true};
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{0.0, 0.0, true};
 
     QVERIFY(!aircraft.ConsumeSmartSwitch());
-    QCOMPARE(gateway.setLVarCalls, 0);
+    QCOMPARE(gateway.lvarWrites[kServiceInterphone], 1);
 }
 
-void Fss727Test::aHeldPhoneFiresOnceAcrossThreeTicks()
+void Fss727Test::aServiceInterphoneLeftOnFiresOnceAcrossThreeTicks()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
-    gateway.lvarSpans[kPhone] = LVarSpan{0.0, 1.0, true};
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{0.0, 1.0, true};
 
     QVERIFY(aircraft.ConsumeSmartSwitch());
 
-    gateway.lvarSpans[kPhone] = LVarSpan{1.0, 1.0, true};
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{1.0, 1.0, true};
 
     QVERIFY(!aircraft.ConsumeSmartSwitch());
 
-    gateway.lvarSpans[kPhone] = LVarSpan{1.0, 1.0, true};
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{1.0, 1.0, true};
+
+    QVERIFY(!aircraft.ConsumeSmartSwitch());
+    QCOMPARE(gateway.lvarWrites[kServiceInterphone], 3);
+    QCOMPARE(gateway.lvars[kServiceInterphone], 0.0);
+}
+
+void Fss727Test::aServiceInterphoneLeftOffNeverFiresNorWrites()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{0.0, 0.0, true};
+
+    QVERIFY(!aircraft.ConsumeSmartSwitch());
+
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{0.0, 0.0, true};
 
     QVERIFY(!aircraft.ConsumeSmartSwitch());
     QCOMPARE(gateway.setLVarCalls, 0);
@@ -2688,7 +2707,7 @@ void Fss727Test::observingEvaluatingAndReadingWriteNoVariable()
         gateway.lvars[kParkBrakeLever] = 1.0;
         gateway.lvars[kChocks] = 1.0;
         ParkWithTheMeasuredCrew(gateway);
-        gateway.lvarSpans[kPhone] = LVarSpan{0.0, 1.0, true};
+        gateway.lvarSpans[kServiceInterphone] = LVarSpan{0.0, 0.0, true};
         PlanTheMeasuredFlight(status);
 
         for (int tick = 0; tick < kFiftyTicks; ++tick)

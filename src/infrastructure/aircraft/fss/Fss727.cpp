@@ -67,8 +67,8 @@ namespace
     constexpr double kEquipmentStowed = 0.0;
     constexpr double kEquipmentPlaced = 1.0;
 
-    constexpr auto kPhoneLVar = "FSS_B727_PDSTL_PHONE_PICK_UP";
-    constexpr double kPhoneAtRest = 0.0;
+    constexpr auto kServiceInterphoneLVar = "FSS_B727_ADP_SERV_INT_SWITCH";
+    constexpr double kServiceInterphoneOff = 0.0;
 
     constexpr auto kPercentOver100Unit = "percent over 100";
     constexpr std::size_t kMainDeckPoint = 1;
@@ -151,11 +151,12 @@ Fss727::Fss727(VariableGateway* variableGateway, const AutomationStatus* status,
                const GsxGateway* gsxGateway)
     : variableGateway_(variableGateway),
       status_(status),
-      smartSwitch_(*variableGateway, {kPhoneLVar},
+      smartSwitch_(*variableGateway, {kServiceInterphoneLVar},
                    [](double, const double max)
                    {
-                       return max > kPhoneAtRest;
-                   }),
+                       return max > kServiceInterphoneOff;
+                   },
+                   kServiceInterphoneOff),
       doorPoints_(kFreighterDoorPoints),
       movingTicks_(doorPoints_.size(), 0),
       doors_(variableGateway),

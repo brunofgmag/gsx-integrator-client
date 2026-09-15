@@ -39,6 +39,16 @@ void IntegratorSnapshotTest::boolFieldDifferenceBreaksEquivalence()
     QVERIFY(!AreEquivalent(a, b));
 
     b.sessionActive = false;
+    b.sessionReady = true;
+
+    QVERIFY(!AreEquivalent(a, b));
+
+    b.sessionReady = false;
+    b.pilotOnFoot = true;
+
+    QVERIFY(!AreEquivalent(a, b));
+
+    b.pilotOnFoot = false;
     b.automationEnabled = true;
 
     QVERIFY(!AreEquivalent(a, b));

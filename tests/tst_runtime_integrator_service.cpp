@@ -440,11 +440,14 @@ void RuntimeIntegratorServiceTest::aWorldMapCameraDuringTheLoadDoesNotLeaveTheFl
     PushOneSecondTick();
     QVERIFY(updated.wait(2000));
 
+    QVERIFY(!service.GetSnapshot().sessionReady);
+
     FakeSimConnectApi::PushSimObjectDouble(camera, kCockpitCamera);
     PushOneSecondTick();
     QVERIFY(updated.wait(2000));
 
     QVERIFY(runtime.IsSessionActive());
+    QVERIFY(service.GetSnapshot().sessionReady);
     QVERIFY(service.GetSnapshot().automationEnabled);
 }
 

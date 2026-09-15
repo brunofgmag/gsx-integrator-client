@@ -313,6 +313,8 @@ void IntegratorRuntime::Update()
 {
     if (IsSimOnMenu() && isSessionActive_)
     {
+        sessionReady_ = false;
+        pilotOnFoot_ = false;
         OnSessionEnd();
 
         return;
@@ -322,7 +324,9 @@ void IntegratorRuntime::Update()
 
     ProbeGates();
 
-    if (!IsSessionReady())
+    sessionReady_ = IsSessionReady();
+    pilotOnFoot_ = IsPilotOnFoot();
+    if (!sessionReady_)
     {
         return;
     }
@@ -574,6 +578,8 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     IntegratorSnapshot snapshot;
     snapshot.connected = IsConnected();
     snapshot.sessionActive = IsSessionActive();
+    snapshot.sessionReady = sessionReady_;
+    snapshot.pilotOnFoot = pilotOnFoot_;
     snapshot.automationEnabled = status_.enabled;
     snapshot.gsxAvailable = status_.gsxAvailable;
     snapshot.aircraftSupported = status_.aircraftSupported;
@@ -727,6 +733,11 @@ bool IntegratorRuntime::IsSessionReady()
         varGateway_.GetAVar("IS AIRCRAFT", "Number", 0.0),
         varGateway_.GetAVar("IS AVATAR", "Number", 0.0)
     );
+}
+
+bool IntegratorRuntime::IsPilotOnFoot()
+{
+    return SessionReadiness::IsOnFoot(simVersion_, varGateway_.GetAVar("IS AVATAR", "Number", 0.0));
 }
 
 QString IntegratorRuntime::GetAircraftName() const

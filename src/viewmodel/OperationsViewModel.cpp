@@ -55,18 +55,18 @@ namespace
         {
         case CargoLoader::Front:
             return QCoreApplication::translate("Turnaround",
-                                               "A GSX loader is waiting for the forward cargo door. "
-                                               "Open it, or in %1 s the client will finish the boarding without waiting for the loader.")
+                                               "A GSX loader is waiting for the forward cargo door to open. "
+                                               "Open it within %1 s, or the client will finish boarding without this loader.")
                 .arg(snapshot.loaderDoorWaitSeconds);
         case CargoLoader::Rear:
             return QCoreApplication::translate("Turnaround",
-                                               "A GSX loader is waiting for the aft cargo door. "
-                                               "Open it, or in %1 s the client will finish the boarding without waiting for the loader.")
+                                               "A GSX loader is waiting for the aft cargo door to open. "
+                                               "Open it within %1 s, or the client will finish boarding without this loader.")
                 .arg(snapshot.loaderDoorWaitSeconds);
         case CargoLoader::MainDeck:
             return QCoreApplication::translate("Turnaround",
-                                               "A GSX loader is waiting for the main deck cargo door. "
-                                               "Open it, or in %1 s the client will finish the boarding without waiting for the loader.")
+                                               "A GSX loader is waiting for the main deck cargo door to open. "
+                                               "Open it within %1 s, or the client will finish boarding without this loader.")
                 .arg(snapshot.loaderDoorWaitSeconds);
         case CargoLoader::None:
             break;
@@ -83,8 +83,14 @@ namespace
                                                "The automation is off, so the client is not driving this turnaround.");
         }
 
-        if (!snapshot.sessionActive)
+        if (!snapshot.sessionActive || !snapshot.sessionReady)
         {
+            if (snapshot.pilotOnFoot)
+            {
+                return QCoreApplication::translate("Turnaround",
+                                                   "This state will hold until you enter the cockpit.");
+            }
+
             return QCoreApplication::translate("Turnaround",
                                                "The flight has not reached the cockpit yet, so the client is still waiting for the sim.");
         }
@@ -632,7 +638,7 @@ QString OperationsViewModel::GetFuelRequestAdvisoryText()
 QString OperationsViewModel::GetFuelPlanAdvisoryText()
 {
     return QCoreApplication::translate("OperationsScreen",
-                                       "The flight plan asks for more fuel than this airframe can hold. The tanks will be filled to capacity and no further.");
+                                       "The flight plan asks for more fuel than this airframe can hold. Refuelling stops when the tanks are full.");
 }
 
 QString OperationsViewModel::GetFuelStayAdvisoryText() const
@@ -664,7 +670,7 @@ QString OperationsViewModel::GetEngineConfirmationAdvisoryText() const
 
 QString OperationsViewModel::GetServicesAdvisoryText() const
 {
-    return QCoreApplication::translate("OperationsScreen", "GSX has not answered the request yet and nothing is moving. The client moves on in %1 s.")
+    return QCoreApplication::translate("OperationsScreen", "GSX has not answered the request, and no vehicle is moving. The client will move on in %1 s.")
         .arg(snapshot_.servicesWaitSeconds);
 }
 
@@ -677,7 +683,7 @@ QString OperationsViewModel::GetOpenDoorAdvisoryText()
 QString OperationsViewModel::GetServiceInterruptedAdvisoryText()
 {
     return QCoreApplication::translate("OperationsScreen",
-                                       "GSX dropped a service it had already started. Ask for it again from the GSX menu; the client will pick the turnaround back up.");
+                                       "GSX stopped a service it had already started. Request it again from the GSX menu and the client will resume the turnaround.");
 }
 
 QString OperationsViewModel::GetCommandErrorLabel()

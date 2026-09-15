@@ -49,6 +49,8 @@ private slots:
     static void theCrewTipOnlyShowsDuringTheBoardingPhase();
     static void theInitialTipNamesTheAutomationThatIsOff();
     static void theInitialTipNamesTheFlightStillOutsideTheCockpit();
+    static void theInitialTipWaitsForTheCockpitWhileTheActiveSessionIsNotReady();
+    static void theInitialTipNamesThePilotWalkingOutsideTheAircraft();
     static void theInitialTipNamesTheUnsupportedAircraft();
     static void theInitialTipNamesTheGsxThatIsNotThere();
     static void theInitialTipNamesTheAutomationFirstWhenEverythingIsStillDown();
@@ -140,6 +142,7 @@ void OperationsViewModelTest::emitsOneSignalForSnapshotChanges()
 
     service.snapshot.connected = true;
     service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
     service.snapshot.plannedFuelKg = 120;
     service.Notify();
 
@@ -315,6 +318,7 @@ void OperationsViewModelTest::exposesAircraftPropertiesFromSnapshot()
     service.snapshot.gsxAvailable = true;
     service.snapshot.aircraftSupported = true;
     service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
     service.snapshot.refuelBySelf = true;
 
     const OperationsViewModel viewModel(&service, &display);
@@ -421,9 +425,9 @@ namespace
     {
         return QStringLiteral("A GSX loader is waiting for the ")
             + door
-            + QStringLiteral(" cargo door. Open it, or in ")
+            + QStringLiteral(" cargo door to open. Open it within ")
             + QString::number(secondsLeft)
-            + QStringLiteral(" s the client will finish the boarding without waiting for the loader.");
+            + QStringLiteral(" s, or the client will finish boarding without this loader.");
     }
 }
 
@@ -641,6 +645,7 @@ void OperationsViewModelTest::theInitialTipNamesTheAutomationThatIsOff()
     service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
     service.snapshot.automationEnabled = false;
     service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
     service.snapshot.aircraftSupported = true;
     service.snapshot.gsxAvailable = true;
     service.Notify();
@@ -666,6 +671,44 @@ void OperationsViewModelTest::theInitialTipNamesTheFlightStillOutsideTheCockpit(
              QStringLiteral("The flight has not reached the cockpit yet, so the client is still waiting for the sim."));
 }
 
+void OperationsViewModelTest::theInitialTipWaitsForTheCockpitWhileTheActiveSessionIsNotReady()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = false;
+    service.snapshot.pilotOnFoot = false;
+    service.snapshot.aircraftSupported = false;
+    service.snapshot.gsxAvailable = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("The flight has not reached the cockpit yet, so the client is still waiting for the sim."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesThePilotWalkingOutsideTheAircraft()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = false;
+    service.snapshot.pilotOnFoot = true;
+    service.snapshot.aircraftSupported = false;
+    service.snapshot.gsxAvailable = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("This state will hold until you enter the cockpit."));
+}
+
 void OperationsViewModelTest::theInitialTipNamesTheUnsupportedAircraft()
 {
     FakeIntegratorService service;
@@ -675,6 +718,7 @@ void OperationsViewModelTest::theInitialTipNamesTheUnsupportedAircraft()
     service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
     service.snapshot.automationEnabled = true;
     service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
     service.snapshot.aircraftSupported = false;
     service.snapshot.gsxAvailable = true;
     service.Notify();
@@ -692,6 +736,7 @@ void OperationsViewModelTest::theInitialTipNamesTheGsxThatIsNotThere()
     service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
     service.snapshot.automationEnabled = true;
     service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
     service.snapshot.aircraftSupported = true;
     service.snapshot.gsxAvailable = false;
     service.Notify();
@@ -726,6 +771,7 @@ void OperationsViewModelTest::theInitialTipStandsDownOnceNothingHoldsTheTurnarou
     service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
     service.snapshot.automationEnabled = true;
     service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
     service.snapshot.aircraftSupported = true;
     service.snapshot.gsxAvailable = true;
     service.Notify();
@@ -982,6 +1028,7 @@ void OperationsViewModelTest::theInitialPhaseLabelAgreesWithTheSimChip()
     service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
     service.snapshot.connected = true;
     service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
     service.snapshot.aircraftSupported = true;
     service.Notify();
 

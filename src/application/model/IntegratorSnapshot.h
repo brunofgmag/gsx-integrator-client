@@ -35,6 +35,8 @@ struct IntegratorSnapshot
 {
     bool connected = false;
     bool sessionActive = false;
+    bool sessionReady = false;
+    bool pilotOnFoot = false;
     bool automationEnabled = false;
     bool gsxAvailable = false;
     bool aircraftSupported = false;

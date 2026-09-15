@@ -21,6 +21,11 @@ namespace SessionReadiness
 
         return offGlobalMenu;
     }
+
+    inline bool IsOnFoot(const SimVersion version, const double isAvatar)
+    {
+        return version == SimVersion::Msfs2024 && isAvatar == 1.0;
+    }
 }
 
 #endif //GSX_INTEGRATOR_CLIENT_SESSIONREADINESS_H
