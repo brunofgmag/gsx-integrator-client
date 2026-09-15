@@ -13,6 +13,11 @@ namespace
     constexpr int kStuckTicks = 60;
     constexpr int kGiveUpTicks = 240;
 
+    bool CanCallStairs(const TurnaroundContext& ctx)
+    {
+        return ctx.gsxGateway->AreStairsAvailable() && !ctx.gsxGateway->AreStairsInPlace();
+    }
+
     void CallJetwayOrStairs(const TurnaroundContext& ctx, const bool jetwayAvailable)
     {
         if (jetwayAvailable)
@@ -83,8 +88,12 @@ std::optional<TurnaroundTransition> CallServicesState::ResolveJetwayOrStairs(Tur
 
     const bool jetwayAvailable = ctx.gsxGateway->IsJetwayAvailable();
 
-    if (!ctx.data.jetwayOrStairsRequested
-        && (jetwayAvailable || ctx.gsxGateway->AreStairsAvailable()))
+    if (!jetwayAvailable && !CanCallStairs(ctx))
+    {
+        return std::nullopt;
+    }
+
+    if (!ctx.data.jetwayOrStairsRequested)
     {
         CallJetwayOrStairs(ctx, jetwayAvailable);
         ctx.data.jetwayOrStairsRequested = true;
