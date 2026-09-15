@@ -13,6 +13,7 @@ private slots:
     static void refuelsProgressivelyOddValues();
     static void defuelsProgressively();
     static void progressiveRampSurvivesGsxFinishingEarly();
+    static void stopsWritingFuelOnceTheHoseDropsMidCourse();
     static void selfAircraftStaysFlatUntilGsxPours();
     static void selfAircraftCompletesWhenGsxFinishes();
     static void selfFollowsGsxFuelCounter();
@@ -173,6 +174,43 @@ void RefuelingStateTest::progressiveRampSurvivesGsxFinishingEarly()
     QCOMPARE(transition->next, TurnaroundPhase::RequestBoarding);
     QCOMPARE(f.aircraft.currentFuelKg, 700.0);
     QCOMPARE(f.ctx.data.loadedFuelKg, 700.0);
+}
+
+void RefuelingStateTest::stopsWritingFuelOnceTheHoseDropsMidCourse()
+{
+    TurnaroundStateFixture f;
+    RefuelingState state;
+
+    f.settings.fuelRateKgs = 10.0;
+    f.aircraft.refuelMethod = RefuelBy::Client;
+    f.aircraft.currentFuelKg = 1000.0;
+    f.ctx.data.plannedFuelKg = 2000.0;
+    f.ctx.data.initialFuelKg = 1000.0;
+    f.ctx.data.loadedFuelKg = 1000.0;
+    f.gsxService.refuelingState = GsxStateStatus::Active;
+    f.gsxService.hoseConnected = true;
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.ctx.data.loadedFuelKg, 1100.0);
+
+    f.gsxService.hoseConnected = false;
+
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.ctx.data.loadedFuelKg, 1100.0);
+    QCOMPARE(f.aircraft.currentFuelKg, 1100.0);
+
+    f.gsxService.refuelingState = GsxStateStatus::Completed;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.loadedFuelKg, 1110.0);
 }
 
 void RefuelingStateTest::selfAircraftStaysFlatUntilGsxPours()

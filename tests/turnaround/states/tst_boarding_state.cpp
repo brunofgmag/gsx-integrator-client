@@ -26,8 +26,10 @@ private slots:
     static void namesTheLoaderOnceItsDoorIsLate();
     static void standsDownOnceTheLoaderGetsItsDoor();
     static void stopsNamingTheLoaderOnceGsxDropsTheBoarding();
-    static void restartsTheClockWhenAnotherLoaderTakesOverTheWait();
+    static void keepsTheClockRunningWhenAnotherLoaderTakesOverTheWait();
+    static void staysQuietThroughTheHandoversOfAHealthyBoarding();
     static void givesUpOnALoaderThatNeverGetsItsDoor();
+    static void givesUpEvenWhenTheLoadersTakeTurnsWaiting();
     static void finishesTheBoardingOnceItHasGivenUpOnTheLoader();
     static void doesNotAskGsxToCompleteWhilePassengersAreMissing();
     static void asksGsxToCompleteWhenTheLoadersAreHeldBehindTheStairs();
@@ -387,7 +389,7 @@ void BoardingStateTest::namesTheLoaderOnceItsDoorIsLate()
 
     ArrangeLoaderWaitingForItsDoor(f);
 
-    for (int tick = 0; tick < 29; ++tick)
+    for (int tick = 0; tick < 44; ++tick)
     {
         QVERIFY(!state.Evaluate(f.ctx).has_value());
     }
@@ -405,7 +407,7 @@ void BoardingStateTest::standsDownOnceTheLoaderGetsItsDoor()
 
     ArrangeLoaderWaitingForItsDoor(f);
 
-    for (int tick = 0; tick < 40; ++tick)
+    for (int tick = 0; tick < 50; ++tick)
     {
         QVERIFY(!state.Evaluate(f.ctx).has_value());
     }
@@ -426,7 +428,7 @@ void BoardingStateTest::stopsNamingTheLoaderOnceGsxDropsTheBoarding()
 
     ArrangeLoaderWaitingForItsDoor(f);
 
-    for (int tick = 0; tick < 40; ++tick)
+    for (int tick = 0; tick < 50; ++tick)
     {
         QVERIFY(!state.Evaluate(f.ctx).has_value());
     }
@@ -440,7 +442,7 @@ void BoardingStateTest::stopsNamingTheLoaderOnceGsxDropsTheBoarding()
     QCOMPARE(f.ctx.data.loaderHoldingBoarding, CargoLoader::None);
 }
 
-void BoardingStateTest::restartsTheClockWhenAnotherLoaderTakesOverTheWait()
+void BoardingStateTest::keepsTheClockRunningWhenAnotherLoaderTakesOverTheWait()
 {
     TurnaroundStateFixture f;
     BoardingState state;
@@ -448,7 +450,7 @@ void BoardingStateTest::restartsTheClockWhenAnotherLoaderTakesOverTheWait()
     ArrangeLoaderWaitingForItsDoor(f);
     f.gsxService.loaderWaitingForDoor = CargoLoader::Front;
 
-    for (int tick = 0; tick < 40; ++tick)
+    for (int tick = 0; tick < 50; ++tick)
     {
         QVERIFY(!state.Evaluate(f.ctx).has_value());
     }
@@ -458,8 +460,33 @@ void BoardingStateTest::restartsTheClockWhenAnotherLoaderTakesOverTheWait()
     f.gsxService.loaderWaitingForDoor = CargoLoader::Rear;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.loaderHoldingBoarding, CargoLoader::Rear);
+    QCOMPARE(f.ctx.data.loaderDoorWaitTicks, 51);
+}
+
+void BoardingStateTest::staysQuietThroughTheHandoversOfAHealthyBoarding()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeLoaderWaitingForItsDoor(f);
+
+    for (int tick = 0; tick < 35; ++tick)
+    {
+        if (tick == 12)
+        {
+            f.gsxService.loaderWaitingForDoor = CargoLoader::Rear;
+        }
+        else if (tick == 23)
+        {
+            f.gsxService.loaderWaitingForDoor = CargoLoader::Front;
+        }
+
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.ctx.data.loaderDoorWaitTicks, 35);
     QCOMPARE(f.ctx.data.loaderHoldingBoarding, CargoLoader::None);
-    QCOMPARE(f.ctx.data.loaderDoorWaitTicks, 1);
 }
 
 void BoardingStateTest::givesUpOnALoaderThatNeverGetsItsDoor()
@@ -479,6 +506,26 @@ void BoardingStateTest::givesUpOnALoaderThatNeverGetsItsDoor()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
     QCOMPARE(f.ctx.data.loaderHoldingBoarding, CargoLoader::MainDeck);
+}
+
+void BoardingStateTest::givesUpEvenWhenTheLoadersTakeTurnsWaiting()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeLoaderWaitingForItsDoor(f);
+
+    for (int tick = 0; tick < 208; ++tick)
+    {
+        f.gsxService.loaderWaitingForDoor = tick % 2 == 0 ? CargoLoader::MainDeck : CargoLoader::Rear;
+
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
 }
 
 void BoardingStateTest::finishesTheBoardingOnceItHasGivenUpOnTheLoader()

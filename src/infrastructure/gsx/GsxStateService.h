@@ -32,7 +32,7 @@ public:
     [[nodiscard]] double GetBoardingCargoPercent() override;
     [[nodiscard]] bool IsLoadingCargo() const override;
     [[nodiscard]] CargoLoader GetLoaderWaitingForDoor() const override;
-    [[nodiscard]] double GetDeboardingCargoPercent() const override;
+    [[nodiscard]] double GetDeboardingCargoPercent() override;
     [[nodiscard]] bool AreStairsInPlace() const override;
     [[nodiscard]] bool IsJetwayInPlace() const override;
     [[nodiscard]] bool AreStairsAvailable() const override;
@@ -58,6 +58,7 @@ private:
     {
         GsxStateStatus status = GsxStateStatus::Unavailable;
         bool completed = false;
+        bool couatlDiedDuringRun = false;
     };
 
     struct PassengerCounter
@@ -89,5 +90,6 @@ private:
     PassengerCounter boarding_;
     PassengerCounter deboarding_;
     CargoPercentReading boardingCargo_;
+    CargoPercentReading deboardingCargo_;
 };
 #endif //GSX_INTEGRATOR_CLIENT_GSXSTATESERVICE_H

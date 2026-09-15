@@ -46,6 +46,8 @@ private slots:
     static void mapsServiceStateLVars();
     static void recordsExplicitCompletedState();
     static void aServiceTheCouatlDropsIsNotRecordedAsCompleted();
+    static void aServiceThePilotEndsWithALiveCouatlIsRecordedAsCompleted();
+    static void aCouatlDeathStopsCountingOnceTheServiceRunsAgain();
     static void aServiceThatPassesThroughCompletedStaysRecordedBackAtIdle();
     static void doesNotRecordCompletionWithoutActiveState();
     static void latchAdvancesWithoutAnyoneAskingForTheStatus();
@@ -60,8 +62,9 @@ private slots:
     static void detectsRepositioning();
     static void cargoPercentReadsLVars();
     static void boardingCargoPercentIgnoresTheStalePercentUntilItMoves();
+    static void deboardingCargoPercentIgnoresTheStalePercentUntilItMoves();
     static void cargoLoadingReadsLVars();
-    static void loaderWaitingForDoorNamesTheFrontOneWhenSeveralWait();
+    static void loaderWaitingForDoorNamesTheMainDeckOneWhenSeveralWait();
     static void jetwayAndStairsAvailability();
     static void jetwayAndStairsUnavailableUntilLVarsReceived();
     static void jetwayAndStairsUnavailableWhileGsxStillEvaluatesTheParking();
@@ -142,6 +145,38 @@ void GsxInterfaceTest::aServiceTheCouatlDropsIsNotRecordedAsCompleted()
 
         QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
     }
+}
+
+void GsxInterfaceTest::aServiceThePilotEndsWithALiveCouatlIsRecordedAsCompleted()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 5.0, 30);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 1.0, 5);
+
+        QVERIFY2(gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::aCouatlDeathStopsCountingOnceTheServiceRunsAgain()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, 5.0, 10);
+    ObserveFor(gsx, gateway, kBoardingState, 0.0, 5.0, 12);
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, 1.0, 5);
+
+    QVERIFY(!gsx.WasStateCompleted(GsxState::Boarding));
+
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, 4.0, 3);
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, 5.0, 10);
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, 1.0, 5);
+
+    QVERIFY(gsx.WasStateCompleted(GsxState::Boarding));
 }
 
 void GsxInterfaceTest::aServiceThatPassesThroughCompletedStaysRecordedBackAtIdle()
@@ -302,12 +337,15 @@ void GsxInterfaceTest::cargoPercentReadsLVars()
     GsxStateService gsx(&gateway);
 
     gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Active);
     gateway.lvars[kBoardingCargoPercent] = 0.0;
-    gateway.lvars[kDeboardingCargoPercent] = 17.0;
+    gateway.lvars[kDeboardingCargoPercent] = 0.0;
 
     QCOMPARE(gsx.GetBoardingCargoPercent(), 0.0);
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 0.0);
 
     gateway.lvars[kBoardingCargoPercent] = 42.5;
+    gateway.lvars[kDeboardingCargoPercent] = 17.0;
 
     QCOMPARE(gsx.GetBoardingCargoPercent(), 42.5);
     QCOMPARE(gsx.GetDeboardingCargoPercent(), 17.0);
@@ -337,6 +375,30 @@ void GsxInterfaceTest::boardingCargoPercentIgnoresTheStalePercentUntilItMoves()
     QCOMPARE(gsx.GetBoardingCargoPercent(), 35.0);
 }
 
+void GsxInterfaceTest::deboardingCargoPercentIgnoresTheStalePercentUntilItMoves()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Callable);
+    gateway.lvars[kDeboardingCargoPercent] = 67.0;
+
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 0.0);
+
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Active);
+
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 0.0);
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 0.0);
+
+    gateway.lvars[kDeboardingCargoPercent] = 0.0;
+
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 0.0);
+
+    gateway.lvars[kDeboardingCargoPercent] = 40.0;
+
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 40.0);
+}
+
 void GsxInterfaceTest::cargoLoadingReadsLVars()
 {
     FakeVariableGateway gateway;
@@ -360,7 +422,7 @@ void GsxInterfaceTest::cargoLoadingReadsLVars()
     QCOMPARE(gsx.GetLoaderWaitingForDoor(), CargoLoader::Front);
 }
 
-void GsxInterfaceTest::loaderWaitingForDoorNamesTheFrontOneWhenSeveralWait()
+void GsxInterfaceTest::loaderWaitingForDoorNamesTheMainDeckOneWhenSeveralWait()
 {
     FakeVariableGateway gateway;
     const GsxStateService gsx(&gateway);
@@ -371,7 +433,11 @@ void GsxInterfaceTest::loaderWaitingForDoorNamesTheFrontOneWhenSeveralWait()
 
     gateway.lvars[kBaggageLoaderFrontState] = gsx::states::kLoaderWaitingForDoor;
 
-    QCOMPARE(gsx.GetLoaderWaitingForDoor(), CargoLoader::Front);
+    QCOMPARE(gsx.GetLoaderWaitingForDoor(), CargoLoader::Rear);
+
+    gateway.lvars[kBaggageLoaderMainState] = gsx::states::kLoaderWaitingForDoor;
+
+    QCOMPARE(gsx.GetLoaderWaitingForDoor(), CargoLoader::MainDeck);
 }
 
 void GsxInterfaceTest::jetwayAndStairsAvailability()

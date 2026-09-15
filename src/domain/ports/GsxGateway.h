@@ -57,7 +57,7 @@ public:
     [[nodiscard]] virtual double GetBoardingCargoPercent() = 0;
     [[nodiscard]] virtual bool IsLoadingCargo() const = 0;
     [[nodiscard]] virtual CargoLoader GetLoaderWaitingForDoor() const = 0;
-    [[nodiscard]] virtual double GetDeboardingCargoPercent() const = 0;
+    [[nodiscard]] virtual double GetDeboardingCargoPercent() = 0;
     [[nodiscard]] virtual bool AreStairsInPlace() const = 0;
     [[nodiscard]] virtual bool IsJetwayInPlace() const = 0;
     [[nodiscard]] virtual bool AreStairsAvailable() const = 0;

@@ -149,7 +149,7 @@ public:
     [[nodiscard]] double GetBoardingCargoPercent() override { return cargoPercent; }
     [[nodiscard]] bool IsLoadingCargo() const override { return loadingCargo; }
     [[nodiscard]] CargoLoader GetLoaderWaitingForDoor() const override { return loaderWaitingForDoor; }
-    [[nodiscard]] double GetDeboardingCargoPercent() const override { return deboardingCargoPercent; }
+    [[nodiscard]] double GetDeboardingCargoPercent() override { return deboardingCargoPercent; }
     [[nodiscard]] bool AreStairsInPlace() const override { return stairsInPlace; }
     [[nodiscard]] bool IsJetwayInPlace() const override { return jetwayInPlace; }
     [[nodiscard]] bool AreStairsAvailable() const override { return stairsAvailable; }
