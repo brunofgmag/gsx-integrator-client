@@ -13,7 +13,7 @@ namespace
 {
     constexpr int kBoardingStallTicks = 90;
     constexpr int kBoardingRetryTicks = 30;
-    constexpr int kLoaderDoorNoticeTicks = 30;
+    constexpr int kLoaderDoorNoticeTicks = 45;
     constexpr int kLoaderDoorGiveUpTicks = 120;
 }
 
@@ -130,17 +130,21 @@ void BoardingState::NoteLoaderAwaitingDoor(TurnaroundContext& ctx)
     auto& data = ctx.data;
     const CargoLoader awaiting = ctx.gsxGateway->GetLoaderWaitingForDoor();
 
-    if (awaiting != data.loaderAwaitingDoor)
-    {
-        data.loaderAwaitingDoor = awaiting;
-        data.loaderDoorWaitTicks = 0;
-        data.loaderHoldingBoarding = CargoLoader::None;
-    }
-
     if (awaiting == CargoLoader::None)
     {
+        data.loaderAwaitingDoor = CargoLoader::None;
+        data.loaderDoorWaitTicks = 0;
+        data.loaderHoldingBoarding = CargoLoader::None;
+
         return;
     }
+
+    if (data.loaderAwaitingDoor == CargoLoader::None)
+    {
+        data.loaderDoorWaitTicks = 0;
+    }
+
+    data.loaderAwaitingDoor = awaiting;
 
     ++data.loaderDoorWaitTicks;
     if (data.loaderDoorWaitTicks >= kLoaderDoorNoticeTicks)

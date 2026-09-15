@@ -22,11 +22,20 @@ namespace
             || ctx.gsxGateway->WasStateCompleted(GsxState::Refueling);
     }
 
+    bool HasFuelAlreadyMoved(const TurnaroundContext& ctx)
+    {
+        return ctx.data.refuelBaselined
+            && std::abs(ctx.data.loadedFuelKg - ctx.data.initialFuelKg) > turnaround::kWeightEpsilonKg;
+    }
+
     bool IsGsxRefuelReady(const TurnaroundContext& ctx, const GsxStateStatus refuelingState)
     {
-        return ctx.gsxGateway->IsFuelHoseConnected()
-            || refuelingState == GsxStateStatus::Active
-            || IsGsxRefuelDone(ctx, refuelingState);
+        if (ctx.gsxGateway->IsFuelHoseConnected() || IsGsxRefuelDone(ctx, refuelingState))
+        {
+            return true;
+        }
+
+        return refuelingState == GsxStateStatus::Active && !HasFuelAlreadyMoved(ctx);
     }
 
     bool IsWeightDone(const TurnaroundContext& ctx, const GsxStateStatus refuelingState)

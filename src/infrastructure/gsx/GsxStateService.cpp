@@ -18,9 +18,9 @@ namespace
     constexpr auto kNoPushbackVerdict = "no pushback";
 
     constexpr std::array kBaggageLoaders = {
-        std::pair{kBaggageLoaderFrontState, CargoLoader::Front},
-        std::pair{kBaggageLoaderRearState, CargoLoader::Rear},
         std::pair{kBaggageLoaderMainState, CargoLoader::MainDeck},
+        std::pair{kBaggageLoaderRearState, CargoLoader::Rear},
+        std::pair{kBaggageLoaderFrontState, CargoLoader::Front},
     };
 
     bool EqualsFold(const std::string& lhs, const std::string_view rhs)
@@ -67,6 +67,7 @@ void GsxStateService::Reset()
     boarding_ = {};
     deboarding_ = {};
     boardingCargo_ = {};
+    deboardingCargo_ = {};
     fuelAndPayloadTakenOver_ = false;
     gpuConnectedSeenClear_ = false;
 
@@ -257,9 +258,11 @@ CargoLoader GsxStateService::GetLoaderWaitingForDoor() const
     return CargoLoader::None;
 }
 
-double GsxStateService::GetDeboardingCargoPercent() const
+double GsxStateService::GetDeboardingCargoPercent()
 {
-    return varManager_->GetLVar(kDeboardingCargoPercent);
+    const bool active = varManager_->GetLVar(kDeboardingState) == static_cast<double>(GsxStateStatus::Active);
+
+    return deboardingCargo_.Update(varManager_->GetLVar(kDeboardingCargoPercent), active);
 }
 
 bool GsxStateService::AreStairsInPlace() const
@@ -428,9 +431,21 @@ void GsxStateService::ObserveState(const GsxState gsxState)
     const auto stateStatus = static_cast<GsxStateStatus>(varManager_->GetLVar(stateLVar));
     StateTrack& track = states_.at(gsxState);
 
-    const bool returnedToIdle = EndsWithoutCompleted(gsxState)
-        && (stateStatus == GsxStateStatus::Callable || stateStatus == GsxStateStatus::Bypassed)
+    if (!IsAvailable())
+    {
+        track.couatlDiedDuringRun = true;
+    }
+    else if (stateStatus == GsxStateStatus::Active && track.status != GsxStateStatus::Active)
+    {
+        track.couatlDiedDuringRun = false;
+    }
+
+    const bool leftActiveWithoutCompleting =
+        (stateStatus == GsxStateStatus::Callable || stateStatus == GsxStateStatus::Bypassed)
         && track.status == GsxStateStatus::Active;
+
+    const bool returnedToIdle = leftActiveWithoutCompleting
+        && (EndsWithoutCompleted(gsxState) || !track.couatlDiedDuringRun);
 
     track.completed = track.completed || stateStatus == GsxStateStatus::Completed || returnedToIdle;
     track.status = stateStatus;
