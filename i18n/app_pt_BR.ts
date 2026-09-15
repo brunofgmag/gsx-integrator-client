@@ -764,7 +764,7 @@
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="629"/>
         <source>The flight plan asks for more fuel than this airframe can hold. The tanks will be filled to capacity and no further.</source>
-        <translation type="unfinished"></translation>
+        <translation>O plano de voo pede mais combustível do que esta aeronave comporta. Os tanques serão enchidos até a capacidade, e nada além disso.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="645"/>
@@ -784,12 +784,12 @@
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="662"/>
         <source>GSX has not answered the request yet and nothing is moving. The client moves on in %1 s.</source>
-        <translation type="unfinished"></translation>
+        <translation>O GSX ainda não respondeu ao pedido e nada se mexe. O cliente segue em %1 s.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="674"/>
         <source>GSX dropped a service it had already started. Ask for it again from the GSX menu; the client will pick the turnaround back up.</source>
-        <translation type="unfinished"></translation>
+        <translation>O GSX largou um serviço que já tinha começado. Peça de novo pelo menu do GSX; o cliente retoma o turnaround.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="943"/>

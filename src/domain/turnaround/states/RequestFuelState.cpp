@@ -27,6 +27,11 @@ std::optional<TurnaroundTransition> RequestFuelState::EvaluatePhase(TurnaroundCo
     const bool loadingAllowed = ctx.settings == nullptr || ctx.settings->autoStartLoading || data.loadingConfirmed;
 
     const GsxStateStatus refuelingState = ctx.gsxGateway->GetStateStatus(GsxState::Refueling);
+    if (refuelingState == GsxStateStatus::Completed || ctx.gsxGateway->WasStateCompleted(GsxState::Refueling))
+    {
+        return TurnaroundTransition{TurnaroundPhase::Refueling};
+    }
+
     if (loadingAllowed && refuelingState == GsxStateStatus::Callable && !data.refuelingRequested)
     {
         WarnWhenPlanExceedsCapacity(ctx);
@@ -36,11 +41,6 @@ std::optional<TurnaroundTransition> RequestFuelState::EvaluatePhase(TurnaroundCo
     }
 
     if (ctx.gsxGateway->IsFuelHoseConnected() && refuelingState == GsxStateStatus::Active)
-    {
-        return TurnaroundTransition{TurnaroundPhase::Refueling};
-    }
-
-    if (refuelingState == GsxStateStatus::Completed || ctx.gsxGateway->WasStateCompleted(GsxState::Refueling))
     {
         return TurnaroundTransition{TurnaroundPhase::Refueling};
     }
