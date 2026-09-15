@@ -134,6 +134,7 @@ void BoardingState::NoteLoaderAwaitingDoor(TurnaroundContext& ctx)
     {
         data.loaderAwaitingDoor = CargoLoader::None;
         data.loaderDoorWaitTicks = 0;
+        data.loaderDoorWaitSeconds = 0;
         data.loaderHoldingBoarding = CargoLoader::None;
 
         return;
@@ -147,6 +148,7 @@ void BoardingState::NoteLoaderAwaitingDoor(TurnaroundContext& ctx)
     data.loaderAwaitingDoor = awaiting;
 
     ++data.loaderDoorWaitTicks;
+    data.loaderDoorWaitSeconds = std::max(0, kLoaderDoorGiveUpTicks - data.loaderDoorWaitTicks);
     if (data.loaderDoorWaitTicks >= kLoaderDoorNoticeTicks)
     {
         data.loaderHoldingBoarding = awaiting;
