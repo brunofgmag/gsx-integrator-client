@@ -402,7 +402,7 @@ void RefuelingStateTest::skipsTheForceWhenGsxAlreadyCompleted()
 
     for (int tick = 0; tick < 70; ++tick)
     {
-        state.Evaluate(f.ctx);
+        static_cast<void>(state.Evaluate(f.ctx));
     }
 
     QCOMPARE(f.menuGateway.completeRefuelCalls, 0);
