@@ -16,6 +16,7 @@ function(configure_gsxi_test TARGET_NAME TEST_NAME)
     set_target_properties(${TARGET_NAME} PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "${GSXI_TEST_RUNTIME_DIR}")
     add_test(NAME ${TEST_NAME} COMMAND ${TARGET_NAME})
+    set_property(TEST ${TEST_NAME} PROPERTY ENVIRONMENT QT_FORCE_STDERR_LOGGING=1)
     add_dependencies(${TARGET_NAME} gsxi-test-qt-runtime)
 endfunction()
 
@@ -970,7 +971,7 @@ if (NOT GSXI_TESTS_ONLY)
     get_filename_component(GSXI_QT_BIN_DIR "${GSXI_QT_CORE_DLL}" DIRECTORY)
     get_filename_component(GSXI_QT_PREFIX "${GSXI_QT_BIN_DIR}" DIRECTORY)
     set_tests_properties(qml-components PROPERTIES ENVIRONMENT
-            "PATH=${GSXI_QT_BIN_DIR};$ENV{PATH};QT_PLUGIN_PATH=${GSXI_QT_PREFIX}/plugins;QML_IMPORT_PATH=${GSXI_QT_PREFIX}/qml;QML2_IMPORT_PATH=${GSXI_QT_PREFIX}/qml")
+            "PATH=${GSXI_QT_BIN_DIR};$ENV{PATH};QT_PLUGIN_PATH=${GSXI_QT_PREFIX}/plugins;QML_IMPORT_PATH=${GSXI_QT_PREFIX}/qml;QML2_IMPORT_PATH=${GSXI_QT_PREFIX}/qml;QT_FORCE_STDERR_LOGGING=1")
 endif ()
 
 set(GSXI_GUARD_CHECKS
