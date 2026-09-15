@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.34.9](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.8...v1.34.9) (2026-09-15)
+
+
+* copy the qt test dlls once and let the filter run a guard ([#162](https://github.com/brunofgmag/gsx-integrator-client/issues/162)) ([9739373](https://github.com/brunofgmag/gsx-integrator-client/commit/9739373cc1887e3b5836a8c5b934e9745f8614a6))
+
+
+### Bug Fixes
+
+* **cmake:** copy the qt test dlls from one target instead of every test ([5ce55ac](https://github.com/brunofgmag/gsx-integrator-client/commit/5ce55ac73eeb3d1e40a932d184c3d966dd72d291)) ([9739373](https://github.com/brunofgmag/gsx-integrator-client/commit/9739373cc1887e3b5836a8c5b934e9745f8614a6))
+* **run-tests:** let the filter run a guard without building a target ([57bb57a](https://github.com/brunofgmag/gsx-integrator-client/commit/57bb57af6e9308bd0d9ab60728f976c34a528d58)) ([9739373](https://github.com/brunofgmag/gsx-integrator-client/commit/9739373cc1887e3b5836a8c5b934e9745f8614a6))
+* **tools:** ground the avar unit allowlist reasons in adr-0008 ([b0150e4](https://github.com/brunofgmag/gsx-integrator-client/commit/b0150e46b7c79ac6963e30a0c36be5ab133f6d8d)) ([9739373](https://github.com/brunofgmag/gsx-integrator-client/commit/9739373cc1887e3b5836a8c5b934e9745f8614a6))
+* **turnaround:** make the discarded nodiscard returns explicit ([f32b126](https://github.com/brunofgmag/gsx-integrator-client/commit/f32b1260facb45c6a49df06f9f64464bb7782123)) ([9739373](https://github.com/brunofgmag/gsx-integrator-client/commit/9739373cc1887e3b5836a8c5b934e9745f8614a6))
+
 ## [1.34.8](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.7...v1.34.8) (2026-09-15)
 
 
