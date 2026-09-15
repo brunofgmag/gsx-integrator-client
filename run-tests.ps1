@@ -9,7 +9,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-if ($Filter -and ($Filter -like '*\*' -or $Filter -like '*/*' -or $Filter -like '*.cpp'))
+if ($Filter -and ($Filter -like '*\*' -or $Filter -like '*/*' -or $Filter -like '*.cpp' -or $Filter -like '*.ps1'))
 {
     $fileName = Split-Path -Leaf $Filter
     Write-Host "==> Detectado caminho de arquivo no filtro: $fileName"
@@ -24,6 +24,9 @@ if ($Filter -and ($Filter -like '*\*' -or $Filter -like '*/*' -or $Filter -like 
     } elseif ($fileName -like 'tst_*.cpp')
     {
         $Filter = $fileName -replace '^tst_', '' -replace '\.cpp$', '' -replace '_', '-'
+    } elseif ($fileName -like 'check-*.ps1')
+    {
+        $Filter = $fileName -replace '\.ps1$', ''
     } else
     {
         Write-Host "==> Arquivo não é um teste C++ reconhecido. Rodando todos os testes."
@@ -139,25 +142,34 @@ if ($mustConfigure)
     }
 }
 
-if ($Filter)
+$filterIsGuard = $Filter -like 'check-*' -and
+    (Test-Path -LiteralPath (Join-Path $PSScriptRoot "tools/$Filter.ps1"))
+
+if ($filterIsGuard)
 {
-    if ($Filter -like 'turnaround-state-*')
-    {
-        $stateName = $Filter -replace '^turnaround-state-', ''
-        $targetToBuild = "gsxi-turnaround-$stateName-state-tests"
-    } else
-    {
-        $targetToBuild = "gsxi-$Filter-tests"
-    }
-    Write-Host "==> Compilando apenas o alvo de teste correspondente: $targetToBuild ($Config)..."
-    & $cmake --build --preset $preset --target $targetToBuild --parallel -- '-nodeReuse:false'
+    Write-Host "==> $Filter é uma guarda e não compila nada: nenhum alvo a construir."
 } else
 {
-    Write-Host "==> Compilando todos os alvos ($Config)..."
-    & $cmake --build --preset $preset --parallel -- '-nodeReuse:false'
-}
-if ($LASTEXITCODE -ne 0)
-{ exit $LASTEXITCODE
+    if ($Filter)
+    {
+        if ($Filter -like 'turnaround-state-*')
+        {
+            $stateName = $Filter -replace '^turnaround-state-', ''
+            $targetToBuild = "gsxi-turnaround-$stateName-state-tests"
+        } else
+        {
+            $targetToBuild = "gsxi-$Filter-tests"
+        }
+        Write-Host "==> Compilando apenas o alvo de teste correspondente: $targetToBuild ($Config)..."
+        & $cmake --build --preset $preset --target $targetToBuild --parallel -- '-nodeReuse:false'
+    } else
+    {
+        Write-Host "==> Compilando todos os alvos ($Config)..."
+        & $cmake --build --preset $preset --parallel -- '-nodeReuse:false'
+    }
+    if ($LASTEXITCODE -ne 0)
+    { exit $LASTEXITCODE
+    }
 }
 
 Write-Host "`n==> Rodando testes..."

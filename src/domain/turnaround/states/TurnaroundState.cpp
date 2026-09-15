@@ -89,7 +89,7 @@ TurnaroundState::RuleOutcome TurnaroundState::RunRules(TurnaroundContext& ctx, c
 
 void TurnaroundState::ActOnRules(TurnaroundContext& ctx, const RuleCadence cadence)
 {
-    RunRules(ctx, cadence);
+    (void)RunRules(ctx, cadence);
 }
 
 bool TurnaroundState::AnyRuleHolds(TurnaroundContext& ctx)

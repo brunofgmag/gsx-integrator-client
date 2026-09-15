@@ -258,11 +258,11 @@ $plant = {
 $allowlist = @(
     @{
         Symbol = 'FUEL WEIGHT PER GALLON as kg and pounds'
-        Reason = 'AvroRj asks in kg and Fss727 in pounds, each from the constant its own file owns; one adapter lives per session, so the two slots never coexist'
+        Reason = 'AvroRj asks in kg and Fss727 in pounds, each from the constant its own file owns; ADR-0008 fixes the write unit per aircraft, so two aircraft disagreeing on one name is that decision working'
     }
     @{
         Symbol = 'PAYLOAD STATION WEIGHT: as kg and pounds'
-        Reason = 'IFly737Max writes in kg and Fss727 in pounds, each from the constant its own file owns; one adapter lives per session, so the two slots never coexist'
+        Reason = 'IFly737Max writes in kg and Fss727 in pounds, each from the constant its own file owns; ADR-0008 fixes the write unit per aircraft, so two aircraft disagreeing on one name is that decision working'
     }
 )
 
