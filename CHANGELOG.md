@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.34.7](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.6...v1.34.7) (2026-09-15)
+
+
+* correct the loader clock, the service end, the deboarding cargo and the fuel hose readings ([#157](https://github.com/brunofgmag/gsx-integrator-client/issues/157)) ([852addb](https://github.com/brunofgmag/gsx-integrator-client/commit/852addb6189344c13c3000e36255440505455a54))
+
+
+### Bug Fixes
+
+* **gsx:** correct the loader clock, the service end, the deboarding cargo and the fuel hose readings ([64db625](https://github.com/brunofgmag/gsx-integrator-client/commit/64db625f5c5dbab138af62159f99d343a6e4b939)) ([852addb](https://github.com/brunofgmag/gsx-integrator-client/commit/852addb6189344c13c3000e36255440505455a54))
+
 ## [1.34.6](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.5...v1.34.6) (2026-09-15)
 
 
