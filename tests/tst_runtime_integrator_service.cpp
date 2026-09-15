@@ -185,6 +185,7 @@ private slots:
     static void theSnapshotCountsTheJetwayWaitDownWithTheFlow();
     static void theSnapshotCarriesTheLoaderCountdownWhileTheLoaderHoldsBoarding();
     static void theSlowTickWritesNothingWhileTheGsxIsDown();
+    static void theFuelWaitsUntilTheRemoteApiAnnouncesItsConnection();
 };
 
 void RuntimeIntegratorServiceTest::init()
@@ -696,6 +697,33 @@ void RuntimeIntegratorServiceTest::theSlowTickWritesNothingWhileTheGsxIsDown()
     QVERIFY(DispatchPending());
 
     QVERIFY(WasWritten(kMd11EfbZfw));
+}
+
+void RuntimeIntegratorServiceTest::theFuelWaitsUntilTheRemoteApiAnnouncesItsConnection()
+{
+#ifndef NDEBUG
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+
+    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::Refueling) - static_cast<int>(runtime.GetPhase()));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::Refueling);
+
+    QVERIFY(PushLVar(gsx::lvars::kRefuelingState, static_cast<double>(GsxStateStatus::Completed)));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.Snapshot().fuelProgress, 0.0);
+
+    FakeGsxRemoteApi::AnnounceConnection(true);
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.Snapshot().fuelProgress, 100.0);
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
 }
 
 QTEST_GUILESS_MAIN(RuntimeIntegratorServiceTest)
