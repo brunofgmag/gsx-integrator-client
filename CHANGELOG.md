@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.34.8](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.7...v1.34.8) (2026-09-15)
+
+
+* hand the resumed main deck travel back to the rule and bound the wait on the main loader ([#161](https://github.com/brunofgmag/gsx-integrator-client/issues/161)) ([fd8675a](https://github.com/brunofgmag/gsx-integrator-client/commit/fd8675a17361169d8561d59a1c4f095b8cd66595))
+
+
+### Bug Fixes
+
+* **fss-727:** hand the resumed main deck travel back to the rule and bound the wait on the main loader ([290f903](https://github.com/brunofgmag/gsx-integrator-client/commit/290f903778edf9fe7c6f1799bb9cd01e282fb513)) ([fd8675a](https://github.com/brunofgmag/gsx-integrator-client/commit/fd8675a17361169d8561d59a1c4f095b8cd66595))
+
 ## [1.34.7](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.6...v1.34.7) (2026-09-15)
 
 
