@@ -12,9 +12,11 @@
 namespace
 {
     constexpr DWORD kOneSecondEvent = 1;
+    constexpr DWORD kPauseEvent = 6;
     constexpr DWORD kSimStateRequest = 0x0FFFFFFF;
     constexpr double kWorldMapCamera = 12.0;
     constexpr double kCockpitCamera = 2.0;
+    constexpr auto kMsfs2024AppName = "SunRise";
 
     void PushSimRunning(const int running)
     {
@@ -29,6 +31,21 @@ namespace
         SIMCONNECT_RECV_EVENT tick{};
         tick.uEventID = kOneSecondEvent;
         FakeSimConnectApi::Push(tick, SIMCONNECT_RECV_ID_EVENT);
+    }
+
+    void PushSimOpen(const char* appName)
+    {
+        SIMCONNECT_RECV_OPEN open{};
+        strcpy_s(open.szApplicationName, appName);
+        FakeSimConnectApi::Push(open, SIMCONNECT_RECV_ID_OPEN);
+    }
+
+    void PushUnpaused()
+    {
+        SIMCONNECT_RECV_EVENT pause{};
+        pause.uEventID = kPauseEvent;
+        pause.dwData = 0;
+        FakeSimConnectApi::Push(pause, SIMCONNECT_RECV_ID_EVENT);
     }
 
     struct RecordingObserver final : IntegratorServiceObserver
@@ -68,6 +85,7 @@ private slots:
     static void aTouchStampedWithAPhaseThatTakesNoneIsRefused();
     static void aTouchStampedWithTheCurrentPhaseReachesTheFlow();
     static void aWorldMapCameraDuringTheLoadDoesNotLeaveTheFlowOff();
+    static void theGsxChipFollowsTheGsxWhileThePilotIsOnFoot();
 };
 
 void RuntimeIntegratorServiceTest::init()
@@ -449,6 +467,45 @@ void RuntimeIntegratorServiceTest::aWorldMapCameraDuringTheLoadDoesNotLeaveTheFl
     QVERIFY(runtime.IsSessionActive());
     QVERIFY(service.GetSnapshot().sessionReady);
     QVERIFY(service.GetSnapshot().automationEnabled);
+}
+
+void RuntimeIntegratorServiceTest::theGsxChipFollowsTheGsxWhileThePilotIsOnFoot()
+{
+    IntegratorRuntime runtime;
+    const RuntimeIntegratorService service(&runtime);
+
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    PushSimOpen(kMsfs2024AppName);
+    PushUnpaused();
+    PushOneSecondTick();
+    QVERIFY(updated.wait(2000));
+
+    const DWORD isAircraft = FakeSimConnectApi::DefineIdOf("IS AIRCRAFT");
+    const DWORD isAvatar = FakeSimConnectApi::DefineIdOf("IS AVATAR");
+    QVERIFY(isAircraft != 0);
+    QVERIFY(isAvatar != 0);
+
+    FakeSimConnectApi::PushSimObjectDouble(isAircraft, 1.0);
+    PushOneSecondTick();
+    QVERIFY(updated.wait(2000));
+
+    QVERIFY(service.GetSnapshot().sessionReady);
+
+    const DWORD couatlStarted = FakeSimConnectApi::DefineIdOf("L:FSDT_GSX_COUATL_STARTED");
+    QVERIFY(couatlStarted != 0);
+    QVERIFY(!service.GetSnapshot().gsxAvailable);
+
+    FakeSimConnectApi::PushSimObjectDouble(isAvatar, 1.0);
+    FakeSimConnectApi::PushSimObjectDouble(couatlStarted, 1.0);
+    PushOneSecondTick();
+    QVERIFY(updated.wait(2000));
+
+    QVERIFY(!service.GetSnapshot().sessionReady);
+    QVERIFY(service.GetSnapshot().pilotOnFoot);
+    QVERIFY(service.GetSnapshot().gsxAvailable);
 }
 
 QTEST_GUILESS_MAIN(RuntimeIntegratorServiceTest)

@@ -326,25 +326,20 @@ void IntegratorRuntime::Update()
 
     sessionReady_ = IsSessionReady();
     pilotOnFoot_ = IsPilotOnFoot();
-    if (!sessionReady_)
-    {
-        return;
-    }
-
-    if (!isSessionActive_)
+    if (sessionReady_ && !isSessionActive_)
     {
         OnFlightStart();
     }
 
-    if (IsSessionPaused())
+    const bool gsxOk = gsxService_.IsAvailable();
+    status_.gsxAvailable = gsxOk;
+
+    if (!sessionReady_ || IsSessionPaused())
     {
         return;
     }
 
     simbriefClient_.Poll();
-
-    const bool gsxOk = gsxService_.IsAvailable();
-    status_.gsxAvailable = gsxOk;
 
     const TickMode mode = ResolveTickMode(status_.enabled, gsxOk);
     if (mode == TickMode::Idle)
