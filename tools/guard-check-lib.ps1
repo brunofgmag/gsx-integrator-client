@@ -29,13 +29,16 @@ function Invoke-GuardCheck
     New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
     try
     {
-        $planted = & $PlantFixture $fixtureRoot
+        $planted = @(& $PlantFixture $fixtureRoot)
         $selfHits = @(& $Detect $fixtureRoot)
-        if (-not ($selfHits | Where-Object { $_.Symbol -eq $planted }))
+        foreach ($symbol in $planted)
         {
-            Write-Host "SELF-TEST FAILED [$Name]: detector no longer flags planted '$planted'."
-            Write-Host "The guard is asleep. Fix the detector before trusting a green run."
-            exit 2
+            if (-not ($selfHits | Where-Object { $_.Symbol -eq $symbol }))
+            {
+                Write-Host "SELF-TEST FAILED [$Name]: detector no longer flags planted '$symbol'."
+                Write-Host "The guard is asleep. Fix the detector before trusting a green run."
+                exit 2
+            }
         }
     }
     finally
