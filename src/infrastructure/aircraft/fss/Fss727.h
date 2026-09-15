@@ -97,6 +97,7 @@ private:
     SmartSwitch smartSwitch_;
     std::span<const Fss727DoorPoint> doorPoints_;
     std::vector<int> movingTicks_;
+    Fss727DoorRest mainDeckRest_;
     GsxDoorSync doors_;
     bool heldForDeparture_ = false;
     int frontEntryCloseRequests_ = 0;
