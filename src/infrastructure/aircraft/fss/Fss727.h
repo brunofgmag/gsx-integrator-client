@@ -67,6 +67,7 @@ public:
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
     [[nodiscard]] bool IsHeldForDeparture() const;
+    [[nodiscard]] int FrontEntryCloseRequests() const;
     [[nodiscard]] int MainDeckCloseRequests() const;
     [[nodiscard]] int HoldCloseRequests() const;
     [[nodiscard]] std::optional<double> MainDeckPosition() const;
@@ -98,6 +99,7 @@ private:
     std::vector<int> movingTicks_;
     GsxDoorSync doors_;
     bool heldForDeparture_ = false;
+    int frontEntryCloseRequests_ = 0;
     int mainDeckCloseRequests_ = 0;
     int holdCloseRequests_ = 0;
     double lastFuelKg_ = -1.0;
