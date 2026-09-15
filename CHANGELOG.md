@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.34.6](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.5...v1.34.6) (2026-09-15)
+
+
+* translate the missing screen lines and stop re-asking gsx for a finished service ([#155](https://github.com/brunofgmag/gsx-integrator-client/issues/155)) ([a7585d9](https://github.com/brunofgmag/gsx-integrator-client/commit/a7585d9ba306e60b1d2134f9215574f143a6a646))
+
+
+### Bug Fixes
+
+* **efb:** publish the dropped service advisory and guard that every advisory reaches the app ([#156](https://github.com/brunofgmag/gsx-integrator-client/issues/156)) ([33de46c](https://github.com/brunofgmag/gsx-integrator-client/commit/33de46c6c8bf2d8b96904d20bc4046e880f1da39))
+* **i18n:** translate the four screen lines that never reached the translation files ([058c136](https://github.com/brunofgmag/gsx-integrator-client/commit/058c136bdb1ab62664d7d06c98867841f2f72477)) ([a7585d9](https://github.com/brunofgmag/gsx-integrator-client/commit/a7585d9ba306e60b1d2134f9215574f143a6a646))
+* **turnaround:** check a service for completion before asking gsx for it again ([5de94e9](https://github.com/brunofgmag/gsx-integrator-client/commit/5de94e9988c1edf77a6b49f143cc5b1c2d66d285)) ([a7585d9](https://github.com/brunofgmag/gsx-integrator-client/commit/a7585d9ba306e60b1d2134f9215574f143a6a646))
+
 ## [1.34.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.4...v1.34.5) (2026-09-15)
 
 
