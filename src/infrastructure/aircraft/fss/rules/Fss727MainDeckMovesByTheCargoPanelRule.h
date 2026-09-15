@@ -43,10 +43,12 @@ private:
 
     void StartTravel(VariableWriter& writer, Travel travel);
     void FinishTravel(VariableWriter& writer);
+    void ResumeTravel(double position);
     void GuardThePanelMasterCut(VariableWriter& writer);
     [[nodiscard]] bool HasComeToRest() const;
     void TurnThePanelMasterOff(VariableWriter& writer, double position);
-    [[nodiscard]] bool IsCloseRequestServable() const;
+    void ServeThePendingClose(VariableWriter& writer, bool closed);
+    [[nodiscard]] bool IsCloseRequestPending() const;
     [[nodiscard]] bool HasTheMainLoaderLeft() const;
     [[nodiscard]] bool IsTheMainLoaderWaitingForTheDeck() const;
     [[nodiscard]] bool IsGsxWorkingTheCargoDoors() const;
@@ -60,8 +62,11 @@ private:
     const GsxDoorSync* doors_;
     int servedRequests_ = 0;
     Travel travel_ = Travel::None;
+    Travel cutTravel_ = Travel::None;
     Fss727DoorRest rest_;
     int masterCutGuardTicks_ = 0;
+    bool mayResumeTravel_ = false;
+    int loaderHoldTicks_ = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727MAINDECKMOVESBYTHECARGOPANELRULE_H

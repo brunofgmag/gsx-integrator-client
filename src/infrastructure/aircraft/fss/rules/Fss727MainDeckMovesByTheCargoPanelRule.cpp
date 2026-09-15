@@ -25,6 +25,7 @@ namespace
 
     constexpr int kRestingTicks = 3;
     constexpr int kMasterCutGuardTicks = 3;
+    constexpr int kMainLoaderGiveUpTicks = 120;
     constexpr double kStillWithin = 0.001;
     constexpr double kRestsClosedAtMost = 0.02;
     constexpr double kRestsOpenAtLeast = 0.98;
@@ -105,21 +106,14 @@ void Fss727MainDeckMovesByTheCargoPanelRule::Act(const RuleContext&, VariableWri
         return;
     }
 
-    if (IsCloseRequestServable())
+    if (IsCloseRequestPending())
     {
-        if (*closed)
-        {
-            servedRequests_ = aircraft_->MainDeckCloseRequests();
-
-            return;
-        }
-
-        StartTravel(writer, Travel::Closing);
-
-        LOG_INFO("FSS 727 main deck door commanded closed, and the panel master stays on for the whole travel");
+        ServeThePendingClose(writer, *closed);
 
         return;
     }
+
+    loaderHoldTicks_ = 0;
 
     if (!*closed || !IsTheMainLoaderWaitingForTheDeck())
     {
@@ -141,7 +135,38 @@ void Fss727MainDeckMovesByTheCargoPanelRule::StartTravel(VariableWriter& writer,
     writer.SetLVar(kCargoDoorSwitchLVar, opening ? kSwitchOn : kSwitchOff);
     travel_ = travel;
     masterCutGuardTicks_ = 0;
+    mayResumeTravel_ = true;
     rest_ = Fss727DoorRest{.lastPosition = aircraft_->MainDeckPosition()};
+}
+
+void Fss727MainDeckMovesByTheCargoPanelRule::ServeThePendingClose(VariableWriter& writer, const bool closed)
+{
+    const bool loaderLeft = HasTheMainLoaderLeft();
+    if (!loaderLeft && ++loaderHoldTicks_ < kMainLoaderGiveUpTicks)
+    {
+        return;
+    }
+
+    loaderHoldTicks_ = 0;
+
+    if (closed)
+    {
+        servedRequests_ = aircraft_->MainDeckCloseRequests();
+
+        return;
+    }
+
+    StartTravel(writer, Travel::Closing);
+
+    if (loaderLeft)
+    {
+        LOG_INFO("FSS 727 main deck door commanded closed, and the panel master stays on for the whole travel");
+
+        return;
+    }
+
+    LOG_INFO("FSS 727 main deck door commanded closed with the main loader still in place after %d ticks, because an open deck holds the pushback gate",
+             kMainLoaderGiveUpTicks);
 }
 
 void Fss727MainDeckMovesByTheCargoPanelRule::FinishTravel(VariableWriter& writer)
@@ -163,6 +188,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::FinishTravel(VariableWriter& writer
         servedRequests_ = aircraft_->MainDeckCloseRequests();
     }
 
+    cutTravel_ = travel_;
     travel_ = Travel::None;
 
     if (!IsAtAnEnd(*position))
@@ -174,6 +200,13 @@ void Fss727MainDeckMovesByTheCargoPanelRule::FinishTravel(VariableWriter& writer
     }
 
     TurnThePanelMasterOff(writer, *position);
+}
+
+void Fss727MainDeckMovesByTheCargoPanelRule::ResumeTravel(const double position)
+{
+    mayResumeTravel_ = false;
+    travel_ = cutTravel_;
+    rest_ = Fss727DoorRest{.lastPosition = position};
 }
 
 void Fss727MainDeckMovesByTheCargoPanelRule::GuardThePanelMasterCut(VariableWriter& writer)
@@ -200,8 +233,9 @@ void Fss727MainDeckMovesByTheCargoPanelRule::GuardThePanelMasterCut(VariableWrit
 
     probe::Line(QStringLiteral("write panel master=1 resume=%1").arg(*position, 0, 'f', kProbePositionDecimals));
     writer.SetLVar(kMasterPowerLVar, kSwitchOn);
+    ResumeTravel(*position);
 
-    LOG_INFO("FSS 727 main deck door reads %.1f%% right after the cargo panel master went off: the master goes back on to let the travel finish",
+    LOG_INFO("FSS 727 main deck door reads %.1f%% right after the cargo panel master went off: the master goes back on and the travel goes back to the rule",
              *position * kPercentPerFraction);
 }
 
@@ -214,16 +248,14 @@ void Fss727MainDeckMovesByTheCargoPanelRule::TurnThePanelMasterOff(VariableWrite
 {
     probe::Line(QStringLiteral("write panel master=0 rest=%1").arg(position, 0, 'f', kProbePositionDecimals));
     writer.SetLVar(kMasterPowerLVar, kSwitchOff);
-    masterCutGuardTicks_ = kMasterCutGuardTicks;
+    masterCutGuardTicks_ = mayResumeTravel_ ? kMasterCutGuardTicks : 0;
 
     LOG_INFO("FSS 727 main deck door at rest at %.1f%%: the cargo panel master goes off", position * kPercentPerFraction);
 }
 
-bool Fss727MainDeckMovesByTheCargoPanelRule::IsCloseRequestServable() const
+bool Fss727MainDeckMovesByTheCargoPanelRule::IsCloseRequestPending() const
 {
-    return aircraft_->MainDeckCloseRequests() != servedRequests_
-        && !IsGsxWorkingTheCargoDoors()
-        && HasTheMainLoaderLeft();
+    return aircraft_->MainDeckCloseRequests() != servedRequests_ && !IsGsxWorkingTheCargoDoors();
 }
 
 bool Fss727MainDeckMovesByTheCargoPanelRule::HasTheMainLoaderLeft() const
