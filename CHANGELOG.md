@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.34.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.4...v1.34.5) (2026-09-15)
+
+
+* read a stopped main deck as open, wait for the main loader before closing it, and put the panel master back on short of an end ([#154](https://github.com/brunofgmag/gsx-integrator-client/issues/154)) ([9b867b0](https://github.com/brunofgmag/gsx-integrator-client/commit/9b867b0ef10918c1575533ac77b9c0611bd58979))
+
+
+### Bug Fixes
+
+* **fss-727:** read a stopped main deck as open, wait for the main loader before closing it, and put the panel master back on short of an end ([304123d](https://github.com/brunofgmag/gsx-integrator-client/commit/304123d8cbb02b03acf9e5a30f5a3fdd31b40637)) ([9b867b0](https://github.com/brunofgmag/gsx-integrator-client/commit/9b867b0ef10918c1575533ac77b9c0611bd58979))
+
 ## [1.34.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.3...v1.34.4) (2026-09-15)
 
 
