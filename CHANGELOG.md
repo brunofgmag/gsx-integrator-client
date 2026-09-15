@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.34.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.3...v1.34.4) (2026-09-15)
+
+
+* keep the front entry and main deck right under gsx stairs, completing and deboarding ([#152](https://github.com/brunofgmag/gsx-integrator-client/issues/152)) ([269522b](https://github.com/brunofgmag/gsx-integrator-client/commit/269522bb2fb4b15720c16bdf51d1ee4d66d889c1))
+
+
+### Bug Fixes
+
+* **fss-727:** hold a pending main deck close through the gsx completing state ([06bcd94](https://github.com/brunofgmag/gsx-integrator-client/commit/06bcd94fc370011a0aa260daf2ae00e7ae55103f)) ([269522b](https://github.com/brunofgmag/gsx-integrator-client/commit/269522bb2fb4b15720c16bdf51d1ee4d66d889c1))
+* **fss-727:** keep the front entry open when every door closes under the gsx stairs ([f833716](https://github.com/brunofgmag/gsx-integrator-client/commit/f833716c8da009a5a617f08ae285e5fa80457f96)) ([269522b](https://github.com/brunofgmag/gsx-integrator-client/commit/269522bb2fb4b15720c16bdf51d1ee4d66d889c1))
+* **fss-727:** open the main deck for the main loader waiting on it during deboarding ([bb0130c](https://github.com/brunofgmag/gsx-integrator-client/commit/bb0130cda8c8565eb95f92ca202889fb59b47930)) ([269522b](https://github.com/brunofgmag/gsx-integrator-client/commit/269522bb2fb4b15720c16bdf51d1ee4d66d889c1))
+
 ## [1.34.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.2...v1.34.3) (2026-09-15)
 
 
