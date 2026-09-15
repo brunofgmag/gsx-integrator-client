@@ -468,6 +468,7 @@ private slots:
     static void holdsBoardingWhileCargoIsPending();
     static void theLoaderCountdownRunsOutOnTheTickTheClientGivesUpOnTheDoor();
     static void thePilotEndingTheBoardingFromTheGsxMenuCompletesIt();
+    static void aCompleteNowThatLeavesTheCargoFlagUpStillEndsTheBoarding();
     static void theCouatlDyingDuringTheBoardingHoldsTheFlowWithTheWarning();
     static void completesReachableWorkflowAndReturnsToStart();
     static void theTurnaroundTurnNotifiesTheMenuGateway();
@@ -756,6 +757,34 @@ void TurnaroundStateMachineTest::thePilotEndingTheBoardingFromTheGsxMenuComplete
 
     QVERIFY(!workflow.f.status.serviceInterrupted);
     QVERIFY(!Logged(workflow, "GSX dropped the boarding it had already started"));
+
+    workflow.FinishDelay(60, TurnaroundPhase::WaitingReadyToPush);
+
+    QCOMPARE(workflow.f.status.boardingProgress, 100.0);
+}
+
+void TurnaroundStateMachineTest::aCompleteNowThatLeavesTheCargoFlagUpStillEndsTheBoarding()
+{
+    TurnaroundWorkflow workflow;
+    ReachBoarding(workflow);
+
+    workflow.f.aircraft.cargo = true;
+    workflow.f.gsxService.cargoPercent = 0.0;
+    workflow.f.gsxService.loadingCargo = true;
+    workflow.TickHolding(TurnaroundPhase::Boarding);
+
+    workflow.f.gsxService.boardingState = GsxStateStatus::Callable;
+
+    int ticks = 0;
+    while (workflow.machine.GetDelayTicksRemaining() == 0 && ticks < 600)
+    {
+        workflow.TickHolding(TurnaroundPhase::Boarding);
+        ++ticks;
+    }
+
+    QCOMPARE(ticks, 120);
+    QVERIFY(workflow.f.aircraft.doorsHeldClosed);
+    QVERIFY(!workflow.f.status.serviceInterrupted);
 
     workflow.FinishDelay(60, TurnaroundPhase::WaitingReadyToPush);
 

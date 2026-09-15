@@ -31,6 +31,8 @@ private slots:
     static void givesUpOnALoaderThatNeverGetsItsDoor();
     static void givesUpEvenWhenTheLoadersTakeTurnsWaiting();
     static void finishesTheBoardingOnceItHasGivenUpOnTheLoader();
+    static void finishesTheBoardingOnceTheCargoFlagOutlivesTheClosedService();
+    static void waitsForTheCargoFlagWhileGsxHasNotClosedTheService();
     static void doesNotAskGsxToCompleteWhilePassengersAreMissing();
     static void asksGsxToCompleteWhenTheLoadersAreHeldBehindTheStairs();
     static void keepsAskingWhileTheLoadersStayHeldBehindTheStairs();
@@ -546,6 +548,68 @@ void BoardingStateTest::finishesTheBoardingOnceItHasGivenUpOnTheLoader()
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingReadyToPush);
     QCOMPARE(f.aircraft.currentZfwKg, 180000.0);
+}
+
+namespace
+{
+    void ArrangeCargoFlagLeftUpByACompleteNow(TurnaroundStateFixture& f)
+    {
+        f.aircraft.cargo = true;
+        f.aircraft.boardMethod = BoardBy::Client;
+        f.ctx.data.initialZfwKg = 42000.0;
+        f.ctx.data.plannedZfwKg = 58000.0;
+        f.gsxService.boardingState = GsxStateStatus::Callable;
+        f.gsxService.boardingCompleted = true;
+        f.gsxService.loadingCargo = true;
+        f.gsxService.cargoPercent = 0.0;
+    }
+}
+
+void BoardingStateTest::finishesTheBoardingOnceTheCargoFlagOutlivesTheClosedService()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeCargoFlagLeftUpByACompleteNow(f);
+
+    for (int tick = 0; tick < 119; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QVERIFY(!f.aircraft.doorsHeldClosed);
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingReadyToPush);
+    QVERIFY(f.aircraft.doorsHeldClosed);
+    QCOMPARE(f.aircraft.currentZfwKg, 58000.0);
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
+    QVERIFY(std::ranges::any_of(f.logger.messages, [](const std::string& message)
+    {
+        return message.find("still flags cargo loading") != std::string::npos;
+    }));
+}
+
+void BoardingStateTest::waitsForTheCargoFlagWhileGsxHasNotClosedTheService()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeCargoFlagLeftUpByACompleteNow(f);
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardingCompleted = false;
+
+    for (int tick = 0; tick < 400; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    f.gsxService.boardingState = GsxStateStatus::Completed;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.aircraft.doorsHeldClosed);
 }
 
 void BoardingStateTest::doesNotAskGsxToCompleteWhilePassengersAreMissing()
