@@ -162,7 +162,7 @@ Fss727::Fss727(VariableGateway* variableGateway, const AutomationStatus* status,
       automodeRule_(*variableGateway),
       frontEntryRule_(*variableGateway, *this, doors_),
       holdsRule_(*variableGateway, *this, doors_),
-      mainDeckRule_(*this, gsxGateway, doors_),
+      mainDeckRule_(*variableGateway, *this, gsxGateway, doors_),
       rules_{&automodeRule_, &frontEntryRule_, &holdsRule_, &mainDeckRule_}
 {
     smartSwitch_.Subscribe();
@@ -189,6 +189,11 @@ void Fss727::Observe()
         const std::optional<double> position = DoorPointPosition(point);
         int& ticks = movingTicks_[point];
         ticks = position.has_value() && IsTravelling(*position) ? ticks + 1 : 0;
+
+        if (point == kMainDeckPoint && position.has_value())
+        {
+            mainDeckRest_.Follow(*position);
+        }
     }
 }
 
@@ -449,6 +454,11 @@ std::optional<bool> Fss727::DoorOpenAt(const std::size_t point) const
     if (!IsTravelling(*position))
     {
         return *position >= kDoorPointOpenAtLeast;
+    }
+
+    if (point == kMainDeckPoint && mainDeckRest_.IsStill())
+    {
+        return true;
     }
 
     return movingTicks_[point] >= doorPoints_[point].movingLimitTicks ? std::optional{true} : std::nullopt;
