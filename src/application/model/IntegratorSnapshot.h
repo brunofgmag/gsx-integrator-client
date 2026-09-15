@@ -57,6 +57,7 @@ struct IntegratorSnapshot
     bool doorsHoldingPushback = false;
     CargoLoader loaderHoldingBoarding = CargoLoader::None;
     int servicesWaitSeconds = 0;
+    int loaderDoorWaitSeconds = 0;
     SnapshotDouble fuelShortfallKg = 0.0;
     SnapshotDouble omittedCrewKg = 0.0;
     SnapshotDouble operatingEmptyWithCrewKg = 0.0;

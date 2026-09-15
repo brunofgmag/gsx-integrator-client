@@ -26,6 +26,7 @@ struct AutomationStatus
     bool serviceInterrupted = false;
     CargoLoader loaderHoldingBoarding = CargoLoader::None;
     int servicesWaitSeconds = 0;
+    int loaderDoorWaitSeconds = 0;
     double fuelProgress = 0.0;
     double boardingProgress = 0.0;
     double deboardingProgress = 0.0;

@@ -14,6 +14,7 @@ private slots:
     static void flightPlanStatusDifferenceBreaksEquivalence();
     static void plannedPaxDifferenceBreaksEquivalence();
     static void autoWeightUnitDifferenceBreaksEquivalence();
+    static void loaderDoorWaitSecondsDifferenceBreaksEquivalence();
     static void floatDifferenceBelowEpsilonStaysEquivalent();
     static void floatDifferenceAboveEpsilonBreaksEquivalence();
 };
@@ -124,6 +125,16 @@ void IntegratorSnapshotTest::autoWeightUnitDifferenceBreaksEquivalence()
     IntegratorSnapshot b;
 
     b.autoWeightUnit = 1;
+
+    QVERIFY(!AreEquivalent(a, b));
+}
+
+void IntegratorSnapshotTest::loaderDoorWaitSecondsDifferenceBreaksEquivalence()
+{
+    const IntegratorSnapshot a;
+    IntegratorSnapshot b;
+
+    b.loaderDoorWaitSeconds = 1;
 
     QVERIFY(!AreEquivalent(a, b));
 }

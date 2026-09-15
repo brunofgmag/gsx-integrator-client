@@ -38,6 +38,8 @@ private slots:
     static void theBoardingTipNamesTheAftLoaderWaitingForItsDoor();
     static void theBoardingTipNamesTheMainDeckLoaderWaitingForItsDoor();
     static void theBoardingTipStandsDownForThePmdgCargoDoorAdvisory();
+    static void theBoardingTipStillNamesAnotherHoldWhileTheMainDeckIsStuck();
+    static void theBoardingTipCountsDownTheSecondsLeftToOpenTheDoor();
     static void theBoardingTipStaysQuietWhileNoLoaderWaits();
     static void theBoardingTipOnlyShowsDuringTheBoardingPhase();
     static void theBoardingTipNamesTheCrewThePlanLeftOutAndTheEmptyWeightThatCountsIt();
@@ -60,6 +62,7 @@ private slots:
     static void restartFlowReportsRejectedCommands();
     static void nextPhaseTextNamesThePhaseThatFollows();
     static void nextPhaseTextOnTheLastPhaseAnnouncesANewSession();
+    static void theInitialPhaseLabelAgreesWithTheSimChip();
     static void holdCountdownTextCountsTheRemainingSeconds();
     static void holdCountdownTextIsEmptyWhenNothingIsHolding();
     static void aircraftNameTextStandsByWhileTheAircraftIsUnsupported();
@@ -404,11 +407,23 @@ void OperationsViewModelTest::powerOnTipNamesTheEngineerPanelWhereTheAircraftTak
 
 namespace
 {
+    constexpr int kLoaderSecondsLeft = 75;
+
     void ArrangeBoardingHeldByALoader(FakeIntegratorService& service, const CargoLoader loader)
     {
         service.snapshot.phase = TurnaroundPhase::Boarding;
         service.snapshot.loaderHoldingBoarding = loader;
+        service.snapshot.loaderDoorWaitSeconds = kLoaderSecondsLeft;
         service.Notify();
+    }
+
+    QString LoaderTipFor(const QString& door, const int secondsLeft)
+    {
+        return QStringLiteral("A GSX loader is waiting for the ")
+            + door
+            + QStringLiteral(" cargo door. Open it, or in ")
+            + QString::number(secondsLeft)
+            + QStringLiteral(" s the client will finish the boarding without waiting for the loader.");
     }
 }
 
@@ -420,9 +435,7 @@ void OperationsViewModelTest::theBoardingTipNamesTheForwardLoaderWaitingForItsDo
 
     ArrangeBoardingHeldByALoader(service, CargoLoader::Front);
 
-    QCOMPARE(viewModel.GetPhaseTip(),
-             QStringLiteral("A GSX loader is waiting for the forward cargo door. "
-                            "Open it, or the client will finish the boarding without waiting for the loader."));
+    QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("forward"), kLoaderSecondsLeft));
 }
 
 void OperationsViewModelTest::theBoardingTipNamesTheAftLoaderWaitingForItsDoor()
@@ -433,9 +446,7 @@ void OperationsViewModelTest::theBoardingTipNamesTheAftLoaderWaitingForItsDoor()
 
     ArrangeBoardingHeldByALoader(service, CargoLoader::Rear);
 
-    QCOMPARE(viewModel.GetPhaseTip(),
-             QStringLiteral("A GSX loader is waiting for the aft cargo door. "
-                            "Open it, or the client will finish the boarding without waiting for the loader."));
+    QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("aft"), kLoaderSecondsLeft));
 }
 
 void OperationsViewModelTest::theBoardingTipNamesTheMainDeckLoaderWaitingForItsDoor()
@@ -446,9 +457,23 @@ void OperationsViewModelTest::theBoardingTipNamesTheMainDeckLoaderWaitingForItsD
 
     ArrangeBoardingHeldByALoader(service, CargoLoader::MainDeck);
 
-    QCOMPARE(viewModel.GetPhaseTip(),
-             QStringLiteral("A GSX loader is waiting for the main deck cargo door. "
-                            "Open it, or the client will finish the boarding without waiting for the loader."));
+    QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("main deck"), kLoaderSecondsLeft));
+}
+
+void OperationsViewModelTest::theBoardingTipCountsDownTheSecondsLeftToOpenTheDoor()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingHeldByALoader(service, CargoLoader::Front);
+
+    QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("forward"), 75));
+
+    service.snapshot.loaderDoorWaitSeconds = 1;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("forward"), 1));
 }
 
 void OperationsViewModelTest::theBoardingTipStandsDownForThePmdgCargoDoorAdvisory()
@@ -461,6 +486,22 @@ void OperationsViewModelTest::theBoardingTipStandsDownForThePmdgCargoDoorAdvisor
     ArrangeBoardingHeldByALoader(service, CargoLoader::MainDeck);
 
     QVERIFY(viewModel.GetPhaseTip().isEmpty());
+}
+
+void OperationsViewModelTest::theBoardingTipStillNamesAnotherHoldWhileTheMainDeckIsStuck()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.cargoDoorStuck = true;
+    ArrangeBoardingHeldByALoader(service, CargoLoader::Front);
+
+    QVERIFY(viewModel.GetPhaseTip().contains(QStringLiteral("forward cargo door")));
+
+    ArrangeBoardingHeldByALoader(service, CargoLoader::Rear);
+
+    QVERIFY(viewModel.GetPhaseTip().contains(QStringLiteral("aft cargo door")));
 }
 
 void OperationsViewModelTest::theBoardingTipStaysQuietWhileNoLoaderWaits()
@@ -546,11 +587,10 @@ void OperationsViewModelTest::aLoaderWaitingForItsDoorComesBeforeTheCrewTip()
     const OperationsViewModel viewModel(&service, &display);
 
     service.snapshot.loaderHoldingBoarding = CargoLoader::MainDeck;
+    service.snapshot.loaderDoorWaitSeconds = kLoaderSecondsLeft;
     ArrangeBoardingWithThePlanLeavingOutTheCrew(service);
 
-    QCOMPARE(viewModel.GetPhaseTip(),
-             QStringLiteral("A GSX loader is waiting for the main deck cargo door. "
-                            "Open it, or the client will finish the boarding without waiting for the loader."));
+    QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("main deck"), kLoaderSecondsLeft));
 
     service.snapshot.loaderHoldingBoarding = CargoLoader::None;
     service.Notify();
@@ -931,6 +971,22 @@ void OperationsViewModelTest::nextPhaseTextOnTheLastPhaseAnnouncesANewSession()
     service.Notify();
 
     QCOMPARE(viewModel.GetNextPhaseText(), QStringLiteral("Next \u25B8 New session"));
+}
+
+void OperationsViewModelTest::theInitialPhaseLabelAgreesWithTheSimChip()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.connected = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.aircraftSupported = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetStateText(), QStringLiteral("Waiting to start"));
+    QCOMPARE(viewModel.GetNextPhaseText(), QStringLiteral("Next ▸ Waiting for aircraft ready"));
 }
 
 void OperationsViewModelTest::holdCountdownTextCountsTheRemainingSeconds()

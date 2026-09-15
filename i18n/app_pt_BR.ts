@@ -1453,8 +1453,8 @@
     <name>Turnaround</name>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="17"/>
-        <source>Waiting for sim ready</source>
-        <translation>Aguardando o simulador</translation>
+        <source>Waiting to start</source>
+        <translation>Aguardando o início</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="19"/>
@@ -1589,18 +1589,18 @@
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="57"/>
-        <source>A GSX loader is waiting for the forward cargo door. Open it, or the client will finish the boarding without waiting for the loader.</source>
-        <translation>Um carregador do GSX espera pela porta de carga dianteira. Abra a porta, ou o cliente termina o embarque sem esperar pelo carregador.</translation>
+        <source>A GSX loader is waiting for the forward cargo door. Open it, or in %1 s the client will finish the boarding without waiting for the loader.</source>
+        <translation>Um carregador do GSX espera pela porta de carga dianteira. Abra a porta, ou em %1 s o cliente termina o embarque sem esperar pelo carregador.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="61"/>
-        <source>A GSX loader is waiting for the aft cargo door. Open it, or the client will finish the boarding without waiting for the loader.</source>
-        <translation>Um carregador do GSX espera pela porta de carga traseira. Abra a porta, ou o cliente termina o embarque sem esperar pelo carregador.</translation>
+        <source>A GSX loader is waiting for the aft cargo door. Open it, or in %1 s the client will finish the boarding without waiting for the loader.</source>
+        <translation>Um carregador do GSX espera pela porta de carga traseira. Abra a porta, ou em %1 s o cliente termina o embarque sem esperar pelo carregador.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="65"/>
-        <source>A GSX loader is waiting for the main deck cargo door. Open it, or the client will finish the boarding without waiting for the loader.</source>
-        <translation>Um carregador do GSX espera pela porta de carga do convés principal. Abra a porta, ou o cliente termina o embarque sem esperar pelo carregador.</translation>
+        <source>A GSX loader is waiting for the main deck cargo door. Open it, or in %1 s the client will finish the boarding without waiting for the loader.</source>
+        <translation>Um carregador do GSX espera pela porta de carga do convés principal. Abra a porta, ou em %1 s o cliente termina o embarque sem esperar pelo carregador.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="79"/>

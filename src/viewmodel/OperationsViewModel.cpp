@@ -14,7 +14,7 @@ namespace
     {
         switch (phase)
         {
-        case TurnaroundPhase::WaitingSupportedAircraft: return QCoreApplication::translate("Turnaround", "Waiting for sim ready");
+        case TurnaroundPhase::WaitingSupportedAircraft: return QCoreApplication::translate("Turnaround", "Waiting to start");
         case TurnaroundPhase::WaitingAircraftReady: return QCoreApplication::translate("Turnaround", "Waiting for aircraft ready");
         case TurnaroundPhase::RepositionAircraft: return QCoreApplication::translate("Turnaround", "Repositioning aircraft");
         case TurnaroundPhase::PlaceGroundEquipment: return QCoreApplication::translate("Turnaround", "Placing GPU & chocks");
@@ -46,7 +46,7 @@ namespace
 
     QString LoaderTip(const IntegratorSnapshot& snapshot)
     {
-        if (snapshot.cargoDoorStuck)
+        if (snapshot.cargoDoorStuck && snapshot.loaderHoldingBoarding == CargoLoader::MainDeck)
         {
             return {};
         }
@@ -56,15 +56,18 @@ namespace
         case CargoLoader::Front:
             return QCoreApplication::translate("Turnaround",
                                                "A GSX loader is waiting for the forward cargo door. "
-                                               "Open it, or the client will finish the boarding without waiting for the loader.");
+                                               "Open it, or in %1 s the client will finish the boarding without waiting for the loader.")
+                .arg(snapshot.loaderDoorWaitSeconds);
         case CargoLoader::Rear:
             return QCoreApplication::translate("Turnaround",
                                                "A GSX loader is waiting for the aft cargo door. "
-                                               "Open it, or the client will finish the boarding without waiting for the loader.");
+                                               "Open it, or in %1 s the client will finish the boarding without waiting for the loader.")
+                .arg(snapshot.loaderDoorWaitSeconds);
         case CargoLoader::MainDeck:
             return QCoreApplication::translate("Turnaround",
                                                "A GSX loader is waiting for the main deck cargo door. "
-                                               "Open it, or the client will finish the boarding without waiting for the loader.");
+                                               "Open it, or in %1 s the client will finish the boarding without waiting for the loader.")
+                .arg(snapshot.loaderDoorWaitSeconds);
         case CargoLoader::None:
             break;
         }
