@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.34.10](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.9...v1.34.10) (2026-09-15)
+
+
+* name the initial phase, count the loader door down and keep the advisory on a second hold ([#163](https://github.com/brunofgmag/gsx-integrator-client/issues/163)) ([a504a13](https://github.com/brunofgmag/gsx-integrator-client/commit/a504a1381e8d84a97d7fb7133993dd7745105425))
+
+
+### Bug Fixes
+
+* **turnaround:** name the initial phase, count the loader door down and keep the advisory on a second hold ([6773bf2](https://github.com/brunofgmag/gsx-integrator-client/commit/6773bf2b5eb177dd51c6c6d7aaa45cbdc78f6c75)) ([a504a13](https://github.com/brunofgmag/gsx-integrator-client/commit/a504a1381e8d84a97d7fb7133993dd7745105425))
+
 ## [1.34.9](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.8...v1.34.9) (2026-09-15)
 
 
