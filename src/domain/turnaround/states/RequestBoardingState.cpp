@@ -15,6 +15,11 @@ std::optional<TurnaroundTransition> RequestBoardingState::EvaluatePhase(Turnarou
     auto& data = ctx.data;
 
     const GsxStateStatus boardingState = ctx.gsxGateway->GetStateStatus(GsxState::Boarding);
+    if (boardingState == GsxStateStatus::Completed || ctx.gsxGateway->WasStateCompleted(GsxState::Boarding))
+    {
+        return TurnaroundTransition{TurnaroundPhase::Boarding};
+    }
+
     if (boardingState == GsxStateStatus::Callable && !data.boardingRequested)
     {
         ctx.menuGateway->RequestBoarding();
@@ -27,11 +32,6 @@ std::optional<TurnaroundTransition> RequestBoardingState::EvaluatePhase(Turnarou
     const bool hasBoardingStarted = hasPassengersBoarding || hasCargoBoarding || gsxReady;
 
     if (hasBoardingStarted && gsxReady)
-    {
-        return TurnaroundTransition{TurnaroundPhase::Boarding};
-    }
-
-    if (boardingState == GsxStateStatus::Completed || ctx.gsxGateway->WasStateCompleted(GsxState::Boarding))
     {
         return TurnaroundTransition{TurnaroundPhase::Boarding};
     }

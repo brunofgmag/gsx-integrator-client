@@ -24,6 +24,7 @@ private slots:
     static void flagsAPlanThatExceedsTheAirframeCapacity();
     static void staysQuietWhenThePlanFitsTheTanks();
     static void staysQuietWhenTheAircraftDoesNotKnowItsCapacity();
+    static void doesNotAskAgainForTheRefuelingItSawFinish();
 };
 
 void RequestFuelStateTest::doesNotRequestFuelWhenServiceIsUnavailable()
@@ -295,6 +296,23 @@ void RequestFuelStateTest::staysQuietWhenTheAircraftDoesNotKnowItsCapacity()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 
     QVERIFY(!f.ctx.data.fuelPlanOverCapacity);
+}
+
+void RequestFuelStateTest::doesNotAskAgainForTheRefuelingItSawFinish()
+{
+    TurnaroundStateFixture f;
+    RequestFuelState state;
+
+    f.gsxService.refuelingState = GsxStateStatus::Callable;
+    f.gsxService.refuelingCompleted = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::Refueling);
+    QCOMPARE(f.menuGateway.refuelingCalls, 0);
+    QCOMPARE(f.gsxService.takeOverCalls, 0);
+    QVERIFY(!f.ctx.data.refuelingRequested);
 }
 
 QTEST_APPLESS_MAIN(RequestFuelStateTest)

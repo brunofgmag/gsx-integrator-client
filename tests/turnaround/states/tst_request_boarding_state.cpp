@@ -17,6 +17,7 @@ private slots:
     static void retriesWhenBoardingDoesNotStart();
     static void advancesWhenBoardingAlreadyCompleted();
     static void advancesOnGsxActiveBeforeAnyVisibleProgress();
+    static void doesNotAskAgainForTheBoardingItSawFinish();
 };
 
 void RequestBoardingStateTest::callsMenuWhenCallable()
@@ -154,6 +155,22 @@ void RequestBoardingStateTest::advancesOnGsxActiveBeforeAnyVisibleProgress()
     QCOMPARE(transition->next, TurnaroundPhase::Boarding);
     QCOMPARE(f.menuGateway.boardingCalls, 0);
     QVERIFY(f.ctx.data.boardingRequested);
+}
+
+void RequestBoardingStateTest::doesNotAskAgainForTheBoardingItSawFinish()
+{
+    TurnaroundStateFixture f;
+    RequestBoardingState state;
+
+    f.gsxService.boardingState = GsxStateStatus::Callable;
+    f.gsxService.boardingCompleted = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::Boarding);
+    QCOMPARE(f.menuGateway.boardingCalls, 0);
+    QVERIFY(!f.ctx.data.boardingRequested);
 }
 
 QTEST_APPLESS_MAIN(RequestBoardingStateTest)

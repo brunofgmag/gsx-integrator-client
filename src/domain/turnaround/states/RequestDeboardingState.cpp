@@ -15,6 +15,11 @@ std::optional<TurnaroundTransition> RequestDeboardingState::EvaluatePhase(Turnar
     auto& data = ctx.data;
 
     const GsxStateStatus deboardingState = ctx.gsxGateway->GetStateStatus(GsxState::Deboarding);
+    if (deboardingState == GsxStateStatus::Completed || ctx.gsxGateway->WasStateCompleted(GsxState::Deboarding))
+    {
+        return TurnaroundTransition{TurnaroundPhase::Deboarding};
+    }
+
     if (ctx.aircraft->IsReadyToDeboard()
         && deboardingState == GsxStateStatus::Callable && !ctx.data.deboardingRequested)
     {
@@ -28,11 +33,6 @@ std::optional<TurnaroundTransition> RequestDeboardingState::EvaluatePhase(Turnar
 
     const bool gsxReady = deboardingState == GsxStateStatus::Active;
     if (hasDeboardingStarted && gsxReady)
-    {
-        return TurnaroundTransition{TurnaroundPhase::Deboarding};
-    }
-
-    if (deboardingState == GsxStateStatus::Completed || ctx.gsxGateway->WasStateCompleted(GsxState::Deboarding))
     {
         return TurnaroundTransition{TurnaroundPhase::Deboarding};
     }
