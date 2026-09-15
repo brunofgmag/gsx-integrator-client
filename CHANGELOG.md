@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.34.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.2...v1.34.3) (2026-09-15)
+
+
+* stop reading a couatl drop as a completed service and never ask for stairs already in place ([#150](https://github.com/brunofgmag/gsx-integrator-client/issues/150)) ([a539c3e](https://github.com/brunofgmag/gsx-integrator-client/commit/a539c3ea90ae33b66be3ddc858b99133f91044f4))
+
+
+### Bug Fixes
+
+* **gsx:** stop reading a service the couatl dropped as completed ([97063be](https://github.com/brunofgmag/gsx-integrator-client/commit/97063be8a116762cc016c3f420239216032b3177)) ([a539c3e](https://github.com/brunofgmag/gsx-integrator-client/commit/a539c3ea90ae33b66be3ddc858b99133f91044f4))
+* **turnaround:** never ask for stairs already in place or not yet read ([3387480](https://github.com/brunofgmag/gsx-integrator-client/commit/33874808cf2832a64972a24b78855d0f66f31bf8)) ([a539c3e](https://github.com/brunofgmag/gsx-integrator-client/commit/a539c3ea90ae33b66be3ddc858b99133f91044f4))
+
 ## [1.34.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.1...v1.34.2) (2026-09-14)
 
 
