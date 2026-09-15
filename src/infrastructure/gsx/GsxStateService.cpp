@@ -44,6 +44,10 @@ namespace
         }
     }
 
+    bool EndsWithoutCompleted(const GsxState gsxState)
+    {
+        return gsxState == GsxState::Pushback || gsxState == GsxState::Deice;
+    }
 }
 
 GsxStateService::GsxStateService(VariableGateway* variableGateway, const GsxRemoteState* remoteState)
@@ -424,8 +428,8 @@ void GsxStateService::ObserveState(const GsxState gsxState)
     const auto stateStatus = static_cast<GsxStateStatus>(varManager_->GetLVar(stateLVar));
     StateTrack& track = states_.at(gsxState);
 
-    const bool returnedToIdle =
-        (stateStatus == GsxStateStatus::Callable || stateStatus == GsxStateStatus::Bypassed)
+    const bool returnedToIdle = EndsWithoutCompleted(gsxState)
+        && (stateStatus == GsxStateStatus::Callable || stateStatus == GsxStateStatus::Bypassed)
         && track.status == GsxStateStatus::Active;
 
     track.completed = track.completed || stateStatus == GsxStateStatus::Completed || returnedToIdle;

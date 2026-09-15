@@ -65,8 +65,9 @@ public:
             const GsxStateStatus status = GetStateStatus(state);
             GsxStateStatus& last = lastObserved[static_cast<std::size_t>(state)];
 
-            const bool returnedToIdle =
-                (status == GsxStateStatus::Callable || status == GsxStateStatus::Bypassed)
+            const bool endsWithoutCompleted = state == GsxState::Pushback || state == GsxState::Deice;
+            const bool returnedToIdle = endsWithoutCompleted
+                && (status == GsxStateStatus::Callable || status == GsxStateStatus::Bypassed)
                 && last == GsxStateStatus::Active;
 
             if (status == GsxStateStatus::Completed || returnedToIdle)
