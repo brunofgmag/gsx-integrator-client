@@ -83,6 +83,12 @@ void IntegratorRuntime::Setup()
 
     TryConnect();
 
+    connect(&gsxRemoteClient_, &GsxRemoteApiClient::ConnectionChanged,
+            &gsxRemoteClient_, [this](const bool connected)
+            {
+                gsxRemoteState_.connected = connected;
+            });
+
     connect(&gsxRemoteClient_, &GsxRemoteApiClient::SnapshotReceived,
             &gsxRemoteClient_, [this](const QJsonObject& s)
             {

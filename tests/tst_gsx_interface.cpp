@@ -89,6 +89,7 @@ private slots:
     static void serviceInProgressFollowsRemoteStateRaw();
     static void serviceInProgressFalseWhenAbsentOrNoRemote();
     static void pushbackIsOfferedUnlessTheApronVerdictSaysOtherwise();
+    static void remoteApiCountsAsConnectedOnlyWhileTheLinkIsUp();
 };
 
 void GsxInterfaceTest::availabilityFollowsCouatlFlag()
@@ -952,6 +953,29 @@ void GsxInterfaceTest::pushbackIsOfferedUnlessTheApronVerdictSaysOtherwise()
     const GsxStateService noRemote(&gateway);
 
     QVERIFY(noRemote.OffersPushback());
+}
+
+void GsxInterfaceTest::remoteApiCountsAsConnectedOnlyWhileTheLinkIsUp()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = 1.0;
+
+    GsxRemoteState remote;
+    const GsxStateService withRemote(&gateway, &remote);
+
+    QVERIFY(!withRemote.IsRemoteApiConnected());
+
+    remote.connected = true;
+
+    QVERIFY(withRemote.IsRemoteApiConnected());
+
+    remote.connected = false;
+
+    QVERIFY(!withRemote.IsRemoteApiConnected());
+
+    const GsxStateService noRemote(&gateway);
+
+    QVERIFY(!noRemote.IsRemoteApiConnected());
 }
 
 QTEST_APPLESS_MAIN(GsxInterfaceTest)

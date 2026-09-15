@@ -21,6 +21,7 @@ struct GsxRemoteMenu
 
 struct GsxRemoteState
 {
+    bool connected = false;
     std::string simbriefStatus;
     std::string simbriefError;
     int simbriefGeneration = 0;
