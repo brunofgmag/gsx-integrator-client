@@ -1,5 +1,7 @@
 #include <QtTest>
 
+#include <string>
+#include <vector>
 #include "tests/turnaround/TurnaroundStateFixture.h"
 #include "src/domain/ports/AircraftRule.h"
 #include "src/domain/turnaround/states/TurnaroundState.h"
@@ -7,6 +9,7 @@
 namespace
 {
     constexpr int kHoldTicks = 3;
+    constexpr int kLongerHoldTicks = 6;
 
     class HoldingRule final : public AircraftRule
     {
@@ -63,6 +66,68 @@ namespace
         }
     };
 
+    class JournalingRule final : public AircraftRule
+    {
+    public:
+        JournalingRule(std::vector<std::string>& journal, const char* name, const RuleCadence cadence)
+            : journal_(&journal), name_(name), cadence_(cadence)
+        {
+        }
+
+        [[nodiscard]] const char* Name() const override
+        {
+            return name_;
+        }
+
+        [[nodiscard]] RuleCadence Cadence() const override
+        {
+            return cadence_;
+        }
+
+        [[nodiscard]] RuleVerdict Evaluate(const RuleContext&) override
+        {
+            journal_->push_back(std::string(name_) + " evaluates");
+
+            return RuleVerdict::Pass();
+        }
+
+        void Act(const RuleContext&, VariableWriter&) override
+        {
+            journal_->push_back(std::string(name_) + " acts");
+        }
+
+    private:
+        std::vector<std::string>* journal_;
+        const char* name_;
+        RuleCadence cadence_;
+    };
+
+    class DeadlineRule final : public AircraftRule
+    {
+    public:
+        DeadlineRule(const char* reason, const int ticksAllowed) : reason_(reason), ticksAllowed_(ticksAllowed)
+        {
+        }
+
+        [[nodiscard]] const char* Name() const override
+        {
+            return reason_;
+        }
+
+        [[nodiscard]] RuleVerdict Evaluate(const RuleContext&) override
+        {
+            return RuleVerdict::Hold(ticksAllowed_, reason_);
+        }
+
+        void Act(const RuleContext&, VariableWriter&) override
+        {
+        }
+
+    private:
+        const char* reason_;
+        int ticksAllowed_;
+    };
+
     class CountingState final : public TurnaroundState
     {
     public:
@@ -103,6 +168,9 @@ private slots:
     static void theSlowPathRunsOnlyTheSlowRules();
     static void observingTheSlowPathNeverLetsARuleAct();
     static void observingLogsEachVerdictOnceUntilItChanges();
+    static void eachRuleActsRightAfterItIsEvaluatedWhenThePhaseEvaluates();
+    static void eachRuleActsRightAfterItIsEvaluatedOnTheActionPass();
+    static void theFirstHoldingRuleSetsTheDeadlineAndTheReason();
 };
 
 void TurnaroundRulesTest::aHoldingRuleStopsThePhaseFromEvaluating()
@@ -285,6 +353,53 @@ void TurnaroundRulesTest::observingLogsEachVerdictOnceUntilItChanges()
     state.ObserveRules(f.ctx, RuleCadence::Slow);
 
     QCOMPARE(f.logger.messages.size(), static_cast<std::size_t>(3));
+}
+
+void TurnaroundRulesTest::eachRuleActsRightAfterItIsEvaluatedWhenThePhaseEvaluates()
+{
+    TurnaroundStateFixture f;
+    std::vector<std::string> journal;
+    JournalingRule first(journal, "first", RuleCadence::Fast);
+    JournalingRule second(journal, "second", RuleCadence::Fast);
+    CountingState state;
+
+    f.aircraft.rules = {&first, &second};
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(journal, (std::vector<std::string>{"first evaluates", "first acts", "second evaluates", "second acts"}));
+}
+
+void TurnaroundRulesTest::eachRuleActsRightAfterItIsEvaluatedOnTheActionPass()
+{
+    TurnaroundStateFixture f;
+    std::vector<std::string> journal;
+    JournalingRule first(journal, "first", RuleCadence::Slow);
+    JournalingRule second(journal, "second", RuleCadence::Slow);
+    CountingState state;
+
+    f.aircraft.rules = {&first, &second};
+
+    state.ActOnRules(f.ctx, RuleCadence::Slow);
+
+    QCOMPARE(journal, (std::vector<std::string>{"first evaluates", "first acts", "second evaluates", "second acts"}));
+}
+
+void TurnaroundRulesTest::theFirstHoldingRuleSetsTheDeadlineAndTheReason()
+{
+    TurnaroundStateFixture f;
+    DeadlineRule shorter("the shorter hold", kHoldTicks);
+    DeadlineRule longer("the longer hold", kLongerHoldTicks);
+    CountingState state;
+
+    f.aircraft.rules = {&shorter, &longer};
+
+    for (int tick = 0; tick < kHoldTicks; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.logger.messages.back(), std::string("Rule hold expired: the shorter hold"));
 }
 
 QTEST_MAIN(TurnaroundRulesTest)
