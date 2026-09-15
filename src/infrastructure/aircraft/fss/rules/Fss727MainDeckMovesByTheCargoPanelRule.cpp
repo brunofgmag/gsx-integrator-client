@@ -35,6 +35,11 @@ namespace
         return state == GsxStateStatus::Requested || state == GsxStateStatus::Active;
     }
 
+    bool IsWorkingTheDoors(const GsxStateStatus state)
+    {
+        return IsUnderway(state) || state == GsxStateStatus::Completing;
+    }
+
     bool IsAtAnEnd(const double position)
     {
         return position <= kRestsClosedAtMost || position >= kRestsOpenAtLeast;
@@ -184,10 +189,15 @@ bool Fss727MainDeckMovesByTheCargoPanelRule::IsTheMainLoaderWaitingForTheDeck() 
 
 bool Fss727MainDeckMovesByTheCargoPanelRule::IsGsxWorkingTheCargoDoors() const
 {
-    return IsGsxUnderway(GsxState::Boarding) || IsGsxUnderway(GsxState::Deboarding);
+    return IsGsxWorkingTheDoors(GsxState::Boarding) || IsGsxWorkingTheDoors(GsxState::Deboarding);
 }
 
 bool Fss727MainDeckMovesByTheCargoPanelRule::IsGsxUnderway(const GsxState state) const
 {
     return gsxGateway_ != nullptr && IsUnderway(gsxGateway_->GetStateStatus(state));
+}
+
+bool Fss727MainDeckMovesByTheCargoPanelRule::IsGsxWorkingTheDoors(const GsxState state) const
+{
+    return gsxGateway_ != nullptr && IsWorkingTheDoors(gsxGateway_->GetStateStatus(state));
 }
