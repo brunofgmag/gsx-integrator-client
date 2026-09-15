@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.34.11](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.10...v1.34.11) (2026-09-15)
+
+
+* pay the debts of the 727 runs, the rule pass and the test output ([#167](https://github.com/brunofgmag/gsx-integrator-client/issues/167)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+
+
+### Bug Fixes
+
+* **boarding:** stop waiting for a cargo flag that gsx leaves up after closing the service ([f97f003](https://github.com/brunofgmag/gsx-integrator-client/commit/f97f00364c9208afbdf9db3a8c7714623a8f6629)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+* **build:** configure the qml test like every other test and let the filter reach it ([e631793](https://github.com/brunofgmag/gsx-integrator-client/commit/e63179380d2fa23f5e0f6974d0c46d99ee304f46)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+* **cmake:** let a failing qt test print its log when no console is attached ([d0615a1](https://github.com/brunofgmag/gsx-integrator-client/commit/d0615a1634de0f61eb6aab0ccd754bd164b8db6f)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+* **fss-727:** trigger the smart switch from SERV INT and name the pilot on foot in the initial tip ([95c8f7e](https://github.com/brunofgmag/gsx-integrator-client/commit/95c8f7e26ab4f41be7123c33cf5f9fad80ff909d)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+* **refueling:** hold the fuel writes while the gsx remote api is down ([b2fcc32](https://github.com/brunofgmag/gsx-integrator-client/commit/b2fcc328115b0b5ba561d597667c5d72ee4c2e82)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+* **runtime:** keep the gsx chip current while the pilot is on foot ([5161317](https://github.com/brunofgmag/gsx-integrator-client/commit/51613177e2e05c3c59a5d37d5c0cf709a846a01f)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+
 ## [1.34.10](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.9...v1.34.10) (2026-09-15)
 
 
