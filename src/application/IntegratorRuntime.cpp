@@ -526,7 +526,7 @@ void IntegratorRuntime::ResolveAircraft()
         return;
     }
 
-    aircraft_ = DetectAircraft(&varGateway_, &status_, &bridgeClient_, &gsxService_, &aircraftDescriptor_);
+    aircraft_ = DetectAircraft({&varGateway_, &status_, &bridgeClient_, &gsxService_}, &aircraftDescriptor_);
     if (aircraft_)
     {
         status_.aircraftSupported = true;
