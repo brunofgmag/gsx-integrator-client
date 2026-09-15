@@ -2,7 +2,9 @@ param(
     [ValidateSet('Debug', 'Release', 'RelWithDebInfo')]
     [string]$Config = 'Debug',
 
-    [string]$Filter = ''
+    [string]$Filter = '',
+
+    [switch]$Reconfigure
 )
 
 $ErrorActionPreference = 'Stop'
@@ -78,10 +80,63 @@ $env:MSBUILDDISABLENODEREUSE = '1'
 
 & (Join-Path $PSScriptRoot 'tools/remove-locked-build-outputs.ps1') -Directory $buildDir
 
-Write-Host "==> Configurando preset '$preset'..."
-& $cmake --preset $preset
-if ($LASTEXITCODE -ne 0)
-{ exit $LASTEXITCODE
+function Get-OutdatedGenerateInputs
+{
+    param([string]$Directory)
+
+    $stamp = Join-Path $Directory 'CMakeFiles/generate.stamp'
+    $depend = "$stamp.depend"
+    if (-not (Test-Path -LiteralPath $stamp) -or -not (Test-Path -LiteralPath $depend))
+    {
+        return @('CMakeFiles/generate.stamp ausente')
+    }
+
+    $stampTime = [System.IO.File]::GetLastWriteTimeUtc($stamp)
+    $outdated = @()
+    foreach ($entry in [System.IO.File]::ReadAllLines($depend))
+    {
+        $path = $entry.Trim()
+        if (-not $path -or $path.StartsWith('#'))
+        {
+            continue
+        }
+
+        if (-not [System.IO.File]::Exists($path) -or [System.IO.File]::GetLastWriteTimeUtc($path) -gt $stampTime)
+        {
+            $outdated += $path
+        }
+    }
+
+    return $outdated
+}
+
+if ($Reconfigure)
+{
+    Write-Host "==> Configurando preset '$preset', forçado por -Reconfigure..."
+    $mustConfigure = $true
+} else
+{
+    $outdatedInputs = @(Get-OutdatedGenerateInputs $buildDir)
+    $mustConfigure = $outdatedInputs.Count -gt 0
+    if ($mustConfigure)
+    {
+        Write-Host "==> Configurando preset '$preset', porque $($outdatedInputs.Count) entrada(s) pedem:"
+        foreach ($entry in ($outdatedInputs | Select-Object -First 5))
+        {
+            Write-Host "    $entry"
+        }
+    } else
+    {
+        Write-Host "==> Preset '$preset' já configurado: nada mais novo que generate.stamp."
+    }
+}
+
+if ($mustConfigure)
+{
+    & $cmake --preset $preset
+    if ($LASTEXITCODE -ne 0)
+    { exit $LASTEXITCODE
+    }
 }
 
 if ($Filter)
