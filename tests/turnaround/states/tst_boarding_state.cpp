@@ -27,6 +27,7 @@ private slots:
     static void standsDownOnceTheLoaderGetsItsDoor();
     static void stopsNamingTheLoaderOnceGsxDropsTheBoarding();
     static void keepsTheClockRunningWhenAnotherLoaderTakesOverTheWait();
+    static void staysQuietThroughTheHandoversOfAHealthyBoarding();
     static void givesUpOnALoaderThatNeverGetsItsDoor();
     static void givesUpEvenWhenTheLoadersTakeTurnsWaiting();
     static void finishesTheBoardingOnceItHasGivenUpOnTheLoader();
@@ -461,6 +462,31 @@ void BoardingStateTest::keepsTheClockRunningWhenAnotherLoaderTakesOverTheWait()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.ctx.data.loaderHoldingBoarding, CargoLoader::Rear);
     QCOMPARE(f.ctx.data.loaderDoorWaitTicks, 51);
+}
+
+void BoardingStateTest::staysQuietThroughTheHandoversOfAHealthyBoarding()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeLoaderWaitingForItsDoor(f);
+
+    for (int tick = 0; tick < 35; ++tick)
+    {
+        if (tick == 12)
+        {
+            f.gsxService.loaderWaitingForDoor = CargoLoader::Rear;
+        }
+        else if (tick == 23)
+        {
+            f.gsxService.loaderWaitingForDoor = CargoLoader::Front;
+        }
+
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.ctx.data.loaderDoorWaitTicks, 35);
+    QCOMPARE(f.ctx.data.loaderHoldingBoarding, CargoLoader::None);
 }
 
 void BoardingStateTest::givesUpOnALoaderThatNeverGetsItsDoor()
