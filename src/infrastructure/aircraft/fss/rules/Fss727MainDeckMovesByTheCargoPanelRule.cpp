@@ -183,7 +183,7 @@ bool Fss727MainDeckMovesByTheCargoPanelRule::IsCloseRequestServable() const
 bool Fss727MainDeckMovesByTheCargoPanelRule::IsTheMainLoaderWaitingForTheDeck() const
 {
     return !aircraft_->IsHeldForDeparture()
-        && IsGsxUnderway(GsxState::Boarding)
+        && (IsGsxUnderway(GsxState::Boarding) || IsGsxUnderway(GsxState::Deboarding))
         && doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0) == gsx::states::kLoaderWaitingForDoor;
 }
 
