@@ -140,7 +140,9 @@ namespace
         case TurnaroundPhase::PlaceArrivalGroundEquipment:
             return QCoreApplication::translate("Turnaround", "Remember to set the Parking Brake.");
         case TurnaroundPhase::RequestDeboarding:
-            return QCoreApplication::translate("Turnaround", "Turn off the beacon lights and set the parking brake.");
+            return snapshot.deboardingAwaitsGsx
+                       ? QCoreApplication::translate("Turnaround", "Wait for GSX to start the deboarding.")
+                       : QCoreApplication::translate("Turnaround", "Turn off the beacon lights and set the parking brake.");
         case TurnaroundPhase::WaitingNewFlight:
             return QCoreApplication::translate("Turnaround", "Activate the SmartSwitch to start a new flight.");
         default:

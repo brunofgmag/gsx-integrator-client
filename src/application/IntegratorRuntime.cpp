@@ -615,6 +615,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.operatingEmptyWithCrewKg = status_.operatingEmptyWithCrewKg;
     snapshot.engineConfirmationBlock = GetEngineConfirmationBlock();
     snapshot.servicesStalled = AreServicesStalled();
+    snapshot.deboardingAwaitsGsx = status_.deboardingAwaitsGsx;
     snapshot.serviceInterrupted = IsServiceInterrupted();
     snapshot.loaderHoldingBoarding = status_.loaderHoldingBoarding;
     snapshot.loaderDoorWaitSeconds = status_.loaderDoorWaitSeconds;

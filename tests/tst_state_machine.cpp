@@ -474,6 +474,7 @@ private slots:
     static void theTurnaroundTurnNotifiesTheMenuGateway();
     static void theStartOfThePushMovementNotifiesTheMenuGateway();
     static void aGsxRestartThatDropsThePushbackWarnsAndTheTaxiStillReachesTheArrival();
+    static void publishesThatTheDeboardingWaitsForGsxUntilTheTurnaroundTurns();
     static void publishesCurrentTankFuelBeforeRefuel();
     static void publishesLoadingTargetsAfterFlightPlanCapture();
     static void publishesTheCrewThePlanLeftOutAfterFlightPlanCapture();
@@ -885,6 +886,31 @@ void TurnaroundStateMachineTest::aGsxRestartThatDropsThePushbackWarnsAndTheTaxiS
     workflow.Land();
 
     QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::PlaceArrivalGroundEquipment);
+}
+
+void TurnaroundStateMachineTest::publishesThatTheDeboardingWaitsForGsxUntilTheTurnaroundTurns()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+    workflow.StartPushbackMovement();
+    workflow.ConfirmEngineStart();
+    workflow.Depart();
+    workflow.Land();
+
+    QVERIFY(!workflow.f.status.deboardingAwaitsGsx);
+
+    workflow.RequestDeboarding();
+
+    QVERIFY(workflow.f.status.deboardingAwaitsGsx);
+
+    workflow.StartDeboarding();
+    workflow.CompleteDeboarding();
+
+    QVERIFY(!workflow.f.status.deboardingAwaitsGsx);
 }
 
 void TurnaroundStateMachineTest::completesReachableWorkflowAndReturnsToStart()

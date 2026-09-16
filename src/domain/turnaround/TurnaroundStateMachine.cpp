@@ -189,6 +189,7 @@ void TurnaroundStateMachine::PublishStatus() const
     context_.status->engineConfirmationBlock = context_.data.engineConfirmationBlock;
     context_.status->servicesStalled = context_.data.servicesStalled;
     context_.status->serviceInterrupted = context_.data.serviceInterrupted;
+    context_.status->deboardingAwaitsGsx = context_.data.deboardingAwaitsGsx;
     context_.status->loaderHoldingBoarding = context_.data.loaderHoldingBoarding;
     context_.status->loaderDoorWaitSeconds = context_.data.loaderDoorWaitSeconds;
     context_.status->servicesWaitSeconds = context_.data.servicesWaitSeconds;

@@ -24,6 +24,7 @@ struct AutomationStatus
     bool planOmitsCrew = false;
     bool servicesStalled = false;
     bool serviceInterrupted = false;
+    bool deboardingAwaitsGsx = false;
     CargoLoader loaderHoldingBoarding = CargoLoader::None;
     int servicesWaitSeconds = 0;
     int loaderDoorWaitSeconds = 0;
