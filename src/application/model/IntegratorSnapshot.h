@@ -56,6 +56,7 @@ struct IntegratorSnapshot
     bool planOmitsCrew = false;
     bool servicesStalled = false;
     bool serviceInterrupted = false;
+    bool deboardingAwaitsGsx = false;
     bool doorsHoldingPushback = false;
     CargoLoader loaderHoldingBoarding = CargoLoader::None;
     int servicesWaitSeconds = 0;

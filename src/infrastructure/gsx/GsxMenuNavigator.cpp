@@ -15,6 +15,7 @@
 namespace
 {
     constexpr auto kGsxChoiceText = "GSX choice";
+    constexpr auto kConfirmationQuestion = "Are you sure";
     constexpr auto kBlockFuelText = "BLOCK FUEL from Simbrief";
     constexpr auto kSelectPositionText = "Select Position at";
     constexpr auto kRepositionRootText = "Reposition Aircraft";
@@ -247,12 +248,14 @@ void GsxMenuNavigator::Reset()
     completingBoarding_ = {};
     confirmingEngines_ = {};
     stairsKeptForPassengers_ = false;
+    deIceYesSpent_ = false;
     intent_ = Intent::None;
     intentSinceMs_ = 0;
     lastPickedSig_.clear();
     lastDiagSig_.clear();
-    watchedSig_.clear();
+    watchedSig_.reset();
     discardedSig_.clear();
+    leftOpenSig_.clear();
     resyncCount_ = 0;
     resyncPending_ = false;
     lastActionMs_ = 0;
@@ -347,7 +350,8 @@ void GsxMenuNavigator::ClearMenuTracking()
 {
     lastPickedSig_.clear();
     lastDiagSig_.clear();
-    watchedSig_.clear();
+    watchedSig_.reset();
+    leftOpenSig_.clear();
 }
 
 bool GsxMenuNavigator::LogMenuIfNew(const std::string& sig)
@@ -431,11 +435,30 @@ void GsxMenuNavigator::DiscardStuckMenu(const std::string& sig)
         return;
     }
 
+    if (!HasActiveIntent())
+    {
+        LogMenuLeftOpen(sig);
+
+        return;
+    }
+
     discardedSig_ = sig;
     watchedSinceMs_ = nowMs_();
     lastActionMs_ = nowMs_();
     (void)client_->SendCommand("menu.close");
     logger_->LogInfo(std::format("RemoteAPI closing the menu the resyncs could not move: '{}'",
+                                 state_->menu.title));
+}
+
+void GsxMenuNavigator::LogMenuLeftOpen(const std::string& sig)
+{
+    if (sig == leftOpenSig_)
+    {
+        return;
+    }
+
+    leftOpenSig_ = sig;
+    logger_->LogInfo(std::format("RemoteAPI leaving the menu open: the client asked for nothing on it: '{}'",
                                  state_->menu.title));
 }
 
@@ -465,10 +488,12 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
 
     const auto& menu = state_->menu;
 
-    if (settings_ != nullptr && settings_->autoDeice
+    if (settings_ != nullptr && settings_->autoDeice && !deIceYesSpent_
         && Contains(menu.title, kDeIceQuestion)
         && PickByContains("Yes"))
     {
+        deIceYesSpent_ = true;
+
         return true;
     }
 
@@ -502,6 +527,7 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
     }
 
     if ((settings_ == nullptr || settings_->autoSelectGsxChoice)
+        && !Contains(menu.title, kConfirmationQuestion)
         && (PickByContains(kGsxChoiceText) || PickByContains(kBlockFuelText)))
     {
         return true;
@@ -930,6 +956,7 @@ void GsxMenuNavigator::RearmPanelLatches()
 void GsxMenuNavigator::OnTurnaroundTurned()
 {
     stairsKeptForPassengers_ = false;
+    deIceYesSpent_ = false;
     RearmPanelLatches();
 }
 

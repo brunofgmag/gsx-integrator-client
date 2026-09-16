@@ -106,8 +106,9 @@ void BoardingState::MaybeForceCompletion(TurnaroundContext& ctx)
         ++data.boardingCompletionAttempts;
         if (heldBehindTheStairs && data.boardingCompletionAttempts == 1)
         {
-            ctx.logger->LogInfo(
-                "Boarding: every passenger is aboard and the loaders are held behind the stairs; asking GSX to complete");
+            ctx.logger->LogInfo(ctx.aircraft->IsCargoVariant()
+                                    ? "Boarding: GSX stopped loading and the loaders left are held behind the stairs; asking GSX to complete"
+                                    : "Boarding: every passenger is aboard and the loaders are held behind the stairs; asking GSX to complete");
         }
         ctx.menuGateway->CompleteBoarding();
     }
@@ -115,9 +116,14 @@ void BoardingState::MaybeForceCompletion(TurnaroundContext& ctx)
 
 bool BoardingState::IsCargoHeldBehindTheStairs(const TurnaroundContext& ctx)
 {
-    if (!ctx.menuGateway->WereStairsKeptForPassengers() || ctx.aircraft->IsCargoVariant())
+    if (!ctx.menuGateway->WereStairsKeptForPassengers())
     {
         return false;
+    }
+
+    if (ctx.aircraft->IsCargoVariant())
+    {
+        return true;
     }
 
     const auto& data = ctx.data;

@@ -473,6 +473,8 @@ private slots:
     static void completesReachableWorkflowAndReturnsToStart();
     static void theTurnaroundTurnNotifiesTheMenuGateway();
     static void theStartOfThePushMovementNotifiesTheMenuGateway();
+    static void aGsxRestartThatDropsThePushbackWarnsAndTheTaxiStillReachesTheArrival();
+    static void publishesThatTheDeboardingWaitsForGsxUntilTheTurnaroundTurns();
     static void publishesCurrentTankFuelBeforeRefuel();
     static void publishesLoadingTargetsAfterFlightPlanCapture();
     static void publishesTheCrewThePlanLeftOutAfterFlightPlanCapture();
@@ -845,6 +847,70 @@ void TurnaroundStateMachineTest::theStartOfThePushMovementNotifiesTheMenuGateway
     workflow.StartPushbackMovement();
 
     QCOMPARE(workflow.f.menuGateway.pushbackStartedCalls, 1);
+}
+
+void TurnaroundStateMachineTest::aGsxRestartThatDropsThePushbackWarnsAndTheTaxiStillReachesTheArrival()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+
+    workflow.f.gsxService.departureInProgress = true;
+    workflow.TickHolding(TurnaroundPhase::WaitingPushbackToStart);
+
+    workflow.f.gsxService.couatlRestartedBetweenTicks = true;
+    workflow.TickHolding(TurnaroundPhase::WaitingPushbackToStart);
+
+    workflow.f.gsxService.departureInProgress = false;
+
+    for (int tick = 0; tick < 60; ++tick)
+    {
+        workflow.TickHolding(TurnaroundPhase::WaitingPushbackToStart);
+    }
+
+    QVERIFY(workflow.f.status.serviceInterrupted);
+    QVERIFY(Logged(workflow, "GSX dropped the pushback it had already started"));
+    QCOMPARE(workflow.f.menuGateway.pushbackCalls, 1);
+
+    workflow.f.aircraft.engineRunning = true;
+    workflow.f.gsxService.groundSpeedKnots = 12.0;
+    workflow.TickTo(TurnaroundPhase::WaitingDeparture);
+
+    QVERIFY(!workflow.f.status.serviceInterrupted);
+
+    workflow.f.gsxService.groundSpeedKnots = 0.0;
+    workflow.Depart();
+    workflow.Land();
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::PlaceArrivalGroundEquipment);
+}
+
+void TurnaroundStateMachineTest::publishesThatTheDeboardingWaitsForGsxUntilTheTurnaroundTurns()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+    workflow.StartPushbackMovement();
+    workflow.ConfirmEngineStart();
+    workflow.Depart();
+    workflow.Land();
+
+    QVERIFY(!workflow.f.status.deboardingAwaitsGsx);
+
+    workflow.RequestDeboarding();
+
+    QVERIFY(workflow.f.status.deboardingAwaitsGsx);
+
+    workflow.StartDeboarding();
+    workflow.CompleteDeboarding();
+
+    QVERIFY(!workflow.f.status.deboardingAwaitsGsx);
 }
 
 void TurnaroundStateMachineTest::completesReachableWorkflowAndReturnsToStart()

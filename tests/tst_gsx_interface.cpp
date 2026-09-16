@@ -11,6 +11,7 @@ namespace
     using namespace gsx::lvars;
 
     constexpr auto kSimOnGround = "SIM ON GROUND";
+    constexpr auto kGroundVelocity = "GROUND VELOCITY";
 
     struct ServiceStateLVar
     {
@@ -48,6 +49,8 @@ private slots:
     static void aServiceTheCouatlDropsIsNotRecordedAsCompleted();
     static void aServiceThePilotEndsWithALiveCouatlIsRecordedAsCompleted();
     static void aCouatlDeathStopsCountingOnceTheServiceRunsAgain();
+    static void aCouatlDeathNoObserveSawIsStillADrop();
+    static void gsxCountsAsDownOnlyWhenTheCouatlFlagDippedSinceTheLastObserve();
     static void aServiceThatPassesThroughCompletedStaysRecordedBackAtIdle();
     static void doesNotRecordCompletionWithoutActiveState();
     static void latchAdvancesWithoutAnyoneAskingForTheStatus();
@@ -71,6 +74,7 @@ private slots:
     static void serviceVehicleActiveFollowsTheStairsVehicles();
     static void goodEngineStartAssumedEnabledUntilLVarReceived();
     static void aircraftOnGroundFollowsSimVar();
+    static void groundSpeedReadsZeroUntilTheSimVarArrives();
     static void boardedPassengersAccumulatesAcrossResets();
     static void deboardedPassengersAccumulatesAcrossResets();
     static void boardedPassengersIgnoresStaleTotalBeforeBoardingStarts();
@@ -178,6 +182,42 @@ void GsxInterfaceTest::aCouatlDeathStopsCountingOnceTheServiceRunsAgain()
     ObserveFor(gsx, gateway, kBoardingState, 1.0, 1.0, 5);
 
     QVERIFY(gsx.WasStateCompleted(GsxState::Boarding));
+}
+
+void GsxInterfaceTest::aCouatlDeathNoObserveSawIsStillADrop()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 5.0, 30);
+
+        gateway.lvarSpans[kCouatlStarted] = LVarSpan{0.0, 1.0, true};
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 1.0, 5);
+
+        QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::gsxCountsAsDownOnlyWhenTheCouatlFlagDippedSinceTheLastObserve()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gsx.Observe();
+
+    QVERIFY(!gsx.WasGsxDownSinceLastObserve());
+
+    gateway.lvarSpans[kCouatlStarted] = LVarSpan{0.0, 1.0, true};
+    gsx.Observe();
+
+    QVERIFY(gsx.WasGsxDownSinceLastObserve());
+
+    gsx.Observe();
+
+    QVERIFY(!gsx.WasGsxDownSinceLastObserve());
 }
 
 void GsxInterfaceTest::aServiceThatPassesThroughCompletedStaysRecordedBackAtIdle()
@@ -546,6 +586,18 @@ void GsxInterfaceTest::aircraftOnGroundFollowsSimVar()
     gateway.avars[kSimOnGround] = 0.0;
 
     QVERIFY(!gsx.IsAircraftOnGround());
+}
+
+void GsxInterfaceTest::groundSpeedReadsZeroUntilTheSimVarArrives()
+{
+    FakeVariableGateway gateway;
+    const GsxStateService gsx(&gateway);
+
+    QCOMPARE(gsx.GetGroundSpeedKnots(), 0.0);
+
+    gateway.avars[kGroundVelocity] = 12.5;
+
+    QCOMPARE(gsx.GetGroundSpeedKnots(), 12.5);
 }
 
 void GsxInterfaceTest::boardedPassengersAccumulatesAcrossResets()

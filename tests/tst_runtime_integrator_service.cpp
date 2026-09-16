@@ -22,7 +22,9 @@ namespace
     constexpr double kCockpitCamera = 2.0;
     constexpr auto kMsfs2024AppName = "SunRise";
     constexpr auto kTitleDatum = "TITLE";
+    constexpr auto kAtcModelDatum = "ATC MODEL";
     constexpr auto kMd11Title = "TFDi Design MD-11 PAX";
+    constexpr auto kMd11AtcModel = "MD11";
     constexpr auto kMd11ProfileId = "tfdi-md11";
     constexpr auto kMd11EfbZfw = "L:MD11_EFB_PAYLOAD_ZFW";
     constexpr double kMd11EmptyWeightKg = 150000.0;
@@ -115,12 +117,14 @@ namespace
         }
 
         const DWORD title = FakeSimConnectApi::DefineIdOf(kTitleDatum);
-        if (title == 0 || !PushLVar(gsx::lvars::kCouatlStarted, 1.0))
+        const DWORD atcModel = FakeSimConnectApi::DefineIdOf(kAtcModelDatum);
+        if (title == 0 || atcModel == 0 || !PushLVar(gsx::lvars::kCouatlStarted, 1.0))
         {
             return false;
         }
 
         FakeSimConnectApi::PushSimObjectString(title, kMd11Title);
+        FakeSimConnectApi::PushSimObjectString(atcModel, kMd11AtcModel);
 
         return TickAndWait(updated) && runtime.GetAircraftProfileId() == kMd11ProfileId;
     }
@@ -182,6 +186,7 @@ private slots:
     static void aTouchStampedWithTheCurrentPhaseReachesTheFlow();
     static void aWorldMapCameraDuringTheLoadDoesNotLeaveTheFlowOff();
     static void theGsxChipFollowsTheGsxWhileThePilotIsOnFoot();
+    static void theAircraftIsDetectedOnlyOnceTheAtcModelArrives();
     static void theSnapshotCountsTheJetwayWaitDownWithTheFlow();
     static void theSnapshotCarriesTheLoaderCountdownWhileTheLoaderHoldsBoarding();
     static void theSlowTickWritesNothingWhileTheGsxIsDown();
@@ -606,6 +611,34 @@ void RuntimeIntegratorServiceTest::theGsxChipFollowsTheGsxWhileThePilotIsOnFoot(
     QVERIFY(!service.GetSnapshot().sessionReady);
     QVERIFY(service.GetSnapshot().pilotOnFoot);
     QVERIFY(service.GetSnapshot().gsxAvailable);
+}
+
+void RuntimeIntegratorServiceTest::theAircraftIsDetectedOnlyOnceTheAtcModelArrives()
+{
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    PushUnpaused();
+    QVERIFY(TickAndWait(updated));
+
+    const DWORD title = FakeSimConnectApi::DefineIdOf(kTitleDatum);
+    const DWORD atcModel = FakeSimConnectApi::DefineIdOf(kAtcModelDatum);
+
+    QVERIFY(title != 0);
+    QVERIFY(atcModel != 0);
+    QVERIFY(PushLVar(gsx::lvars::kCouatlStarted, 1.0));
+
+    FakeSimConnectApi::PushSimObjectString(title, kMd11Title);
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.GetAircraftProfileId(), std::string{});
+
+    FakeSimConnectApi::PushSimObjectString(atcModel, kMd11AtcModel);
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.GetAircraftProfileId(), std::string{kMd11ProfileId});
 }
 
 void RuntimeIntegratorServiceTest::theSnapshotCountsTheJetwayWaitDownWithTheFlow()

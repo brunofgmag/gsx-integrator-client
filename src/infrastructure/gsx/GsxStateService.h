@@ -40,11 +40,13 @@ public:
     [[nodiscard]] bool IsJetwayOrStairsOperating() const override;
     [[nodiscard]] bool IsServiceVehicleActive() const override;
     [[nodiscard]] bool IsAircraftOnGround() const override;
+    [[nodiscard]] double GetGroundSpeedKnots() const override;
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override;
     [[nodiscard]] GroundPowerStatus GetGpuStatus() const override;
     [[nodiscard]] bool IsServiceInProgress(GroundService service) const override;
     [[nodiscard]] bool OffersPushback() const override;
     [[nodiscard]] bool IsRemoteApiConnected() const override;
+    [[nodiscard]] bool WasGsxDownSinceLastObserve() const override;
 
     void TakeOverFuelAndPayload() override;
     void ReassertTakeovers() const;
@@ -55,6 +57,7 @@ public:
 private:
     bool fuelAndPayloadTakenOver_ = false;
     bool gpuConnectedSeenClear_ = false;
+    bool gsxDownSinceLastObserve_ = false;
     struct StateTrack
     {
         GsxStateStatus status = GsxStateStatus::Unavailable;

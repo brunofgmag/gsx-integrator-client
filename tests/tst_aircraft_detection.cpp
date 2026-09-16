@@ -24,7 +24,7 @@ private slots:
     static void detectsTitleCaseInsensitively();
     static void detectsByAtcModelWhenLiveryRenamesTitle();
     static void detectsCargoByAtcModel();
-    static void detectsWhenAtcModelUnavailable();
+    static void waitsForTheAtcModelBeforeDetecting();
     static void detectsIFlyMax8FromBaseTitle();
     static void detectsIFlyMax8FromLiveryTitle();
     static void detectsIFlyMax8200FromTitle();
@@ -40,6 +40,8 @@ private slots:
     static void detectionReportsAvroRjClientRefuel();
     static void detectsFss727200fFromTheFssAndThirdPartyTitles();
     static void detectsFss727200reFreighterFromItsTitles();
+    static void detectsFss727200reFreighterFromAThirdPartyLiveryByItsAtcModel();
+    static void detectsFss727200reFreighterByItsAtcModelOverA200fTitle();
     static void leavesTheFss727PassengerVariantUndetected();
     static void doesNotDetectFss727FromAGenericFreighterTitle();
     static void detectionReportsFss727ClientRefuel();
@@ -186,13 +188,18 @@ void AircraftDetectionTest::detectsCargoByAtcModel()
     QVERIFY(aircraft->IsCargoVariant());
 }
 
-void AircraftDetectionTest::detectsWhenAtcModelUnavailable()
+void AircraftDetectionTest::waitsForTheAtcModelBeforeDetecting()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
 
     gateway.aircraftName = "TFDi Design MD-11 PW44";
     gateway.atcModelAvailable = false;
+
+    QVERIFY(DetectAircraft({&gateway, &status}) == nullptr);
+
+    gateway.atcModel = "MD11";
+    gateway.atcModelAvailable = true;
 
     const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status});
 
@@ -419,6 +426,42 @@ void AircraftDetectionTest::detectsFss727200reFreighterFromItsTitles()
         QCOMPARE(std::string(descriptor->id), std::string("fss-727-200re"));
         QVERIFY(aircraft->IsCargoVariant());
     }
+}
+
+void AircraftDetectionTest::detectsFss727200reFreighterFromAThirdPartyLiveryByItsAtcModel()
+{
+    for (const char* title : {"Boeing B727-200 Icelandair Cargo | Metal | TF-EVJ",
+                              "Boeing B727-200 Icelandair Cargo TF-EVJ"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+        gateway.atcModel = "B727RE";
+
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
+
+        QVERIFY2(aircraft != nullptr, title);
+        QCOMPARE(std::string(descriptor->id), std::string("fss-727-200re"));
+        QVERIFY(aircraft->IsCargoVariant());
+    }
+}
+
+void AircraftDetectionTest::detectsFss727200reFreighterByItsAtcModelOverA200fTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "Boeing B727-200 Freighter Custom Repaint";
+    gateway.atcModel = "B727RE";
+
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(std::string(descriptor->id), std::string("fss-727-200re"));
+    QVERIFY(aircraft->IsCargoVariant());
 }
 
 void AircraftDetectionTest::leavesTheFss727PassengerVariantUndetected()

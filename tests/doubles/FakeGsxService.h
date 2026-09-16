@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <string>
+#include <utility>
 #include "../../src/domain/ports/GsxGateway.h"
 
 class FakeGsxService final : public GsxGateway
@@ -44,6 +45,9 @@ public:
     GroundPowerStatus gpuStatus = GroundPowerStatus::Disconnected;
     int takeOverCalls = 0;
     bool couatlAlive = true;
+    bool couatlRestartedBetweenTicks = false;
+    bool gsxDownSinceLastObserve = false;
+    double groundSpeedKnots = 0.0;
     std::array<GsxStateStatus, 5> lastObserved{};
     std::array<bool, 5> couatlDiedDuringRun{};
     bool cateringInProgress = false;
@@ -61,6 +65,8 @@ public:
     {
         ++observeCalls;
 
+        gsxDownSinceLastObserve = !couatlAlive || std::exchange(couatlRestartedBetweenTicks, false);
+
         for (const GsxState state : {GsxState::Refueling, GsxState::Boarding, GsxState::Pushback,
                                      GsxState::Deboarding, GsxState::Deice})
         {
@@ -68,7 +74,7 @@ public:
             GsxStateStatus& last = lastObserved[static_cast<std::size_t>(state)];
             bool& diedDuringRun = couatlDiedDuringRun[static_cast<std::size_t>(state)];
 
-            if (!couatlAlive)
+            if (gsxDownSinceLastObserve)
             {
                 diedDuringRun = true;
             }
@@ -172,6 +178,7 @@ public:
     [[nodiscard]] bool IsServiceVehicleActive() const override { return serviceVehicleActive; }
     [[nodiscard]] bool IsSimbriefLoaded() const override { return simbriefLoaded; }
     [[nodiscard]] bool IsAircraftOnGround() const override { return onGround; }
+    [[nodiscard]] double GetGroundSpeedKnots() const override { return groundSpeedKnots; }
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override { return goodEngineStartConfirmation; }
     [[nodiscard]] GroundPowerStatus GetGpuStatus() const override { return gpuStatus; }
 
@@ -198,6 +205,7 @@ public:
 
     [[nodiscard]] bool OffersPushback() const override { return offersPushback; }
     [[nodiscard]] bool IsRemoteApiConnected() const override { return remoteApiConnected; }
+    [[nodiscard]] bool WasGsxDownSinceLastObserve() const override { return gsxDownSinceLastObserve; }
 
     void TakeOverFuelAndPayload() override
     {

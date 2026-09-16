@@ -61,7 +61,10 @@ struct TurnaroundData
     int servicesOperatingTicks = 0;
     bool boardingRequested = false;
     bool deboardingRequested = false;
+    bool deboardingAwaitsGsx = false;
     bool pushbackRequested = false;
+    bool pushbackPending = false;
+    bool pushbackLostToGsxRestart = false;
     bool jetwayOrStairsRequested = false;
     bool jetwayOrStairsCompleted = false;
     int stairsInPlaceTicks = 0;

@@ -27,6 +27,9 @@ std::optional<TurnaroundTransition> RequestDeboardingState::EvaluatePhase(Turnar
         ctx.data.deboardingRequested = true;
     }
 
+    data.deboardingAwaitsGsx = data.deboardingRequested
+        || deboardingState == GsxStateStatus::Requested || deboardingState == GsxStateStatus::Active;
+
     const bool hasPassengersDeboarding = ctx.gsxGateway->GetDeboardedPassengers() > 0;
     const bool hasCargoDeboarding = ctx.gsxGateway->GetDeboardingCargoPercent() > 0.0;
     const bool hasDeboardingStarted = hasPassengersDeboarding || hasCargoDeboarding;
