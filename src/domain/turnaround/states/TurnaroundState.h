@@ -32,15 +32,9 @@ protected:
     static void NoteServiceInterruption(TurnaroundContext& ctx, const char* serviceName,
                                         GsxStateStatus state, bool started, bool completed);
 
-private:
-    struct RuleOutcome
-    {
-        bool holds = false;
-        int ticksAllowed = 0;
-        const char* reason = "";
-    };
+    static void NoteServiceInterruption(TurnaroundContext& ctx, const char* serviceName, bool interrupted);
 
-    [[nodiscard]] RuleOutcome RunRules(TurnaroundContext& ctx, RuleCadence cadence);
+private:
     [[nodiscard]] bool AnyRuleHolds(TurnaroundContext& ctx);
 
     int holdTicks_ = 0;

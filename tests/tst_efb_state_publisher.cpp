@@ -25,6 +25,8 @@ private slots:
     static void carriesTheFlowButtonPermissionsTheWindowDecidesOnce();
     static void carriesTheRefusalTheWindowShowsWithoutASnapshotChange();
     static void carriesThePilotTouchTheCurrentPhaseAnswersFor();
+    static void carriesTheDroppedServiceSentenceTheWindowWrites();
+    static void carriesTheLoaderCountdownTheWindowWrites();
 };
 
 void EfbStatePublisherTest::publishesTheSnapshotWhenItChanges()
@@ -319,4 +321,45 @@ void EfbStatePublisherTest::carriesThePilotTouchTheCurrentPhaseAnswersFor()
 
     QVERIFY(std::get<2>(bridge.calls.back()).find(R"("pilotTouchLabel":"")") != std::string::npos);
     QVERIFY(std::get<2>(bridge.calls.back()).find(R"("canPilotTouch":false)") != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesTheDroppedServiceSentenceTheWindowWrites()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.Notify();
+    publisher.Publish();
+
+    const std::string expected = R"("serviceInterruptedAdvisoryText":")"
+        + OperationsViewModel::GetServiceInterruptedAdvisoryText().toStdString() + R"(")";
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(expected) != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesTheLoaderCountdownTheWindowWrites()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.loaderHoldingBoarding = CargoLoader::Front;
+    service.snapshot.loaderDoorWaitSeconds = 42;
+    service.Notify();
+    publisher.Publish();
+
+    const std::string expected = R"("phaseTip":")" + viewModel.GetPhaseTip().toStdString() + R"(")";
+
+    QVERIFY(viewModel.GetPhaseTip().contains(QStringLiteral("in 42 s")));
+    QVERIFY(std::get<2>(bridge.calls.back()).find(expected) != std::string::npos);
 }

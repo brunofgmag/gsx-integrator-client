@@ -9,7 +9,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-if ($Filter -and ($Filter -like '*\*' -or $Filter -like '*/*' -or $Filter -like '*.cpp'))
+if ($Filter -and ($Filter -like '*\*' -or $Filter -like '*/*' -or $Filter -like '*.cpp' -or $Filter -like '*.qml' -or $Filter -like '*.ps1'))
 {
     $fileName = Split-Path -Leaf $Filter
     Write-Host "==> Detectado caminho de arquivo no filtro: $fileName"
@@ -24,6 +24,12 @@ if ($Filter -and ($Filter -like '*\*' -or $Filter -like '*/*' -or $Filter -like 
     } elseif ($fileName -like 'tst_*.cpp')
     {
         $Filter = $fileName -replace '^tst_', '' -replace '\.cpp$', '' -replace '_', '-'
+    } elseif ($fileName -like 'tst_*.qml')
+    {
+        $Filter = 'qml-components'
+    } elseif ($fileName -like 'check-*.ps1')
+    {
+        $Filter = $fileName -replace '\.ps1$', ''
     } else
     {
         Write-Host "==> Arquivo não é um teste C++ reconhecido. Rodando todos os testes."
@@ -36,7 +42,6 @@ if ($Filter -and ($Filter -like '*\*' -or $Filter -like '*/*' -or $Filter -like 
     }
 }
 
-# ── Find cmake ──────────────────────────────────────────────────────────
 $cmakeCmd = Get-Command cmake -ErrorAction SilentlyContinue
 if ($cmakeCmd)
 {
@@ -58,7 +63,6 @@ if (-not (Test-Path -LiteralPath $ctest))
 { throw 'ctest.exe não encontrado ao lado do cmake.'
 }
 
-# ── Qt ─────────────
 if (-not $env:QT_ROOT_DIR)
 {
     $kit = Get-ChildItem -LiteralPath 'C:\Qt' -Directory -ErrorAction SilentlyContinue |
@@ -78,40 +82,102 @@ if (-not $env:QT_ROOT_DIR)
 $preset  = $Config.ToLowerInvariant()
 $buildDir = Join-Path $PSScriptRoot "build/$preset"
 
-# ── Configure ───────────────────────────────────────────────
-$cacheFile = Join-Path $buildDir 'CMakeCache.txt'
-if ($Reconfigure -or -not (Test-Path -LiteralPath $cacheFile))
+$env:MSBUILDDISABLENODEREUSE = '1'
+
+& (Join-Path $PSScriptRoot 'tools/remove-locked-build-outputs.ps1') -Directory $buildDir
+
+function Get-OutdatedGenerateInputs
 {
-    Write-Host "==> Configurando preset '$preset'..."
+    param([string]$Directory)
+
+    $stamp = Join-Path $Directory 'CMakeFiles/generate.stamp'
+    $depend = "$stamp.depend"
+    if (-not (Test-Path -LiteralPath $stamp) -or -not (Test-Path -LiteralPath $depend))
+    {
+        return @('CMakeFiles/generate.stamp ausente')
+    }
+
+    $stampTime = [System.IO.File]::GetLastWriteTimeUtc($stamp)
+    $outdated = @()
+    foreach ($entry in [System.IO.File]::ReadAllLines($depend))
+    {
+        $path = $entry.Trim()
+        if (-not $path -or $path.StartsWith('#'))
+        {
+            continue
+        }
+
+        if (-not [System.IO.File]::Exists($path) -or [System.IO.File]::GetLastWriteTimeUtc($path) -gt $stampTime)
+        {
+            $outdated += $path
+        }
+    }
+
+    return $outdated
+}
+
+if ($Reconfigure)
+{
+    Write-Host "==> Configurando preset '$preset', forçado por -Reconfigure..."
+    $mustConfigure = $true
+} else
+{
+    $outdatedInputs = @(Get-OutdatedGenerateInputs $buildDir)
+    $mustConfigure = $outdatedInputs.Count -gt 0
+    if ($mustConfigure)
+    {
+        Write-Host "==> Configurando preset '$preset', porque $($outdatedInputs.Count) entrada(s) pedem:"
+        foreach ($entry in ($outdatedInputs | Select-Object -First 5))
+        {
+            Write-Host "    $entry"
+        }
+    } else
+    {
+        Write-Host "==> Preset '$preset' já configurado: nada mais novo que generate.stamp."
+    }
+}
+
+if ($mustConfigure)
+{
     & $cmake --preset $preset
     if ($LASTEXITCODE -ne 0)
     { exit $LASTEXITCODE
     }
 }
 
-# ── Compile targets ──────────────────────────────────────────────
-if ($Filter)
+$filterIsGuard = $Filter -like 'check-*' -and
+    (Test-Path -LiteralPath (Join-Path $PSScriptRoot "tools/$Filter.ps1"))
+
+if ($filterIsGuard)
 {
-    if ($Filter -like 'turnaround-state-*')
-    {
-        $stateName = $Filter -replace '^turnaround-state-', ''
-        $targetToBuild = "gsxi-turnaround-$stateName-state-tests"
-    } else
-    {
-        $targetToBuild = "gsxi-$Filter-tests"
-    }
-    Write-Host "==> Compilando apenas o alvo de teste correspondente: $targetToBuild ($Config)..."
-    & $cmake --build --preset $preset --target $targetToBuild --parallel
+    Write-Host "==> $Filter é uma guarda e não compila nada: nenhum alvo a construir."
 } else
 {
-    Write-Host "==> Compilando todos os alvos ($Config)..."
-    & $cmake --build --preset $preset --parallel
-}
-if ($LASTEXITCODE -ne 0)
-{ exit $LASTEXITCODE
+    if ($Filter)
+    {
+        if ($Filter -like 'turnaround-state-*')
+        {
+            $stateName = $Filter -replace '^turnaround-state-', ''
+            $targetToBuild = "gsxi-turnaround-$stateName-state-tests"
+        } elseif ($Filter -eq 'qml-components')
+        {
+            $targetToBuild = 'gsxi-qml-tests'
+        } else
+        {
+            $targetToBuild = "gsxi-$Filter-tests"
+        }
+        Write-Host "==> Compilando apenas o alvo de teste correspondente: $targetToBuild ($Config)..."
+        & $cmake --build --preset $preset --target $targetToBuild --parallel -- '-nodeReuse:false'
+    } else
+    {
+        Write-Host "==> Compilando todos os alvos ($Config)..."
+        & $cmake --build --preset $preset --parallel -- '-nodeReuse:false'
+    }
+    if ($LASTEXITCODE -ne 0)
+    { exit $LASTEXITCODE
+    }
 }
 
-# ── Run CTest ─────────────────────────────────────────────────────────────
 Write-Host "`n==> Rodando testes..."
 $ctestArgs = @(
     '--test-dir', $buildDir

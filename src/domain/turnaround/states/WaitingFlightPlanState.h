@@ -17,6 +17,7 @@ protected:
 
 private:
     static void CaptureFlightPlan(TurnaroundContext& ctx);
+    static void NoteCrewLeftOutOfThePlan(TurnaroundContext& ctx);
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_WAITFORFLIGHTPLANSTATE_H

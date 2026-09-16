@@ -29,10 +29,10 @@ public:
     [[nodiscard]] int GetPlannedPassengers() const override;
     [[nodiscard]] int GetBoardedPassengers() override;
     [[nodiscard]] int GetDeboardedPassengers() override;
-    [[nodiscard]] double GetBoardingCargoPercent() const override;
+    [[nodiscard]] double GetBoardingCargoPercent() override;
     [[nodiscard]] bool IsLoadingCargo() const override;
-    [[nodiscard]] bool IsLoaderWaitingForDoor() const override;
-    [[nodiscard]] double GetDeboardingCargoPercent() const override;
+    [[nodiscard]] CargoLoader GetLoaderWaitingForDoor() const override;
+    [[nodiscard]] double GetDeboardingCargoPercent() override;
     [[nodiscard]] bool AreStairsInPlace() const override;
     [[nodiscard]] bool IsJetwayInPlace() const override;
     [[nodiscard]] bool AreStairsAvailable() const override;
@@ -40,10 +40,13 @@ public:
     [[nodiscard]] bool IsJetwayOrStairsOperating() const override;
     [[nodiscard]] bool IsServiceVehicleActive() const override;
     [[nodiscard]] bool IsAircraftOnGround() const override;
+    [[nodiscard]] double GetGroundSpeedKnots() const override;
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override;
     [[nodiscard]] GroundPowerStatus GetGpuStatus() const override;
     [[nodiscard]] bool IsServiceInProgress(GroundService service) const override;
     [[nodiscard]] bool OffersPushback() const override;
+    [[nodiscard]] bool IsRemoteApiConnected() const override;
+    [[nodiscard]] bool WasGsxDownSinceLastObserve() const override;
 
     void TakeOverFuelAndPayload() override;
     void ReassertTakeovers() const;
@@ -54,10 +57,12 @@ public:
 private:
     bool fuelAndPayloadTakenOver_ = false;
     bool gpuConnectedSeenClear_ = false;
+    bool gsxDownSinceLastObserve_ = false;
     struct StateTrack
     {
         GsxStateStatus status = GsxStateStatus::Unavailable;
         bool completed = false;
+        bool couatlDiedDuringRun = false;
     };
 
     struct PassengerCounter
@@ -65,9 +70,19 @@ private:
         int last = 0;
         int total = 0;
         bool counting = false;
+        bool moved = false;
         bool grown = false;
 
         int Update(int current, bool active);
+    };
+
+    struct CargoPercentReading
+    {
+        double first = 0.0;
+        bool counting = false;
+        bool moved = false;
+
+        double Update(double current, bool active);
     };
 
     void ObserveState(GsxState gsxState);
@@ -78,5 +93,7 @@ private:
     std::map<GsxState, StateTrack> states_;
     PassengerCounter boarding_;
     PassengerCounter deboarding_;
+    CargoPercentReading boardingCargo_;
+    CargoPercentReading deboardingCargo_;
 };
 #endif //GSX_INTEGRATOR_CLIENT_GSXSTATESERVICE_H

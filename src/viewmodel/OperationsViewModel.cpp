@@ -14,7 +14,7 @@ namespace
     {
         switch (phase)
         {
-        case TurnaroundPhase::WaitingSupportedAircraft: return QCoreApplication::translate("Turnaround", "Waiting for sim ready");
+        case TurnaroundPhase::WaitingSupportedAircraft: return QCoreApplication::translate("Turnaround", "Waiting to start");
         case TurnaroundPhase::WaitingAircraftReady: return QCoreApplication::translate("Turnaround", "Waiting for aircraft ready");
         case TurnaroundPhase::RepositionAircraft: return QCoreApplication::translate("Turnaround", "Repositioning aircraft");
         case TurnaroundPhase::PlaceGroundEquipment: return QCoreApplication::translate("Turnaround", "Placing GPU & chocks");
@@ -44,18 +44,88 @@ namespace
         }
     }
 
-    QString PhaseTip(const TurnaroundPhase phase, const bool efbFlightPlan)
+    QString LoaderTip(const IntegratorSnapshot& snapshot)
     {
-        switch (phase)
+        if (snapshot.cargoDoorStuck && snapshot.loaderHoldingBoarding == CargoLoader::MainDeck)
         {
+            return {};
+        }
+
+        switch (snapshot.loaderHoldingBoarding)
+        {
+        case CargoLoader::Front:
+            return QCoreApplication::translate("Turnaround",
+                                               "A GSX loader is waiting for the forward cargo door to open. "
+                                               "Open it within %1 s, or the client will finish boarding without this loader.")
+                .arg(snapshot.loaderDoorWaitSeconds);
+        case CargoLoader::Rear:
+            return QCoreApplication::translate("Turnaround",
+                                               "A GSX loader is waiting for the aft cargo door to open. "
+                                               "Open it within %1 s, or the client will finish boarding without this loader.")
+                .arg(snapshot.loaderDoorWaitSeconds);
+        case CargoLoader::MainDeck:
+            return QCoreApplication::translate("Turnaround",
+                                               "A GSX loader is waiting for the main deck cargo door to open. "
+                                               "Open it within %1 s, or the client will finish boarding without this loader.")
+                .arg(snapshot.loaderDoorWaitSeconds);
+        case CargoLoader::None:
+            break;
+        }
+
+        return {};
+    }
+
+    QString WaitingSupportedAircraftTip(const IntegratorSnapshot& snapshot)
+    {
+        if (!snapshot.automationEnabled)
+        {
+            return QCoreApplication::translate("Turnaround",
+                                               "The automation is off, so the client is not driving this turnaround.");
+        }
+
+        if (!snapshot.sessionActive || !snapshot.sessionReady)
+        {
+            if (snapshot.pilotOnFoot)
+            {
+                return QCoreApplication::translate("Turnaround",
+                                                   "This state will hold until you enter the cockpit.");
+            }
+
+            return QCoreApplication::translate("Turnaround",
+                                               "The flight has not reached the cockpit yet, so the client is still waiting for the sim.");
+        }
+
+        if (!snapshot.aircraftSupported)
+        {
+            return QCoreApplication::translate("Turnaround",
+                                               "This aircraft is not supported, so the client cannot drive its turnaround.");
+        }
+
+        if (!snapshot.gsxAvailable)
+        {
+            return QCoreApplication::translate("Turnaround",
+                                               "GSX Pro is not answering, so the client is watching without driving the turnaround.");
+        }
+
+        return {};
+    }
+
+    QString PhaseTip(const IntegratorSnapshot& snapshot)
+    {
+        switch (snapshot.phase)
+        {
+        case TurnaroundPhase::WaitingSupportedAircraft:
+            return WaitingSupportedAircraftTip(snapshot);
         case TurnaroundPhase::WaitingAircraftReady:
             return QCoreApplication::translate("Turnaround", "Check that the aircraft engines are shut down.");
         case TurnaroundPhase::WaitingFlightPlan:
-            return efbFlightPlan
+            return snapshot.efbFlightPlan
                        ? QCoreApplication::translate("Turnaround", "Import your SimBrief flight plan on the aircraft EFB.")
                        : QCoreApplication::translate("Turnaround", "Check that SimBrief is loaded in GSX and in this app.");
         case TurnaroundPhase::WaitingPowerOn:
-            return QCoreApplication::translate("Turnaround", "Connect the GPU and switch on the batteries so the aircraft has power.");
+            return snapshot.engineerPanelExternalPower
+                       ? QCoreApplication::translate("Turnaround", "With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power.")
+                       : QCoreApplication::translate("Turnaround", "Connect the GPU and switch on the batteries so the aircraft has power.");
         case TurnaroundPhase::RequestPushback:
             return QCoreApplication::translate("Turnaround", "Remember to remove additional services (like the GPU).");
         case TurnaroundPhase::WaitingReadyToPush:
@@ -70,7 +140,9 @@ namespace
         case TurnaroundPhase::PlaceArrivalGroundEquipment:
             return QCoreApplication::translate("Turnaround", "Remember to set the Parking Brake.");
         case TurnaroundPhase::RequestDeboarding:
-            return QCoreApplication::translate("Turnaround", "Turn off the beacon lights and set the parking brake.");
+            return snapshot.deboardingAwaitsGsx
+                       ? QCoreApplication::translate("Turnaround", "Wait for GSX to start the deboarding.")
+                       : QCoreApplication::translate("Turnaround", "Turn off the beacon lights and set the parking brake.");
         case TurnaroundPhase::WaitingNewFlight:
             return QCoreApplication::translate("Turnaround", "Activate the SmartSwitch to start a new flight.");
         default:
@@ -356,7 +428,26 @@ QString OperationsViewModel::GetHoldCountdownText() const
 
 QString OperationsViewModel::GetPhaseTip() const
 {
-    return IsAwaitingStartLoading() ? StartLoadingTip() : PhaseTip(snapshot_.phase, snapshot_.efbFlightPlan);
+    if (IsAwaitingStartLoading())
+    {
+        return StartLoadingTip();
+    }
+
+    return snapshot_.phase == TurnaroundPhase::Boarding ? BoardingTip() : PhaseTip(snapshot_);
+}
+
+QString OperationsViewModel::BoardingTip() const
+{
+    if (QString loaderTip = LoaderTip(snapshot_); !loaderTip.isEmpty() || !snapshot_.planOmitsCrew)
+    {
+        return loaderTip;
+    }
+
+    return QCoreApplication::translate("Turnaround",
+                                       "The SimBrief airframe leaves the crew out of its empty weight, "
+                                       "so the aircraft will weigh %1 more than the SimBrief ZFW. "
+                                       "Set the airframe's empty weight to %2 to count the crew.")
+        .arg(WeightText(snapshot_.omittedCrewKg), WeightText(snapshot_.operatingEmptyWithCrewKg));
 }
 
 bool OperationsViewModel::IsAwaitingStartLoading() const
@@ -549,7 +640,7 @@ QString OperationsViewModel::GetFuelRequestAdvisoryText()
 QString OperationsViewModel::GetFuelPlanAdvisoryText()
 {
     return QCoreApplication::translate("OperationsScreen",
-                                       "The flight plan asks for more fuel than this airframe can hold. The tanks will be filled to capacity and no further.");
+                                       "The flight plan asks for more fuel than this airframe can hold. Refuelling stops when the tanks are full.");
 }
 
 QString OperationsViewModel::GetFuelStayAdvisoryText() const
@@ -581,7 +672,7 @@ QString OperationsViewModel::GetEngineConfirmationAdvisoryText() const
 
 QString OperationsViewModel::GetServicesAdvisoryText() const
 {
-    return QCoreApplication::translate("OperationsScreen", "GSX has not answered the request yet and nothing is moving. The client moves on in %1 s.")
+    return QCoreApplication::translate("OperationsScreen", "GSX has not answered the request, and no vehicle is moving. The client will move on in %1 s.")
         .arg(snapshot_.servicesWaitSeconds);
 }
 
@@ -594,7 +685,7 @@ QString OperationsViewModel::GetOpenDoorAdvisoryText()
 QString OperationsViewModel::GetServiceInterruptedAdvisoryText()
 {
     return QCoreApplication::translate("OperationsScreen",
-                                       "GSX dropped a service it had already started. Ask for it again from the GSX menu; the client will pick the turnaround back up.");
+                                       "GSX stopped a service it had already started. Request it again from the GSX menu and the client will resume the turnaround.");
 }
 
 QString OperationsViewModel::GetCommandErrorLabel()

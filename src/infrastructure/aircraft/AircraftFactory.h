@@ -3,17 +3,11 @@
 
 #include <memory>
 #include <vector>
+#include "AircraftRegistry.h"
 #include "../../domain/ports/Aircraft.h"
 #include "../../application/model/AircraftProfile.h"
 
-class VariableGateway;
-struct AutomationStatus;
-struct AircraftDescriptor;
-class CommBusBridgeGateway;
-
-[[nodiscard]] std::unique_ptr<Aircraft> DetectAircraft(VariableGateway* variableGateway,
-                                                       const AutomationStatus* status,
-                                                       CommBusBridgeGateway* commBusBridge = nullptr,
+[[nodiscard]] std::unique_ptr<Aircraft> DetectAircraft(const AircraftContext& context,
                                                        const AircraftDescriptor** outDescriptor = nullptr);
 
 [[nodiscard]] std::vector<AircraftProfileInfo> SupportedAircraftProfiles();

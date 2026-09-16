@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDDATA_H
 
 #include "../model/AutomationStatus.h"
+#include "../model/CargoLoader.h"
 
 struct CabinServiceProgress
 {
@@ -34,11 +35,19 @@ struct TurnaroundData
     bool boardingBaselined = false;
     int boardingStallTicks = 0;
     int boardingCompletionAttempts = 0;
+    CargoLoader loaderAwaitingDoor = CargoLoader::None;
+    CargoLoader loaderHoldingBoarding = CargoLoader::None;
+    int loaderDoorWaitTicks = 0;
+    int loaderDoorWaitSeconds = 0;
+    int cargoFlagAfterServiceTicks = 0;
     bool deboardingBaselined = false;
     bool refuelingRequested = false;
     int fuelRequestStallTicks = 0;
     bool fuelRequestStalled = false;
     bool fuelPlanOverCapacity = false;
+    bool planOmitsCrew = false;
+    double omittedCrewKg = 0.0;
+    double operatingEmptyWithCrewKg = 0.0;
     bool fuelDidNotStay = false;
     bool fuelStayChecked = false;
     bool fuelStayDismissed = false;
@@ -52,7 +61,10 @@ struct TurnaroundData
     int servicesOperatingTicks = 0;
     bool boardingRequested = false;
     bool deboardingRequested = false;
+    bool deboardingAwaitsGsx = false;
     bool pushbackRequested = false;
+    bool pushbackPending = false;
+    bool pushbackLostToGsxRestart = false;
     bool jetwayOrStairsRequested = false;
     bool jetwayOrStairsCompleted = false;
     int stairsInPlaceTicks = 0;

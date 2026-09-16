@@ -135,11 +135,6 @@ bool Pmdg777::HasAircraftPower() const
     return ownedData_->ApuRunning() || ownedData_->ExtPowerConnected();
 }
 
-bool Pmdg777::GroundPowerConnected() const
-{
-    return ownedData_->ExtPowerConnected();
-}
-
 bool Pmdg777::GroundPowerPresent() const
 {
     return ownedData_->ExtPowerAvailable() || ownedData_->ExtPowerConnected();

@@ -110,6 +110,7 @@ private:
 
     [[nodiscard]] bool IsSessionPaused() const { return pauseFlags_ != 0; }
     [[nodiscard]] bool IsSessionReady();
+    [[nodiscard]] bool IsPilotOnFoot();
     [[nodiscard]] const AutomationStatus& Status() const { return status_; }
     [[nodiscard]] int GetDelayTicksRemaining() const { return stateMachine_.GetDelayTicksRemaining(); }
     [[nodiscard]] bool IsLoadingConfirmed() const { return stateMachine_.IsLoadingConfirmed(); }
@@ -119,6 +120,7 @@ private:
     [[nodiscard]] bool IsAircraftCargoVariant() const;
     [[nodiscard]] bool IsLoadingCargoPhase() const;
     [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
+    [[nodiscard]] bool AircraftTakesExternalPowerAtTheEngineerPanel() const;
     [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
     [[nodiscard]] bool CanFixGsxProfile() const;
     [[nodiscard]] bool CanFixPmdgOptions() const;
@@ -175,6 +177,8 @@ private:
 
     SimVersion simVersion_ = SimVersion::Unknown;
     bool isSessionActive_ = false;
+    bool sessionReady_ = false;
+    bool pilotOnFoot_ = false;
     unsigned pauseFlags_ = 1;
     unsigned pauseEvents_ = 0;
     GsxProfileState gsxProfile_;

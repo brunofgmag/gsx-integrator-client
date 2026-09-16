@@ -83,6 +83,12 @@ void IntegratorRuntime::Setup()
 
     TryConnect();
 
+    connect(&gsxRemoteClient_, &GsxRemoteApiClient::ConnectionChanged,
+            &gsxRemoteClient_, [this](const bool connected)
+            {
+                gsxRemoteState_.connected = connected;
+            });
+
     connect(&gsxRemoteClient_, &GsxRemoteApiClient::SnapshotReceived,
             &gsxRemoteClient_, [this](const QJsonObject& s)
             {
@@ -313,6 +319,8 @@ void IntegratorRuntime::Update()
 {
     if (IsSimOnMenu() && isSessionActive_)
     {
+        sessionReady_ = false;
+        pilotOnFoot_ = false;
         OnSessionEnd();
 
         return;
@@ -322,25 +330,22 @@ void IntegratorRuntime::Update()
 
     ProbeGates();
 
-    if (!IsSessionReady())
-    {
-        return;
-    }
-
-    if (!isSessionActive_)
+    sessionReady_ = IsSessionReady();
+    pilotOnFoot_ = IsPilotOnFoot();
+    if (sessionReady_ && !isSessionActive_)
     {
         OnFlightStart();
     }
 
-    if (IsSessionPaused())
+    const bool gsxOk = gsxService_.IsAvailable();
+    status_.gsxAvailable = gsxOk;
+
+    if (!sessionReady_ || IsSessionPaused())
     {
         return;
     }
 
     simbriefClient_.Poll();
-
-    const bool gsxOk = gsxService_.IsAvailable();
-    status_.gsxAvailable = gsxOk;
 
     const TickMode mode = ResolveTickMode(status_.enabled, gsxOk);
     if (mode == TickMode::Idle)
@@ -526,7 +531,7 @@ void IntegratorRuntime::ResolveAircraft()
         return;
     }
 
-    aircraft_ = DetectAircraft(&varGateway_, &status_, &bridgeClient_, &aircraftDescriptor_);
+    aircraft_ = DetectAircraft({&varGateway_, &status_, &bridgeClient_, &gsxService_}, &aircraftDescriptor_);
     if (aircraft_)
     {
         status_.aircraftSupported = true;
@@ -574,6 +579,8 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     IntegratorSnapshot snapshot;
     snapshot.connected = IsConnected();
     snapshot.sessionActive = IsSessionActive();
+    snapshot.sessionReady = sessionReady_;
+    snapshot.pilotOnFoot = pilotOnFoot_;
     snapshot.automationEnabled = status_.enabled;
     snapshot.gsxAvailable = status_.gsxAvailable;
     snapshot.aircraftSupported = status_.aircraftSupported;
@@ -593,6 +600,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.refuelBySelf = IsAircraftRefuelBySelf();
     snapshot.cargoAircraft = IsAircraftCargoVariant();
     snapshot.efbFlightPlan = AircraftRequiresEfbFlightPlan();
+    snapshot.engineerPanelExternalPower = AircraftTakesExternalPowerAtTheEngineerPanel();
     snapshot.gsxProfileConflict = HasGsxProfileConflict();
     snapshot.gsxProfileFixable = CanFixGsxProfile();
     snapshot.pmdgOptionsConflict = HasPmdgOptionsConflict();
@@ -602,9 +610,15 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.fuelPlanOverCapacity = IsFuelPlanOverCapacity();
     snapshot.fuelDidNotStay = DidFuelNotStay();
     snapshot.fuelShortfallKg = status_.fuelShortfallKg;
+    snapshot.planOmitsCrew = status_.planOmitsCrew;
+    snapshot.omittedCrewKg = status_.omittedCrewKg;
+    snapshot.operatingEmptyWithCrewKg = status_.operatingEmptyWithCrewKg;
     snapshot.engineConfirmationBlock = GetEngineConfirmationBlock();
     snapshot.servicesStalled = AreServicesStalled();
+    snapshot.deboardingAwaitsGsx = status_.deboardingAwaitsGsx;
     snapshot.serviceInterrupted = IsServiceInterrupted();
+    snapshot.loaderHoldingBoarding = status_.loaderHoldingBoarding;
+    snapshot.loaderDoorWaitSeconds = status_.loaderDoorWaitSeconds;
     snapshot.servicesWaitSeconds = status_.servicesWaitSeconds;
     snapshot.doorsHoldingPushback = AreDoorsHoldingPushback();
     snapshot.phase = GetPhase();
@@ -723,6 +737,11 @@ bool IntegratorRuntime::IsSessionReady()
     );
 }
 
+bool IntegratorRuntime::IsPilotOnFoot()
+{
+    return SessionReadiness::IsOnFoot(simVersion_, varGateway_.GetAVar("IS AVATAR", "Number", 0.0));
+}
+
 QString IntegratorRuntime::GetAircraftName() const
 {
     return aircraftDescriptor_ ? QString::fromUtf8(aircraftDescriptor_->name) : QString();
@@ -756,6 +775,11 @@ bool IntegratorRuntime::IsAircraftCargoVariant() const
 bool IntegratorRuntime::AircraftRequiresEfbFlightPlan() const
 {
     return aircraft_ && aircraft_->RequiresEfbFlightPlan();
+}
+
+bool IntegratorRuntime::AircraftTakesExternalPowerAtTheEngineerPanel() const
+{
+    return aircraft_ && aircraft_->TakesExternalPowerAtTheEngineerPanel();
 }
 
 WeightUnit IntegratorRuntime::GetAutoWeightUnit() const

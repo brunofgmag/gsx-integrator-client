@@ -24,7 +24,7 @@ private slots:
     static void detectsTitleCaseInsensitively();
     static void detectsByAtcModelWhenLiveryRenamesTitle();
     static void detectsCargoByAtcModel();
-    static void detectsWhenAtcModelUnavailable();
+    static void waitsForTheAtcModelBeforeDetecting();
     static void detectsIFlyMax8FromBaseTitle();
     static void detectsIFlyMax8FromLiveryTitle();
     static void detectsIFlyMax8200FromTitle();
@@ -38,6 +38,13 @@ private slots:
     static void detectsAvroRjFreighterAsCargoVariantOfTheRj100();
     static void doesNotDetectAvroRjByBareIcao();
     static void detectionReportsAvroRjClientRefuel();
+    static void detectsFss727200fFromTheFssAndThirdPartyTitles();
+    static void detectsFss727200reFreighterFromItsTitles();
+    static void detectsFss727200reFreighterFromAThirdPartyLiveryByItsAtcModel();
+    static void detectsFss727200reFreighterByItsAtcModelOverA200fTitle();
+    static void leavesTheFss727PassengerVariantUndetected();
+    static void doesNotDetectFss727FromAGenericFreighterTitle();
+    static void detectionReportsFss727ClientRefuel();
     static void detectsFenixA319FromPresetTitle();
     static void detectsFenixA320FromPresetTitle();
     static void detectsFenixA321FromPresetTitle();
@@ -61,7 +68,7 @@ void AircraftDetectionTest::returnsNullWhenNameUnavailable()
 
     gateway.aircraftNameAvailable = false;
 
-    QVERIFY(DetectAircraft(&gateway, &status) == nullptr);
+    QVERIFY(DetectAircraft({&gateway, &status}) == nullptr);
 }
 
 void AircraftDetectionTest::returnsNullForUnknownAircraft()
@@ -71,7 +78,7 @@ void AircraftDetectionTest::returnsNullForUnknownAircraft()
 
     gateway.aircraftName = "Airbus 738neo";
 
-    QVERIFY(DetectAircraft(&gateway, &status) == nullptr);
+    QVERIFY(DetectAircraft({&gateway, &status}) == nullptr);
 }
 
 void AircraftDetectionTest::detectsPassengerVariant()
@@ -82,7 +89,7 @@ void AircraftDetectionTest::detectsPassengerVariant()
     gateway.aircraftName = "TFDi Design MD-11";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("TFDi MD-11"));
@@ -97,7 +104,7 @@ void AircraftDetectionTest::detectsCargoVariant()
     gateway.aircraftName = "TFDi Design MD-11F";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("TFDi MD-11"));
@@ -111,7 +118,7 @@ void AircraftDetectionTest::detectsCargoFromTitleSuffixWithLivery()
 
     gateway.aircraftName = "TFDi Design MD-11F FedEx";
 
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status});
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(aircraft->IsCargoVariant());
@@ -124,7 +131,7 @@ void AircraftDetectionTest::detectsPassengerFromTitleWithLivery()
 
     gateway.aircraftName = "TFDi Design MD-11 Delta";
 
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status});
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(!aircraft->IsCargoVariant());
@@ -137,7 +144,7 @@ void AircraftDetectionTest::returnsNullForEmptyName()
 
     gateway.aircraftName = "";
 
-    QVERIFY(DetectAircraft(&gateway, &status) == nullptr);
+    QVERIFY(DetectAircraft({&gateway, &status}) == nullptr);
 }
 
 void AircraftDetectionTest::detectsTitleCaseInsensitively()
@@ -147,7 +154,7 @@ void AircraftDetectionTest::detectsTitleCaseInsensitively()
 
     gateway.aircraftName = "tfdi design md-11";
 
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status});
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(!aircraft->IsCargoVariant());
@@ -161,7 +168,7 @@ void AircraftDetectionTest::detectsByAtcModelWhenLiveryRenamesTitle()
     gateway.aircraftName = "FLAGSHIP PAX PW";
     gateway.atcModel = "MD11";
 
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status});
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(!aircraft->IsCargoVariant());
@@ -175,13 +182,13 @@ void AircraftDetectionTest::detectsCargoByAtcModel()
     gateway.aircraftName = "FedEx Heavy Freight";
     gateway.atcModel = "MD11F";
 
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status});
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(aircraft->IsCargoVariant());
 }
 
-void AircraftDetectionTest::detectsWhenAtcModelUnavailable()
+void AircraftDetectionTest::waitsForTheAtcModelBeforeDetecting()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -189,7 +196,12 @@ void AircraftDetectionTest::detectsWhenAtcModelUnavailable()
     gateway.aircraftName = "TFDi Design MD-11 PW44";
     gateway.atcModelAvailable = false;
 
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+    QVERIFY(DetectAircraft({&gateway, &status}) == nullptr);
+
+    gateway.atcModel = "MD11";
+    gateway.atcModelAvailable = true;
+
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status});
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(!aircraft->IsCargoVariant());
@@ -203,7 +215,7 @@ void AircraftDetectionTest::detectsIFlyMax8FromBaseTitle()
     gateway.aircraftName = "iFly 737-MAX8 (178Seats)";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("iFly 737 MAX 8"));
@@ -218,7 +230,7 @@ void AircraftDetectionTest::detectsIFlyMax8FromLiveryTitle()
     gateway.aircraftName = "iFly 737-MAX8 GLO PRXML (166Seat)";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("iFly 737 MAX 8"));
@@ -232,7 +244,7 @@ void AircraftDetectionTest::detectsIFlyMax8200FromTitle()
     gateway.aircraftName = "iFly 737-MAX8200";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("iFly 737 MAX 8"));
@@ -246,7 +258,7 @@ void AircraftDetectionTest::doesNotDetectIFlyByGenericBoeingAtcModel()
     gateway.aircraftName = "PMDG 737-800 Houston";
     gateway.atcModel = "B738";
 
-    QVERIFY(DetectAircraft(&gateway, &status) == nullptr);
+    QVERIFY(DetectAircraft({&gateway, &status}) == nullptr);
 }
 
 void AircraftDetectionTest::detectsTolissA340FromPresetTitle()
@@ -257,7 +269,7 @@ void AircraftDetectionTest::detectsTolissA340FromPresetTitle()
     gateway.aircraftName = "ToLiss A346 PRO [Preset Pax]";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("ToLiss A340-600"));
@@ -273,7 +285,7 @@ void AircraftDetectionTest::detectsTolissA340ByAtcModel()
     gateway.atcModel = "A346";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("ToLiss A340-600"));
@@ -286,7 +298,7 @@ void AircraftDetectionTest::detectsTolissA340CargoPreset()
 
     gateway.aircraftName = "ToLiss A346 PRO [Preset Cargo]";
 
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status});
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(aircraft->IsCargoVariant());
@@ -300,7 +312,7 @@ void AircraftDetectionTest::detectsAvroRj70FromPresetTitle()
     gateway.aircraftName = "Just Flight RJ70 SAS";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(!aircraft->IsCargoVariant());
@@ -315,7 +327,7 @@ void AircraftDetectionTest::detectsAvroRj85FromPresetTitle()
     gateway.aircraftName = "Just Flight RJ85 Lufthansa";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(!aircraft->IsCargoVariant());
@@ -330,7 +342,7 @@ void AircraftDetectionTest::detectsAvroRj100FromPresetTitle()
     gateway.aircraftName = "Just Flight RJ100 British Airways";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(!aircraft->IsCargoVariant());
@@ -345,7 +357,7 @@ void AircraftDetectionTest::detectsAvroRjFreighterAsCargoVariantOfTheRj100()
     gateway.aircraftName = "Just Flight RJ100 QT TNT";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(aircraft->IsCargoVariant());
@@ -360,7 +372,7 @@ void AircraftDetectionTest::doesNotDetectAvroRjByBareIcao()
     gateway.aircraftName = "Generic Regional Jet";
     gateway.atcModel = "RJ85";
 
-    QVERIFY(DetectAircraft(&gateway, &status) == nullptr);
+    QVERIFY(DetectAircraft({&gateway, &status}) == nullptr);
 }
 
 void AircraftDetectionTest::detectionReportsAvroRjClientRefuel()
@@ -371,10 +383,128 @@ void AircraftDetectionTest::detectionReportsAvroRjClientRefuel()
     gateway.aircraftName = "Just Flight RJ85 CityJet";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(descriptor->refuelBy, RefuelBy::Client);
+}
+
+void AircraftDetectionTest::detectsFss727200fFromTheFssAndThirdPartyTitles()
+{
+    for (const char* title : {"Boeing 727-200F", "Boeing 727-200F - Oil Spill Response", "Boeing 727-200F - Fedex",
+                              "Boeing B727-200 Freighter TOTAL PR-TTO", "Boeing B727-200 Freighter First Air C-FUFA"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+        gateway.atcModel = "B727";
+
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
+
+        QVERIFY2(aircraft != nullptr, title);
+        QCOMPARE(std::string(descriptor->id), std::string("fss-727-200f"));
+        QVERIFY(aircraft->IsCargoVariant());
+    }
+}
+
+void AircraftDetectionTest::detectsFss727200reFreighterFromItsTitles()
+{
+    for (const char* title : {"Boeing 727-200RE Super 27 Freighter", "Boeing 727-200RE Freighter - FedEx"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+        gateway.atcModel = "B727RE";
+
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
+
+        QVERIFY2(aircraft != nullptr, title);
+        QCOMPARE(std::string(descriptor->id), std::string("fss-727-200re"));
+        QVERIFY(aircraft->IsCargoVariant());
+    }
+}
+
+void AircraftDetectionTest::detectsFss727200reFreighterFromAThirdPartyLiveryByItsAtcModel()
+{
+    for (const char* title : {"Boeing B727-200 Icelandair Cargo | Metal | TF-EVJ",
+                              "Boeing B727-200 Icelandair Cargo TF-EVJ"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+        gateway.atcModel = "B727RE";
+
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
+
+        QVERIFY2(aircraft != nullptr, title);
+        QCOMPARE(std::string(descriptor->id), std::string("fss-727-200re"));
+        QVERIFY(aircraft->IsCargoVariant());
+    }
+}
+
+void AircraftDetectionTest::detectsFss727200reFreighterByItsAtcModelOverA200fTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "Boeing B727-200 Freighter Custom Repaint";
+    gateway.atcModel = "B727RE";
+
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(std::string(descriptor->id), std::string("fss-727-200re"));
+    QVERIFY(aircraft->IsCargoVariant());
+}
+
+void AircraftDetectionTest::leavesTheFss727PassengerVariantUndetected()
+{
+    for (const char* title : {"Boeing 727-200RE Super 27 Passenger", "Boeing 727-200RE Passenger - Eastern",
+                              "Boeing 727-200RE Passenger - Avensa"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+        gateway.atcModel = "B727REP";
+
+        QVERIFY2(DetectAircraft({&gateway, &status}) == nullptr, title);
+    }
+}
+
+void AircraftDetectionTest::doesNotDetectFss727FromAGenericFreighterTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "727-200 Freighter";
+    gateway.atcModel = "B727";
+
+    QVERIFY(DetectAircraft({&gateway, &status}) == nullptr);
+}
+
+void AircraftDetectionTest::detectionReportsFss727ClientRefuel()
+{
+    for (const char* title : {"Boeing 727-200F - DHL", "Boeing 727-200RE Freighter - CAT"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
+
+        QVERIFY2(aircraft != nullptr, title);
+        QCOMPARE(descriptor->refuelBy, RefuelBy::Client);
+    }
 }
 
 void AircraftDetectionTest::detectsFenixA319FromPresetTitle()
@@ -385,7 +515,7 @@ void AircraftDetectionTest::detectsFenixA319FromPresetTitle()
     gateway.aircraftName = "FenixA319 CFM SL HD";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("Fenix A319"));
@@ -400,7 +530,7 @@ void AircraftDetectionTest::detectsFenixA320FromPresetTitle()
     gateway.aircraftName = "FenixA320 IAE WF";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("Fenix A320"));
@@ -414,7 +544,7 @@ void AircraftDetectionTest::detectsFenixA321FromPresetTitle()
     gateway.aircraftName = "FenixA321 IAE WF TC";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("Fenix A321"));
@@ -428,7 +558,7 @@ void AircraftDetectionTest::doesNotDetectFenixByGenericAirbusAtcModel()
     gateway.aircraftName = "FlyByWire A320neo";
     gateway.atcModel = "A320";
 
-    QVERIFY(DetectAircraft(&gateway, &status) == nullptr);
+    QVERIFY(DetectAircraft({&gateway, &status}) == nullptr);
 }
 
 void AircraftDetectionTest::detectsPmdg777300ErFromPresetTitle()
@@ -440,7 +570,7 @@ void AircraftDetectionTest::detectsPmdg777300ErFromPresetTitle()
     gateway.atcModel = "B77W";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("PMDG 777-300ER"));
@@ -456,7 +586,7 @@ void AircraftDetectionTest::detectsPmdg777FreighterFromPresetTitle()
     gateway.atcModel = "B77L";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("PMDG 777F"));
@@ -472,7 +602,7 @@ void AircraftDetectionTest::detectsPmdg777200LrFromPresetTitle()
     gateway.atcModel = "B77L";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("PMDG 777-200LR"));
@@ -488,7 +618,7 @@ void AircraftDetectionTest::detectsPmdg777200ErFromPresetTitle()
     gateway.atcModel = "B772";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("PMDG 777-200ER"));
@@ -503,7 +633,7 @@ void AircraftDetectionTest::disambiguatesPmdg777FreighterFromLrByTitle()
     freighter.aircraftName = "777F";
     freighter.atcModel = "B77L";
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> freighterAircraft = DetectAircraft(&freighter, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> freighterAircraft = DetectAircraft({&freighter, &status}, &descriptor);
 
     QVERIFY(freighterAircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("PMDG 777F"));
@@ -511,7 +641,7 @@ void AircraftDetectionTest::disambiguatesPmdg777FreighterFromLrByTitle()
     FakeVariableGateway longRange;
     longRange.aircraftName = "777-200LR";
     longRange.atcModel = "B77L";
-    const std::unique_ptr<Aircraft> longRangeAircraft = DetectAircraft(&longRange, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> longRangeAircraft = DetectAircraft({&longRange, &status}, &descriptor);
 
     QVERIFY(longRangeAircraft != nullptr);
     QCOMPARE(QString(descriptor->name), QString("PMDG 777-200LR"));
@@ -525,7 +655,7 @@ void AircraftDetectionTest::doesNotDetectPmdg777ByBareIcao()
     gateway.aircraftName = "Boeing 777 Generic Repaint";
     gateway.atcModel = "B77W";
 
-    QVERIFY(DetectAircraft(&gateway, &status) == nullptr);
+    QVERIFY(DetectAircraft({&gateway, &status}) == nullptr);
 }
 
 void AircraftDetectionTest::detectionReportsFenixClientRefuel()
@@ -536,7 +666,7 @@ void AircraftDetectionTest::detectionReportsFenixClientRefuel()
     gateway.aircraftName = "FenixA320 CFM SL";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(descriptor != nullptr);
@@ -576,7 +706,7 @@ void AircraftDetectionTest::detectionReportsMatchedDescriptor()
     gateway.aircraftName = "TFDi Design MD-11";
 
     const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft(&gateway, &status, nullptr, &descriptor);
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
     QVERIFY(aircraft != nullptr);
     QVERIFY(descriptor != nullptr);

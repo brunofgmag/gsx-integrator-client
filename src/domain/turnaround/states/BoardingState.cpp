@@ -13,6 +13,9 @@ namespace
 {
     constexpr int kBoardingStallTicks = 90;
     constexpr int kBoardingRetryTicks = 30;
+    constexpr int kLoaderDoorNoticeTicks = 45;
+    constexpr int kLoaderDoorGiveUpTicks = 120;
+    constexpr int kCargoFlagGiveUpTicks = kLoaderDoorGiveUpTicks;
 }
 
 std::optional<TurnaroundTransition> BoardingState::EvaluatePhase(TurnaroundContext& ctx)
@@ -26,10 +29,14 @@ std::optional<TurnaroundTransition> BoardingState::EvaluatePhase(TurnaroundConte
 
     if (boardingState != GsxStateStatus::Active && !isCompleted)
     {
+        data.loaderHoldingBoarding = CargoLoader::None;
+
         return std::nullopt;
     }
 
     EnsureBaseline(ctx);
+    NoteLoaderAwaitingDoor(ctx);
+    NoteCargoFlagAfterTheService(ctx, isCompleted);
 
     if (isCompleted && !IsCargoPending(ctx))
     {
@@ -77,7 +84,11 @@ void BoardingState::MaybeForceCompletion(TurnaroundContext& ctx)
     auto& data = ctx.data;
 
     const bool heldBehindTheStairs = IsCargoHeldBehindTheStairs(ctx);
-    if (IsCargoPending(ctx) || (!IsBarFull(ctx) && !heldBehindTheStairs))
+    const bool abandonedLoader = HasGivenUpOnTheLoader(ctx);
+    const bool nothingToForce = IsCargoPending(ctx)
+        || (!IsBarFull(ctx) && !heldBehindTheStairs && !abandonedLoader);
+
+    if (nothingToForce)
     {
         data.boardingStallTicks = 0;
         data.boardingCompletionAttempts = 0;
@@ -95,8 +106,9 @@ void BoardingState::MaybeForceCompletion(TurnaroundContext& ctx)
         ++data.boardingCompletionAttempts;
         if (heldBehindTheStairs && data.boardingCompletionAttempts == 1)
         {
-            ctx.logger->LogInfo(
-                "Boarding: every passenger is aboard and the loaders are held behind the stairs; asking GSX to complete");
+            ctx.logger->LogInfo(ctx.aircraft->IsCargoVariant()
+                                    ? "Boarding: GSX stopped loading and the loaders left are held behind the stairs; asking GSX to complete"
+                                    : "Boarding: every passenger is aboard and the loaders are held behind the stairs; asking GSX to complete");
         }
         ctx.menuGateway->CompleteBoarding();
     }
@@ -104,9 +116,14 @@ void BoardingState::MaybeForceCompletion(TurnaroundContext& ctx)
 
 bool BoardingState::IsCargoHeldBehindTheStairs(const TurnaroundContext& ctx)
 {
-    if (!ctx.menuGateway->WereStairsKeptForPassengers() || ctx.aircraft->IsCargoVariant())
+    if (!ctx.menuGateway->WereStairsKeptForPassengers())
     {
         return false;
+    }
+
+    if (ctx.aircraft->IsCargoVariant())
+    {
+        return true;
     }
 
     const auto& data = ctx.data;
@@ -116,9 +133,73 @@ bool BoardingState::IsCargoHeldBehindTheStairs(const TurnaroundContext& ctx)
         && ctx.gsxGateway->GetBoardingCargoPercent() <= 0.0;
 }
 
+void BoardingState::NoteLoaderAwaitingDoor(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+    const CargoLoader awaiting = ctx.gsxGateway->GetLoaderWaitingForDoor();
+
+    if (awaiting == CargoLoader::None)
+    {
+        data.loaderAwaitingDoor = CargoLoader::None;
+        data.loaderDoorWaitTicks = 0;
+        data.loaderDoorWaitSeconds = 0;
+        data.loaderHoldingBoarding = CargoLoader::None;
+
+        return;
+    }
+
+    if (data.loaderAwaitingDoor == CargoLoader::None)
+    {
+        data.loaderDoorWaitTicks = 0;
+    }
+
+    data.loaderAwaitingDoor = awaiting;
+
+    ++data.loaderDoorWaitTicks;
+    data.loaderDoorWaitSeconds = std::max(0, kLoaderDoorGiveUpTicks - data.loaderDoorWaitTicks);
+    if (data.loaderDoorWaitTicks >= kLoaderDoorNoticeTicks)
+    {
+        data.loaderHoldingBoarding = awaiting;
+    }
+}
+
+bool BoardingState::HasGivenUpOnTheLoader(const TurnaroundContext& ctx)
+{
+    return ctx.data.loaderAwaitingDoor != CargoLoader::None
+        && ctx.data.loaderDoorWaitTicks >= kLoaderDoorGiveUpTicks;
+}
+
+void BoardingState::NoteCargoFlagAfterTheService(TurnaroundContext& ctx, const bool serviceClosed)
+{
+    auto& data = ctx.data;
+
+    if (!serviceClosed || !ctx.gsxGateway->IsLoadingCargo())
+    {
+        data.cargoFlagAfterServiceTicks = 0;
+
+        return;
+    }
+
+    if (++data.cargoFlagAfterServiceTicks == kCargoFlagGiveUpTicks)
+    {
+        ctx.logger->LogInfo(
+            "Boarding: GSX closed the service and still flags cargo loading; the client stops waiting for it");
+    }
+}
+
+bool BoardingState::HasGivenUpOnTheCargoFlag(const TurnaroundContext& ctx)
+{
+    return ctx.data.cargoFlagAfterServiceTicks >= kCargoFlagGiveUpTicks;
+}
+
 bool BoardingState::IsCargoPending(const TurnaroundContext& ctx)
 {
-    return ctx.gsxGateway->IsLoadingCargo() || ctx.gsxGateway->IsLoaderWaitingForDoor();
+    if (ctx.gsxGateway->IsLoadingCargo() && !HasGivenUpOnTheCargoFlag(ctx))
+    {
+        return true;
+    }
+
+    return ctx.data.loaderAwaitingDoor != CargoLoader::None && !HasGivenUpOnTheLoader(ctx);
 }
 
 void BoardingState::EnsureBaseline(TurnaroundContext& ctx)

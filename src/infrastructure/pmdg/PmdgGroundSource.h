@@ -7,8 +7,7 @@ public:
     virtual ~PmdgGroundSource() = default;
 
     [[nodiscard]] virtual bool HasAircraftPower() const = 0;
-    [[nodiscard]] virtual bool GroundPowerConnected() const = 0;
-    [[nodiscard]] virtual bool GroundPowerPresent() const { return GroundPowerConnected(); }
+    [[nodiscard]] virtual bool GroundPowerPresent() const = 0;
     [[nodiscard]] virtual bool ChocksSet() const = 0;
 };
 

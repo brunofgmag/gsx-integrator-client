@@ -172,11 +172,15 @@ private slots:
     static void theDepartureClearanceIsAskedForOnce();
     static void deIceMenuPicksYesWhenEnabled();
     static void deIceMenuDeclinedByDefault();
+    static void theDeIceIsAcceptedOncePerDepartureWhenTheQuestionComesBack();
+    static void theTurnaroundTurnRearmsTheDeIce();
+    static void resetRearmsTheDeIce();
     static void picksSimbriefBlockFuelOnRefuelingLevelMenu();
     static void blockFuelNotPickedWhenFlagOff();
     static void manualMenuWithGsxChoiceIsPicked();
     static void manualMenuIsNotRepickedWhileUnchanged();
     static void manualMenuWithoutGsxChoiceIsIgnored();
+    static void theGsxChoiceNeverAnswersThePilotsPullConfirmation();
     static void skipsDisabledEntryAndPicksEnabled();
     static void repositionWalksRootThenSubmenu();
     static void repositionSurvivesTransientCloseAndRootReshow();
@@ -200,6 +204,9 @@ private slots:
     static void rearmedTriggerIsDroppedOnceGsxTakesIt();
     static void stuckMenuIsClosedAfterResyncsAreExhausted();
     static void thePushbackDirectionMenuIsNeverDiscarded();
+    static void aMenuReopenedWithAnEmptyTitleDoesNotInheritTheSpentResyncs();
+    static void aMenuTheClientAskedNothingOfIsNeverDiscarded();
+    static void aMenuLeftOpenForThePilotIsStillDiscardedOnceTheClientWaitsOnIt();
     static void theStuckMenuIsDiscardedEvenWithARequestStillPending();
     static void theLastAttemptGetsTheSameGraceAsTheOthers();
     static void resetAllowsClosingTheSameStuckMenuAgain();
@@ -1323,7 +1330,8 @@ void GsxMenuNavigatorTest::theStairsAreKeptWhilePassengersAreBoarding()
 
     QVERIFY(pick != nullptr);
     QCOMPARE(pick->args.value("index").toInt(), 1);
-    QVERIFY(Logged(logger, "keeping the stairs"));
+    QVERIFY(Logged(logger, "RemoteAPI keeping the stairs: boarding or deboarding is underway"));
+    QVERIFY(!Logged(logger, "passengers"));
 }
 
 void GsxMenuNavigatorTest::theStairsAreKeptWhilePassengersAreDeboarding()
@@ -1507,6 +1515,83 @@ void GsxMenuNavigatorTest::deIceMenuDeclinedByDefault()
     QCOMPARE(pick->args.value("index").toInt(), 1);
 }
 
+namespace
+{
+    void AskForDeIceAndClose(GsxRemoteState& state, GsxMenuNavigator& nav)
+    {
+        ShowMenu(state, "Ice warning: do you request the de-icing treatment?", {"Yes", "No [GSX choice]"});
+        nav.OnMenuChanged();
+
+        state.menu.shown = false;
+        state.menu.title.clear();
+        state.menu.entries.clear();
+        nav.OnMenuChanged();
+    }
+
+    int YesPicks(const FakeRemoteClient& client)
+    {
+        int yes = 0;
+        for (const Sent& s : client.sent)
+        {
+            if (s.verb == "menu.pick" && s.args.value("index").toInt() == 0)
+            {
+                ++yes;
+            }
+        }
+
+        return yes;
+    }
+}
+
+void GsxMenuNavigatorTest::theDeIceIsAcceptedOncePerDepartureWhenTheQuestionComesBack()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.autoDeice = true;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    AskForDeIceAndClose(state, nav);
+    AskForDeIceAndClose(state, nav);
+
+    QCOMPARE(client.Count("menu.pick"), 2);
+    QCOMPARE(YesPicks(client), 1);
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::theTurnaroundTurnRearmsTheDeIce()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.autoDeice = true;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    AskForDeIceAndClose(state, nav);
+    nav.OnTurnaroundTurned();
+    AskForDeIceAndClose(state, nav);
+
+    QCOMPARE(YesPicks(client), 2);
+}
+
+void GsxMenuNavigatorTest::resetRearmsTheDeIce()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.autoDeice = true;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    AskForDeIceAndClose(state, nav);
+    nav.Reset();
+    AskForDeIceAndClose(state, nav);
+
+    QCOMPARE(YesPicks(client), 2);
+}
+
 void GsxMenuNavigatorTest::picksSimbriefBlockFuelOnRefuelingLevelMenu()
 {
     FakeRemoteClient client;
@@ -1603,6 +1688,34 @@ void GsxMenuNavigatorTest::manualMenuWithoutGsxChoiceIsIgnored()
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
     ShowMenu(state, "Activate Services at ZZZZ/Test Airport", {"Request Refueling", "Request Boarding"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 0);
+}
+
+void GsxMenuNavigatorTest::theGsxChoiceNeverAnswersThePilotsPullConfirmation()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Departure");
+
+    nav.RequestPushback();
+    MarkServiceTaken(state, "Departure");
+    nav.OnMenuChanged();
+
+    ShowMenu(state, "Select pushback direction",
+             {"Nose Right/Tail Left (LEFT)", "Nose Left/Tail Right (RIGHT)", "Straight Pull pushback (manual stop, max 100 m)"});
+    nav.OnMenuChanged();
+
+    fakeNow += 8000;
+    ShowMenu(state, "Are you sure you want to Pull?", {"Yes", "No [GSX choice]"});
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("menu.pick"), 0);
@@ -2434,6 +2547,126 @@ void GsxMenuNavigatorTest::thePushbackDirectionMenuIsNeverDiscarded()
     QVERIFY(!Logged(logger, "the resyncs could not move"));
 }
 
+void GsxMenuNavigatorTest::aMenuReopenedWithAnEmptyTitleDoesNotInheritTheSpentResyncs()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Departure");
+
+    nav.RequestPushback();
+    MarkServiceTaken(state, "Departure");
+    nav.OnMenuChanged();
+
+    ShowMenu(state, "Select pushback direction",
+             {"Nose Right/Tail Left (LEFT)", "Nose Left/Tail Right (RIGHT)", "QuickEdit Pushback"});
+    nav.OnMenuChanged();
+
+    for (int tick = 0; tick < 4; ++tick)
+    {
+        fakeNow += 2000;
+        nav.OnMenuChanged();
+    }
+
+    QVERIFY(Logged(logger, "leaving the pushback direction menu open"));
+
+    state.menu.shown = false;
+    state.menu.title.clear();
+    state.menu.entries.clear();
+    nav.OnMenuChanged();
+
+    const int resyncsBeforeTheReopen = client.Count("state.get");
+
+    fakeNow += 700;
+    ShowMenu(state, "", {});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.close"), 0);
+    QCOMPARE(client.Count("state.get"), resyncsBeforeTheReopen);
+}
+
+void GsxMenuNavigatorTest::aMenuTheClientAskedNothingOfIsNeverDiscarded()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Departure");
+
+    nav.RequestPushback();
+    MarkServiceTaken(state, "Departure");
+    nav.OnMenuChanged();
+
+    fakeNow += 300000;
+    ShowMenu(state, "Interrupt pushback?", {"Yes", "No", "Select pushback direction", "Cameras"});
+    nav.OnMenuChanged();
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        fakeNow += 2000;
+        nav.OnMenuChanged();
+    }
+
+    QCOMPARE(client.Count("state.get"), 3);
+    QCOMPARE(client.Count("menu.close"), 0);
+    QVERIFY(!Logged(logger, "the resyncs could not move"));
+    QVERIFY(Logged(logger, "RemoteAPI leaving the menu open: the client asked for nothing on it: 'Interrupt pushback?'"));
+}
+
+void GsxMenuNavigatorTest::aMenuLeftOpenForThePilotIsStillDiscardedOnceTheClientWaitsOnIt()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    const auto stallTheServicesMenu = [&]
+    {
+        ShowMenu(state, "Activate Services at ZZZZ/Test Airport", {"Request Boarding", "Operate Stairs"});
+        nav.OnMenuChanged();
+
+        for (int tick = 0; tick < 4; ++tick)
+        {
+            fakeNow += 2000;
+            nav.OnMenuChanged();
+        }
+    };
+
+    stallTheServicesMenu();
+
+    QCOMPARE(client.Count("menu.close"), 0);
+
+    state.menu.shown = false;
+    state.menu.title.clear();
+    state.menu.entries.clear();
+    nav.OnSnapshot();
+
+    OfferService(state, "OperateStairs");
+    nav.CallStairs();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    stallTheServicesMenu();
+
+    QCOMPARE(client.Count("menu.close"), 1);
+    QVERIFY(Logged(logger, "the resyncs could not move"));
+}
+
 void GsxMenuNavigatorTest::resetAllowsClosingTheSameStuckMenuAgain()
 {
     FakeRemoteClient client;
@@ -2447,6 +2680,9 @@ void GsxMenuNavigatorTest::resetAllowsClosingTheSameStuckMenuAgain()
 
     const auto driveToStuckMenu = [&]
     {
+        state.menu.shown = false;
+        nav.RequestBoarding();
+
         ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
         nav.OnMenuChanged();
 

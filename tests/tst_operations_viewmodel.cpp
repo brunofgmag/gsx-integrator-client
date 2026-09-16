@@ -33,6 +33,29 @@ private slots:
     static void successfulCommandClearsPreviousError();
     static void exposesPhaseIndexCountAndTip();
     static void flightPlanTipFollowsPlanSource();
+    static void powerOnTipNamesTheEngineerPanelWhereTheAircraftTakesExternalPowerThere();
+    static void theDeboardingTipWaitsForGsxOnceTheRequestIsOut();
+    static void theBoardingTipNamesTheForwardLoaderWaitingForItsDoor();
+    static void theBoardingTipNamesTheAftLoaderWaitingForItsDoor();
+    static void theBoardingTipNamesTheMainDeckLoaderWaitingForItsDoor();
+    static void theBoardingTipStandsDownForThePmdgCargoDoorAdvisory();
+    static void theBoardingTipStillNamesAnotherHoldWhileTheMainDeckIsStuck();
+    static void theBoardingTipCountsDownTheSecondsLeftToOpenTheDoor();
+    static void theBoardingTipStaysQuietWhileNoLoaderWaits();
+    static void theBoardingTipOnlyShowsDuringTheBoardingPhase();
+    static void theBoardingTipNamesTheCrewThePlanLeftOutAndTheEmptyWeightThatCountsIt();
+    static void theCrewTipFollowsTheDisplayUnit();
+    static void aLoaderWaitingForItsDoorComesBeforeTheCrewTip();
+    static void theCrewTipStaysQuietWhenThePlanCountsTheCrew();
+    static void theCrewTipOnlyShowsDuringTheBoardingPhase();
+    static void theInitialTipNamesTheAutomationThatIsOff();
+    static void theInitialTipNamesTheFlightStillOutsideTheCockpit();
+    static void theInitialTipWaitsForTheCockpitWhileTheActiveSessionIsNotReady();
+    static void theInitialTipNamesThePilotWalkingOutsideTheAircraft();
+    static void theInitialTipNamesTheUnsupportedAircraft();
+    static void theInitialTipNamesTheGsxThatIsNotThere();
+    static void theInitialTipNamesTheAutomationFirstWhenEverythingIsStillDown();
+    static void theInitialTipStandsDownOnceNothingHoldsTheTurnaround();
     static void exposesGsxProfileConflictFromSnapshot();
     static void fixGsxProfileDelegatesToService();
     static void fixGsxProfileReportsRejectedCommands();
@@ -42,6 +65,7 @@ private slots:
     static void restartFlowReportsRejectedCommands();
     static void nextPhaseTextNamesThePhaseThatFollows();
     static void nextPhaseTextOnTheLastPhaseAnnouncesANewSession();
+    static void theInitialPhaseLabelAgreesWithTheSimChip();
     static void holdCountdownTextCountsTheRemainingSeconds();
     static void holdCountdownTextIsEmptyWhenNothingIsHolding();
     static void aircraftNameTextStandsByWhileTheAircraftIsUnsupported();
@@ -119,6 +143,7 @@ void OperationsViewModelTest::emitsOneSignalForSnapshotChanges()
 
     service.snapshot.connected = true;
     service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
     service.snapshot.plannedFuelKg = 120;
     service.Notify();
 
@@ -294,6 +319,7 @@ void OperationsViewModelTest::exposesAircraftPropertiesFromSnapshot()
     service.snapshot.gsxAvailable = true;
     service.snapshot.aircraftSupported = true;
     service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
     service.snapshot.refuelBySelf = true;
 
     const OperationsViewModel viewModel(&service, &display);
@@ -363,6 +389,414 @@ void OperationsViewModelTest::flightPlanTipFollowsPlanSource()
 
     QCOMPARE(viewModel.GetPhaseTip(),
              QStringLiteral("Import your SimBrief flight plan on the aircraft EFB."));
+}
+
+void OperationsViewModelTest::powerOnTipNamesTheEngineerPanelWhereTheAircraftTakesExternalPowerThere()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingPowerOn;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Connect the GPU and switch on the batteries so the aircraft has power."));
+
+    service.snapshot.engineerPanelExternalPower = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power."));
+}
+
+void OperationsViewModelTest::theDeboardingTipWaitsForGsxOnceTheRequestIsOut()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::RequestDeboarding;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Turn off the beacon lights and set the parking brake."));
+
+    service.snapshot.deboardingAwaitsGsx = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Wait for GSX to start the deboarding."));
+}
+
+namespace
+{
+    constexpr int kLoaderSecondsLeft = 75;
+
+    void ArrangeBoardingHeldByALoader(FakeIntegratorService& service, const CargoLoader loader)
+    {
+        service.snapshot.phase = TurnaroundPhase::Boarding;
+        service.snapshot.loaderHoldingBoarding = loader;
+        service.snapshot.loaderDoorWaitSeconds = kLoaderSecondsLeft;
+        service.Notify();
+    }
+
+    QString LoaderTipFor(const QString& door, const int secondsLeft)
+    {
+        return QStringLiteral("A GSX loader is waiting for the ")
+            + door
+            + QStringLiteral(" cargo door to open. Open it within ")
+            + QString::number(secondsLeft)
+            + QStringLiteral(" s, or the client will finish boarding without this loader.");
+    }
+}
+
+void OperationsViewModelTest::theBoardingTipNamesTheForwardLoaderWaitingForItsDoor()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingHeldByALoader(service, CargoLoader::Front);
+
+    QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("forward"), kLoaderSecondsLeft));
+}
+
+void OperationsViewModelTest::theBoardingTipNamesTheAftLoaderWaitingForItsDoor()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingHeldByALoader(service, CargoLoader::Rear);
+
+    QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("aft"), kLoaderSecondsLeft));
+}
+
+void OperationsViewModelTest::theBoardingTipNamesTheMainDeckLoaderWaitingForItsDoor()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingHeldByALoader(service, CargoLoader::MainDeck);
+
+    QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("main deck"), kLoaderSecondsLeft));
+}
+
+void OperationsViewModelTest::theBoardingTipCountsDownTheSecondsLeftToOpenTheDoor()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingHeldByALoader(service, CargoLoader::Front);
+
+    QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("forward"), 75));
+
+    service.snapshot.loaderDoorWaitSeconds = 1;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("forward"), 1));
+}
+
+void OperationsViewModelTest::theBoardingTipStandsDownForThePmdgCargoDoorAdvisory()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.cargoDoorStuck = true;
+    ArrangeBoardingHeldByALoader(service, CargoLoader::MainDeck);
+
+    QVERIFY(viewModel.GetPhaseTip().isEmpty());
+}
+
+void OperationsViewModelTest::theBoardingTipStillNamesAnotherHoldWhileTheMainDeckIsStuck()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.cargoDoorStuck = true;
+    ArrangeBoardingHeldByALoader(service, CargoLoader::Front);
+
+    QVERIFY(viewModel.GetPhaseTip().contains(QStringLiteral("forward cargo door")));
+
+    ArrangeBoardingHeldByALoader(service, CargoLoader::Rear);
+
+    QVERIFY(viewModel.GetPhaseTip().contains(QStringLiteral("aft cargo door")));
+}
+
+void OperationsViewModelTest::theBoardingTipStaysQuietWhileNoLoaderWaits()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingHeldByALoader(service, CargoLoader::None);
+
+    QVERIFY(viewModel.GetPhaseTip().isEmpty());
+}
+
+void OperationsViewModelTest::theBoardingTipOnlyShowsDuringTheBoardingPhase()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingReadyToPush;
+    service.snapshot.loaderHoldingBoarding = CargoLoader::MainDeck;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Turn on the beacon lights and set the parking brake."));
+}
+
+namespace
+{
+    constexpr double kOmittedCrewKg = 195.044719;
+    constexpr double kOperatingEmptyWithCrewKg = 42501.044719;
+
+    void ArrangeBoardingWithThePlanLeavingOutTheCrew(FakeIntegratorService& service)
+    {
+        service.snapshot.phase = TurnaroundPhase::Boarding;
+        service.snapshot.planOmitsCrew = true;
+        service.snapshot.omittedCrewKg = kOmittedCrewKg;
+        service.snapshot.operatingEmptyWithCrewKg = kOperatingEmptyWithCrewKg;
+        service.Notify();
+    }
+
+    QString CrewTip(const QString& omittedCrew, const QString& operatingEmptyWithCrew)
+    {
+        return QStringLiteral("The SimBrief airframe leaves the crew out of its empty weight, so the aircraft will weigh ")
+            + omittedCrew
+            + QStringLiteral(" more than the SimBrief ZFW. Set the airframe's empty weight to ")
+            + operatingEmptyWithCrew
+            + QStringLiteral(" to count the crew.");
+    }
+}
+
+void OperationsViewModelTest::theBoardingTipNamesTheCrewThePlanLeftOutAndTheEmptyWeightThatCountsIt()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingWithThePlanLeavingOutTheCrew(service);
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             CrewTip(QLocale().toString(195) + QStringLiteral(" kg"),
+                     QLocale().toString(42501) + QStringLiteral(" kg")));
+}
+
+void OperationsViewModelTest::theCrewTipFollowsTheDisplayUnit()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    display.weightIsLb = true;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingWithThePlanLeavingOutTheCrew(service);
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             CrewTip(QLocale().toString(430) + QStringLiteral(" lb"),
+                     QLocale().toString(93699) + QStringLiteral(" lb")));
+}
+
+void OperationsViewModelTest::aLoaderWaitingForItsDoorComesBeforeTheCrewTip()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.loaderHoldingBoarding = CargoLoader::MainDeck;
+    service.snapshot.loaderDoorWaitSeconds = kLoaderSecondsLeft;
+    ArrangeBoardingWithThePlanLeavingOutTheCrew(service);
+
+    QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("main deck"), kLoaderSecondsLeft));
+
+    service.snapshot.loaderHoldingBoarding = CargoLoader::None;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             CrewTip(QLocale().toString(195) + QStringLiteral(" kg"),
+                     QLocale().toString(42501) + QStringLiteral(" kg")));
+}
+
+void OperationsViewModelTest::theCrewTipStaysQuietWhenThePlanCountsTheCrew()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingWithThePlanLeavingOutTheCrew(service);
+    service.snapshot.planOmitsCrew = false;
+    service.Notify();
+
+    QVERIFY(viewModel.GetPhaseTip().isEmpty());
+}
+
+void OperationsViewModelTest::theCrewTipOnlyShowsDuringTheBoardingPhase()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    ArrangeBoardingWithThePlanLeavingOutTheCrew(service);
+    service.snapshot.phase = TurnaroundPhase::WaitingReadyToPush;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Turn on the beacon lights and set the parking brake."));
+
+    service.snapshot.phase = TurnaroundPhase::Refueling;
+    service.Notify();
+
+    QVERIFY(viewModel.GetPhaseTip().isEmpty());
+}
+
+void OperationsViewModelTest::theInitialTipNamesTheAutomationThatIsOff()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = false;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
+    service.snapshot.aircraftSupported = true;
+    service.snapshot.gsxAvailable = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("The automation is off, so the client is not driving this turnaround."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesTheFlightStillOutsideTheCockpit()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = false;
+    service.snapshot.aircraftSupported = true;
+    service.snapshot.gsxAvailable = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("The flight has not reached the cockpit yet, so the client is still waiting for the sim."));
+}
+
+void OperationsViewModelTest::theInitialTipWaitsForTheCockpitWhileTheActiveSessionIsNotReady()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = false;
+    service.snapshot.pilotOnFoot = false;
+    service.snapshot.aircraftSupported = false;
+    service.snapshot.gsxAvailable = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("The flight has not reached the cockpit yet, so the client is still waiting for the sim."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesThePilotWalkingOutsideTheAircraft()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = false;
+    service.snapshot.pilotOnFoot = true;
+    service.snapshot.aircraftSupported = false;
+    service.snapshot.gsxAvailable = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("This state will hold until you enter the cockpit."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesTheUnsupportedAircraft()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
+    service.snapshot.aircraftSupported = false;
+    service.snapshot.gsxAvailable = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("This aircraft is not supported, so the client cannot drive its turnaround."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesTheGsxThatIsNotThere()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
+    service.snapshot.aircraftSupported = true;
+    service.snapshot.gsxAvailable = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("GSX Pro is not answering, so the client is watching without driving the turnaround."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesTheAutomationFirstWhenEverythingIsStillDown()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = false;
+    service.snapshot.sessionActive = false;
+    service.snapshot.aircraftSupported = false;
+    service.snapshot.gsxAvailable = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("The automation is off, so the client is not driving this turnaround."));
+}
+
+void OperationsViewModelTest::theInitialTipStandsDownOnceNothingHoldsTheTurnaround()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
+    service.snapshot.aircraftSupported = true;
+    service.snapshot.gsxAvailable = true;
+    service.Notify();
+
+    QVERIFY(viewModel.GetPhaseTip().isEmpty());
 }
 
 void OperationsViewModelTest::exposesGsxProfileConflictFromSnapshot()
@@ -603,6 +1037,23 @@ void OperationsViewModelTest::nextPhaseTextOnTheLastPhaseAnnouncesANewSession()
     service.Notify();
 
     QCOMPARE(viewModel.GetNextPhaseText(), QStringLiteral("Next \u25B8 New session"));
+}
+
+void OperationsViewModelTest::theInitialPhaseLabelAgreesWithTheSimChip()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.connected = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
+    service.snapshot.aircraftSupported = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetStateText(), QStringLiteral("Waiting to start"));
+    QCOMPARE(viewModel.GetNextPhaseText(), QStringLiteral("Next ▸ Waiting for aircraft ready"));
 }
 
 void OperationsViewModelTest::holdCountdownTextCountsTheRemainingSeconds()

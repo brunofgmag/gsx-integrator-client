@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <string>
+#include <utility>
 #include "../../src/domain/ports/GsxGateway.h"
 
 class FakeGsxService final : public GsxGateway
@@ -31,7 +32,7 @@ public:
     int deboardedPassengers = 0;
     double cargoPercent = 0.0;
     bool loadingCargo = false;
-    bool loaderWaitingForDoor = false;
+    CargoLoader loaderWaitingForDoor = CargoLoader::None;
     double deboardingCargoPercent = 0.0;
     bool refuelingCompleted = false;
     bool boardingCompleted = false;
@@ -43,7 +44,12 @@ public:
     bool goodEngineStartConfirmation = false;
     GroundPowerStatus gpuStatus = GroundPowerStatus::Disconnected;
     int takeOverCalls = 0;
+    bool couatlAlive = true;
+    bool couatlRestartedBetweenTicks = false;
+    bool gsxDownSinceLastObserve = false;
+    double groundSpeedKnots = 0.0;
     std::array<GsxStateStatus, 5> lastObserved{};
+    std::array<bool, 5> couatlDiedDuringRun{};
     bool cateringInProgress = false;
     bool lavatoryInProgress = false;
     bool waterInProgress = false;
@@ -51,7 +57,7 @@ public:
     bool gpuInProgress = false;
     bool departureInProgress = false;
     bool offersPushback = true;
-
+    bool remoteApiConnected = true;
 
     int observeCalls = 0;
 
@@ -59,15 +65,30 @@ public:
     {
         ++observeCalls;
 
+        gsxDownSinceLastObserve = !couatlAlive || std::exchange(couatlRestartedBetweenTicks, false);
+
         for (const GsxState state : {GsxState::Refueling, GsxState::Boarding, GsxState::Pushback,
                                      GsxState::Deboarding, GsxState::Deice})
         {
             const GsxStateStatus status = GetStateStatus(state);
             GsxStateStatus& last = lastObserved[static_cast<std::size_t>(state)];
+            bool& diedDuringRun = couatlDiedDuringRun[static_cast<std::size_t>(state)];
 
-            const bool returnedToIdle =
+            if (gsxDownSinceLastObserve)
+            {
+                diedDuringRun = true;
+            }
+            else if (status == GsxStateStatus::Active && last != GsxStateStatus::Active)
+            {
+                diedDuringRun = false;
+            }
+
+            const bool endsWithoutCompleted = state == GsxState::Pushback || state == GsxState::Deice;
+            const bool leftActiveWithoutCompleting =
                 (status == GsxStateStatus::Callable || status == GsxStateStatus::Bypassed)
                 && last == GsxStateStatus::Active;
+            const bool returnedToIdle = leftActiveWithoutCompleting
+                && (endsWithoutCompleted || !diedDuringRun);
 
             if (status == GsxStateStatus::Completed || returnedToIdle)
             {
@@ -145,10 +166,10 @@ public:
     [[nodiscard]] int GetPlannedPassengers() const override { return plannedPassengers; }
     [[nodiscard]] int GetBoardedPassengers() override { return boardedPassengers; }
     [[nodiscard]] int GetDeboardedPassengers() override { return deboardedPassengers; }
-    [[nodiscard]] double GetBoardingCargoPercent() const override { return cargoPercent; }
+    [[nodiscard]] double GetBoardingCargoPercent() override { return cargoPercent; }
     [[nodiscard]] bool IsLoadingCargo() const override { return loadingCargo; }
-    [[nodiscard]] bool IsLoaderWaitingForDoor() const override { return loaderWaitingForDoor; }
-    [[nodiscard]] double GetDeboardingCargoPercent() const override { return deboardingCargoPercent; }
+    [[nodiscard]] CargoLoader GetLoaderWaitingForDoor() const override { return loaderWaitingForDoor; }
+    [[nodiscard]] double GetDeboardingCargoPercent() override { return deboardingCargoPercent; }
     [[nodiscard]] bool AreStairsInPlace() const override { return stairsInPlace; }
     [[nodiscard]] bool IsJetwayInPlace() const override { return jetwayInPlace; }
     [[nodiscard]] bool AreStairsAvailable() const override { return stairsAvailable; }
@@ -157,6 +178,7 @@ public:
     [[nodiscard]] bool IsServiceVehicleActive() const override { return serviceVehicleActive; }
     [[nodiscard]] bool IsSimbriefLoaded() const override { return simbriefLoaded; }
     [[nodiscard]] bool IsAircraftOnGround() const override { return onGround; }
+    [[nodiscard]] double GetGroundSpeedKnots() const override { return groundSpeedKnots; }
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override { return goodEngineStartConfirmation; }
     [[nodiscard]] GroundPowerStatus GetGpuStatus() const override { return gpuStatus; }
 
@@ -182,6 +204,8 @@ public:
     }
 
     [[nodiscard]] bool OffersPushback() const override { return offersPushback; }
+    [[nodiscard]] bool IsRemoteApiConnected() const override { return remoteApiConnected; }
+    [[nodiscard]] bool WasGsxDownSinceLastObserve() const override { return gsxDownSinceLastObserve; }
 
     void TakeOverFuelAndPayload() override
     {

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <string>
 #include "../../domain/model/AutomationStatus.h"
+#include "../../domain/model/CargoLoader.h"
 #include "../../domain/model/FlightPlan.h"
 #include "../../domain/turnaround/TurnaroundPhase.h"
 #include "../../domain/turnaround/TurnaroundTransition.h"
@@ -34,6 +35,8 @@ struct IntegratorSnapshot
 {
     bool connected = false;
     bool sessionActive = false;
+    bool sessionReady = false;
+    bool pilotOnFoot = false;
     bool automationEnabled = false;
     bool gsxAvailable = false;
     bool aircraftSupported = false;
@@ -50,14 +53,21 @@ struct IntegratorSnapshot
     bool fuelRequestStalled = false;
     bool fuelPlanOverCapacity = false;
     bool fuelDidNotStay = false;
+    bool planOmitsCrew = false;
     bool servicesStalled = false;
     bool serviceInterrupted = false;
+    bool deboardingAwaitsGsx = false;
     bool doorsHoldingPushback = false;
+    CargoLoader loaderHoldingBoarding = CargoLoader::None;
     int servicesWaitSeconds = 0;
+    int loaderDoorWaitSeconds = 0;
     SnapshotDouble fuelShortfallKg = 0.0;
+    SnapshotDouble omittedCrewKg = 0.0;
+    SnapshotDouble operatingEmptyWithCrewKg = 0.0;
     EngineConfirmationBlock engineConfirmationBlock = EngineConfirmationBlock::None;
     bool cargoAircraft = false;
     bool efbFlightPlan = false;
+    bool engineerPanelExternalPower = false;
 
     std::string aircraftName;
     std::string aircraftProfileId;

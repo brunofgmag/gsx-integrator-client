@@ -10,6 +10,7 @@
 class VariableGateway;
 struct AutomationStatus;
 class CommBusBridgeGateway;
+class GsxGateway;
 
 enum class MatchField
 {
@@ -36,6 +37,7 @@ struct AircraftContext
     VariableGateway* variableGateway = nullptr;
     const AutomationStatus* status = nullptr;
     CommBusBridgeGateway* commBusBridge = nullptr;
+    const GsxGateway* gsxGateway = nullptr;
 };
 
 using AircraftCreator = std::unique_ptr<Aircraft> (*)(const AircraftContext& context, const AircraftIdentity& identity);

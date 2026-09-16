@@ -1,6 +1,7 @@
 #include "TurnaroundState.h"
 
 #include <format>
+#include <optional>
 #include <string>
 
 #include "../TurnaroundContext.h"
@@ -20,13 +21,48 @@ namespace
 
         return context;
     }
+
+    template <typename OnVerdict>
+    void EvaluateRules(const TurnaroundState& state, const TurnaroundContext& ctx, const RuleCadence cadence,
+                       OnVerdict onVerdict)
+    {
+        if (ctx.aircraft == nullptr)
+        {
+            return;
+        }
+
+        const RuleContext ruleContext = BuildRuleContext(state, ctx);
+
+        for (AircraftRule* const rule : ctx.aircraft->Rules())
+        {
+            if (rule == nullptr || rule->Cadence() != cadence)
+            {
+                continue;
+            }
+
+            onVerdict(*rule, ruleContext, rule->Evaluate(ruleContext));
+        }
+    }
+
+    void Act(AircraftRule& rule, const RuleContext& ruleContext, const TurnaroundContext& ctx)
+    {
+        if (ctx.variableWriter != nullptr)
+        {
+            rule.Act(ruleContext, *ctx.variableWriter);
+        }
+    }
 }
 
 void TurnaroundState::NoteServiceInterruption(TurnaroundContext& ctx, const char* serviceName,
                                               const GsxStateStatus state, const bool started,
                                               const bool completed)
 {
-    const bool interrupted = started && !completed && state < GsxStateStatus::Requested;
+    NoteServiceInterruption(ctx, serviceName, started && !completed && state < GsxStateStatus::Requested);
+}
+
+void TurnaroundState::NoteServiceInterruption(TurnaroundContext& ctx, const char* serviceName,
+                                              const bool interrupted)
+{
     if (interrupted == ctx.data.serviceInterrupted)
     {
         return;
@@ -52,65 +88,30 @@ std::optional<TurnaroundTransition> TurnaroundState::Evaluate(TurnaroundContext&
     return EvaluatePhase(ctx);
 }
 
-TurnaroundState::RuleOutcome TurnaroundState::RunRules(TurnaroundContext& ctx, const RuleCadence cadence)
-{
-    RuleOutcome outcome;
-
-    if (ctx.aircraft == nullptr)
-    {
-        return outcome;
-    }
-
-    const RuleContext ruleContext = BuildRuleContext(*this, ctx);
-
-    for (AircraftRule* const rule : ctx.aircraft->Rules())
-    {
-        if (rule == nullptr || rule->Cadence() != cadence)
-        {
-            continue;
-        }
-
-        const RuleVerdict verdict = rule->Evaluate(ruleContext);
-        if (verdict.holds && !outcome.holds)
-        {
-            outcome.holds = true;
-            outcome.ticksAllowed = verdict.holdTicksAllowed;
-            outcome.reason = verdict.reason;
-        }
-
-        if (ctx.variableWriter != nullptr)
-        {
-            rule->Act(ruleContext, *ctx.variableWriter);
-        }
-    }
-
-    return outcome;
-}
-
 void TurnaroundState::ActOnRules(TurnaroundContext& ctx, const RuleCadence cadence)
 {
-    RunRules(ctx, cadence);
+    EvaluateRules(*this, ctx, cadence, [&ctx](AircraftRule& rule, const RuleContext& ruleContext, const RuleVerdict&)
+    {
+        Act(rule, ruleContext, ctx);
+    });
 }
 
 bool TurnaroundState::AnyRuleHolds(TurnaroundContext& ctx)
 {
-    if (ctx.aircraft == nullptr)
-    {
-        holdTicks_ = 0;
+    std::optional<RuleVerdict> hold;
 
-        return false;
-    }
+    EvaluateRules(*this, ctx, RuleCadence::Fast,
+                  [&ctx, &hold](AircraftRule& rule, const RuleContext& ruleContext, const RuleVerdict& verdict)
+                  {
+                      if (verdict.holds && !hold.has_value())
+                      {
+                          hold = verdict;
+                      }
 
-    const RuleOutcome outcome = RunRules(ctx, RuleCadence::Fast);
+                      Act(rule, ruleContext, ctx);
+                  });
 
-    if (!outcome.holds)
-    {
-        holdTicks_ = 0;
-
-        return false;
-    }
-
-    if (ctx.pilotTouched)
+    if (!hold.has_value() || ctx.pilotTouched)
     {
         holdTicks_ = 0;
 
@@ -119,13 +120,13 @@ bool TurnaroundState::AnyRuleHolds(TurnaroundContext& ctx)
 
     ++holdTicks_;
 
-    if (holdTicks_ > outcome.ticksAllowed)
+    if (holdTicks_ > hold->holdTicksAllowed)
     {
         holdTicks_ = 0;
 
         if (ctx.logger != nullptr)
         {
-            ctx.logger->LogInfo(std::format("Rule hold expired: {}", outcome.reason));
+            ctx.logger->LogInfo(std::format("Rule hold expired: {}", hold->reason));
         }
 
         return false;
@@ -136,33 +137,27 @@ bool TurnaroundState::AnyRuleHolds(TurnaroundContext& ctx)
 
 void TurnaroundState::ObserveRules(TurnaroundContext& ctx, const RuleCadence cadence)
 {
-    if (ctx.aircraft == nullptr || ctx.logger == nullptr)
+    if (ctx.logger == nullptr)
     {
         return;
     }
 
-    const RuleContext ruleContext = BuildRuleContext(*this, ctx);
+    EvaluateRules(*this, ctx, cadence,
+                  [this, &ctx](const AircraftRule& rule, const RuleContext&, const RuleVerdict& verdict)
+                  {
+                      std::string message = std::format("Rule {} would {}{}", rule.Name(),
+                                                        verdict.holds ? "hold" : "pass",
+                                                        verdict.holds
+                                                            ? std::format(": {}", verdict.reason)
+                                                            : std::string{});
 
-    for (AircraftRule* const rule : ctx.aircraft->Rules())
-    {
-        if (rule == nullptr || rule->Cadence() != cadence)
-        {
-            continue;
-        }
+                      std::string& lastLogged = observedVerdicts_[rule.Name()];
+                      if (lastLogged == message)
+                      {
+                          return;
+                      }
 
-        const RuleVerdict verdict = rule->Evaluate(ruleContext);
-
-        std::string message = std::format("Rule {} would {}{}", rule->Name(),
-                                          verdict.holds ? "hold" : "pass",
-                                          verdict.holds ? std::format(": {}", verdict.reason) : std::string{});
-
-        std::string& lastLogged = observedVerdicts_[rule->Name()];
-        if (lastLogged == message)
-        {
-            continue;
-        }
-
-        lastLogged = std::move(message);
-        ctx.logger->LogInfo(lastLogged);
-    }
+                      lastLogged = std::move(message);
+                      ctx.logger->LogInfo(lastLogged);
+                  });
 }

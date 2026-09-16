@@ -11,6 +11,8 @@ public:
     double plannedFuelKg = 0.0;
     double plannedZfwKg = 0.0;
     double emptyZfwKg = 0.0;
+    double plannedOperatingEmptyKg = 0.0;
+    double crewOnBoardKg = 0.0;
     int plannedPax = 0;
     double currentFuelKg = 0.0;
     double currentZfwKg = 0.0;
@@ -56,6 +58,8 @@ public:
     [[nodiscard]] double GetPlannedFuelKg() const override { return plannedFuelKg; }
     [[nodiscard]] double GetPlannedZfwKg() const override { return plannedZfwKg; }
     [[nodiscard]] double GetEmptyZfwKg() const override { return emptyZfwKg; }
+    [[nodiscard]] double GetPlannedOperatingEmptyKg() const override { return plannedOperatingEmptyKg; }
+    [[nodiscard]] double GetCrewOnBoardKg() const override { return crewOnBoardKg; }
     [[nodiscard]] int GetPlannedPassengers() const override { return plannedPax; }
     [[nodiscard]] double GetCurrentFuelKg() const override { return currentFuelKg; }
     [[nodiscard]] double GetFuelCapacityKg() const override { return fuelCapacityKg; }

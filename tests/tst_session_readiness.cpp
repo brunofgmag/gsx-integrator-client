@@ -15,6 +15,7 @@ private slots:
     static void evaluatesTruthTable();
     static void cameraBoundaryAtEleven();
     static void fs2020IgnoresAircraftAndAvatarVars();
+    static void onlyTheFs2024AvatarIsOnFoot();
     static void detectsSimVersionFromAppName_data();
     static void detectsSimVersionFromAppName();
     static void labelsSimVersions();
@@ -77,6 +78,14 @@ void SessionReadinessTest::fs2020IgnoresAircraftAndAvatarVars()
     QVERIFY(SessionReadiness::Evaluate(SimVersion::Msfs2020, 4.0, 0.0, 0.0));
     QVERIFY(SessionReadiness::Evaluate(SimVersion::Msfs2020, 4.0, 0.0, 1.0));
     QVERIFY(SessionReadiness::Evaluate(SimVersion::Unknown, 4.0, 1.0, 1.0));
+}
+
+void SessionReadinessTest::onlyTheFs2024AvatarIsOnFoot()
+{
+    QVERIFY(SessionReadiness::IsOnFoot(SimVersion::Msfs2024, 1.0));
+    QVERIFY(!SessionReadiness::IsOnFoot(SimVersion::Msfs2024, 0.0));
+    QVERIFY(!SessionReadiness::IsOnFoot(SimVersion::Msfs2020, 1.0));
+    QVERIFY(!SessionReadiness::IsOnFoot(SimVersion::Unknown, 1.0));
 }
 
 void SessionReadinessTest::detectsSimVersionFromAppName_data()

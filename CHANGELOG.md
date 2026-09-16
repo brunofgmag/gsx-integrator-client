@@ -1,5 +1,228 @@
 # Changelog
 
+## [1.34.12](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.11...v1.34.12) (2026-09-16)
+
+
+* pay the  debts of the bikf flight ([#169](https://github.com/brunofgmag/gsx-integrator-client/issues/169)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+
+
+### Bug Fixes
+
+* **aircraft:** wait for the atc model before detecting the aircraft ([1f32b54](https://github.com/brunofgmag/gsx-integrator-client/commit/1f32b545f4136288cfb8ea811b9a415d410875e5)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **fss-727:** close the main deck once the gsx deboarding completes with it open ([4bf7773](https://github.com/brunofgmag/gsx-integrator-client/commit/4bf777368007255d0bbb1d11a62708efa94e0923)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **fss-727:** detect the 727-200re freighter by its atc model ([a02218a](https://github.com/brunofgmag/gsx-integrator-client/commit/a02218a46bf99d9493dfeae4a604d715d853bb91)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **gsx:** accept the de-icing once per departure and leave a repeated question to the gsx choice ([8ec64af](https://github.com/brunofgmag/gsx-integrator-client/commit/8ec64af8f1604261db07e952749c5ffe77a4c49c)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **gsx:** leave the menus the client asked nothing of open and restart the stall watch when a menu reopens ([bd9ef11](https://github.com/brunofgmag/gsx-integrator-client/commit/bd9ef1196384a1ca7c8c696c825da6e91fc649fd)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **gsx:** never answer the pilot's pull confirmation with the gsx choice ([83929a0](https://github.com/brunofgmag/gsx-integrator-client/commit/83929a01d212e990af34a79cb4828a82a8dddb61)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **operations:** tell the pilot to wait for gsx once the deboarding request is out ([89679ad](https://github.com/brunofgmag/gsx-integrator-client/commit/89679ad6ba7e6127c3fd87e4d12f09f2b73019ae)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **turnaround:** complete the freighter boarding the kept stairs hold up ([91c9a7b](https://github.com/brunofgmag/gsx-integrator-client/commit/91c9a7bd1b93ae83731dbfe122f732fe278e0c86)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **turnaround:** warn when a gsx restart drops the pending pushback and leave for the departure without one ([44f6ff3](https://github.com/brunofgmag/gsx-integrator-client/commit/44f6ff3f3a99913469d770b5d04f96c51d20af71)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+
+## [1.34.11](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.10...v1.34.11) (2026-09-15)
+
+
+* pay the debts of the 727 runs, the rule pass and the test output ([#167](https://github.com/brunofgmag/gsx-integrator-client/issues/167)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+
+
+### Bug Fixes
+
+* **boarding:** stop waiting for a cargo flag that gsx leaves up after closing the service ([f97f003](https://github.com/brunofgmag/gsx-integrator-client/commit/f97f00364c9208afbdf9db3a8c7714623a8f6629)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+* **build:** configure the qml test like every other test and let the filter reach it ([e631793](https://github.com/brunofgmag/gsx-integrator-client/commit/e63179380d2fa23f5e0f6974d0c46d99ee304f46)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+* **cmake:** let a failing qt test print its log when no console is attached ([d0615a1](https://github.com/brunofgmag/gsx-integrator-client/commit/d0615a1634de0f61eb6aab0ccd754bd164b8db6f)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+* **fss-727:** trigger the smart switch from SERV INT and name the pilot on foot in the initial tip ([95c8f7e](https://github.com/brunofgmag/gsx-integrator-client/commit/95c8f7e26ab4f41be7123c33cf5f9fad80ff909d)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+* **refueling:** hold the fuel writes while the gsx remote api is down ([b2fcc32](https://github.com/brunofgmag/gsx-integrator-client/commit/b2fcc328115b0b5ba561d597667c5d72ee4c2e82)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+* **runtime:** keep the gsx chip current while the pilot is on foot ([5161317](https://github.com/brunofgmag/gsx-integrator-client/commit/51613177e2e05c3c59a5d37d5c0cf709a846a01f)) ([0d190e1](https://github.com/brunofgmag/gsx-integrator-client/commit/0d190e1c96455babf189c32bde994496d9b354c0))
+
+## [1.34.10](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.9...v1.34.10) (2026-09-15)
+
+
+* name the initial phase, count the loader door down and keep the advisory on a second hold ([#163](https://github.com/brunofgmag/gsx-integrator-client/issues/163)) ([a504a13](https://github.com/brunofgmag/gsx-integrator-client/commit/a504a1381e8d84a97d7fb7133993dd7745105425))
+
+
+### Bug Fixes
+
+* **turnaround:** name the initial phase, count the loader door down and keep the advisory on a second hold ([6773bf2](https://github.com/brunofgmag/gsx-integrator-client/commit/6773bf2b5eb177dd51c6c6d7aaa45cbdc78f6c75)) ([a504a13](https://github.com/brunofgmag/gsx-integrator-client/commit/a504a1381e8d84a97d7fb7133993dd7745105425))
+
+## [1.34.9](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.8...v1.34.9) (2026-09-15)
+
+
+* copy the qt test dlls once and let the filter run a guard ([#162](https://github.com/brunofgmag/gsx-integrator-client/issues/162)) ([9739373](https://github.com/brunofgmag/gsx-integrator-client/commit/9739373cc1887e3b5836a8c5b934e9745f8614a6))
+
+
+### Bug Fixes
+
+* **cmake:** copy the qt test dlls from one target instead of every test ([5ce55ac](https://github.com/brunofgmag/gsx-integrator-client/commit/5ce55ac73eeb3d1e40a932d184c3d966dd72d291)) ([9739373](https://github.com/brunofgmag/gsx-integrator-client/commit/9739373cc1887e3b5836a8c5b934e9745f8614a6))
+* **run-tests:** let the filter run a guard without building a target ([57bb57a](https://github.com/brunofgmag/gsx-integrator-client/commit/57bb57af6e9308bd0d9ab60728f976c34a528d58)) ([9739373](https://github.com/brunofgmag/gsx-integrator-client/commit/9739373cc1887e3b5836a8c5b934e9745f8614a6))
+* **tools:** ground the avar unit allowlist reasons in adr-0008 ([b0150e4](https://github.com/brunofgmag/gsx-integrator-client/commit/b0150e46b7c79ac6963e30a0c36be5ab133f6d8d)) ([9739373](https://github.com/brunofgmag/gsx-integrator-client/commit/9739373cc1887e3b5836a8c5b934e9745f8614a6))
+* **turnaround:** make the discarded nodiscard returns explicit ([f32b126](https://github.com/brunofgmag/gsx-integrator-client/commit/f32b1260facb45c6a49df06f9f64464bb7782123)) ([9739373](https://github.com/brunofgmag/gsx-integrator-client/commit/9739373cc1887e3b5836a8c5b934e9745f8614a6))
+
+## [1.34.8](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.7...v1.34.8) (2026-09-15)
+
+
+* hand the resumed main deck travel back to the rule and bound the wait on the main loader ([#161](https://github.com/brunofgmag/gsx-integrator-client/issues/161)) ([fd8675a](https://github.com/brunofgmag/gsx-integrator-client/commit/fd8675a17361169d8561d59a1c4f095b8cd66595))
+
+
+### Bug Fixes
+
+* **fss-727:** hand the resumed main deck travel back to the rule and bound the wait on the main loader ([290f903](https://github.com/brunofgmag/gsx-integrator-client/commit/290f903778edf9fe7c6f1799bb9cd01e282fb513)) ([fd8675a](https://github.com/brunofgmag/gsx-integrator-client/commit/fd8675a17361169d8561d59a1c4f095b8cd66595))
+
+## [1.34.7](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.6...v1.34.7) (2026-09-15)
+
+
+* correct the loader clock, the service end, the deboarding cargo and the fuel hose readings ([#157](https://github.com/brunofgmag/gsx-integrator-client/issues/157)) ([852addb](https://github.com/brunofgmag/gsx-integrator-client/commit/852addb6189344c13c3000e36255440505455a54))
+
+
+### Bug Fixes
+
+* **gsx:** correct the loader clock, the service end, the deboarding cargo and the fuel hose readings ([64db625](https://github.com/brunofgmag/gsx-integrator-client/commit/64db625f5c5dbab138af62159f99d343a6e4b939)) ([852addb](https://github.com/brunofgmag/gsx-integrator-client/commit/852addb6189344c13c3000e36255440505455a54))
+
+## [1.34.6](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.5...v1.34.6) (2026-09-15)
+
+
+* translate the missing screen lines and stop re-asking gsx for a finished service ([#155](https://github.com/brunofgmag/gsx-integrator-client/issues/155)) ([a7585d9](https://github.com/brunofgmag/gsx-integrator-client/commit/a7585d9ba306e60b1d2134f9215574f143a6a646))
+
+
+### Bug Fixes
+
+* **efb:** publish the dropped service advisory and guard that every advisory reaches the app ([#156](https://github.com/brunofgmag/gsx-integrator-client/issues/156)) ([33de46c](https://github.com/brunofgmag/gsx-integrator-client/commit/33de46c6c8bf2d8b96904d20bc4046e880f1da39))
+* **i18n:** translate the four screen lines that never reached the translation files ([058c136](https://github.com/brunofgmag/gsx-integrator-client/commit/058c136bdb1ab62664d7d06c98867841f2f72477)) ([a7585d9](https://github.com/brunofgmag/gsx-integrator-client/commit/a7585d9ba306e60b1d2134f9215574f143a6a646))
+* **turnaround:** check a service for completion before asking gsx for it again ([5de94e9](https://github.com/brunofgmag/gsx-integrator-client/commit/5de94e9988c1edf77a6b49f143cc5b1c2d66d285)) ([a7585d9](https://github.com/brunofgmag/gsx-integrator-client/commit/a7585d9ba306e60b1d2134f9215574f143a6a646))
+
+## [1.34.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.4...v1.34.5) (2026-09-15)
+
+
+* read a stopped main deck as open, wait for the main loader before closing it, and put the panel master back on short of an end ([#154](https://github.com/brunofgmag/gsx-integrator-client/issues/154)) ([9b867b0](https://github.com/brunofgmag/gsx-integrator-client/commit/9b867b0ef10918c1575533ac77b9c0611bd58979))
+
+
+### Bug Fixes
+
+* **fss-727:** read a stopped main deck as open, wait for the main loader before closing it, and put the panel master back on short of an end ([304123d](https://github.com/brunofgmag/gsx-integrator-client/commit/304123d8cbb02b03acf9e5a30f5a3fdd31b40637)) ([9b867b0](https://github.com/brunofgmag/gsx-integrator-client/commit/9b867b0ef10918c1575533ac77b9c0611bd58979))
+
+## [1.34.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.3...v1.34.4) (2026-09-15)
+
+
+* keep the front entry and main deck right under gsx stairs, completing and deboarding ([#152](https://github.com/brunofgmag/gsx-integrator-client/issues/152)) ([269522b](https://github.com/brunofgmag/gsx-integrator-client/commit/269522bb2fb4b15720c16bdf51d1ee4d66d889c1))
+
+
+### Bug Fixes
+
+* **fss-727:** hold a pending main deck close through the gsx completing state ([06bcd94](https://github.com/brunofgmag/gsx-integrator-client/commit/06bcd94fc370011a0aa260daf2ae00e7ae55103f)) ([269522b](https://github.com/brunofgmag/gsx-integrator-client/commit/269522bb2fb4b15720c16bdf51d1ee4d66d889c1))
+* **fss-727:** keep the front entry open when every door closes under the gsx stairs ([f833716](https://github.com/brunofgmag/gsx-integrator-client/commit/f833716c8da009a5a617f08ae285e5fa80457f96)) ([269522b](https://github.com/brunofgmag/gsx-integrator-client/commit/269522bb2fb4b15720c16bdf51d1ee4d66d889c1))
+* **fss-727:** open the main deck for the main loader waiting on it during deboarding ([bb0130c](https://github.com/brunofgmag/gsx-integrator-client/commit/bb0130cda8c8565eb95f92ca202889fb59b47930)) ([269522b](https://github.com/brunofgmag/gsx-integrator-client/commit/269522bb2fb4b15720c16bdf51d1ee4d66d889c1))
+
+## [1.34.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.2...v1.34.3) (2026-09-15)
+
+
+* stop reading a couatl drop as a completed service and never ask for stairs already in place ([#150](https://github.com/brunofgmag/gsx-integrator-client/issues/150)) ([a539c3e](https://github.com/brunofgmag/gsx-integrator-client/commit/a539c3ea90ae33b66be3ddc858b99133f91044f4))
+
+
+### Bug Fixes
+
+* **gsx:** stop reading a service the couatl dropped as completed ([97063be](https://github.com/brunofgmag/gsx-integrator-client/commit/97063be8a116762cc016c3f420239216032b3177)) ([a539c3e](https://github.com/brunofgmag/gsx-integrator-client/commit/a539c3ea90ae33b66be3ddc858b99133f91044f4))
+* **turnaround:** never ask for stairs already in place or not yet read ([3387480](https://github.com/brunofgmag/gsx-integrator-client/commit/33874808cf2832a64972a24b78855d0f66f31bf8)) ([a539c3e](https://github.com/brunofgmag/gsx-integrator-client/commit/a539c3ea90ae33b66be3ddc858b99133f91044f4))
+
+## [1.34.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.1...v1.34.2) (2026-09-14)
+
+
+* keep the deck master on until the door rests and point the power-on tip at the engineer panel ([#148](https://github.com/brunofgmag/gsx-integrator-client/issues/148)) ([66034af](https://github.com/brunofgmag/gsx-integrator-client/commit/66034af8d86d723c949e1e4d55b5f319c2920239))
+
+
+### Bug Fixes
+
+* **fss-727:** end the main deck travel once the door rests instead of at a position threshold ([c78f50e](https://github.com/brunofgmag/gsx-integrator-client/commit/c78f50e417f7aec74e1ae7184ff0e510f82c7f0a)) ([66034af](https://github.com/brunofgmag/gsx-integrator-client/commit/66034af8d86d723c949e1e4d55b5f319c2920239))
+* **operations:** point the 727 power-on tip at the engineer panel ext power switch ([78a52bb](https://github.com/brunofgmag/gsx-integrator-client/commit/78a52bb11b4448b11cf32f044e63871b83ca689e)) ([66034af](https://github.com/brunofgmag/gsx-integrator-client/commit/66034af8d86d723c949e1e4d55b5f319c2920239))
+
+## [1.34.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.0...v1.34.1) (2026-09-14)
+
+
+* stop the cmake regeneration race by configuring in both scripts ([#146](https://github.com/brunofgmag/gsx-integrator-client/issues/146)) ([475a5b6](https://github.com/brunofgmag/gsx-integrator-client/commit/475a5b6f6ce4ee9dd81cf65b521d497a4dd7882e))
+
+
+### Bug Fixes
+
+* **build:** stop the cmake regeneration race by configuring in both scripts ([5aee05d](https://github.com/brunofgmag/gsx-integrator-client/commit/5aee05d172f50b64ab6183b37fb034d11e4e9b51)) ([475a5b6](https://github.com/brunofgmag/gsx-integrator-client/commit/475a5b6f6ce4ee9dd81cf65b521d497a4dd7882e))
+
+## [1.34.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.33.0...v1.34.0) (2026-09-14)
+
+
+* load the simbrief cargo line and tell the pilot when the plan leaves out the crew ([#144](https://github.com/brunofgmag/gsx-integrator-client/issues/144)) ([b1564c5](https://github.com/brunofgmag/gsx-integrator-client/commit/b1564c54813aa06f2689f53e946bc7a2eecefd54))
+
+
+### Features
+
+* **fss-727:** load the plan cargo line whole and hold the plan until the crew reads parked ([60b0a24](https://github.com/brunofgmag/gsx-integrator-client/commit/60b0a245bbf6203ea778b387f43a12ae8dcc5c7e)) ([b1564c5](https://github.com/brunofgmag/gsx-integrator-client/commit/b1564c54813aa06f2689f53e946bc7a2eecefd54))
+* **operations:** tell the pilot the empty weight simbrief needs to count the crew ([93a88c6](https://github.com/brunofgmag/gsx-integrator-client/commit/93a88c6071574cf7891a007fa94a504ec5f6f99b)) ([b1564c5](https://github.com/brunofgmag/gsx-integrator-client/commit/b1564c54813aa06f2689f53e946bc7a2eecefd54))
+* **simbrief:** read the operating empty weight and the payload line from the ofp ([8026dfd](https://github.com/brunofgmag/gsx-integrator-client/commit/8026dfd179f0db051a41de21a412a16cb978936a)) ([b1564c5](https://github.com/brunofgmag/gsx-integrator-client/commit/b1564c54813aa06f2689f53e946bc7a2eecefd54))
+* **turnaround:** flag a plan whose operating empty weight leaves out the crew ([f13a31b](https://github.com/brunofgmag/gsx-integrator-client/commit/f13a31bff9ca49ebab7fccbbf762c1801f974480)) ([b1564c5](https://github.com/brunofgmag/gsx-integrator-client/commit/b1564c54813aa06f2689f53e946bc7a2eecefd54))
+
+## [1.33.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.32.2...v1.33.0) (2026-09-14)
+
+
+* drive the aircraft's own ground power, main deck and holds ([#142](https://github.com/brunofgmag/gsx-integrator-client/issues/142)) ([801745c](https://github.com/brunofgmag/gsx-integrator-client/commit/801745c60443f54adaea77edad5d392f26483d8d))
+
+
+### Features
+
+* **fss-727:** open the main deck for the waiting main loader and close it when boarding ends ([3dabf94](https://github.com/brunofgmag/gsx-integrator-client/commit/3dabf94865efe11186f5210af6d080862cb389dc)) ([801745c](https://github.com/brunofgmag/gsx-integrator-client/commit/801745c60443f54adaea77edad5d392f26483d8d))
+* **fss-727:** raise the aircraft's own ground power through the port and stop calling the gsx unit ([1acf10b](https://github.com/brunofgmag/gsx-integrator-client/commit/1acf10bd29cfdf65977d85b2d5e54b4090924e51)) ([801745c](https://github.com/brunofgmag/gsx-integrator-client/commit/801745c60443f54adaea77edad5d392f26483d8d))
+
+
+### Bug Fixes
+
+* **fss-727:** close each hold only once its loader has left ([28206f9](https://github.com/brunofgmag/gsx-integrator-client/commit/28206f965e8bba23032b2723d8922c076e2f1952)) ([801745c](https://github.com/brunofgmag/gsx-integrator-client/commit/801745c60443f54adaea77edad5d392f26483d8d))
+
+## [1.32.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.32.1...v1.32.2) (2026-09-14)
+
+
+* give up on a loader that never gets its door and name it on screen ([#140](https://github.com/brunofgmag/gsx-integrator-client/issues/140)) ([2a3ff8e](https://github.com/brunofgmag/gsx-integrator-client/commit/2a3ff8e6301e700995cea0364b335b74b6a36976))
+
+
+### Bug Fixes
+
+* **boarding:** give up on a loader that never gets its door and name it on screen ([518041c](https://github.com/brunofgmag/gsx-integrator-client/commit/518041cdbd1cb15d14e474a9067c9526a8985405)) ([2a3ff8e](https://github.com/brunofgmag/gsx-integrator-client/commit/2a3ff8e6301e700995cea0364b335b74b6a36976))
+* **gsx:** hold a service counter at zero until its lvar moves off the last turnaround ([12d7629](https://github.com/brunofgmag/gsx-integrator-client/commit/12d7629f5afc89b07443ccf39080bc29cb3703ab)) ([2a3ff8e](https://github.com/brunofgmag/gsx-integrator-client/commit/2a3ff8e6301e700995cea0364b335b74b6a36976))
+
+## [1.32.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.32.0...v1.32.1) (2026-09-14)
+
+
+* name what holds the initial turnaround phase ([#138](https://github.com/brunofgmag/gsx-integrator-client/issues/138)) ([af7ceab](https://github.com/brunofgmag/gsx-integrator-client/commit/af7ceabfde2d50aa884d4a023670b1e1a2b6fbea))
+
+
+### Bug Fixes
+
+* **operations:** name what holds the initial turnaround phase ([7ee8664](https://github.com/brunofgmag/gsx-integrator-client/commit/7ee8664090f9c65edd557eebe6009ee54704bb2e)) ([af7ceab](https://github.com/brunofgmag/gsx-integrator-client/commit/af7ceabfde2d50aa884d4a023670b1e1a2b6fbea))
+
+## [1.32.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.31.0...v1.32.0) (2026-09-12)
+
+
+* refuel by tank level and load the cargo stations from the plan ([#134](https://github.com/brunofgmag/gsx-integrator-client/issues/134)) ([29cf27b](https://github.com/brunofgmag/gsx-integrator-client/commit/29cf27b54ba6ad330f345d90113206b5cbc8e084))
+
+
+### Features
+
+* **fss-727:** load the cargo stations from the planned zero-fuel weight ([3da20ee](https://github.com/brunofgmag/gsx-integrator-client/commit/3da20ee100e5925bd430dd09fddd5a24dd363a40)) ([29cf27b](https://github.com/brunofgmag/gsx-integrator-client/commit/29cf27b54ba6ad330f345d90113206b5cbc8e084))
+* **fss-727:** refuel the three tanks by level fraction ([91e592f](https://github.com/brunofgmag/gsx-integrator-client/commit/91e592fb9a51278df51a983ac4c39412c85e64ec)) ([29cf27b](https://github.com/brunofgmag/gsx-integrator-client/commit/29cf27b54ba6ad330f345d90113206b5cbc8e084))
+
+## [1.31.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.30.0...v1.31.0) (2026-09-12)
+
+
+* drive the ground equipment, power and doors, and drop the passenger variant ([#132](https://github.com/brunofgmag/gsx-integrator-client/issues/132)) ([e003301](https://github.com/brunofgmag/gsx-integrator-client/commit/e0033019ac69ec0ab9d5d6b42fa06d20b7575501))
+
+
+### Features
+
+* **fss-727:** drive the ground equipment, power and doors, and drop the passenger variant ([61cc3cc](https://github.com/brunofgmag/gsx-integrator-client/commit/61cc3cc382ce181f0f3ca1e351cbbf0e3f955c0a)) ([e003301](https://github.com/brunofgmag/gsx-integrator-client/commit/e0033019ac69ec0ab9d5d6b42fa06d20b7575501))
+
+## [1.30.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.7...v1.30.0) (2026-09-12)
+
+
+* read the three 727 variants and keep the vendor GSX auto mode off ([#130](https://github.com/brunofgmag/gsx-integrator-client/issues/130)) ([171bbd9](https://github.com/brunofgmag/gsx-integrator-client/commit/171bbd906478771fde207f648ef0b0a3e0c6d964))
+
+
+### Features
+
+* **fss-727:** read the three variants and keep the vendor GSX auto mode off ([7bdd0b4](https://github.com/brunofgmag/gsx-integrator-client/commit/7bdd0b4470100c091d7a5527a53ec9fcd4f561a6)) ([171bbd9](https://github.com/brunofgmag/gsx-integrator-client/commit/171bbd906478771fde207f648ef0b0a3e0c6d964))
+
 ## [1.29.7](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.29.6...v1.29.7) (2026-09-03)
 
 

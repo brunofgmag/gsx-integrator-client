@@ -1,9 +1,11 @@
 #include "GsxStateService.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <ranges>
 #include <string_view>
+#include <utility>
 
 #include "GsxLVars.h"
 #include "../logging/LogMacros.h"
@@ -14,6 +16,14 @@ using namespace gsx::lvars;
 namespace
 {
     constexpr auto kNoPushbackVerdict = "no pushback";
+    constexpr auto kGroundVelocity = "GROUND VELOCITY";
+    constexpr auto kKnotsUnit = "Knots";
+
+    constexpr std::array kBaggageLoaders = {
+        std::pair{kBaggageLoaderMainState, CargoLoader::MainDeck},
+        std::pair{kBaggageLoaderRearState, CargoLoader::Rear},
+        std::pair{kBaggageLoaderFrontState, CargoLoader::Front},
+    };
 
     bool EqualsFold(const std::string& lhs, const std::string_view rhs)
     {
@@ -36,6 +46,10 @@ namespace
         }
     }
 
+    bool EndsWithoutCompleted(const GsxState gsxState)
+    {
+        return gsxState == GsxState::Pushback || gsxState == GsxState::Deice;
+    }
 }
 
 GsxStateService::GsxStateService(VariableGateway* variableGateway, const GsxRemoteState* remoteState)
@@ -54,8 +68,11 @@ void GsxStateService::Reset()
 {
     boarding_ = {};
     deboarding_ = {};
+    boardingCargo_ = {};
+    deboardingCargo_ = {};
     fuelAndPayloadTakenOver_ = false;
     gpuConnectedSeenClear_ = false;
+    gsxDownSinceLastObserve_ = false;
 
     for (auto& track : states_ | std::views::values)
     {
@@ -70,6 +87,9 @@ bool GsxStateService::IsAvailable() const
 
 void GsxStateService::Observe()
 {
+    const LVarSpan couatlStarted = varManager_->ConsumeLVarSpan(kCouatlStarted);
+    gsxDownSinceLastObserve_ = !couatlStarted.received || couatlStarted.min < 1.0;
+
     for (const GsxState gsxState : {GsxState::Refueling, GsxState::Boarding, GsxState::Pushback,
                                     GsxState::Deboarding, GsxState::Deice})
     {
@@ -167,7 +187,17 @@ int GsxStateService::PassengerCounter::Update(const int current, const bool acti
         counting = true;
         last = current;
 
-        return total + current;
+        return 0;
+    }
+
+    if (!moved)
+    {
+        if (current == last)
+        {
+            return 0;
+        }
+
+        moved = true;
     }
 
     if (current < last)
@@ -189,9 +219,31 @@ int GsxStateService::PassengerCounter::Update(const int current, const bool acti
     return total + current;
 }
 
-double GsxStateService::GetBoardingCargoPercent() const
+double GsxStateService::GetBoardingCargoPercent()
 {
-    return varManager_->GetLVar(kBoardingCargoPercent);
+    const bool active = varManager_->GetLVar(kBoardingState) == static_cast<double>(GsxStateStatus::Active);
+
+    return boardingCargo_.Update(varManager_->GetLVar(kBoardingCargoPercent), active);
+}
+
+double GsxStateService::CargoPercentReading::Update(const double current, const bool active)
+{
+    if (!counting)
+    {
+        if (!active)
+        {
+            return 0.0;
+        }
+
+        counting = true;
+        first = current;
+
+        return 0.0;
+    }
+
+    moved = moved || current != first;
+
+    return moved ? current : 0.0;
 }
 
 bool GsxStateService::IsLoadingCargo() const
@@ -199,22 +251,24 @@ bool GsxStateService::IsLoadingCargo() const
     return varManager_->GetLVar(kBoardingCargo) == 1.0;
 }
 
-bool GsxStateService::IsLoaderWaitingForDoor() const
+CargoLoader GsxStateService::GetLoaderWaitingForDoor() const
 {
-    for (const char* state : {kBaggageLoaderFrontState, kBaggageLoaderRearState, kBaggageLoaderMainState})
+    for (const auto& [state, loader] : kBaggageLoaders)
     {
         if (varManager_->GetLVar(state) == gsx::states::kLoaderWaitingForDoor)
         {
-            return true;
+            return loader;
         }
     }
 
-    return false;
+    return CargoLoader::None;
 }
 
-double GsxStateService::GetDeboardingCargoPercent() const
+double GsxStateService::GetDeboardingCargoPercent()
 {
-    return varManager_->GetLVar(kDeboardingCargoPercent);
+    const bool active = varManager_->GetLVar(kDeboardingState) == static_cast<double>(GsxStateStatus::Active);
+
+    return deboardingCargo_.Update(varManager_->GetLVar(kDeboardingCargoPercent), active);
 }
 
 bool GsxStateService::AreStairsInPlace() const
@@ -287,6 +341,16 @@ bool GsxStateService::OffersPushback() const
     });
 }
 
+bool GsxStateService::IsRemoteApiConnected() const
+{
+    return remote_ != nullptr && remote_->connected;
+}
+
+bool GsxStateService::WasGsxDownSinceLastObserve() const
+{
+    return gsxDownSinceLastObserve_;
+}
+
 bool GsxStateService::AreStairsAvailable() const
 {
     const double state = varManager_->GetLVar(kStairs, 0.0);
@@ -324,6 +388,11 @@ bool GsxStateService::IsServiceVehicleActive() const
 bool GsxStateService::IsAircraftOnGround() const
 {
     return varManager_->GetAVar("SIM ON GROUND", "Bool", 1.0) == 1.0;
+}
+
+double GsxStateService::GetGroundSpeedKnots() const
+{
+    return varManager_->GetAVar(kGroundVelocity, kKnotsUnit, 0.0);
 }
 
 void GsxStateService::TakeOverFuelAndPayload()
@@ -383,9 +452,21 @@ void GsxStateService::ObserveState(const GsxState gsxState)
     const auto stateStatus = static_cast<GsxStateStatus>(varManager_->GetLVar(stateLVar));
     StateTrack& track = states_.at(gsxState);
 
-    const bool returnedToIdle =
+    if (gsxDownSinceLastObserve_)
+    {
+        track.couatlDiedDuringRun = true;
+    }
+    else if (stateStatus == GsxStateStatus::Active && track.status != GsxStateStatus::Active)
+    {
+        track.couatlDiedDuringRun = false;
+    }
+
+    const bool leftActiveWithoutCompleting =
         (stateStatus == GsxStateStatus::Callable || stateStatus == GsxStateStatus::Bypassed)
         && track.status == GsxStateStatus::Active;
+
+    const bool returnedToIdle = leftActiveWithoutCompleting
+        && (EndsWithoutCompleted(gsxState) || !track.couatlDiedDuringRun);
 
     track.completed = track.completed || stateStatus == GsxStateStatus::Completed || returnedToIdle;
     track.status = stateStatus;

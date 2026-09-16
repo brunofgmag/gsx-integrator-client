@@ -17,6 +17,10 @@ protected:
 
 private:
     [[nodiscard]] static bool IsCargoPending(const TurnaroundContext& ctx);
+    [[nodiscard]] static bool HasGivenUpOnTheLoader(const TurnaroundContext& ctx);
+    static void NoteLoaderAwaitingDoor(TurnaroundContext& ctx);
+    static void NoteCargoFlagAfterTheService(TurnaroundContext& ctx, bool serviceClosed);
+    [[nodiscard]] static bool HasGivenUpOnTheCargoFlag(const TurnaroundContext& ctx);
     [[nodiscard]] static bool IsBarFull(const TurnaroundContext& ctx);
     [[nodiscard]] static bool IsCargoHeldBehindTheStairs(const TurnaroundContext& ctx);
     static void MaybeForceCompletion(TurnaroundContext& ctx);

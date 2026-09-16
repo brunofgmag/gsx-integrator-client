@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "../model/CargoLoader.h"
 #include "../model/GroundPowerStatus.h"
 
 enum class GsxStateStatus : int
@@ -14,6 +15,7 @@ enum class GsxStateStatus : int
     Requested = 4,
     Active = 5,
     Completed = 6,
+    Completing = 7,
 };
 
 enum class GsxState : int
@@ -52,10 +54,10 @@ public:
     [[nodiscard]] virtual int GetPlannedPassengers() const = 0;
     [[nodiscard]] virtual int GetBoardedPassengers() = 0;
     [[nodiscard]] virtual int GetDeboardedPassengers() = 0;
-    [[nodiscard]] virtual double GetBoardingCargoPercent() const = 0;
+    [[nodiscard]] virtual double GetBoardingCargoPercent() = 0;
     [[nodiscard]] virtual bool IsLoadingCargo() const = 0;
-    [[nodiscard]] virtual bool IsLoaderWaitingForDoor() const = 0;
-    [[nodiscard]] virtual double GetDeboardingCargoPercent() const = 0;
+    [[nodiscard]] virtual CargoLoader GetLoaderWaitingForDoor() const = 0;
+    [[nodiscard]] virtual double GetDeboardingCargoPercent() = 0;
     [[nodiscard]] virtual bool AreStairsInPlace() const = 0;
     [[nodiscard]] virtual bool IsJetwayInPlace() const = 0;
     [[nodiscard]] virtual bool AreStairsAvailable() const = 0;
@@ -65,10 +67,13 @@ public:
     [[nodiscard]] virtual bool IsSimbriefLoaded() const = 0;
     [[nodiscard]] virtual std::string GetSimbriefRefusal() const = 0;
     [[nodiscard]] virtual bool IsAircraftOnGround() const = 0;
+    [[nodiscard]] virtual double GetGroundSpeedKnots() const = 0;
     [[nodiscard]] virtual bool IsGoodEngineStartConfirmationEnabled() const = 0;
     [[nodiscard]] virtual GroundPowerStatus GetGpuStatus() const = 0;
     [[nodiscard]] virtual bool IsServiceInProgress(GroundService service) const = 0;
     [[nodiscard]] virtual bool OffersPushback() const = 0;
+    [[nodiscard]] virtual bool IsRemoteApiConnected() const = 0;
+    [[nodiscard]] virtual bool WasGsxDownSinceLastObserve() const = 0;
 
     virtual void TakeOverFuelAndPayload() = 0;
 };

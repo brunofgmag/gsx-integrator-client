@@ -36,6 +36,8 @@ public:
     [[nodiscard]] virtual double GetPlannedZfwKg() const = 0;
     [[nodiscard]] virtual int GetPlannedPassengers() const = 0;
     [[nodiscard]] virtual double GetEmptyZfwKg() const = 0;
+    [[nodiscard]] virtual double GetPlannedOperatingEmptyKg() const { return 0.0; }
+    [[nodiscard]] virtual double GetCrewOnBoardKg() const { return 0.0; }
     [[nodiscard]] virtual std::optional<WeightUnit> GetNativeWeightUnit() const { return std::nullopt; }
 
     [[nodiscard]] virtual double GetCurrentFuelKg() const = 0;
@@ -52,6 +54,7 @@ public:
     [[nodiscard]] virtual bool ConsumeSmartSwitch() = 0;
 
     [[nodiscard]] virtual bool IsPowered() const = 0;
+    [[nodiscard]] virtual bool TakesExternalPowerAtTheEngineerPanel() const { return false; }
     [[nodiscard]] virtual std::optional<GroundPowerStatus> GetGroundPowerStatus() const { return std::nullopt; }
     [[nodiscard]] virtual bool SupportsChocksControl() const { return false; }
     virtual bool SetChocks(bool) { return false; }

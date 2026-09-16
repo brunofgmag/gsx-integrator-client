@@ -1,5 +1,7 @@
 #include <QtTest/QTest>
 
+#include <array>
+
 #include "TestDoubles.h"
 #include "../src/infrastructure/gsx/GsxStateService.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
@@ -9,6 +11,31 @@ namespace
     using namespace gsx::lvars;
 
     constexpr auto kSimOnGround = "SIM ON GROUND";
+    constexpr auto kGroundVelocity = "GROUND VELOCITY";
+
+    struct ServiceStateLVar
+    {
+        const char* lvar;
+        GsxState state;
+    };
+
+    constexpr std::array kServicesThatEndThroughCompleted = {
+        ServiceStateLVar{kRefuelingState, GsxState::Refueling},
+        ServiceStateLVar{kBoardingState, GsxState::Boarding},
+        ServiceStateLVar{kDeboardingState, GsxState::Deboarding},
+    };
+
+    void ObserveFor(GsxStateService& gsx, FakeVariableGateway& gateway, const char* stateLVar,
+                    const double couatlStarted, const double state, const int ticks)
+    {
+        gateway.lvars[kCouatlStarted] = couatlStarted;
+        gateway.lvars[stateLVar] = state;
+
+        for (int tick = 0; tick < ticks; ++tick)
+        {
+            gsx.Observe();
+        }
+    }
 }
 
 class GsxInterfaceTest final : public QObject
@@ -19,9 +46,15 @@ private slots:
     static void availabilityFollowsCouatlFlag();
     static void mapsServiceStateLVars();
     static void recordsExplicitCompletedState();
-    static void recordsCompletionWhenActiveReturnsToIdle();
+    static void aServiceTheCouatlDropsIsNotRecordedAsCompleted();
+    static void aServiceThePilotEndsWithALiveCouatlIsRecordedAsCompleted();
+    static void aCouatlDeathStopsCountingOnceTheServiceRunsAgain();
+    static void aCouatlDeathNoObserveSawIsStillADrop();
+    static void gsxCountsAsDownOnlyWhenTheCouatlFlagDippedSinceTheLastObserve();
+    static void aServiceThatPassesThroughCompletedStaysRecordedBackAtIdle();
     static void doesNotRecordCompletionWithoutActiveState();
     static void latchAdvancesWithoutAnyoneAskingForTheStatus();
+    static void aDeiceReturningToIdleIsRecordedAsCompleted();
     static void readingTheStatusDoesNotAdvanceTheLatch();
     static void readsFuelHoseAndPassengerCounts();
     static void detectsSimbriefLoaded();
@@ -31,18 +64,23 @@ private slots:
     static void detectsPushbackFinished();
     static void detectsRepositioning();
     static void cargoPercentReadsLVars();
+    static void boardingCargoPercentIgnoresTheStalePercentUntilItMoves();
+    static void deboardingCargoPercentIgnoresTheStalePercentUntilItMoves();
     static void cargoLoadingReadsLVars();
+    static void loaderWaitingForDoorNamesTheMainDeckOneWhenSeveralWait();
     static void jetwayAndStairsAvailability();
     static void jetwayAndStairsUnavailableUntilLVarsReceived();
     static void jetwayAndStairsUnavailableWhileGsxStillEvaluatesTheParking();
     static void serviceVehicleActiveFollowsTheStairsVehicles();
     static void goodEngineStartAssumedEnabledUntilLVarReceived();
     static void aircraftOnGroundFollowsSimVar();
+    static void groundSpeedReadsZeroUntilTheSimVarArrives();
     static void boardedPassengersAccumulatesAcrossResets();
     static void deboardedPassengersAccumulatesAcrossResets();
     static void boardedPassengersIgnoresStaleTotalBeforeBoardingStarts();
     static void deboardedPassengersIgnoresStaleTotalBeforeDeboardingStarts();
-    static void boardedPassengersDiscardsStaleTotalZeroedAfterBoardingStarts();
+    static void boardedPassengersIgnoresTheStaleTotalOnTheFirstActiveTick();
+    static void deboardedPassengersIgnoresTheStaleTotalOnTheFirstActiveTick();
     static void takeOverFuelAndPayloadClearsAutomationLVars();
     static void reassertsTakeoverAfterCouatlReset();
     static void refuelCounterComesFromFuelCounterLvar();
@@ -55,6 +93,7 @@ private slots:
     static void serviceInProgressFollowsRemoteStateRaw();
     static void serviceInProgressFalseWhenAbsentOrNoRemote();
     static void pushbackIsOfferedUnlessTheApronVerdictSaysOtherwise();
+    static void remoteApiCountsAsConnectedOnlyWhileTheLinkIsUp();
 };
 
 void GsxInterfaceTest::availabilityFollowsCouatlFlag()
@@ -97,22 +136,104 @@ void GsxInterfaceTest::recordsExplicitCompletedState()
     QVERIFY(gsx.WasStateCompleted(GsxState::Refueling));
 }
 
-void GsxInterfaceTest::recordsCompletionWhenActiveReturnsToIdle()
+void GsxInterfaceTest::aServiceTheCouatlDropsIsNotRecordedAsCompleted()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 5.0, 30);
+        ObserveFor(gsx, gateway, stateLVar, 0.0, 5.0, 12);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 5.0, 5);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 1.0, 30);
+
+        QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::aServiceThePilotEndsWithALiveCouatlIsRecordedAsCompleted()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 5.0, 30);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 1.0, 5);
+
+        QVERIFY2(gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::aCouatlDeathStopsCountingOnceTheServiceRunsAgain()
 {
     FakeVariableGateway gateway;
     GsxStateService gsx(&gateway);
 
-    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
-    gsx.Observe();
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, 5.0, 10);
+    ObserveFor(gsx, gateway, kBoardingState, 0.0, 5.0, 12);
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, 1.0, 5);
 
-    QCOMPARE(gsx.GetStateStatus(GsxState::Boarding), GsxStateStatus::Active);
     QVERIFY(!gsx.WasStateCompleted(GsxState::Boarding));
 
-    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Callable);
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, 4.0, 3);
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, 5.0, 10);
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, 1.0, 5);
+
+    QVERIFY(gsx.WasStateCompleted(GsxState::Boarding));
+}
+
+void GsxInterfaceTest::aCouatlDeathNoObserveSawIsStillADrop()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 5.0, 30);
+
+        gateway.lvarSpans[kCouatlStarted] = LVarSpan{0.0, 1.0, true};
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 1.0, 5);
+
+        QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::gsxCountsAsDownOnlyWhenTheCouatlFlagDippedSinceTheLastObserve()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
     gsx.Observe();
 
-    QCOMPARE(gsx.GetStateStatus(GsxState::Boarding), GsxStateStatus::Callable);
-    QVERIFY(gsx.WasStateCompleted(GsxState::Boarding));
+    QVERIFY(!gsx.WasGsxDownSinceLastObserve());
+
+    gateway.lvarSpans[kCouatlStarted] = LVarSpan{0.0, 1.0, true};
+    gsx.Observe();
+
+    QVERIFY(gsx.WasGsxDownSinceLastObserve());
+
+    gsx.Observe();
+
+    QVERIFY(!gsx.WasGsxDownSinceLastObserve());
+}
+
+void GsxInterfaceTest::aServiceThatPassesThroughCompletedStaysRecordedBackAtIdle()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 5.0, 63);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 7.0, 2);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 6.0, 11);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 1.0, 20);
+
+        QVERIFY2(gsx.WasStateCompleted(service), stateLVar);
+    }
 }
 
 void GsxInterfaceTest::doesNotRecordCompletionWithoutActiveState()
@@ -135,10 +256,14 @@ void GsxInterfaceTest::readsFuelHoseAndPassengerCounts()
     gateway.lvars[kFuelHoseConnected] = 1.0;
     gateway.lvars[kMaxPassengers] = 215.0;
     gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
-    gateway.lvars[kNumPassengersBoardingTotal] = 130.0;
+    gateway.lvars[kNumPassengersBoardingTotal] = 0.0;
 
     QVERIFY(gsx.IsFuelHoseConnected());
     QCOMPARE(gsx.GetPlannedPassengers(), 215);
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
+
+    gateway.lvars[kNumPassengersBoardingTotal] = 130.0;
+
     QCOMPARE(gsx.GetBoardedPassengers(), 130);
 }
 
@@ -161,7 +286,7 @@ void GsxInterfaceTest::resetClearsCompletionFlags()
 
     gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
     gsx.Observe();
-    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Callable);
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Completed);
     gsx.Observe();
 
     QVERIFY(gsx.WasStateCompleted(GsxState::Boarding));
@@ -250,7 +375,15 @@ void GsxInterfaceTest::detectsRepositioning()
 void GsxInterfaceTest::cargoPercentReadsLVars()
 {
     FakeVariableGateway gateway;
-    const GsxStateService gsx(&gateway);
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kBoardingCargoPercent] = 0.0;
+    gateway.lvars[kDeboardingCargoPercent] = 0.0;
+
+    QCOMPARE(gsx.GetBoardingCargoPercent(), 0.0);
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 0.0);
 
     gateway.lvars[kBoardingCargoPercent] = 42.5;
     gateway.lvars[kDeboardingCargoPercent] = 17.0;
@@ -259,27 +392,93 @@ void GsxInterfaceTest::cargoPercentReadsLVars()
     QCOMPARE(gsx.GetDeboardingCargoPercent(), 17.0);
 }
 
+void GsxInterfaceTest::boardingCargoPercentIgnoresTheStalePercentUntilItMoves()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Callable);
+    gateway.lvars[kBoardingCargoPercent] = 92.0;
+
+    QCOMPARE(gsx.GetBoardingCargoPercent(), 0.0);
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
+
+    QCOMPARE(gsx.GetBoardingCargoPercent(), 0.0);
+    QCOMPARE(gsx.GetBoardingCargoPercent(), 0.0);
+
+    gateway.lvars[kBoardingCargoPercent] = 0.0;
+
+    QCOMPARE(gsx.GetBoardingCargoPercent(), 0.0);
+
+    gateway.lvars[kBoardingCargoPercent] = 35.0;
+
+    QCOMPARE(gsx.GetBoardingCargoPercent(), 35.0);
+}
+
+void GsxInterfaceTest::deboardingCargoPercentIgnoresTheStalePercentUntilItMoves()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Callable);
+    gateway.lvars[kDeboardingCargoPercent] = 67.0;
+
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 0.0);
+
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Active);
+
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 0.0);
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 0.0);
+
+    gateway.lvars[kDeboardingCargoPercent] = 0.0;
+
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 0.0);
+
+    gateway.lvars[kDeboardingCargoPercent] = 40.0;
+
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 40.0);
+}
+
 void GsxInterfaceTest::cargoLoadingReadsLVars()
 {
     FakeVariableGateway gateway;
     const GsxStateService gsx(&gateway);
 
     QVERIFY(!gsx.IsLoadingCargo());
-    QVERIFY(!gsx.IsLoaderWaitingForDoor());
+    QCOMPARE(gsx.GetLoaderWaitingForDoor(), CargoLoader::None);
 
     gateway.lvars[kBoardingCargo] = 1.0;
     gateway.lvars[kBaggageLoaderMainState] = gsx::states::kLoaderWaitingForDoor;
 
     QVERIFY(gsx.IsLoadingCargo());
-    QVERIFY(gsx.IsLoaderWaitingForDoor());
+    QCOMPARE(gsx.GetLoaderWaitingForDoor(), CargoLoader::MainDeck);
 
     gateway.lvars[kBaggageLoaderMainState] = gsx::states::kLoaderRetracting;
 
-    QVERIFY(!gsx.IsLoaderWaitingForDoor());
+    QCOMPARE(gsx.GetLoaderWaitingForDoor(), CargoLoader::None);
 
     gateway.lvars[kBaggageLoaderFrontState] = gsx::states::kLoaderWaitingForDoor;
 
-    QVERIFY(gsx.IsLoaderWaitingForDoor());
+    QCOMPARE(gsx.GetLoaderWaitingForDoor(), CargoLoader::Front);
+}
+
+void GsxInterfaceTest::loaderWaitingForDoorNamesTheMainDeckOneWhenSeveralWait()
+{
+    FakeVariableGateway gateway;
+    const GsxStateService gsx(&gateway);
+
+    gateway.lvars[kBaggageLoaderRearState] = gsx::states::kLoaderWaitingForDoor;
+
+    QCOMPARE(gsx.GetLoaderWaitingForDoor(), CargoLoader::Rear);
+
+    gateway.lvars[kBaggageLoaderFrontState] = gsx::states::kLoaderWaitingForDoor;
+
+    QCOMPARE(gsx.GetLoaderWaitingForDoor(), CargoLoader::Rear);
+
+    gateway.lvars[kBaggageLoaderMainState] = gsx::states::kLoaderWaitingForDoor;
+
+    QCOMPARE(gsx.GetLoaderWaitingForDoor(), CargoLoader::MainDeck);
 }
 
 void GsxInterfaceTest::jetwayAndStairsAvailability()
@@ -389,6 +588,18 @@ void GsxInterfaceTest::aircraftOnGroundFollowsSimVar()
     QVERIFY(!gsx.IsAircraftOnGround());
 }
 
+void GsxInterfaceTest::groundSpeedReadsZeroUntilTheSimVarArrives()
+{
+    FakeVariableGateway gateway;
+    const GsxStateService gsx(&gateway);
+
+    QCOMPARE(gsx.GetGroundSpeedKnots(), 0.0);
+
+    gateway.avars[kGroundVelocity] = 12.5;
+
+    QCOMPARE(gsx.GetGroundSpeedKnots(), 12.5);
+}
+
 void GsxInterfaceTest::boardedPassengersAccumulatesAcrossResets()
 {
     FakeVariableGateway gateway;
@@ -483,15 +694,16 @@ void GsxInterfaceTest::deboardedPassengersIgnoresStaleTotalBeforeDeboardingStart
     QCOMPARE(gsx.GetDeboardedPassengers(), 7);
 }
 
-void GsxInterfaceTest::boardedPassengersDiscardsStaleTotalZeroedAfterBoardingStarts()
+void GsxInterfaceTest::boardedPassengersIgnoresTheStaleTotalOnTheFirstActiveTick()
 {
     FakeVariableGateway gateway;
     GsxStateService gsx(&gateway);
 
     gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Active);
-    gateway.lvars[kNumPassengersBoardingTotal] = 192.0;
+    gateway.lvars[kNumPassengersBoardingTotal] = 92.0;
 
-    QCOMPARE(gsx.GetBoardedPassengers(), 192);
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
+    QCOMPARE(gsx.GetBoardedPassengers(), 0);
 
     gateway.lvars[kNumPassengersBoardingTotal] = 0.0;
 
@@ -500,6 +712,25 @@ void GsxInterfaceTest::boardedPassengersDiscardsStaleTotalZeroedAfterBoardingSta
     gateway.lvars[kNumPassengersBoardingTotal] = 10.0;
 
     QCOMPARE(gsx.GetBoardedPassengers(), 10);
+}
+
+void GsxInterfaceTest::deboardedPassengersIgnoresTheStaleTotalOnTheFirstActiveTick()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersDeboardingTotal] = 92.0;
+
+    QCOMPARE(gsx.GetDeboardedPassengers(), 0);
+
+    gateway.lvars[kNumPassengersDeboardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetDeboardedPassengers(), 0);
+
+    gateway.lvars[kNumPassengersDeboardingTotal] = 7.0;
+
+    QCOMPARE(gsx.GetDeboardedPassengers(), 7);
 }
 
 void GsxInterfaceTest::takeOverFuelAndPayloadClearsAutomationLVars()
@@ -727,6 +958,22 @@ void GsxInterfaceTest::latchAdvancesWithoutAnyoneAskingForTheStatus()
     QVERIFY(gsx.WasStateCompleted(GsxState::Pushback));
 }
 
+void GsxInterfaceTest::aDeiceReturningToIdleIsRecordedAsCompleted()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kDeiceState] = static_cast<double>(GsxStateStatus::Active);
+    gsx.Observe();
+
+    QVERIFY(!gsx.WasStateCompleted(GsxState::Deice));
+
+    gateway.lvars[kDeiceState] = static_cast<double>(GsxStateStatus::Callable);
+    gsx.Observe();
+
+    QVERIFY(gsx.WasStateCompleted(GsxState::Deice));
+}
+
 void GsxInterfaceTest::readingTheStatusDoesNotAdvanceTheLatch()
 {
     FakeVariableGateway gateway;
@@ -758,6 +1005,29 @@ void GsxInterfaceTest::pushbackIsOfferedUnlessTheApronVerdictSaysOtherwise()
     const GsxStateService noRemote(&gateway);
 
     QVERIFY(noRemote.OffersPushback());
+}
+
+void GsxInterfaceTest::remoteApiCountsAsConnectedOnlyWhileTheLinkIsUp()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = 1.0;
+
+    GsxRemoteState remote;
+    const GsxStateService withRemote(&gateway, &remote);
+
+    QVERIFY(!withRemote.IsRemoteApiConnected());
+
+    remote.connected = true;
+
+    QVERIFY(withRemote.IsRemoteApiConnected());
+
+    remote.connected = false;
+
+    QVERIFY(!withRemote.IsRemoteApiConnected());
+
+    const GsxStateService noRemote(&gateway);
+
+    QVERIFY(!noRemote.IsRemoteApiConnected());
 }
 
 QTEST_APPLESS_MAIN(GsxInterfaceTest)

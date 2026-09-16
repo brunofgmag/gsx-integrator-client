@@ -1,14 +1,23 @@
+set(GSXI_TEST_RUNTIME_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>")
+
+add_custom_target(gsxi-test-qt-runtime
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${GSXI_TEST_RUNTIME_DIR}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+        "$<TARGET_FILE:Qt6::Core>"
+        "$<TARGET_FILE:Qt6::Test>"
+        "$<TARGET_FILE:Qt6::Network>"
+        "$<TARGET_FILE:Qt6::WebSockets>"
+        "${GSXI_TEST_RUNTIME_DIR}"
+        VERBATIM)
+
 function(configure_gsxi_test TARGET_NAME TEST_NAME)
     target_link_libraries(${TARGET_NAME} PRIVATE Qt6::Core Qt6::Test)
     target_include_directories(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
-    add_test(NAME ${TEST_NAME} COMMAND ${TARGET_NAME})
-
-    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-            "$<TARGET_FILE:Qt6::Core>"
-            "$<TARGET_FILE:Qt6::Test>"
-            "$<TARGET_FILE_DIR:${TARGET_NAME}>"
-            VERBATIM)
+    set_target_properties(${TARGET_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${GSXI_TEST_RUNTIME_DIR}")
+    add_test(NAME ${TEST_NAME} COMMAND ${TARGET_NAME} ${ARGN})
+    set_property(TEST ${TEST_NAME} PROPERTY ENVIRONMENT QT_FORCE_STDERR_LOGGING=1)
+    add_dependencies(${TARGET_NAME} gsxi-test-qt-runtime)
 endfunction()
 
 function(gsxi_add_qt_test TARGET_NAME TEST_NAME)
@@ -195,13 +204,6 @@ gsxi_add_qt_test(gsxi-gsx-menu-navigator-tests gsx-menu-navigator
         src/domain/model/AutomationSettings.h)
 target_link_libraries(gsxi-gsx-menu-navigator-tests PRIVATE Qt6::WebSockets)
 
-add_custom_command(TARGET gsxi-gsx-menu-navigator-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::WebSockets>"
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-gsx-menu-navigator-tests>"
-        VERBATIM)
-
 gsxi_add_qt_test(gsxi-gsx-door-sync-tests gsx-door-sync
         tests/tst_gsx_door_sync.cpp
         src/infrastructure/gsx/GsxDoorSync.cpp
@@ -226,13 +228,6 @@ gsxi_add_qt_test(gsxi-gsx-remote-api-client-tests gsx-remote-api-client
         src/infrastructure/gsx/GsxRemoteApiClient.h)
 target_link_libraries(gsxi-gsx-remote-api-client-tests PRIVATE Qt6::WebSockets)
 
-add_custom_command(TARGET gsxi-gsx-remote-api-client-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::WebSockets>"
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-gsx-remote-api-client-tests>"
-        VERBATIM)
-
 gsxi_add_qt_test(gsxi-github-update-service-tests github-update-service
         tests/tst_github_update_service.cpp
         src/infrastructure/update/GithubUpdateService.cpp
@@ -244,12 +239,6 @@ gsxi_add_qt_test(gsxi-github-update-service-tests github-update-service
         src/application/ports/UpdateService.h
         src/application/model/UpdateInfo.h)
 target_link_libraries(gsxi-github-update-service-tests PRIVATE Qt6::Network)
-
-add_custom_command(TARGET gsxi-github-update-service-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-github-update-service-tests>"
-        VERBATIM)
 
 gsxi_add_qt_test(gsxi-qsettings-repository-tests qsettings-repository
         tests/tst_qsettings_repository.cpp
@@ -360,6 +349,32 @@ gsxi_add_qt_test(gsxi-avro-rj-tests avro-rj
         src/infrastructure/gsx/GsxDoorSync.cpp
         src/infrastructure/gsx/GsxDoorSync.h)
 
+gsxi_add_qt_test(gsxi-fss-727-tests fss-727
+        tests/TestDoubles.h
+        tests/AircraftTicks.h
+        tests/doubles/FakeGsxService.h
+        tests/tst_fss_727.cpp
+        src/infrastructure/aircraft/AircraftIdentity.h
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/fss/Fss727.cpp
+        src/infrastructure/aircraft/fss/Fss727.h
+        src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
+        src/domain/model/AutomationStatus.h
+        src/domain/support/Weight.h)
+target_link_libraries(gsxi-fss-727-tests PRIVATE gsxi-turnaround-state-test-support)
+
 gsxi_add_qt_test(gsxi-toliss-a340-tests toliss-a340
         tests/TestDoubles.h
         tests/AircraftTicks.h
@@ -386,12 +401,6 @@ gsxi_add_qt_test(gsxi-fenix-efb-client-tests fenix-efb-client
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h)
 target_link_libraries(gsxi-fenix-efb-client-tests PRIVATE Qt6::Network)
-
-add_custom_command(TARGET gsxi-fenix-efb-client-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-fenix-efb-client-tests>"
-        VERBATIM)
 
 gsxi_add_qt_test(gsxi-fenix-a32x-tests fenix-a32x
         tests/TestDoubles.h
@@ -420,12 +429,6 @@ gsxi_add_qt_test(gsxi-fenix-a32x-tests fenix-a32x
         src/infrastructure/gsx/GsxDoorSync.h
         src/domain/model/AutomationStatus.h)
 target_link_libraries(gsxi-fenix-a32x-tests PRIVATE Qt6::Network)
-
-add_custom_command(TARGET gsxi-fenix-a32x-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-fenix-a32x-tests>"
-        VERBATIM)
 
 gsxi_add_qt_test(gsxi-commbus-bridge-client-tests commbus-bridge-client
         tests/doubles/FakeVariableGateway.h
@@ -660,6 +663,16 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/avrorj/rules/AvroRjWatchModuleFuelMirrorRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.h
+        src/infrastructure/aircraft/fss/Fss727.cpp
+        src/infrastructure/aircraft/fss/Fss727.h
+        src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
@@ -749,12 +762,6 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
 target_link_libraries(gsxi-aircraft-detection-tests PRIVATE Qt6::Network)
 target_include_directories(gsxi-aircraft-detection-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
-add_custom_command(TARGET gsxi-aircraft-detection-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-aircraft-detection-tests>"
-        VERBATIM)
-
 gsxi_add_qt_test(gsxi-github-release-parser-tests github-release-parser
         tests/tst_github_release_parser.cpp
         src/application/model/UpdateInfo.h
@@ -795,6 +802,8 @@ gsxi_add_qt_test(gsxi-integrator-snapshot-tests integrator-snapshot
 gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-service
         tests/doubles/FakeSimConnectApi.h
         tests/doubles/FakeSimConnectApi.cpp
+        tests/doubles/FakeGsxRemoteApiClient.h
+        tests/doubles/FakeGsxRemoteApiClient.cpp
         tests/tst_runtime_integrator_service.cpp
         src/application/IntegratorRuntime.cpp
         src/application/IntegratorRuntime.h
@@ -819,6 +828,16 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/avrorj/rules/AvroRjWatchModuleFuelMirrorRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.h
+        src/infrastructure/aircraft/fss/Fss727.cpp
+        src/infrastructure/aircraft/fss/Fss727.h
+        src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
@@ -897,7 +916,6 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/gsx/GsxDoorSync.h
         src/infrastructure/gsx/GsxMenuNavigator.cpp
         src/infrastructure/gsx/GsxMenuNavigator.h
-        src/infrastructure/gsx/GsxRemoteApiClient.cpp
         src/infrastructure/gsx/GsxRemoteApiClient.h
         src/infrastructure/gsx/GsxRemoteStateReducer.cpp
         src/infrastructure/gsx/GsxRemoteStateReducer.h
@@ -915,16 +933,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_link_libraries(gsxi-runtime-integrator-service-tests PRIVATE
         gsxi-turnaround-state-test-support
-        Qt6::Network
-        Qt6::WebSockets)
+        Qt6::Network)
 target_include_directories(gsxi-runtime-integrator-service-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
-
-add_custom_command(TARGET gsxi-runtime-integrator-service-tests POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-        "$<TARGET_FILE:Qt6::WebSockets>"
-        "$<TARGET_FILE:Qt6::Network>"
-        "$<TARGET_FILE_DIR:gsxi-runtime-integrator-service-tests>"
-        VERBATIM)
 
 if (NOT GSXI_TESTS_ONLY)
     qt_add_executable(gsxi-qml-tests tests/qml/main.cpp)
@@ -952,7 +962,7 @@ if (NOT GSXI_TESTS_ONLY)
     target_compile_definitions(gsxi-qml-tests PRIVATE
             QUICK_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}/tests/qml")
 
-    add_test(NAME qml-components COMMAND gsxi-qml-tests -platform offscreen)
+    configure_gsxi_test(gsxi-qml-tests qml-components -platform offscreen)
 
     get_target_property(GSXI_QT_CORE_DLL Qt6::Core IMPORTED_LOCATION_DEBUG)
     if (NOT GSXI_QT_CORE_DLL)
@@ -960,8 +970,11 @@ if (NOT GSXI_TESTS_ONLY)
     endif ()
     get_filename_component(GSXI_QT_BIN_DIR "${GSXI_QT_CORE_DLL}" DIRECTORY)
     get_filename_component(GSXI_QT_PREFIX "${GSXI_QT_BIN_DIR}" DIRECTORY)
-    set_tests_properties(qml-components PROPERTIES ENVIRONMENT
-            "PATH=${GSXI_QT_BIN_DIR};$ENV{PATH};QT_PLUGIN_PATH=${GSXI_QT_PREFIX}/plugins;QML_IMPORT_PATH=${GSXI_QT_PREFIX}/qml;QML2_IMPORT_PATH=${GSXI_QT_PREFIX}/qml")
+    set_property(TEST qml-components APPEND PROPERTY ENVIRONMENT
+            "PATH=${GSXI_QT_BIN_DIR}"
+            "QT_PLUGIN_PATH=${GSXI_QT_PREFIX}/plugins"
+            "QML_IMPORT_PATH=${GSXI_QT_PREFIX}/qml"
+            "QML2_IMPORT_PATH=${GSXI_QT_PREFIX}/qml")
 endif ()
 
 set(GSXI_GUARD_CHECKS
@@ -970,7 +983,9 @@ set(GSXI_GUARD_CHECKS
         check-viewmodel-property-unbound
         check-infra-gateway-uncalled
         check-state-predicate-lvar-default
-        check-remote-state-field-unread)
+        check-remote-state-field-unread
+        check-avar-unit
+        check-advisory-text-unpublished)
 
 foreach (GSXI_GUARD_CHECK ${GSXI_GUARD_CHECKS})
     add_test(NAME ${GSXI_GUARD_CHECK}

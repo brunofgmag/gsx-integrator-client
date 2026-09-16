@@ -1,4 +1,5 @@
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_SUPPRESS_REGENERATION ON)
 
 set(APP_NAME "gsx-integrator-client")
 
@@ -17,5 +18,5 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif ()
 
 if (MSVC)
-    add_compile_options(/MP)
+    add_compile_options(/MP /we4834)
 endif ()
