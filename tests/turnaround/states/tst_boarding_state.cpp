@@ -40,6 +40,10 @@ private slots:
     static void doesNotAskGsxToCompleteWhilePassengersStillUseTheKeptStairs();
     static void doesNotAskGsxToCompleteOnceTheHeldCargoStartsMoving();
     static void asksGsxToCompleteOnceTheHeldLoaderHasWaitedTooLongForADoor();
+    static void asksGsxToCompleteWhenTheFreighterLoaderIsHeldBehindTheStairs();
+    static void finishesTheFreighterBoardingOnlyOnceGsxConfirmsTheForcedCompletion();
+    static void restartsTheFreighterCountWhenTheCargoStartsLoadingAgain();
+    static void doesNotAskGsxToCompleteAFreighterWhoseStairsWereNotKept();
     static void warnsWhenGsxDropsTheBoardingItHadStarted();
 };
 
@@ -772,6 +776,115 @@ void BoardingStateTest::asksGsxToCompleteOnceTheHeldLoaderHasWaitedTooLongForADo
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
+}
+
+namespace
+{
+    void ArrangeFreighterLoaderHeldBehindTheStairs(TurnaroundStateFixture& f)
+    {
+        f.aircraft.cargo = true;
+        f.aircraft.boardMethod = BoardBy::Client;
+        f.ctx.data.initialZfwKg = 42000.0;
+        f.ctx.data.plannedZfwKg = 58000.0;
+        f.ctx.data.plannedPassengers = 0;
+        f.gsxService.boardingState = GsxStateStatus::Active;
+        f.gsxService.boardedPassengers = 0;
+        f.gsxService.cargoPercent = 67.0;
+        f.menuGateway.stairsKeptForPassengers = true;
+    }
+}
+
+void BoardingStateTest::asksGsxToCompleteWhenTheFreighterLoaderIsHeldBehindTheStairs()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeFreighterLoaderHeldBehindTheStairs(f);
+
+    for (int tick = 0; tick < 89; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
+
+    const auto heldLine = std::ranges::find_if(f.logger.messages, [](const std::string& message)
+    {
+        return message.find("held behind the stairs") != std::string::npos;
+    });
+    QVERIFY(heldLine != f.logger.messages.end());
+    QCOMPARE(heldLine->find("passenger"), std::string::npos);
+}
+
+void BoardingStateTest::finishesTheFreighterBoardingOnlyOnceGsxConfirmsTheForcedCompletion()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeFreighterLoaderHeldBehindTheStairs(f);
+
+    for (int tick = 0; tick < 120; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 2);
+
+    f.gsxService.boardingState = GsxStateStatus::Completed;
+
+    const auto transition = state.Evaluate(f.ctx);
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingReadyToPush);
+    QCOMPARE(f.aircraft.currentZfwKg, 58000.0);
+}
+
+void BoardingStateTest::restartsTheFreighterCountWhenTheCargoStartsLoadingAgain()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeFreighterLoaderHeldBehindTheStairs(f);
+
+    for (int tick = 0; tick < 80; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    f.gsxService.loadingCargo = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.boardingStallTicks, 0);
+
+    f.gsxService.loadingCargo = false;
+
+    for (int tick = 0; tick < 89; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
+}
+
+void BoardingStateTest::doesNotAskGsxToCompleteAFreighterWhoseStairsWereNotKept()
+{
+    TurnaroundStateFixture f;
+    BoardingState state;
+
+    ArrangeFreighterLoaderHeldBehindTheStairs(f);
+    f.menuGateway.stairsKeptForPassengers = false;
+
+    for (int tick = 0; tick < 400; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
 }
 
 void BoardingStateTest::warnsWhenGsxDropsTheBoardingItHadStarted()
