@@ -527,7 +527,8 @@ namespace
         Fss727::kName200ReFreighter,
         {
             {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200RE Freighter"},
-            {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200RE Super 27 Freighter"}
+            {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200RE Super 27 Freighter"},
+            {MatchField::AtcModel, MatchOp::Equals, "B727RE"}
         },
         &CreateFss727200ReFreighter, "fss-727-200re", "R72F", RefuelBy::Client
     };
