@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.34.12](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.11...v1.34.12) (2026-09-16)
+
+
+* pay the  debts of the bikf flight ([#169](https://github.com/brunofgmag/gsx-integrator-client/issues/169)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+
+
+### Bug Fixes
+
+* **aircraft:** wait for the atc model before detecting the aircraft ([1f32b54](https://github.com/brunofgmag/gsx-integrator-client/commit/1f32b545f4136288cfb8ea811b9a415d410875e5)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **fss-727:** close the main deck once the gsx deboarding completes with it open ([4bf7773](https://github.com/brunofgmag/gsx-integrator-client/commit/4bf777368007255d0bbb1d11a62708efa94e0923)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **fss-727:** detect the 727-200re freighter by its atc model ([a02218a](https://github.com/brunofgmag/gsx-integrator-client/commit/a02218a46bf99d9493dfeae4a604d715d853bb91)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **gsx:** accept the de-icing once per departure and leave a repeated question to the gsx choice ([8ec64af](https://github.com/brunofgmag/gsx-integrator-client/commit/8ec64af8f1604261db07e952749c5ffe77a4c49c)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **gsx:** leave the menus the client asked nothing of open and restart the stall watch when a menu reopens ([bd9ef11](https://github.com/brunofgmag/gsx-integrator-client/commit/bd9ef1196384a1ca7c8c696c825da6e91fc649fd)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **gsx:** never answer the pilot's pull confirmation with the gsx choice ([83929a0](https://github.com/brunofgmag/gsx-integrator-client/commit/83929a01d212e990af34a79cb4828a82a8dddb61)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **operations:** tell the pilot to wait for gsx once the deboarding request is out ([89679ad](https://github.com/brunofgmag/gsx-integrator-client/commit/89679ad6ba7e6127c3fd87e4d12f09f2b73019ae)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **turnaround:** complete the freighter boarding the kept stairs hold up ([91c9a7b](https://github.com/brunofgmag/gsx-integrator-client/commit/91c9a7bd1b93ae83731dbfe122f732fe278e0c86)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+* **turnaround:** warn when a gsx restart drops the pending pushback and leave for the departure without one ([44f6ff3](https://github.com/brunofgmag/gsx-integrator-client/commit/44f6ff3f3a99913469d770b5d04f96c51d20af71)) ([7fa5c09](https://github.com/brunofgmag/gsx-integrator-client/commit/7fa5c098f3684360cca7010b7a29e1588e40cffa))
+
 ## [1.34.11](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.10...v1.34.11) (2026-09-15)
 
 
