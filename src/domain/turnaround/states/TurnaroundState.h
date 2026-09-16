@@ -32,6 +32,8 @@ protected:
     static void NoteServiceInterruption(TurnaroundContext& ctx, const char* serviceName,
                                         GsxStateStatus state, bool started, bool completed);
 
+    static void NoteServiceInterruption(TurnaroundContext& ctx, const char* serviceName, bool interrupted);
+
 private:
     [[nodiscard]] bool AnyRuleHolds(TurnaroundContext& ctx);
 

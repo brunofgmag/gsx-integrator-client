@@ -57,7 +57,12 @@ void TurnaroundState::NoteServiceInterruption(TurnaroundContext& ctx, const char
                                               const GsxStateStatus state, const bool started,
                                               const bool completed)
 {
-    const bool interrupted = started && !completed && state < GsxStateStatus::Requested;
+    NoteServiceInterruption(ctx, serviceName, started && !completed && state < GsxStateStatus::Requested);
+}
+
+void TurnaroundState::NoteServiceInterruption(TurnaroundContext& ctx, const char* serviceName,
+                                              const bool interrupted)
+{
     if (interrupted == ctx.data.serviceInterrupted)
     {
         return;

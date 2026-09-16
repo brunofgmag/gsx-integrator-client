@@ -13,6 +13,9 @@ public:
 
 protected:
     [[nodiscard]] std::optional<TurnaroundTransition> EvaluatePhase(TurnaroundContext& ctx) override;
+
+private:
+    static void NoteDroppedPushback(TurnaroundContext& ctx);
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_WAITPUSHBACKSTATE_H

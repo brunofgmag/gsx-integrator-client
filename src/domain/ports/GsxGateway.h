@@ -67,11 +67,13 @@ public:
     [[nodiscard]] virtual bool IsSimbriefLoaded() const = 0;
     [[nodiscard]] virtual std::string GetSimbriefRefusal() const = 0;
     [[nodiscard]] virtual bool IsAircraftOnGround() const = 0;
+    [[nodiscard]] virtual double GetGroundSpeedKnots() const = 0;
     [[nodiscard]] virtual bool IsGoodEngineStartConfirmationEnabled() const = 0;
     [[nodiscard]] virtual GroundPowerStatus GetGpuStatus() const = 0;
     [[nodiscard]] virtual bool IsServiceInProgress(GroundService service) const = 0;
     [[nodiscard]] virtual bool OffersPushback() const = 0;
     [[nodiscard]] virtual bool IsRemoteApiConnected() const = 0;
+    [[nodiscard]] virtual bool WasGsxDownSinceLastObserve() const = 0;
 
     virtual void TakeOverFuelAndPayload() = 0;
 };

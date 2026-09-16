@@ -16,6 +16,8 @@ using namespace gsx::lvars;
 namespace
 {
     constexpr auto kNoPushbackVerdict = "no pushback";
+    constexpr auto kGroundVelocity = "GROUND VELOCITY";
+    constexpr auto kKnotsUnit = "Knots";
 
     constexpr std::array kBaggageLoaders = {
         std::pair{kBaggageLoaderMainState, CargoLoader::MainDeck},
@@ -70,6 +72,7 @@ void GsxStateService::Reset()
     deboardingCargo_ = {};
     fuelAndPayloadTakenOver_ = false;
     gpuConnectedSeenClear_ = false;
+    gsxDownSinceLastObserve_ = false;
 
     for (auto& track : states_ | std::views::values)
     {
@@ -84,6 +87,9 @@ bool GsxStateService::IsAvailable() const
 
 void GsxStateService::Observe()
 {
+    const LVarSpan couatlStarted = varManager_->ConsumeLVarSpan(kCouatlStarted);
+    gsxDownSinceLastObserve_ = !couatlStarted.received || couatlStarted.min < 1.0;
+
     for (const GsxState gsxState : {GsxState::Refueling, GsxState::Boarding, GsxState::Pushback,
                                     GsxState::Deboarding, GsxState::Deice})
     {
@@ -340,6 +346,11 @@ bool GsxStateService::IsRemoteApiConnected() const
     return remote_ != nullptr && remote_->connected;
 }
 
+bool GsxStateService::WasGsxDownSinceLastObserve() const
+{
+    return gsxDownSinceLastObserve_;
+}
+
 bool GsxStateService::AreStairsAvailable() const
 {
     const double state = varManager_->GetLVar(kStairs, 0.0);
@@ -377,6 +388,11 @@ bool GsxStateService::IsServiceVehicleActive() const
 bool GsxStateService::IsAircraftOnGround() const
 {
     return varManager_->GetAVar("SIM ON GROUND", "Bool", 1.0) == 1.0;
+}
+
+double GsxStateService::GetGroundSpeedKnots() const
+{
+    return varManager_->GetAVar(kGroundVelocity, kKnotsUnit, 0.0);
 }
 
 void GsxStateService::TakeOverFuelAndPayload()
@@ -436,7 +452,7 @@ void GsxStateService::ObserveState(const GsxState gsxState)
     const auto stateStatus = static_cast<GsxStateStatus>(varManager_->GetLVar(stateLVar));
     StateTrack& track = states_.at(gsxState);
 
-    if (!IsAvailable())
+    if (gsxDownSinceLastObserve_)
     {
         track.couatlDiedDuringRun = true;
     }
