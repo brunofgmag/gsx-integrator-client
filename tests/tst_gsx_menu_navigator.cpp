@@ -177,6 +177,7 @@ private slots:
     static void manualMenuWithGsxChoiceIsPicked();
     static void manualMenuIsNotRepickedWhileUnchanged();
     static void manualMenuWithoutGsxChoiceIsIgnored();
+    static void theGsxChoiceNeverAnswersThePilotsPullConfirmation();
     static void skipsDisabledEntryAndPicksEnabled();
     static void repositionWalksRootThenSubmenu();
     static void repositionSurvivesTransientCloseAndRootReshow();
@@ -1607,6 +1608,34 @@ void GsxMenuNavigatorTest::manualMenuWithoutGsxChoiceIsIgnored()
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
     ShowMenu(state, "Activate Services at ZZZZ/Test Airport", {"Request Refueling", "Request Boarding"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 0);
+}
+
+void GsxMenuNavigatorTest::theGsxChoiceNeverAnswersThePilotsPullConfirmation()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Departure");
+
+    nav.RequestPushback();
+    MarkServiceTaken(state, "Departure");
+    nav.OnMenuChanged();
+
+    ShowMenu(state, "Select pushback direction",
+             {"Nose Right/Tail Left (LEFT)", "Nose Left/Tail Right (RIGHT)", "Straight Pull pushback (manual stop, max 100 m)"});
+    nav.OnMenuChanged();
+
+    fakeNow += 8000;
+    ShowMenu(state, "Are you sure you want to Pull?", {"Yes", "No [GSX choice]"});
     nav.OnMenuChanged();
 
     QCOMPARE(client.Count("menu.pick"), 0);

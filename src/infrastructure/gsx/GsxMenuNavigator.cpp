@@ -15,6 +15,7 @@
 namespace
 {
     constexpr auto kGsxChoiceText = "GSX choice";
+    constexpr auto kConfirmationQuestion = "Are you sure";
     constexpr auto kBlockFuelText = "BLOCK FUEL from Simbrief";
     constexpr auto kSelectPositionText = "Select Position at";
     constexpr auto kRepositionRootText = "Reposition Aircraft";
@@ -523,6 +524,7 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
     }
 
     if ((settings_ == nullptr || settings_->autoSelectGsxChoice)
+        && !Contains(menu.title, kConfirmationQuestion)
         && (PickByContains(kGsxChoiceText) || PickByContains(kBlockFuelText)))
     {
         return true;
