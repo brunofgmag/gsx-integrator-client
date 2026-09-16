@@ -251,8 +251,9 @@ void GsxMenuNavigator::Reset()
     intentSinceMs_ = 0;
     lastPickedSig_.clear();
     lastDiagSig_.clear();
-    watchedSig_.clear();
+    watchedSig_.reset();
     discardedSig_.clear();
+    leftOpenSig_.clear();
     resyncCount_ = 0;
     resyncPending_ = false;
     lastActionMs_ = 0;
@@ -347,7 +348,8 @@ void GsxMenuNavigator::ClearMenuTracking()
 {
     lastPickedSig_.clear();
     lastDiagSig_.clear();
-    watchedSig_.clear();
+    watchedSig_.reset();
+    leftOpenSig_.clear();
 }
 
 bool GsxMenuNavigator::LogMenuIfNew(const std::string& sig)
@@ -431,11 +433,30 @@ void GsxMenuNavigator::DiscardStuckMenu(const std::string& sig)
         return;
     }
 
+    if (!HasActiveIntent())
+    {
+        LogMenuLeftOpen(sig);
+
+        return;
+    }
+
     discardedSig_ = sig;
     watchedSinceMs_ = nowMs_();
     lastActionMs_ = nowMs_();
     (void)client_->SendCommand("menu.close");
     logger_->LogInfo(std::format("RemoteAPI closing the menu the resyncs could not move: '{}'",
+                                 state_->menu.title));
+}
+
+void GsxMenuNavigator::LogMenuLeftOpen(const std::string& sig)
+{
+    if (sig == leftOpenSig_)
+    {
+        return;
+    }
+
+    leftOpenSig_ = sig;
+    logger_->LogInfo(std::format("RemoteAPI leaving the menu open: the client asked for nothing on it: '{}'",
                                  state_->menu.title));
 }
 

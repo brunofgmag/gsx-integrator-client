@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_GSXMENUNAVIGATOR_H
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -111,6 +112,7 @@ private:
     bool LogMenuIfNew(const std::string& sig);
     void MaybeResyncStalledMenu(const std::string& sig);
     void DiscardStuckMenu(const std::string& sig);
+    void LogMenuLeftOpen(const std::string& sig);
     bool MaybeCloseStaleMenu();
     bool HandleAutoPicks(const std::string& sig);
     bool HandlePendingCompletions(const std::string& sig);
@@ -144,12 +146,13 @@ private:
     std::function<long long()> nowMs_;
     std::string lastPickedSig_;
     std::string lastDiagSig_;
-    std::string watchedSig_;
+    std::optional<std::string> watchedSig_;
     long long watchedSinceMs_ = 0;
     int resyncCount_ = 0;
     bool resyncPending_ = false;
     std::string resyncSig_;
     std::string discardedSig_;
+    std::string leftOpenSig_;
     mutable long long lastActionMs_ = 0;
     bool panelOpenSpent_ = false;
     bool panelCloseSpent_ = false;
