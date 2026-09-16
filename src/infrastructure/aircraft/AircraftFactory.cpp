@@ -26,15 +26,14 @@ std::unique_ptr<Aircraft> DetectAircraft(const AircraftContext& context,
                                          const AircraftDescriptor** outDescriptor)
 {
     char title[64] = {};
-    if (!context.variableGateway->FetchAircraftName(title, sizeof(title)))
-    {
-        return nullptr;
-    }
+    const bool titleArrived = context.variableGateway->FetchAircraftName(title, sizeof(title));
 
     char atcModel[64] = {};
-    if (!context.variableGateway->FetchAtcModel(atcModel, sizeof(atcModel)))
+    const bool atcModelArrived = context.variableGateway->FetchAtcModel(atcModel, sizeof(atcModel));
+
+    if (!titleArrived || !atcModelArrived)
     {
-        atcModel[0] = '\0';
+        return nullptr;
     }
 
     const AircraftIdentity identity{title, atcModel};

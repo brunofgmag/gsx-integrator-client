@@ -24,7 +24,7 @@ private slots:
     static void detectsTitleCaseInsensitively();
     static void detectsByAtcModelWhenLiveryRenamesTitle();
     static void detectsCargoByAtcModel();
-    static void detectsWhenAtcModelUnavailable();
+    static void waitsForTheAtcModelBeforeDetecting();
     static void detectsIFlyMax8FromBaseTitle();
     static void detectsIFlyMax8FromLiveryTitle();
     static void detectsIFlyMax8200FromTitle();
@@ -186,13 +186,18 @@ void AircraftDetectionTest::detectsCargoByAtcModel()
     QVERIFY(aircraft->IsCargoVariant());
 }
 
-void AircraftDetectionTest::detectsWhenAtcModelUnavailable()
+void AircraftDetectionTest::waitsForTheAtcModelBeforeDetecting()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
 
     gateway.aircraftName = "TFDi Design MD-11 PW44";
     gateway.atcModelAvailable = false;
+
+    QVERIFY(DetectAircraft({&gateway, &status}) == nullptr);
+
+    gateway.atcModel = "MD11";
+    gateway.atcModelAvailable = true;
 
     const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status});
 
