@@ -248,6 +248,7 @@ void GsxMenuNavigator::Reset()
     completingBoarding_ = {};
     confirmingEngines_ = {};
     stairsKeptForPassengers_ = false;
+    deIceYesSpent_ = false;
     intent_ = Intent::None;
     intentSinceMs_ = 0;
     lastPickedSig_.clear();
@@ -487,10 +488,12 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
 
     const auto& menu = state_->menu;
 
-    if (settings_ != nullptr && settings_->autoDeice
+    if (settings_ != nullptr && settings_->autoDeice && !deIceYesSpent_
         && Contains(menu.title, kDeIceQuestion)
         && PickByContains("Yes"))
     {
+        deIceYesSpent_ = true;
+
         return true;
     }
 
@@ -953,6 +956,7 @@ void GsxMenuNavigator::RearmPanelLatches()
 void GsxMenuNavigator::OnTurnaroundTurned()
 {
     stairsKeptForPassengers_ = false;
+    deIceYesSpent_ = false;
     RearmPanelLatches();
 }
 

@@ -172,6 +172,9 @@ private slots:
     static void theDepartureClearanceIsAskedForOnce();
     static void deIceMenuPicksYesWhenEnabled();
     static void deIceMenuDeclinedByDefault();
+    static void theDeIceIsAcceptedOncePerDepartureWhenTheQuestionComesBack();
+    static void theTurnaroundTurnRearmsTheDeIce();
+    static void resetRearmsTheDeIce();
     static void picksSimbriefBlockFuelOnRefuelingLevelMenu();
     static void blockFuelNotPickedWhenFlagOff();
     static void manualMenuWithGsxChoiceIsPicked();
@@ -1510,6 +1513,83 @@ void GsxMenuNavigatorTest::deIceMenuDeclinedByDefault()
     QVERIFY(pick != nullptr);
 
     QCOMPARE(pick->args.value("index").toInt(), 1);
+}
+
+namespace
+{
+    void AskForDeIceAndClose(GsxRemoteState& state, GsxMenuNavigator& nav)
+    {
+        ShowMenu(state, "Ice warning: do you request the de-icing treatment?", {"Yes", "No [GSX choice]"});
+        nav.OnMenuChanged();
+
+        state.menu.shown = false;
+        state.menu.title.clear();
+        state.menu.entries.clear();
+        nav.OnMenuChanged();
+    }
+
+    int YesPicks(const FakeRemoteClient& client)
+    {
+        int yes = 0;
+        for (const Sent& s : client.sent)
+        {
+            if (s.verb == "menu.pick" && s.args.value("index").toInt() == 0)
+            {
+                ++yes;
+            }
+        }
+
+        return yes;
+    }
+}
+
+void GsxMenuNavigatorTest::theDeIceIsAcceptedOncePerDepartureWhenTheQuestionComesBack()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.autoDeice = true;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    AskForDeIceAndClose(state, nav);
+    AskForDeIceAndClose(state, nav);
+
+    QCOMPARE(client.Count("menu.pick"), 2);
+    QCOMPARE(YesPicks(client), 1);
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::theTurnaroundTurnRearmsTheDeIce()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.autoDeice = true;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    AskForDeIceAndClose(state, nav);
+    nav.OnTurnaroundTurned();
+    AskForDeIceAndClose(state, nav);
+
+    QCOMPARE(YesPicks(client), 2);
+}
+
+void GsxMenuNavigatorTest::resetRearmsTheDeIce()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.autoDeice = true;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    AskForDeIceAndClose(state, nav);
+    nav.Reset();
+    AskForDeIceAndClose(state, nav);
+
+    QCOMPARE(YesPicks(client), 2);
 }
 
 void GsxMenuNavigatorTest::picksSimbriefBlockFuelOnRefuelingLevelMenu()

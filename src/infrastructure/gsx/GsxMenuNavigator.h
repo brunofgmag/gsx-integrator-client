@@ -158,6 +158,7 @@ private:
     bool panelCloseSpent_ = false;
     bool panelOpenedByUs_ = false;
     bool stairsKeptForPassengers_ = false;
+    bool deIceYesSpent_ = false;
     long long panelOpenSentMs_ = 0;
 
     static constexpr long long kIntentTtlMs = 60000;
