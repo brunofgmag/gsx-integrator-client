@@ -92,6 +92,7 @@ RuleVerdict Fss727MainDeckMovesByTheCargoPanelRule::Evaluate(const RuleContext&)
 void Fss727MainDeckMovesByTheCargoPanelRule::Act(const RuleContext&, VariableWriter& writer)
 {
     GuardThePanelMasterCut(writer);
+    AskForTheDeckClosedOnceTheDeboardingCompletes();
 
     if (travel_ != Travel::None)
     {
@@ -151,7 +152,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::ServeThePendingClose(VariableWriter
 
     if (closed)
     {
-        servedRequests_ = aircraft_->MainDeckCloseRequests();
+        servedRequests_ = CloseRequests();
 
         return;
     }
@@ -185,7 +186,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::FinishTravel(VariableWriter& writer
 
     if (travel_ == Travel::Closing)
     {
-        servedRequests_ = aircraft_->MainDeckCloseRequests();
+        servedRequests_ = CloseRequests();
     }
 
     cutTravel_ = travel_;
@@ -253,9 +254,30 @@ void Fss727MainDeckMovesByTheCargoPanelRule::TurnThePanelMasterOff(VariableWrite
     LOG_INFO("FSS 727 main deck door at rest at %.1f%%: the cargo panel master goes off", position * kPercentPerFraction);
 }
 
+void Fss727MainDeckMovesByTheCargoPanelRule::AskForTheDeckClosedOnceTheDeboardingCompletes()
+{
+    const GsxStateStatus deboarding = GsxStatusOf(GsxState::Deboarding);
+    const bool completedNow = deboardingAtWork_ && deboarding == GsxStateStatus::Completed;
+    deboardingAtWork_ = IsWorkingTheDoors(deboarding);
+
+    if (!completedNow || aircraft_->IsMainDeckClosed().value_or(true))
+    {
+        return;
+    }
+
+    ++deboardingCloseRequests_;
+
+    LOG_INFO("FSS 727 main deck door still open as the GSX deboarding completes: its close is asked for once, and an opening after this is left alone");
+}
+
+int Fss727MainDeckMovesByTheCargoPanelRule::CloseRequests() const
+{
+    return aircraft_->MainDeckCloseRequests() + deboardingCloseRequests_;
+}
+
 bool Fss727MainDeckMovesByTheCargoPanelRule::IsCloseRequestPending() const
 {
-    return aircraft_->MainDeckCloseRequests() != servedRequests_ && !IsGsxWorkingTheCargoDoors();
+    return CloseRequests() != servedRequests_ && !IsGsxWorkingTheCargoDoors();
 }
 
 bool Fss727MainDeckMovesByTheCargoPanelRule::HasTheMainLoaderLeft() const

@@ -48,6 +48,8 @@ private:
     [[nodiscard]] bool HasComeToRest() const;
     void TurnThePanelMasterOff(VariableWriter& writer, double position);
     void ServeThePendingClose(VariableWriter& writer, bool closed);
+    void AskForTheDeckClosedOnceTheDeboardingCompletes();
+    [[nodiscard]] int CloseRequests() const;
     [[nodiscard]] bool IsCloseRequestPending() const;
     [[nodiscard]] bool HasTheMainLoaderLeft() const;
     [[nodiscard]] bool IsTheMainLoaderWaitingForTheDeck() const;
@@ -61,6 +63,8 @@ private:
     const GsxGateway* gsxGateway_;
     const GsxDoorSync* doors_;
     int servedRequests_ = 0;
+    int deboardingCloseRequests_ = 0;
+    bool deboardingAtWork_ = false;
     Travel travel_ = Travel::None;
     Travel cutTravel_ = Travel::None;
     Fss727DoorRest rest_;
