@@ -149,6 +149,7 @@ std::optional<FlightPlan> ParseSimbriefOfp(const std::string_view xml)
     plan.generatedEpoch = ParseSimbriefPlanEpoch(xml);
     plan.operatingEmptyKg = ParseWeightKg(xml, "oew", ofpInPounds).value_or(0.0);
     plan.payloadKg = ParseWeightKg(xml, "payload", ofpInPounds);
+    plan.cargoKg = ParseWeightKg(xml, "cargo", ofpInPounds);
 
     return plan;
 }

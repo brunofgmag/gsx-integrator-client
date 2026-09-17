@@ -5,15 +5,19 @@
 #include <algorithm>
 #include <array>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 
 #include "../AircraftRegistry.h"
 #include "../DoorReading.h"
+#include "../../gsx/GsxLVars.h"
 #include "../../logging/LogMacros.h"
 #include "../../simvars/VariableGateway.h"
 #include "../../../domain/model/AutomationStatus.h"
 #include "../../../domain/model/FlightPlan.h"
+#include "../../../domain/support/Weight.h"
 
 using namespace simvars;
 
@@ -55,6 +59,122 @@ namespace
 
     constexpr int kEngineCount = 2;
     constexpr double kEngineRunningDefault = 1.0;
+
+    constexpr auto kPoundsUnit = "pounds";
+    constexpr auto kGallonsUnit = "gallons";
+    constexpr auto kPercentOver100Unit = "percent over 100";
+    constexpr auto kSimFuelWeightPerGallon = "FUEL WEIGHT PER GALLON";
+    constexpr auto kSimUnusableFuelTotal = "UNUSABLE FUEL TOTAL QUANTITY";
+    constexpr std::array kTankCapacities = {"FUELSYSTEM TANK CAPACITY:1", "FUELSYSTEM TANK CAPACITY:2"};
+    constexpr std::array kTankLevels = {"FUELSYSTEM TANK LEVEL:1", "FUELSYSTEM TANK LEVEL:2"};
+
+    constexpr auto kSimPayloadStationPrefix = "PAYLOAD STATION WEIGHT:";
+    constexpr int kZoneAOrDeckFwdStation = 3;
+    constexpr int kHoldFwdStation = 4;
+    constexpr int kZoneBOrDeckAftStation = 5;
+    constexpr int kHoldAftStation = 6;
+
+    constexpr double kZoneACapKg = 1140.0;
+    constexpr double kHoldFwdShareOfBaggage = 0.72;
+    constexpr double kHoldAftShareOfBaggage = 0.28;
+
+    constexpr double kFreighterDeckFwdShare = 0.25;
+    constexpr double kFreighterDeckAftShare = 0.45;
+    constexpr double kFreighterHoldFwdShare = 0.10;
+    constexpr double kFreighterHoldAftShare = 0.20;
+
+    constexpr auto kPlanWeightZoneALVar = "FSS_EXX_PLANE_SETUP_WEIGHT_ZONE_A";
+    constexpr auto kPlanWeightZoneBLVar = "FSS_EXX_PLANE_SETUP_WEIGHT_ZONE_B";
+    constexpr auto kPlanWeightCargoFwdLVar = "FSS_EXX_PLANE_SETUP_WEIGHT_CARGO_FWD";
+    constexpr auto kPlanWeightCargoAftLVar = "FSS_EXX_PLANE_SETUP_WEIGHT_CARGO_AFT";
+
+    constexpr double kMaxPassengersE190 = 114.0;
+    constexpr double kMaxPassengersE195 = 124.0;
+
+    struct StationTargetsKg
+    {
+        double zoneAOrDeckFwdKg = 0.0;
+        double zoneBOrDeckAftKg = 0.0;
+        double holdFwdKg = 0.0;
+        double holdAftKg = 0.0;
+    };
+
+    std::optional<StationTargetsKg> FullStationTargetsKg(const AutomationStatus& status, const bool cargoVariant)
+    {
+        const double payloadLineKg = status.plannedPayloadKg.value_or(0.0);
+
+        if (cargoVariant)
+        {
+            return StationTargetsKg{
+                .zoneAOrDeckFwdKg = payloadLineKg * kFreighterDeckFwdShare,
+                .zoneBOrDeckAftKg = payloadLineKg * kFreighterDeckAftShare,
+                .holdFwdKg = payloadLineKg * kFreighterHoldFwdShare,
+                .holdAftKg = payloadLineKg * kFreighterHoldAftShare
+            };
+        }
+
+        if (!status.plannedCargoKg.has_value())
+        {
+            return std::nullopt;
+        }
+
+        const double cargoKg = *status.plannedCargoKg;
+        const double passengerWeightKg = std::max(payloadLineKg - cargoKg, 0.0);
+        const double zoneAKg = std::min(passengerWeightKg, kZoneACapKg);
+
+        return StationTargetsKg{
+            .zoneAOrDeckFwdKg = zoneAKg,
+            .zoneBOrDeckAftKg = passengerWeightKg - zoneAKg,
+            .holdFwdKg = cargoKg * kHoldFwdShareOfBaggage,
+            .holdAftKg = cargoKg * kHoldAftShareOfBaggage
+        };
+    }
+
+    std::string PayloadStationVar(const int station)
+    {
+        return kSimPayloadStationPrefix + std::to_string(station);
+    }
+
+    std::optional<double> PoundsPerGallon(VariableGateway& variables)
+    {
+        if (!variables.HasReceivedAVar(kSimFuelWeightPerGallon, kPoundsUnit))
+        {
+            return std::nullopt;
+        }
+
+        return variables.GetAVar(kSimFuelWeightPerGallon, kPoundsUnit, 0.0);
+    }
+
+    std::optional<double> TankCapacityGallons(VariableGateway& variables)
+    {
+        double capacityGallons = 0.0;
+        for (const char* tankCapacity : kTankCapacities)
+        {
+            if (!variables.HasReceivedAVar(tankCapacity, kGallonsUnit))
+            {
+                return std::nullopt;
+            }
+
+            capacityGallons += variables.GetAVar(tankCapacity, kGallonsUnit, 0.0);
+        }
+
+        return capacityGallons;
+    }
+
+    std::optional<double> UnusableFuelGallons(VariableGateway& variables)
+    {
+        if (!variables.HasReceivedAVar(kSimUnusableFuelTotal, kGallonsUnit))
+        {
+            return std::nullopt;
+        }
+
+        return variables.GetAVar(kSimUnusableFuelTotal, kGallonsUnit, 0.0);
+    }
+
+    double MaxPassengersFor(const char* name)
+    {
+        return std::string_view(name) == FssEJet::kNameE195 ? kMaxPassengersE195 : kMaxPassengersE190;
+    }
 
     struct DoorReadPoint
     {
@@ -129,6 +249,7 @@ FssEJet::FssEJet(VariableGateway* variableGateway, const AutomationStatus* statu
     : variableGateway_(variableGateway),
       status_(status),
       cargoVariant_(cargoVariant),
+      maxPassengers_(MaxPassengersFor(name)),
       smartSwitch_(*variableGateway, {kCallRampLeftLVar, kCallRampRightLVar},
                    [](double, const double max)
                    {
@@ -167,9 +288,41 @@ const std::vector<AircraftRule*>& FssEJet::Rules() const
     return rules_;
 }
 
+void FssEJet::OnLoadingStarted()
+{
+    if (passengersReported_)
+    {
+        return;
+    }
+
+    passengersReported_ = true;
+
+    variableGateway_->SetLVar(gsx::lvars::kNumPassengers, static_cast<double>(GetPlannedPassengers()));
+    variableGateway_->SetLVar(gsx::lvars::kMaxPassengers, maxPassengers_);
+
+    const std::optional<StationTargetsKg> targets = FullStationTargetsKg(*status_, cargoVariant_);
+    if (!targets.has_value())
+    {
+        LOG_INFO("Loading started: %d passengers planned of %.0f max; no cargo line in the plan, "
+                 "plan weights not mirrored", GetPlannedPassengers(), maxPassengers_);
+
+        return;
+    }
+
+    variableGateway_->SetLVar(kPlanWeightZoneALVar, targets->zoneAOrDeckFwdKg);
+    variableGateway_->SetLVar(kPlanWeightZoneBLVar, targets->zoneBOrDeckAftKg);
+    variableGateway_->SetLVar(kPlanWeightCargoFwdLVar, targets->holdFwdKg);
+    variableGateway_->SetLVar(kPlanWeightCargoAftLVar, targets->holdAftKg);
+
+    LOG_INFO("Loading started: %d passengers planned of %.0f max; plan weights mirrored to PLANE_SETUP_WEIGHT_*",
+             GetPlannedPassengers(), maxPassengers_);
+}
+
 bool FssEJet::IsFlightPlanLoaded() const
 {
-    return status_->flightPlanStatus == FlightPlanStatus::Ready;
+    return status_->flightPlanStatus == FlightPlanStatus::Ready
+        && status_->plannedPayloadKg.has_value()
+        && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit);
 }
 
 double FssEJet::GetPlannedFuelKg() const
@@ -179,7 +332,7 @@ double FssEJet::GetPlannedFuelKg() const
 
 double FssEJet::GetPlannedZfwKg() const
 {
-    return status_->plannedZfwKg;
+    return GetEmptyZfwKg() + status_->plannedPayloadKg.value_or(0.0);
 }
 
 int FssEJet::GetPlannedPassengers() const
@@ -197,9 +350,75 @@ double FssEJet::GetCurrentFuelKg() const
     return CurrentFuelKg(*variableGateway_);
 }
 
+double FssEJet::GetFuelCapacityKg() const
+{
+    const std::optional<double> poundsPerGallon = PoundsPerGallon(*variableGateway_);
+    const std::optional<double> capacityGallons = TankCapacityGallons(*variableGateway_);
+    const std::optional<double> unusableGallons = UnusableFuelGallons(*variableGateway_);
+    if (!poundsPerGallon.has_value() || !capacityGallons.has_value() || !unusableGallons.has_value())
+    {
+        return 0.0;
+    }
+
+    const double usableGallons = std::max(*capacityGallons - *unusableGallons, 0.0);
+
+    return weight::LbToKg(usableGallons * *poundsPerGallon);
+}
+
+void FssEJet::SetCurrentFuelKg(const double fuelKg)
+{
+    const std::optional<double> poundsPerGallon = PoundsPerGallon(*variableGateway_);
+    const std::optional<double> capacityGallons = TankCapacityGallons(*variableGateway_);
+    const std::optional<double> unusableGallons = UnusableFuelGallons(*variableGateway_);
+    if (!poundsPerGallon.has_value() || *poundsPerGallon <= 0.0
+        || !capacityGallons.has_value() || *capacityGallons <= 0.0
+        || !unusableGallons.has_value()
+        || fuelKg == lastFuelKg_)
+    {
+        return;
+    }
+
+    lastFuelKg_ = fuelKg;
+
+    const double targetGallons = weight::KgToLb(fuelKg) / *poundsPerGallon;
+    const double level = std::clamp((targetGallons + *unusableGallons) / *capacityGallons, 0.0, 1.0);
+
+    for (const char* tankLevel : kTankLevels)
+    {
+        variableGateway_->SetAVar(tankLevel, kPercentOver100Unit, level);
+    }
+}
+
 double FssEJet::GetCurrentZfwKg() const
 {
     return CurrentZfwKg(*variableGateway_);
+}
+
+void FssEJet::SetCurrentZfwKg(const double zfwKg)
+{
+    if (!variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit) || zfwKg == lastZfwKg_)
+    {
+        return;
+    }
+
+    const std::optional<StationTargetsKg> targets = FullStationTargetsKg(*status_, cargoVariant_);
+    if (!targets.has_value())
+    {
+        return;
+    }
+
+    lastZfwKg_ = zfwKg;
+
+    const double payloadLineKg = status_->plannedPayloadKg.value_or(0.0);
+    const double onBoardKg = std::clamp(zfwKg - GetEmptyZfwKg(), 0.0, payloadLineKg);
+    const double progress = payloadLineKg > 0.0 ? onBoardKg / payloadLineKg : 0.0;
+
+    variableGateway_->SetAVar(PayloadStationVar(kZoneAOrDeckFwdStation), kKgUnit,
+                              targets->zoneAOrDeckFwdKg * progress);
+    variableGateway_->SetAVar(PayloadStationVar(kHoldFwdStation), kKgUnit, targets->holdFwdKg * progress);
+    variableGateway_->SetAVar(PayloadStationVar(kZoneBOrDeckAftStation), kKgUnit,
+                              targets->zoneBOrDeckAftKg * progress);
+    variableGateway_->SetAVar(PayloadStationVar(kHoldAftStation), kKgUnit, targets->holdAftKg * progress);
 }
 
 bool FssEJet::ConsumeSmartSwitch()

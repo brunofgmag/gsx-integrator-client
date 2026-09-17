@@ -26,7 +26,7 @@ public:
 
     void Observe() override;
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
-    void OnLoadingStarted() override {}
+    void OnLoadingStarted() override;
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
@@ -36,9 +36,10 @@ public:
     [[nodiscard]] std::optional<WeightUnit> GetNativeWeightUnit() const override { return WeightUnit::Kg; }
 
     [[nodiscard]] double GetCurrentFuelKg() const override;
-    void SetCurrentFuelKg(double) override {}
+    [[nodiscard]] double GetFuelCapacityKg() const override;
+    void SetCurrentFuelKg(double fuelKg) override;
     [[nodiscard]] double GetCurrentZfwKg() const override;
-    void SetCurrentZfwKg(double) override {}
+    void SetCurrentZfwKg(double zfwKg) override;
 
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
@@ -73,6 +74,7 @@ private:
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;
     bool cargoVariant_;
+    double maxPassengers_;
     SmartSwitch smartSwitch_;
     GsxDoorSync doors_;
     std::vector<int> doorMovingTicks_;
@@ -80,6 +82,9 @@ private:
     FssEJetGpuFollowsRequestRule gpuRule_;
     FssEJetDoorsFollowGsxRule doorsRule_;
     std::vector<AircraftRule*> rules_;
+    double lastFuelKg_ = -1.0;
+    double lastZfwKg_ = -1.0;
+    bool passengersReported_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSSEJET_H
