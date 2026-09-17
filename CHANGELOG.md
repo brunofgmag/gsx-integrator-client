@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.36.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.35.0...v1.36.0) (2026-09-17)
+
+
+* move doors by the crew, clear ramp call on touch ([#174](https://github.com/brunofgmag/gsx-integrator-client/issues/174)) ([4f8a6a1](https://github.com/brunofgmag/gsx-integrator-client/commit/4f8a6a1c4af4741f3f13b6b00cbffa1f9bdd2ef0))
+
+
+### Features
+
+* **fss-e-jets:** move doors by the crew ([f9ca179](https://github.com/brunofgmag/gsx-integrator-client/commit/f9ca1796d5b23ef62d4843776322469eb306e634)) ([4f8a6a1](https://github.com/brunofgmag/gsx-integrator-client/commit/4f8a6a1c4af4741f3f13b6b00cbffa1f9bdd2ef0))
+
 ## [1.35.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.12...v1.35.0) (2026-09-17)
 
 
