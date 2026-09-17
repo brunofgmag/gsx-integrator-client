@@ -17,6 +17,8 @@ public:
     double currentFuelKg = 0.0;
     double currentZfwKg = 0.0;
     double fuelCapacityKg = 0.0;
+    int fuelCapacityReadsBeforeArrival = 0;
+    mutable int fuelCapacityReads = 0;
     bool smartSwitchActivated = false;
     bool powered = false;
     bool readyToPush = false;
@@ -62,7 +64,13 @@ public:
     [[nodiscard]] double GetCrewOnBoardKg() const override { return crewOnBoardKg; }
     [[nodiscard]] int GetPlannedPassengers() const override { return plannedPax; }
     [[nodiscard]] double GetCurrentFuelKg() const override { return currentFuelKg; }
-    [[nodiscard]] double GetFuelCapacityKg() const override { return fuelCapacityKg; }
+    [[nodiscard]] double GetFuelCapacityKg() const override
+    {
+        ++fuelCapacityReads;
+
+        return fuelCapacityReads > fuelCapacityReadsBeforeArrival ? fuelCapacityKg : 0.0;
+    }
+
     void SetCurrentFuelKg(const double value) override { currentFuelKg = value; }
     [[nodiscard]] double GetCurrentZfwKg() const override { return currentZfwKg; }
     void SetCurrentZfwKg(const double value) override { currentZfwKg = value; }
