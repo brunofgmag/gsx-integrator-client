@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.35.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.12...v1.35.0) (2026-09-17)
+
+
+* recognize, power and position the FSS E-Jets ([#172](https://github.com/brunofgmag/gsx-integrator-client/issues/172)) ([ec49253](https://github.com/brunofgmag/gsx-integrator-client/commit/ec49253e9ad5be4286516d1c84cbbe50a1890240))
+
+
+### Features
+
+* **fss-e-jets:** recognize, power and position the FSS E-Jets ([684a2f4](https://github.com/brunofgmag/gsx-integrator-client/commit/684a2f4e92c4db39aa3c61ea7d7f414e60011025)) ([ec49253](https://github.com/brunofgmag/gsx-integrator-client/commit/ec49253e9ad5be4286516d1c84cbbe50a1890240))
+
 ## [1.34.12](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.11...v1.34.12) (2026-09-16)
 
 
