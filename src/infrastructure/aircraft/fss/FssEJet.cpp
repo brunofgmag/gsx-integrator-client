@@ -64,6 +64,7 @@ namespace
     constexpr auto kGallonsUnit = "gallons";
     constexpr auto kPercentOver100Unit = "percent over 100";
     constexpr auto kSimFuelWeightPerGallon = "FUEL WEIGHT PER GALLON";
+    constexpr auto kSimUnusableFuelTotal = "UNUSABLE FUEL TOTAL QUANTITY";
     constexpr std::array kTankCapacities = {"FUELSYSTEM TANK CAPACITY:1", "FUELSYSTEM TANK CAPACITY:2"};
     constexpr std::array kTankLevels = {"FUELSYSTEM TANK LEVEL:1", "FUELSYSTEM TANK LEVEL:2"};
 
@@ -158,6 +159,16 @@ namespace
         }
 
         return capacityGallons;
+    }
+
+    std::optional<double> UnusableFuelGallons(VariableGateway& variables)
+    {
+        if (!variables.HasReceivedAVar(kSimUnusableFuelTotal, kGallonsUnit))
+        {
+            return std::nullopt;
+        }
+
+        return variables.GetAVar(kSimUnusableFuelTotal, kGallonsUnit, 0.0);
     }
 
     double MaxPassengersFor(const char* name)
@@ -343,20 +354,25 @@ double FssEJet::GetFuelCapacityKg() const
 {
     const std::optional<double> poundsPerGallon = PoundsPerGallon(*variableGateway_);
     const std::optional<double> capacityGallons = TankCapacityGallons(*variableGateway_);
-    if (!poundsPerGallon.has_value() || !capacityGallons.has_value())
+    const std::optional<double> unusableGallons = UnusableFuelGallons(*variableGateway_);
+    if (!poundsPerGallon.has_value() || !capacityGallons.has_value() || !unusableGallons.has_value())
     {
         return 0.0;
     }
 
-    return weight::LbToKg(*capacityGallons * *poundsPerGallon);
+    const double usableGallons = std::max(*capacityGallons - *unusableGallons, 0.0);
+
+    return weight::LbToKg(usableGallons * *poundsPerGallon);
 }
 
 void FssEJet::SetCurrentFuelKg(const double fuelKg)
 {
     const std::optional<double> poundsPerGallon = PoundsPerGallon(*variableGateway_);
     const std::optional<double> capacityGallons = TankCapacityGallons(*variableGateway_);
+    const std::optional<double> unusableGallons = UnusableFuelGallons(*variableGateway_);
     if (!poundsPerGallon.has_value() || *poundsPerGallon <= 0.0
         || !capacityGallons.has_value() || *capacityGallons <= 0.0
+        || !unusableGallons.has_value()
         || fuelKg == lastFuelKg_)
     {
         return;
@@ -364,7 +380,8 @@ void FssEJet::SetCurrentFuelKg(const double fuelKg)
 
     lastFuelKg_ = fuelKg;
 
-    const double level = std::clamp(weight::KgToLb(fuelKg) / *poundsPerGallon / *capacityGallons, 0.0, 1.0);
+    const double targetGallons = weight::KgToLb(fuelKg) / *poundsPerGallon;
+    const double level = std::clamp((targetGallons + *unusableGallons) / *capacityGallons, 0.0, 1.0);
 
     for (const char* tankLevel : kTankLevels)
     {

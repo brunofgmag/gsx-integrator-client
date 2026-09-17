@@ -21,11 +21,14 @@ namespace
     constexpr auto kFuelWeightPerGallon = "FUEL WEIGHT PER GALLON";
     constexpr auto kTankCapacity1 = "FUELSYSTEM TANK CAPACITY:1";
     constexpr auto kTankCapacity2 = "FUELSYSTEM TANK CAPACITY:2";
+    constexpr auto kUnusableFuelTotal = "UNUSABLE FUEL TOTAL QUANTITY";
     constexpr std::array kTankLevels = {"FUELSYSTEM TANK LEVEL:1", "FUELSYSTEM TANK LEVEL:2"};
 
     constexpr double kFuelPoundsPerGallon = 6.7;
     constexpr double kTankGallons = 2149.0;
-    constexpr double kFuelCapacityKg = weight::LbToKg(kFuelPoundsPerGallon * kTankGallons * 2.0);
+    constexpr double kReserveGallons = 30.0;
+    constexpr double kUsableTankGallons = kTankGallons * 2.0 - kReserveGallons;
+    constexpr double kFuelCapacityKg = weight::LbToKg(kFuelPoundsPerGallon * kUsableTankGallons);
     constexpr double kLevelTolerance = 1e-6;
     constexpr double kKgTolerance = 1e-6;
 
@@ -51,6 +54,18 @@ namespace
         gateway.avars[kFuelWeightPerGallon] = kFuelPoundsPerGallon;
         gateway.avars[kTankCapacity1] = kTankGallons;
         gateway.avars[kTankCapacity2] = kTankGallons;
+    }
+
+    void GiveReserve(FakeVariableGateway& gateway)
+    {
+        gateway.avars[kUnusableFuelTotal] = kReserveGallons;
+    }
+
+    double ExpectedLevelForTargetKg(const double targetKg)
+    {
+        const double targetGallons = weight::KgToLb(targetKg) / kFuelPoundsPerGallon;
+
+        return (targetGallons + kReserveGallons) / (kTankGallons * 2.0);
     }
 
     void PlanTheMeasuredFlight(AutomationStatus& status, const double payloadKg, const int passengers)
@@ -245,11 +260,11 @@ private slots:
     static void theFreighterDoorStatusIgnoresL2AndR2AndIncludesTheMainDeck();
     static void doorsRuleNeverWritesToAnInteractivePointOrTheExitToggle();
     static void observingEvaluatingAndReadingWriteNoVariable();
-    static void fuelCapacitySumsBothTanksInKg();
-    static void fuelCapacityWaitsForTheWeightPerGallonAndTheTwoCapacities();
+    static void fuelCapacitySumsBothTanksMinusTheReserveInKg();
+    static void fuelCapacityWaitsForTheWeightPerGallonTheTwoCapacitiesAndTheReserve();
     static void refuelWritesTheSameLevelFractionInBothTanks();
     static void refuelKeepsTheTankLevelBetweenEmptyAndFull();
-    static void refuelWritesNothingUntilTheWeightPerGallonAndTheTwoCapacitiesArrive();
+    static void refuelWritesNothingUntilTheWeightPerGallonTheTwoCapacitiesAndTheReserveArrive();
     static void refuelWritesTheSameTargetOnlyOnce();
     static void loadsPassengerZonesThenHoldsByTheMeasuredSplit();
     static void writesNoStationsWithoutACargoLineInThePlan();
@@ -1177,18 +1192,19 @@ void FssEJetTest::observingEvaluatingAndReadingWriteNoVariable()
     }
 }
 
-void FssEJetTest::fuelCapacitySumsBothTanksInKg()
+void FssEJetTest::fuelCapacitySumsBothTanksMinusTheReserveInKg()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
     const FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
     GiveTanks(gateway);
+    GiveReserve(gateway);
 
     QVERIFY(std::abs(aircraft.GetFuelCapacityKg() - kFuelCapacityKg) < kKgTolerance);
 }
 
-void FssEJetTest::fuelCapacityWaitsForTheWeightPerGallonAndTheTwoCapacities()
+void FssEJetTest::fuelCapacityWaitsForTheWeightPerGallonTheTwoCapacitiesAndTheReserve()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -1203,6 +1219,10 @@ void FssEJetTest::fuelCapacityWaitsForTheWeightPerGallonAndTheTwoCapacities()
 
     gateway.avars[kFuelWeightPerGallon] = kFuelPoundsPerGallon;
 
+    QCOMPARE(aircraft.GetFuelCapacityKg(), 0.0);
+
+    GiveReserve(gateway);
+
     QVERIFY(std::abs(aircraft.GetFuelCapacityKg() - kFuelCapacityKg) < kKgTolerance);
 }
 
@@ -1213,13 +1233,17 @@ void FssEJetTest::refuelWritesTheSameLevelFractionInBothTanks()
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
     GiveTanks(gateway);
+    GiveReserve(gateway);
 
-    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
+    const double targetKg = kFuelCapacityKg / 2.0;
+    aircraft.SetCurrentFuelKg(targetKg);
+
+    const double expectedLevel = ExpectedLevelForTargetKg(targetKg);
 
     for (const char* level : kTankLevels)
     {
         QCOMPARE(gateway.AVarWriteCount(level), 1);
-        QVERIFY(std::abs(gateway.WrittenAVar(level) - 0.5) < kLevelTolerance);
+        QVERIFY(std::abs(gateway.WrittenAVar(level) - expectedLevel) < kLevelTolerance);
         QCOMPARE(gateway.AVarWriteUnit(level), std::string(kPercentOver100Unit));
     }
 }
@@ -1231,6 +1255,7 @@ void FssEJetTest::refuelKeepsTheTankLevelBetweenEmptyAndFull()
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
     GiveTanks(gateway);
+    GiveReserve(gateway);
 
     aircraft.SetCurrentFuelKg(kFuelCapacityKg * 2.0);
 
@@ -1247,7 +1272,7 @@ void FssEJetTest::refuelKeepsTheTankLevelBetweenEmptyAndFull()
     }
 }
 
-void FssEJetTest::refuelWritesNothingUntilTheWeightPerGallonAndTheTwoCapacitiesArrive()
+void FssEJetTest::refuelWritesNothingUntilTheWeightPerGallonTheTwoCapacitiesAndTheReserveArrive()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -1268,6 +1293,12 @@ void FssEJetTest::refuelWritesNothingUntilTheWeightPerGallonAndTheTwoCapacitiesA
 
     aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
 
+    QCOMPARE(gateway.setAVarCalls, 0);
+
+    GiveReserve(gateway);
+
+    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
+
     for (const char* level : kTankLevels)
     {
         QCOMPARE(gateway.AVarWriteCount(level), 1);
@@ -1281,6 +1312,7 @@ void FssEJetTest::refuelWritesTheSameTargetOnlyOnce()
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
     GiveTanks(gateway);
+    GiveReserve(gateway);
 
     aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
     aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
