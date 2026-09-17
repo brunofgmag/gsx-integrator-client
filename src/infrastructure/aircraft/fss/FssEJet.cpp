@@ -2,6 +2,7 @@
 
 #include "../../simvars/SimVars.h"
 
+#include <algorithm>
 #include <array>
 #include <memory>
 #include <string>
@@ -204,15 +205,10 @@ bool FssEJet::IsBeaconOn() const
 
 bool FssEJet::AreChocksSet() const
 {
-    for (const char* lVar : kChocksLVars)
+    return std::ranges::any_of(kChocksLVars, [this](const char* lVar)
     {
-        if (variableGateway_->GetLVar(lVar, 0.0) > 0.0)
-        {
-            return true;
-        }
-    }
-
-    return false;
+        return variableGateway_->GetLVar(lVar, 0.0) > 0.0;
+    });
 }
 
 namespace

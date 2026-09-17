@@ -20,9 +20,9 @@ namespace
 }
 
 FssEJetKeepVendorAutomationOffRule::FssEJetKeepVendorAutomationOffRule(VariableReader& variables)
-    : variables_(&variables)
+    : variables_(&variables),
+      ticksSinceWrite_{kTicksToWaitForTheEcho, kTicksToWaitForTheEcho, kTicksToWaitForTheEcho}
 {
-    ticksSinceWrite_.fill(kTicksToWaitForTheEcho);
 }
 
 const char* FssEJetKeepVendorAutomationOffRule::Name() const
