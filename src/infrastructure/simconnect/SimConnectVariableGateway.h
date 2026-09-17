@@ -13,6 +13,7 @@ class SimConnectVariableGateway final : public VariableGateway, public VariableT
 public:
     void Attach(HANDLE hSimConnect);
     void Detach();
+    void ForgetTextSlots();
 
     void MarkTick() override;
 
