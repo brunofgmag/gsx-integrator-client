@@ -5,9 +5,11 @@
 #include <algorithm>
 #include <array>
 #include <memory>
+#include <span>
 #include <string>
 
 #include "../AircraftRegistry.h"
+#include "../DoorReading.h"
 #include "../../logging/LogMacros.h"
 #include "../../simvars/VariableGateway.h"
 #include "../../../domain/model/AutomationStatus.h"
@@ -24,6 +26,9 @@ namespace
     constexpr auto kCallRampLeftLVar = "FSS_EXX_AUDIO_L_TEL_RAMP_BTN";
     constexpr auto kCallRampRightLVar = "FSS_EXX_AUDIO_R_TEL_RAMP_BTN";
     constexpr double kCallRampOff = 0.0;
+
+    constexpr auto kCallRampActiveLVar = "FSS_EXX_AUDIO_TEL_RAMP_ACTIVE";
+    constexpr double kCallRampInactive = 0.0;
 
     constexpr auto kGpuStateLVar = "FSS_EXX_EXT_GPU_STATE";
     constexpr double kGpuStateHidden = -1.0;
@@ -50,6 +55,73 @@ namespace
 
     constexpr int kEngineCount = 2;
     constexpr double kEngineRunningDefault = 1.0;
+
+    struct DoorReadPoint
+    {
+        const char* openLVar;
+        const char* movingLVar;
+        const char* movingLVar2;
+        int movingLimitTicks;
+    };
+
+    constexpr int kPaxDoorMovingLimitTicks = 14;
+
+    constexpr std::array kPassengerDoorReadPoints = {
+        DoorReadPoint{"FSS_EXX_DOOR_FWD_L_OPEN", "FSS_EXX_DOOR_FWD_L_MOVING", nullptr, kPaxDoorMovingLimitTicks},
+        DoorReadPoint{"FSS_EXX_DOOR_AFT_L_OPEN", "FSS_EXX_DOOR_AFT_L_MOVING", nullptr, kPaxDoorMovingLimitTicks},
+        DoorReadPoint{"FSS_EXX_DOOR_FWD_R_OPEN", "FSS_EXX_DOOR_FWD_R_MOVING", nullptr, kPaxDoorMovingLimitTicks},
+        DoorReadPoint{"FSS_EXX_DOOR_AFT_R_OPEN", "FSS_EXX_DOOR_AFT_R_MOVING", nullptr, kPaxDoorMovingLimitTicks},
+        DoorReadPoint{"FSS_EXX_DOOR_CARGO_FWD_OPEN", "FSS_EXX_DOOR_CARGO_FWD_MOVING", nullptr,
+                      doors::kCargoDoorMovingLimitTicks},
+        DoorReadPoint{"FSS_EXX_DOOR_CARGO_AFT_OPEN", "FSS_EXX_DOOR_CARGO_AFT_MOVING", nullptr,
+                      doors::kCargoDoorMovingLimitTicks}
+    };
+
+    constexpr std::array kCargoDoorReadPoints = {
+        DoorReadPoint{"FSS_EXX_DOOR_FWD_L_OPEN", "FSS_EXX_DOOR_FWD_L_MOVING", nullptr, kPaxDoorMovingLimitTicks},
+        DoorReadPoint{"FSS_EXX_DOOR_FWD_R_OPEN", "FSS_EXX_DOOR_FWD_R_MOVING", nullptr, kPaxDoorMovingLimitTicks},
+        DoorReadPoint{"FSS_EXX_DOOR_CARGO_FWD_OPEN", "FSS_EXX_DOOR_CARGO_FWD_MOVING", nullptr,
+                      doors::kCargoDoorMovingLimitTicks},
+        DoorReadPoint{"FSS_EXX_DOOR_CARGO_AFT_OPEN", "FSS_EXX_DOOR_CARGO_AFT_MOVING", nullptr,
+                      doors::kCargoDoorMovingLimitTicks},
+        DoorReadPoint{"FSS_EXX_DOOR_CARGO_MAIN_OPEN", "FSS_EXX_DOOR_CARGO_MAIN_MOVING_UP",
+                      "FSS_EXX_DOOR_CARGO_MAIN_MOVING_DN", doors::kMainDeckDoorMovingLimitTicks}
+    };
+
+    std::span<const DoorReadPoint> DoorReadPointsFor(const bool cargoVariant)
+    {
+        if (cargoVariant)
+        {
+            return kCargoDoorReadPoints;
+        }
+
+        return kPassengerDoorReadPoints;
+    }
+
+    bool IsDoorMoving(VariableGateway& variables, const DoorReadPoint& point)
+    {
+        if (variables.GetLVar(point.movingLVar, 0.0) > 0.0)
+        {
+            return true;
+        }
+
+        return point.movingLVar2 != nullptr && variables.GetLVar(point.movingLVar2, 0.0) > 0.0;
+    }
+
+    std::optional<bool> DoorOpenAt(VariableGateway& variables, const DoorReadPoint& point, const int movingTicks)
+    {
+        if (!variables.HasReceivedLVar(point.openLVar))
+        {
+            return std::nullopt;
+        }
+
+        if (!IsDoorMoving(variables, point))
+        {
+            return variables.GetLVar(point.openLVar, 0.0) > 0.0;
+        }
+
+        return movingTicks >= point.movingLimitTicks ? std::optional{true} : std::nullopt;
+    }
 }
 
 FssEJet::FssEJet(VariableGateway* variableGateway, const AutomationStatus* status, const char* name,
@@ -61,11 +133,13 @@ FssEJet::FssEJet(VariableGateway* variableGateway, const AutomationStatus* statu
                    [](double, const double max)
                    {
                        return max > kCallRampOff;
-                   },
-                   kCallRampOff),
+                   }),
+      doors_(variableGateway),
+      doorMovingTicks_(DoorReadPointsFor(cargoVariant).size(), 0),
       automationRule_(*variableGateway),
       gpuRule_(*this),
-      rules_{&automationRule_, &gpuRule_}
+      doorsRule_(*variableGateway, doors_, *this, cargoVariant),
+      rules_{&automationRule_, &gpuRule_, &doorsRule_}
 {
     smartSwitch_.Subscribe();
 
@@ -75,6 +149,17 @@ FssEJet::FssEJet(VariableGateway* variableGateway, const AutomationStatus* statu
 bool FssEJet::IsCargoVariant() const
 {
     return cargoVariant_;
+}
+
+void FssEJet::Observe()
+{
+    doors_.Observe();
+
+    const std::span<const DoorReadPoint> points = DoorReadPointsFor(cargoVariant_);
+    for (std::size_t i = 0; i < points.size(); ++i)
+    {
+        doorMovingTicks_[i] = IsDoorMoving(*variableGateway_, points[i]) ? doorMovingTicks_[i] + 1 : 0;
+    }
 }
 
 const std::vector<AircraftRule*>& FssEJet::Rules() const
@@ -119,7 +204,13 @@ double FssEJet::GetCurrentZfwKg() const
 
 bool FssEJet::ConsumeSmartSwitch()
 {
-    return smartSwitch_.Consume();
+    const bool consumed = smartSwitch_.Consume();
+    if (consumed)
+    {
+        variableGateway_->SetLVar(kCallRampActiveLVar, kCallRampInactive);
+    }
+
+    return consumed;
 }
 
 std::optional<GroundPowerStatus> FssEJet::GetGroundPowerStatus() const
@@ -166,6 +257,34 @@ void FssEJet::ClearOwnGroundEquipment()
     {
         variableGateway_->SetLVar(lVar, kEquipmentStowed);
     }
+}
+
+void FssEJet::CloseAllDoors()
+{
+    doorsRule_.RequestCloseAll();
+}
+
+void FssEJet::HoldDoorsClosed(const bool hold)
+{
+    doors_.HoldClosedForDeparture(hold);
+
+    if (hold)
+    {
+        doorsRule_.RequestCloseAll();
+    }
+}
+
+DoorStatus FssEJet::GetDoorStatus() const
+{
+    const std::span<const DoorReadPoint> points = DoorReadPointsFor(cargoVariant_);
+
+    DoorStatus status = doors::kNoDoorsSeen;
+    for (std::size_t i = 0; i < points.size(); ++i)
+    {
+        status = doors::Combine(status, DoorOpenAt(*variableGateway_, points[i], doorMovingTicks_[i]));
+    }
+
+    return status;
 }
 
 bool FssEJet::IsPowered() const

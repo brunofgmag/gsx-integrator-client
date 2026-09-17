@@ -125,6 +125,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.h
         src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.cpp
         src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/aircraft/fenix/FenixA32x.h
         src/infrastructure/aircraft/fenix/rules/FenixA32xDoorsFollowGsxRule.cpp

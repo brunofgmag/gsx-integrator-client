@@ -388,8 +388,13 @@ gsxi_add_qt_test(gsxi-fss-e-jets-tests fss-e-jets
         src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.h
         src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.cpp
         src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.h
+        src/infrastructure/aircraft/DoorReading.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
         src/domain/model/AutomationStatus.h
         src/domain/support/Weight.h)
 
@@ -697,6 +702,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.h
         src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.cpp
         src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
@@ -868,6 +875,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.h
         src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.cpp
         src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
