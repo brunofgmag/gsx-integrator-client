@@ -5,8 +5,10 @@
 #include <vector>
 
 #include "../SmartSwitch.h"
+#include "rules/FssEJetDoorsFollowGsxRule.h"
 #include "rules/FssEJetGpuFollowsRequestRule.h"
 #include "rules/FssEJetKeepVendorAutomationOffRule.h"
+#include "../../gsx/GsxDoorSync.h"
 #include "../../../domain/ports/Aircraft.h"
 
 class VariableGateway;
@@ -22,6 +24,7 @@ public:
 
     [[nodiscard]] bool IsCargoVariant() const override;
 
+    void Observe() override;
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
     void OnLoadingStarted() override {}
 
@@ -52,6 +55,10 @@ public:
     bool SetChocks(bool placed) override;
     void ClearOwnGroundEquipment() override;
 
+    void CloseAllDoors() override;
+    void HoldDoorsClosed(bool hold) override;
+    [[nodiscard]] DoorStatus GetDoorStatus() const override;
+
     [[nodiscard]] bool IsPowered() const override;
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;
@@ -67,8 +74,11 @@ private:
     const AutomationStatus* status_;
     bool cargoVariant_;
     SmartSwitch smartSwitch_;
+    GsxDoorSync doors_;
+    std::vector<int> doorMovingTicks_;
     FssEJetKeepVendorAutomationOffRule automationRule_;
     FssEJetGpuFollowsRequestRule gpuRule_;
+    FssEJetDoorsFollowGsxRule doorsRule_;
     std::vector<AircraftRule*> rules_;
 };
 
