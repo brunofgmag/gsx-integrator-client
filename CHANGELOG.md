@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.37.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.36.0...v1.37.0) (2026-09-17)
+
+
+* fuel and load the E-Jets from the plan ([#176](https://github.com/brunofgmag/gsx-integrator-client/issues/176)) ([e34b445](https://github.com/brunofgmag/gsx-integrator-client/commit/e34b445ac326d5abfd9f6549ffd1a5953c9bc3bb))
+
+
+### Features
+
+* **fss-e-jets:** refuel by tank level and load the stations from the plan ([85214ea](https://github.com/brunofgmag/gsx-integrator-client/commit/85214eadf0c6e74c4a91855e4cf5cf32d14d7654)) ([e34b445](https://github.com/brunofgmag/gsx-integrator-client/commit/e34b445ac326d5abfd9f6549ffd1a5953c9bc3bb))
+* **simbrief:** read the cargo line from the OFP ([0a8a967](https://github.com/brunofgmag/gsx-integrator-client/commit/0a8a967d605ae65e01f48619322bb359ab7fb04a)) ([e34b445](https://github.com/brunofgmag/gsx-integrator-client/commit/e34b445ac326d5abfd9f6549ffd1a5953c9bc3bb))
+
+
+### Bug Fixes
+
+* **fss-e-jets:** account for unusable fuel reserve when writing tank level ([eb5c374](https://github.com/brunofgmag/gsx-integrator-client/commit/eb5c37482ddf71f5535d7a878a0b7253ba6aea76)) ([e34b445](https://github.com/brunofgmag/gsx-integrator-client/commit/e34b445ac326d5abfd9f6549ffd1a5953c9bc3bb))
+
 ## [1.36.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.35.0...v1.36.0) (2026-09-17)
 
 
