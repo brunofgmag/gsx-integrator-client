@@ -132,13 +132,13 @@ void GsxMenuNavigator::RequestSimbriefLoad()
 
 void GsxMenuNavigator::RequestBoarding()
 {
-    stairsKeptForPassengers_ = false;
+    stairsKeptInPlace_ = false;
     TriggerService(kBoardingServiceId);
 }
 
 void GsxMenuNavigator::RequestDeboarding()
 {
-    stairsKeptForPassengers_ = false;
+    stairsKeptInPlace_ = false;
     TriggerService(kDeboardingServiceId);
 }
 
@@ -247,7 +247,7 @@ void GsxMenuNavigator::Reset()
     completingRefuel_ = {};
     completingBoarding_ = {};
     confirmingEngines_ = {};
-    stairsKeptForPassengers_ = false;
+    stairsKeptInPlace_ = false;
     deIceYesSpent_ = false;
     intent_ = Intent::None;
     intentSinceMs_ = 0;
@@ -518,7 +518,7 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
         {
             if (passengersNeedThem)
             {
-                stairsKeptForPassengers_ = true;
+                stairsKeptInPlace_ = true;
                 logger_->LogInfo("RemoteAPI keeping the stairs: boarding or deboarding is underway");
             }
 
@@ -955,14 +955,14 @@ void GsxMenuNavigator::RearmPanelLatches()
 
 void GsxMenuNavigator::OnTurnaroundTurned()
 {
-    stairsKeptForPassengers_ = false;
+    stairsKeptInPlace_ = false;
     deIceYesSpent_ = false;
     RearmPanelLatches();
 }
 
-bool GsxMenuNavigator::WereStairsKeptForPassengers() const
+bool GsxMenuNavigator::WereStairsKeptInPlace() const
 {
-    return stairsKeptForPassengers_;
+    return stairsKeptInPlace_;
 }
 
 void GsxMenuNavigator::OnPushbackStarted()

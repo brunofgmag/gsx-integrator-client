@@ -116,7 +116,7 @@ void BoardingState::MaybeForceCompletion(TurnaroundContext& ctx)
 
 bool BoardingState::IsCargoHeldBehindTheStairs(const TurnaroundContext& ctx)
 {
-    if (!ctx.menuGateway->WereStairsKeptForPassengers())
+    if (!ctx.menuGateway->WereStairsKeptInPlace())
     {
         return false;
     }

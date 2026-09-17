@@ -656,7 +656,7 @@ namespace
         f.gsxService.boardingState = GsxStateStatus::Active;
         f.gsxService.boardedPassengers = 151;
         f.gsxService.cargoPercent = 0.0;
-        f.menuGateway.stairsKeptForPassengers = true;
+        f.menuGateway.stairsKeptInPlace = true;
     }
 }
 
@@ -710,7 +710,7 @@ void BoardingStateTest::doesNotAskGsxToCompleteWhenCargoIsMerelySlow()
     BoardingState state;
 
     ArrangeCargoHeldBehindTheStairs(f);
-    f.menuGateway.stairsKeptForPassengers = false;
+    f.menuGateway.stairsKeptInPlace = false;
 
     for (int tick = 0; tick < 400; ++tick)
     {
@@ -790,7 +790,7 @@ namespace
         f.gsxService.boardingState = GsxStateStatus::Active;
         f.gsxService.boardedPassengers = 0;
         f.gsxService.cargoPercent = 67.0;
-        f.menuGateway.stairsKeptForPassengers = true;
+        f.menuGateway.stairsKeptInPlace = true;
     }
 }
 
@@ -877,7 +877,7 @@ void BoardingStateTest::doesNotAskGsxToCompleteAFreighterWhoseStairsWereNotKept(
     BoardingState state;
 
     ArrangeFreighterLoaderHeldBehindTheStairs(f);
-    f.menuGateway.stairsKeptForPassengers = false;
+    f.menuGateway.stairsKeptInPlace = false;
 
     for (int tick = 0; tick < 400; ++tick)
     {

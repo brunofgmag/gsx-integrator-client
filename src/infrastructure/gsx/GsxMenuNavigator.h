@@ -49,7 +49,7 @@ public:
 
     [[nodiscard]] bool ConfirmGoodEngines() override;
     [[nodiscard]] bool CompletePushback() override;
-    [[nodiscard]] bool WereStairsKeptForPassengers() const override;
+    [[nodiscard]] bool WereStairsKeptInPlace() const override;
 
     [[nodiscard]] bool IsMenuSettled() const;
 
@@ -157,7 +157,7 @@ private:
     bool panelOpenSpent_ = false;
     bool panelCloseSpent_ = false;
     bool panelOpenedByUs_ = false;
-    bool stairsKeptForPassengers_ = false;
+    bool stairsKeptInPlace_ = false;
     bool deIceYesSpent_ = false;
     long long panelOpenSentMs_ = 0;
 
