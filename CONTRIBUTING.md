@@ -39,7 +39,7 @@ Every airplane has a folder of its own under `src/infrastructure/aircraft/`, and
 
 ### 1. Create the adapter
 
-Add `YourAircraft.h` and `YourAircraft.cpp` under `src/infrastructure/aircraft/yourvendor/`, a folder of its own named after the vendor in lowercase, implementing the `Aircraft` interface from `src/domain/ports/Aircraft.h`. The folder is per vendor, not per airplane, so one vendor with several airplanes gets one folder: `fss/` holds the 727, and `pmdg/` holds the 737 and the 777 side by side. The interface has three groups of methods:
+Add `YourAircraft.h` and `YourAircraft.cpp` under `src/infrastructure/aircraft/yourvendor/`, a folder of its own named after the vendor in lowercase, implementing the `Aircraft` interface from `src/domain/ports/Aircraft.h`. The folder is per vendor, not per airplane, so one vendor with several airplanes gets one folder: `fss/` holds the 727 and the E-Jets, and `pmdg/` holds the 737 and the 777 side by side. The interface has three groups of methods:
 
 - Planned figures: `IsFlightPlanLoaded`, `GetPlannedFuelKg`, `GetPlannedZfwKg`, `GetPlannedPassengers` and `GetEmptyZfwKg`. These report what the airplane's own systems know about the flight.
 - Current figures: `GetCurrentFuelKg`, `SetCurrentFuelKg`, `GetCurrentZfwKg` and `SetCurrentZfwKg`. The workflow calls the setters while GSX refuels and boards.
