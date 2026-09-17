@@ -375,6 +375,24 @@ gsxi_add_qt_test(gsxi-fss-727-tests fss-727
         src/domain/support/Weight.h)
 target_link_libraries(gsxi-fss-727-tests PRIVATE gsxi-turnaround-state-test-support)
 
+gsxi_add_qt_test(gsxi-fss-e-jets-tests fss-e-jets
+        tests/TestDoubles.h
+        tests/AircraftTicks.h
+        tests/tst_fss_e_jets.cpp
+        src/infrastructure/aircraft/AircraftIdentity.h
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/fss/FssEJet.cpp
+        src/infrastructure/aircraft/fss/FssEJet.h
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
+        src/domain/model/AutomationStatus.h
+        src/domain/support/Weight.h)
+
 gsxi_add_qt_test(gsxi-toliss-a340-tests toliss-a340
         tests/TestDoubles.h
         tests/AircraftTicks.h
@@ -673,6 +691,12 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
+        src/infrastructure/aircraft/fss/FssEJet.cpp
+        src/infrastructure/aircraft/fss/FssEJet.h
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
@@ -838,6 +862,12 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
+        src/infrastructure/aircraft/fss/FssEJet.cpp
+        src/infrastructure/aircraft/fss/FssEJet.h
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
