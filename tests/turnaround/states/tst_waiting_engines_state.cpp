@@ -21,10 +21,16 @@ private slots:
     static void namesTheGateThatIsHoldingTheSmartSwitch();
     static void staysQuietAfterTheConfirmationWasSent();
     static void proceedsWhenPushbackFinished();
+    static void movesOnToTheDepartureWhenTheAircraftTaxisUnderItsOwnPower();
+    static void movesOnToTheDepartureOnceTheAircraftIsAirborne();
+    static void holdsWhileTheEnginesRunWithTheAircraftStill();
+    static void holdsWhileTheAircraftMovesWithTheEnginesOff();
 };
 
 namespace
 {
+    constexpr double kTaxiKnots = 12.0;
+
     void ArmConfirmationScenario(TurnaroundStateFixture& f)
     {
         f.gsxService.goodEngineStartConfirmation = true;
@@ -32,6 +38,13 @@ namespace
         f.aircraft.engineRunning = true;
         f.aircraft.parkingBrakeSet = true;
         f.ctx.pilotTouched = true;
+    }
+
+    void ArmCouatlRestartScenario(TurnaroundStateFixture& f)
+    {
+        f.gsxService.goodEngineStartConfirmation = true;
+        f.gsxService.waitingForEngines = false;
+        f.gsxService.pushbackFinished = false;
     }
 }
 
@@ -226,6 +239,63 @@ void WaitingEnginesStateTest::staysQuietAfterTheConfirmationWasSent()
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.ctx.data.engineConfirmationBlock, EngineConfirmationBlock::None);
+}
+
+void WaitingEnginesStateTest::movesOnToTheDepartureWhenTheAircraftTaxisUnderItsOwnPower()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    ArmCouatlRestartScenario(f);
+    f.aircraft.engineRunning = true;
+    f.gsxService.groundSpeedKnots = kTaxiKnots;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingDeparture);
+    QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 0);
+}
+
+void WaitingEnginesStateTest::movesOnToTheDepartureOnceTheAircraftIsAirborne()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    ArmCouatlRestartScenario(f);
+    f.gsxService.onGround = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingDeparture);
+    QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 0);
+}
+
+void WaitingEnginesStateTest::holdsWhileTheEnginesRunWithTheAircraftStill()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    ArmCouatlRestartScenario(f);
+    f.aircraft.engineRunning = true;
+    f.gsxService.groundSpeedKnots = 0.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.engineConfirmationBlock, EngineConfirmationBlock::GsxNotAsking);
+}
+
+void WaitingEnginesStateTest::holdsWhileTheAircraftMovesWithTheEnginesOff()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    ArmCouatlRestartScenario(f);
+    f.aircraft.engineRunning = false;
+    f.gsxService.groundSpeedKnots = kTaxiKnots;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.engineConfirmationBlock, EngineConfirmationBlock::EnginesStopped);
 }
 
 QTEST_APPLESS_MAIN(WaitingEnginesStateTest)
