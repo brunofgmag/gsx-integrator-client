@@ -26,7 +26,7 @@ public:
 
     [[nodiscard]] virtual bool ConfirmGoodEngines() = 0;
     [[nodiscard]] virtual bool CompletePushback() = 0;
-    [[nodiscard]] virtual bool WereStairsKeptForPassengers() const = 0;
+    [[nodiscard]] virtual bool WereStairsKeptInPlace() const = 0;
 
     virtual void DisableGsxMenu() = 0;
 

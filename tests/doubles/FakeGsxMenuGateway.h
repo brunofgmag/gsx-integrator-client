@@ -8,7 +8,7 @@ class FakeGsxMenuGateway final : public GsxMenuGateway
 public:
     bool confirmGoodEnginesResult = true;
     bool completePushbackResult = true;
-    bool stairsKeptForPassengers = false;
+    bool stairsKeptInPlace = false;
 
     int callJetwayCalls = 0;
     int callStairsCalls = 0;
@@ -78,7 +78,7 @@ public:
         return completePushbackResult;
     }
 
-    [[nodiscard]] bool WereStairsKeptForPassengers() const override { return stairsKeptForPassengers; }
+    [[nodiscard]] bool WereStairsKeptInPlace() const override { return stairsKeptInPlace; }
 
     void DisableGsxMenu() override {}
 

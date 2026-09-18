@@ -1391,7 +1391,7 @@ void GsxMenuNavigatorTest::theKeptStairsAreRememberedUntilTheNextBoardingRequest
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    QVERIFY(!nav.WereStairsKeptForPassengers());
+    QVERIFY(!nav.WereStairsKeptInPlace());
 
     MarkServiceTaken(state, "Boarding");
     ShowMenu(state,
@@ -1399,11 +1399,11 @@ void GsxMenuNavigatorTest::theKeptStairsAreRememberedUntilTheNextBoardingRequest
              {"Yes, remove the stairs", "No, keep the stairs"});
     nav.OnMenuChanged();
 
-    QVERIFY(nav.WereStairsKeptForPassengers());
+    QVERIFY(nav.WereStairsKeptInPlace());
 
     nav.RequestBoarding();
 
-    QVERIFY(!nav.WereStairsKeptForPassengers());
+    QVERIFY(!nav.WereStairsKeptInPlace());
 }
 
 void GsxMenuNavigatorTest::theRemovedStairsAreNotRemembered()
@@ -1423,7 +1423,7 @@ void GsxMenuNavigatorTest::theRemovedStairsAreNotRemembered()
 
     QVERIFY(pick != nullptr);
     QCOMPARE(pick->args.value("index").toInt(), 0);
-    QVERIFY(!nav.WereStairsKeptForPassengers());
+    QVERIFY(!nav.WereStairsKeptInPlace());
 }
 
 void GsxMenuNavigatorTest::theTurnaroundTurnForgetsTheKeptStairs()
@@ -1440,11 +1440,11 @@ void GsxMenuNavigatorTest::theTurnaroundTurnForgetsTheKeptStairs()
              {"Yes, remove the stairs", "No, keep the stairs"});
     nav.OnMenuChanged();
 
-    QVERIFY(nav.WereStairsKeptForPassengers());
+    QVERIFY(nav.WereStairsKeptInPlace());
 
     nav.OnTurnaroundTurned();
 
-    QVERIFY(!nav.WereStairsKeptForPassengers());
+    QVERIFY(!nav.WereStairsKeptInPlace());
 }
 
 void GsxMenuNavigatorTest::theDepartureClearanceIsAskedForOnce()

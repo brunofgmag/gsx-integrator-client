@@ -42,6 +42,7 @@ private slots:
     static void detectsFss727200reFreighterFromItsTitles();
     static void detectsFss727200reFreighterFromAThirdPartyLiveryByItsAtcModel();
     static void detectsFss727200reFreighterByItsAtcModelOverA200fTitle();
+    static void aSecondFlightOnOneConnectionIsNotPinnedByThePreviousAtcModel();
     static void leavesTheFss727PassengerVariantUndetected();
     static void doesNotDetectFss727FromAGenericFreighterTitle();
     static void detectionReportsFss727ClientRefuel();
@@ -467,6 +468,35 @@ void AircraftDetectionTest::detectsFss727200reFreighterByItsAtcModelOverA200fTit
     QVERIFY(aircraft != nullptr);
     QCOMPARE(std::string(descriptor->id), std::string("fss-727-200re"));
     QVERIFY(aircraft->IsCargoVariant());
+}
+
+void AircraftDetectionTest::aSecondFlightOnOneConnectionIsNotPinnedByThePreviousAtcModel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "Boeing 727-200RE Super 27 Freighter";
+    gateway.atcModel = "B727RE";
+
+    const AircraftDescriptor* first = nullptr;
+
+    QVERIFY(DetectAircraft({&gateway, &status}, &first) != nullptr);
+    QCOMPARE(std::string(first->id), std::string("fss-727-200re"));
+
+    gateway.aircraftName = "Boeing B727-200 Freighter Custom Repaint";
+    gateway.aircraftNameAvailable = false;
+    gateway.atcModelAvailable = false;
+
+    const AircraftDescriptor* second = nullptr;
+
+    QVERIFY(DetectAircraft({&gateway, &status}, &second) == nullptr);
+
+    gateway.aircraftNameAvailable = true;
+    gateway.atcModel = "B722";
+    gateway.atcModelAvailable = true;
+
+    QVERIFY(DetectAircraft({&gateway, &status}, &second) != nullptr);
+    QCOMPARE(std::string(second->id), std::string("fss-727-200f"));
 }
 
 void AircraftDetectionTest::leavesTheFss727PassengerVariantUndetected()

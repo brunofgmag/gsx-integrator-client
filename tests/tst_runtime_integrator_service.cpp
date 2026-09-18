@@ -189,6 +189,7 @@ private slots:
     static void theAircraftIsDetectedOnlyOnceTheAtcModelArrives();
     static void theSnapshotCountsTheJetwayWaitDownWithTheFlow();
     static void theSnapshotCarriesTheLoaderCountdownWhileTheLoaderHoldsBoarding();
+    static void theSnapshotCarriesTheDeboardingWaitOnceTheGsxTakesTheRequest();
     static void theSlowTickWritesNothingWhileTheGsxIsDown();
     static void theFuelWaitsUntilTheRemoteApiAnnouncesItsConnection();
 };
@@ -693,6 +694,35 @@ void RuntimeIntegratorServiceTest::theSnapshotCarriesTheLoaderCountdownWhileTheL
 
     QCOMPARE(snapshot.loaderHoldingBoarding, CargoLoader::MainDeck);
     QVERIFY(snapshot.loaderDoorWaitSeconds > 0);
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
+}
+
+void RuntimeIntegratorServiceTest::theSnapshotCarriesTheDeboardingWaitOnceTheGsxTakesTheRequest()
+{
+#ifndef NDEBUG
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+
+    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::RequestDeboarding)
+                           - static_cast<int>(runtime.GetPhase()));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::RequestDeboarding);
+
+    QVERIFY(PushLVar(gsx::lvars::kDeboardingState, static_cast<double>(GsxStateStatus::Unavailable)));
+    QVERIFY(TickAndWait(updated));
+
+    QVERIFY(!runtime.Snapshot().deboardingAwaitsGsx);
+
+    QVERIFY(PushLVar(gsx::lvars::kDeboardingState, static_cast<double>(GsxStateStatus::Requested)));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::RequestDeboarding);
+    QVERIFY(runtime.Snapshot().deboardingAwaitsGsx);
 #else
     QSKIP("DebugSkipPhase is compiled out of Release builds");
 #endif

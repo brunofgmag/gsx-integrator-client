@@ -41,6 +41,26 @@ void SimConnectVariableGateway::Detach()
     }
 }
 
+void SimConnectVariableGateway::ForgetTextSlots()
+{
+    for (auto& slot : slots_)
+    {
+        if (!slot.isString)
+        {
+            continue;
+        }
+
+        slot.received = false;
+        slot.registered = false;
+        slot.text[0] = '\0';
+
+        if (hSimConnect_ != nullptr && !RegisterSlot(slot))
+        {
+            LOG_WARN("Failed to re-register variable '%s'", slot.datumName.c_str());
+        }
+    }
+}
+
 void SimConnectVariableGateway::MarkTick()
 {
     for (auto& slot : slots_)

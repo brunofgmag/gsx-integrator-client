@@ -521,6 +521,8 @@ void IntegratorRuntime::OnSessionEnd()
 
     ClearFlightState();
 
+    varGateway_.ForgetTextSlots();
+
     emit Updated();
 }
 
