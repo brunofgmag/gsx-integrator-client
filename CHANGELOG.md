@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.38.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.37.1...v1.38.0) (2026-09-18)
+
+
+* client logging toggle with per-channel files ([#180](https://github.com/brunofgmag/gsx-integrator-client/issues/180)) ([8467993](https://github.com/brunofgmag/gsx-integrator-client/commit/8467993f08d8e7d538ac39ce6ae0df3cb73b66dc))
+
+
+### Features
+
+* **probe:** client logging toggle with per-channel files ([da6c0fa](https://github.com/brunofgmag/gsx-integrator-client/commit/da6c0fa6c7b6ebbdf178782078774275111a5e32)) ([8467993](https://github.com/brunofgmag/gsx-integrator-client/commit/8467993f08d8e7d538ac39ce6ae0df3cb73b66dc))
+
 ## [1.37.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.37.0...v1.37.1) (2026-09-18)
 
 
