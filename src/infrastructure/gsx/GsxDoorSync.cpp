@@ -97,13 +97,22 @@ void GsxDoorSync::Sync(const DoorWriter& write)
 
         if (IsMoving(door))
         {
-            probe::Line(QStringLiteral("hold  sync  %1 moving").arg(QLatin1String(DoorName(door))));
+            bool& holdLogged = holdLogged_[static_cast<std::size_t>(door)];
+            if (!holdLogged)
+            {
+                holdLogged = true;
+                probe::Line(probe::Channel::Writes,
+                            QStringLiteral("hold  sync  %1 moving").arg(QLatin1String(DoorName(door))));
+            }
+
             continue;
         }
 
-        probe::Line(QStringLiteral("write sync  %1 open=%2").arg(QLatin1String(DoorName(door))).arg(wantsOpen ? 1 : 0));
+        probe::Line(probe::Channel::Writes,
+                    QStringLiteral("write sync  %1 open=%2").arg(QLatin1String(DoorName(door))).arg(wantsOpen ? 1 : 0));
         write(door, wantsOpen);
         lastTarget = wantsOpen ? kDoorOpen : kDoorClosed;
+        holdLogged_[static_cast<std::size_t>(door)] = false;
     }
 }
 
@@ -128,7 +137,7 @@ void GsxDoorSync::Observe()
         {
             inheritedVehicles_.emplace(lVar, variableGateway_->GetLVar(lVar, 0.0));
         }
-        probe::Line(QStringLiteral("gsx couatl restarted, vehicle states distrusted"));
+        probe::Line(probe::Channel::Client, QStringLiteral("gsx couatl restarted, vehicle states distrusted"));
     }
 
     couatlSeenStarted_ = true;
@@ -232,9 +241,11 @@ void GsxDoorSync::Report() const
                           .arg(variableGateway_->GetLVar(name, -1.0), 0, 'f', 1));
     }
 
-    probe::Change("gsx.candidates", QStringLiteral("gsxc  %1").arg(candidates.join(QLatin1Char(' '))));
+    probe::Change(probe::Channel::GsxLVars, "gsx.candidates",
+                  QStringLiteral("gsxc  %1").arg(candidates.join(QLatin1Char(' '))));
 
-    probe::Change("gsx.doorsync", QStringLiteral("dsync %1 | %2")
+    probe::Change(probe::Channel::GsxLVars, "gsx.doorsync",
+                  QStringLiteral("dsync %1 | %2")
                   .arg(values.join(QLatin1Char(' ')), wanted.join(QLatin1Char(' '))));
 }
 
@@ -242,9 +253,11 @@ void GsxDoorSync::CloseAll(const DoorWriter& write)
 {
     for (const GsxDoor door : kAllDoors)
     {
-        probe::Line(QStringLiteral("write close %1 open=0").arg(QLatin1String(DoorName(door))));
+        probe::Line(probe::Channel::Writes,
+                    QStringLiteral("write close %1 open=0").arg(QLatin1String(DoorName(door))));
         write(door, false);
         lastTargets_[static_cast<std::size_t>(door)] = kDoorClosed;
+        holdLogged_[static_cast<std::size_t>(door)] = false;
     }
 }
 

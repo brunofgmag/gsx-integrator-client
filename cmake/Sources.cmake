@@ -217,6 +217,7 @@ set(APP_SOURCES
         src/infrastructure/gsx/GsxLVars.h
         src/infrastructure/logging/LogMacros.h
         src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeChannels.h
         src/infrastructure/probe/ProbeObserver.cpp
         src/infrastructure/probe/ProbeObserver.h
         src/infrastructure/probe/ProbeWatchList.cpp

@@ -1,5 +1,7 @@
 #include "IntegratorRuntime.h"
 
+#include <array>
+#include "../infrastructure/probe/ProbeChannels.h"
 #include "../infrastructure/probe/ProbeLog.h"
 #include "sim/SessionReadiness.h"
 #include "../infrastructure/aircraft/AircraftFactory.h"
@@ -11,6 +13,11 @@
 
 namespace
 {
+    constexpr auto kNoSessionPhase = "NoSession";
+    constexpr auto kGateChangeKey = "gates";
+    constexpr auto kSimAVarsChangeKey = "sim.avars";
+    constexpr std::array<const char*, 3> kSessionAVars = {"CAMERA STATE", "IS AIRCRAFT", "IS AVATAR"};
+
     bool NeedsRefuelingFix(const std::filesystem::path& cfg)
     {
         const std::optional<int> refueling = GsxAircraftProfile::ReadRefueling(cfg);
@@ -300,19 +307,31 @@ void IntegratorRuntime::ProbeGates()
     char title[256] = {};
     varGateway_.FetchAircraftName(title, sizeof title);
 
-    probe::Change("gates",
+    const double camera = varGateway_.GetAVar(kSessionAVars[0], "Number", -1.0);
+    const double isAircraft = varGateway_.GetAVar(kSessionAVars[1], "Number", -1.0);
+    const double isAvatar = varGateway_.GetAVar(kSessionAVars[2], "Number", -1.0);
+
+    probe::Change(probe::Channel::Turnaround,
+                  kGateChangeKey,
                   QStringLiteral("gate  ready=%1 pauseFlags=%2 pauseEvents=%3 camera=%4 isAircraft=%5 "
                                  "isAvatar=%6 sessionActive=%7 sim=%8 aircraft=%9 title='%10'")
                   .arg(IsSessionReady() ? 1 : 0)
                   .arg(pauseFlags_)
                   .arg(pauseEvents_)
-                  .arg(varGateway_.GetAVar("CAMERA STATE", "Number", -1.0))
-                  .arg(varGateway_.GetAVar("IS AIRCRAFT", "Number", -1.0))
-                  .arg(varGateway_.GetAVar("IS AVATAR", "Number", -1.0))
+                  .arg(camera)
+                  .arg(isAircraft)
+                  .arg(isAvatar)
                   .arg(isSessionActive_ ? 1 : 0)
                   .arg(static_cast<int>(simVersion_))
                   .arg(aircraft_ ? 1 : 0)
                   .arg(QString::fromLatin1(title)));
+
+    probe::Change(probe::Channel::SimAVars,
+                  kSimAVarsChangeKey,
+                  QStringLiteral("sim camera=%1 aircraft=%2 avatar=%3")
+                  .arg(camera)
+                  .arg(isAircraft)
+                  .arg(isAvatar));
 }
 
 void IntegratorRuntime::Update()
@@ -361,6 +380,8 @@ void IntegratorRuntime::Update()
     }
 
     varGateway_.MarkTick();
+
+    probe::SetPhase(TurnaroundPhaseToString(GetPhase()));
 
     if (mode == TickMode::Driving)
     {
@@ -467,6 +488,9 @@ void IntegratorRuntime::Shutdown()
 {
     LOG_INFO("Shutting down GSX Integrator...");
 
+    probe::SetPhase(kNoSessionPhase);
+    probe::SetAircraft(QString());
+
     dispatchTimer_.stop();
     reconnectTimer_.stop();
 
@@ -497,6 +521,8 @@ void IntegratorRuntime::ResetSession()
 
 void IntegratorRuntime::ClearFlightState()
 {
+    probe::SetAircraft(QString());
+
     aircraft_.reset();
     gsxProfile_.Reset();
     pmdgOptions_.Reset();
@@ -519,6 +545,8 @@ void IntegratorRuntime::OnSessionEnd()
 
     isSessionActive_ = false;
 
+    probe::SetPhase(kNoSessionPhase);
+
     ClearFlightState();
 
     varGateway_.ForgetTextSlots();
@@ -536,6 +564,7 @@ void IntegratorRuntime::ResolveAircraft()
     aircraft_ = DetectAircraft({&varGateway_, &status_, &bridgeClient_, &gsxService_}, &aircraftDescriptor_);
     if (aircraft_)
     {
+        probe::SetAircraft(QString::fromUtf8(aircraftDescriptor_->id));
         status_.aircraftSupported = true;
         gsxProfile_.roots = GsxAircraftProfile::ProfileRootsFor(aircraftDescriptor_->name);
         gsxProfile_.flagsMissing = GsxAircraftProfile::FlagsMissingProfile(aircraftDescriptor_->name);

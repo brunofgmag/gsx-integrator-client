@@ -52,6 +52,9 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(bool closeToTray READ GetCloseToTray WRITE SetCloseToTray NOTIFY CloseToTrayChanged)
     Q_PROPERTY(bool minimizeToTray READ GetMinimizeToTray WRITE SetMinimizeToTray NOTIFY MinimizeToTrayChanged)
     Q_PROPERTY(bool trayTipShown READ GetTrayTipShown WRITE SetTrayTipShown NOTIFY TrayTipShownChanged)
+    Q_PROPERTY(bool loggingEnabled READ GetLoggingEnabled WRITE SetLoggingEnabled NOTIFY LoggingEnabledChanged)
+    Q_PROPERTY(bool debugToolsAvailable READ AreDebugToolsAvailable CONSTANT)
+    Q_PROPERTY(QString logLocation READ GetLogLocation CONSTANT)
     Q_PROPERTY(bool canSave READ CanSave NOTIFY ValidationChanged)
     Q_PROPERTY(QString validationMessage READ GetValidationMessage NOTIFY ValidationChanged)
     Q_PROPERTY(QString saveMessage READ GetSaveMessage NOTIFY SaveResultChanged)
@@ -189,6 +192,11 @@ public:
     [[nodiscard]] bool GetTrayTipShown() const;
     void SetTrayTipShown(bool shown);
 
+    [[nodiscard]] bool GetLoggingEnabled() const;
+    void SetLoggingEnabled(bool enabled);
+    [[nodiscard]] static bool AreDebugToolsAvailable();
+    [[nodiscard]] static QString GetLogLocation();
+
     void RetranslateUi();
 
     [[nodiscard]] bool CanSave() const;
@@ -266,6 +274,7 @@ signals:
     void CloseToTrayChanged();
     void MinimizeToTrayChanged();
     void TrayTipShownChanged();
+    void LoggingEnabledChanged();
     void ValidationChanged();
     void SaveResultChanged();
     void ProfileModelChanged();

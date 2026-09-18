@@ -130,7 +130,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::StartTravel(VariableWriter& writer,
 {
     const bool opening = travel == Travel::Opening;
 
-    probe::Line(QStringLiteral("write panel cover=1 master=1 door=%1").arg(opening ? 1 : 0));
+    probe::Line(probe::Channel::Writes, QStringLiteral("write panel cover=1 master=1 door=%1").arg(opening ? 1 : 0));
     writer.SetLVar(kMasterCoverLVar, kSwitchOn);
     writer.SetLVar(kMasterPowerLVar, kSwitchOn);
     writer.SetLVar(kCargoDoorSwitchLVar, opening ? kSwitchOn : kSwitchOff);
@@ -232,7 +232,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::GuardThePanelMasterCut(VariableWrit
 
     masterCutGuardTicks_ = 0;
 
-    probe::Line(QStringLiteral("write panel master=1 resume=%1").arg(*position, 0, 'f', kProbePositionDecimals));
+    probe::Line(probe::Channel::Writes, QStringLiteral("write panel master=1 resume=%1").arg(*position, 0, 'f', kProbePositionDecimals));
     writer.SetLVar(kMasterPowerLVar, kSwitchOn);
     ResumeTravel(*position);
 
@@ -247,7 +247,7 @@ bool Fss727MainDeckMovesByTheCargoPanelRule::HasComeToRest() const
 
 void Fss727MainDeckMovesByTheCargoPanelRule::TurnThePanelMasterOff(VariableWriter& writer, const double position)
 {
-    probe::Line(QStringLiteral("write panel master=0 rest=%1").arg(position, 0, 'f', kProbePositionDecimals));
+    probe::Line(probe::Channel::Writes, QStringLiteral("write panel master=0 rest=%1").arg(position, 0, 'f', kProbePositionDecimals));
     writer.SetLVar(kMasterPowerLVar, kSwitchOff);
     masterCutGuardTicks_ = mayResumeTravel_ ? kMasterCutGuardTicks : 0;
 

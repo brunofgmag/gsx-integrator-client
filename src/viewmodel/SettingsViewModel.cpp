@@ -1,10 +1,12 @@
 #include "SettingsViewModel.h"
 
+#include <QtCore/QDir>
 #include <QtCore/QLocale>
 #include <utility>
 #include "../application/ports/IntegratorService.h"
 #include "../application/ports/SettingsRepository.h"
 #include "../domain/support/Weight.h"
+#include "../infrastructure/probe/ProbeLog.h"
 
 namespace
 {
@@ -517,6 +519,30 @@ bool SettingsViewModel::GetTrayTipShown() const
 void SettingsViewModel::SetTrayTipShown(const bool shown)
 {
     SetPersisted(settings_.trayTipShown, shown, &SettingsViewModel::TrayTipShownChanged);
+}
+
+bool SettingsViewModel::GetLoggingEnabled() const
+{
+    return settings_.loggingEnabled;
+}
+
+void SettingsViewModel::SetLoggingEnabled(const bool enabled)
+{
+    SetPersisted(settings_.loggingEnabled, enabled, &SettingsViewModel::LoggingEnabledChanged);
+}
+
+bool SettingsViewModel::AreDebugToolsAvailable()
+{
+#ifndef NDEBUG
+    return true;
+#else
+    return false;
+#endif
+}
+
+QString SettingsViewModel::GetLogLocation()
+{
+    return QDir::toNativeSeparators(probe::Location());
 }
 
 void SettingsViewModel::RetranslateUi()

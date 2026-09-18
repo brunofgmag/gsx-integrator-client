@@ -56,7 +56,7 @@ void FssEJetKeepVendorAutomationOffRule::Act(const RuleContext&, VariableWriter&
             continue;
         }
 
-        probe::Line(QStringLiteral("write automation %1=0").arg(lVar));
+        probe::Line(probe::Channel::Writes, QStringLiteral("write automation %1=0").arg(lVar));
         writer.SetLVar(lVar, kAutomationOff);
         ticksSinceWrite = 0;
 

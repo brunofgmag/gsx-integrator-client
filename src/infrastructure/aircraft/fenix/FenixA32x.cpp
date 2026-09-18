@@ -210,15 +210,24 @@ void FenixA32x::ReportProbe() const
     }
 
     QStringList doors;
+    QStringList doorSignatures;
     for (const char* const dataref : kProbeDoorDatarefs)
     {
-        doors.append(QStringLiteral("%1=%2").arg(QLatin1String(dataref))
-                     .arg(efb_->GetNumber(dataref, kDoorUnanswered), 0, 'f', 3));
+        const double value = efb_->GetNumber(dataref, kDoorUnanswered);
+        doors.append(QStringLiteral("%1=%2").arg(QLatin1String(dataref)).arg(value, 0, 'f', 3));
+        doorSignatures.append(QStringLiteral("%1=%2").arg(QLatin1String(dataref)).arg(value, 0, 'f', 1));
     }
 
-    probe::Change("fenix.doors", QStringLiteral("efb   fenix available=%1 %2")
-                  .arg(efb_->IsAvailable() ? 1 : 0)
-                  .arg(doors.join(QLatin1Char(' '))));
+    const auto doorsLine = [&](const QString& joined)
+    {
+        return QStringLiteral("efb   fenix available=%1 %2")
+            .arg(efb_->IsAvailable() ? 1 : 0)
+            .arg(joined);
+    };
+
+    probe::Change(probe::Channel::AircraftVendor, "fenix.doors",
+                  doorsLine(doorSignatures.join(QLatin1Char(' '))),
+                  doorsLine(doors.join(QLatin1Char(' '))));
 
     for (const probe::WatchedVariable& watched : probe::WatchList())
     {
@@ -227,10 +236,16 @@ void FenixA32x::ReportProbe() const
             continue;
         }
 
-        probe::Change("watch." + watched.name,
-                      QStringLiteral("watch fenix %1=%2")
-                      .arg(QString::fromStdString(watched.name))
-                      .arg(efb_->GetNumber(watched.name, -1.0), 0, 'f', 3));
+        const double value = efb_->GetNumber(watched.name, -1.0);
+        const auto line = [&](const QString& shown)
+        {
+            return QStringLiteral("watch fenix %1=%2")
+                .arg(QString::fromStdString(watched.name), shown);
+        };
+
+        probe::Change(probe::Channel::AircraftVendor, "watch." + watched.name,
+                      line(QString::number(value, 'f', 1)),
+                      line(QString::number(value, 'f', 3)));
     }
 }
 

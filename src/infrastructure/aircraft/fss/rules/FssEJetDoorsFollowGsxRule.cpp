@@ -184,7 +184,7 @@ bool FssEJetDoorsFollowGsxRule::IsOpenLVarConfirmed(const char* openLVar, const 
 
 void FssEJetDoorsFollowGsxRule::WriteRequest(const FssEJetDoorSlot& slot, const bool open, VariableWriter& writer)
 {
-    probe::Line(QStringLiteral("write door req=%1 open=%2").arg(QLatin1String(slot.reqLVar)).arg(open ? 1 : 0));
+    probe::Line(probe::Channel::Writes, QStringLiteral("write door req=%1 open=%2").arg(QLatin1String(slot.reqLVar)).arg(open ? 1 : 0));
     writer.SetLVar(slot.reqLVar, open ? kDoorOpen : kDoorClosed);
 
     LOG_INFO("FSS E-Jet door commanded via %s: %s", slot.reqLVar, open ? "open" : "closed");
@@ -232,7 +232,7 @@ void FssEJetDoorsFollowGsxRule::ReconcileMainDeck(const bool forceClosed, Variab
 
 void FssEJetDoorsFollowGsxRule::WriteMainDeckRequest(const bool open, VariableWriter& writer)
 {
-    probe::Line(QStringLiteral("write door req=%1 open=%2").arg(QLatin1String(kMainDeckReqLVar)).arg(open ? 1 : 0));
+    probe::Line(probe::Channel::Writes, QStringLiteral("write door req=%1 open=%2").arg(QLatin1String(kMainDeckReqLVar)).arg(open ? 1 : 0));
     writer.SetLVar(kMainDeckReqLVar, open ? kDoorOpen : kDoorClosed);
 }
 

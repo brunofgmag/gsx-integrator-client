@@ -52,15 +52,19 @@ bool SmartSwitch::Consume()
 
         if (probe::IsOn())
         {
-            probe::Change("swtch." + lvar,
-                          QStringLiteral("swtch %1 recv=%2 span=[%3..%4] pressed=%5 pending=%6 stale=%7")
-                          .arg(QString::fromStdString(lvar))
-                          .arg(span.received)
-                          .arg(span.min, 0, 'f', 3)
-                          .arg(span.max, 0, 'f', 3)
-                          .arg(pressed)
-                          .arg(pending_)
-                          .arg(stale));
+            const auto line = [&](const int decimals)
+            {
+                return QStringLiteral("swtch %1 recv=%2 span=[%3..%4] pressed=%5 pending=%6 stale=%7")
+                    .arg(QString::fromStdString(lvar))
+                    .arg(span.received)
+                    .arg(span.min, 0, 'f', decimals)
+                    .arg(span.max, 0, 'f', decimals)
+                    .arg(pressed)
+                    .arg(pending_)
+                    .arg(stale);
+            };
+
+            probe::Change(probe::Channel::AircraftLVars, "swtch." + lvar, line(1), line(3));
         }
 
         if (pressed)

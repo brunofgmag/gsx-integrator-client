@@ -167,6 +167,7 @@ int main(int argc, char* argv[])
 
     QSettingsRepository settingsRepository;
     const AppSettings startupSettings = settingsRepository.Load();
+    probe::SetEnabled(startupSettings.loggingEnabled || probe::ActsOnTheSim());
     const StartupWindow startupWindow = ResolveStartupWindow(trayArg, startupSettings);
 
     GraphicsBackend::Apply(QString::fromStdString(startupSettings.renderer));
