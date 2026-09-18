@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.37.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.37.0...v1.37.1) (2026-09-18)
+
+
+* warn over capacity, exit the engine wait, and forget stale text slots ([#178](https://github.com/brunofgmag/gsx-integrator-client/issues/178)) ([205506f](https://github.com/brunofgmag/gsx-integrator-client/commit/205506fc48135c1de4705344f0c05b42030191b5))
+
+
+### Bug Fixes
+
+* **simconnect:** forget the text slots when the session ends ([5d890c2](https://github.com/brunofgmag/gsx-integrator-client/commit/5d890c2ee47af8fbbe5cd8677b26b38536c35de0)) ([205506f](https://github.com/brunofgmag/gsx-integrator-client/commit/205506fc48135c1de4705344f0c05b42030191b5))
+* **turnaround:** leave the engine wait when the aircraft taxis or flies ([bcacc14](https://github.com/brunofgmag/gsx-integrator-client/commit/bcacc14311ccd9ada4353f51a96484126d862418)) ([205506f](https://github.com/brunofgmag/gsx-integrator-client/commit/205506fc48135c1de4705344f0c05b42030191b5))
+* **turnaround:** warn about a fuel plan over capacity once the capacity arrives ([0293829](https://github.com/brunofgmag/gsx-integrator-client/commit/029382993f3b34801b05b1e5318c7c762ee61600)) ([205506f](https://github.com/brunofgmag/gsx-integrator-client/commit/205506fc48135c1de4705344f0c05b42030191b5))
+
 ## [1.37.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.36.0...v1.37.0) (2026-09-17)
 
 
