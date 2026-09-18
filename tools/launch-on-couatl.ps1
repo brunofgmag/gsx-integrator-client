@@ -115,7 +115,10 @@ if (-not $NoProbe)
 {
     $env:GSXI_PROBE = '1'
     $env:GSXI_NO_UPDATES = '1'
-    Write-Host "==> Probe readings land in $( Join-Path $env:LOCALAPPDATA 'brunofgmag\gsx-integrator-client\probe' )"
+    $folder = Join-Path $env:LOCALAPPDATA 'brunofgmag\gsx-integrator-client\probe'
+    Write-Host "==> Probe readings land in the newest $folder\<yyyyMMdd-HHmmss>\ subfolder, one file per channel."
+    Write-Host "==> session-<stamp>.log is the union of every channel; only the last 5 runs are kept."
+    Write-Host "==> Logging without the sim-acting hooks can also be turned on from Settings › Advanced (Debug build only), with no environment variable."
 }
 
 $client = Start-Process -FilePath $exe -PassThru
