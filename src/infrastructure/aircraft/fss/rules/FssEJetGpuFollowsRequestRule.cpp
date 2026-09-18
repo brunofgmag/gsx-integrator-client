@@ -79,7 +79,7 @@ void FssEJetGpuFollowsRequestRule::Act(const RuleContext&, VariableWriter& write
     ticksSincePulse_ = 0;
     ++attempts_;
 
-    probe::Line(QStringLiteral("write gpu toggle request=%1").arg(*desired_ ? 1 : 0));
+    probe::Line(probe::Channel::Writes, QStringLiteral("write gpu toggle request=%1").arg(*desired_ ? 1 : 0));
     writer.SetLVar(kToggleLVar, kTogglePulse);
 
     LOG_INFO("FSS E-Jet ground power toggle pulsed: requested %s, read %s",

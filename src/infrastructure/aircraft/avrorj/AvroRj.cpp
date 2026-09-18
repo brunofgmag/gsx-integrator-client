@@ -309,7 +309,7 @@ double AvroRj::GetFuelCapacityKg() const
 
 bool AvroRj::SetChocks(const bool placed)
 {
-    probe::Line(QStringLiteral("write chocks EXT_Chocks=%1").arg(placed ? 1 : 0));
+    probe::Line(probe::Channel::Writes, QStringLiteral("write chocks EXT_Chocks=%1").arg(placed ? 1 : 0));
     variableGateway_->SetLVar(kChocksLVar, placed ? 1.0 : 0.0);
 
     return true;

@@ -18,7 +18,12 @@ ColumnLayout {
     readonly property bool restartPending: root.settingsVm.activeRenderer.length > 0
                                         && root.settingsVm.activeRenderer !== root.settingsVm.renderer
 
+    property bool loggingWasOnAtStart: root.settingsVm.loggingEnabled
+    readonly property bool loggingRestartPending: root.settingsVm.loggingEnabled !== root.loggingWasOnAtStart
+
     spacing: 8
+
+    Component.onCompleted: root.loggingWasOnAtStart = root.settingsVm.loggingEnabled
 
     SettingRow {
         Layout.fillWidth: true
@@ -40,6 +45,24 @@ ColumnLayout {
               ? qsTr("Restart GSX Integrator to draw with %1. It is still using %2.")
                     .arg(root.rendererLabels[root.settingsVm.renderer] ?? root.settingsVm.renderer)
                     .arg(root.rendererLabels[root.settingsVm.activeRenderer] ?? root.settingsVm.activeRenderer)
+              : ""
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        visible: root.settingsVm.debugToolsAvailable
+        title: qsTr("Client logging")
+        caption: qsTr("Write diagnostic logs to disk")
+        helpText: qsTr("Logs are saved in: %1").arg(root.settingsVm.logLocation)
+        checked: root.settingsVm.loggingEnabled
+        onToggled: checked => root.settingsVm.loggingEnabled = checked
+    }
+
+    Advisory {
+        Layout.fillWidth: true
+        visible: root.settingsVm.debugToolsAvailable && root.loggingRestartPending
+        text: root.loggingRestartPending
+              ? qsTr("Restart GSX Integrator to apply the logging change.")
               : ""
     }
 

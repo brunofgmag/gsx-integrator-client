@@ -46,7 +46,7 @@ void Fss727KeepVendorGsxAutomodeOffRule::Act(const RuleContext&, VariableWriter&
         return;
     }
 
-    probe::Line(QStringLiteral("write automode FSS_B727_GSX_AUTOMODE_DISABLED=1"));
+    probe::Line(probe::Channel::Writes, QStringLiteral("write automode FSS_B727_GSX_AUTOMODE_DISABLED=1"));
     writer.SetLVar(kAutomodeDisabledLVar, kAutomodeDisabled);
     ticksSinceWrite_ = 0;
 

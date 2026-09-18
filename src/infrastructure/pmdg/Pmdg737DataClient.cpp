@@ -48,7 +48,7 @@ void Pmdg737DataClient::Poll()
 
 void Pmdg737DataClient::MaybeProbeToggle()
 {
-    if (probeToggleSent_ || !probe::IsOn() || !channel_.HasData() || !AnyMainBusPowered())
+    if (probeToggleSent_ || !probe::ActsOnTheSim() || !channel_.HasData() || !AnyMainBusPowered())
     {
         return;
     }
@@ -60,7 +60,7 @@ void Pmdg737DataClient::MaybeProbeToggle()
     }
 
     probeToggleSent_ = true;
-    probe::Line(QStringLiteral("probe pmdg-737 sending SDK event offset=%1").arg(offset));
+    probe::Line(probe::Channel::Writes, QStringLiteral("probe pmdg-737 sending SDK event offset=%1").arg(offset));
     channel_.TransmitEvent(static_cast<unsigned>(offset), kMouseLeftSingle);
 }
 
@@ -72,7 +72,7 @@ void Pmdg737DataClient::ReportProbe() const
     }
 
     const PMDG_NG3_Data& data = channel_.Data();
-    probe::Change("pmdg737.doors",
+    probe::Change(probe::Channel::AircraftVendor, "pmdg737.doors",
                   QStringLiteral("sdk   pmdg-737 doors fwdEntry=%1 fwdService=%2 airstair=%3 "
                                  "fwdOverwingL=%4 fwdOverwingR=%5 fwdCargo=%6 equip=%7 "
                                  "aftOverwingL=%8 aftOverwingR=%9 aftCargo=%10 aftEntry=%11 aftService=%12")
@@ -84,7 +84,7 @@ void Pmdg737DataClient::ReportProbe() const
                   .arg(data.DOOR_annunAFT_CARGO).arg(data.DOOR_annunAFT_ENTRY)
                   .arg(data.DOOR_annunAFT_SERVICE));
 
-    probe::Change("pmdg737.hyd",
+    probe::Change(probe::Channel::AircraftVendor, "pmdg737.hyd",
                   QStringLiteral("sdk   pmdg-737 hyd pumpEng=[%1,%2] pumpElec=[%3,%4] "
                                  "lowPressEng=[%5,%6] lowPressElec=[%7,%8] acMain=[%9,%10] gpu=%11 brake=%12")
                   .arg(data.HYD_PumpSw_eng[0]).arg(data.HYD_PumpSw_eng[1])

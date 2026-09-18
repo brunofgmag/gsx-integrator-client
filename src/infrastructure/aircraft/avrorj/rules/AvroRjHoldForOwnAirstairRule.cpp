@@ -174,12 +174,12 @@ void AvroRjHoldForOwnAirstairRule::Drive(VariableWriter& writer)
             break;
         }
 
-        probe::Line(QStringLiteral("write airstair arm clickspot=1"));
+        probe::Line(probe::Channel::Writes, QStringLiteral("write airstair arm clickspot=1"));
         writer.SetLVar(kStairArmClickspotLVar, kClickspotPressed);
         phase_ = Phase::Arming;
         break;
     case Phase::Arming:
-        probe::Line(QStringLiteral("write airstair extend switch=1"));
+        probe::Line(probe::Channel::Writes, QStringLiteral("write airstair extend switch=1"));
         writer.SetLVar(kStairExtendSwitchLVar, kStairSwitchExtended);
         phase_ = Phase::Extended;
         break;
@@ -202,14 +202,14 @@ void AvroRjHoldForOwnAirstairRule::Drive(VariableWriter& writer)
                 break;
             }
 
-            probe::Line(QStringLiteral("write airstair retract switch=0"));
+            probe::Line(probe::Channel::Writes, QStringLiteral("write airstair retract switch=0"));
             writer.SetLVar(kStairExtendSwitchLVar, kStairSwitchRetracted);
             phase_ = Phase::Unarming;
         }
 
         break;
     case Phase::Unarming:
-        probe::Line(QStringLiteral("write airstair stow clickspot=1"));
+        probe::Line(probe::Channel::Writes, QStringLiteral("write airstair stow clickspot=1"));
         writer.SetLVar(kStairArmClickspotLVar, kClickspotPressed);
         phase_ = Phase::Stowed;
         break;

@@ -668,6 +668,16 @@ gsxi_add_qt_test(gsxi-probe-watch-list-tests probe-watch-list
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h)
 
+gsxi_add_qt_test(gsxi-probe-log-tests probe-log
+        tests/tst_probe_log.cpp
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeChannels.h)
+
+gsxi_add_qt_test(gsxi-probe-channels-tests probe-channels
+        tests/tst_probe_channels.cpp
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h)
+
 gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         tests/TestDoubles.h
         tests/doubles/FakeSimConnectApi.h
@@ -839,6 +849,7 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/application/IntegratorRuntime.cpp
         src/application/IntegratorRuntime.h
         src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeChannels.h
         src/infrastructure/probe/ProbeObserver.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h

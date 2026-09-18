@@ -345,7 +345,7 @@ std::optional<GroundPowerStatus> Fss727::GetGroundPowerStatus() const
 
 void Fss727::SetGroundPower(const bool on)
 {
-    probe::Line(QStringLiteral("write gpu FSS_B727_GPU_AVAIL=%1").arg(on ? 1 : 0));
+    probe::Line(probe::Channel::Writes, QStringLiteral("write gpu FSS_B727_GPU_AVAIL=%1").arg(on ? 1 : 0));
     variableGateway_->SetLVar(kGpuAvailableLVar, on ? kGpuRaised : kGpuStowed);
 
     LOG_INFO("FSS 727 own ground power %s; the EXT POWER switch is the pilot's", on ? "raised" : "stowed");

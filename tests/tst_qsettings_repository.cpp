@@ -80,6 +80,7 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QCOMPARE(loaded.minimizeToTray, true);
     QCOMPARE(loaded.trayTipShown, false);
     QCOMPARE(loaded.streamerMode, false);
+    QCOMPARE(loaded.loggingEnabled, false);
     QVERIFY(loaded.profiles.empty());
 }
 
@@ -229,6 +230,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     values.closeToTray = true;
     values.minimizeToTray = false;
     values.trayTipShown = true;
+    values.loggingEnabled = true;
 
     AircraftProfile profile;
     profile.useGlobal = false;
@@ -271,6 +273,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     QCOMPARE(loaded.closeToTray, values.closeToTray);
     QCOMPARE(loaded.minimizeToTray, values.minimizeToTray);
     QCOMPARE(loaded.trayTipShown, values.trayTipShown);
+    QCOMPARE(loaded.loggingEnabled, values.loggingEnabled);
 
     QCOMPARE(loaded.profiles.size(), std::size_t{1});
     const auto it = loaded.profiles.find("a340");

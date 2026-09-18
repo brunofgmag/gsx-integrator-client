@@ -61,7 +61,7 @@ void Fss727HoldsCloseOnceTheirLoaderLeavesRule::Act(const RuleContext&, Variable
             continue;
         }
 
-        probe::Line(QStringLiteral("write hold %1 %2=0").arg(QLatin1String(hold.name), QLatin1String(hold.goal)));
+        probe::Line(probe::Channel::Writes, QStringLiteral("write hold %1 %2=0").arg(QLatin1String(hold.name), QLatin1String(hold.goal)));
         writer.SetAVar(hold.goal, kPercentOver100Unit, kHoldGoalClosed);
         served = requests;
 

@@ -4,85 +4,53 @@
 #include <string>
 #include <unordered_map>
 #include <QtCore/QDateTime>
-#include <QtCore/QDir>
-#include <QtCore/QFile>
-#include <QtCore/QStandardPaths>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
+#include <QtCore/QMutex>
+#include <QtCore/QMutexLocker>
 #include <QtCore/QString>
-#include <QtCore/QTextStream>
-#include <QtCore/QtLogging>
+#include "ProbeChannels.h"
 
 namespace probe
 {
-    inline constexpr int kRepeatSeconds = 60;
+    inline constexpr int kMinSecondsBetweenChanges = 2;
     inline constexpr int kElideOver = 200;
-
-    inline bool IsOn()
-    {
-#ifdef NDEBUG
-        return false;
-#else
-        static const bool on = qEnvironmentVariableIsSet("GSXI_PROBE");
-
-        return on;
-#endif
-    }
 
     namespace detail
     {
-        inline QString Directory()
+        struct ChangeMemo
         {
-            static const QString directory = []
-            {
-                QString base = qEnvironmentVariable("GSXI_PROBE_DIR");
-                if (base.isEmpty())
-                {
-                    base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
-                        + QStringLiteral("/probe");
-                }
-                QDir().mkpath(base);
+            QString signature;
+            qint64 at = 0;
+        };
 
-                return base;
-            }();
+        inline std::unordered_map<std::string, ChangeMemo>& ChangeMemos()
+        {
+            static std::unordered_map<std::string, ChangeMemo> memos;
 
-            return directory;
+            return memos;
         }
 
-        inline QString Stamp()
+        inline QMutex& ChangeMutex()
         {
-            static const QString stamp =
-                QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss"));
+            static QMutex mutex;
 
-            return stamp;
+            return mutex;
         }
 
-        inline void Append(QFile& file, const QString& line)
+        struct WireMemo
         {
-            if (!file.isOpen())
-            {
-                return;
-            }
+            QString payload;
+            int skipped = 0;
+            bool seen = false;
+        };
 
-            QTextStream stream(&file);
-            stream << QDateTime::currentDateTime().toString(Qt::ISODateWithMs) << ' ' << line << '\n';
-            stream.flush();
-        }
-
-        inline QFile& SessionFile()
+        inline std::unordered_map<std::string, WireMemo>& WireMemos()
         {
-            static QFile file(Directory() + QStringLiteral("/session-") + Stamp() + QStringLiteral(".log"));
-            static const bool opened = file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
-            Q_UNUSED(opened)
+            static std::unordered_map<std::string, WireMemo> memos;
 
-            return file;
-        }
-
-        inline QFile& WireFile()
-        {
-            static QFile file(Directory() + QStringLiteral("/wire-") + Stamp() + QStringLiteral(".jsonl"));
-            static const bool opened = file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
-            Q_UNUSED(opened)
-
-            return file;
+            return memos;
         }
 
         inline QString Elide(const QString& text)
@@ -121,6 +89,20 @@ namespace probe
 
             return out;
         }
+
+        inline QString JsonQuoted(const QString& value)
+        {
+            const QJsonDocument document(QJsonArray{value});
+            const QString encoded = QString::fromUtf8(document.toJson(QJsonDocument::Compact));
+
+            return encoded.mid(1, encoded.size() - 2);
+        }
+
+        inline QString ElidedReference(const QString& path, const int count)
+        {
+            return QStringLiteral("{\"type\":\"elided\",\"path\":") + JsonQuoted(path)
+                + QStringLiteral(",\"count\":") + QString::number(count) + QLatin1Char('}');
+        }
     }
 
     inline QString Location()
@@ -128,47 +110,67 @@ namespace probe
         return detail::Directory();
     }
 
-    inline void Line(const QString& text)
+    inline void Line(const Channel channel, const QString& text)
     {
         if (!IsOn())
         {
             return;
         }
 
-        detail::Append(detail::SessionFile(), text);
+        Append(channel, text);
     }
 
-    inline void Change(const std::string& key, const QString& signature, const QString& text)
+    inline void Change(const Channel channel, const std::string& key, const QString& signature, const QString& text)
     {
         if (!IsOn())
         {
             return;
         }
-
-        struct Memo
-        {
-            QString signature;
-            qint64 at = 0;
-        };
-
-        static std::unordered_map<std::string, Memo> memo;
 
         const qint64 now = QDateTime::currentSecsSinceEpoch();
-        Memo& previous = memo[key];
-        if (previous.signature == signature && now - previous.at < kRepeatSeconds)
+        const std::string memoKey =
+            std::to_string(static_cast<int>(channel)) + '\x1f' + key;
+        const bool shouldWrite = [&]
         {
-            return;
+            QMutexLocker locker(&detail::ChangeMutex());
+            detail::ChangeMemo& previous = detail::ChangeMemos()[memoKey];
+            if (previous.signature == signature || now - previous.at < kMinSecondsBetweenChanges)
+            {
+                return false;
+            }
+
+            previous.signature = signature;
+            previous.at = now;
+
+            return true;
+        }();
+
+        if (shouldWrite)
+        {
+            Append(channel, text);
         }
-
-        previous.signature = signature;
-        previous.at = now;
-        detail::Append(detail::SessionFile(), text);
     }
 
-    inline void Change(const std::string& key, const QString& text)
+    inline void Change(const Channel channel, const std::string& key, const QString& text)
     {
-        Change(key, text, text);
+        Change(channel, key, text, text);
     }
+
+#ifndef NDEBUG
+    inline void ResetChangeMemoForTest()
+    {
+        QMutexLocker locker(&detail::ChangeMutex());
+
+        detail::ChangeMemos().clear();
+    }
+
+    inline void ResetWireMemoForTest()
+    {
+        QMutexLocker locker(&detail::Mutex());
+
+        detail::WireMemos().clear();
+    }
+#endif
 
     inline void Wire(const QString& text)
     {
@@ -177,7 +179,62 @@ namespace probe
             return;
         }
 
-        detail::Append(detail::WireFile(), detail::Elide(text));
+        const QString elided = detail::Elide(text);
+        const QJsonDocument document = QJsonDocument::fromJson(elided.toUtf8());
+        if (!document.isObject())
+        {
+            Append(Channel::Wire, elided);
+
+            return;
+        }
+
+        const QJsonObject object = document.object();
+        const QJsonValue type = object.value(QStringLiteral("type"));
+        const QJsonValue path = object.value(QStringLiteral("path"));
+        if (type.toString() != QStringLiteral("patch") || !path.isString())
+        {
+            Append(Channel::Wire, elided);
+
+            return;
+        }
+
+        const QString pathText = path.toString();
+        const std::string memoKey = pathText.toStdString();
+        QString reference;
+        const bool record = [&]
+        {
+            QMutexLocker locker(&detail::Mutex());
+            detail::WireMemo& memo = detail::WireMemos()[memoKey];
+            if (memo.seen && memo.payload == elided)
+            {
+                ++memo.skipped;
+
+                return false;
+            }
+
+            if (memo.seen && memo.skipped > 0)
+            {
+                reference = detail::ElidedReference(pathText, memo.skipped);
+            }
+
+            memo.payload = elided;
+            memo.seen = true;
+            memo.skipped = 0;
+
+            return true;
+        }();
+
+        if (!record)
+        {
+            return;
+        }
+
+        if (!reference.isEmpty())
+        {
+            Append(Channel::Wire, reference);
+        }
+
+        Append(Channel::Wire, elided);
     }
 
     inline void Sink(const QString& message)
@@ -187,7 +244,11 @@ namespace probe
             return;
         }
 
-        detail::Append(detail::SessionFile(), QStringLiteral("qt   ") + message);
+        const Channel channel = message.contains(QLatin1String("[GSX Integrator] RemoteAPI "))
+            ? Channel::GsxMenu
+            : Channel::Client;
+
+        Append(channel, QStringLiteral("qt   ") + message);
     }
 }
 

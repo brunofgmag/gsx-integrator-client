@@ -67,7 +67,7 @@ void Fss727FrontEntryServesTheGroundAccessRule::Command(VariableWriter& writer, 
 {
     lastTarget_ = target;
 
-    probe::Line(QStringLiteral("write front FwdPax open=%1").arg(target == kDoorOpen ? 1 : 0));
+    probe::Line(probe::Channel::Writes, QStringLiteral("write front FwdPax open=%1").arg(target == kDoorOpen ? 1 : 0));
     writer.SetAVar(kFrontEntryGoal, kPercentOver100Unit, target);
 
     LOG_INFO("FSS 727 front entry door commanded %s", target == kDoorOpen ? "open" : "closed");

@@ -35,6 +35,9 @@ private slots:
     static void groundServicesPersistImmediately();
     static void traySettingsDefaults();
     static void traySettingsPersistImmediately();
+    static void loggingEnabledDefaultsToDisabled();
+    static void loggingEnabledPersistsWhenToggled();
+    static void loggingEnabledEmitsItsSignalOnce();
     static void streamerModeDefaultsToDisabled();
     static void streamerModePersistsImmediately();
     static void theGsxPanelModeDefaultsToOnPushbackAndPersists();
@@ -310,6 +313,51 @@ void SettingsViewModelTest::traySettingsPersistImmediately()
     viewModel.SetTrayTipShown(true);
 
     QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::loggingEnabledDefaultsToDisabled()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    const SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(!viewModel.GetLoggingEnabled());
+}
+
+void SettingsViewModelTest::loggingEnabledPersistsWhenToggled()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(!viewModel.GetLoggingEnabled());
+#ifndef NDEBUG
+    QVERIFY(SettingsViewModel::AreDebugToolsAvailable());
+#else
+    QVERIFY(!SettingsViewModel::AreDebugToolsAvailable());
+#endif
+
+    viewModel.SetLoggingEnabled(true);
+
+    QVERIFY(viewModel.GetLoggingEnabled());
+    QVERIFY(repository.stored.loggingEnabled);
+    QVERIFY(service.appliedSettings.loggingEnabled);
+}
+
+void SettingsViewModelTest::loggingEnabledEmitsItsSignalOnce()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+    const QSignalSpy spy(&viewModel, &SettingsViewModel::LoggingEnabledChanged);
+
+    viewModel.SetLoggingEnabled(true);
+
+    QCOMPARE(spy.count(), 1);
+
+    viewModel.SetLoggingEnabled(true);
+
+    QCOMPARE(spy.count(), 1);
 }
 
 void SettingsViewModelTest::streamerModeDefaultsToDisabled()
