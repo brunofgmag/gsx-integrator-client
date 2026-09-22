@@ -161,6 +161,10 @@ gsxi_add_qt_test(gsxi-session-readiness-tests session-readiness
         src/application/sim/SessionReadiness.h
         src/application/sim/SimVersion.h)
 
+gsxi_add_qt_test(gsxi-tick-mode-tests tick-mode
+        tests/tst_tick_mode.cpp
+        src/application/sim/TickMode.h)
+
 gsxi_add_qt_test(gsxi-turnaround-math-tests turnaround-math
         tests/tst_turnaround_math.cpp
         src/domain/turnaround/TurnaroundMath.h)
@@ -251,7 +255,11 @@ gsxi_add_qt_test(gsxi-qsettings-repository-tests qsettings-repository
 gsxi_add_qt_test(gsxi-simconnect-session-tests simconnect-session
         tests/doubles/FakeSimConnectApi.h
         tests/doubles/FakeSimConnectApi.cpp
+        tests/ProbeLines.h
         tests/tst_simconnect_session.cpp
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeWriteMemo.h
         src/infrastructure/simconnect/SimConnectSession.cpp
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
@@ -261,7 +269,11 @@ target_include_directories(gsxi-simconnect-session-tests PRIVATE "${SIMCONNECT_I
 gsxi_add_qt_test(gsxi-variable-gateway-tests variable-gateway
         tests/doubles/FakeSimConnectApi.h
         tests/doubles/FakeSimConnectApi.cpp
+        tests/ProbeLines.h
         tests/tst_variable_gateway.cpp
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeWriteMemo.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_include_directories(gsxi-variable-gateway-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
@@ -419,10 +431,14 @@ gsxi_add_qt_test(gsxi-toliss-a340-tests toliss-a340
         src/domain/model/AutomationStatus.h)
 
 gsxi_add_qt_test(gsxi-fenix-efb-client-tests fenix-efb-client
+        tests/ProbeLines.h
         tests/tst_fenix_efb_client.cpp
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
-        src/infrastructure/fenix/FenixEfbGateway.h)
+        src/infrastructure/fenix/FenixEfbGateway.h
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeWriteMemo.h)
 target_link_libraries(gsxi-fenix-efb-client-tests PRIVATE Qt6::Network)
 
 gsxi_add_qt_test(gsxi-fenix-a32x-tests fenix-a32x
@@ -677,6 +693,33 @@ gsxi_add_qt_test(gsxi-probe-channels-tests probe-channels
         tests/tst_probe_channels.cpp
         src/infrastructure/probe/ProbeChannels.h
         src/infrastructure/probe/ProbeLog.h)
+
+gsxi_add_qt_test(gsxi-probe-write-memo-tests probe-write-memo
+        tests/tst_probe_write_memo.cpp
+        src/infrastructure/probe/ProbeWriteMemo.h)
+
+gsxi_add_qt_test(gsxi-probe-observer-tests probe-observer
+        tests/doubles/FakeAircraft.h
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
+        tests/doubles/FakeVariableGateway.h
+        tests/ProbeLines.h
+        tests/tst_probe_observer.cpp
+        src/infrastructure/gsx/GsxLVars.h
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeObserver.cpp
+        src/infrastructure/probe/ProbeObserver.h
+        src/infrastructure/probe/ProbeWatchList.cpp
+        src/infrastructure/probe/ProbeWatchList.h
+        src/infrastructure/probe/ProbeWriteMemo.h
+        src/infrastructure/simconnect/SimConnectSession.cpp
+        src/infrastructure/simconnect/SimConnectSession.h
+        src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+        src/infrastructure/simconnect/SimConnectVariableGateway.h
+        src/infrastructure/simvars/SimVars.h
+        src/infrastructure/simvars/VariableGateway.h)
+target_include_directories(gsxi-probe-observer-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
 gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         tests/TestDoubles.h

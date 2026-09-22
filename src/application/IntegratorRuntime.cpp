@@ -1,9 +1,12 @@
 #include "IntegratorRuntime.h"
 
 #include <array>
+#include <QtCore/QCoreApplication>
 #include "../infrastructure/probe/ProbeChannels.h"
 #include "../infrastructure/probe/ProbeLog.h"
+#include "../infrastructure/probe/ProbeWatchList.h"
 #include "sim/SessionReadiness.h"
+#include "sim/TickMode.h"
 #include "../infrastructure/aircraft/AircraftFactory.h"
 #include "../infrastructure/aircraft/AircraftRegistry.h"
 #include "../infrastructure/logging/LogMacros.h"
@@ -17,6 +20,13 @@ namespace
     constexpr auto kGateChangeKey = "gates";
     constexpr auto kSimAVarsChangeKey = "sim.avars";
     constexpr std::array<const char*, 3> kSessionAVars = {"CAMERA STATE", "IS AIRCRAFT", "IS AVATAR"};
+    constexpr auto kPilotIdSet = "set";
+    constexpr auto kPilotIdUnset = "unset";
+#ifdef NDEBUG
+    constexpr auto kBuildConfiguration = "release";
+#else
+    constexpr auto kBuildConfiguration = "debug";
+#endif
 
     bool NeedsRefuelingFix(const std::filesystem::path& cfg)
     {
@@ -40,21 +50,40 @@ namespace
         return joined;
     }
 
-    enum class TickMode
+    int Flag(const bool value)
     {
-        Idle,
-        ObserveOnly,
-        Driving
-    };
+        return value ? 1 : 0;
+    }
 
-    TickMode ResolveTickMode(const bool automationEnabled, const bool gsxAvailable)
+    void LogRunHeader(const AutomationSettings& settings)
     {
-        if (automationEnabled && gsxAvailable)
-        {
-            return TickMode::Driving;
-        }
-
-        return automationEnabled || probe::IsOn() ? TickMode::ObserveOnly : TickMode::Idle;
+        LOG_INFO("Logging run: folder=%s", qUtf8Printable(probe::RunLocation()));
+        LOG_INFO("Logging run: version=%s build=%s gsxiProbe=%d watchList=%d",
+                 qUtf8Printable(QCoreApplication::applicationVersion()),
+                 kBuildConfiguration,
+                 Flag(probe::ActsOnTheSim()),
+                 static_cast<int>(probe::WatchList().size()));
+        LOG_INFO("Startup settings: simbriefPilotId=%s fuelRateKgs=%g autoSelectGsxChoice=%d autoDeice=%d "
+                 "useAircraftStairs=%d crewBoarding=%d crewDeboarding=%d autoStartFlow=%d autoStartLoading=%d",
+                 settings.simbriefPilotId > 0 ? kPilotIdSet : kPilotIdUnset,
+                 settings.fuelRateKgs,
+                 Flag(settings.autoSelectGsxChoice),
+                 Flag(settings.autoDeice),
+                 Flag(settings.useAircraftStairs),
+                 static_cast<int>(settings.crewBoarding),
+                 static_cast<int>(settings.crewDeboarding),
+                 Flag(settings.autoStartFlow),
+                 Flag(settings.autoStartLoading));
+        LOG_INFO("Startup settings: skipReposition=%d callGpu=%d callGpuOnArrival=%d callCatering=%d "
+                 "callLavatory=%d callWater=%d callCleaning=%d gsxPanelMode=%d",
+                 Flag(settings.skipReposition),
+                 Flag(settings.callGpu),
+                 Flag(settings.callGpuOnArrival),
+                 Flag(settings.callCatering),
+                 Flag(settings.callLavatory),
+                 Flag(settings.callWater),
+                 Flag(settings.callCleaning),
+                 static_cast<int>(settings.gsxPanelMode));
     }
 }
 
@@ -84,8 +113,7 @@ void IntegratorRuntime::Setup()
 
     if (probe::IsOn())
     {
-        LOG_INFO("Probe mode is on: readings go to %s",
-                 qUtf8Printable(probe::Location()));
+        LogRunHeader(settings_);
     }
 
     TryConnect();
@@ -175,7 +203,12 @@ void IntegratorRuntime::TryConnect()
         return;
     }
 
-    LOG_INFO("Opening SimConnect...");
+    if (!connectAttemptAnnounced_)
+    {
+        LOG_INFO("Opening SimConnect...");
+        connectAttemptAnnounced_ = true;
+    }
+
     if (!simConnect_.Open("GSX Integrator"))
     {
         reconnectTimer_.start();
@@ -248,6 +281,7 @@ void IntegratorRuntime::HandleDisconnected()
 {
     LOG_INFO("Lost connection to the simulator.");
 
+    connectAttemptAnnounced_ = false;
     simVersion_ = SimVersion::Unknown;
 
     varGateway_.Detach();
@@ -366,7 +400,7 @@ void IntegratorRuntime::Update()
 
     simbriefClient_.Poll();
 
-    const TickMode mode = ResolveTickMode(status_.enabled, gsxOk);
+    const TickMode mode = TickModeResolution::Resolve(status_.enabled, gsxOk, probe::ActsOnTheSim());
     if (mode == TickMode::Idle)
     {
         return;
@@ -470,7 +504,8 @@ void IntegratorRuntime::UpdateSlow()
 
     stateMachine_.AttachAircraft(aircraft_.get());
 
-    if (ResolveTickMode(status_.enabled, gsxService_.IsAvailable()) == TickMode::Driving)
+    if (TickModeResolution::Resolve(status_.enabled, gsxService_.IsAvailable(), probe::ActsOnTheSim())
+        == TickMode::Driving)
     {
         stateMachine_.TickSlowRules();
     }

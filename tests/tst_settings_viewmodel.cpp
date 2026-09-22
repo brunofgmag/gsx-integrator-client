@@ -8,6 +8,9 @@
 
 namespace
 {
+    constexpr auto kRunFolder = "C:/Users/pilot/AppData/Local/probe/20260922-101500-000-42";
+    constexpr auto kNativeRunFolder = R"(C:\Users\pilot\AppData\Local\probe\20260922-101500-000-42)";
+
     std::vector<AircraftProfileInfo> TestProfileInfos()
     {
         return {
@@ -38,6 +41,9 @@ private slots:
     static void loggingEnabledDefaultsToDisabled();
     static void loggingEnabledPersistsWhenToggled();
     static void loggingEnabledEmitsItsSignalOnce();
+    static void loggingActiveStaysOffUntilReported();
+    static void loggingActiveAndTheSavedToggleMoveApart();
+    static void logLocationIsReportedWithNativeSeparators();
     static void streamerModeDefaultsToDisabled();
     static void streamerModePersistsImmediately();
     static void theGsxPanelModeDefaultsToOnPushbackAndPersists();
@@ -356,6 +362,66 @@ void SettingsViewModelTest::loggingEnabledEmitsItsSignalOnce()
     QCOMPARE(spy.count(), 1);
 
     viewModel.SetLoggingEnabled(true);
+
+    QCOMPARE(spy.count(), 1);
+}
+
+void SettingsViewModelTest::loggingActiveStaysOffUntilReported()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(!viewModel.GetLoggingActive());
+
+    const QSignalSpy spy(&viewModel, &SettingsViewModel::LoggingActiveChanged);
+    viewModel.SetLoggingActive(true);
+
+    QVERIFY(viewModel.GetLoggingActive());
+    QCOMPARE(spy.count(), 1);
+
+    viewModel.SetLoggingActive(true);
+
+    QCOMPARE(spy.count(), 1);
+}
+
+void SettingsViewModelTest::loggingActiveAndTheSavedToggleMoveApart()
+{
+    FakeSettingsRepository repository;
+    repository.stored.loggingEnabled = true;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    viewModel.SetLoggingActive(true);
+    viewModel.SetLoggingEnabled(false);
+
+    QVERIFY(viewModel.GetLoggingActive());
+    QVERIFY(!viewModel.GetLoggingEnabled());
+    QVERIFY(!repository.stored.loggingEnabled);
+
+    viewModel.SetLoggingActive(false);
+    viewModel.SetLoggingEnabled(true);
+
+    QVERIFY(!viewModel.GetLoggingActive());
+    QVERIFY(viewModel.GetLoggingEnabled());
+    QVERIFY(repository.stored.loggingEnabled);
+}
+
+void SettingsViewModelTest::logLocationIsReportedWithNativeSeparators()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(viewModel.GetLogLocation().isEmpty());
+
+    const QSignalSpy spy(&viewModel, &SettingsViewModel::LogLocationChanged);
+    viewModel.SetLogLocation(QLatin1String(kRunFolder));
+
+    QCOMPARE(viewModel.GetLogLocation(), QLatin1String(kNativeRunFolder));
+    QCOMPARE(spy.count(), 1);
+
+    viewModel.SetLogLocation(QLatin1String(kNativeRunFolder));
 
     QCOMPARE(spy.count(), 1);
 }

@@ -7,6 +7,9 @@
 #include <vector>
 #include <windows.h>
 #include <SimConnect.h>
+#include <QtCore/QStringList>
+#include <QtCore/QTemporaryDir>
+#include "ProbeLines.h"
 #include "doubles/FakeSimConnectApi.h"
 #include "../src/infrastructure/simconnect/SimConnectVariableGateway.h"
 
@@ -16,6 +19,10 @@ namespace
     constexpr auto kEng3N1 = "md11_eng3_n1";
     constexpr auto kSimFuelTotalKg = "FUEL TOTAL QUANTITY WEIGHT";
     constexpr auto kKgUnit = "kg";
+    constexpr auto kGpuAvail = "FSS_B727_GPU_AVAIL";
+    constexpr auto kPayloadStation = "PAYLOAD STATION WEIGHT:1";
+    constexpr auto kPoundsUnit = "pounds";
+    constexpr auto kWritesLog = "writes.log";
     constexpr DWORD kFirstDefineId = 1;
     constexpr std::size_t kString256 = 256;
     constexpr auto kSuper27FreighterTitle = "Boeing 727-200RE Super 27 Freighter";
@@ -45,6 +52,8 @@ class VariableGatewayTest final : public QObject
     Q_OBJECT
 
 private slots:
+    void initTestCase();
+
     static void lvarReturnsDefaultUntilDataArrives();
     static void lvarReturnsRealValueAfterDataArrives();
     static void lvarHonorsCustomDefault();
@@ -63,7 +72,20 @@ private slots:
     static void forgettingTheTextSlotsDropsThePreviousFlightStrings();
     static void forgettingTheTextSlotsLeavesTheNumbersAlone();
     static void forgettingTheTextSlotsAsksTheSimForTheStringsAgain();
+    static void everyWriteToTheSimLandsInTheWritesLog();
+    static void aRepeatedWriteIsCountedAndLoggedOnceUntilTheValueChanges();
+    static void aWriteThatNeverLeftIsNotLogged();
+
+private:
+    QTemporaryDir directory_;
 };
+
+void VariableGatewayTest::initTestCase()
+{
+    QVERIFY(directory_.isValid());
+    qputenv("GSXI_PROBE_DIR", directory_.path().toUtf8());
+    probe::SetEnabled(true);
+}
 
 void VariableGatewayTest::lvarReturnsDefaultUntilDataArrives()
 {
@@ -352,6 +374,67 @@ void VariableGatewayTest::forgettingTheTextSlotsAsksTheSimForTheStringsAgain()
 
     QCOMPARE(FakeSimConnectApi::dataRequests.size(), afterTheFirstFlight + 1);
     QCOMPARE(FakeSimConnectApi::dataRequests.back().defineId, kFirstDefineId);
+}
+
+void VariableGatewayTest::everyWriteToTheSimLandsInTheWritesLog()
+{
+#ifndef NDEBUG
+    FakeSimConnectApi::Reset();
+    const qsizetype before = ProbeLines(kWritesLog).size();
+    SimConnectVariableGateway gateway;
+    gateway.Attach(reinterpret_cast<HANDLE>(0x5150));
+
+    gateway.SetLVar(kGpuAvail, 1.0);
+    gateway.SetAVar(kPayloadStation, kPoundsUnit, 1234.5);
+
+    QCOMPARE(ProbeLines(kWritesLog).mid(before),
+             (QStringList{
+                 QStringLiteral("set L:FSS_B727_GPU_AVAIL=1 unit=Number n=1"),
+                 QStringLiteral("set PAYLOAD STATION WEIGHT:1=1234.5 unit=pounds n=1")
+             }));
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void VariableGatewayTest::aRepeatedWriteIsCountedAndLoggedOnceUntilTheValueChanges()
+{
+#ifndef NDEBUG
+    FakeSimConnectApi::Reset();
+    const qsizetype before = ProbeLines(kWritesLog).size();
+    SimConnectVariableGateway gateway;
+    gateway.Attach(reinterpret_cast<HANDLE>(0x5150));
+
+    gateway.SetLVar(kGpuAvail, 1.0);
+    gateway.SetLVar(kGpuAvail, 1.0);
+    gateway.SetLVar(kGpuAvail, 1.0);
+    gateway.SetLVar(kGpuAvail, 0.0);
+
+    QCOMPARE(FakeSimConnectApi::writtenSimObjectData.size(), std::size_t{4});
+    QCOMPARE(ProbeLines(kWritesLog).mid(before),
+             (QStringList{
+                 QStringLiteral("set L:FSS_B727_GPU_AVAIL=1 unit=Number n=1"),
+                 QStringLiteral("set L:FSS_B727_GPU_AVAIL=0 unit=Number n=4")
+             }));
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void VariableGatewayTest::aWriteThatNeverLeftIsNotLogged()
+{
+#ifndef NDEBUG
+    FakeSimConnectApi::Reset();
+    const qsizetype before = ProbeLines(kWritesLog).size();
+    SimConnectVariableGateway gateway;
+
+    gateway.SetLVar(kGpuAvail, 1.0);
+
+    QVERIFY(FakeSimConnectApi::writtenSimObjectData.empty());
+    QCOMPARE(ProbeLines(kWritesLog).size(), before);
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
 }
 
 QTEST_APPLESS_MAIN(VariableGatewayTest)

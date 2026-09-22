@@ -18,12 +18,9 @@ ColumnLayout {
     readonly property bool restartPending: root.settingsVm.activeRenderer.length > 0
                                         && root.settingsVm.activeRenderer !== root.settingsVm.renderer
 
-    property bool loggingWasOnAtStart: root.settingsVm.loggingEnabled
-    readonly property bool loggingRestartPending: root.settingsVm.loggingEnabled !== root.loggingWasOnAtStart
+    readonly property bool loggingRestartPending: root.settingsVm.loggingEnabled !== root.settingsVm.loggingActive
 
     spacing: 8
-
-    Component.onCompleted: root.loggingWasOnAtStart = root.settingsVm.loggingEnabled
 
     SettingRow {
         Layout.fillWidth: true
@@ -61,9 +58,11 @@ ColumnLayout {
     Advisory {
         Layout.fillWidth: true
         visible: root.settingsVm.debugToolsAvailable && root.loggingRestartPending
-        text: root.loggingRestartPending
-              ? qsTr("Restart GSX Integrator to apply the logging change.")
-              : ""
+        text: !root.loggingRestartPending
+              ? ""
+              : root.settingsVm.loggingEnabled
+                ? qsTr("Restart GSX Integrator to start logging.")
+                : qsTr("Logging stays on until GSX Integrator restarts.")
     }
 
     Item {

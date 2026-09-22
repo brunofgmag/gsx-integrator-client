@@ -222,6 +222,7 @@ set(APP_SOURCES
         src/infrastructure/probe/ProbeObserver.h
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
+        src/infrastructure/probe/ProbeWriteMemo.h
         src/infrastructure/simbrief/SimbriefClient.cpp
         src/infrastructure/simbrief/SimbriefClient.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp
@@ -255,6 +256,7 @@ set(APP_SOURCES
         src/infrastructure/logging/QtDomainLogger.h
         src/application/sim/SessionReadiness.h
         src/application/sim/SimVersion.h
+        src/application/sim/TickMode.h
         src/infrastructure/gsx/GsxRemoteState.h
         src/infrastructure/gsx/GsxRemoteStateReducer.cpp
         src/infrastructure/gsx/GsxRemoteStateReducer.h
