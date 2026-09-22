@@ -9,6 +9,7 @@
 #include <QtCore/QStringList>
 #include "ProbeLog.h"
 #include "ProbeWatchList.h"
+#include "../gsx/GsxLVars.h"
 #include "../simconnect/SimConnectSession.h"
 #include "../simvars/SimVars.h"
 #include "../simvars/VariableGateway.h"
@@ -21,6 +22,17 @@ namespace
     constexpr int kObserveIntervalMs = 1000;
     constexpr auto kRatioDoorMarker = "OPEN_RATIO";
     constexpr auto kIflyDoorPrefix = "Animation_";
+    constexpr auto kPending = "pending";
+    constexpr int kShownDigits = 15;
+    constexpr int kWholeUnits = 0;
+    constexpr int kTenths = 1;
+    constexpr int kHundredths = 2;
+    constexpr int kThousandths = 3;
+
+    constexpr auto kSimOnGround = "SIM ON GROUND";
+    constexpr auto kSimGroundVelocity = "GROUND VELOCITY";
+    constexpr auto kSimExternalPowerOn = "EXTERNAL POWER ON:1";
+    constexpr auto kKnotsUnit = "Knots";
 
     struct ProbeVar
     {
@@ -120,6 +132,47 @@ namespace
         ProbeAVar{"EXIT OPEN:5", "percent"}
     };
 
+    struct SimSample
+    {
+        const char* name = nullptr;
+        const char* unit = nullptr;
+        int signatureDecimals = 0;
+        int textDecimals = 0;
+    };
+
+    constexpr std::array kDefaultSimAVars = {
+        SimSample{kSimFuelTotalKg, kKgUnit, kWholeUnits, kHundredths},
+        SimSample{kSimTotalWeight, kKgUnit, kWholeUnits, kHundredths},
+        SimSample{kSimEmptyWeight, kKgUnit, kWholeUnits, kHundredths},
+        SimSample{kSimOnGround, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimGroundVelocity, kKnotsUnit, kTenths, kThousandths},
+        SimSample{kSimParkingBrake, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimBeaconLight, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimEng1Combustion, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimEng2Combustion, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimEng3Combustion, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimEng4Combustion, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimExternalPowerOn, kBoolUnit, kWholeUnits, kWholeUnits}
+    };
+
+    constexpr std::array kDefaultGsxLVars = {
+        gsx::lvars::kBoardingState,
+        gsx::lvars::kDeboardingState,
+        gsx::lvars::kRefuelingState,
+        gsx::lvars::kPushbackStatus,
+        gsx::lvars::kDeiceState,
+        gsx::lvars::kFuelHoseConnected,
+        gsx::lvars::kFuelCounter,
+        gsx::lvars::kNumPassengersBoardingTotal,
+        gsx::lvars::kNumPassengersDeboardingTotal,
+        gsx::lvars::kBoardingCargoPercent,
+        gsx::lvars::kDeboardingCargoPercent,
+        gsx::lvars::kGpuConnected,
+        gsx::lvars::kGpuState,
+        gsx::lvars::kJetway,
+        gsx::lvars::kStairs
+    };
+
     struct ProbeProfile
     {
         const char* brakeLVar = nullptr;
@@ -204,6 +257,62 @@ namespace
     QString RatioSignature(const double value)
     {
         return QString::number(value, 'f', 1);
+    }
+
+    QString Fixed(const bool received, const double value, const int decimals)
+    {
+        if (!received)
+        {
+            return QLatin1String(kPending);
+        }
+
+        const double scale = std::pow(10.0, decimals);
+
+        return QString::number(std::round(value * scale) / scale, 'f', decimals);
+    }
+
+    QString FullPrecision(const bool received, const double value)
+    {
+        if (!received)
+        {
+            return QLatin1String(kPending);
+        }
+
+        return QString::number(value, 'g', kShownDigits);
+    }
+
+    void ReportSimAVars(VariableReader& variables)
+    {
+        for (const SimSample& sample : kDefaultSimAVars)
+        {
+            const bool received = variables.HasReceivedAVar(sample.name, sample.unit);
+            const double value = variables.GetAVar(sample.name, sample.unit, 0.0);
+
+            probe::Change(probe::Channel::SimAVars, sample.name,
+                          Fixed(received, value, sample.signatureDecimals),
+                          QStringLiteral("avar  %1=%2 unit=%3")
+                          .arg(QLatin1String(sample.name), Fixed(received, value, sample.textDecimals),
+                               QLatin1String(sample.unit)));
+        }
+    }
+
+    void ReportGsxLVars(VariableReader& variables)
+    {
+        if (variables.GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
+        {
+            return;
+        }
+
+        for (const char* name : kDefaultGsxLVars)
+        {
+            const bool received = variables.HasReceivedLVar(name);
+            const double value = variables.GetLVar(name, 0.0);
+
+            probe::Change(probe::Channel::GsxLVars, name,
+                          Fixed(received, value, kWholeUnits),
+                          QStringLiteral("gsx   %1=%2")
+                          .arg(QLatin1String(name), FullPrecision(received, value)));
+        }
     }
 
     struct LVarWrite
@@ -413,6 +522,9 @@ void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables
     probe::Change(probe::Channel::AircraftAVars, "exits",
                   QStringLiteral("exit  %1 %2").arg(id, exitSignatures.join(QLatin1Char(' '))),
                   QStringLiteral("exit  %1 %2").arg(id, exits.join(QLatin1Char(' '))));
+
+    ReportSimAVars(variables);
+    ReportGsxLVars(variables);
 
     MaybeSetLVar(variables);
 }

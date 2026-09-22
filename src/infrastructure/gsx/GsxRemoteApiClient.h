@@ -22,6 +22,7 @@ public:
     virtual bool SendCommand(const QString& verb, const QJsonObject& args = {});
 
     void SetHandshakeTimeoutForTest(const int ms) { handshakeTimeoutMs_ = ms; }
+    void SetPortForTest(const quint16 port) { portForTest_ = port; }
 
 signals:
     void SnapshotReceived(const QJsonObject& snapshot);
@@ -49,9 +50,11 @@ private:
     QTimer* reconnectTimer_ = nullptr;
     QTimer* handshakeTimer_ = nullptr;
     quint16 port_ = 8744;
+    quint16 portForTest_ = 0;
     bool connected_ = false;
     bool handshakeDone_ = false;
     bool stopping_ = false;
+    bool announceNextAttempt_ = true;
     int backoffMs_ = 1000;
     int handshakeTimeoutMs_ = kHandshakeTimeoutMs;
 };

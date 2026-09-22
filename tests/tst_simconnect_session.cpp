@@ -4,6 +4,9 @@
 
 #include <QtTest/QTest>
 
+#include <QtCore/QStringList>
+#include <QtCore/QTemporaryDir>
+#include "ProbeLines.h"
 #include "doubles/FakeSimConnectApi.h"
 #include "../src/infrastructure/simconnect/SimConnectSession.h"
 
@@ -16,6 +19,11 @@ namespace
     constexpr DWORD kEventMenuToggle = 5;
     constexpr DWORD kEventPauseEx1 = 6;
     constexpr DWORD kRequestSimState = 0x0FFFFFFF;
+    constexpr auto kDoorEvent = "#69632";
+    constexpr auto kDoorToggleEvent = "#83645";
+    constexpr DWORD kMouseLeftSingle = 536870912;
+    constexpr int kAMoment = 50;
+    constexpr auto kWritesLog = "writes.log";
 
     SIMCONNECT_RECV_EVENT MakeEvent(const DWORD eventId, const DWORD data)
     {
@@ -32,6 +40,7 @@ class SimConnectSessionTest final : public QObject
     Q_OBJECT
 
 private slots:
+    void initTestCase();
     static void init();
 
     static void openFailureLeavesDisconnected();
@@ -46,7 +55,20 @@ private slots:
     static void undersizedEventMessageIsIgnored();
     static void transmitRequiresConnection();
     static void closeClearsCallbacks();
+    static void aTransmittedEventLandsInTheWritesLog();
+    static void aToggleSentTwiceAMomentApartIsLoggedTwice();
+    static void anEventThatNeverLeftIsNotLogged();
+
+private:
+    QTemporaryDir directory_;
 };
+
+void SimConnectSessionTest::initTestCase()
+{
+    QVERIFY(directory_.isValid());
+    qputenv("GSXI_PROBE_DIR", directory_.path().toUtf8());
+    probe::SetEnabled(true);
+}
 
 void SimConnectSessionTest::init()
 {
@@ -272,6 +294,64 @@ void SimConnectSessionTest::closeClearsCallbacks()
     QVERIFY(session.Dispatch());
 
     QCOMPARE(ticks, 0);
+}
+
+void SimConnectSessionTest::aTransmittedEventLandsInTheWritesLog()
+{
+#ifndef NDEBUG
+    const qsizetype before = ProbeLines(kWritesLog).size();
+    SimConnectSession session;
+    QVERIFY(session.Open("test"));
+
+    QVERIFY(session.TransmitEvent(kDoorEvent, 536870912));
+
+    QCOMPARE(ProbeLines(kWritesLog).mid(before),
+             QStringList{QStringLiteral("event #69632 param=536870912 n=1")});
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void SimConnectSessionTest::aToggleSentTwiceAMomentApartIsLoggedTwice()
+{
+#ifndef NDEBUG
+    const qsizetype before = ProbeLines(kWritesLog).size();
+    SimConnectSession session;
+    QVERIFY(session.Open("test"));
+
+    QVERIFY(session.TransmitEvent(kDoorToggleEvent, kMouseLeftSingle));
+    QTest::qWait(kAMoment);
+    QVERIFY(session.TransmitEvent(kDoorToggleEvent, kMouseLeftSingle));
+
+    QCOMPARE(FakeSimConnectApi::transmittedEvents, 2);
+    QCOMPARE(ProbeLines(kWritesLog).mid(before),
+             (QStringList{
+                 QStringLiteral("event #83645 param=536870912 n=1"),
+                 QStringLiteral("event #83645 param=536870912 n=2")
+             }));
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void SimConnectSessionTest::anEventThatNeverLeftIsNotLogged()
+{
+#ifndef NDEBUG
+    const qsizetype before = ProbeLines(kWritesLog).size();
+    SimConnectSession session;
+
+    QVERIFY(!session.TransmitEvent(kDoorEvent, 1));
+
+    QVERIFY(session.Open("test"));
+    FakeSimConnectApi::subscribeSucceeds = false;
+
+    QVERIFY(!session.TransmitEvent(kDoorEvent, 1));
+
+    QCOMPARE(FakeSimConnectApi::transmittedEvents, 0);
+    QCOMPARE(ProbeLines(kWritesLog).size(), before);
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
 }
 
 QTEST_GUILESS_MAIN(SimConnectSessionTest)

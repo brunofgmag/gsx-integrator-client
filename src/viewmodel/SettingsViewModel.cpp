@@ -6,7 +6,6 @@
 #include "../application/ports/IntegratorService.h"
 #include "../application/ports/SettingsRepository.h"
 #include "../domain/support/Weight.h"
-#include "../infrastructure/probe/ProbeLog.h"
 
 namespace
 {
@@ -531,6 +530,23 @@ void SettingsViewModel::SetLoggingEnabled(const bool enabled)
     SetPersisted(settings_.loggingEnabled, enabled, &SettingsViewModel::LoggingEnabledChanged);
 }
 
+bool SettingsViewModel::GetLoggingActive() const
+{
+    return loggingActive_;
+}
+
+void SettingsViewModel::SetLoggingActive(const bool active)
+{
+    if (loggingActive_ == active)
+    {
+        return;
+    }
+
+    loggingActive_ = active;
+
+    emit LoggingActiveChanged();
+}
+
 bool SettingsViewModel::AreDebugToolsAvailable()
 {
 #ifndef NDEBUG
@@ -540,9 +556,22 @@ bool SettingsViewModel::AreDebugToolsAvailable()
 #endif
 }
 
-QString SettingsViewModel::GetLogLocation()
+QString SettingsViewModel::GetLogLocation() const
 {
-    return QDir::toNativeSeparators(probe::Location());
+    return logLocation_;
+}
+
+void SettingsViewModel::SetLogLocation(const QString& location)
+{
+    const QString native = QDir::toNativeSeparators(location);
+    if (logLocation_ == native)
+    {
+        return;
+    }
+
+    logLocation_ = native;
+
+    emit LogLocationChanged();
 }
 
 void SettingsViewModel::RetranslateUi()

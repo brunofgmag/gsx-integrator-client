@@ -65,11 +65,14 @@ void GsxRemoteApiClient::Stop()
 
 void GsxRemoteApiClient::OnReconnect()
 {
-    port_ = ResolvePort();
+    port_ = portForTest_ != 0 ? portForTest_ : ResolvePort();
 
     const QUrl url(QStringLiteral("ws://127.0.0.1:%1").arg(port_));
 
-    LOG_INFO("GSX RemoteAPI: connecting to %s", url.toString().toUtf8().constData());
+    if (std::exchange(announceNextAttempt_, false))
+    {
+        LOG_INFO("GSX RemoteAPI: connecting to %s", url.toString().toUtf8().constData());
+    }
 
     socket_->open(url);
 }
@@ -135,7 +138,10 @@ void GsxRemoteApiClient::SendSubscribe() const
         {"channels", QJsonArray{"state", "prompts", "toasts"}},
     };
 
-    socket_->sendTextMessage(QString::fromUtf8(QJsonDocument(sub).toJson(QJsonDocument::Compact)));
+    const QString text = QString::fromUtf8(QJsonDocument(sub).toJson(QJsonDocument::Compact));
+    probe::WireSent(text);
+
+    socket_->sendTextMessage(text);
 }
 
 bool GsxRemoteApiClient::SendCommand(const QString& verb, const QJsonObject& args)
@@ -150,8 +156,10 @@ bool GsxRemoteApiClient::SendCommand(const QString& verb, const QJsonObject& arg
 
     if (!args.isEmpty()) cmd.insert("args", args);
     {
-        const auto numBytes =
-            socket_->sendTextMessage(QString::fromUtf8(QJsonDocument(cmd).toJson(QJsonDocument::Compact)));
+        const QString text = QString::fromUtf8(QJsonDocument(cmd).toJson(QJsonDocument::Compact));
+        probe::WireSent(text);
+
+        const auto numBytes = socket_->sendTextMessage(text);
         return numBytes != -1;
     }
 }
@@ -165,6 +173,7 @@ void GsxRemoteApiClient::OnTextMessage(const QString& text)
         handshakeDone_ = true;
         handshakeTimer_->stop();
         backoffMs_ = 1000;
+        announceNextAttempt_ = true;
 
         emit ConnectionChanged(true);
     }

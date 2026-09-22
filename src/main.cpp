@@ -181,6 +181,9 @@ int main(int argc, char* argv[])
     RuntimeIntegratorService integratorService(&runtime);
     SettingsViewModel settingsViewModel(&settingsRepository, &integratorService,
                                         SupportedAircraftProfiles());
+    const bool loggingActive = probe::IsOn();
+    settingsViewModel.SetLoggingActive(loggingActive);
+    settingsViewModel.SetLogLocation(loggingActive ? probe::RunLocation() : probe::Location());
     OperationsViewModel operationsViewModel(&integratorService, &settingsViewModel);
 
     EfbStatePublisher efbStatePublisher(runtime.Bridge(), &operationsViewModel,

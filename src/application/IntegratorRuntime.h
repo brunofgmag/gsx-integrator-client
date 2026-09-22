@@ -176,6 +176,7 @@ private:
     ProbeObserver probe_;
 
     SimVersion simVersion_ = SimVersion::Unknown;
+    bool connectAttemptAnnounced_ = false;
     bool isSessionActive_ = false;
     bool sessionReady_ = false;
     bool pilotOnFoot_ = false;

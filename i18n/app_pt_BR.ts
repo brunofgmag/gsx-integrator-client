@@ -102,43 +102,48 @@
 <context>
     <name>AdvancedPane</name>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="30"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="27"/>
         <source>Renderer</source>
         <translation>Renderizador</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="31"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="28"/>
         <source>Graphics backend</source>
         <translation>Backend gráfico</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="32"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="29"/>
         <source>Software is the default because it uses the least RAM and VRAM. D3D12 draws on the graphics card; OpenGL is there for drivers that misbehave.</source>
         <translation>Software é o padrão porque usa menos RAM e VRAM. D3D12 desenha na placa de vídeo; OpenGL existe para drivers que se comportam mal.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="54"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="51"/>
         <source>Client logging</source>
         <translation>Log do cliente</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="55"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="52"/>
         <source>Write diagnostic logs to disk</source>
         <translation>Grava logs de diagnóstico em disco</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="56"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="53"/>
         <source>Logs are saved in: %1</source>
         <translation>Logs são salvos em: %1</translation>
     </message>
     <message>
-        <source>Records what the client reads, decides and writes, split by category, under %1.</source>
-        <translation type="vanished">Registra o que o cliente lê, decide e escreve, separado por categoria, em %1.</translation>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="64"/>
+        <source>Restart GSX Integrator to start logging.</source>
+        <translation>Reinicie o GSX Integrator para começar a gravar o log.</translation>
     </message>
     <message>
         <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="65"/>
-        <source>Restart GSX Integrator to apply the logging change.</source>
-        <translation>Reinicie o GSX Integrator para aplicar a mudança do log.</translation>
+        <source>Logging stays on until GSX Integrator restarts.</source>
+        <translation>O log continua ligado até o GSX Integrator reiniciar.</translation>
+    </message>
+    <message>
+        <source>Records what the client reads, decides and writes, split by category, under %1.</source>
+        <translation type="vanished">Registra o que o cliente lê, decide e escreve, separado por categoria, em %1.</translation>
     </message>
     <message>
         <source>D3D12 is the default and hands the drawing to the graphics card. Software draws on the processor instead, at a steadier cost and with less memory, but the window can fail to repaint when it shrinks. OpenGL is there for drivers that misbehave.</source>
@@ -157,7 +162,7 @@
         <translation type="vanished">D3D12 é o padrão e mantém o desenho na placa de vídeo. Software desenha no processador: o arrasto da janela fica mais suave, mas queima um núcleo sempre que algo anima na tela, disputando com o simulador. OpenGL e Vulkan existem para drivers que se comportam mal.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="45"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="42"/>
         <source>Restart GSX Integrator to draw with %1. It is still using %2.</source>
         <translation>Reinicie o GSX Integrator para desenhar com %1. Ele ainda está usando %2.</translation>
     </message>
@@ -1432,43 +1437,43 @@
 <context>
     <name>SettingsViewModel</name>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="685"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="714"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="924"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="953"/>
         <source>Enter a valid SimBrief Pilot ID.</source>
         <translation>Informe um SimBrief Pilot ID válido.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="934"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="963"/>
         <source>Enter a valid fuel rate.</source>
         <translation>Informe uma taxa de combustível válida.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="951"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="980"/>
         <source>Enter a valid fuel rate for %1.</source>
         <translation>Informe uma taxa de combustível válida para %1.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="617"/>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="968"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="646"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="997"/>
         <source>Could not save settings.</source>
         <translation>Não foi possível salvar as configurações.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="447"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="446"/>
         <source>lb/s</source>
         <translation>lb/s</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="447"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="446"/>
         <source>kg/s</source>
         <translation>kg/s</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="623"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="652"/>
         <source>Settings saved.</source>
         <translation>Configurações salvas.</translation>
     </message>

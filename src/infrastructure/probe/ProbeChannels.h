@@ -1,6 +1,8 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PROBECHANNELS_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PROBECHANNELS_H
 
+#include <algorithm>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <QtCore/QCoreApplication>
@@ -10,6 +12,8 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QMutex>
 #include <QtCore/QMutexLocker>
+#include <QtCore/QRegularExpression>
+#include <QtCore/QSet>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -17,11 +21,18 @@
 
 namespace probe
 {
-    inline constexpr qint64 kRunBudgetBytes = 32LL * 1024 * 1024;
+    inline constexpr qint64 kMiB = 1024LL * 1024;
+    inline constexpr qint64 kWireBudgetBytes = 32 * kMiB;
+    inline constexpr qint64 kUnionBudgetBytes = 32 * kMiB;
+    inline constexpr qint64 kChannelBudgetBytes = 8 * kMiB;
     inline constexpr int kKeepRuns = 5;
     inline constexpr auto kNoSession = "NoSession";
     inline constexpr auto kUnknownAircraft = "unknown";
-    inline constexpr auto kCapMessage = "log capped at 32 MiB, nothing else will be written this run";
+    inline constexpr auto kCapMessage = "log file capped at %1 MiB, nothing else will be written to it this run";
+    inline constexpr auto kCapNote = "%1 capped at %2 MiB, nothing else will be written to it this run";
+    inline constexpr auto kRunStampPattern = R"(^\d{8}-\d{6}(?:-\d{3}-\d+)?$)";
+    inline constexpr auto kWirePrefix = "wire-";
+    inline constexpr auto kWireSuffix = ".jsonl";
 
     enum class Channel
     {
@@ -78,6 +89,20 @@ namespace probe
 
     namespace detail
     {
+        struct Budgets
+        {
+            qint64 wireBytes = kWireBudgetBytes;
+            qint64 unionBytes = kUnionBudgetBytes;
+            qint64 channelBytes = kChannelBudgetBytes;
+        };
+
+        struct LogFile
+        {
+            std::unique_ptr<QFile> file;
+            qint64 written = 0;
+            bool capped = false;
+        };
+
         inline QString Directory()
         {
             static const QString directory = []
@@ -104,43 +129,6 @@ namespace probe
             return stamp;
         }
 
-        inline QStringList StaleRuns(const QStringList& sortedNames, const int keep)
-        {
-            QStringList stale;
-
-            for (int i = 0; i + keep < sortedNames.size(); ++i)
-            {
-                stale.append(sortedNames.at(i));
-            }
-
-            return stale;
-        }
-
-        inline QString RunDirectory()
-        {
-            static const QString directory = []
-            {
-                const QString base = Directory();
-                const QStringList names =
-                    QDir(base).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-                const QStringList stale = StaleRuns(names, kKeepRuns - 1);
-                for (const QString& name : stale)
-                {
-                    (void)QDir(base + QStringLiteral("/") + name).removeRecursively();
-                }
-
-                const QString run = base + QStringLiteral("/") + Stamp();
-                if (!QDir().mkpath(run))
-                {
-                    return base;
-                }
-
-                return run;
-            }();
-
-            return directory;
-        }
-
         inline QString& Phase()
         {
             static QString phase = QLatin1String(kNoSession);
@@ -155,63 +143,11 @@ namespace probe
             return aircraft;
         }
 
-        inline qint64& Budget()
-        {
-            static qint64 budget = 0;
-
-            return budget;
-        }
-
-        inline qint64& RunBudget()
-        {
-            static qint64 budget = kRunBudgetBytes;
-
-            return budget;
-        }
-
-        inline bool& Capped()
-        {
-            static bool capped = false;
-
-            return capped;
-        }
-
-        inline QMutex& Mutex()
-        {
-            static QMutex mutex;
-
-            return mutex;
-        }
-
-        inline std::map<QString, std::unique_ptr<QFile>>& Files()
-        {
-            static std::map<QString, std::unique_ptr<QFile>> files;
-
-            return files;
-        }
-
-        inline QFile& FileAt(const QString& path)
-        {
-            auto& files = Files();
-            const auto found = files.find(path);
-            if (found != files.end())
-            {
-                return *found->second;
-            }
-
-            (void)QDir().mkpath(QFileInfo(path).absolutePath());
-            auto file = std::make_unique<QFile>(path);
-            file->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
-            const auto inserted = files.emplace(path, std::move(file));
-
-            return *inserted.first->second;
-        }
-
         inline QString AircraftFile(const QString& suffix)
         {
-            const QString id = Aircraft().isEmpty() ? QLatin1String(kUnknownAircraft) : Aircraft();
+            const QString aircraftId = Aircraft().isEmpty() ? QLatin1String(kUnknownAircraft) : Aircraft();
 
-            return QStringLiteral("aircraft/") + id + suffix;
+            return QStringLiteral("aircraft/") + aircraftId + suffix;
         }
 
         inline QString ChannelFileName(const Channel channel)
@@ -225,7 +161,7 @@ namespace probe
                 case Channel::GsxMenu:
                     return QStringLiteral("gsx-menu.log");
                 case Channel::Wire:
-                    return QStringLiteral("wire-") + Stamp() + QStringLiteral(".jsonl");
+                    return QLatin1String(kWirePrefix) + Stamp() + QLatin1String(kWireSuffix);
                 case Channel::GsxLVars:
                     return QStringLiteral("gsx-lvars.log");
                 case Channel::SimAVars:
@@ -248,10 +184,129 @@ namespace probe
             return QStringLiteral("session-") + Stamp() + QStringLiteral(".log");
         }
 
+        inline bool IsRunStamp(const QString& name)
+        {
+            static const QRegularExpression stamp(QString::fromLatin1(kRunStampPattern));
+
+            return stamp.match(name).hasMatch();
+        }
+
+        inline bool SawTheSimulator(const QString& run)
+        {
+            const QDir directory(run);
+            const QString wireFiles = QLatin1String(kWirePrefix) + QLatin1Char('*') + QLatin1String(kWireSuffix);
+
+            return directory.exists(ChannelFileName(Channel::Turnaround))
+                || !directory.entryList(QStringList{wireFiles}, QDir::Files).isEmpty();
+        }
+
+        inline QStringList StaleRuns(const QStringList& names, const QSet<QString>& sawTheSimulator, const int keep)
+        {
+            QStringList runs;
+            std::ranges::copy_if(names, std::back_inserter(runs), IsRunStamp);
+            runs.sort();
+
+            QStringList simulatorRuns;
+            QStringList stale;
+            std::ranges::partition_copy(runs, std::back_inserter(simulatorRuns), std::back_inserter(stale),
+                                        [&sawTheSimulator](const QString& run)
+                                        {
+                                            return sawTheSimulator.contains(run);
+                                        });
+
+            const qsizetype surplus = std::max<qsizetype>(0, simulatorRuns.size() - keep);
+            stale.append(simulatorRuns.first(surplus));
+            stale.sort();
+
+            return stale;
+        }
+
+        inline QString RunDirectory()
+        {
+            static const QString directory = []
+            {
+                const QString base = Directory();
+                const QStringList names =
+                    QDir(base).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+                QSet<QString> sawTheSimulator;
+                for (const QString& name : names)
+                {
+                    if (SawTheSimulator(base + QLatin1Char('/') + name))
+                    {
+                        sawTheSimulator.insert(name);
+                    }
+                }
+
+                const QStringList stale = StaleRuns(names, sawTheSimulator, kKeepRuns - 1);
+                for (const QString& name : stale)
+                {
+                    (void)QDir(base + QLatin1Char('/') + name).removeRecursively();
+                }
+
+                const QString run = base + QLatin1Char('/') + Stamp();
+                if (!QDir().mkpath(run))
+                {
+                    return base;
+                }
+
+                return run;
+            }();
+
+            return directory;
+        }
+
+        inline Budgets& FileBudgets()
+        {
+            static Budgets budgets;
+
+            return budgets;
+        }
+
+        inline QMutex& Mutex()
+        {
+            static QMutex mutex;
+
+            return mutex;
+        }
+
+        inline std::map<QString, LogFile>& Files()
+        {
+            static std::map<QString, LogFile> files;
+
+            return files;
+        }
+
+        inline LogFile& FileAt(const QString& path)
+        {
+            auto& files = Files();
+            const auto found = files.find(path);
+            if (found != files.end())
+            {
+                return found->second;
+            }
+
+            (void)QDir().mkpath(QFileInfo(path).absolutePath());
+            auto file = std::make_unique<QFile>(path);
+            file->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text);
+            const auto inserted = files.emplace(path, LogFile{.file = std::move(file)});
+
+            return inserted.first->second;
+        }
+
         inline QString FormatLine(const QString& text)
         {
             return QDateTime::currentDateTime().toString(Qt::ISODateWithMs)
                 + QStringLiteral(" [") + Phase() + QStringLiteral("] ") + text;
+        }
+
+        inline QString CapMessage(const qint64 budget)
+        {
+            return QString::fromLatin1(kCapMessage).arg(budget / kMiB);
+        }
+
+        inline QString CapNote(const QString& name, const qint64 budget)
+        {
+            return QString::fromLatin1(kCapNote).arg(name, QString::number(budget / kMiB));
         }
 
         inline qint64 Write(QFile& file, const QString& text)
@@ -272,10 +327,30 @@ namespace probe
             Write(file, text + QLatin1Char('\n'));
         }
 
-#ifndef NDEBUG
-        inline void SetBudgetForTest(const qint64 bytes)
+        inline bool Record(const QString& name, const qint64 budget, const QString& line)
         {
-            RunBudget() = bytes;
+            LogFile& log = FileAt(RunDirectory() + QLatin1Char('/') + name);
+            if (log.capped)
+            {
+                return false;
+            }
+
+            log.written += Write(*log.file, line);
+            if (log.written <= budget)
+            {
+                return false;
+            }
+
+            WriteLine(*log.file, FormatLine(CapMessage(budget)));
+            log.capped = true;
+
+            return true;
+        }
+
+#ifndef NDEBUG
+        inline void SetBudgetForTest(const Budgets& budgets)
+        {
+            FileBudgets() = budgets;
         }
 #endif
     }
@@ -301,26 +376,21 @@ namespace probe
 
         QMutexLocker locker(&detail::Mutex());
 
-        if (detail::Capped())
+        const detail::Budgets& budgets = detail::FileBudgets();
+        const QString unionName = detail::UnionFileName();
+        const QString line = detail::FormatLine(text) + QLatin1Char('\n');
+        if (channel != Channel::Wire)
         {
-            return;
+            detail::Record(unionName, budgets.unionBytes, line);
         }
 
-        const QString directory = detail::RunDirectory();
-        QFile& channelFile =
-            detail::FileAt(directory + QLatin1Char('/') + detail::ChannelFileName(channel));
-        QFile& unionFile = detail::FileAt(directory + QLatin1Char('/') + detail::UnionFileName());
-        const QString line = detail::FormatLine(text) + QLatin1Char('\n');
-
-        detail::Budget() += detail::Write(channelFile, line);
-        detail::Budget() += detail::Write(unionFile, line);
-
-        if (detail::Budget() > detail::RunBudget())
+        const QString channelName = detail::ChannelFileName(channel);
+        const qint64 channelBudget = channel == Channel::Wire ? budgets.wireBytes : budgets.channelBytes;
+        const bool channelCapped = detail::Record(channelName, channelBudget, line);
+        if (channelCapped)
         {
-            const QString cap = detail::FormatLine(QLatin1String(kCapMessage));
-            detail::WriteLine(channelFile, cap);
-            detail::WriteLine(unionFile, cap);
-            detail::Capped() = true;
+            detail::Record(unionName, budgets.unionBytes,
+                           detail::FormatLine(detail::CapNote(channelName, channelBudget)) + QLatin1Char('\n'));
         }
     }
 
@@ -342,9 +412,7 @@ namespace probe
         detail::Files().clear();
         detail::Phase() = QLatin1String(kNoSession);
         detail::Aircraft().clear();
-        detail::Budget() = 0;
-        detail::RunBudget() = kRunBudgetBytes;
-        detail::Capped() = false;
+        detail::FileBudgets() = {};
     }
 #endif
 }

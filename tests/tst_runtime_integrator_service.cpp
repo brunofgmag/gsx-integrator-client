@@ -1,6 +1,9 @@
 #include <algorithm>
 #include <string>
 
+#include <QtCore/QScopeGuard>
+#include <QtCore/QStringList>
+#include <QtCore/QTemporaryDir>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
@@ -10,6 +13,7 @@
 #include "../src/domain/turnaround/PilotTouch.h"
 #include "../src/application/RuntimeIntegratorService.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
+#include "../src/infrastructure/probe/ProbeChannels.h"
 #include "../src/infrastructure/simvars/SimVars.h"
 
 namespace
@@ -31,6 +35,9 @@ namespace
     constexpr double kJetwayInPlace = 5.0;
     constexpr int kFlowTickBudget = 12;
     constexpr int kLoaderNoticeTickBudget = 120;
+    constexpr int kReconnectWaitMs = 6000;
+    constexpr int kPersonalPilotId = 4815162;
+    constexpr auto kOpeningSimConnect = "Opening SimConnect...";
 
     void PushSimRunning(const int running)
     {
@@ -157,6 +164,60 @@ namespace
             ++notifications;
         }
     };
+
+#ifndef NDEBUG
+    void TurnTheProbeOff()
+    {
+        probe::SetEnabled(false);
+        probe::ResetForTest();
+    }
+#endif
+
+    class LogCapture
+    {
+    public:
+        LogCapture()
+            : previous_(qInstallMessageHandler(Collect))
+        {
+            Lines().clear();
+        }
+
+        ~LogCapture()
+        {
+            qInstallMessageHandler(previous_);
+        }
+
+        LogCapture(const LogCapture&) = delete;
+        LogCapture& operator=(const LogCapture&) = delete;
+        LogCapture(LogCapture&&) = delete;
+        LogCapture& operator=(LogCapture&&) = delete;
+
+        [[nodiscard]] static qsizetype Count(const QString& fragment)
+        {
+            return std::ranges::count_if(Lines(),
+                                         [&fragment](const QString& line) { return line.contains(fragment); });
+        }
+
+        [[nodiscard]] static bool Contains(const QString& fragment)
+        {
+            return Count(fragment) > 0;
+        }
+
+    private:
+        static QStringList& Lines()
+        {
+            static QStringList lines;
+
+            return lines;
+        }
+
+        static void Collect(QtMsgType, const QMessageLogContext&, const QString& message)
+        {
+            Lines().append(message);
+        }
+
+        QtMessageHandler previous_;
+    };
 }
 
 class RuntimeIntegratorServiceTest final : public QObject
@@ -164,6 +225,7 @@ class RuntimeIntegratorServiceTest final : public QObject
     Q_OBJECT
 
 private slots:
+    void initTestCase();
     static void init();
 
     static void freshSnapshotHasDisconnectedDefaults();
@@ -192,7 +254,21 @@ private slots:
     static void theSnapshotCarriesTheDeboardingWaitOnceTheGsxTakesTheRequest();
     static void theSlowTickWritesNothingWhileTheGsxIsDown();
     static void theFuelWaitsUntilTheRemoteApiAnnouncesItsConnection();
+    static void openingSimConnectIsAnnouncedOncePerDisconnectedPeriod();
+    static void theLoggingToggleAloneLeavesTheAircraftUntouched();
+    static void theRunHeaderNamesTheRunFolderAndLeavesThePilotIdOut();
+
+private:
+    QTemporaryDir probeDirectory_;
 };
+
+void RuntimeIntegratorServiceTest::initTestCase()
+{
+    qunsetenv("GSXI_PROBE");
+
+    QVERIFY(probeDirectory_.isValid());
+    qputenv("GSXI_PROBE_DIR", probeDirectory_.path().toUtf8());
+}
 
 void RuntimeIntegratorServiceTest::init()
 {
@@ -786,6 +862,84 @@ void RuntimeIntegratorServiceTest::theFuelWaitsUntilTheRemoteApiAnnouncesItsConn
     QCOMPARE(runtime.Snapshot().fuelProgress, 100.0);
 #else
     QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
+}
+
+void RuntimeIntegratorServiceTest::openingSimConnectIsAnnouncedOncePerDisconnectedPeriod()
+{
+    const LogCapture log;
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QCOMPARE(LogCapture::Count(QLatin1String(kOpeningSimConnect)), 1);
+
+    const QSignalSpy quits(&runtime, &IntegratorRuntime::SimulatorQuit);
+    FakeSimConnectApi::openSucceeds = false;
+    constexpr SIMCONNECT_RECV quit{};
+    FakeSimConnectApi::Push(quit, SIMCONNECT_RECV_ID_QUIT);
+
+    QVERIFY(QTest::qWaitFor([&quits] { return quits.count() > 0; }, 2000));
+
+    QSignalSpy retries(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(retries.wait(kReconnectWaitMs));
+    QVERIFY(!runtime.IsConnected());
+    QCOMPARE(LogCapture::Count(QLatin1String(kOpeningSimConnect)), 2);
+
+    QVERIFY(retries.wait(kReconnectWaitMs));
+    QVERIFY(!runtime.IsConnected());
+    QCOMPARE(LogCapture::Count(QLatin1String(kOpeningSimConnect)), 2);
+}
+
+void RuntimeIntegratorServiceTest::theLoggingToggleAloneLeavesTheAircraftUntouched()
+{
+#ifndef NDEBUG
+    probe::SetEnabled(true);
+    const auto probeOff = qScopeGuard(TurnTheProbeOff);
+
+    IntegratorRuntime runtime;
+
+    AutomationSettings settings;
+    settings.autoStartFlow = false;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(!DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+
+    QVERIFY(!runtime.Snapshot().automationEnabled);
+    QCOMPARE(runtime.GetAircraftProfileId(), std::string{});
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void RuntimeIntegratorServiceTest::theRunHeaderNamesTheRunFolderAndLeavesThePilotIdOut()
+{
+#ifndef NDEBUG
+    probe::SetEnabled(true);
+    const auto probeOff = qScopeGuard(TurnTheProbeOff);
+
+    const LogCapture log;
+    IntegratorRuntime runtime;
+    RuntimeIntegratorService service(&runtime);
+
+    AppSettings settings;
+    settings.simbriefPilotId = kPersonalPilotId;
+    settings.callCatering = true;
+    service.ApplySettings(settings);
+
+    runtime.Setup();
+
+    QVERIFY(LogCapture::Contains(QStringLiteral("Logging run: folder=") + probe::RunLocation()));
+    QVERIFY(LogCapture::Contains(QStringLiteral("build=debug")));
+    QVERIFY(LogCapture::Contains(QStringLiteral("simbriefPilotId=set")));
+    QVERIFY(LogCapture::Contains(QStringLiteral("callCatering=1")));
+    QVERIFY(!LogCapture::Contains(QString::number(kPersonalPilotId)));
+#else
+    QSKIP("probe recording is compiled out of Release builds");
 #endif
 }
 

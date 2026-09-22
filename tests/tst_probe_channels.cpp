@@ -5,6 +5,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
 #include <QtCore/QRegularExpression>
+#include <QtCore/QSet>
 #include <QtCore/QStringList>
 #include <QtCore/QTemporaryDir>
 #include "../src/infrastructure/probe/ProbeChannels.h"
@@ -44,14 +45,6 @@ namespace
         return lines.isEmpty() ? QString() : lines.last();
     }
 
-    QString UnionPath(const QString& run)
-    {
-        const QStringList names =
-            QDir(run).entryList(QStringList{QStringLiteral("session-*.log")}, QDir::Files);
-
-        return names.isEmpty() ? QString() : run + QLatin1Char('/') + names.first();
-    }
-
     QStringList Lines(const QString& path)
     {
         return ReadAll(path).split(QLatin1Char('\n'), Qt::SkipEmptyParts);
@@ -72,6 +65,28 @@ namespace
 
         return path;
     }
+
+    QString FreshUnionLog()
+    {
+        return FreshChannelLog(probe::detail::UnionFileName());
+    }
+
+    QString FreshWireLog()
+    {
+        return FreshChannelLog(probe::detail::ChannelFileName(probe::Channel::Wire));
+    }
+
+    QString Line(const int bytes)
+    {
+        return {bytes, QLatin1Char('x')};
+    }
+
+    void Touch(const QString& path)
+    {
+        QVERIFY(QDir().mkpath(QFileInfo(path).absolutePath()));
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+    }
 }
 
 class ProbeChannelsTest final : public QObject
@@ -83,13 +98,20 @@ private slots:
     void init();
     void cleanup();
 
-    static void staleRunsKeepsTheNewestAndReturnsTheRest();
+    static void theFourNewestSimulatorRunsAreKept();
+    static void runsThatNeverSawTheSimulatorAreDeletedAndNotCounted();
+    static void directoriesThatAreNotRunStampsAreNeverDeleted();
+    static void aRunSawTheSimulatorWhenItHoldsTheGateLogOrAWireLog();
     static void eachChannelGetsItsOwnFile();
-    static void everyLineAlsoLandsInTheSessionUnion();
+    static void everyChannelButTheWireAlsoLandsInTheSessionUnion();
     static void everyLineCarriesTheTimestampAndThePhase();
     static void theAircraftChannelsFollowTheAircraftId();
     static void aRunFolderIsCreatedPerLaunch();
-    static void theBudgetWritesOneCapLineAndThenGoesSilent();
+    static void aCappedFileWritesOneCapLineAndThenGoesSilent();
+    static void aCappedChannelLeavesTheOtherFilesWriting();
+    static void theUnionNamesTheFileThatCapped();
+    static void theUnionNamesACappedWireFile();
+    static void theUnionCapsOnItsOwnBudget();
     static void appendIsSilentWhenTheGateIsOff();
     static void aFirstChangeWritesImmediately();
     static void anUnchangedSignatureNeverWritesAgain();
@@ -125,25 +147,95 @@ void ProbeChannelsTest::cleanup()
     probe::SetEnabled(true);
 }
 
-void ProbeChannelsTest::staleRunsKeepsTheNewestAndReturnsTheRest()
+void ProbeChannelsTest::theFourNewestSimulatorRunsAreKept()
 {
     const QStringList names{
-        QStringLiteral("20260101-000001"),
+        QStringLiteral("20260104-100000-003-9"),
         QStringLiteral("20260101-000002"),
-        QStringLiteral("20260101-000003"),
-        QStringLiteral("20260101-000004"),
-        QStringLiteral("20260101-000005"),
-        QStringLiteral("20260101-000006"),
-        QStringLiteral("20260101-000007")};
+        QStringLiteral("20260102-080000-001-7"),
+        QStringLiteral("20260101-000001"),
+        QStringLiteral("20260103-090000-002-8"),
+        QStringLiteral("20260101-000002-500-100")};
+    const QSet<QString> sawTheSimulator(names.cbegin(), names.cend());
 
-    const QStringList stale = probe::detail::StaleRuns(names, probe::kKeepRuns - 1);
+    const QStringList stale = probe::detail::StaleRuns(names, sawTheSimulator, probe::kKeepRuns - 1);
 
-    QCOMPARE(stale.size(), 3);
-    QCOMPARE(stale.first(), QStringLiteral("20260101-000001"));
-    QCOMPARE(stale.last(), QStringLiteral("20260101-000003"));
-    QVERIFY(probe::detail::StaleRuns(QStringList{QStringLiteral("a"), QStringLiteral("b"), QStringLiteral("c")},
-                                     probe::kKeepRuns - 1)
-                    .isEmpty());
+    QCOMPARE(stale, (QStringList{QStringLiteral("20260101-000001"), QStringLiteral("20260101-000002")}));
+
+    const QStringList few{QStringLiteral("20260101-000001"), QStringLiteral("20260101-000002")};
+
+    QVERIFY(probe::detail::StaleRuns(few, QSet<QString>(few.cbegin(), few.cend()), probe::kKeepRuns - 1).isEmpty());
+}
+
+void ProbeChannelsTest::runsThatNeverSawTheSimulatorAreDeletedAndNotCounted()
+{
+    const QStringList simulatorRuns{
+        QStringLiteral("20260901-100000-000-1"),
+        QStringLiteral("20260902-100000-000-2"),
+        QStringLiteral("20260903-100000-000-3"),
+        QStringLiteral("20260904-100000-000-4")};
+    const QStringList launchesWithoutTheSimulator{
+        QStringLiteral("20260831-100000"),
+        QStringLiteral("20260905-100000-000-5"),
+        QStringLiteral("20260906-100000-000-6"),
+        QStringLiteral("20260907-100000-000-7")};
+
+    const QStringList stale =
+        probe::detail::StaleRuns(simulatorRuns + launchesWithoutTheSimulator,
+                                 QSet<QString>(simulatorRuns.cbegin(), simulatorRuns.cend()), probe::kKeepRuns - 1);
+
+    QCOMPARE(stale, launchesWithoutTheSimulator);
+}
+
+void ProbeChannelsTest::directoriesThatAreNotRunStampsAreNeverDeleted()
+{
+    const QStringList strangers{
+        QStringLiteral("measurements"),
+        QStringLiteral("a340-2026-09-17"),
+        QStringLiteral("20260917"),
+        QStringLiteral("20260917-223100-extra"),
+        QStringLiteral("20260917-223100-123-"),
+        QStringLiteral("x20260917-223100"),
+        QStringLiteral("job-42")};
+    const QStringList runs{
+        QStringLiteral("20260101-000001"),
+        QStringLiteral("20260102-000001-000-1"),
+        QStringLiteral("20260103-000001-000-2"),
+        QStringLiteral("20260104-000001-000-3"),
+        QStringLiteral("20260105-000001-000-4"),
+        QStringLiteral("20260106-000001-000-5")};
+    const QSet<QString> sawTheSimulator{
+        QStringLiteral("measurements"),
+        QStringLiteral("20260917-223100-extra"),
+        QStringLiteral("20260101-000001"),
+        QStringLiteral("20260102-000001-000-1"),
+        QStringLiteral("20260103-000001-000-2"),
+        QStringLiteral("20260104-000001-000-3"),
+        QStringLiteral("20260105-000001-000-4"),
+        QStringLiteral("20260106-000001-000-5")};
+
+    const QStringList stale = probe::detail::StaleRuns(strangers + runs, sawTheSimulator, probe::kKeepRuns - 1);
+
+    QCOMPARE(stale, (QStringList{QStringLiteral("20260101-000001"), QStringLiteral("20260102-000001-000-1")}));
+    QVERIFY(probe::detail::StaleRuns(strangers, {}, probe::kKeepRuns - 1).isEmpty());
+}
+
+void ProbeChannelsTest::aRunSawTheSimulatorWhenItHoldsTheGateLogOrAWireLog()
+{
+    const QTemporaryDir base;
+
+    QVERIFY(base.isValid());
+
+    Touch(base.filePath(QStringLiteral("gate/turnaround.log")));
+    Touch(base.filePath(QStringLiteral("wire/wire-20260101-000001-000-1.jsonl")));
+    Touch(base.filePath(QStringLiteral("noise/client.log")));
+    Touch(base.filePath(QStringLiteral("noise/session-20260101-000001-000-1.log")));
+    QVERIFY(QDir().mkpath(base.filePath(QStringLiteral("empty"))));
+
+    QVERIFY(probe::detail::SawTheSimulator(base.filePath(QStringLiteral("gate"))));
+    QVERIFY(probe::detail::SawTheSimulator(base.filePath(QStringLiteral("wire"))));
+    QVERIFY(!probe::detail::SawTheSimulator(base.filePath(QStringLiteral("noise"))));
+    QVERIFY(!probe::detail::SawTheSimulator(base.filePath(QStringLiteral("empty"))));
 }
 
 void ProbeChannelsTest::eachChannelGetsItsOwnFile()
@@ -163,20 +255,22 @@ void ProbeChannelsTest::eachChannelGetsItsOwnFile()
 #endif
 }
 
-void ProbeChannelsTest::everyLineAlsoLandsInTheSessionUnion()
+void ProbeChannelsTest::everyChannelButTheWireAlsoLandsInTheSessionUnion()
 {
 #ifndef NDEBUG
+    const QString wirePath = FreshWireLog();
+    const QString unionPath = FreshUnionLog();
+
     probe::Append(probe::Channel::Turnaround, QStringLiteral("first-line"));
     probe::Append(probe::Channel::GsxMenu, QStringLiteral("second-line"));
-
-    const QString unionPath = UnionPath(probe::RunLocation());
-
-    QVERIFY(!unionPath.isEmpty());
+    probe::Append(probe::Channel::Wire, QStringLiteral("wire-line"));
 
     const QString content = ReadAll(unionPath);
 
     QVERIFY(content.contains(QStringLiteral("first-line")));
     QVERIFY(content.contains(QStringLiteral("second-line")));
+    QVERIFY(!content.contains(QStringLiteral("wire-line")));
+    QVERIFY(ReadAll(wirePath).contains(QStringLiteral("wire-line")));
 #else
     QSKIP("probe recording is compiled out of Release builds");
 #endif
@@ -239,27 +333,127 @@ void ProbeChannelsTest::aRunFolderIsCreatedPerLaunch()
 #endif
 }
 
-void ProbeChannelsTest::theBudgetWritesOneCapLineAndThenGoesSilent()
+void ProbeChannelsTest::aCappedFileWritesOneCapLineAndThenGoesSilent()
 {
 #ifndef NDEBUG
-    probe::detail::SetBudgetForTest(200);
+    probe::detail::SetBudgetForTest({.channelBytes = 200});
+    const QString clientPath = FreshClientLog();
+    const QString cap = probe::detail::CapMessage(200);
 
-    probe::Append(probe::Channel::Client, QString(100, QLatin1Char('x')));
-    probe::Append(probe::Channel::Client, QString(100, QLatin1Char('x')));
+    probe::Append(probe::Channel::Client, Line(100));
 
-    const QString run = probe::RunLocation();
-    const QString clientPath = run + QStringLiteral("/client.log");
-    const QString unionPath = UnionPath(run);
+    QVERIFY(!ReadAll(clientPath).contains(cap));
 
-    QCOMPARE(ReadAll(clientPath).count(probe::kCapMessage), 1);
-    QCOMPARE(ReadAll(unionPath).count(probe::kCapMessage), 1);
+    probe::Append(probe::Channel::Client, Line(100));
+
+    QCOMPARE(ReadAll(clientPath).count(cap), 1);
+    QVERIFY(LastLine(clientPath).endsWith(cap));
 
     const qint64 clientSize = QFileInfo(clientPath).size();
-    const qint64 unionSize = QFileInfo(unionPath).size();
 
-    probe::Append(probe::Channel::Client, QString(100, QLatin1Char('x')));
+    probe::Append(probe::Channel::Client, Line(100));
+    probe::Append(probe::Channel::Client, Line(100));
 
     QCOMPARE(QFileInfo(clientPath).size(), clientSize);
+    QCOMPARE(ReadAll(clientPath).count(cap), 1);
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void ProbeChannelsTest::aCappedChannelLeavesTheOtherFilesWriting()
+{
+#ifndef NDEBUG
+    probe::detail::SetBudgetForTest({.channelBytes = 200});
+    const QString clientPath = FreshClientLog();
+    const QString lvarsPath = FreshChannelLog(QStringLiteral("gsx-lvars.log"));
+    const QString unionPath = FreshUnionLog();
+
+    probe::Append(probe::Channel::Client, Line(100));
+    probe::Append(probe::Channel::Client, Line(100));
+
+    QCOMPARE(ReadAll(clientPath).count(probe::detail::CapMessage(200)), 1);
+
+    probe::Append(probe::Channel::Client, QStringLiteral("client-after-cap"));
+    probe::Append(probe::Channel::GsxLVars, QStringLiteral("lvars-after-cap"));
+
+    QVERIFY(!ReadAll(clientPath).contains(QStringLiteral("client-after-cap")));
+    QVERIFY(ReadAll(lvarsPath).contains(QStringLiteral("lvars-after-cap")));
+    QVERIFY(ReadAll(unionPath).contains(QStringLiteral("lvars-after-cap")));
+    QVERIFY(ReadAll(unionPath).contains(QStringLiteral("client-after-cap")));
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void ProbeChannelsTest::theUnionNamesTheFileThatCapped()
+{
+#ifndef NDEBUG
+    probe::detail::SetBudgetForTest({.channelBytes = 200});
+    FreshClientLog();
+    const QString unionPath = FreshUnionLog();
+    const QString note = probe::detail::CapNote(QStringLiteral("client.log"), 200);
+
+    probe::Append(probe::Channel::Client, Line(100));
+
+    QVERIFY(!ReadAll(unionPath).contains(note));
+
+    probe::Append(probe::Channel::Client, Line(100));
+
+    QCOMPARE(ReadAll(unionPath).count(note), 1);
+
+    probe::Append(probe::Channel::Client, Line(100));
+    probe::Append(probe::Channel::Client, Line(100));
+
+    QCOMPARE(ReadAll(unionPath).count(note), 1);
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void ProbeChannelsTest::theUnionNamesACappedWireFile()
+{
+#ifndef NDEBUG
+    probe::detail::SetBudgetForTest({.wireBytes = 200});
+    const QString wirePath = FreshWireLog();
+    const QString unionPath = FreshUnionLog();
+
+    probe::Append(probe::Channel::Wire, Line(100));
+    probe::Append(probe::Channel::Wire, Line(100));
+
+    QCOMPARE(ReadAll(wirePath).count(probe::detail::CapMessage(200)), 1);
+    QCOMPARE(ReadAll(unionPath).count(
+                 probe::detail::CapNote(probe::detail::ChannelFileName(probe::Channel::Wire), 200)),
+             1);
+    QVERIFY(!ReadAll(unionPath).contains(Line(100)));
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void ProbeChannelsTest::theUnionCapsOnItsOwnBudget()
+{
+#ifndef NDEBUG
+    probe::detail::SetBudgetForTest({.unionBytes = 200, .channelBytes = 400});
+    const QString clientPath = FreshClientLog();
+    const QString unionPath = FreshUnionLog();
+
+    probe::Append(probe::Channel::Client, Line(100));
+    probe::Append(probe::Channel::Client, Line(100));
+
+    QCOMPARE(ReadAll(unionPath).count(probe::detail::CapMessage(200)), 1);
+    QVERIFY(!ReadAll(clientPath).contains(probe::detail::CapMessage(400)));
+
+    const qint64 unionSize = QFileInfo(unionPath).size();
+
+    probe::Append(probe::Channel::Client, QStringLiteral("after-the-union-capped"));
+
+    QVERIFY(ReadAll(clientPath).contains(QStringLiteral("after-the-union-capped")));
+    QCOMPARE(QFileInfo(unionPath).size(), unionSize);
+
+    probe::Append(probe::Channel::Client, Line(100));
+
+    QCOMPARE(ReadAll(clientPath).count(probe::detail::CapMessage(400)), 1);
     QCOMPARE(QFileInfo(unionPath).size(), unionSize);
 #else
     QSKIP("probe recording is compiled out of Release builds");
