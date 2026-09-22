@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.39.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.38.0...v1.39.0) (2026-09-22)
+
+
+* make the client log cover a whole turnaround ([#182](https://github.com/brunofgmag/gsx-integrator-client/issues/182)) ([c688064](https://github.com/brunofgmag/gsx-integrator-client/commit/c6880641751aa6586315bdbac32f30034cbf2b31))
+
+
+### Features
+
+* **probe:** make the client log cover a whole turnaround ([22d924e](https://github.com/brunofgmag/gsx-integrator-client/commit/22d924eea3ef04b94d30399961e6bf6d017f5e41)) ([c688064](https://github.com/brunofgmag/gsx-integrator-client/commit/c6880641751aa6586315bdbac32f30034cbf2b31))
+
 ## [1.38.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.37.1...v1.38.0) (2026-09-18)
 
 
