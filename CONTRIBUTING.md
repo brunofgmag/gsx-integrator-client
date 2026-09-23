@@ -1,26 +1,30 @@
 # Contributing
 
-Thanks for your interest in the project. The contribution that helps most right now is support for a new aircraft. The automation core, the UI and the GSX integration are in place; what limits who can use the app is the list of supported aircraft. If you want to change something outside aircraft support, open an issue first so we can talk about it before you write code.
+The contribution that helps most right now is support for a new aircraft. The automation, the UI and the GSX integration are done; the aircraft list is what limits who can use the app. For anything else, open an issue first so we can talk it over before you write code.
 
-## Building the project
+## Building
 
 You need:
 
 - Visual Studio 2022 with the "Desktop development with C++" workload
-- Qt 6.8 or newer, kit `msvc2022_64` (MinGW is not supported)
-- The MSFS 2024 SDK, with `MSFS2024_SDK` or `MSFS_SDK` set in the environment
+- Qt 6.8 or newer, kit `msvc2022_64`
+- The MSFS 2024 SDK, with `MSFS2024_SDK` or `MSFS_SDK` set
 - CMake 3.21 or newer
+
+MSVC 2022 x64 is the only supported toolchain. MinGW configures, but only as an experimental cross-compile path.
 
 ```powershell
 .\build.ps1 -Config Release
 .\run-tests.ps1
 ```
 
-After cloning, run the CMake configure once (or `git config core.hooksPath .githooks`) so the git hooks take effect. The pre-commit hook checks Conventional Commits and runs a Release build with tests before every commit.
+`build.ps1 -RunTests` builds and tests in one go. `run-tests.ps1 -Filter <name>` runs a single test.
 
-## How the code is organized
+The CMake configure step installs the git hooks (or run `git config core.hooksPath .githooks` yourself). The commit-msg hook enforces Conventional Commits. The pre-commit hook runs a full Release build with tests whenever a commit touches `src/`, `tests/`, `cmake/`, `tools/` or the build files.
 
-The app follows MVVM with a layered core:
+## Code layout
+
+MVVM over a layered core:
 
 ```
 src/
@@ -31,37 +35,65 @@ src/
 └── qml/             views only: binding, layout, animation
 ```
 
-The turnaround workflow lives in the domain and drives everything through interfaces. It asks the active `Aircraft` what state the plane is in and tells it what fuel and load to set. An aircraft adapter is the piece that translates those questions into the LVars and SimVars of one specific airplane. You should not need to touch the domain, the workflow or the UI to add an aircraft.
+The turnaround workflow lives in the domain and works through interfaces. It asks the active `Aircraft` what state the airplane is in and tells it what fuel and load to set. An aircraft adapter translates those calls into one airplane's LVars and SimVars. Adding an aircraft should not touch the domain, the workflow or the UI.
 
 ## Adding an aircraft
 
-Every airplane has a folder of its own under `src/infrastructure/aircraft/`, and several of those adapters are worth reading side by side with this section, because they solve the loading problem in different ways. `TfdiMd11.cpp` drives the airplane's own EFB: the setters store targets and `OnSlowTick` commits them to the EFB LVars. `IFly737Max.cpp` rides on top of GSX, letting the truck fill the native tanks while the adapter only writes payload into the native stations. `FenixA32x.cpp` talks to the Fenix EFB over its own HTTP client, and `Pmdg777.cpp` writes fuel and payload through the PMDG tablet over the shared CommBus bridge. Read the one closest to your airplane.
+Start by reading the adapter closest to your airplane. They solve loading in different ways:
 
-### 1. Create the adapter
+- `tfdi/TfdiMd11.cpp` drives the airplane's own EFB. The setters stage targets and a slow rule writes them to the EFB LVars.
+- `ifly/IFly737Max.cpp` lets the GSX truck fill the native tanks and only writes payload into the native stations.
+- `fenix/FenixA32x.cpp` talks to the Fenix EFB through its GraphQL client.
+- `pmdg/Pmdg777.cpp` writes fuel and payload through the PMDG tablet over the shared CommBus bridge.
 
-Add `YourAircraft.h` and `YourAircraft.cpp` under `src/infrastructure/aircraft/yourvendor/`, a folder of its own named after the vendor in lowercase, implementing the `Aircraft` interface from `src/domain/ports/Aircraft.h`. The folder is per vendor, not per airplane, so one vendor with several airplanes gets one folder: `fss/` holds the 727 and the E-Jets, and `pmdg/` holds the 737 and the 777 side by side. The interface has three groups of methods:
+All of them live under `src/infrastructure/aircraft/`.
 
-- Planned figures: `IsFlightPlanLoaded`, `GetPlannedFuelKg`, `GetPlannedZfwKg`, `GetPlannedPassengers` and `GetEmptyZfwKg`. These report what the airplane's own systems know about the flight.
-- Current figures: `GetCurrentFuelKg`, `SetCurrentFuelKg`, `GetCurrentZfwKg` and `SetCurrentZfwKg`. The workflow calls the setters while GSX refuels and boards.
-- State and capabilities: `IsPowered`, `IsEngineRunning`, `IsParkingBrakeSet`, `IsReadyToPush`, `IsReadyToDeboard`, `SupportsStairsOrJetways`, and `GetRefuelMethod`/`GetBoardMethod`, which tell the workflow how the airplane wants to be loaded. Ground equipment is optional and defaults to off: implement `SupportsChocksControl`/`SetChocks`, `SupportsGroundPowerControl`/`SetGroundPower` and `GetGroundPowerStatus` only if your airplane drives its own chocks or external power, and `CloseAllDoors` if you manage the doors yourself. Anything with a default can be left alone.
+### 1. Write the adapter
 
-The refuel and board methods decide who owns the fuel and the payload during the GSX service. `Self` means the airplane loads itself all at once through its own systems, like the MD-11's EFB or the A340's MCDU uplink. The client delivers the target once and the progress bar follows the counter GSX animates. `Client` means the client writes the value itself, tick by tick, at the rate from the settings. The iFly boards this way: its `SetCurrentZfwKg` is what actually fills the payload stations, so anything else would send the airplane out empty. Fuel has a third option, `Gsx`, for airplanes where the truck pumps the native tanks directly, as on the iFly. The client writes nothing, `SetCurrentFuelKg` can be a no-op, and the progress bar mirrors the real fuel quantity. There is no boarding equivalent because GSX never loads payload itself; someone always has to write the weight, either the airplane or the client.
+Create `YourAircraft.h` and `YourAircraft.cpp` in `src/infrastructure/aircraft/<vendor>/`, one lowercase folder per vendor (`fss/` holds both the 727 and the E-Jets, `pmdg/` both the 737 and the 777). The class implements `Aircraft` from `src/domain/ports/Aircraft.h`.
 
-The weight setters have the same freedom. The MD-11 turns `SetCurrentZfwKg` into an EFB target; the iFly writes the value into the native payload stations, split in proportion to the default station loads from `flight_model.cfg` so the CG lands somewhere sensible. The FSS 727 shows the third shape: its fuel goes in as a fraction of tank capacity rather than a weight, because that is the only surface the airplane offers, and its payload is spread over the cargo stations in proportion to the capacities its own EFB uses, leaving the crew seats alone. Use whatever surface the airplane gives you, and if you believe the airplane manages its own weights, test it in the sim first.
+The interface falls into four groups. Every method with a default body can be left alone.
 
-`ConsumeSmartSwitch` is the cockpit "go ahead" control. Implement it as an edge detector: return true once when the switch leaves its resting position, then false until it comes back and moves again. A spring-loaded switch needs no write-back (iFly); a latching one can be reset by writing the rest value (MD-11). The state machine polls it once per tick, and the active phase decides what a press means: start loading while the turnaround holds at "Requesting fuel", confirm the engine start during pushback, begin the next flight after the turnaround ends.
+- Planned figures: `IsFlightPlanLoaded`, `GetPlannedFuelKg`, `GetPlannedZfwKg`, `GetPlannedPassengers`, `GetEmptyZfwKg`. What the airplane's own systems know about the flight. Override `RequiresEfbFlightPlan` to return true if the turnaround should wait at "Waiting for flight plan" until the pilot loads the plan in the aircraft.
+- Current figures: `GetCurrentFuelKg`, `SetCurrentFuelKg`, `GetCurrentZfwKg`, `SetCurrentZfwKg`. The workflow calls the setters while GSX refuels and boards.
+- State: `IsPowered`, `IsEngineRunning`, `IsParkingBrakeSet`, `IsHeldInPlace`, `IsReadyToPush`, `IsReadyToDeboard`, `IsCargoVariant`, `SupportsStairsOrJetways`, `CompletesPushbackViaInterruptMenu`, `OnLoadingStarted`, `ConsumeSmartSwitch`.
+- Loading and ground equipment: `GetRefuelMethod` and `GetBoardMethod` say how the airplane wants to be loaded. Chocks, ground power and doors are optional and off by default: implement `SupportsChocksControl`/`SetChocks`, `SupportsGroundPowerControl`/`SetGroundPower`/`GetGroundPowerStatus` or `CloseAllDoors` only if the airplane drives them itself.
 
-`OnTick` runs every second and `OnSlowTick` every four. Use them for polling and cheap housekeeping. The MD-11 commits EFB targets on `OnSlowTick` because the aircraft applies weight changes with a delay.
+#### Refuel and board methods
 
-### 2. Talk to the sim through VariableGateway
+These decide who owns fuel and payload during the GSX service:
 
-The adapter reads and writes LVars and SimVars through the `VariableGateway` it receives in the constructor. One thing to know before you write predicates: a variable read returns its registered default until the first value actually arrives from the simulator. Pick defaults so your predicates fail safe during that window. A readiness check should read "not ready" while data is still missing, never "ready".
+- `Self`: the airplane loads everything at once through its own systems, like the MD-11's EFB or the A340's MCDU uplink. The client hands over the target once, and the progress bar follows the counter GSX animates.
+- `Client`: the client writes the value tick by tick, at the rate from the settings. The iFly boards this way, because its `SetCurrentZfwKg` is what actually fills the payload stations. Anything else would send it out empty.
+- `Gsx` (fuel only): the truck pumps the native tanks, as on the iFly. The client writes nothing, `SetCurrentFuelKg` can stay a no-op, and the progress bar mirrors the real fuel quantity.
 
-The same window bites writes that are computed from a read. The iFly refuses to touch the payload stations until `HasReceivedAVar` confirms `EMPTY WEIGHT` has arrived, because subtracting a default of zero would turn the entire ZFW into payload. If your setter does arithmetic on a sim variable, guard it the same way.
+There is no `Gsx` for boarding because GSX never loads payload itself. Either the airplane or the client has to write the weight.
+
+The weight setters can use whatever surface the airplane offers. The MD-11 turns `SetCurrentZfwKg` into an EFB target. The iFly splits the value over the native payload stations in proportion to the default station loads from `flight_model.cfg`, so the CG lands somewhere sensible. The FSS 727 sets fuel as a fraction of tank capacity, the only surface it has, and spreads payload over the cargo stations in proportion to the capacities its EFB uses, leaving the crew seats alone. If you think the airplane manages its own weights, check it in the sim first.
+
+#### Smart switch
+
+`ConsumeSmartSwitch` reads the cockpit "go ahead" control. It returns true once when the switch leaves its resting position, then false until the switch comes back and moves again. The `SmartSwitch` helper in `src/infrastructure/aircraft/SmartSwitch.h` does this for you: give it the LVars, a predicate for "pressed", and a reset value for a latching switch (the MD-11). A spring-loaded switch needs no reset (the iFly). The state machine polls it once per tick, and the current phase decides what a press means: start loading at "Requesting fuel", confirm engine start during pushback, begin the next flight after the turnaround.
+
+#### Rules
+
+Work the airplane has to do on its own schedule, such as moving doors or committing EFB targets, goes into rules. A rule implements `AircraftRule` from `src/domain/ports/AircraftRule.h`, and the adapter returns its rules from `Rules()`. Put them in a `rules/` folder next to the adapter.
+
+- `Cadence()` picks when it runs: `Fast` every second (the default), `Slow` every four seconds. The MD-11 commits EFB targets on `Slow` because the airplane applies weight changes with a delay.
+- `Evaluate` returns `RuleVerdict::Pass()` or `RuleVerdict::Hold(ticks, reason)`. A fast rule that holds keeps the turnaround in its current phase for at most that many ticks, and a pilot action cancels the hold.
+- `Act` does the writing through the `VariableWriter` it receives.
+
+`Observe()` on the adapter runs every second before the rules, for polling and cheap housekeeping.
+
+### 2. Read and write through VariableGateway
+
+The adapter reads and writes LVars and SimVars through the `VariableGateway` it gets in its constructor. A read returns its registered default until the first real value arrives from the simulator, so pick defaults that fail safe: a readiness check must say "not ready" while data is missing, never "ready".
+
+Writes computed from a read have the same problem. The iFly won't touch the payload stations until `HasReceivedAVar` confirms `EMPTY WEIGHT` has arrived, because subtracting a default of zero would turn the whole ZFW into payload. Guard any setter that does arithmetic on a sim variable the same way.
 
 ### 3. Register the aircraft
 
-Detection is self-registered; there is no central list to edit. At the bottom of your `.cpp`, in an anonymous namespace, declare a descriptor and a registration:
+Detection registers itself; there is no central list. At the bottom of your `.cpp`, in an anonymous namespace, declare a descriptor and a registration:
 
 ```cpp
 namespace
@@ -84,20 +116,29 @@ namespace
 }
 ```
 
-The last three arguments are easy to leave out, because they have defaults and the code compiles without them. It fails in a test instead: the identifier and the short code have to be non-empty and unique across the whole registry, and the short code is also what sorts the aircraft in the settings list. `refuelBy` says who moves the fuel. `Gsx` lets the truck fill the tanks, `Self` means the airplane loads on its own, and `Client` means this adapter writes the fuel progressively. The screen reads it to decide whether that profile gets a fuel rate control.
+Don't drop the last three arguments. They have defaults, so the code compiles without them, but a test fails: the id and the short code must be non-empty and unique across the registry. The short code also sorts the aircraft in the settings list. `RefuelBy` tells the settings screen whether this profile gets a fuel rate control, with the same meaning as `GetRefuelMethod`.
 
-The creator receives an `AircraftContext` that bundles the `VariableGateway` and `AutomationStatus` most adapters need, along with the shared CommBus bridge. Most aircraft only use the gateway. One that speaks CommBus borrows `context.commBusBridge` instead of opening its own SimConnect connection, the way `Pmdg777.cpp` reaches the PMDG tablet.
+Matching is case-insensitive against the `TITLE` and `ATC MODEL` sim vars, using `Equals`, `StartsWith` or `Contains`. An ATC MODEL match scores 4, a title match 2, and the highest score wins; a tie goes to the name that sorts first. To tell variants apart, use the creator, the way the MD-11 detects its freighter.
 
-Matching is case insensitive and runs against the `TITLE` and `ATC MODEL` sim vars with `Equals`, `StartsWith` and `Contains`. An ATC MODEL match scores 4 points, a title match scores 2, and the descriptor with the highest score wins. Use the factory callback to tell variants apart, the way the MD-11 detects its freighter.
+The creator gets an `AircraftContext` with the `VariableGateway`, the `AutomationStatus`, the shared CommBus bridge and the GSX gateway. Most aircraft only need the gateway. One that speaks CommBus borrows `context.commBusBridge` instead of opening its own SimConnect connection, as `Pmdg777.cpp` does to reach the PMDG tablet.
 
-### 4. Register the files in the build
+If the airplane needs `refueling = 0` in its GSX profile, add it to `kProfileFolders` in `src/infrastructure/gsx/GsxAircraftProfile.cpp`, or a profile with `refueling = 1` goes unnoticed and the GSX truck fills the tanks behind the client's back.
 
-Add both files to `cmake/Sources.cmake`. The source list is explicit on purpose; there is no GLOB. Aircraft code compiles directly into the app target. Do not create a static library for it. Detection registers itself at link time, so the aircraft also has to be listed in the test targets that exercise detection and the runtime integrator service in `cmake/Tests.cmake`, or those tests will not see it.
+### 4. Add the files to the build
+
+List every new file in `cmake/Sources.cmake`. The lists are explicit; there is no glob. Aircraft code compiles straight into the app target, never into a static library, because registration is a static object nobody references, and the MSVC linker silently drops it from a library: the aircraft builds, runs and is never detected.
+
+The same goes for tests. In `cmake/Tests.cmake`, add the files to `gsxi-aircraft-detection-tests` and `gsxi-runtime-integrator-service-tests`, which compile every aircraft, and give the aircraft a test target of its own like `gsxi-tfdi-md11-tests`.
 
 ### 5. Test it
 
-Spawn in the aircraft and check the log for the detection line, then fly a full turnaround: refuel, board, push. Logic that does not depend on the sim belongs in unit tests under `tests/`; `run-tests.ps1` runs them locally and CI runs them again on every pull request.
+Unit-test everything that doesn't need the sim, under `tests/`. `run-tests.ps1` runs the suite locally and CI runs it on every pull request.
+
+Then load the aircraft in the sim, check the log for the detection line, and fly a full turnaround: refuel, board, push.
 
 ## Conventions
 
-C++20. Collaborators are passed as non-owning raw pointers. The domain stays free of Qt and SimConnect. The `LOG_INFO`/`LOG_WARN`/`LOG_ERROR` macros belong to infrastructure and application code only. Commits follow Conventional Commits, enforced by the pre-commit hook.
+- C++20.
+- Collaborators are passed as non-owning raw pointers.
+- The domain knows nothing about Qt or SimConnect. The `LOG_INFO`/`LOG_WARN`/`LOG_ERROR` macros are for infrastructure and application code only.
+- Commits follow Conventional Commits.
