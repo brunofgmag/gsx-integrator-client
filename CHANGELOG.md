@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.40.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.39.2...v1.40.0) (2026-09-25)
+
+
+* refuel and board together with per-aircraft fuel rates ([#190](https://github.com/brunofgmag/gsx-integrator-client/issues/190)) ([9a48f21](https://github.com/brunofgmag/gsx-integrator-client/commit/9a48f21d8e54b5d1f90101414a8fd4aa2bb04173))
+
+
+### Features
+
+* **turnaround:** refuel and board together with per-aircraft fuel rates ([5839423](https://github.com/brunofgmag/gsx-integrator-client/commit/58394238a3dd0ef3e663f9e53b65e7b088cdf9e3)) ([9a48f21](https://github.com/brunofgmag/gsx-integrator-client/commit/9a48f21d8e54b5d1f90101414a8fd4aa2bb04173))
+
 ## [1.39.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.39.1...v1.39.2) (2026-09-25)
 
 
