@@ -1731,28 +1731,28 @@
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="124"/>
-        <source>flick %1 to either side</source>
-        <translation>flick %1 to either side</translation>
+        <source>flick %1 on the aircraft to either side</source>
+        <translation>flick %1 on the aircraft to either side</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="126"/>
-        <source>turn %1 on</source>
-        <translation>turn %1 on</translation>
+        <source>turn on %1 on the aircraft</source>
+        <translation>turn on %1 on the aircraft</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="128"/>
-        <source>press %1</source>
-        <translation>press %1</translation>
+        <source>press %1 on the aircraft</source>
+        <translation>press %1 on the aircraft</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="135"/>
-        <source>flip %1</source>
-        <translation>flip %1</translation>
+        <source>flip %1 on the aircraft</source>
+        <translation>flip %1 on the aircraft</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="138"/>
-        <source>flip %1 to %2</source>
-        <translation>flip %1 to %2</translation>
+        <source>flip %1 on the aircraft to %2</source>
+        <translation>flip %1 on the aircraft to %2</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="149"/>

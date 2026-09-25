@@ -23,6 +23,7 @@ public:
     void Tick();
     void TickSlowRules();
     void AttachAircraft(Aircraft* aircraft);
+    void AttachFlightPlanSource(FlightPlanSource* flightPlanSource);
     void ObserveRules();
     void ObserveSlowRules();
     void Reset();

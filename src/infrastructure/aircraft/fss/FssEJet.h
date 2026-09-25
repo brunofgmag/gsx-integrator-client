@@ -70,6 +70,7 @@ public:
 private:
     [[nodiscard]] bool IsBeaconOn() const;
     [[nodiscard]] bool AreChocksSet() const;
+    void KeepClearingCallRamp();
 
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;
@@ -85,6 +86,7 @@ private:
     double lastFuelKg_ = -1.0;
     double lastZfwKg_ = -1.0;
     bool passengersReported_ = false;
+    int callRampClearingTicksLeft_ = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSSEJET_H

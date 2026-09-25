@@ -16,6 +16,7 @@ protected:
     [[nodiscard]] std::optional<TurnaroundTransition> EvaluatePhase(TurnaroundContext& ctx) override;
 
 private:
+    [[nodiscard]] static bool AwaitsLatestFlightPlan(TurnaroundContext& ctx);
     static void CaptureFlightPlan(TurnaroundContext& ctx);
     static void NoteCrewLeftOutOfThePlan(TurnaroundContext& ctx);
 };

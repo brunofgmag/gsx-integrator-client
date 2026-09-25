@@ -55,11 +55,22 @@ void SimConnectVariableGateway::ForgetTextSlots()
             continue;
         }
 
+        const bool wasRegistered = slot.registered;
         slot.received = false;
         slot.registered = false;
         slot.text[0] = '\0';
 
-        if (hSimConnect_ != nullptr && !RegisterSlot(slot))
+        if (hSimConnect_ == nullptr)
+        {
+            continue;
+        }
+
+        if (wasRegistered)
+        {
+            (void)SimConnect_ClearDataDefinition(hSimConnect_, slot.defineId);
+        }
+
+        if (!RegisterSlot(slot))
         {
             LOG_WARN("Failed to re-register variable '%s'", slot.datumName.c_str());
         }

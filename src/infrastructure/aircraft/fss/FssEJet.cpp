@@ -34,6 +34,7 @@ namespace
 
     constexpr auto kCallRampActiveLVar = "FSS_EXX_AUDIO_TEL_RAMP_ACTIVE";
     constexpr double kCallRampInactive = 0.0;
+    constexpr int kCallRampClearingTicks = 5;
 
     constexpr auto kGpuStateLVar = "FSS_EXX_EXT_GPU_STATE";
     constexpr double kGpuStateHidden = -1.0;
@@ -428,9 +429,32 @@ bool FssEJet::ConsumeSmartSwitch()
     if (consumed)
     {
         variableGateway_->SetLVar(kCallRampActiveLVar, kCallRampInactive);
+        callRampClearingTicksLeft_ = kCallRampClearingTicks;
+
+        return true;
     }
 
-    return consumed;
+    KeepClearingCallRamp();
+
+    return false;
+}
+
+void FssEJet::KeepClearingCallRamp()
+{
+    if (callRampClearingTicksLeft_ == 0)
+    {
+        return;
+    }
+
+    --callRampClearingTicksLeft_;
+
+    if (!variableGateway_->HasReceivedLVar(kCallRampActiveLVar)
+        || variableGateway_->GetLVar(kCallRampActiveLVar, kCallRampInactive) <= kCallRampInactive)
+    {
+        return;
+    }
+
+    variableGateway_->SetLVar(kCallRampActiveLVar, kCallRampInactive);
 }
 
 std::optional<GroundPowerStatus> FssEJet::GetGroundPowerStatus() const

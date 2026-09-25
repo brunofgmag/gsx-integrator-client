@@ -226,6 +226,8 @@ set(APP_SOURCES
         src/infrastructure/probe/ProbeWriteMemo.h
         src/infrastructure/simbrief/SimbriefClient.cpp
         src/infrastructure/simbrief/SimbriefClient.h
+        src/infrastructure/simbrief/SimbriefFlightPlanSource.cpp
+        src/infrastructure/simbrief/SimbriefFlightPlanSource.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp
         src/infrastructure/simbrief/SimbriefOfpParser.h
         src/infrastructure/settings/QSettingsRepository.cpp
@@ -253,6 +255,7 @@ set(APP_SOURCES
         src/infrastructure/gsx/GsxMenuNavigator.cpp
         src/infrastructure/gsx/GsxMenuNavigator.h
         src/domain/ports/DomainLogger.h
+        src/domain/ports/FlightPlanSource.h
         src/infrastructure/logging/QtDomainLogger.cpp
         src/infrastructure/logging/QtDomainLogger.h
         src/application/sim/SessionReadiness.h

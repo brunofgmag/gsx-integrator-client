@@ -85,6 +85,8 @@ struct TurnaroundData
     CabinServiceProgress cleaning;
     int cabinWaitIntervals = 0;
     bool flightPlanRequested = false;
+    bool flightPlanRefused = false;
+    bool latestFlightPlanRequested = false;
     bool repositionRequested = false;
     bool repositionCompleted = false;
 
