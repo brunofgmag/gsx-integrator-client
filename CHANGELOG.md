@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.39.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.39.0...v1.39.1) (2026-09-25)
+
+
+* name the smart switch control in tips and advisories ([#186](https://github.com/brunofgmag/gsx-integrator-client/issues/186)) ([b745d39](https://github.com/brunofgmag/gsx-integrator-client/commit/b745d39c0516016fbdb28b977d812eb556083c5f))
+
+
+### Bug Fixes
+
+* **ui:** name the smart switch control in tips and advisories ([c054cd1](https://github.com/brunofgmag/gsx-integrator-client/commit/c054cd1a7a55e5dd125a397c5e811c39dd66ebe6)) ([b745d39](https://github.com/brunofgmag/gsx-integrator-client/commit/b745d39c0516016fbdb28b977d812eb556083c5f))
+
 ## [1.39.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.38.0...v1.39.0) (2026-09-22)
 
 
