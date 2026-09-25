@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <span>
@@ -23,6 +24,8 @@ using namespace simvars;
 
 namespace
 {
+    constexpr double kRecommendedFuelRateKgs = 0.0;
+
     constexpr auto kElecPwrAcAvailLVar = "FSS_EXX_ELEC_PWR_AC_AVAIL";
     constexpr auto kBeaconSwitchLVar = "FSS_EXX_OVHD_EXLT_RED_BCN_SWITCH";
     constexpr auto kParkBrakeLeverLVar = "FSS_EXX_PARKBRAKE_BV_LEVER";
@@ -64,11 +67,9 @@ namespace
 
     constexpr auto kPoundsUnit = "pounds";
     constexpr auto kGallonsUnit = "gallons";
-    constexpr auto kPercentOver100Unit = "percent over 100";
     constexpr auto kSimFuelWeightPerGallon = "FUEL WEIGHT PER GALLON";
     constexpr auto kSimUnusableFuelTotal = "UNUSABLE FUEL TOTAL QUANTITY";
     constexpr std::array kTankCapacities = {"FUELSYSTEM TANK CAPACITY:1", "FUELSYSTEM TANK CAPACITY:2"};
-    constexpr std::array kTankLevels = {"FUELSYSTEM TANK LEVEL:1", "FUELSYSTEM TANK LEVEL:2"};
 
     constexpr auto kSimPayloadStationPrefix = "PAYLOAD STATION WEIGHT:";
     constexpr int kZoneAOrDeckFwdStation = 3;
@@ -89,6 +90,10 @@ namespace
     constexpr auto kPlanWeightZoneBLVar = "FSS_EXX_PLANE_SETUP_WEIGHT_ZONE_B";
     constexpr auto kPlanWeightCargoFwdLVar = "FSS_EXX_PLANE_SETUP_WEIGHT_CARGO_FWD";
     constexpr auto kPlanWeightCargoAftLVar = "FSS_EXX_PLANE_SETUP_WEIGHT_CARGO_AFT";
+    constexpr auto kEfbPlanFuelLeftLVar = "FSS_EXX_PLANE_SETUP_WEIGHT_FUEL_L";
+    constexpr auto kEfbPlanFuelRightLVar = "FSS_EXX_PLANE_SETUP_WEIGHT_FUEL_R";
+    constexpr double kEfbPlanFuelMissing = 0.0;
+    constexpr double kEfbPlanFuelToleranceKg = 5.0;
 
     constexpr double kMaxPassengersE190 = 114.0;
     constexpr double kMaxPassengersE195 = 124.0;
@@ -324,7 +329,51 @@ bool FssEJet::IsFlightPlanLoaded() const
 {
     return status_->flightPlanStatus == FlightPlanStatus::Ready
         && status_->plannedPayloadKg.has_value()
-        && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit);
+        && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit)
+        && HasTheOfpFuelPlanOnTheEfb();
+}
+
+bool FssEJet::FlightPlanDiffersFromTheOfp() const
+{
+    const std::optional<bool> matched = CompareTheEfbFuelPlanWithTheOfp();
+
+    return matched.has_value() && !*matched;
+}
+
+bool FssEJet::HasTheOfpFuelPlanOnTheEfb() const
+{
+    return CompareTheEfbFuelPlanWithTheOfp().value_or(false);
+}
+
+std::optional<bool> FssEJet::CompareTheEfbFuelPlanWithTheOfp() const
+{
+    if (!variableGateway_->HasReceivedLVar(kEfbPlanFuelLeftLVar)
+        || !variableGateway_->HasReceivedLVar(kEfbPlanFuelRightLVar))
+    {
+        efbFuelPlanMatched_.reset();
+
+        return std::nullopt;
+    }
+
+    const double efbFuelKg = variableGateway_->GetLVar(kEfbPlanFuelLeftLVar, kEfbPlanFuelMissing)
+        + variableGateway_->GetLVar(kEfbPlanFuelRightLVar, kEfbPlanFuelMissing);
+    if (efbFuelKg <= kEfbPlanFuelMissing)
+    {
+        efbFuelPlanMatched_.reset();
+
+        return std::nullopt;
+    }
+
+    const double ofpFuelKg = status_->plannedFuelKg;
+    const bool matched = std::abs(efbFuelKg - ofpFuelKg) <= kEfbPlanFuelToleranceKg;
+    if (efbFuelPlanMatched_ != matched)
+    {
+        efbFuelPlanMatched_ = matched;
+        LOG_INFO("EFB fuel plan %.0f kg %s the OFP %.0f kg", efbFuelKg, matched ? "matches" : "differs from",
+                 ofpFuelKg);
+    }
+
+    return matched;
 }
 
 double FssEJet::GetPlannedFuelKg() const
@@ -365,30 +414,6 @@ double FssEJet::GetFuelCapacityKg() const
     const double usableGallons = std::max(*capacityGallons - *unusableGallons, 0.0);
 
     return weight::LbToKg(usableGallons * *poundsPerGallon);
-}
-
-void FssEJet::SetCurrentFuelKg(const double fuelKg)
-{
-    const std::optional<double> poundsPerGallon = PoundsPerGallon(*variableGateway_);
-    const std::optional<double> capacityGallons = TankCapacityGallons(*variableGateway_);
-    const std::optional<double> unusableGallons = UnusableFuelGallons(*variableGateway_);
-    if (!poundsPerGallon.has_value() || *poundsPerGallon <= 0.0
-        || !capacityGallons.has_value() || *capacityGallons <= 0.0
-        || !unusableGallons.has_value()
-        || fuelKg == lastFuelKg_)
-    {
-        return;
-    }
-
-    lastFuelKg_ = fuelKg;
-
-    const double targetGallons = weight::KgToLb(fuelKg) / *poundsPerGallon;
-    const double level = std::clamp((targetGallons + *unusableGallons) / *capacityGallons, 0.0, 1.0);
-
-    for (const char* tankLevel : kTankLevels)
-    {
-        variableGateway_->SetAVar(tankLevel, kPercentOver100Unit, level);
-    }
 }
 
 double FssEJet::GetCurrentZfwKg() const
@@ -599,7 +624,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "FSS Embraer E190"}
         },
-        &CreateFssE190, "fss-e190", "E190", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::Press}
+        &CreateFssE190, "fss-e190", "E190", RefuelBy::Gsx, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::Press}, kRecommendedFuelRateKgs
     };
 
     const AircraftDescriptor kFssE195Descriptor{
@@ -607,7 +632,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "FSS Embraer E195"}
         },
-        &CreateFssE195, "fss-e195", "E195", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::Press}
+        &CreateFssE195, "fss-e195", "E195", RefuelBy::Gsx, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::Press}, kRecommendedFuelRateKgs
     };
 
     [[maybe_unused]] const AircraftRegistration kFssE190Registration{kFssE190Descriptor};

@@ -65,6 +65,7 @@ public:
     [[nodiscard]] virtual bool IsJetwayOrStairsOperating() const = 0;
     [[nodiscard]] virtual bool IsServiceVehicleActive() const = 0;
     [[nodiscard]] virtual bool IsSimbriefLoaded() const = 0;
+    [[nodiscard]] virtual int GetServedSimbriefGeneration() const = 0;
     [[nodiscard]] virtual std::string GetSimbriefRefusal() const = 0;
     [[nodiscard]] virtual bool IsAircraftOnGround() const = 0;
     [[nodiscard]] virtual double GetGroundSpeedKnots() const = 0;
@@ -76,6 +77,7 @@ public:
     [[nodiscard]] virtual bool WasGsxDownSinceLastObserve() const = 0;
 
     virtual void TakeOverFuelAndPayload() = 0;
+    virtual void OnTurnaroundTurned() = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_GSXGATEWAY_H

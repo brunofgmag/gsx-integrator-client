@@ -9,6 +9,12 @@
 namespace
 {
     constexpr auto kRunFolder = "C:/Users/pilot/AppData/Local/probe/20260922-101500-000-42";
+    constexpr double kClientRecommendedKgs = 17.0;
+    constexpr int kGlobalManualIndex = 1;
+    constexpr int kProfileGlobalIndex = 0;
+    constexpr int kProfileRecommendedIndex = 1;
+    constexpr int kProfileManualIndex = 2;
+    constexpr int kClientProfileIndex = 2;
     constexpr auto kNativeRunFolder = R"(C:\Users\pilot\AppData\Local\probe\20260922-101500-000-42)";
 
     std::vector<AircraftProfileInfo> TestProfileInfos()
@@ -16,7 +22,7 @@ namespace
         return {
             {"toliss-a340", "A346", "ToLiss A340-600", RefuelBy::Self},
             {"ifly-737max8", "B38M", "iFly 737 MAX 8", RefuelBy::Gsx},
-            {"fictional-client", "CLI1", "Client Fueled Test Aircraft", RefuelBy::Client},
+            {"fictional-client", "CLI1", "Client Fueled Test Aircraft", RefuelBy::Client, kClientRecommendedKgs},
         };
     }
 }
@@ -80,6 +86,15 @@ private slots:
     static void setProfileAsGlobalDefaultCopiesValues();
     static void setProfileAsGlobalDefaultSkipsFuelForNonClient();
     static void applyProfileToAllProfilesCopiesDraft();
+    static void callBoardingEarlyDefaultsOffAndPersistsImmediately();
+    static void profileCallBoardingEarlyIsBufferedUntilSave();
+    static void theGlobalFuelRateModeDefaultsToRecommendedAndIsSaved();
+    static void anEmptyGlobalRateIsAcceptedOutsideManual();
+    static void theProfileFuelRateModeIsSavedWithTheDraft();
+    static void anEmptyProfileRateIsAcceptedOutsideManual();
+    static void aProfileMirroringTheGlobalShowsTheGlobalMode();
+    static void theProfileShowsTheAircraftRecommendedRateInTheDisplayUnit();
+    static void setProfileAsGlobalDefaultCopiesTheFuelRateMode();
 };
 
 void SettingsViewModelTest::loadsAndAppliesStoredSettings()
@@ -480,6 +495,7 @@ void SettingsViewModelTest::rejectsNonNumericFuelRate()
     FakeIntegratorService service;
     SettingsViewModel viewModel(&repository, &service);
 
+    viewModel.SetFuelRateModeIndex(kGlobalManualIndex);
     viewModel.SetFuelRateText(QStringLiteral("abc"));
 
     QVERIFY(!viewModel.save());
@@ -493,6 +509,7 @@ void SettingsViewModelTest::rejectsNonPositiveFuelRate()
     FakeIntegratorService service;
     SettingsViewModel viewModel(&repository, &service);
 
+    viewModel.SetFuelRateModeIndex(kGlobalManualIndex);
     viewModel.SetFuelRateText(QStringLiteral("0"));
 
     QVERIFY(!viewModel.save());
@@ -522,6 +539,7 @@ void SettingsViewModelTest::canSaveReflectsValidationState()
     FakeSettingsRepository repository;
     FakeIntegratorService service;
 
+    repository.stored.fuelRateMode = FuelRateMode::Manual;
     repository.stored.fuelRateKgs = 60.0;
 
     SettingsViewModel viewModel(&repository, &service);
@@ -951,6 +969,7 @@ void SettingsViewModelTest::invalidClientProfileFuelRateBlocksSave()
 
     viewModel.SetSelectedProfileIndex(2);
     viewModel.SetProfileUseGlobal(false);
+    viewModel.SetProfileFuelRateModeIndex(kProfileManualIndex);
     viewModel.SetProfileFuelRateText(QStringLiteral("zero"));
 
     QVERIFY(!viewModel.CanSave());
@@ -1029,6 +1048,221 @@ void SettingsViewModelTest::applyProfileToAllProfilesCopiesDraft()
     QVERIFY(!viewModel.GetProfileUseGlobal());
     QVERIFY(viewModel.GetProfileCallCleaning());
     QCOMPARE(repository.saveCalls, savesAfterConstruction);
+}
+
+void SettingsViewModelTest::callBoardingEarlyDefaultsOffAndPersistsImmediately()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+    const QSignalSpy changed(&viewModel, &SettingsViewModel::CallBoardingEarlyChanged);
+
+    QVERIFY(!viewModel.GetCallBoardingEarly());
+    QVERIFY(!service.appliedSettings.callBoardingEarly);
+
+    viewModel.SetCallBoardingEarly(true);
+
+    QVERIFY(viewModel.GetCallBoardingEarly());
+    QCOMPARE(repository.saveCalls, 1);
+    QVERIFY(repository.stored.callBoardingEarly);
+    QVERIFY(service.appliedSettings.callBoardingEarly);
+    QCOMPARE(changed.count(), 1);
+
+    viewModel.SetCallBoardingEarly(true);
+
+    QCOMPARE(repository.saveCalls, 1);
+}
+
+void SettingsViewModelTest::profileCallBoardingEarlyIsBufferedUntilSave()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    repository.stored.callBoardingEarly = true;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+    const int savesAfterConstruction = repository.saveCalls;
+
+    viewModel.SetSelectedProfileIndex(kClientProfileIndex);
+
+    QVERIFY(viewModel.GetProfileCallBoardingEarly());
+
+    viewModel.SetProfileCallBoardingEarly(false);
+
+    QVERIFY(viewModel.GetProfileCallBoardingEarly());
+
+    viewModel.SetProfileUseGlobal(false);
+
+    QVERIFY(viewModel.GetProfileCallBoardingEarly());
+
+    viewModel.SetProfileCallBoardingEarly(false);
+
+    QVERIFY(!viewModel.GetProfileCallBoardingEarly());
+    QVERIFY(viewModel.GetCallBoardingEarly());
+    QCOMPARE(repository.saveCalls, savesAfterConstruction);
+
+    QVERIFY(viewModel.save());
+
+    QVERIFY(!repository.stored.profiles.at("fictional-client").callBoardingEarly);
+    QVERIFY(repository.stored.callBoardingEarly);
+}
+
+void SettingsViewModelTest::theGlobalFuelRateModeDefaultsToRecommendedAndIsSaved()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+    const int savesAfterConstruction = repository.saveCalls;
+
+    QCOMPARE(viewModel.GetFuelRateModeIndex(), 0);
+    QVERIFY(!viewModel.IsFuelRateEditable());
+
+    viewModel.SetFuelRateModeIndex(kGlobalManualIndex);
+
+    QCOMPARE(viewModel.GetFuelRateModeIndex(), kGlobalManualIndex);
+    QVERIFY(viewModel.IsFuelRateEditable());
+    QCOMPARE(repository.saveCalls, savesAfterConstruction);
+
+    viewModel.SetFuelRateText(QStringLiteral("25"));
+
+    QVERIFY(viewModel.save());
+    QCOMPARE(repository.stored.fuelRateMode, FuelRateMode::Manual);
+    QCOMPARE(repository.stored.fuelRateKgs, 25.0);
+    QCOMPARE(service.appliedSettings.fuelRateMode, FuelRateMode::Manual);
+}
+
+void SettingsViewModelTest::anEmptyGlobalRateIsAcceptedOutsideManual()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    repository.stored.fuelRateKgs = 30.0;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+
+    viewModel.SetFuelRateText(QString());
+
+    QVERIFY(viewModel.CanSave());
+    QVERIFY(viewModel.save());
+    QCOMPARE(repository.stored.fuelRateMode, FuelRateMode::Recommended);
+    QCOMPARE(repository.stored.fuelRateKgs, 30.0);
+
+    viewModel.SetFuelRateModeIndex(kGlobalManualIndex);
+
+    QVERIFY(!viewModel.CanSave());
+    QCOMPARE(viewModel.GetValidationMessage(), QStringLiteral("Enter a valid fuel rate."));
+}
+
+void SettingsViewModelTest::theProfileFuelRateModeIsSavedWithTheDraft()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+
+    viewModel.SetSelectedProfileIndex(kClientProfileIndex);
+    viewModel.SetProfileUseGlobal(false);
+
+    QCOMPARE(viewModel.GetProfileFuelRateModeIndex(), kProfileRecommendedIndex);
+    QVERIFY(!viewModel.IsProfileFuelRateEditable());
+
+    viewModel.SetProfileFuelRateModeIndex(kProfileManualIndex);
+    viewModel.SetProfileFuelRateText(QStringLiteral("12.5"));
+
+    QVERIFY(viewModel.IsProfileFuelRateEditable());
+    QVERIFY(viewModel.save());
+    QCOMPARE(repository.stored.profiles.at("fictional-client").fuelRateMode, FuelRateMode::Manual);
+    QCOMPARE(repository.stored.profiles.at("fictional-client").fuelRateKgs, 12.5);
+
+    viewModel.SetProfileFuelRateModeIndex(kProfileGlobalIndex);
+
+    QVERIFY(!viewModel.IsProfileFuelRateEditable());
+    QVERIFY(viewModel.save());
+    QCOMPARE(repository.stored.profiles.at("fictional-client").fuelRateMode, FuelRateMode::Global);
+    QCOMPARE(repository.stored.profiles.at("fictional-client").fuelRateKgs, 12.5);
+}
+
+void SettingsViewModelTest::anEmptyProfileRateIsAcceptedOutsideManual()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+
+    viewModel.SetSelectedProfileIndex(kClientProfileIndex);
+    viewModel.SetProfileUseGlobal(false);
+    viewModel.SetProfileFuelRateText(QString());
+
+    QVERIFY(viewModel.CanSave());
+
+    viewModel.SetProfileFuelRateModeIndex(kProfileManualIndex);
+
+    QVERIFY(!viewModel.CanSave());
+    QCOMPARE(viewModel.GetValidationMessage(), QStringLiteral("Enter a valid fuel rate for CLI1."));
+
+    viewModel.SetProfileFuelRateModeIndex(kProfileGlobalIndex);
+
+    QVERIFY(viewModel.CanSave());
+    QVERIFY(viewModel.save());
+    QCOMPARE(repository.stored.profiles.at("fictional-client").fuelRateMode, FuelRateMode::Global);
+}
+
+void SettingsViewModelTest::aProfileMirroringTheGlobalShowsTheGlobalMode()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    repository.stored.fuelRateMode = FuelRateMode::Manual;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+
+    viewModel.SetSelectedProfileIndex(kClientProfileIndex);
+
+    QVERIFY(viewModel.GetProfileUseGlobal());
+    QCOMPARE(viewModel.GetProfileFuelRateModeIndex(), kProfileManualIndex);
+    QVERIFY(!viewModel.IsProfileFuelRateEditable());
+
+    viewModel.SetProfileFuelRateModeIndex(kProfileGlobalIndex);
+
+    QCOMPARE(viewModel.GetProfileFuelRateModeIndex(), kProfileManualIndex);
+
+    viewModel.SetProfileUseGlobal(false);
+
+    QCOMPARE(viewModel.GetProfileFuelRateModeIndex(), kProfileManualIndex);
+    QVERIFY(viewModel.IsProfileFuelRateEditable());
+}
+
+void SettingsViewModelTest::theProfileShowsTheAircraftRecommendedRateInTheDisplayUnit()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+
+    viewModel.SetSelectedProfileIndex(kClientProfileIndex);
+
+    QCOMPARE(viewModel.GetProfileRecommendedFuelRateText(), QStringLiteral("17"));
+
+    viewModel.SetWeightUnitMode(SettingsViewModel::Pounds);
+
+    QCOMPARE(viewModel.GetProfileRecommendedFuelRateText(), QStringLiteral("37"));
+
+    viewModel.SetSelectedProfileIndex(0);
+
+    QCOMPARE(viewModel.GetProfileRecommendedFuelRateText(), QStringLiteral("0"));
+}
+
+void SettingsViewModelTest::setProfileAsGlobalDefaultCopiesTheFuelRateMode()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+
+    viewModel.SetSelectedProfileIndex(kClientProfileIndex);
+    viewModel.SetProfileUseGlobal(false);
+    viewModel.SetProfileFuelRateModeIndex(kProfileManualIndex);
+    viewModel.SetProfileCallBoardingEarly(true);
+    viewModel.setProfileAsGlobalDefault();
+
+    QCOMPARE(viewModel.GetFuelRateModeIndex(), kGlobalManualIndex);
+    QVERIFY(viewModel.GetCallBoardingEarly());
+
+    viewModel.SetProfileUseGlobal(false);
+    viewModel.SetProfileFuelRateModeIndex(kProfileGlobalIndex);
+    viewModel.setProfileAsGlobalDefault();
+
+    QCOMPARE(viewModel.GetFuelRateModeIndex(), kGlobalManualIndex);
 }
 
 QTEST_APPLESS_MAIN(SettingsViewModelTest)

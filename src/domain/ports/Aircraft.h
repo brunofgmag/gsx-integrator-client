@@ -31,7 +31,9 @@ public:
     virtual void OnLoadingStarted() = 0;
 
     [[nodiscard]] virtual bool RequiresEfbFlightPlan() const { return false; }
+    [[nodiscard]] virtual bool AppliesTheEfbFlightPlanOnItsDeparturePage() const { return false; }
     [[nodiscard]] virtual bool IsFlightPlanLoaded() const = 0;
+    [[nodiscard]] virtual bool FlightPlanDiffersFromTheOfp() const { return false; }
     [[nodiscard]] virtual double GetPlannedFuelKg() const = 0;
     [[nodiscard]] virtual double GetPlannedZfwKg() const = 0;
     [[nodiscard]] virtual int GetPlannedPassengers() const = 0;

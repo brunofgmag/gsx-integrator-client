@@ -80,6 +80,20 @@ void GsxStateService::Reset()
     }
 }
 
+void GsxStateService::OnTurnaroundTurned()
+{
+    boarding_ = {};
+    deboarding_ = {};
+    boardingCargo_ = {};
+    deboardingCargo_ = {};
+
+    for (auto& track : states_ | std::views::values)
+    {
+        track.completed = false;
+        track.couatlDiedDuringRun = false;
+    }
+}
+
 bool GsxStateService::IsAvailable() const
 {
     return varManager_->GetLVar(kCouatlStarted) >= 1.0;
@@ -424,6 +438,16 @@ void GsxStateService::ReassertTakeovers() const
 bool GsxStateService::IsSimbriefLoaded() const
 {
     return varManager_->GetLVar(kSimbriefSuccess) >= 1.0;
+}
+
+int GsxStateService::GetServedSimbriefGeneration() const
+{
+    if (remote_ == nullptr)
+    {
+        return 0;
+    }
+
+    return remote_->simbriefGeneration;
 }
 
 std::string GsxStateService::GetSimbriefRefusal() const

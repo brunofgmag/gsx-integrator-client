@@ -142,6 +142,9 @@ private slots:
     static void completeBoardingPicksCompleteNowViaCargoEntry();
     static void completeBoardingMatchesThePassengerEntry();
     static void completeBoardingDoesNotRepeatThePickWhenASnapshotRepeatsTheMenu();
+    static void completeRefuelLeavesAServiceInProgressItDidNotOpenToThePilot();
+    static void completeBoardingLeavesAServiceInProgressItDidNotOpenToThePilot();
+    static void eachCompletionOnlyCompletesTheServiceItOpened();
     static void completePushbackPicksEntryWithoutInterruptTitle();
     static void staleRepositionClearedByServiceIntent();
     static void picksGsxChoiceDuringServiceIntent();
@@ -864,6 +867,94 @@ void GsxMenuNavigatorTest::completeBoardingDoesNotRepeatThePickWhenASnapshotRepe
 
     QCOMPARE(client.Count("menu.pick"), 2);
     QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 0);
+}
+
+void GsxMenuNavigatorTest::completeRefuelLeavesAServiceInProgressItDidNotOpenToThePilot()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.CompleteRefuel();
+
+    ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 0);
+
+    ShowMenu(state, "Activate Services at ZZZZ",
+             {"Request Deboarding", "Refueling: 10761 kg loaded", "Boarding passengers now"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 1);
+
+    ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 2);
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 0);
+}
+
+void GsxMenuNavigatorTest::completeBoardingLeavesAServiceInProgressItDidNotOpenToThePilot()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.CompleteBoarding();
+
+    ShowMenu(state, "Activate Services at ZZZZ",
+             {"Request Deboarding", "Refueling: 10761 kg loaded", "Prepare for Push-back and Departure"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 0);
+
+    ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 0);
+}
+
+void GsxMenuNavigatorTest::eachCompletionOnlyCompletesTheServiceItOpened()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.CompleteRefuel();
+    nav.CompleteBoarding();
+
+    ShowMenu(state, "Activate Services at ZZZZ",
+             {"Request Deboarding", "Refueling: 10761 kg loaded", "Boarding passengers now"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 1);
+
+    ShowMenu(state, "Activate Services at ZZZZ",
+             {"Request Deboarding", "Request Catering service", "Boarding passengers now"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 2);
+
+    ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 3);
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 0);
+
+    state.menu.shown = false;
+    nav.OnMenuChanged();
+
+    ShowMenu(state, "Service in progress", {"Complete now", "Abort service", "Back"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 3);
 }
 
 void GsxMenuNavigatorTest::completePushbackPicksEntryWithoutInterruptTitle()

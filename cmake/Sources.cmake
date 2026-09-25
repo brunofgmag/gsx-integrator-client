@@ -16,12 +16,12 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/states/WaitingFlightPlanState.h
         src/domain/turnaround/states/RequestFuelState.cpp
         src/domain/turnaround/states/RequestFuelState.h
-        src/domain/turnaround/states/RefuelingState.cpp
-        src/domain/turnaround/states/RefuelingState.h
-        src/domain/turnaround/states/RequestBoardingState.cpp
-        src/domain/turnaround/states/RequestBoardingState.h
-        src/domain/turnaround/states/BoardingState.cpp
-        src/domain/turnaround/states/BoardingState.h
+        src/domain/turnaround/states/LoadingState.cpp
+        src/domain/turnaround/states/LoadingState.h
+        src/domain/turnaround/states/RefuelingTrack.cpp
+        src/domain/turnaround/states/RefuelingTrack.h
+        src/domain/turnaround/states/BoardingTrack.cpp
+        src/domain/turnaround/states/BoardingTrack.h
         src/domain/turnaround/states/RequestPushbackState.cpp
         src/domain/turnaround/states/RequestPushbackState.h
         src/domain/turnaround/states/WaitingPushbackToStartState.cpp

@@ -197,7 +197,8 @@ void RuntimeIntegratorService::PushEffectiveSettings()
 {
     appliedProfileId_ = runtime_->GetAircraftProfileId();
     runtime_->ApplySettings(ResolveAutomationSettings(appSettings_, appliedProfileId_,
-                                                      runtime_->AircraftCarriesItsOwnStairs()));
+                                                      runtime_->AircraftCarriesItsOwnStairs(),
+                                                      runtime_->AircraftRecommendedFuelRateKgs()));
 }
 
 void RuntimeIntegratorService::OnRuntimeUpdated()

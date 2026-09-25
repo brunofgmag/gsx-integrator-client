@@ -8,6 +8,7 @@ class FakeAircraft final : public Aircraft
 public:
     bool cargo = false;
     bool flightPlanLoaded = false;
+    bool flightPlanDiffersFromTheOfp = false;
     double plannedFuelKg = 0.0;
     double plannedZfwKg = 0.0;
     double emptyZfwKg = 0.0;
@@ -57,6 +58,7 @@ public:
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return requiresEfbFlightPlan; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override { return flightPlanLoaded; }
+    [[nodiscard]] bool FlightPlanDiffersFromTheOfp() const override { return flightPlanDiffersFromTheOfp; }
     [[nodiscard]] double GetPlannedFuelKg() const override { return plannedFuelKg; }
     [[nodiscard]] double GetPlannedZfwKg() const override { return plannedZfwKg; }
     [[nodiscard]] double GetEmptyZfwKg() const override { return emptyZfwKg; }

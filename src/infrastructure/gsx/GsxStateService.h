@@ -49,9 +49,11 @@ public:
     [[nodiscard]] bool WasGsxDownSinceLastObserve() const override;
 
     void TakeOverFuelAndPayload() override;
+    void OnTurnaroundTurned() override;
     void ReassertTakeovers() const;
 
     [[nodiscard]] bool IsSimbriefLoaded() const override;
+    [[nodiscard]] int GetServedSimbriefGeneration() const override;
     [[nodiscard]] std::string GetSimbriefRefusal() const override;
 
 private:

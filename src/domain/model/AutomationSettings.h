@@ -32,6 +32,7 @@ struct AutomationSettings
     bool skipReposition = false;
     bool callGpu = false;
     bool callGpuOnArrival = false;
+    bool callBoardingEarly = false;
     bool callCatering = false;
     bool callLavatory = false;
     bool callWater = false;

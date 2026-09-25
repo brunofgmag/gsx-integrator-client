@@ -50,6 +50,7 @@ public:
     [[nodiscard]] TurnaroundPhase GetPhase() const { return stateMachine_.GetPhase(); }
     [[nodiscard]] std::string GetAircraftProfileId() const;
     [[nodiscard]] bool AircraftCarriesItsOwnStairs() const;
+    [[nodiscard]] double AircraftRecommendedFuelRateKgs() const;
     [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfile_.conflict; }
     bool FixGsxProfile();
     [[nodiscard]] bool HasPmdgOptionsConflict() const { return pmdgOptions_.conflict; }
@@ -121,6 +122,7 @@ private:
     [[nodiscard]] bool IsAircraftCargoVariant() const;
     [[nodiscard]] bool IsLoadingCargoPhase() const;
     [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
+    [[nodiscard]] bool AircraftAppliesTheEfbFlightPlanOnItsDeparturePage() const;
     [[nodiscard]] bool AircraftTakesExternalPowerAtTheEngineerPanel() const;
     [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
     [[nodiscard]] bool CanFixGsxProfile() const;

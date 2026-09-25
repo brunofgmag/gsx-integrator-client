@@ -144,7 +144,7 @@ void EfbCommandReceiverTest::aStampedTouchReachesTheServiceWithThePhaseTheScreen
     receiver.Setup();
 
     bridge.Deliver(EfbCommBus::kCommandChannel,
-                   R"({"command":"pilotTouch","phase":12})");
+                   R"({"command":"pilotTouch","phase":10})");
 
     QCOMPARE(service.pilotTouchCalls, 1);
     QCOMPARE(service.pilotTouchStamp, TurnaroundPhase::WaitingReadyToPush);
@@ -161,7 +161,7 @@ void EfbCommandReceiverTest::aTouchWithoutAPhaseStampIsDropped()
     receiver.Setup();
 
     bridge.Deliver(EfbCommBus::kCommandChannel, Command("pilotTouch"));
-    bridge.Deliver(EfbCommBus::kCommandChannel, R"({"command":"pilotTouch","phase":"12"})");
+    bridge.Deliver(EfbCommBus::kCommandChannel, R"({"command":"pilotTouch","phase":"10"})");
     bridge.Deliver(EfbCommBus::kCommandChannel, R"({"command":"pilotTouch","phase":-1})");
     bridge.Deliver(EfbCommBus::kCommandChannel,
                    R"({"command":"pilotTouch","phase":)"
@@ -182,7 +182,7 @@ void EfbCommandReceiverTest::aRefusedStampedTouchCarriesTheReasonToTheScreen()
     EfbCommandReceiver receiver(&bridge, &viewModel);
     receiver.Setup();
 
-    bridge.Deliver(EfbCommBus::kCommandChannel, R"({"command":"pilotTouch","phase":25})");
+    bridge.Deliver(EfbCommBus::kCommandChannel, R"({"command":"pilotTouch","phase":23})");
 
     QCOMPARE(viewModel.GetCommandError(),
              QStringLiteral("The turnaround moved on before your touch arrived."));

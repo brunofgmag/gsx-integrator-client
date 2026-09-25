@@ -19,6 +19,8 @@ using namespace simvars;
 
 namespace
 {
+    constexpr double kRecommendedFuelRateKgs = 12.0;
+
     constexpr auto kGallonsUnit = "Gallons";
 
     constexpr auto kSimFuelWeightPerGallon = "FUEL WEIGHT PER GALLON";
@@ -389,7 +391,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "Just Flight RJ70"}
         },
-        &CreateAvroRj, "justflight-rj70", "RJ70", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
+        &CreateAvroRj, "justflight-rj70", "RJ70", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
     };
 
     const AircraftDescriptor kAvroRj85Descriptor{
@@ -397,7 +399,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "Just Flight RJ85"}
         },
-        &CreateAvroRj, "justflight-rj85", "RJ85", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
+        &CreateAvroRj, "justflight-rj85", "RJ85", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
     };
 
     const AircraftDescriptor kAvroRj100Descriptor{
@@ -405,7 +407,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "Just Flight RJ100"}
         },
-        &CreateAvroRj, "justflight-rj100", "RJ1H", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
+        &CreateAvroRj, "justflight-rj100", "RJ1H", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
     };
 
     [[maybe_unused]] const AircraftRegistration kAvroRj70Registration{kAvroRj70Descriptor};

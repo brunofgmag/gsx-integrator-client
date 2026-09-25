@@ -28,6 +28,16 @@ private slots:
     static void neverAsksForTheLatestPlanWhenGsxNeverRefused();
     static void asksAgainWhenTheLatestPlanFailsToLoad();
     static void capturesWithoutAFlightPlanSource();
+    static void fetchesTheLatestPlanEveryThirtyTicksWhileTheAircraftPlanDiffers();
+    static void neverFetchesTheLatestPlanWhileTheAircraftHasNoPlan();
+    static void holdsADifferingPlanWithoutAFlightPlanSource();
+    static void leavesTheFetchToTheRefusalFlowWhileItAwaitsTheLatestPlan();
+    static void ignoresTheRefusalGsxPublishedBeforeTheRequest();
+    static void retriesOnTheTenthTickAfterTheRequest();
+    static void flagsTheRefusalGsxPublishesAtTheRetry();
+    static void reloadsGsxWhenTheDifferingPlanFetchBringsANewOfp();
+    static void retriesTheReloadOnTheTenthTickWhileGsxServesTheOldGeneration();
+    static void waitsPastANewerGenerationGsxRefused();
 };
 
 namespace
@@ -73,6 +83,44 @@ namespace
         {
             return message.find(fragment) != std::string::npos;
         });
+    }
+
+    constexpr auto kDifferingPlanFetch = "The aircraft flight plan differs from the OFP: fetching the latest OFP";
+
+    void TickOnce(TurnaroundStateFixture& f, WaitingFlightPlanState& state)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    constexpr int kTicksUntilTheRetry = 11;
+
+    void TickUntilTheRetry(TurnaroundStateFixture& f, WaitingFlightPlanState& state)
+    {
+        for (int tick = 0; tick < kTicksUntilTheRetry; ++tick)
+        {
+            TickOnce(f, state);
+        }
+    }
+
+    constexpr double kPreviousFlightFuelKg = 5210.0;
+    constexpr double kNewFlightFuelKg = 8381.0;
+
+    void FetchTheNewOfpWhileGsxServesThePreviousFlight(TurnaroundStateFixture& f, WaitingFlightPlanState& state)
+    {
+        f.status.flightPlanStatus = FlightPlanStatus::Ready;
+        f.aircraft.plannedFuelKg = kPreviousFlightFuelKg;
+        f.gsxService.simbriefLoaded = true;
+        f.gsxService.simbriefGeneration = 1;
+        f.aircraft.flightPlanDiffersFromTheOfp = true;
+
+        TickOnce(f, state);
+        QCOMPARE(f.flightPlanSource.latestRequests, 1);
+
+        f.aircraft.flightPlanDiffersFromTheOfp = false;
+        f.aircraft.flightPlanLoaded = true;
+        f.aircraft.plannedFuelKg = kNewFlightFuelKg;
+        f.status.flightPlanStatus = FlightPlanStatus::Ready;
     }
 
     bool LoggedTheOmittedCrew(const TurnaroundStateFixture& f)
@@ -385,8 +433,7 @@ void WaitingFlightPlanStateTest::asksAgainWhenTheLatestPlanFailsToLoad()
 
     ArrangeTheRefusedPlan(f);
 
-    ++f.ctx.data.stateTickCount;
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    TickUntilTheRetry(f, state);
 
     GsxAcceptsTheRegeneratedPlan(f);
 
@@ -397,7 +444,7 @@ void WaitingFlightPlanStateTest::asksAgainWhenTheLatestPlanFailsToLoad()
     f.status.flightPlanStatus = FlightPlanStatus::Error;
     f.aircraft.flightPlanLoaded = false;
 
-    while (f.ctx.data.stateTickCount < 9)
+    while (f.ctx.data.stateTickCount < 19)
     {
         ++f.ctx.data.stateTickCount;
         QVERIFY(!state.Evaluate(f.ctx).has_value());
@@ -420,8 +467,8 @@ void WaitingFlightPlanStateTest::capturesWithoutAFlightPlanSource()
     f.ctx.flightPlanSource = nullptr;
     ArrangeTheRefusedPlan(f);
 
-    ++f.ctx.data.stateTickCount;
-    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    TickUntilTheRetry(f, state);
+    QVERIFY(f.ctx.data.flightPlanRefused);
 
     GsxAcceptsTheRegeneratedPlan(f);
 
@@ -430,6 +477,301 @@ void WaitingFlightPlanStateTest::capturesWithoutAFlightPlanSource()
 
     QVERIFY(transition.has_value());
     QCOMPARE(f.ctx.data.plannedFuelKg, 4897.0);
+}
+
+void WaitingFlightPlanStateTest::fetchesTheLatestPlanEveryThirtyTicksWhileTheAircraftPlanDiffers()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    f.status.flightPlanStatus = FlightPlanStatus::Ready;
+
+    for (int tick = 0; tick < 7; ++tick)
+    {
+        TickOnce(f, state);
+    }
+
+    QCOMPARE(f.flightPlanSource.latestRequests, 0);
+
+    f.aircraft.flightPlanDiffersFromTheOfp = true;
+
+    TickOnce(f, state);
+    QCOMPARE(f.flightPlanSource.latestRequests, 1);
+    QVERIFY(Logged(f, kDifferingPlanFetch));
+
+    for (int tick = 0; tick < 29; ++tick)
+    {
+        TickOnce(f, state);
+    }
+
+    QCOMPARE(f.flightPlanSource.latestRequests, 1);
+
+    TickOnce(f, state);
+    QCOMPARE(f.flightPlanSource.latestRequests, 2);
+
+    f.aircraft.flightPlanDiffersFromTheOfp = false;
+    f.aircraft.flightPlanLoaded = true;
+    f.aircraft.plannedFuelKg = 12971.0;
+    f.status.flightPlanStatus = FlightPlanStatus::Ready;
+    f.gsxService.simbriefLoaded = true;
+    f.gsxService.simbriefGeneration = 1;
+
+    ++f.ctx.data.stateTickCount;
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
+    QCOMPARE(f.flightPlanSource.latestRequests, 2);
+    QCOMPARE(f.ctx.data.plannedFuelKg, 12971.0);
+}
+
+void WaitingFlightPlanStateTest::neverFetchesTheLatestPlanWhileTheAircraftHasNoPlan()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    f.status.flightPlanStatus = FlightPlanStatus::Ready;
+
+    for (int tick = 0; tick < 95; ++tick)
+    {
+        TickOnce(f, state);
+    }
+
+    QCOMPARE(f.flightPlanSource.latestRequests, 0);
+    QVERIFY(!Logged(f, kDifferingPlanFetch));
+}
+
+void WaitingFlightPlanStateTest::holdsADifferingPlanWithoutAFlightPlanSource()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    f.ctx.flightPlanSource = nullptr;
+    f.status.flightPlanStatus = FlightPlanStatus::Ready;
+    f.aircraft.flightPlanDiffersFromTheOfp = true;
+
+    for (int tick = 0; tick < 65; ++tick)
+    {
+        TickOnce(f, state);
+    }
+
+    QVERIFY(!Logged(f, kDifferingPlanFetch));
+}
+
+void WaitingFlightPlanStateTest::leavesTheFetchToTheRefusalFlowWhileItAwaitsTheLatestPlan()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    ArrangeTheRefusedPlan(f);
+
+    TickUntilTheRetry(f, state);
+    GsxAcceptsTheRegeneratedPlan(f);
+    TickOnce(f, state);
+    QCOMPARE(f.flightPlanSource.latestRequests, 1);
+
+    f.aircraft.flightPlanLoaded = false;
+    f.aircraft.flightPlanDiffersFromTheOfp = true;
+
+    for (int tick = 0; tick < 65; ++tick)
+    {
+        TickOnce(f, state);
+    }
+
+    QCOMPARE(f.flightPlanSource.latestRequests, 1);
+    QVERIFY(!Logged(f, kDifferingPlanFetch));
+}
+
+void WaitingFlightPlanStateTest::ignoresTheRefusalGsxPublishedBeforeTheRequest()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    f.status.flightPlanStatus = FlightPlanStatus::Ready;
+    f.gsxService.simbriefError = "No SimBrief plan loaded";
+
+    while (f.ctx.data.stateTickCount < 18)
+    {
+        TickOnce(f, state);
+    }
+
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 0);
+
+    f.aircraft.flightPlanLoaded = true;
+    f.aircraft.plannedFuelKg = 5360.0;
+    f.aircraft.plannedPax = 104;
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        TickOnce(f, state);
+    }
+
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 1);
+
+    GsxAcceptsTheRegeneratedPlan(f);
+
+    ++f.ctx.data.stateTickCount;
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 1);
+    QCOMPARE(f.flightPlanSource.latestRequests, 0);
+    QVERIFY(!f.ctx.data.flightPlanRefused);
+    QVERIFY(!Logged(f, "refused"));
+    QCOMPARE(f.ctx.data.plannedFuelKg, 5360.0);
+    QCOMPARE(f.ctx.data.plannedPassengers, 104);
+}
+
+void WaitingFlightPlanStateTest::retriesOnTheTenthTickAfterTheRequest()
+{
+    for (const int requestTick : {1, 5, 19, 27})
+    {
+        TurnaroundStateFixture f;
+        WaitingFlightPlanState state;
+
+        while (f.ctx.data.stateTickCount < requestTick - 1)
+        {
+            TickOnce(f, state);
+        }
+
+        f.aircraft.flightPlanLoaded = true;
+
+        TickOnce(f, state);
+        QCOMPARE(f.menuGateway.simbriefLoadCalls, 1);
+
+        for (int tick = 0; tick < 9; ++tick)
+        {
+            TickOnce(f, state);
+        }
+
+        QVERIFY(!Logged(f, "not loaded after"));
+
+        TickOnce(f, state);
+        QVERIFY(Logged(f, "GSX Simbrief plan not loaded after 10 seconds"));
+        QCOMPARE(f.menuGateway.simbriefLoadCalls, 1);
+
+        TickOnce(f, state);
+        QCOMPARE(f.menuGateway.simbriefLoadCalls, 2);
+    }
+}
+
+void WaitingFlightPlanStateTest::flagsTheRefusalGsxPublishesAtTheRetry()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    ArrangeTheRefusedPlan(f);
+    f.gsxService.simbriefError.clear();
+
+    TickOnce(f, state);
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 1);
+
+    f.gsxService.simbriefError = kRouteRefusal;
+
+    for (int tick = 0; tick < 9; ++tick)
+    {
+        TickOnce(f, state);
+    }
+
+    QVERIFY(!f.ctx.data.flightPlanRefused);
+
+    TickOnce(f, state);
+    QVERIFY(f.ctx.data.flightPlanRefused);
+    QVERIFY(Logged(f, std::string("GSX refused the SimBrief plan: ") + kRouteRefusal));
+
+    GsxAcceptsTheRegeneratedPlan(f);
+
+    TickOnce(f, state);
+    QCOMPARE(f.flightPlanSource.latestRequests, 1);
+    QVERIFY(Logged(f, "GSX accepted the SimBrief plan after refusing it: fetching the latest OFP before capturing it"));
+}
+
+void WaitingFlightPlanStateTest::reloadsGsxWhenTheDifferingPlanFetchBringsANewOfp()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    FetchTheNewOfpWhileGsxServesThePreviousFlight(f, state);
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 0);
+
+    TickOnce(f, state);
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 1);
+    QVERIFY(Logged(f, "Asking GSX to reload SimBrief: it must serve a generation newer than 1"));
+
+    for (int tick = 0; tick < 8; ++tick)
+    {
+        TickOnce(f, state);
+    }
+
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 1);
+    QCOMPARE(f.ctx.data.plannedFuelKg, 0.0);
+
+    f.gsxService.simbriefGeneration = 2;
+
+    ++f.ctx.data.stateTickCount;
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 1);
+    QCOMPARE(f.flightPlanSource.latestRequests, 1);
+    QCOMPARE(f.ctx.data.plannedFuelKg, kNewFlightFuelKg);
+}
+
+void WaitingFlightPlanStateTest::retriesTheReloadOnTheTenthTickWhileGsxServesTheOldGeneration()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    FetchTheNewOfpWhileGsxServesThePreviousFlight(f, state);
+
+    TickOnce(f, state);
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 1);
+
+    for (int tick = 0; tick < 9; ++tick)
+    {
+        TickOnce(f, state);
+    }
+
+    QVERIFY(!Logged(f, "not loaded after"));
+
+    TickOnce(f, state);
+    QVERIFY(Logged(f, "GSX Simbrief plan not loaded after 10 seconds"));
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 1);
+
+    TickOnce(f, state);
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 2);
+
+    f.gsxService.simbriefGeneration = 2;
+
+    ++f.ctx.data.stateTickCount;
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.plannedFuelKg, kNewFlightFuelKg);
+}
+
+void WaitingFlightPlanStateTest::waitsPastANewerGenerationGsxRefused()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    FetchTheNewOfpWhileGsxServesThePreviousFlight(f, state);
+
+    TickOnce(f, state);
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 1);
+
+    f.gsxService.simbriefGeneration = 2;
+    f.gsxService.simbriefError = kRouteRefusal;
+
+    TickOnce(f, state);
+    QCOMPARE(f.ctx.data.plannedFuelKg, 0.0);
+
+    f.gsxService.simbriefGeneration = 3;
+    f.gsxService.simbriefError.clear();
+
+    ++f.ctx.data.stateTickCount;
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.plannedFuelKg, kNewFlightFuelKg);
 }
 
 QTEST_APPLESS_MAIN(WaitingFlightPlanStateTest)

@@ -33,6 +33,7 @@ private slots:
     static void successfulCommandClearsPreviousError();
     static void exposesPhaseIndexCountAndTip();
     static void flightPlanTipFollowsPlanSource();
+    static void flightPlanTipNamesTheDeparturePageWhereTheEfbAppliesThePlanThere();
     static void powerOnTipNamesTheEngineerPanelWhereTheAircraftTakesExternalPowerThere();
     static void theDeboardingTipWaitsForGsxOnceTheRequestIsOut();
     static void theBoardingTipNamesTheForwardLoaderWaitingForItsDoor();
@@ -47,7 +48,7 @@ private slots:
     static void theCrewTipFollowsTheDisplayUnit();
     static void aLoaderWaitingForItsDoorComesBeforeTheCrewTip();
     static void theCrewTipStaysQuietWhenThePlanCountsTheCrew();
-    static void theCrewTipOnlyShowsDuringTheBoardingPhase();
+    static void theCrewTipOnlyShowsDuringTheLoadingPhase();
     static void theInitialTipNamesTheAutomationThatIsOff();
     static void theInitialTipNamesTheFlightStillOutsideTheCockpit();
     static void theInitialTipWaitsForTheCockpitWhileTheActiveSessionIsNotReady();
@@ -65,6 +66,7 @@ private slots:
     static void restartFlowReportsRejectedCommands();
     static void nextPhaseTextNamesThePhaseThatFollows();
     static void nextPhaseTextOnTheLastPhaseAnnouncesANewSession();
+    static void theLoadingPhaseNamesBothServices();
     static void theInitialPhaseLabelAgreesWithTheSimChip();
     static void holdCountdownTextCountsTheRemainingSeconds();
     static void holdCountdownTextIsEmptyWhenNothingIsHolding();
@@ -85,6 +87,7 @@ private slots:
     static void progressTextsRoundToAWholePercent();
     static void theBoardingCardFollowsTheDeboardingPhase();
     static void fuelRateTextNamesWhoSetsThePace();
+    static void fuelRateTextShowsTheEffectiveRateInTheDisplayUnit();
     static void plannedPaxTextPrintsThePlainNumber();
     static void cardAndRowLabelsNameTheirValue();
     static void buttonLabelsNameTheirAction();
@@ -398,6 +401,21 @@ void OperationsViewModelTest::flightPlanTipFollowsPlanSource()
              QStringLiteral("Import your SimBrief flight plan on the aircraft EFB."));
 }
 
+void OperationsViewModelTest::flightPlanTipNamesTheDeparturePageWhereTheEfbAppliesThePlanThere()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingFlightPlan;
+    service.snapshot.efbFlightPlan = true;
+    service.snapshot.efbFlightPlanOnDeparturePage = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Import your SimBrief flight plan on the aircraft EFB and open its DEPARTURE page."));
+}
+
 void OperationsViewModelTest::powerOnTipNamesTheEngineerPanelWhereTheAircraftTakesExternalPowerThere()
 {
     FakeIntegratorService service;
@@ -442,7 +460,7 @@ namespace
 
     void ArrangeBoardingHeldByALoader(FakeIntegratorService& service, const CargoLoader loader)
     {
-        service.snapshot.phase = TurnaroundPhase::Boarding;
+        service.snapshot.phase = TurnaroundPhase::Loading;
         service.snapshot.loaderHoldingBoarding = loader;
         service.snapshot.loaderDoorWaitSeconds = kLoaderSecondsLeft;
         service.Notify();
@@ -567,7 +585,7 @@ namespace
 
     void ArrangeBoardingWithThePlanLeavingOutTheCrew(FakeIntegratorService& service)
     {
-        service.snapshot.phase = TurnaroundPhase::Boarding;
+        service.snapshot.phase = TurnaroundPhase::Loading;
         service.snapshot.planOmitsCrew = true;
         service.snapshot.omittedCrewKg = kOmittedCrewKg;
         service.snapshot.operatingEmptyWithCrewKg = kOperatingEmptyWithCrewKg;
@@ -644,7 +662,7 @@ void OperationsViewModelTest::theCrewTipStaysQuietWhenThePlanCountsTheCrew()
     QVERIFY(viewModel.GetPhaseTip().isEmpty());
 }
 
-void OperationsViewModelTest::theCrewTipOnlyShowsDuringTheBoardingPhase()
+void OperationsViewModelTest::theCrewTipOnlyShowsDuringTheLoadingPhase()
 {
     FakeIntegratorService service;
     FakeOperationsDisplaySettings display;
@@ -657,7 +675,7 @@ void OperationsViewModelTest::theCrewTipOnlyShowsDuringTheBoardingPhase()
     QCOMPARE(viewModel.GetPhaseTip(),
              QStringLiteral("Turn on the beacon lights and set the parking brake."));
 
-    service.snapshot.phase = TurnaroundPhase::Refueling;
+    service.snapshot.phase = TurnaroundPhase::RequestFuel;
     service.Notify();
 
     QVERIFY(viewModel.GetPhaseTip().isEmpty());
@@ -915,7 +933,7 @@ void OperationsViewModelTest::exposesInDeboardingPhaseFromSnapshot()
     FakeOperationsDisplaySettings display;
     const OperationsViewModel viewModel(&service, &display);
 
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
 
     QVERIFY(!viewModel.IsInDeboardingPhase());
@@ -1044,6 +1062,24 @@ void OperationsViewModelTest::nextPhaseTextOnTheLastPhaseAnnouncesANewSession()
     service.Notify();
 
     QCOMPARE(viewModel.GetNextPhaseText(), QStringLiteral("Next \u25B8 New session"));
+}
+
+void OperationsViewModelTest::theLoadingPhaseNamesBothServices()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::RequestFuel;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetNextPhaseText(), QStringLiteral("Next ▸ Refueling & boarding"));
+
+    service.snapshot.phase = TurnaroundPhase::Loading;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetStateText(), QStringLiteral("Refueling & boarding"));
+    QCOMPARE(viewModel.GetNextPhaseText(), QStringLiteral("Next ▸ Waiting for beacon & brake"));
 }
 
 void OperationsViewModelTest::theInitialPhaseLabelAgreesWithTheSimChip()
@@ -1251,12 +1287,10 @@ void OperationsViewModelTest::phaseCounterTextCountsFromOne()
     QCOMPARE(viewModel.GetPhaseCounterText(),
              QStringLiteral("1/") + QString::number(OperationsViewModel::GetPhaseCount()));
 
-    service.snapshot.phase = TurnaroundPhase::Refueling;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
 
-    QCOMPARE(viewModel.GetPhaseCounterText(),
-             QString::number(static_cast<int>(TurnaroundPhase::Refueling) + 1)
-                 + QStringLiteral("/") + QString::number(OperationsViewModel::GetPhaseCount()));
+    QCOMPARE(viewModel.GetPhaseCounterText(), QStringLiteral("10/24"));
 }
 
 void OperationsViewModelTest::turnaroundStateCardLabelsNameTheirText()
@@ -1337,7 +1371,7 @@ void OperationsViewModelTest::theBoardingCardFollowsTheDeboardingPhase()
     service.snapshot.boardedPax = 42;
     service.snapshot.boardingProgress = 23.0;
     service.snapshot.deboardingProgress = 50.0;
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
 
     QCOMPARE(viewModel.GetPaxCardLabel(), QStringLiteral("Boarding"));
@@ -1356,11 +1390,11 @@ void OperationsViewModelTest::fuelRateTextNamesWhoSetsThePace()
 {
     FakeIntegratorService service;
     FakeOperationsDisplaySettings display;
-    display.fuelRateText = QStringLiteral("1.2");
     display.fuelRateUnitText = QStringLiteral("kg/s");
+    service.snapshot.fuelRateKgs = 17.0;
     const OperationsViewModel viewModel(&service, &display);
 
-    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("1.2 kg/s"));
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("17 kg/s"));
 
     service.snapshot.refuelBySelf = true;
     service.Notify();
@@ -1371,6 +1405,23 @@ void OperationsViewModelTest::fuelRateTextNamesWhoSetsThePace()
     service.Notify();
 
     QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("Auto"));
+}
+
+void OperationsViewModelTest::fuelRateTextShowsTheEffectiveRateInTheDisplayUnit()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    display.weightIsLb = true;
+    display.fuelRateUnitText = QStringLiteral("lb/s");
+    service.snapshot.fuelRateKgs = 15.0;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("33 lb/s"));
+
+    service.snapshot.fuelRateKgs = 50.0;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetFuelRateText(), QStringLiteral("110 lb/s"));
 }
 
 void OperationsViewModelTest::plannedPaxTextPrintsThePlainNumber()
@@ -1465,8 +1516,7 @@ void OperationsViewModelTest::theLoadingChipKnowsWhenAServiceIsActuallyRunning()
 
     QVERIFY(!viewModel.IsLoadingRunning());
 
-    for (const TurnaroundPhase phase : {TurnaroundPhase::Refueling, TurnaroundPhase::Boarding,
-                                        TurnaroundPhase::Deboarding})
+    for (const TurnaroundPhase phase : {TurnaroundPhase::Loading, TurnaroundPhase::Deboarding})
     {
         service.snapshot.phase = phase;
         service.Notify();
@@ -1474,7 +1524,7 @@ void OperationsViewModelTest::theLoadingChipKnowsWhenAServiceIsActuallyRunning()
         QVERIFY2(viewModel.IsLoadingRunning(), QByteArray::number(static_cast<int>(phase)));
     }
 
-    service.snapshot.phase = TurnaroundPhase::RequestBoarding;
+    service.snapshot.phase = TurnaroundPhase::RequestFuel;
     service.Notify();
 
     QVERIFY(!viewModel.IsLoadingRunning());
@@ -1521,7 +1571,7 @@ void OperationsViewModelTest::thePilotTouchLabelIsEmptyWherePhaseTakesNoTouch()
     FakeOperationsDisplaySettings display;
     OperationsViewModel viewModel(&service, &display);
 
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
 
     QVERIFY(viewModel.GetPilotTouchLabel().isEmpty());
@@ -1560,7 +1610,7 @@ void OperationsViewModelTest::thePilotTouchWaitsForAConnectedAndRunningTurnaroun
 
     QVERIFY(viewModel.CanPilotTouch());
 
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
 
     QVERIFY(!viewModel.CanPilotTouch());

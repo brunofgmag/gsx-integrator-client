@@ -19,6 +19,8 @@ using namespace simvars;
 
 namespace
 {
+    constexpr double kRecommendedFuelRateKgs = 0.0;
+
     constexpr auto kCargoDoorModeFwdLVar = "TLS_CARGO_DOOR_MODE_FWD";
     constexpr auto kCargoDoorModeAftLVar = "TLS_CARGO_DOOR_MODE_AFT";
 
@@ -294,7 +296,7 @@ namespace
             {MatchField::Title, MatchOp::Contains, "Aerosoft A346"},
             {MatchField::AtcModel, MatchOp::Equals, "A346"}
         },
-        &CreateTolissA340, "toliss-a340", "A346", RefuelBy::Self, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::FlickEitherSide}
+        &CreateTolissA340, "toliss-a340", "A346", RefuelBy::Self, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::FlickEitherSide}, kRecommendedFuelRateKgs
     };
 
     [[maybe_unused]] const AircraftRegistration kTolissA340Registration{kTolissA340Descriptor};

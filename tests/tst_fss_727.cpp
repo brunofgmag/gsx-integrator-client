@@ -14,7 +14,7 @@
 #include "../src/domain/model/FlightPlan.h"
 #include "../src/domain/support/Weight.h"
 #include "../src/domain/turnaround/TurnaroundContext.h"
-#include "../src/domain/turnaround/states/BoardingState.h"
+#include "../src/domain/turnaround/states/LoadingState.h"
 #include "../src/domain/turnaround/states/WaitingFlightPlanState.h"
 #include "../src/infrastructure/aircraft/fss/Fss727.h"
 
@@ -1199,14 +1199,15 @@ void Fss727Test::theTargetTheBoardingBarAndTheFinalWriteAgreeOnThePlanCargoLine(
     QVERIFY(ctx.data.planOmitsCrew);
     QCOMPARE(WrittenCargoLb(gateway), 0.0);
 
-    BoardingState boarding;
+    LoadingState loading;
+    ctx.data.refuelFinished = true;
     gsx.boardingState = GsxStateStatus::Active;
 
     for (const double cargoPercent : {25.0, 50.0, 90.0, 99.0})
     {
         gsx.cargoPercent = cargoPercent;
 
-        QVERIFY(!boarding.Evaluate(ctx).has_value());
+        QVERIFY(!loading.Evaluate(ctx).has_value());
         QVERIFY(ctx.data.loadedZfwKg < ctx.data.plannedZfwKg);
         QVERIFY(std::abs(ctx.data.boardingProgress - cargoPercent) < kKgTolerance);
         QVERIFY(WrittenCargoLb(gateway) <= cargoLineLb + kPoundTolerance);
@@ -1215,7 +1216,7 @@ void Fss727Test::theTargetTheBoardingBarAndTheFinalWriteAgreeOnThePlanCargoLine(
     gsx.cargoPercent = 100.0;
     gsx.boardingState = GsxStateStatus::Completed;
 
-    QVERIFY(boarding.Evaluate(ctx).has_value());
+    QVERIFY(loading.Evaluate(ctx).has_value());
     QCOMPARE(ctx.data.boardingProgress, 100.0);
     QCOMPARE(ctx.data.loadedZfwKg, ctx.data.plannedZfwKg);
     QVERIFY(std::abs(WrittenCargoLb(gateway) - cargoLineLb) < kPoundTolerance);

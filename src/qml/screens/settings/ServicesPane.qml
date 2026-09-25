@@ -39,6 +39,14 @@ ColumnLayout {
 
     SwitchRow {
         Layout.fillWidth: true
+        title: qsTr("Call boarding early on refuel")
+        caption: qsTr("Requests boarding once refueling is under way (1%) instead of at 75%")
+        checked: root.settingsVm.callBoardingEarly
+        onToggled: checked => root.settingsVm.callBoardingEarly = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
         title: qsTr("Call lavatory service")
         caption: qsTr("After deboarding")
         checked: root.settingsVm.callLavatory

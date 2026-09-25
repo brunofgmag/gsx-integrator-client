@@ -59,7 +59,7 @@ void RequestFuelStateTest::advancesWhenRequestFuelServiceIsActive()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::Refueling);
+    QCOMPARE(transition->next, TurnaroundPhase::Loading);
     QCOMPARE(f.menuGateway.refuelingCalls, 1);
     QCOMPARE(f.gsxService.takeOverCalls, 1);
     QVERIFY(f.ctx.data.refuelingRequested);
@@ -105,7 +105,7 @@ void RequestFuelStateTest::advancesWhenRefuelingAlreadyCompleted()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::Refueling);
+    QCOMPARE(transition->next, TurnaroundPhase::Loading);
     QCOMPARE(f.menuGateway.refuelingCalls, 0);
 }
 
@@ -159,7 +159,7 @@ void RequestFuelStateTest::advancesFromExternalRefuelingWhileHolding()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::Refueling);
+    QCOMPARE(transition->next, TurnaroundPhase::Loading);
     QCOMPARE(f.menuGateway.refuelingCalls, 0);
 }
 
@@ -350,7 +350,7 @@ void RequestFuelStateTest::doesNotAskAgainForTheRefuelingItSawFinish()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::Refueling);
+    QCOMPARE(transition->next, TurnaroundPhase::Loading);
     QCOMPARE(f.menuGateway.refuelingCalls, 0);
     QCOMPARE(f.gsxService.takeOverCalls, 0);
     QVERIFY(!f.ctx.data.refuelingRequested);

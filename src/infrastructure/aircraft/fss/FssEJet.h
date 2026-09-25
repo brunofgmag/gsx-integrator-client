@@ -29,6 +29,9 @@ public:
     void OnLoadingStarted() override;
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
+    [[nodiscard]] bool FlightPlanDiffersFromTheOfp() const override;
+    [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
+    [[nodiscard]] bool AppliesTheEfbFlightPlanOnItsDeparturePage() const override { return true; }
     [[nodiscard]] double GetPlannedFuelKg() const override;
     [[nodiscard]] double GetPlannedZfwKg() const override;
     [[nodiscard]] int GetPlannedPassengers() const override;
@@ -37,14 +40,13 @@ public:
 
     [[nodiscard]] double GetCurrentFuelKg() const override;
     [[nodiscard]] double GetFuelCapacityKg() const override;
-    void SetCurrentFuelKg(double fuelKg) override;
     [[nodiscard]] double GetCurrentZfwKg() const override;
     void SetCurrentZfwKg(double zfwKg) override;
 
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
-    [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Client; }
-    [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Client; }
+    [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Gsx; }
+    [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Self; }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
 
@@ -70,6 +72,8 @@ public:
 private:
     [[nodiscard]] bool IsBeaconOn() const;
     [[nodiscard]] bool AreChocksSet() const;
+    [[nodiscard]] bool HasTheOfpFuelPlanOnTheEfb() const;
+    [[nodiscard]] std::optional<bool> CompareTheEfbFuelPlanWithTheOfp() const;
     void KeepClearingCallRamp();
 
     VariableGateway* variableGateway_;
@@ -83,10 +87,10 @@ private:
     FssEJetGpuFollowsRequestRule gpuRule_;
     FssEJetDoorsFollowGsxRule doorsRule_;
     std::vector<AircraftRule*> rules_;
-    double lastFuelKg_ = -1.0;
     double lastZfwKg_ = -1.0;
     bool passengersReported_ = false;
     int callRampClearingTicksLeft_ = 0;
+    mutable std::optional<bool> efbFuelPlanMatched_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSSEJET_H

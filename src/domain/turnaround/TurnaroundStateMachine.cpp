@@ -5,9 +5,7 @@
 #include <utility>
 #include "states/WaitingFlightPlanState.h"
 #include "states/RequestFuelState.h"
-#include "states/RefuelingState.h"
-#include "states/RequestBoardingState.h"
-#include "states/BoardingState.h"
+#include "states/LoadingState.h"
 #include "states/RequestPushbackState.h"
 #include "states/CallServicesState.h"
 #include "states/CallCateringState.h"
@@ -82,9 +80,7 @@ void TurnaroundStateMachine::RegisterStates()
     add(std::make_unique<WaitingPowerOnState>());
     add(std::make_unique<CallCateringState>());
     add(std::make_unique<RequestFuelState>());
-    add(std::make_unique<RefuelingState>());
-    add(std::make_unique<RequestBoardingState>());
-    add(std::make_unique<BoardingState>());
+    add(std::make_unique<LoadingState>());
     add(std::make_unique<WaitingReadyToPushState>());
     add(std::make_unique<WaitCateringState>());
     add(std::make_unique<RemoveGroundEquipmentState>());
@@ -267,6 +263,11 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
         if (context_.menuGateway != nullptr)
         {
             context_.menuGateway->OnTurnaroundTurned();
+        }
+
+        if (context_.gsxGateway != nullptr)
+        {
+            context_.gsxGateway->OnTurnaroundTurned();
         }
     }
 

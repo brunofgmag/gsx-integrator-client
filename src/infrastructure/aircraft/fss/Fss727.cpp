@@ -23,6 +23,8 @@ using namespace simvars;
 
 namespace
 {
+    constexpr double kRecommendedFuelRateKgs = 30.0;
+
     constexpr auto kPoundsUnit = "pounds";
     constexpr auto kGallonsUnit = "gallons";
 
@@ -521,7 +523,7 @@ namespace
             {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200F"},
             {MatchField::Title, MatchOp::StartsWith, "Boeing B727-200 Freighter"}
         },
-        &CreateFss727200F, "fss-727-200f", "722F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}
+        &CreateFss727200F, "fss-727-200f", "722F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}, kRecommendedFuelRateKgs
     };
 
     const AircraftDescriptor kFss727200ReFreighterDescriptor{
@@ -531,7 +533,7 @@ namespace
             {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200RE Super 27 Freighter"},
             {MatchField::AtcModel, MatchOp::Equals, "B727RE"}
         },
-        &CreateFss727200ReFreighter, "fss-727-200re", "R72F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}
+        &CreateFss727200ReFreighter, "fss-727-200re", "R72F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}, kRecommendedFuelRateKgs
     };
 
     [[maybe_unused]] const AircraftRegistration kFss727200FRegistration{kFss727200FDescriptor};

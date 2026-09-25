@@ -20,6 +20,8 @@ using namespace simvars;
 
 namespace
 {
+    constexpr double kRecommendedFuelRateKgs = 0.0;
+
     constexpr auto kSimAvionicsBusVoltage = "ELECTRICAL AVIONICS BUS VOLTAGE";
     constexpr auto kVoltsUnit = "Volts";
 
@@ -224,7 +226,7 @@ namespace
         {
             {MatchField::Title, MatchOp::Contains, "iFly 737-MAX"}
         },
-        &CreateIFly737Max, "ifly-737max8", "B38M", RefuelBy::Gsx, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::FlickEitherSide}
+        &CreateIFly737Max, "ifly-737max8", "B38M", RefuelBy::Gsx, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::FlickEitherSide}, kRecommendedFuelRateKgs
     };
 
     [[maybe_unused]] const AircraftRegistration kIFly737MaxRegistration{kIFly737MaxDescriptor};

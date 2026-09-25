@@ -52,6 +52,7 @@ struct AircraftDescriptor
     const char* shortCode = "";
     RefuelBy refuelBy = RefuelBy::Gsx;
     SmartSwitchCue smartSwitch{};
+    double fuelRateKgs = 0.0;
 };
 
 std::vector<const AircraftDescriptor*>& AircraftRegistry();
