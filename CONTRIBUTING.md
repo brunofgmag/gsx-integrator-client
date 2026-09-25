@@ -118,6 +118,8 @@ namespace
 
 Don't drop the last three arguments. They have defaults, so the code compiles without them, but a test fails: the id and the short code must be non-empty and unique across the registry. The short code also sorts the aircraft in the settings list. `RefuelBy` tells the settings screen whether this profile gets a fuel rate control, with the same meaning as `GetRefuelMethod`.
 
+A `Client` airplane also passes a recommended fuel rate in kg/s as the last descriptor argument, after the smart switch cue, and declares it as a `constexpr` at the top of the file. Users get this rate unless they set a manual one, so take it from the manufacturer's airport planning document if one exists. A `Gsx` or `Self` airplane leaves it at zero. A test checks both cases.
+
 Matching is case-insensitive against the `TITLE` and `ATC MODEL` sim vars, using `Equals`, `StartsWith` or `Contains`. An ATC MODEL match scores 4, a title match 2, and the highest score wins; a tie goes to the name that sorts first. To tell variants apart, use the creator, the way the MD-11 detects its freighter.
 
 The creator gets an `AircraftContext` with the `VariableGateway`, the `AutomationStatus`, the shared CommBus bridge and the GSX gateway. Most aircraft only need the gateway. One that speaks CommBus borrows `context.commBusBridge` instead of opening its own SimConnect connection, as `Pmdg777.cpp` does to reach the PMDG tablet.

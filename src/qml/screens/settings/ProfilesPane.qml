@@ -77,14 +77,28 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: !root.ghost && root.settingsVm.profileFuelEditable
         title: qsTr("Fuel rate")
-        caption: qsTr("Refueling speed")
+        caption: root.settingsVm.profileFuelEditable
+                 ? qsTr("Recommends %1 %2")
+                       .arg(root.settingsVm.profileRecommendedFuelRateText)
+                       .arg(root.settingsVm.fuelRateUnitText)
+                 : qsTr("Refueling speed")
         helpText: root.settingsVm.profileFuelEditable
-                  ? qsTr("Refueling speed used when this aircraft is loaded by the client.")
+                  ? qsTr("Global follows the Automation rate, Recommended uses this aircraft's rate and Manual uses the value you type.")
                   : qsTr("This aircraft refuels through GSX or on its own, so you cannot set the rate.")
+
+        SegmentedControl {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: root.settingsVm.profileFuelEditable
+            opacity: enabled ? 1.0 : 0.45
+            model: [qsTr("Global"), qsTr("Recommended"), qsTr("Manual")]
+            currentIndex: root.settingsVm.profileFuelRateModeIndex
+            onActivated: index => root.settingsVm.profileFuelRateModeIndex = index
+        }
 
         TextField {
             id: profileFuelField
             visible: root.settingsVm.profileFuelEditable
+            enabled: root.settingsVm.profileFuelRateEditable
             width: 70
             height: 32
             text: root.settingsVm.profileFuelRateText
@@ -150,6 +164,14 @@ ColumnLayout {
         helpText: qsTr("Cargo aircraft skip catering automatically, even when this is on.")
         checked: root.settingsVm.profileCallCatering
         onToggled: checked => root.settingsVm.profileCallCatering = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        enabled: !root.ghost
+        title: qsTr("Call boarding early on refuel")
+        checked: root.settingsVm.profileCallBoardingEarly
+        onToggled: checked => root.settingsVm.profileCallBoardingEarly = checked
     }
 
     SwitchRow {

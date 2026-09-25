@@ -1,5 +1,6 @@
 #include <QtTest/QTest>
 
+#include <algorithm>
 #include <memory>
 #include <set>
 #include "TestDoubles.h"
@@ -50,7 +51,7 @@ private slots:
     static void detectsFssE195FreighterFromItsTitle();
     static void doesNotDetectFssEJetByGenericAtcModel();
     static void fssEJetRegistrationOrderDoesNotChangeTheWinner();
-    static void detectionReportsFssEJetClientRefuel();
+    static void detectionReportsFssEJetGsxRefuelWithoutARecommendedRate();
     static void detectsFenixA319FromPresetTitle();
     static void detectsFenixA320FromPresetTitle();
     static void detectsFenixA321FromPresetTitle();
@@ -64,6 +65,9 @@ private slots:
     static void detectionReportsFenixClientRefuel();
     static void everyDescriptorHasUniqueProfileMetadata();
     static void everyDescriptorNamesItsSmartSwitch();
+    static void onlyTheFssEJetsApplyTheEfbFlightPlanOnTheirDeparturePage();
+    static void aRecommendedFuelRateExistsOnlyWhereTheClientRefuels();
+    static void supportedProfilesCarryTheRecommendedFuelRate();
     static void supportedProfilesAreSortedByShortCode();
     static void detectionReportsMatchedDescriptor();
 };
@@ -630,18 +634,22 @@ void AircraftDetectionTest::fssEJetRegistrationOrderDoesNotChangeTheWinner()
     QCOMPARE(std::string(forward->id), std::string("fss-e195"));
 }
 
-void AircraftDetectionTest::detectionReportsFssEJetClientRefuel()
+void AircraftDetectionTest::detectionReportsFssEJetGsxRefuelWithoutARecommendedRate()
 {
-    FakeVariableGateway gateway;
-    AutomationStatus status;
+    for (const char* title : {"FSS Embraer E190", "FSS Embraer E195"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
 
-    gateway.aircraftName = "FSS Embraer E190";
+        gateway.aircraftName = title;
 
-    const AircraftDescriptor* descriptor = nullptr;
-    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
 
-    QVERIFY(aircraft != nullptr);
-    QCOMPARE(descriptor->refuelBy, RefuelBy::Client);
+        QVERIFY2(aircraft != nullptr, title);
+        QCOMPARE(descriptor->refuelBy, RefuelBy::Gsx);
+        QCOMPARE(descriptor->fuelRateKgs, 0.0);
+    }
 }
 
 void AircraftDetectionTest::detectsFenixA319FromPresetTitle()
@@ -829,6 +837,50 @@ void AircraftDetectionTest::everyDescriptorNamesItsSmartSwitch()
     for (const AircraftDescriptor* descriptor : AircraftRegistry())
     {
         QVERIFY2(!descriptor->smartSwitch.control.empty(), descriptor->id);
+    }
+}
+
+void AircraftDetectionTest::onlyTheFssEJetsApplyTheEfbFlightPlanOnTheirDeparturePage()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    for (const AircraftDescriptor* descriptor : AircraftRegistry())
+    {
+        const std::unique_ptr<Aircraft> aircraft = descriptor->create({&gateway, &status}, {descriptor->name, ""});
+        const std::string id = descriptor->id;
+
+        QVERIFY2(aircraft != nullptr, descriptor->id);
+        QVERIFY2(aircraft->AppliesTheEfbFlightPlanOnItsDeparturePage() == (id == "fss-e190" || id == "fss-e195"),
+                 descriptor->id);
+    }
+}
+
+void AircraftDetectionTest::aRecommendedFuelRateExistsOnlyWhereTheClientRefuels()
+{
+    for (const AircraftDescriptor* descriptor : AircraftRegistry())
+    {
+        if (descriptor->refuelBy == RefuelBy::Client)
+        {
+            QVERIFY2(descriptor->fuelRateKgs > 0.0, descriptor->id);
+        }
+        else
+        {
+            QVERIFY2(descriptor->fuelRateKgs == 0.0, descriptor->id);
+        }
+    }
+}
+
+void AircraftDetectionTest::supportedProfilesCarryTheRecommendedFuelRate()
+{
+    for (const AircraftProfileInfo& info : SupportedAircraftProfiles())
+    {
+        const auto descriptor = std::ranges::find_if(AircraftRegistry(), [&info](const AircraftDescriptor* candidate)
+        {
+            return info.id == candidate->id;
+        });
+        QVERIFY(descriptor != AircraftRegistry().end());
+        QCOMPARE(info.recommendedFuelRateKgs, (*descriptor)->fuelRateKgs);
     }
 }
 

@@ -74,11 +74,12 @@ namespace
                  static_cast<int>(settings.crewDeboarding),
                  Flag(settings.autoStartFlow),
                  Flag(settings.autoStartLoading));
-        LOG_INFO("Startup settings: skipReposition=%d callGpu=%d callGpuOnArrival=%d callCatering=%d "
-                 "callLavatory=%d callWater=%d callCleaning=%d gsxPanelMode=%d",
+        LOG_INFO("Startup settings: skipReposition=%d callGpu=%d callGpuOnArrival=%d callBoardingEarly=%d "
+                 "callCatering=%d callLavatory=%d callWater=%d callCleaning=%d gsxPanelMode=%d",
                  Flag(settings.skipReposition),
                  Flag(settings.callGpu),
                  Flag(settings.callGpuOnArrival),
+                 Flag(settings.callBoardingEarly),
                  Flag(settings.callCatering),
                  Flag(settings.callLavatory),
                  Flag(settings.callWater),
@@ -442,8 +443,7 @@ bool IntegratorRuntime::IsLoadingCargoPhase() const
 {
     const TurnaroundPhase phase = GetPhase();
 
-    return phase == TurnaroundPhase::RequestBoarding
-        || phase == TurnaroundPhase::Boarding
+    return phase == TurnaroundPhase::Loading
         || phase == TurnaroundPhase::RequestDeboarding
         || phase == TurnaroundPhase::Deboarding;
 }
@@ -461,7 +461,7 @@ bool IntegratorRuntime::IsFuelRequestStalled() const
 bool IntegratorRuntime::IsFuelPlanOverCapacity() const
 {
     return status_.fuelPlanOverCapacity
-        && (GetPhase() == TurnaroundPhase::RequestFuel || GetPhase() == TurnaroundPhase::Refueling);
+        && (GetPhase() == TurnaroundPhase::RequestFuel || GetPhase() == TurnaroundPhase::Loading);
 }
 
 bool IntegratorRuntime::DidFuelNotStay() const
@@ -670,6 +670,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.refuelBySelf = IsAircraftRefuelBySelf();
     snapshot.cargoAircraft = IsAircraftCargoVariant();
     snapshot.efbFlightPlan = AircraftRequiresEfbFlightPlan();
+    snapshot.efbFlightPlanOnDeparturePage = AircraftAppliesTheEfbFlightPlanOnItsDeparturePage();
     snapshot.engineerPanelExternalPower = AircraftTakesExternalPowerAtTheEngineerPanel();
     snapshot.groundPowerByClient = settings_.callGpu || settings_.callGpuOnArrival;
     snapshot.gsxProfileConflict = HasGsxProfileConflict();
@@ -703,6 +704,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.plannedFuelKg = status_.plannedFuelKg;
     snapshot.loadedFuelKg = status_.loadedFuelKg;
     snapshot.settledFuelKg = status_.settledFuelKg;
+    snapshot.fuelRateKgs = settings_.fuelRateKgs;
     snapshot.plannedZfwKg = status_.plannedZfwKg;
     snapshot.plannedPax = status_.plannedPassengers;
     snapshot.boardedPax = status_.boardedPassengers;
@@ -828,6 +830,11 @@ bool IntegratorRuntime::AircraftCarriesItsOwnStairs() const
     return aircraft_ && aircraft_->CarriesItsOwnStairs();
 }
 
+double IntegratorRuntime::AircraftRecommendedFuelRateKgs() const
+{
+    return aircraft_ && aircraftDescriptor_ ? aircraftDescriptor_->fuelRateKgs : 0.0;
+}
+
 bool IntegratorRuntime::IsAircraftRefuelByGsx() const
 {
     return aircraft_ && aircraft_->GetRefuelMethod() == RefuelBy::Gsx;
@@ -846,6 +853,11 @@ bool IntegratorRuntime::IsAircraftCargoVariant() const
 bool IntegratorRuntime::AircraftRequiresEfbFlightPlan() const
 {
     return aircraft_ && aircraft_->RequiresEfbFlightPlan();
+}
+
+bool IntegratorRuntime::AircraftAppliesTheEfbFlightPlanOnItsDeparturePage() const
+{
+    return aircraft_ && aircraft_->AppliesTheEfbFlightPlanOnItsDeparturePage();
 }
 
 bool IntegratorRuntime::AircraftTakesExternalPowerAtTheEngineerPanel() const

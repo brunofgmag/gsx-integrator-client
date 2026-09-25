@@ -17,7 +17,6 @@ namespace
     constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
     constexpr auto kKgUnit = "kg";
     constexpr auto kPoundsUnit = "pounds";
-    constexpr auto kPercentOver100Unit = "percent over 100";
     constexpr auto kFuelWeightPerGallon = "FUEL WEIGHT PER GALLON";
     constexpr auto kTankCapacity1 = "FUELSYSTEM TANK CAPACITY:1";
     constexpr auto kTankCapacity2 = "FUELSYSTEM TANK CAPACITY:2";
@@ -29,7 +28,6 @@ namespace
     constexpr double kReserveGallons = 30.0;
     constexpr double kUsableTankGallons = kTankGallons * 2.0 - kReserveGallons;
     constexpr double kFuelCapacityKg = weight::LbToKg(kFuelPoundsPerGallon * kUsableTankGallons);
-    constexpr double kLevelTolerance = 1e-6;
     constexpr double kKgTolerance = 1e-6;
 
     constexpr auto kStation1 = "PAYLOAD STATION WEIGHT:1";
@@ -43,6 +41,8 @@ namespace
     constexpr auto kPlanWeightZoneB = "FSS_EXX_PLANE_SETUP_WEIGHT_ZONE_B";
     constexpr auto kPlanWeightCargoFwd = "FSS_EXX_PLANE_SETUP_WEIGHT_CARGO_FWD";
     constexpr auto kPlanWeightCargoAft = "FSS_EXX_PLANE_SETUP_WEIGHT_CARGO_AFT";
+    constexpr auto kEfbPlanFuelLeft = "FSS_EXX_PLANE_SETUP_WEIGHT_FUEL_L";
+    constexpr auto kEfbPlanFuelRight = "FSS_EXX_PLANE_SETUP_WEIGHT_FUEL_R";
 
     constexpr auto kNumPassengers = "FSDT_GSX_NUMPASSENGERS";
     constexpr auto kMaxNumPassengers = "FSDT_GSX_MAX_NUMPASSENGERS";
@@ -61,13 +61,6 @@ namespace
         gateway.avars[kUnusableFuelTotal] = kReserveGallons;
     }
 
-    double ExpectedLevelForTargetKg(const double targetKg)
-    {
-        const double targetGallons = weight::KgToLb(targetKg) / kFuelPoundsPerGallon;
-
-        return (targetGallons + kReserveGallons) / (kTankGallons * 2.0);
-    }
-
     void PlanTheMeasuredFlight(AutomationStatus& status, const double payloadKg, const int passengers)
     {
         status.flightPlanStatus = FlightPlanStatus::Ready;
@@ -83,6 +76,12 @@ namespace
     void ParkWithTheMeasuredEmptyWeight(FakeVariableGateway& gateway, const double emptyWeightKg)
     {
         gateway.avars[kSimEmptyWeight] = emptyWeightKg;
+    }
+
+    void LoadAFuelPlanOnTheEfb(FakeVariableGateway& gateway, const double fuelKg)
+    {
+        gateway.lvars[kEfbPlanFuelLeft] = fuelKg / 2.0;
+        gateway.lvars[kEfbPlanFuelRight] = fuelKg / 2.0;
     }
 
     constexpr auto kAcPowerAvailable = "FSS_EXX_ELEC_PWR_AC_AVAIL";
@@ -184,6 +183,12 @@ namespace
                                        { return line.contains(QLatin1String(fragment)); });
         }
 
+        [[nodiscard]] static long long Count(const char* fragment)
+        {
+            return std::ranges::count_if(Lines(), [fragment](const QString& line)
+                                         { return line.contains(QLatin1String(fragment)); });
+        }
+
     private:
         static QStringList& Lines()
         {
@@ -224,9 +229,17 @@ private slots:
     static void logsTheProfileNameWithTheFreighterSuffix();
     static void readsThePlanFromTheClientOfp();
     static void doesNotConsiderThePlanLoadedWithoutThePayloadLineOrTheEmptyWeight();
+    static void holdsWithoutTheFuelPlanOnTheEfbEvenWithTheOfpReady();
+    static void acceptsTheEfbFuelPlanWithinFiveKgOfTheOfp();
+    static void acceptsTheMeasuredSbfzEfbPlanAgainstItsOfp();
+    static void holdsWhenTheEfbCarriesAnotherFlightPlan();
+    static void logsTheEfbFuelPlanMismatchOnceWhileItLasts();
+    static void saysItsFlightPlanDiffersFromTheOfpOnlyWhenTheEfbCarriesAnother();
+    static void requiresTheFlightPlanOnTheEfbOnBothTypes();
+    static void appliesTheEfbFlightPlanOnItsDeparturePageOnBothTypes();
     static void targetsTheEmptyWeightPlusThePlannedPayload();
     static void writesKgAsTheNativeUnit();
-    static void loadsAndRefuelsThroughTheClient();
+    static void leavesTheFuelAndTheLoadToTheEfbOnBothTypes();
     static void energizedFollowsAcAvailable();
     static void engineRunningFollowsCombustion();
     static void defaultsHoldTheStateUntilDataArrives();
@@ -271,15 +284,13 @@ private slots:
     static void observingEvaluatingAndReadingWriteNoVariable();
     static void fuelCapacitySumsBothTanksMinusTheReserveInKg();
     static void fuelCapacityWaitsForTheWeightPerGallonTheTwoCapacitiesAndTheReserve();
-    static void refuelWritesTheSameLevelFractionInBothTanks();
-    static void refuelKeepsTheTankLevelBetweenEmptyAndFull();
-    static void refuelWritesNothingUntilTheWeightPerGallonTheTwoCapacitiesAndTheReserveArrive();
-    static void refuelWritesTheSameTargetOnlyOnce();
+    static void leavesTheTanksToTheEfbPump();
     static void loadsPassengerZonesThenHoldsByTheMeasuredSplit();
     static void writesNoStationsWithoutACargoLineInThePlan();
     static void loadsTheFreighterStationsByTheFixedRatios();
     static void loadingNeverTouchesTheCrewStations();
     static void loadingWritesNothingUntilTheEmptyWeightArrives();
+    static void repeatingTheSameZfwEveryTickWritesTheStationsOnce();
     static void mirrorsThePlannedCargoIntoThePlaneSetupWeightsOnce();
     static void mirrorsNoPlaneSetupWeightsWithoutACargoLineInThePlan();
     static void reportsPlannedPassengersToGsxOnce();
@@ -325,12 +336,12 @@ void FssEJetTest::readsThePlanFromTheClientOfp()
     AutomationStatus status;
     const FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
-    QVERIFY(!aircraft.RequiresEfbFlightPlan());
     QVERIFY(!aircraft.IsFlightPlanLoaded());
 
     status.plannedFuelKg = 6531.0;
     PlanTheMeasuredFlight(status, 6000.0, 88);
     ParkWithTheMeasuredEmptyWeight(gateway, 34000.0);
+    LoadAFuelPlanOnTheEfb(gateway, 6531.0);
 
     QVERIFY(aircraft.IsFlightPlanLoaded());
     QCOMPARE(aircraft.GetPlannedFuelKg(), 6531.0);
@@ -344,7 +355,9 @@ void FssEJetTest::doesNotConsiderThePlanLoadedWithoutThePayloadLineOrTheEmptyWei
     AutomationStatus status;
     const FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
+    status.plannedFuelKg = 4000.0;
     PlanTheMeasuredFlight(status, 6000.0, 50);
+    LoadAFuelPlanOnTheEfb(gateway, 4000.0);
 
     QVERIFY(!aircraft.IsFlightPlanLoaded());
 
@@ -357,14 +370,165 @@ void FssEJetTest::doesNotConsiderThePlanLoadedWithoutThePayloadLineOrTheEmptyWei
     QVERIFY(!aircraft.IsFlightPlanLoaded());
 }
 
+void FssEJetTest::holdsWithoutTheFuelPlanOnTheEfbEvenWithTheOfpReady()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    status.plannedFuelKg = 5211.01;
+    PlanTheMeasuredFlight(status, 6000.0, 50);
+    ParkWithTheMeasuredEmptyWeight(gateway, 34000.0);
+
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+
+    LoadAFuelPlanOnTheEfb(gateway, 0.0);
+
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+
+    gateway.lvars.erase(kEfbPlanFuelRight);
+    gateway.lvars[kEfbPlanFuelLeft] = 5211.01;
+
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+}
+
+void FssEJetTest::acceptsTheEfbFuelPlanWithinFiveKgOfTheOfp()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    status.plannedFuelKg = 5211.0;
+    PlanTheMeasuredFlight(status, 6000.0, 50);
+    ParkWithTheMeasuredEmptyWeight(gateway, 34000.0);
+
+    LoadAFuelPlanOnTheEfb(gateway, 5211.0 + 4.9);
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+
+    LoadAFuelPlanOnTheEfb(gateway, 5211.0 - 4.9);
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+
+    LoadAFuelPlanOnTheEfb(gateway, 5211.0 + 5.1);
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+
+    LoadAFuelPlanOnTheEfb(gateway, 5211.0 - 5.1);
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+}
+
+void FssEJetTest::acceptsTheMeasuredSbfzEfbPlanAgainstItsOfp()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    status.plannedFuelKg = 5211.01;
+    PlanTheMeasuredFlight(status, 6000.0, 50);
+    ParkWithTheMeasuredEmptyWeight(gateway, 34000.0);
+    gateway.lvars[kEfbPlanFuelLeft] = 2605.5;
+    gateway.lvars[kEfbPlanFuelRight] = 2605.5;
+
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+}
+
+void FssEJetTest::holdsWhenTheEfbCarriesAnotherFlightPlan()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    status.plannedFuelKg = 3582.0;
+    PlanTheMeasuredFlight(status, 6000.0, 50);
+    ParkWithTheMeasuredEmptyWeight(gateway, 34000.0);
+    LoadAFuelPlanOnTheEfb(gateway, 3597.0);
+
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+}
+
+void FssEJetTest::logsTheEfbFuelPlanMismatchOnceWhileItLasts()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const LogCapture log;
+    const FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    status.plannedFuelKg = 3582.0;
+    PlanTheMeasuredFlight(status, 6000.0, 50);
+    ParkWithTheMeasuredEmptyWeight(gateway, 34000.0);
+    LoadAFuelPlanOnTheEfb(gateway, 3597.0);
+
+    for (int check = 0; check < 3; ++check)
+    {
+        QVERIFY(!aircraft.IsFlightPlanLoaded());
+    }
+
+    QCOMPARE(LogCapture::Count("EFB fuel plan 3597 kg differs from the OFP 3582 kg"), 1LL);
+
+    LoadAFuelPlanOnTheEfb(gateway, 3582.0);
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+
+    QCOMPARE(LogCapture::Count("EFB fuel plan 3582 kg matches the OFP 3582 kg"), 1LL);
+
+    LoadAFuelPlanOnTheEfb(gateway, 3597.0);
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+
+    QCOMPARE(LogCapture::Count("EFB fuel plan 3597 kg differs from the OFP 3582 kg"), 2LL);
+}
+
+void FssEJetTest::saysItsFlightPlanDiffersFromTheOfpOnlyWhenTheEfbCarriesAnother()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    status.plannedFuelKg = 3582.0;
+    PlanTheMeasuredFlight(status, 6000.0, 50);
+    ParkWithTheMeasuredEmptyWeight(gateway, 34000.0);
+
+    QVERIFY(!aircraft.FlightPlanDiffersFromTheOfp());
+
+    LoadAFuelPlanOnTheEfb(gateway, 0.0);
+    QVERIFY(!aircraft.FlightPlanDiffersFromTheOfp());
+
+    LoadAFuelPlanOnTheEfb(gateway, 3597.0);
+    QVERIFY(aircraft.FlightPlanDiffersFromTheOfp());
+
+    LoadAFuelPlanOnTheEfb(gateway, 3582.0);
+    QVERIFY(!aircraft.FlightPlanDiffersFromTheOfp());
+}
+
+void FssEJetTest::requiresTheFlightPlanOnTheEfbOnBothTypes()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const FssEJet e190(&gateway, &status, FssEJet::kNameE190, false);
+    const FssEJet e195(&gateway, &status, FssEJet::kNameE195, false);
+
+    QVERIFY(e190.RequiresEfbFlightPlan());
+    QVERIFY(e195.RequiresEfbFlightPlan());
+}
+
+void FssEJetTest::appliesTheEfbFlightPlanOnItsDeparturePageOnBothTypes()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const FssEJet e190(&gateway, &status, FssEJet::kNameE190, false);
+    const FssEJet e195(&gateway, &status, FssEJet::kNameE195, false);
+
+    QVERIFY(e190.AppliesTheEfbFlightPlanOnItsDeparturePage());
+    QVERIFY(e195.AppliesTheEfbFlightPlanOnItsDeparturePage());
+}
+
 void FssEJetTest::targetsTheEmptyWeightPlusThePlannedPayload()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
     const FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
+    status.plannedFuelKg = 4000.0;
     PlanTheMeasuredFlight(status, 6000.0, 50);
     ParkWithTheMeasuredEmptyWeight(gateway, 34000.0);
+    LoadAFuelPlanOnTheEfb(gateway, 4000.0);
 
     QVERIFY(aircraft.IsFlightPlanLoaded());
     QCOMPARE(aircraft.GetPlannedZfwKg(), 40000.0);
@@ -383,17 +547,21 @@ void FssEJetTest::writesKgAsTheNativeUnit()
     QVERIFY(aircraft.GetNativeWeightUnit() == WeightUnit::Kg);
 }
 
-void FssEJetTest::loadsAndRefuelsThroughTheClient()
+void FssEJetTest::leavesTheFuelAndTheLoadToTheEfbOnBothTypes()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+    const FssEJet e190(&gateway, &status, FssEJet::kNameE190, false);
+    const FssEJet e195(&gateway, &status, FssEJet::kNameE195, false);
 
-    QVERIFY(aircraft.GetRefuelMethod() == RefuelBy::Client);
-    QVERIFY(aircraft.GetBoardMethod() == BoardBy::Client);
-    QVERIFY(aircraft.SupportsStairsOrJetways());
-    QVERIFY(!aircraft.CompletesPushbackViaInterruptMenu());
-    QVERIFY(!aircraft.TakesExternalPowerAtTheEngineerPanel());
+    for (const FssEJet* aircraft : {&e190, &e195})
+    {
+        QVERIFY(aircraft->GetRefuelMethod() == RefuelBy::Gsx);
+        QVERIFY(aircraft->GetBoardMethod() == BoardBy::Self);
+        QVERIFY(aircraft->SupportsStairsOrJetways());
+        QVERIFY(!aircraft->CompletesPushbackViaInterruptMenu());
+        QVERIFY(!aircraft->TakesExternalPowerAtTheEngineerPanel());
+    }
 }
 
 void FssEJetTest::energizedFollowsAcAvailable()
@@ -1396,7 +1564,7 @@ void FssEJetTest::fuelCapacityWaitsForTheWeightPerGallonTheTwoCapacitiesAndTheRe
     QVERIFY(std::abs(aircraft.GetFuelCapacityKg() - kFuelCapacityKg) < kKgTolerance);
 }
 
-void FssEJetTest::refuelWritesTheSameLevelFractionInBothTanks()
+void FssEJetTest::leavesTheTanksToTheEfbPump()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -1405,99 +1573,14 @@ void FssEJetTest::refuelWritesTheSameLevelFractionInBothTanks()
     GiveTanks(gateway);
     GiveReserve(gateway);
 
-    const double targetKg = kFuelCapacityKg / 2.0;
-    aircraft.SetCurrentFuelKg(targetKg);
-
-    const double expectedLevel = ExpectedLevelForTargetKg(targetKg);
+    Aircraft& port = aircraft;
+    port.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
 
     for (const char* level : kTankLevels)
     {
-        QCOMPARE(gateway.AVarWriteCount(level), 1);
-        QVERIFY(std::abs(gateway.WrittenAVar(level) - expectedLevel) < kLevelTolerance);
-        QCOMPARE(gateway.AVarWriteUnit(level), std::string(kPercentOver100Unit));
+        QCOMPARE(gateway.AVarWriteCount(level), 0);
     }
-}
-
-void FssEJetTest::refuelKeepsTheTankLevelBetweenEmptyAndFull()
-{
-    FakeVariableGateway gateway;
-    AutomationStatus status;
-    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
-
-    GiveTanks(gateway);
-    GiveReserve(gateway);
-
-    aircraft.SetCurrentFuelKg(kFuelCapacityKg * 2.0);
-
-    for (const char* level : kTankLevels)
-    {
-        QCOMPARE(gateway.WrittenAVar(level), 1.0);
-    }
-
-    aircraft.SetCurrentFuelKg(-5000.0);
-
-    for (const char* level : kTankLevels)
-    {
-        QCOMPARE(gateway.WrittenAVar(level), 0.0);
-    }
-}
-
-void FssEJetTest::refuelWritesNothingUntilTheWeightPerGallonTheTwoCapacitiesAndTheReserveArrive()
-{
-    FakeVariableGateway gateway;
-    AutomationStatus status;
-    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
-
-    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
-
     QCOMPARE(gateway.setAVarCalls, 0);
-
-    gateway.avars[kTankCapacity1] = kTankGallons;
-    gateway.avars[kTankCapacity2] = kTankGallons;
-
-    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
-
-    QCOMPARE(gateway.setAVarCalls, 0);
-
-    gateway.avars[kFuelWeightPerGallon] = kFuelPoundsPerGallon;
-
-    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
-
-    QCOMPARE(gateway.setAVarCalls, 0);
-
-    GiveReserve(gateway);
-
-    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
-
-    for (const char* level : kTankLevels)
-    {
-        QCOMPARE(gateway.AVarWriteCount(level), 1);
-    }
-}
-
-void FssEJetTest::refuelWritesTheSameTargetOnlyOnce()
-{
-    FakeVariableGateway gateway;
-    AutomationStatus status;
-    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
-
-    GiveTanks(gateway);
-    GiveReserve(gateway);
-
-    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
-    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
-
-    for (const char* level : kTankLevels)
-    {
-        QCOMPARE(gateway.AVarWriteCount(level), 1);
-    }
-
-    aircraft.SetCurrentFuelKg(kFuelCapacityKg / 4.0);
-
-    for (const char* level : kTankLevels)
-    {
-        QCOMPARE(gateway.AVarWriteCount(level), 2);
-    }
 }
 
 void FssEJetTest::loadsPassengerZonesThenHoldsByTheMeasuredSplit()
@@ -1581,6 +1664,35 @@ void FssEJetTest::loadingWritesNothingUntilTheEmptyWeightArrives()
     aircraft.SetCurrentZfwKg(40000.0);
 
     QCOMPARE(gateway.setAVarCalls, 0);
+}
+
+void FssEJetTest::repeatingTheSameZfwEveryTickWritesTheStationsOnce()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    PlanTheMeasuredFlight(status, 5940.0, 66);
+    GiveCargo(status, 660.0);
+    ParkWithTheMeasuredEmptyWeight(gateway, 34000.0);
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        aircraft.SetCurrentZfwKg(aircraft.GetEmptyZfwKg());
+    }
+
+    for (const char* station : {kStation3, kStation4, kStation5, kStation6})
+    {
+        QCOMPARE(gateway.AVarWriteCount(station), 1);
+        QCOMPARE(gateway.WrittenAVar(station), 0.0);
+    }
+
+    aircraft.SetCurrentZfwKg(aircraft.GetPlannedZfwKg());
+
+    for (const char* station : {kStation3, kStation4, kStation5, kStation6})
+    {
+        QCOMPARE(gateway.AVarWriteCount(station), 2);
+    }
 }
 
 void FssEJetTest::mirrorsThePlannedCargoIntoThePlaneSetupWeightsOnce()

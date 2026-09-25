@@ -246,6 +246,7 @@ void GsxMenuNavigator::Reset()
     completingPushback_ = {};
     completingRefuel_ = {};
     completingBoarding_ = {};
+    serviceOpenedBy_ = nullptr;
     confirmingEngines_ = {};
     stairsKeptInPlace_ = false;
     deIceYesSpent_ = false;
@@ -300,6 +301,8 @@ void GsxMenuNavigator::HandleMenu()
 
     if (HandleAutoPicks(sig))
     {
+        serviceOpenedBy_ = nullptr;
+
         return;
     }
 
@@ -571,43 +574,53 @@ bool GsxMenuNavigator::HandlePendingCompletions(const std::string& sig)
         return true;
     }
 
-    if (completingRefuel_.active)
+    if (!completingRefuel_.active && !completingBoarding_.active)
     {
-        if (Contains(state_->menu.title, kServiceInProgressTitle))
-        {
-            if (PickByContains(kCompleteNowText))
-            {
-                completingRefuel_ = {};
-            }
-
-            return true;
-        }
-
-        if (PickByContains(kRefuelingEntryText))
-        {
-            return true;
-        }
+        return false;
     }
 
-    if (completingBoarding_.active)
+    if (Contains(state_->menu.title, kServiceInProgressTitle))
     {
-        if (Contains(state_->menu.title, kServiceInProgressTitle))
-        {
-            if (PickByContains(kCompleteNowText))
-            {
-                completingBoarding_ = {};
-            }
+        return CompleteTheServiceItOpened();
+    }
 
-            return true;
-        }
+    serviceOpenedBy_ = nullptr;
 
-        if (PickByContains(kLoadingInProgressText) || PickByContains(kBoardingPassengersText))
-        {
-            return true;
-        }
+    if (completingRefuel_.active && PickByContains(kRefuelingEntryText))
+    {
+        serviceOpenedBy_ = &completingRefuel_;
+
+        return true;
+    }
+
+    if (completingBoarding_.active
+        && (PickByContains(kLoadingInProgressText) || PickByContains(kBoardingPassengersText)))
+    {
+        serviceOpenedBy_ = &completingBoarding_;
+
+        return true;
     }
 
     return false;
+}
+
+bool GsxMenuNavigator::CompleteTheServiceItOpened()
+{
+    TimedIntent* const opener = serviceOpenedBy_;
+    if (opener == nullptr || !opener->active)
+    {
+        serviceOpenedBy_ = nullptr;
+
+        return true;
+    }
+
+    if (PickByContains(kCompleteNowText))
+    {
+        *opener = {};
+        serviceOpenedBy_ = nullptr;
+    }
+
+    return true;
 }
 
 bool GsxMenuNavigator::RepositionWalking() const

@@ -23,9 +23,7 @@ namespace
         case TurnaroundPhase::CallCatering: return QCoreApplication::translate("Turnaround", "Requesting catering");
         case TurnaroundPhase::WaitingFlightPlan: return QCoreApplication::translate("Turnaround", "Waiting for flight plan");
         case TurnaroundPhase::RequestFuel: return QCoreApplication::translate("Turnaround", "Requesting fuel");
-        case TurnaroundPhase::Refueling: return QCoreApplication::translate("Turnaround", "Refueling");
-        case TurnaroundPhase::RequestBoarding: return QCoreApplication::translate("Turnaround", "Requesting boarding");
-        case TurnaroundPhase::Boarding: return QCoreApplication::translate("Turnaround", "Boarding");
+        case TurnaroundPhase::Loading: return QCoreApplication::translate("Turnaround", "Refueling & boarding");
         case TurnaroundPhase::WaitingReadyToPush: return QCoreApplication::translate("Turnaround", "Waiting for beacon & brake");
         case TurnaroundPhase::WaitCatering: return QCoreApplication::translate("Turnaround", "Waiting for catering");
         case TurnaroundPhase::RemoveGroundEquipment: return QCoreApplication::translate("Turnaround", "Removing GPU & chocks");
@@ -139,6 +137,22 @@ namespace
             .arg(control, QString::fromStdString(cue.side));
     }
 
+    QString FlightPlanTip(const IntegratorSnapshot& snapshot)
+    {
+        if (!snapshot.efbFlightPlan)
+        {
+            return QCoreApplication::translate("Turnaround", "Check that SimBrief is loaded in GSX and in the client.");
+        }
+
+        if (snapshot.efbFlightPlanOnDeparturePage)
+        {
+            return QCoreApplication::translate("Turnaround",
+                                               "Import your SimBrief flight plan on the aircraft EFB and open its DEPARTURE page.");
+        }
+
+        return QCoreApplication::translate("Turnaround", "Import your SimBrief flight plan on the aircraft EFB.");
+    }
+
     QString PushbackRequestTip(const IntegratorSnapshot& snapshot)
     {
         if (snapshot.groundPowerByClient)
@@ -159,9 +173,7 @@ namespace
         case TurnaroundPhase::WaitingAircraftReady:
             return QCoreApplication::translate("Turnaround", "Check that the aircraft engines are shut down.");
         case TurnaroundPhase::WaitingFlightPlan:
-            return snapshot.efbFlightPlan
-                       ? QCoreApplication::translate("Turnaround", "Import your SimBrief flight plan on the aircraft EFB.")
-                       : QCoreApplication::translate("Turnaround", "Check that SimBrief is loaded in GSX and in the client.");
+            return FlightPlanTip(snapshot);
         case TurnaroundPhase::WaitingPowerOn:
             return snapshot.engineerPanelExternalPower
                        ? QCoreApplication::translate("Turnaround", "With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power.")
@@ -410,8 +422,7 @@ bool OperationsViewModel::AutoStartsFlow() const
 
 bool OperationsViewModel::IsLoadingRunning() const
 {
-    return snapshot_.phase == TurnaroundPhase::Refueling
-        || snapshot_.phase == TurnaroundPhase::Boarding
+    return snapshot_.phase == TurnaroundPhase::Loading
         || snapshot_.phase == TurnaroundPhase::Deboarding;
 }
 
@@ -478,7 +489,7 @@ QString OperationsViewModel::GetPhaseTip() const
         return StartLoadingTip(snapshot_);
     }
 
-    return snapshot_.phase == TurnaroundPhase::Boarding ? BoardingTip() : PhaseTip(snapshot_);
+    return snapshot_.phase == TurnaroundPhase::Loading ? BoardingTip() : PhaseTip(snapshot_);
 }
 
 QString OperationsViewModel::BoardingTip() const
@@ -547,7 +558,10 @@ QString OperationsViewModel::GetFuelRateText() const
         return QStringLiteral("GSX");
     }
 
-    return display_->GetFuelRateText()
+    const double kgs = snapshot_.fuelRateKgs;
+    const double shown = display_->GetWeightIsLb() ? weight::KgToLb(kgs) : kgs;
+
+    return QString::number(qRound64(shown))
         + QStringLiteral(" ")
         + display_->GetFuelRateUnitText();
 }

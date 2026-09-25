@@ -14,6 +14,7 @@
 namespace
 {
     constexpr int kRetryTicks = 10;
+    constexpr int kDifferingFlightPlanFetchTicks = 30;
 }
 
 std::optional<TurnaroundTransition> WaitingFlightPlanState::EvaluatePhase(TurnaroundContext& ctx)
@@ -25,46 +26,21 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::EvaluatePhase(Turnar
         return std::nullopt;
     }
 
+    FetchTheLatestPlanWhileTheAircraftPlanDiffers(ctx);
+
     if (!ctx.aircraft->IsFlightPlanLoaded())
     {
         return std::nullopt;
     }
 
-    bool& flightPlanRequested = ctx.data.flightPlanRequested;
-    const bool simbriefLoaded = ctx.gsxGateway->IsSimbriefLoaded();
-
-    if (!simbriefLoaded && !flightPlanRequested)
+    if (!GsxServesTheLatestPlan(ctx))
     {
-        ctx.menuGateway->RequestSimbriefLoad();
-        flightPlanRequested = true;
-    }
-
-    if (simbriefLoaded)
-    {
-        flightPlanRequested = false;
-    }
-    else if (!ctx.gsxGateway->GetSimbriefRefusal().empty())
-    {
-        ctx.data.flightPlanRefused = true;
-    }
-
-    if (flightPlanRequested)
-    {
-        if (ctx.TickCondition(kRetryTicks))
-        {
-            if (const std::string refusal = ctx.gsxGateway->GetSimbriefRefusal(); !refusal.empty())
-            {
-                ctx.logger->LogInfo(std::format("GSX refused the SimBrief plan: {}", refusal));
-            }
-            else
-            {
-                ctx.logger->LogInfo(std::format("GSX Simbrief plan not loaded after {} seconds", kRetryTicks));
-            }
-            flightPlanRequested = false;
-        }
+        AwaitSimbriefLoad(ctx);
 
         return std::nullopt;
     }
+
+    ctx.data.flightPlanRequested = false;
 
     if (ctx.data.flightPlanRefused && !ctx.data.latestFlightPlanRequested && ctx.flightPlanSource != nullptr)
     {
@@ -78,6 +54,54 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::EvaluatePhase(Turnar
     CaptureFlightPlan(ctx);
 
     return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
+}
+
+bool WaitingFlightPlanState::GsxServesTheLatestPlan(const TurnaroundContext& ctx)
+{
+    if (!ctx.gsxGateway->IsSimbriefLoaded())
+    {
+        return false;
+    }
+
+    const std::optional<int>& staleGeneration = ctx.data.staleSimbriefGeneration;
+
+    return !staleGeneration.has_value()
+        || (ctx.gsxGateway->GetServedSimbriefGeneration() > *staleGeneration
+            && ctx.gsxGateway->GetSimbriefRefusal().empty());
+}
+
+void WaitingFlightPlanState::AwaitSimbriefLoad(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+    if (!data.flightPlanRequested)
+    {
+        if (data.staleSimbriefGeneration.has_value())
+        {
+            ctx.logger->LogInfo(std::format(
+                "Asking GSX to reload SimBrief: it must serve a generation newer than {}", *data.staleSimbriefGeneration));
+        }
+        ctx.menuGateway->RequestSimbriefLoad();
+        data.flightPlanRequested = true;
+        data.flightPlanRequestTicks = 0;
+
+        return;
+    }
+
+    if (++data.flightPlanRequestTicks < kRetryTicks)
+    {
+        return;
+    }
+
+    if (const std::string refusal = ctx.gsxGateway->GetSimbriefRefusal(); !refusal.empty())
+    {
+        ctx.logger->LogInfo(std::format("GSX refused the SimBrief plan: {}", refusal));
+        data.flightPlanRefused = true;
+    }
+    else
+    {
+        ctx.logger->LogInfo(std::format("GSX Simbrief plan not loaded after {} seconds", kRetryTicks));
+    }
+    data.flightPlanRequested = false;
 }
 
 bool WaitingFlightPlanState::AwaitsLatestFlightPlan(TurnaroundContext& ctx)
@@ -100,6 +124,27 @@ bool WaitingFlightPlanState::AwaitsLatestFlightPlan(TurnaroundContext& ctx)
     }
 
     return true;
+}
+
+void WaitingFlightPlanState::FetchTheLatestPlanWhileTheAircraftPlanDiffers(TurnaroundContext& ctx)
+{
+    int& differingTicks = ctx.data.differingFlightPlanTicks;
+    if (ctx.flightPlanSource == nullptr || !ctx.aircraft->FlightPlanDiffersFromTheOfp())
+    {
+        differingTicks = 0;
+
+        return;
+    }
+
+    if (differingTicks % kDifferingFlightPlanFetchTicks == 0)
+    {
+        ctx.logger->LogInfo("The aircraft flight plan differs from the OFP: fetching the latest OFP");
+        ctx.flightPlanSource->RequestLatest();
+        ctx.data.staleSimbriefGeneration = ctx.gsxGateway->GetServedSimbriefGeneration();
+        ctx.data.flightPlanRequested = false;
+    }
+
+    ++differingTicks;
 }
 
 void WaitingFlightPlanState::CaptureFlightPlan(TurnaroundContext& ctx)

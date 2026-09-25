@@ -37,7 +37,7 @@ You need:
 | ToLiss A340-600 | Any | MCDU uplink, at once | MCDU uplink, at once | INT/RAD | GPU only, visual | Beta |
 | JustFlight Avro RJ70 / RJ85 / RJ100 (incl. QT) | Any | GSX, progressive | GSX, progressive | R/T-INT | Chocks + GPU | Beta |
 | FSS Boeing 727-200F / 200RE Freighter | Any | Client, progressive | Client, progressive | SERV INT | Chocks + GPU | Beta |
-| FSS Embraer E190 / E195 (incl. Freighter) | Any | Client, progressive | Client, progressive | Call RAMP | Chocks + GPU | Beta |
+| FSS Embraer E190 / E195 (incl. Freighter) | Any | EFB, progressive | EFB, at once | Call RAMP | Chocks + GPU | Beta |
 
 Any other aircraft connects but gets no automation.
 
@@ -47,9 +47,12 @@ The iFly needs SP1 because older versions lack the GSX integration the client re
 
 The progress bars look the same everywhere. What differs is who moves the fuel and the weight:
 
-- Client, progressive: fuel flows at the rate set in the fuel card while the GSX hose is connected, and passengers and cargo follow GSX boarding. Freighters take the whole payload as cargo, spread over the main deck and the holds.
+- Client, progressive: fuel flows while the GSX hose is connected, and passengers and cargo follow GSX boarding. Each aircraft comes with a recommended fuel rate taken from its manufacturer's airport planning figures. You can set your own rate in the settings, for every aircraft at once or in an aircraft profile. Freighters take the whole payload as cargo, spread over the main deck and the holds.
 - GSX, progressive: the GSX truck fills the tanks at its own pace, so the fuel card rate reads Auto. If it feels slow, GSX has a Fuel Time Acceleration option.
+- EFB, progressive: the E-Jet's own EFB pumps the fuel from the flight plan imported into it, at its own pace, and puts the whole payload on board once GSX boarding starts. The client watches the tanks, so the fuel card rate reads Auto, and the boarding bar still follows GSX.
 - At once: the MD-11 and the A340 load fuel and payload in one step, and the bars follow GSX.
+
+Refueling and boarding run together, as they often do at a real gate. The client asks GSX for boarding once refueling reaches 75%, or right away when there is little fuel to load. Turn on "Call boarding early on refuel" in the Services settings, or in an aircraft profile, to ask for boarding as soon as refueling starts.
 
 GSX has its own PMDG automation that types fuel and payload into the FMC. The client turns it off so the two don't fight over the numbers.
 
@@ -158,7 +161,7 @@ Aircraft notes:
 - Fenix, iFly, Avro RJ, PMDG 777 and 737: import your SimBrief plan in the aircraft (its EFB, or on the PMDG the tablet's flight plan page or the FMC). The turnaround waits at "Waiting for flight plan" until you do. On the iFly, use the Balance & Payload page and load only the flight plan, not the weights.
 - Avro RJ: the client asks GSX for the aircraft's own airstairs. At a jetway stand it boards through the jetway.
 - FSS 727: the client loads from your OFP and never reads the tablet, so there is nothing to import. If you do import a plan, make it the same one you dispatched; the client can't see it and won't warn you if they differ. Once loading starts, leave the tablet's fuel player alone: pressing Play drains the tanks to the tablet's figure. During boarding the client opens the main deck door from the cargo door panel when the GSX loader is waiting and closes it when boarding ends. Don't touch that panel while the door moves; cutting its master power halfway freezes the door.
-- FSS E190/E195: the client loads from your OFP and never reads the EFB. Don't import a SimBrief plan into the EFB, because it overwrites the loaded fuel and payload the moment boarding ends. The EFB's GSX remote control also opens the GSX menu on its own; if you see that, turn `enableGsxRemoteControl` off in the EFB settings.
+- FSS E190/E195: import your SimBrief plan into the EFB and open its DEPARTURE page, but don't load the aircraft from it. The EFB only hands the plan to the aircraft once the DEPARTURE page has it, including after you change flights. The client requests refueling and boarding from GSX, and the EFB fills the tanks and loads the payload from that plan as GSX serves them. The turnaround waits at "Waiting for flight plan" until the EFB holds the same fuel as your OFP. If you regenerate the plan in SimBrief, import it into the EFB again; the client fetches the new OFP by itself. The EFB's GSX remote control also opens the GSX menu on its own; if you see that, turn `enableGsxRemoteControl` off in the EFB settings.
 
 If nothing happens after loading in, check that the aircraft is on the list above and that GSX itself is running normally.
 

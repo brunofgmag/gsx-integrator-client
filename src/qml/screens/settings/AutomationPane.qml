@@ -15,12 +15,21 @@ ColumnLayout {
         Layout.fillWidth: true
         title: qsTr("Fuel rate")
         caption: qsTr("Refueling speed")
-        helpText: qsTr("Only aircraft that cannot refuel through GSX use this rate. The others show Auto and follow the GSX pace.")
+        helpText: qsTr("Recommended uses each aircraft's own refueling rate; Manual uses the value you type. Only aircraft the client refuels use this rate. The others show Auto and fill at their own pace.")
+
+        SegmentedControl {
+            anchors.verticalCenter: parent.verticalCenter
+            model: [qsTr("Recommended"), qsTr("Manual")]
+            currentIndex: root.settingsVm.fuelRateModeIndex
+            onActivated: index => root.settingsVm.fuelRateModeIndex = index
+        }
 
         TextField {
             id: fuelRateField
             width: 70
             height: 32
+            enabled: root.settingsVm.fuelRateEditable
+            opacity: enabled ? 1.0 : 0.45
             text: root.settingsVm.fuelRateText
             color: Theme.text
             font.pixelSize: 12

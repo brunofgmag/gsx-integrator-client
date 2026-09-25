@@ -116,6 +116,7 @@ private:
     bool MaybeCloseStaleMenu();
     bool HandleAutoPicks(const std::string& sig);
     bool HandlePendingCompletions(const std::string& sig);
+    bool CompleteTheServiceItOpened();
     [[nodiscard]] bool RepositionWalking() const;
     bool HandleRepositionFlow();
     bool HandleIntentPrompts();
@@ -138,6 +139,7 @@ private:
     TimedIntent completingPushback_;
     TimedIntent completingRefuel_;
     TimedIntent completingBoarding_;
+    TimedIntent* serviceOpenedBy_ = nullptr;
     TimedIntent confirmingEngines_;
 
     Intent intent_ = Intent::None;

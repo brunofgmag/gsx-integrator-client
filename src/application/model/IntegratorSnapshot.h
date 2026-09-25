@@ -68,6 +68,7 @@ struct IntegratorSnapshot
     EngineConfirmationBlock engineConfirmationBlock = EngineConfirmationBlock::None;
     bool cargoAircraft = false;
     bool efbFlightPlan = false;
+    bool efbFlightPlanOnDeparturePage = false;
     bool engineerPanelExternalPower = false;
     bool groundPowerByClient = false;
 
@@ -86,6 +87,7 @@ struct IntegratorSnapshot
     SnapshotDouble plannedFuelKg;
     SnapshotDouble loadedFuelKg;
     SnapshotDouble settledFuelKg;
+    SnapshotDouble fuelRateKgs;
     SnapshotDouble plannedZfwKg;
     int plannedPax = 0;
     int boardedPax = 0;

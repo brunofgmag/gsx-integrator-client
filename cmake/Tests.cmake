@@ -60,9 +60,7 @@ set(TURNAROUND_STATE_TESTS
         gsxi-turnaround-call-catering-state-tests turnaround-state-call-catering tests/turnaround/states/tst_call_catering_state.cpp
         gsxi-turnaround-waiting-power-on-state-tests turnaround-state-waiting-power-on tests/turnaround/states/tst_waiting_power_on_state.cpp
         gsxi-turnaround-request-fuel-state-tests turnaround-state-request-fuel tests/turnaround/states/tst_request_fuel_state.cpp
-        gsxi-turnaround-refueling-state-tests turnaround-state-refueling tests/turnaround/states/tst_refueling_state.cpp
-        gsxi-turnaround-request-boarding-state-tests turnaround-state-request-boarding tests/turnaround/states/tst_request_boarding_state.cpp
-        gsxi-turnaround-boarding-state-tests turnaround-state-boarding tests/turnaround/states/tst_boarding_state.cpp
+        gsxi-turnaround-loading-state-tests turnaround-state-loading tests/turnaround/states/tst_loading_state.cpp
         gsxi-turnaround-waiting-aircraft-ready-state-tests turnaround-state-waiting-aircraft-ready tests/turnaround/states/tst_waiting_aircraft_ready_state.cpp
         gsxi-turnaround-waiting-ready-to-push-state-tests turnaround-state-waiting-ready-to-push tests/turnaround/states/tst_waiting_ready_to_push_state.cpp
         gsxi-turnaround-wait-catering-state-tests turnaround-state-wait-catering tests/turnaround/states/tst_wait_catering_state.cpp
@@ -92,6 +90,9 @@ foreach (TURNAROUND_STATE_TEST_INDEX RANGE 0 ${TURNAROUND_STATE_TEST_LAST_INDEX}
             ${TURNAROUND_STATE_TEST_NAME}
             ${TURNAROUND_STATE_TEST_FILE})
 endforeach ()
+
+add_turnaround_state_test(gsxi-refueling-track-tests refueling-track tests/turnaround/states/tst_refueling_track.cpp)
+add_turnaround_state_test(gsxi-boarding-track-tests boarding-track tests/turnaround/states/tst_boarding_track.cpp)
 
 add_executable(gsxi-turnaround-rules-tests
         tests/turnaround/TurnaroundStateFixture.h

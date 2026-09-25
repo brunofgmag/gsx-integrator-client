@@ -27,6 +27,8 @@ private slots:
     static void carriesThePilotTouchTheCurrentPhaseAnswersFor();
     static void carriesTheDroppedServiceSentenceTheWindowWrites();
     static void carriesTheLoaderCountdownTheWindowWrites();
+    static void carriesTheEffectiveFuelRateTheFuelCardShows();
+    static void carriesTheDeparturePageTipTheWindowWrites();
 };
 
 void EfbStatePublisherTest::publishesTheSnapshotWhenItChanges()
@@ -38,7 +40,7 @@ void EfbStatePublisherTest::publishesTheSnapshotWhenItChanges()
 
     EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
 
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
     publisher.Publish();
 
@@ -56,7 +58,7 @@ void EfbStatePublisherTest::staysSilentWhileTheSnapshotDoesNotChange()
 
     EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
 
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
     publisher.Publish();
     publisher.Publish();
@@ -94,7 +96,7 @@ void EfbStatePublisherTest::publishesNothingWhileTheBridgeIsUnavailable()
 
     EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
 
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
     publisher.Publish();
 
@@ -116,7 +118,7 @@ void EfbStatePublisherTest::keepsRetryingAfterTheBridgeRefusesTheWrite()
 
     EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
 
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
     publisher.Publish();
 
@@ -137,7 +139,7 @@ void EfbStatePublisherTest::announcesTheDepartureWhenTheClientQuits()
 
     EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
 
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
     publisher.Publish();
     publisher.PublishDeparture();
@@ -200,7 +202,7 @@ void EfbStatePublisherTest::answersTheAppHelloWithAFreshSnapshot()
     EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
     publisher.Setup();
 
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
     publisher.Publish();
     publisher.Publish();
@@ -238,7 +240,7 @@ void EfbStatePublisherTest::carriesTheLoadingModeFlagTheScreenColoursWith()
 
     EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
 
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
     publisher.Publish();
 
@@ -315,7 +317,7 @@ void EfbStatePublisherTest::carriesThePilotTouchTheCurrentPhaseAnswersFor()
     QVERIFY(std::get<2>(bridge.calls.back()).find(R"("pilotTouchLabel":"Start New Flight")") != std::string::npos);
     QVERIFY(std::get<2>(bridge.calls.back()).find(R"("canPilotTouch":true)") != std::string::npos);
 
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
     publisher.Publish();
 
@@ -352,7 +354,7 @@ void EfbStatePublisherTest::carriesTheLoaderCountdownTheWindowWrites()
     EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
 
     service.snapshot.connected = true;
-    service.snapshot.phase = TurnaroundPhase::Boarding;
+    service.snapshot.phase = TurnaroundPhase::Loading;
     service.snapshot.loaderHoldingBoarding = CargoLoader::Front;
     service.snapshot.loaderDoorWaitSeconds = 42;
     service.Notify();
@@ -362,4 +364,44 @@ void EfbStatePublisherTest::carriesTheLoaderCountdownTheWindowWrites()
 
     QVERIFY(viewModel.GetPhaseTip().contains(QStringLiteral("in 42 s")));
     QVERIFY(std::get<2>(bridge.calls.back()).find(expected) != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesTheDeparturePageTipTheWindowWrites()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.phase = TurnaroundPhase::WaitingFlightPlan;
+    service.snapshot.efbFlightPlan = true;
+    service.snapshot.efbFlightPlanOnDeparturePage = true;
+    service.Notify();
+    publisher.Publish();
+
+    const std::string expected = R"("phaseTip":")" + viewModel.GetPhaseTip().toStdString() + R"(")";
+
+    QVERIFY(viewModel.GetPhaseTip().contains(QStringLiteral("DEPARTURE")));
+    QVERIFY(std::get<2>(bridge.calls.back()).find(expected) != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesTheEffectiveFuelRateTheFuelCardShows()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.phase = TurnaroundPhase::Loading;
+    service.snapshot.fuelRateKgs = 17.0;
+    service.Notify();
+    publisher.Publish();
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("fuelRateText":"17 kg/s")") != std::string::npos);
 }

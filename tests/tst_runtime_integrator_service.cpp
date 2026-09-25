@@ -30,6 +30,10 @@ namespace
     constexpr auto kMd11Title = "TFDi Design MD-11 PAX";
     constexpr auto kMd11AtcModel = "MD11";
     constexpr auto kMd11ProfileId = "tfdi-md11";
+    constexpr auto kRj85Title = "Just Flight RJ85";
+    constexpr auto kRj85AtcModel = "RJ85";
+    constexpr auto kRj85ProfileId = "justflight-rj85";
+    constexpr double kRj85RecommendedFuelRateKgs = 12.0;
     constexpr auto kMd11EfbZfw = "L:MD11_EFB_PAYLOAD_ZFW";
     constexpr double kMd11EmptyWeightKg = 150000.0;
     constexpr double kJetwayInPlace = 5.0;
@@ -115,7 +119,8 @@ namespace
                                    [defineId](const auto& write) { return write.first == defineId; });
     }
 
-    bool DetectTheMd11WithTheGsxUp(const IntegratorRuntime& runtime, QSignalSpy& updated)
+    bool DetectWithTheGsxUp(const IntegratorRuntime& runtime, QSignalSpy& updated, const char* titleText,
+                            const char* atcModelText, const char* profileId)
     {
         PushUnpaused();
         if (!TickAndWait(updated))
@@ -130,10 +135,15 @@ namespace
             return false;
         }
 
-        FakeSimConnectApi::PushSimObjectString(title, kMd11Title);
-        FakeSimConnectApi::PushSimObjectString(atcModel, kMd11AtcModel);
+        FakeSimConnectApi::PushSimObjectString(title, titleText);
+        FakeSimConnectApi::PushSimObjectString(atcModel, atcModelText);
 
-        return TickAndWait(updated) && runtime.GetAircraftProfileId() == kMd11ProfileId;
+        return TickAndWait(updated) && runtime.GetAircraftProfileId() == profileId;
+    }
+
+    bool DetectTheMd11WithTheGsxUp(const IntegratorRuntime& runtime, QSignalSpy& updated)
+    {
+        return DetectWithTheGsxUp(runtime, updated, kMd11Title, kMd11AtcModel, kMd11ProfileId);
     }
 
     bool DriveTheFlowInto(const TurnaroundPhase phase, const IntegratorRuntime& runtime, QSignalSpy& updated)
@@ -233,6 +243,7 @@ private slots:
     static void fixGsxProfileWithoutConflictFails();
     static void fixPmdgOptionsWithoutConflictFails();
     static void applySettingsPushesEffectiveSettings();
+    static void theAircraftRecommendedFuelRateReachesTheEffectiveSettings();
     static void observersAreDedupedAndNotified();
     static void automationToggleEmitsOncePerChange();
     static void runtimeGettersOnEmptyRuntime();
@@ -299,6 +310,7 @@ void RuntimeIntegratorServiceTest::freshSnapshotHasDisconnectedDefaults()
     QVERIFY(!snapshot.pmdgOptionsFixable);
     QVERIFY(!snapshot.cargoAircraft);
     QVERIFY(!snapshot.engineerPanelExternalPower);
+    QVERIFY(!snapshot.efbFlightPlanOnDeparturePage);
     QCOMPARE(snapshot.aircraftName, std::string{});
     QCOMPARE(snapshot.aircraftProfileId, std::string{});
     QCOMPARE(snapshot.phase, TurnaroundPhase::WaitingSupportedAircraft);
@@ -376,14 +388,40 @@ void RuntimeIntegratorServiceTest::applySettingsPushesEffectiveSettings()
 
     AppSettings settings;
     settings.simbriefPilotId = 123;
+    settings.fuelRateMode = FuelRateMode::Manual;
     settings.fuelRateKgs = 7.5;
     settings.callCatering = true;
+    settings.callBoardingEarly = true;
 
     service.ApplySettings(settings);
 
     QCOMPARE(runtime.Settings().simbriefPilotId, 123);
     QCOMPARE(runtime.Settings().fuelRateKgs, 7.5);
     QCOMPARE(runtime.Settings().callCatering, true);
+    QCOMPARE(runtime.Settings().callBoardingEarly, true);
+    QCOMPARE(runtime.Snapshot().fuelRateKgs.value, 7.5);
+}
+
+void RuntimeIntegratorServiceTest::theAircraftRecommendedFuelRateReachesTheEffectiveSettings()
+{
+    IntegratorRuntime runtime;
+    RuntimeIntegratorService service(&runtime);
+
+    AppSettings settings;
+    settings.fuelRateKgs = 7.5;
+    service.ApplySettings(settings);
+
+    QCOMPARE(runtime.AircraftRecommendedFuelRateKgs(), 0.0);
+    QCOMPARE(runtime.Settings().fuelRateKgs, AutomationSettings::kDefaultFuelRateKgs);
+
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kRj85Title, kRj85AtcModel, kRj85ProfileId));
+
+    QCOMPARE(runtime.AircraftRecommendedFuelRateKgs(), kRj85RecommendedFuelRateKgs);
+    QCOMPARE(runtime.Settings().fuelRateKgs, kRj85RecommendedFuelRateKgs);
+    QCOMPARE(runtime.Snapshot().fuelRateKgs.value, kRj85RecommendedFuelRateKgs);
 }
 
 void RuntimeIntegratorServiceTest::observersAreDedupedAndNotified()
@@ -442,6 +480,7 @@ void RuntimeIntegratorServiceTest::runtimeGettersOnEmptyRuntime()
     QVERIFY(!snapshot.refuelBySelf);
     QVERIFY(!snapshot.cargoAircraft);
     QVERIFY(!snapshot.engineerPanelExternalPower);
+    QVERIFY(!snapshot.efbFlightPlanOnDeparturePage);
     QVERIFY(!snapshot.gsxProfileConflict);
     QVERIFY(!snapshot.gsxProfileFixable);
     QVERIFY(!snapshot.pmdgOptionsConflict);
@@ -753,8 +792,8 @@ void RuntimeIntegratorServiceTest::theSnapshotCarriesTheLoaderCountdownWhileTheL
 
     QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
 
-    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::Boarding) - static_cast<int>(runtime.GetPhase()));
-    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::Boarding);
+    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::Loading) - static_cast<int>(runtime.GetPhase()));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::Loading);
 
     QVERIFY(PushLVar(gsx::lvars::kBoardingState, static_cast<double>(GsxStateStatus::Active)));
     QVERIFY(TickAndWait(updated));
@@ -848,8 +887,8 @@ void RuntimeIntegratorServiceTest::theFuelWaitsUntilTheRemoteApiAnnouncesItsConn
 
     QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
 
-    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::Refueling) - static_cast<int>(runtime.GetPhase()));
-    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::Refueling);
+    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::Loading) - static_cast<int>(runtime.GetPhase()));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::Loading);
 
     QVERIFY(PushLVar(gsx::lvars::kRefuelingState, static_cast<double>(GsxStateStatus::Completed)));
     QVERIFY(TickAndWait(updated));

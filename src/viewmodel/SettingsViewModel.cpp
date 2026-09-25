@@ -2,6 +2,8 @@
 
 #include <QtCore/QDir>
 #include <QtCore/QLocale>
+#include <algorithm>
+#include <array>
 #include <utility>
 #include "../application/ports/IntegratorService.h"
 #include "../application/ports/SettingsRepository.h"
@@ -9,6 +11,23 @@
 
 namespace
 {
+    constexpr std::array kGlobalFuelRateModes{FuelRateMode::Recommended, FuelRateMode::Manual};
+    constexpr std::array kProfileFuelRateModes{FuelRateMode::Global, FuelRateMode::Recommended, FuelRateMode::Manual};
+
+    template <std::size_t N>
+    int FuelRateModeIndex(const std::array<FuelRateMode, N>& modes, const FuelRateMode mode)
+    {
+        const auto it = std::ranges::find(modes, mode);
+
+        return it != modes.end() ? static_cast<int>(it - modes.begin()) : 0;
+    }
+
+    template <std::size_t N>
+    bool IsFuelRateModeIndex(const std::array<FuelRateMode, N>& modes, const int index)
+    {
+        return index >= 0 && index < static_cast<int>(modes.size());
+    }
+
     double ParseFuelRate(const QString& text, const bool lb, bool* ok)
     {
         const QString trimmed = text.trimmed();
@@ -52,6 +71,7 @@ namespace
         dst.skipReposition = src.skipReposition;
         dst.callGpu = src.callGpu;
         dst.callGpuOnArrival = src.callGpuOnArrival;
+        dst.callBoardingEarly = src.callBoardingEarly;
         dst.callCatering = src.callCatering;
         dst.callLavatory = src.callLavatory;
         dst.callWater = src.callWater;
@@ -75,6 +95,7 @@ SettingsViewModel::SettingsViewModel(
                                : QString();
     displayIsLb_ = EffectiveIsLb();
     fuelRateText_ = FormatFuelRate(settings_.fuelRateKgs, displayIsLb_);
+    fuelRateMode_ = settings_.fuelRateMode;
     integratorService_->ApplySettings(settings_);
 
     for (const AircraftProfileInfo& info : profileInfos_)
@@ -84,6 +105,7 @@ SettingsViewModel::SettingsViewModel(
         if (it != settings_.profiles.end())
         {
             draft.useGlobal = it->second.useGlobal;
+            draft.fuelRateMode = it->second.fuelRateMode;
             draft.fuelRateText = FormatFuelRate(it->second.fuelRateKgs, displayIsLb_);
             CopyServiceFields(draft, it->second);
         }
@@ -158,6 +180,38 @@ void SettingsViewModel::SetFuelRateText(const QString& rate)
     emit FuelRateTextChanged();
     emit ProfileDraftChanged();
     emit ValidationChanged();
+}
+
+int SettingsViewModel::GetFuelRateModeIndex() const
+{
+    return FuelRateModeIndex(kGlobalFuelRateModes, fuelRateMode_);
+}
+
+void SettingsViewModel::SetFuelRateModeIndex(const int index)
+{
+    if (!IsFuelRateModeIndex(kGlobalFuelRateModes, index))
+    {
+        return;
+    }
+
+    const FuelRateMode mode = kGlobalFuelRateModes[static_cast<std::size_t>(index)];
+    if (fuelRateMode_ == mode)
+    {
+        return;
+    }
+
+    fuelRateMode_ = mode;
+
+    SetSaveResult({}, false);
+
+    emit FuelRateModeChanged();
+    emit ProfileDraftChanged();
+    emit ValidationChanged();
+}
+
+bool SettingsViewModel::IsFuelRateEditable() const
+{
+    return fuelRateMode_ == FuelRateMode::Manual;
 }
 
 bool SettingsViewModel::GetAutoSelectGsxChoice() const
@@ -264,6 +318,19 @@ bool SettingsViewModel::GetCallGpuOnArrival() const
 void SettingsViewModel::SetCallGpuOnArrival(const bool enabled)
 {
     if (SetPersisted(settings_.callGpuOnArrival, enabled, &SettingsViewModel::CallGpuOnArrivalChanged))
+    {
+        emit ProfileDraftChanged();
+    }
+}
+
+bool SettingsViewModel::GetCallBoardingEarly() const
+{
+    return settings_.callBoardingEarly;
+}
+
+void SettingsViewModel::SetCallBoardingEarly(const bool enabled)
+{
+    if (SetPersisted(settings_.callBoardingEarly, enabled, &SettingsViewModel::CallBoardingEarlyChanged))
     {
         emit ProfileDraftChanged();
     }
@@ -619,6 +686,7 @@ bool SettingsViewModel::save()
     }
 
     settings_.simbriefPilotId = pilotId;
+    settings_.fuelRateMode = fuelRateMode_;
     settings_.fuelRateKgs = fuelRateKgs;
 
     for (const AircraftProfileInfo& info : profileInfos_)
@@ -635,6 +703,7 @@ bool SettingsViewModel::save()
 
         AircraftProfile profile;
         profile.useGlobal = false;
+        profile.fuelRateMode = draft.fuelRateMode;
         const auto rate = profileFuelRates.find(profileInfos_[i].id);
         profile.fuelRateKgs = rate != profileFuelRates.end() ? rate->second : settings_.fuelRateKgs;
         CopyServiceFields(profile, draft);
@@ -744,10 +813,18 @@ void SettingsViewModel::setProfileAsGlobalDefault()
         return;
     }
 
-    if (GetProfileFuelEditable() && fuelRateText_ != draft.fuelRateText)
+    if (GetProfileFuelEditable())
     {
-        fuelRateText_ = draft.fuelRateText;
-        emit FuelRateTextChanged();
+        if (fuelRateText_ != draft.fuelRateText)
+        {
+            fuelRateText_ = draft.fuelRateText;
+            emit FuelRateTextChanged();
+        }
+        if (draft.fuelRateMode != FuelRateMode::Global && fuelRateMode_ != draft.fuelRateMode)
+        {
+            fuelRateMode_ = draft.fuelRateMode;
+            emit FuelRateModeChanged();
+        }
     }
     CopyServiceFields(settings_, draft);
     draft.useGlobal = true;
@@ -755,6 +832,7 @@ void SettingsViewModel::setProfileAsGlobalDefault()
     emit SkipRepositionChanged();
     emit CallGpuChanged();
     emit CallGpuOnArrivalChanged();
+    emit CallBoardingEarlyChanged();
     emit CallCateringChanged();
     emit CallLavatoryChanged();
     emit CallWaterChanged();
@@ -827,6 +905,7 @@ void SettingsViewModel::SetProfileUseGlobal(const bool useGlobal)
     draft.useGlobal = useGlobal;
     if (!useGlobal)
     {
+        draft.fuelRateMode = fuelRateMode_;
         draft.fuelRateText = fuelRateText_;
         CopyServiceFields(draft, settings_);
     }
@@ -849,6 +928,48 @@ void SettingsViewModel::SetProfileFuelRateText(const QString& rate)
     SelectedDraft().fuelRateText = rate;
 
     TouchProfileDraft();
+}
+
+int SettingsViewModel::GetProfileFuelRateModeIndex() const
+{
+    const FuelRateMode mode = SelectedDraft().useGlobal ? fuelRateMode_ : SelectedDraft().fuelRateMode;
+
+    return FuelRateModeIndex(kProfileFuelRateModes, mode);
+}
+
+void SettingsViewModel::SetProfileFuelRateModeIndex(const int index)
+{
+    if (profileDrafts_.empty() || SelectedDraft().useGlobal || !IsFuelRateModeIndex(kProfileFuelRateModes, index))
+    {
+        return;
+    }
+
+    const FuelRateMode mode = kProfileFuelRateModes[static_cast<std::size_t>(index)];
+    if (SelectedDraft().fuelRateMode == mode)
+    {
+        return;
+    }
+
+    SelectedDraft().fuelRateMode = mode;
+
+    TouchProfileDraft();
+}
+
+bool SettingsViewModel::IsProfileFuelRateEditable() const
+{
+    return GetProfileFuelEditable()
+        && !SelectedDraft().useGlobal
+        && SelectedDraft().fuelRateMode == FuelRateMode::Manual;
+}
+
+QString SettingsViewModel::GetProfileRecommendedFuelRateText() const
+{
+    if (profileInfos_.empty())
+    {
+        return {};
+    }
+
+    return FormatFuelRate(profileInfos_[selectedProfileIndex_].recommendedFuelRateKgs, displayIsLb_);
 }
 
 bool SettingsViewModel::GetProfileSkipReposition() const
@@ -879,6 +1000,16 @@ bool SettingsViewModel::GetProfileCallGpuOnArrival() const
 void SettingsViewModel::SetProfileCallGpuOnArrival(const bool enabled)
 {
     SetProfileToggle(&ProfileDraft::callGpuOnArrival, enabled);
+}
+
+bool SettingsViewModel::GetProfileCallBoardingEarly() const
+{
+    return SelectedDraft().useGlobal ? settings_.callBoardingEarly : SelectedDraft().callBoardingEarly;
+}
+
+void SettingsViewModel::SetProfileCallBoardingEarly(const bool enabled)
+{
+    SetProfileToggle(&ProfileDraft::callBoardingEarly, enabled);
 }
 
 bool SettingsViewModel::GetProfileCallCatering() const
@@ -957,13 +1088,15 @@ SettingsViewModel::Draft SettingsViewModel::Validate() const
     }
 
     bool rateOk = false;
-    result.fuelRateKgs = ParseFuelRate(fuelRateText_, displayIsLb_, &rateOk);
-    if (!rateOk || result.fuelRateKgs <= 0.0)
+    const double globalRate = ParseFuelRate(fuelRateText_, displayIsLb_, &rateOk);
+    const bool globalRateValid = rateOk && globalRate > 0.0;
+    if (!globalRateValid && fuelRateMode_ == FuelRateMode::Manual)
     {
         result.error = tr("Enter a valid fuel rate.");
 
         return result;
     }
+    result.fuelRateKgs = globalRateValid ? globalRate : settings_.fuelRateKgs;
 
     for (size_t i = 0; i < profileInfos_.size(); ++i)
     {
@@ -975,14 +1108,18 @@ SettingsViewModel::Draft SettingsViewModel::Validate() const
 
         bool profileRateOk = false;
         const double profileRate = ParseFuelRate(draft.fuelRateText, displayIsLb_, &profileRateOk);
-        if (!profileRateOk || profileRate <= 0.0)
+        const bool profileRateValid = profileRateOk && profileRate > 0.0;
+        if (!profileRateValid && draft.fuelRateMode == FuelRateMode::Manual)
         {
             result.error = tr("Enter a valid fuel rate for %1.")
                 .arg(QString::fromStdString(profileInfos_[i].shortCode));
 
             return result;
         }
-        result.profileFuelRates.emplace(profileInfos_[i].id, profileRate);
+        if (profileRateValid)
+        {
+            result.profileFuelRates.emplace(profileInfos_[i].id, profileRate);
+        }
     }
 
     result.valid = true;

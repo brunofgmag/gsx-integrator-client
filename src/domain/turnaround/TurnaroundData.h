@@ -1,6 +1,8 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDDATA_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDDATA_H
 
+#include <optional>
+
 #include "../model/AutomationStatus.h"
 #include "../model/CargoLoader.h"
 
@@ -60,6 +62,9 @@ struct TurnaroundData
     int servicesWaitSeconds = 0;
     int servicesOperatingTicks = 0;
     bool boardingRequested = false;
+    bool boardingConfirmed = false;
+    bool refuelFinished = false;
+    bool boardingFinished = false;
     bool deboardingRequested = false;
     bool deboardingAwaitsGsx = false;
     bool pushbackRequested = false;
@@ -85,8 +90,11 @@ struct TurnaroundData
     CabinServiceProgress cleaning;
     int cabinWaitIntervals = 0;
     bool flightPlanRequested = false;
+    int flightPlanRequestTicks = 0;
     bool flightPlanRefused = false;
     bool latestFlightPlanRequested = false;
+    int differingFlightPlanTicks = 0;
+    std::optional<int> staleSimbriefGeneration;
     bool repositionRequested = false;
     bool repositionCompleted = false;
 

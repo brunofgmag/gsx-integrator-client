@@ -28,6 +28,8 @@ using namespace simvars;
 
 namespace
 {
+    constexpr double kRecommendedFuelRateKgs = 17.0;
+
     constexpr auto kSmartSwitchLVar = "S_ASP_INTRAD";
     constexpr auto kSmartSwitchControl = "INT/RAD";
     constexpr auto kSmartSwitchSide = "INT";
@@ -604,7 +606,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "FenixA319"}
         },
-        &CreateFenixA32x, "fenix-a319", "A319", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
+        &CreateFenixA32x, "fenix-a319", "A319", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
     };
 
     const AircraftDescriptor kFenixA320Descriptor{
@@ -612,7 +614,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "FenixA320"}
         },
-        &CreateFenixA32x, "fenix-a320", "A320", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
+        &CreateFenixA32x, "fenix-a320", "A320", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
     };
 
     const AircraftDescriptor kFenixA321Descriptor{
@@ -620,7 +622,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "FenixA321"}
         },
-        &CreateFenixA32x, "fenix-a321", "A321", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
+        &CreateFenixA32x, "fenix-a321", "A321", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
     };
 
     [[maybe_unused]] const AircraftRegistration kFenixA319Registration{kFenixA319Descriptor};

@@ -10,6 +10,7 @@ struct AppSettings
 {
     int simbriefPilotId = 0;
     bool streamerMode = false;
+    FuelRateMode fuelRateMode = FuelRateMode::Recommended;
     double fuelRateKgs = AutomationSettings::kDefaultFuelRateKgs;
     bool autoSelectGsxChoice = true;
     bool autoDeice = false;
@@ -21,6 +22,7 @@ struct AppSettings
     bool skipReposition = false;
     bool callGpu = false;
     bool callGpuOnArrival = false;
+    bool callBoardingEarly = false;
     bool callCatering = false;
     bool callLavatory = false;
     bool callWater = false;

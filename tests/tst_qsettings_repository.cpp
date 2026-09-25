@@ -29,6 +29,11 @@ private slots:
     void theRetiredAllRequestsSurvivesTheRescale() const;
     void aRescaledPanelModeIsNeverMigratedTwice() const;
     void savingThePanelModeLeavesTheLegacyKeyIntact();
+    void anAbsentGlobalFuelRateModeReadsAsRecommendedAndKeepsTheRateAsManual() const;
+    void anAbsentProfileFuelRateModeReadsAsRecommendedAndKeepsTheRateAsManual() const;
+    void storedFuelRateModesAreReadBack() const;
+    void savedFuelRateModesAreWrittenAndReread();
+    void anAbsentEarlyBoardingKeyReadsAsOff() const;
 
 private:
     QTemporaryDir tempDir_;
@@ -56,6 +61,7 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     const AppSettings loaded = repository_.Load();
 
     QCOMPARE(loaded.simbriefPilotId, 0);
+    QCOMPARE(loaded.fuelRateMode, FuelRateMode::Recommended);
     QCOMPARE(loaded.fuelRateKgs, AutomationSettings::kDefaultFuelRateKgs);
     QCOMPARE(loaded.autoSelectGsxChoice, true);
     QCOMPARE(loaded.autoDeice, false);
@@ -67,6 +73,7 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QCOMPARE(loaded.skipReposition, false);
     QCOMPARE(loaded.callGpu, false);
     QCOMPARE(loaded.callGpuOnArrival, false);
+    QCOMPARE(loaded.callBoardingEarly, false);
     QCOMPARE(loaded.callCatering, false);
     QCOMPARE(loaded.callLavatory, false);
     QCOMPARE(loaded.callWater, false);
@@ -177,6 +184,85 @@ void QSettingsRepositoryTest::savingThePanelModeLeavesTheLegacyKeyIntact()
              static_cast<int>(GsxPanelMode::AllRequests));
 }
 
+void QSettingsRepositoryTest::anAbsentGlobalFuelRateModeReadsAsRecommendedAndKeepsTheRateAsManual() const
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("fuel/rateKgs"), 42.5);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QCOMPARE(loaded.fuelRateMode, FuelRateMode::Recommended);
+    QCOMPARE(loaded.fuelRateKgs, 42.5);
+}
+
+void QSettingsRepositoryTest::anAbsentProfileFuelRateModeReadsAsRecommendedAndKeepsTheRateAsManual() const
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("profiles/fenix-a320/useGlobal"), false);
+    settings.setValue(QStringLiteral("profiles/fenix-a320/fuelRateKgs"), 33.0);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    const auto it = loaded.profiles.find("fenix-a320");
+    QVERIFY(it != loaded.profiles.end());
+    QCOMPARE(it->second.fuelRateMode, FuelRateMode::Recommended);
+    QCOMPARE(it->second.fuelRateKgs, 33.0);
+}
+
+void QSettingsRepositoryTest::storedFuelRateModesAreReadBack() const
+{
+    QSettings settings;
+    settings.setValue(QStringLiteral("fuel/rateMode"), static_cast<int>(FuelRateMode::Manual));
+    settings.setValue(QStringLiteral("profiles/fenix-a320/useGlobal"), false);
+    settings.setValue(QStringLiteral("profiles/fenix-a320/fuelRateMode"), static_cast<int>(FuelRateMode::Manual));
+    settings.setValue(QStringLiteral("profiles/pmdg-777f/useGlobal"), false);
+    settings.setValue(QStringLiteral("profiles/pmdg-777f/fuelRateMode"), static_cast<int>(FuelRateMode::Global));
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QCOMPARE(loaded.fuelRateMode, FuelRateMode::Manual);
+    QCOMPARE(loaded.profiles.at("fenix-a320").fuelRateMode, FuelRateMode::Manual);
+    QCOMPARE(loaded.profiles.at("pmdg-777f").fuelRateMode, FuelRateMode::Global);
+}
+
+void QSettingsRepositoryTest::savedFuelRateModesAreWrittenAndReread()
+{
+    AppSettings values;
+    values.fuelRateMode = FuelRateMode::Manual;
+    values.fuelRateKgs = 18.0;
+    AircraftProfile recommended;
+    recommended.useGlobal = false;
+    recommended.fuelRateMode = FuelRateMode::Recommended;
+    recommended.fuelRateKgs = 11.0;
+    values.profiles.emplace("fenix-a320", recommended);
+    AircraftProfile manual;
+    manual.useGlobal = false;
+    manual.fuelRateMode = FuelRateMode::Manual;
+    manual.fuelRateKgs = 44.0;
+    values.profiles.emplace("pmdg-777f", manual);
+
+    QVERIFY(repository_.Save(values));
+
+    const QSettings reread;
+    QCOMPARE(reread.value(QStringLiteral("fuel/rateMode")).toInt(), static_cast<int>(FuelRateMode::Manual));
+    QCOMPARE(reread.value(QStringLiteral("profiles/fenix-a320/fuelRateMode")).toInt(),
+             static_cast<int>(FuelRateMode::Recommended));
+    QCOMPARE(reread.value(QStringLiteral("profiles/pmdg-777f/fuelRateMode")).toInt(),
+             static_cast<int>(FuelRateMode::Manual));
+
+    const AppSettings loaded = repository_.Load();
+
+    QCOMPARE(loaded.fuelRateMode, FuelRateMode::Manual);
+    QCOMPARE(loaded.fuelRateKgs, 18.0);
+    QCOMPARE(loaded.profiles.at("fenix-a320").fuelRateMode, FuelRateMode::Recommended);
+    QCOMPARE(loaded.profiles.at("fenix-a320").fuelRateKgs, 11.0);
+    QCOMPARE(loaded.profiles.at("pmdg-777f").fuelRateMode, FuelRateMode::Manual);
+    QCOMPARE(loaded.profiles.at("pmdg-777f").fuelRateKgs, 44.0);
+}
+
 void QSettingsRepositoryTest::crewDeboardingInheritsTheBoardingChoiceWhenAbsent() const
 {
     QSettings settings;
@@ -207,6 +293,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     AppSettings values;
     values.simbriefPilotId = 12345;
     values.streamerMode = true;
+    values.fuelRateMode = FuelRateMode::Manual;
     values.fuelRateKgs = 42.5;
     values.autoSelectGsxChoice = false;
     values.autoDeice = true;
@@ -218,6 +305,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     values.skipReposition = true;
     values.callGpu = true;
     values.callGpuOnArrival = true;
+    values.callBoardingEarly = true;
     values.callCatering = true;
     values.callLavatory = true;
     values.callWater = true;
@@ -234,10 +322,12 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
 
     AircraftProfile profile;
     profile.useGlobal = false;
+    profile.fuelRateMode = FuelRateMode::Global;
     profile.fuelRateKgs = 33.0;
     profile.skipReposition = true;
     profile.callGpu = true;
     profile.callGpuOnArrival = false;
+    profile.callBoardingEarly = true;
     profile.callCatering = true;
     profile.callLavatory = false;
     profile.callWater = true;
@@ -250,6 +340,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
 
     QCOMPARE(loaded.simbriefPilotId, values.simbriefPilotId);
     QCOMPARE(loaded.streamerMode, values.streamerMode);
+    QCOMPARE(loaded.fuelRateMode, values.fuelRateMode);
     QCOMPARE(loaded.fuelRateKgs, values.fuelRateKgs);
     QCOMPARE(loaded.autoSelectGsxChoice, values.autoSelectGsxChoice);
     QCOMPARE(loaded.autoDeice, values.autoDeice);
@@ -261,6 +352,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     QCOMPARE(loaded.skipReposition, values.skipReposition);
     QCOMPARE(loaded.callGpu, values.callGpu);
     QCOMPARE(loaded.callGpuOnArrival, values.callGpuOnArrival);
+    QCOMPARE(loaded.callBoardingEarly, values.callBoardingEarly);
     QCOMPARE(loaded.callCatering, values.callCatering);
     QCOMPARE(loaded.callLavatory, values.callLavatory);
     QCOMPARE(loaded.callWater, values.callWater);
@@ -279,10 +371,12 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     const auto it = loaded.profiles.find("a340");
     QVERIFY(it != loaded.profiles.end());
     QCOMPARE(it->second.useGlobal, profile.useGlobal);
+    QCOMPARE(it->second.fuelRateMode, profile.fuelRateMode);
     QCOMPARE(it->second.fuelRateKgs, profile.fuelRateKgs);
     QCOMPARE(it->second.skipReposition, profile.skipReposition);
     QCOMPARE(it->second.callGpu, profile.callGpu);
     QCOMPARE(it->second.callGpuOnArrival, profile.callGpuOnArrival);
+    QCOMPARE(it->second.callBoardingEarly, profile.callBoardingEarly);
     QCOMPARE(it->second.callCatering, profile.callCatering);
     QCOMPARE(it->second.callLavatory, profile.callLavatory);
     QCOMPARE(it->second.callWater, profile.callWater);
@@ -354,6 +448,20 @@ void QSettingsRepositoryTest::saveReplacesExistingProfiles()
 
     QCOMPARE(loaded.profiles.size(), std::size_t{1});
     QVERIFY(loaded.profiles.contains("two"));
+}
+
+void QSettingsRepositoryTest::anAbsentEarlyBoardingKeyReadsAsOff() const
+{
+    QSettings settings;
+    settings.setValue("services/callGpu", true);
+    settings.setValue("profiles/a340/useGlobal", false);
+    settings.setValue("profiles/a340/callGpu", true);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QVERIFY(!loaded.callBoardingEarly);
+    QVERIFY(!loaded.profiles.at("a340").callBoardingEarly);
 }
 
 QTEST_GUILESS_MAIN(QSettingsRepositoryTest)
