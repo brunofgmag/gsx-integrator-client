@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.39.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.39.1...v1.39.2) (2026-09-25)
+
+
+* keep the call ramp light off and refetch the ofp after a gsx refusal ([#188](https://github.com/brunofgmag/gsx-integrator-client/issues/188)) ([8497dd1](https://github.com/brunofgmag/gsx-integrator-client/commit/8497dd1ccbb94570b3d8c38feec4a02e043e62c2))
+
+
+### Bug Fixes
+
+* **fss-e-jets:** keep the call ramp light off and refetch the ofp after a gsx refusal ([9607076](https://github.com/brunofgmag/gsx-integrator-client/commit/960707611fc75e404318bf5e8902d13b5684e453)) ([8497dd1](https://github.com/brunofgmag/gsx-integrator-client/commit/8497dd1ccbb94570b3d8c38feec4a02e043e62c2))
+
 ## [1.39.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.39.0...v1.39.1) (2026-09-25)
 
 
