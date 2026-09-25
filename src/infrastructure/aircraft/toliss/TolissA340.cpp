@@ -79,6 +79,7 @@ namespace
 
     constexpr auto kSmartSwitchLVar = "AB_ACP_CPT_RTU_Switch";
     constexpr double kSmartSwitchNeutral = 1.0;
+    constexpr auto kSmartSwitchControl = "INT/RAD";
 
     constexpr auto kParkingBrakeLVar = "PARKINGBRAKE_POSITION";
     constexpr double kParkingBrakeSetLVarValue = 100.0;
@@ -293,7 +294,7 @@ namespace
             {MatchField::Title, MatchOp::Contains, "Aerosoft A346"},
             {MatchField::AtcModel, MatchOp::Equals, "A346"}
         },
-        &CreateTolissA340, "toliss-a340", "A346", RefuelBy::Self
+        &CreateTolissA340, "toliss-a340", "A346", RefuelBy::Self, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::FlickEitherSide}
     };
 
     [[maybe_unused]] const AircraftRegistration kTolissA340Registration{kTolissA340Descriptor};

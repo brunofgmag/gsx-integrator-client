@@ -168,7 +168,8 @@ public:
     [[nodiscard]] static QString GetDismissAdvisoryLabel();
     [[nodiscard]] QString GetEngineConfirmationAdvisoryText() const;
     [[nodiscard]] QString GetServicesAdvisoryText() const;
-    [[nodiscard]] static QString GetOpenDoorAdvisoryText();
+    [[nodiscard]] QString GetOpenDoorAdvisoryText() const;
+    [[nodiscard]] static QString GetAdvisoryLabel();
     [[nodiscard]] static QString GetServiceInterruptedAdvisoryText();
     [[nodiscard]] static QString GetCommandErrorLabel();
     [[nodiscard]] bool IsGsxProfileFixable() const;

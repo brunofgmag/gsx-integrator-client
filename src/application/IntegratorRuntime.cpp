@@ -662,11 +662,13 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
         && GetPhase() <= TurnaroundPhase::WaitingFlightPlan;
     snapshot.aircraftName = GetAircraftName().toStdString();
     snapshot.aircraftProfileId = GetAircraftProfileId();
+    snapshot.smartSwitch = aircraft_ && aircraftDescriptor_ ? aircraftDescriptor_->smartSwitch : SmartSwitchCue{};
     snapshot.refuelByGsx = IsAircraftRefuelByGsx();
     snapshot.refuelBySelf = IsAircraftRefuelBySelf();
     snapshot.cargoAircraft = IsAircraftCargoVariant();
     snapshot.efbFlightPlan = AircraftRequiresEfbFlightPlan();
     snapshot.engineerPanelExternalPower = AircraftTakesExternalPowerAtTheEngineerPanel();
+    snapshot.groundPowerByClient = settings_.callGpu || settings_.callGpuOnArrival;
     snapshot.gsxProfileConflict = HasGsxProfileConflict();
     snapshot.gsxProfileFixable = CanFixGsxProfile();
     snapshot.pmdgOptionsConflict = HasPmdgOptionsConflict();

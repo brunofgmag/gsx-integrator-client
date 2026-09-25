@@ -163,7 +163,7 @@ Item {
             Text {
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("No plugin found in any Community folder. The client can't warn you about new versions.")
+                text: qsTr("No plugin found in any Community folder. Without it, the EFB app, the GSX panel setting and PMDG loading do not work. Install it with the installer.")
                 color: Theme.faint
                 font.pixelSize: 10
                 font.letterSpacing: 0.8
@@ -191,7 +191,7 @@ Item {
                 topPadding: 4
                 horizontalAlignment: Text.AlignHCenter
                 text: root.updateVm
-                      ? qsTr("CommBus update available — v%1").arg(root.updateVm.commbusLatestVersion)
+                      ? qsTr("CommBus update available · v%1").arg(root.updateVm.commbusLatestVersion)
                       : ""
                 color: Theme.amber
                 font.pixelSize: 11

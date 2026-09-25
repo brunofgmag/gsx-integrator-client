@@ -58,6 +58,8 @@ namespace
     constexpr auto kParkBrakeAnnunciatorLVar = "C_ANNUNS_ParkBrake_il";
 
     constexpr auto kSmartSwitchLVar = "PED_FWD_L_Audio_RT";
+    constexpr auto kSmartSwitchControl = "R/T-INT";
+    constexpr auto kSmartSwitchSide = "INT";
     constexpr double kSmartSwitchNeutral = 1.0;
 
     constexpr auto kFwdPaxDoorLVar = "EXT_Door_pax_1L";
@@ -387,7 +389,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "Just Flight RJ70"}
         },
-        &CreateAvroRj, "justflight-rj70", "RJ70", RefuelBy::Client
+        &CreateAvroRj, "justflight-rj70", "RJ70", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
     };
 
     const AircraftDescriptor kAvroRj85Descriptor{
@@ -395,7 +397,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "Just Flight RJ85"}
         },
-        &CreateAvroRj, "justflight-rj85", "RJ85", RefuelBy::Client
+        &CreateAvroRj, "justflight-rj85", "RJ85", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
     };
 
     const AircraftDescriptor kAvroRj100Descriptor{
@@ -403,7 +405,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "Just Flight RJ100"}
         },
-        &CreateAvroRj, "justflight-rj100", "RJ1H", RefuelBy::Client
+        &CreateAvroRj, "justflight-rj100", "RJ1H", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
     };
 
     [[maybe_unused]] const AircraftRegistration kAvroRj70Registration{kAvroRj70Descriptor};

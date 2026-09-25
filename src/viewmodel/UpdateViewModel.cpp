@@ -76,11 +76,11 @@ QString UpdateViewModel::GetStatusText() const
     case UpToDate:
         return tr("Up to date");
     case UpdateAvailable:
-        return tr("Update available — v%1").arg(latest_.version);
+        return tr("Update available · v%1").arg(latest_.version);
     case Downloading:
         return tr("Downloading v%1").arg(latest_.version);
     case ReadyToRestart:
-        return tr("Update ready — restart to apply");
+        return tr("Update ready: restart to apply");
     case Error:
         return errorMessage_;
     default:

@@ -87,6 +87,7 @@ set(APP_SOURCES
         src/application/model/AircraftProfile.h
         src/application/model/EffectiveSettings.h
         src/application/model/IntegratorSnapshot.h
+        src/application/model/SmartSwitchCue.h
         src/domain/model/AutomationStatus.h
         src/domain/model/AutomationSettings.h
         src/domain/model/FlightPlan.h

@@ -65,11 +65,14 @@ Some aircraft use their own ground power instead of the GSX unit, and the client
 
 ### The smart switch
 
-The smart switch is a cockpit control you flip to tell the client "go ahead". It does three things:
+The smart switch is a cockpit control you flip to tell the client "go ahead". It does four things:
 
-- At "Requesting fuel", with automatic loading off, it starts loading, same as the Start Loading button.
+- At "Waiting for start loading", with automatic loading off, it starts loading, same as the Start Loading button.
+- At "Waiting for beacon & brake", with a door still open, it lets the pushback go ahead with the door open.
 - During pushback, it confirms the engines started.
 - After a finished turnaround, it starts the next one.
+
+When the client asks for it, the tip on screen names the control and the side to use on the aircraft you are flying.
 
 | Aircraft | Where | How |
 |---|---|---|

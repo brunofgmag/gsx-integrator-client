@@ -54,7 +54,7 @@ ColumnLayout {
         Layout.fillWidth: true
         title: qsTr("Accept actions automatically")
         caption: qsTr("Picks the recommended GSX menu option")
-        helpText: qsTr("The client answers GSX menus on its own: any option marked \"GSX choice\" and the Simbrief block fuel level, even on menus you opened by hand.")
+        helpText: qsTr("The client answers GSX menus on its own: any option marked \"GSX choice\" and the SimBrief block fuel level, even on menus you opened by hand.")
         checked: root.settingsVm.autoSelectGsxChoice
         onToggled: checked => root.settingsVm.autoSelectGsxChoice = checked
     }
@@ -72,7 +72,7 @@ ColumnLayout {
         Layout.fillWidth: true
         title: qsTr("Auto-start loading")
         caption: qsTr("Request refueling without pressing anything")
-        helpText: qsTr("When off, the turnaround holds at \"Requesting fuel\" until you press Start Loading or the aircraft's SmartSwitch. Asking for fuel in the GSX menu resumes it too.")
+        helpText: qsTr("When off, the turnaround holds at \"Waiting for start loading\" until you press Start Loading or the aircraft's smart switch. Asking for fuel in the GSX menu resumes it too.")
         checked: root.settingsVm.autoStartLoading
         onToggled: checked => root.settingsVm.autoStartLoading = checked
     }

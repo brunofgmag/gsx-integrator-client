@@ -68,6 +68,7 @@ namespace
     constexpr double kEquipmentPlaced = 1.0;
 
     constexpr auto kServiceInterphoneLVar = "FSS_B727_ADP_SERV_INT_SWITCH";
+    constexpr auto kSmartSwitchControl = "SERV INT";
     constexpr double kServiceInterphoneOff = 0.0;
 
     constexpr auto kPercentOver100Unit = "percent over 100";
@@ -520,7 +521,7 @@ namespace
             {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200F"},
             {MatchField::Title, MatchOp::StartsWith, "Boeing B727-200 Freighter"}
         },
-        &CreateFss727200F, "fss-727-200f", "722F", RefuelBy::Client
+        &CreateFss727200F, "fss-727-200f", "722F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}
     };
 
     const AircraftDescriptor kFss727200ReFreighterDescriptor{
@@ -530,7 +531,7 @@ namespace
             {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200RE Super 27 Freighter"},
             {MatchField::AtcModel, MatchOp::Equals, "B727RE"}
         },
-        &CreateFss727200ReFreighter, "fss-727-200re", "R72F", RefuelBy::Client
+        &CreateFss727200ReFreighter, "fss-727-200re", "R72F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}
     };
 
     [[maybe_unused]] const AircraftRegistration kFss727200FRegistration{kFss727200FDescriptor};

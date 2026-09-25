@@ -24,6 +24,7 @@ namespace
     constexpr auto kVoltsUnit = "Volts";
 
     constexpr auto kSmartSwitch = "VC_ACP_1_Push_to_Talk_SW_VAL";
+    constexpr auto kSmartSwitchControl = "R/T-I/C";
     constexpr double kSmartSwitchNeutral = 10.0;
 
     constexpr int kEngineCount = 2;
@@ -223,7 +224,7 @@ namespace
         {
             {MatchField::Title, MatchOp::Contains, "iFly 737-MAX"}
         },
-        &CreateIFly737Max, "ifly-737max8", "B38M", RefuelBy::Gsx
+        &CreateIFly737Max, "ifly-737max8", "B38M", RefuelBy::Gsx, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::FlickEitherSide}
     };
 
     [[maybe_unused]] const AircraftRegistration kIFly737MaxRegistration{kIFly737MaxDescriptor};

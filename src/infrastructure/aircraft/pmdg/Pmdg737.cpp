@@ -18,6 +18,8 @@ namespace
     constexpr auto kChocksLVar = "NGXWheelChocks";
     constexpr auto kSmartSwitchLVar = "switch_752_73X";
     constexpr double kSmartSwitchNeutral = 50.0;
+    constexpr auto kSmartSwitchControl = "R/T-I/C";
+    constexpr auto kSmartSwitchSide = "R/T";
 
     constexpr int kStateQueryTicks = 3;
 
@@ -217,7 +219,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, kTitlePax800}
         },
-        &CreatePmdg737, "pmdg-737-800", "73H", RefuelBy::Client
+        &CreatePmdg737, "pmdg-737-800", "73H", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
     };
 
     const AircraftDescriptor kPmdg737Bcf800Descriptor{
@@ -225,7 +227,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, kTitleBcf800}
         },
-        &CreatePmdg737, "pmdg-737-800bcf", "73BCF", RefuelBy::Client
+        &CreatePmdg737, "pmdg-737-800bcf", "73BCF", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
     };
 
     const AircraftDescriptor kPmdg737Bdsf800Descriptor{
@@ -233,7 +235,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, kTitleBdsf800}
         },
-        &CreatePmdg737, "pmdg-737-800bdsf", "73SF", RefuelBy::Client
+        &CreatePmdg737, "pmdg-737-800bdsf", "73SF", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
     };
 
     const AircraftDescriptor kPmdg737Bbj2Descriptor{
@@ -242,7 +244,7 @@ namespace
             {MatchField::Title, MatchOp::StartsWith, kTitleBbj2Short},
             {MatchField::Title, MatchOp::StartsWith, kTitleBbj2}
         },
-        &CreatePmdg737, "pmdg-737-bbj2", "73BBJ", RefuelBy::Client
+        &CreatePmdg737, "pmdg-737-bbj2", "73BBJ", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}
     };
 
     [[maybe_unused]] const AircraftRegistration kPmdg737Pax800Registration{kPmdg737Pax800Descriptor};
