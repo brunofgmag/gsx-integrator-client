@@ -100,6 +100,13 @@ private slots:
     static void aRefusedPilotTouchReportsTheReason();
     static void everyTouchablePhaseNamesItsTouchExceptTheOneAButtonAlreadyCovers();
     static void theLoadedFuelShowsWhatSettledInTheTanks();
+    static void theSmartSwitchTipsNameTheControlAndTheSideThatActs();
+    static void theSmartSwitchTipsNameTheMoveOfEachKindOfControl();
+    static void theSmartSwitchTipsFallBackWhenTheAircraftNamesNoControl();
+    static void theOpenDoorAdvisoryNamesTheSmartSwitch();
+    static void theUnlockTouchOnlyActsWhileADoorHoldsThePushback();
+    static void thePushbackTipOnlyShowsWhenThePilotHandlesTheGroundPower();
+    static void theParkingBrakeTipSaysWhatEachSideOfTheTurnaroundNeedsItFor();
 };
 
 void OperationsViewModelTest::waitingForLoadingOverridesStateTextAndTip()
@@ -382,7 +389,7 @@ void OperationsViewModelTest::flightPlanTipFollowsPlanSource()
     service.Notify();
 
     QCOMPARE(viewModel.GetPhaseTip(),
-             QStringLiteral("Check that SimBrief is loaded in GSX and in this app."));
+             QStringLiteral("Check that SimBrief is loaded in GSX and in the client."));
 
     service.snapshot.efbFlightPlan = true;
     service.Notify();
@@ -1065,7 +1072,7 @@ void OperationsViewModelTest::holdCountdownTextCountsTheRemainingSeconds()
     service.snapshot.delayTicksRemaining = 12;
     service.Notify();
 
-    QCOMPARE(viewModel.GetHoldCountdownText(), QStringLiteral("Next state in 12s"));
+    QCOMPARE(viewModel.GetHoldCountdownText(), QStringLiteral("Next state in 12 s"));
 }
 
 void OperationsViewModelTest::holdCountdownTextIsEmptyWhenNothingIsHolding()
@@ -1609,4 +1616,139 @@ void OperationsViewModelTest::everyTouchablePhaseNamesItsTouchExceptTheOneAButto
 
         QVERIFY(!viewModel.GetPilotTouchLabel().isEmpty());
     }
+}
+
+void OperationsViewModelTest::theSmartSwitchTipsNameTheControlAndTheSideThatActs()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.smartSwitch = SmartSwitchCue{.control = "MIC/INT", .side = "INT", .move = SmartSwitchMove::Flip};
+    service.snapshot.phase = TurnaroundPhase::WaitingForEngines;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("Confirm a good engine start: flip MIC/INT to INT."));
+
+    service.snapshot.phase = TurnaroundPhase::WaitingNewFlight;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, flip MIC/INT to INT."));
+
+    service.snapshot.connected = true;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.phase = TurnaroundPhase::RequestFuel;
+    service.snapshot.canStartLoading = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Press START LOADING or flip MIC/INT to INT to begin refueling and boarding."));
+}
+
+void OperationsViewModelTest::theSmartSwitchTipsNameTheMoveOfEachKindOfControl()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingNewFlight;
+
+    service.snapshot.smartSwitch = SmartSwitchCue{.control = "INT/RAD", .side = "", .move = SmartSwitchMove::Flip};
+    service.Notify();
+    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, flip INT/RAD."));
+
+    service.snapshot.smartSwitch =
+        SmartSwitchCue{.control = "R/T-I/C", .side = "", .move = SmartSwitchMove::FlickEitherSide};
+    service.Notify();
+    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, flick R/T-I/C to either side."));
+
+    service.snapshot.smartSwitch = SmartSwitchCue{.control = "SERV INT", .side = "", .move = SmartSwitchMove::TurnOn};
+    service.Notify();
+    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, turn SERV INT on."));
+
+    service.snapshot.smartSwitch = SmartSwitchCue{.control = "Call RAMP", .side = "", .move = SmartSwitchMove::Press};
+    service.Notify();
+    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, press Call RAMP."));
+}
+
+void OperationsViewModelTest::theSmartSwitchTipsFallBackWhenTheAircraftNamesNoControl()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingForEngines;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Confirm a good engine start: use the aircraft's smart switch."));
+}
+
+void OperationsViewModelTest::theOpenDoorAdvisoryNamesTheSmartSwitch()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.smartSwitch = SmartSwitchCue{.control = "INT/RAD", .side = "INT", .move = SmartSwitchMove::Flip};
+    service.Notify();
+
+    QCOMPARE(viewModel.GetOpenDoorAdvisoryText(),
+             QStringLiteral("A door is open. Close it, or flip INT/RAD to INT to push back with it open."));
+}
+
+void OperationsViewModelTest::theUnlockTouchOnlyActsWhileADoorHoldsThePushback()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.connected = true;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.phase = TurnaroundPhase::WaitingReadyToPush;
+    service.Notify();
+
+    QVERIFY(!viewModel.CanPilotTouch());
+
+    service.snapshot.doorsHoldingPushback = true;
+    service.Notify();
+
+    QVERIFY(viewModel.CanPilotTouch());
+}
+
+void OperationsViewModelTest::thePushbackTipOnlyShowsWhenThePilotHandlesTheGroundPower()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::RequestPushback;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Remove the GPU and any other additional service you called yourself."));
+
+    service.snapshot.groundPowerByClient = true;
+    service.Notify();
+
+    QVERIFY(viewModel.GetPhaseTip().isEmpty());
+}
+
+void OperationsViewModelTest::theParkingBrakeTipSaysWhatEachSideOfTheTurnaroundNeedsItFor()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::RemoveGroundEquipment;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Keep the parking brake set: the chocks only come off with it set."));
+
+    service.snapshot.phase = TurnaroundPhase::PlaceArrivalGroundEquipment;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Set the parking brake: the GPU and chocks are only placed with it set."));
 }

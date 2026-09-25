@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <string>
+#include "SmartSwitchCue.h"
 #include "../../domain/model/AutomationStatus.h"
 #include "../../domain/model/CargoLoader.h"
 #include "../../domain/model/FlightPlan.h"
@@ -68,9 +69,11 @@ struct IntegratorSnapshot
     bool cargoAircraft = false;
     bool efbFlightPlan = false;
     bool engineerPanelExternalPower = false;
+    bool groundPowerByClient = false;
 
     std::string aircraftName;
     std::string aircraftProfileId;
+    SmartSwitchCue smartSwitch;
     TurnaroundPhase phase = TurnaroundPhase::WaitingFlightPlan;
     FlightPlanStatus flightPlanStatus = FlightPlanStatus::Idle;
     FlightPlanFailure flightPlanFailure = FlightPlanFailure::None;

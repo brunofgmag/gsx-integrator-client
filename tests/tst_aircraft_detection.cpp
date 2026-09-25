@@ -63,6 +63,7 @@ private slots:
     static void doesNotDetectPmdg777ByBareIcao();
     static void detectionReportsFenixClientRefuel();
     static void everyDescriptorHasUniqueProfileMetadata();
+    static void everyDescriptorNamesItsSmartSwitch();
     static void supportedProfilesAreSortedByShortCode();
     static void detectionReportsMatchedDescriptor();
 };
@@ -820,6 +821,14 @@ void AircraftDetectionTest::everyDescriptorHasUniqueProfileMetadata()
         QVERIFY(descriptor->shortCode != nullptr && descriptor->shortCode[0] != '\0');
         QVERIFY(ids.insert(descriptor->id).second);
         QVERIFY(codes.insert(descriptor->shortCode).second);
+    }
+}
+
+void AircraftDetectionTest::everyDescriptorNamesItsSmartSwitch()
+{
+    for (const AircraftDescriptor* descriptor : AircraftRegistry())
+    {
+        QVERIFY2(!descriptor->smartSwitch.control.empty(), descriptor->id);
     }
 }
 

@@ -110,6 +110,46 @@ namespace
         return {};
     }
 
+    QString SmartSwitchAction(const SmartSwitchCue& cue)
+    {
+        const QString control = QString::fromStdString(cue.control);
+        if (control.isEmpty())
+        {
+            return QCoreApplication::translate("Turnaround", "use the aircraft's smart switch");
+        }
+
+        switch (cue.move)
+        {
+        case SmartSwitchMove::FlickEitherSide:
+            return QCoreApplication::translate("Turnaround", "flick %1 to either side").arg(control);
+        case SmartSwitchMove::TurnOn:
+            return QCoreApplication::translate("Turnaround", "turn %1 on").arg(control);
+        case SmartSwitchMove::Press:
+            return QCoreApplication::translate("Turnaround", "press %1").arg(control);
+        case SmartSwitchMove::Flip:
+            break;
+        }
+
+        if (cue.side.empty())
+        {
+            return QCoreApplication::translate("Turnaround", "flip %1").arg(control);
+        }
+
+        return QCoreApplication::translate("Turnaround", "flip %1 to %2")
+            .arg(control, QString::fromStdString(cue.side));
+    }
+
+    QString PushbackRequestTip(const IntegratorSnapshot& snapshot)
+    {
+        if (snapshot.groundPowerByClient)
+        {
+            return {};
+        }
+
+        return QCoreApplication::translate("Turnaround",
+                                           "Remove the GPU and any other additional service you called yourself.");
+    }
+
     QString PhaseTip(const IntegratorSnapshot& snapshot)
     {
         switch (snapshot.phase)
@@ -121,30 +161,35 @@ namespace
         case TurnaroundPhase::WaitingFlightPlan:
             return snapshot.efbFlightPlan
                        ? QCoreApplication::translate("Turnaround", "Import your SimBrief flight plan on the aircraft EFB.")
-                       : QCoreApplication::translate("Turnaround", "Check that SimBrief is loaded in GSX and in this app.");
+                       : QCoreApplication::translate("Turnaround", "Check that SimBrief is loaded in GSX and in the client.");
         case TurnaroundPhase::WaitingPowerOn:
             return snapshot.engineerPanelExternalPower
                        ? QCoreApplication::translate("Turnaround", "With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power.")
                        : QCoreApplication::translate("Turnaround", "Connect the GPU and switch on the batteries so the aircraft has power.");
         case TurnaroundPhase::RequestPushback:
-            return QCoreApplication::translate("Turnaround", "Remember to remove additional services (like the GPU).");
+            return PushbackRequestTip(snapshot);
         case TurnaroundPhase::WaitingReadyToPush:
             return QCoreApplication::translate("Turnaround", "Turn on the beacon lights and set the parking brake.");
         case TurnaroundPhase::WaitingPushbackToStart:
             return QCoreApplication::translate("Turnaround", "Select the final pushback position in the GSX menu.");
         case TurnaroundPhase::WaitingForEngines:
-            return QCoreApplication::translate("Turnaround", "Confirm a good engine start with the SmartSwitch.");
+            return QCoreApplication::translate("Turnaround", "Confirm a good engine start: %1.")
+                .arg(SmartSwitchAction(snapshot.smartSwitch));
         case TurnaroundPhase::WaitingEngineShutdown:
             return QCoreApplication::translate("Turnaround", "Shut down the engines.");
         case TurnaroundPhase::RemoveGroundEquipment:
+            return QCoreApplication::translate("Turnaround",
+                                               "Keep the parking brake set: the chocks only come off with it set.");
         case TurnaroundPhase::PlaceArrivalGroundEquipment:
-            return QCoreApplication::translate("Turnaround", "Remember to set the Parking Brake.");
+            return QCoreApplication::translate("Turnaround",
+                                               "Set the parking brake: the GPU and chocks are only placed with it set.");
         case TurnaroundPhase::RequestDeboarding:
             return snapshot.deboardingAwaitsGsx
                        ? QCoreApplication::translate("Turnaround", "Wait for GSX to start the deboarding.")
                        : QCoreApplication::translate("Turnaround", "Turn off the beacon lights and set the parking brake.");
         case TurnaroundPhase::WaitingNewFlight:
-            return QCoreApplication::translate("Turnaround", "Activate the SmartSwitch to start a new flight.");
+            return QCoreApplication::translate("Turnaround", "To start a new flight, %1.")
+                .arg(SmartSwitchAction(snapshot.smartSwitch));
         default:
             return {};
         }
@@ -170,10 +215,10 @@ namespace
         return QCoreApplication::translate("Turnaround", "Waiting for start loading");
     }
 
-    QString StartLoadingTip()
+    QString StartLoadingTip(const IntegratorSnapshot& snapshot)
     {
-        return QCoreApplication::translate("Turnaround",
-                                           "Press START LOADING or activate the SmartSwitch to begin refueling and boarding.");
+        return QCoreApplication::translate("Turnaround", "Press START LOADING or %1 to begin refueling and boarding.")
+            .arg(SmartSwitchAction(snapshot.smartSwitch));
     }
 
     QString PercentText(const double progress)
@@ -422,7 +467,7 @@ QString OperationsViewModel::GetHoldCountdownText() const
         return {};
     }
 
-    return QCoreApplication::translate("OperationsScreen", "Next state in %1s")
+    return QCoreApplication::translate("OperationsScreen", "Next state in %1 s")
         .arg(remaining);
 }
 
@@ -430,7 +475,7 @@ QString OperationsViewModel::GetPhaseTip() const
 {
     if (IsAwaitingStartLoading())
     {
-        return StartLoadingTip();
+        return StartLoadingTip(snapshot_);
     }
 
     return snapshot_.phase == TurnaroundPhase::Boarding ? BoardingTip() : PhaseTip(snapshot_);
@@ -656,13 +701,13 @@ QString OperationsViewModel::GetEngineConfirmationAdvisoryText() const
     {
     case EngineConfirmationBlock::EnginesStopped:
         return QCoreApplication::translate("OperationsScreen",
-                                           "The engines are not running, so the SmartSwitch will not confirm the start yet.");
+                                           "The engines are not running, so the smart switch will not confirm the start yet.");
     case EngineConfirmationBlock::GsxNotAsking:
         return QCoreApplication::translate("OperationsScreen",
-                                           "GSX has not asked for the confirmation, so the SmartSwitch will not confirm the start yet.");
+                                           "GSX has not asked for the confirmation, so the smart switch will not confirm the start yet.");
     case EngineConfirmationBlock::ParkingBrakeReleased:
         return QCoreApplication::translate("OperationsScreen",
-                                           "The parking brake is not set, so the SmartSwitch will not confirm the start yet.");
+                                           "The parking brake is not set, so the smart switch will not confirm the start yet.");
     case EngineConfirmationBlock::None:
         break;
     }
@@ -676,10 +721,15 @@ QString OperationsViewModel::GetServicesAdvisoryText() const
         .arg(snapshot_.servicesWaitSeconds);
 }
 
-QString OperationsViewModel::GetOpenDoorAdvisoryText()
+QString OperationsViewModel::GetOpenDoorAdvisoryText() const
 {
-    return QCoreApplication::translate("OperationsScreen",
-                                       "A door is open. Close it, or use the SmartSwitch to unlock the pushback.");
+    return QCoreApplication::translate("OperationsScreen", "A door is open. Close it, or %1 to push back with it open.")
+        .arg(SmartSwitchAction(snapshot_.smartSwitch));
+}
+
+QString OperationsViewModel::GetAdvisoryLabel()
+{
+    return QCoreApplication::translate("Advisory", "Advisory");
 }
 
 QString OperationsViewModel::GetServiceInterruptedAdvisoryText()
@@ -903,6 +953,11 @@ QString OperationsViewModel::GetPilotTouchLabel() const
 
 bool OperationsViewModel::CanPilotTouch() const
 {
+    if (snapshot_.phase == TurnaroundPhase::WaitingReadyToPush && !snapshot_.doorsHoldingPushback)
+    {
+        return false;
+    }
+
     return snapshot_.connected && snapshot_.automationEnabled && PilotTouch::Accepts(snapshot_.phase);
 }
 

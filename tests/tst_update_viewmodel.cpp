@@ -231,7 +231,7 @@ void UpdateViewModelTest::derivedFlagsAndStatusTextFollowState()
 
     QVERIFY(viewModel.CanDownload());
     QVERIFY(!viewModel.IsDownloading());
-    QCOMPARE(viewModel.GetStatusText(), QStringLiteral("Update available — v1.4.0"));
+    QCOMPARE(viewModel.GetStatusText(), QStringLiteral("Update available · v1.4.0"));
 
     viewModel.downloadAndInstall();
 
@@ -250,7 +250,7 @@ void UpdateViewModelTest::stagedUpdateExposesRestartText()
 
     QVERIFY(viewModel.IsReadyToRestart());
     QVERIFY(!viewModel.CanDownload());
-    QCOMPARE(viewModel.GetStatusText(), QStringLiteral("Update ready — restart to apply"));
+    QCOMPARE(viewModel.GetStatusText(), QStringLiteral("Update ready: restart to apply"));
 }
 
 void UpdateViewModelTest::errorStateExposesHasErrorAndMessage()

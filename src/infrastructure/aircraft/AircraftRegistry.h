@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "AircraftIdentity.h"
+#include "../../application/model/SmartSwitchCue.h"
 #include "../../domain/ports/Aircraft.h"
 
 class VariableGateway;
@@ -50,6 +51,7 @@ struct AircraftDescriptor
     const char* id = "";
     const char* shortCode = "";
     RefuelBy refuelBy = RefuelBy::Gsx;
+    SmartSwitchCue smartSwitch{};
 };
 
 std::vector<const AircraftDescriptor*>& AircraftRegistry();

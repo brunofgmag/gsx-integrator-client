@@ -29,6 +29,7 @@ namespace
 
     constexpr auto kCallRampLeftLVar = "FSS_EXX_AUDIO_L_TEL_RAMP_BTN";
     constexpr auto kCallRampRightLVar = "FSS_EXX_AUDIO_R_TEL_RAMP_BTN";
+    constexpr auto kSmartSwitchControl = "Call RAMP";
     constexpr double kCallRampOff = 0.0;
 
     constexpr auto kCallRampActiveLVar = "FSS_EXX_AUDIO_TEL_RAMP_ACTIVE";
@@ -574,7 +575,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "FSS Embraer E190"}
         },
-        &CreateFssE190, "fss-e190", "E190", RefuelBy::Client
+        &CreateFssE190, "fss-e190", "E190", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::Press}
     };
 
     const AircraftDescriptor kFssE195Descriptor{
@@ -582,7 +583,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "FSS Embraer E195"}
         },
-        &CreateFssE195, "fss-e195", "E195", RefuelBy::Client
+        &CreateFssE195, "fss-e195", "E195", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::Press}
     };
 
     [[maybe_unused]] const AircraftRegistration kFssE190Registration{kFssE190Descriptor};
