@@ -33,6 +33,7 @@ add_library(gsxi-turnaround-state-test-support STATIC
         src/domain/ports/GsxGateway.h
         src/domain/ports/GsxMenuGateway.h
         src/domain/ports/DomainLogger.h
+        src/domain/ports/FlightPlanSource.h
         ${TURNAROUND_STATE_SOURCES})
 target_include_directories(gsxi-turnaround-state-test-support PRIVATE "${CMAKE_SOURCE_DIR}")
 
@@ -41,6 +42,7 @@ function(add_turnaround_state_test TARGET_NAME TEST_NAME TEST_FILE)
             tests/turnaround/TurnaroundStateFixture.h
             tests/doubles/FakeAircraft.h
             tests/doubles/FakeDomainLogger.h
+            tests/doubles/FakeFlightPlanSource.h
             tests/doubles/FakeGsxMenuGateway.h
             tests/doubles/FakeGsxService.h
             tests/doubles/FakeVariableWriter.h
@@ -95,6 +97,7 @@ add_executable(gsxi-turnaround-rules-tests
         tests/turnaround/TurnaroundStateFixture.h
         tests/doubles/FakeAircraft.h
         tests/doubles/FakeDomainLogger.h
+        tests/doubles/FakeFlightPlanSource.h
         tests/doubles/FakeGsxMenuGateway.h
         tests/doubles/FakeGsxService.h
         tests/doubles/FakeVariableWriter.h
@@ -107,6 +110,7 @@ add_executable(gsxi-turnaround-workflow-tests
         tests/turnaround/TurnaroundStateFixture.h
         tests/doubles/FakeGsxMenuGateway.h
         tests/doubles/FakeDomainLogger.h
+        tests/doubles/FakeFlightPlanSource.h
         tests/tst_state_machine.cpp
         src/domain/turnaround/TurnaroundStateMachine.cpp
         src/domain/turnaround/TurnaroundStateMachine.h)
@@ -1018,6 +1022,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/logging/QtDomainLogger.h
         src/infrastructure/simbrief/SimbriefClient.cpp
         src/infrastructure/simbrief/SimbriefClient.h
+        src/infrastructure/simbrief/SimbriefFlightPlanSource.cpp
+        src/infrastructure/simbrief/SimbriefFlightPlanSource.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp
         src/infrastructure/simbrief/SimbriefOfpParser.h
         src/infrastructure/simconnect/SimConnectSession.cpp

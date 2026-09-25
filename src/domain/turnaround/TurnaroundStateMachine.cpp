@@ -207,6 +207,11 @@ void TurnaroundStateMachine::AttachAircraft(Aircraft* aircraft)
     context_.aircraft = aircraft;
 }
 
+void TurnaroundStateMachine::AttachFlightPlanSource(FlightPlanSource* flightPlanSource)
+{
+    context_.flightPlanSource = flightPlanSource;
+}
+
 void TurnaroundStateMachine::Reset()
 {
     context_.aircraft = nullptr;

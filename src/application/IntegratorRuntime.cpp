@@ -93,8 +93,11 @@ IntegratorRuntime::IntegratorRuntime(QObject* parent)
       gsxService_(&varGateway_, &gsxRemoteState_),
       gsxMenu_(&gsxRemoteClient_, &gsxRemoteState_, &settings_, &qtLogger_, &pluginClient_),
       stateMachine_(&status_, &settings_, &gsxService_, &gsxMenu_, &qtLogger_, &varGateway_),
-      simbriefClient_(&status_, &settings_, this)
+      simbriefClient_(&status_, &settings_, this),
+      flightPlanSource_(&simbriefClient_)
 {
+    stateMachine_.AttachFlightPlanSource(&flightPlanSource_);
+
     dispatchTimer_.setInterval(kDispatchIntervalMs);
     connect(&dispatchTimer_, &QTimer::timeout, this, &IntegratorRuntime::OnDispatchTimer);
 

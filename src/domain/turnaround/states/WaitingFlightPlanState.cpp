@@ -9,6 +9,7 @@
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 #include "../../ports/DomainLogger.h"
+#include "../../ports/FlightPlanSource.h"
 
 namespace
 {
@@ -18,6 +19,11 @@ namespace
 std::optional<TurnaroundTransition> WaitingFlightPlanState::EvaluatePhase(TurnaroundContext& ctx)
 {
     ctx.aircraft->SetCurrentZfwKg(ctx.aircraft->GetEmptyZfwKg());
+
+    if (AwaitsLatestFlightPlan(ctx))
+    {
+        return std::nullopt;
+    }
 
     if (!ctx.aircraft->IsFlightPlanLoaded())
     {
@@ -36,6 +42,10 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::EvaluatePhase(Turnar
     if (simbriefLoaded)
     {
         flightPlanRequested = false;
+    }
+    else if (!ctx.gsxGateway->GetSimbriefRefusal().empty())
+    {
+        ctx.data.flightPlanRefused = true;
     }
 
     if (flightPlanRequested)
@@ -56,9 +66,40 @@ std::optional<TurnaroundTransition> WaitingFlightPlanState::EvaluatePhase(Turnar
         return std::nullopt;
     }
 
+    if (ctx.data.flightPlanRefused && !ctx.data.latestFlightPlanRequested && ctx.flightPlanSource != nullptr)
+    {
+        ctx.logger->LogInfo("GSX accepted the SimBrief plan after refusing it: fetching the latest OFP before capturing it");
+        ctx.flightPlanSource->RequestLatest();
+        ctx.data.latestFlightPlanRequested = true;
+
+        return std::nullopt;
+    }
+
     CaptureFlightPlan(ctx);
 
     return TurnaroundTransition{TurnaroundPhase::WaitingPowerOn};
+}
+
+bool WaitingFlightPlanState::AwaitsLatestFlightPlan(TurnaroundContext& ctx)
+{
+    if (!ctx.data.latestFlightPlanRequested)
+    {
+        return false;
+    }
+
+    const FlightPlanStatus status = ctx.status->flightPlanStatus;
+    if (status == FlightPlanStatus::Ready)
+    {
+        return false;
+    }
+
+    if (status == FlightPlanStatus::Error && ctx.TickCondition(kRetryTicks))
+    {
+        ctx.logger->LogInfo("The latest SimBrief OFP failed to load: fetching it again");
+        ctx.flightPlanSource->RequestLatest();
+    }
+
+    return true;
 }
 
 void WaitingFlightPlanState::CaptureFlightPlan(TurnaroundContext& ctx)

@@ -51,6 +51,14 @@ struct FakeSimConnectApi
         dataDefinitions.clear();
     }
 
+    static std::size_t DatumsIn(const DWORD defineId)
+    {
+        return static_cast<std::size_t>(std::ranges::count_if(dataDefinitions, [defineId](const auto& definition)
+        {
+            return definition.first == defineId;
+        }));
+    }
+
     static DWORD DefineIdOf(const std::string& datumName)
     {
         for (const auto& [defineId, name] : dataDefinitions)

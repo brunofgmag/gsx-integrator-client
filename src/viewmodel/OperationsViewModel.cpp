@@ -121,21 +121,21 @@ namespace
         switch (cue.move)
         {
         case SmartSwitchMove::FlickEitherSide:
-            return QCoreApplication::translate("Turnaround", "flick %1 to either side").arg(control);
+            return QCoreApplication::translate("Turnaround", "flick %1 on the aircraft to either side").arg(control);
         case SmartSwitchMove::TurnOn:
-            return QCoreApplication::translate("Turnaround", "turn %1 on").arg(control);
+            return QCoreApplication::translate("Turnaround", "turn on %1 on the aircraft").arg(control);
         case SmartSwitchMove::Press:
-            return QCoreApplication::translate("Turnaround", "press %1").arg(control);
+            return QCoreApplication::translate("Turnaround", "press %1 on the aircraft").arg(control);
         case SmartSwitchMove::Flip:
             break;
         }
 
         if (cue.side.empty())
         {
-            return QCoreApplication::translate("Turnaround", "flip %1").arg(control);
+            return QCoreApplication::translate("Turnaround", "flip %1 on the aircraft").arg(control);
         }
 
-        return QCoreApplication::translate("Turnaround", "flip %1 to %2")
+        return QCoreApplication::translate("Turnaround", "flip %1 on the aircraft to %2")
             .arg(control, QString::fromStdString(cue.side));
     }
 

@@ -72,6 +72,7 @@ private slots:
     static void forgettingTheTextSlotsDropsThePreviousFlightStrings();
     static void forgettingTheTextSlotsLeavesTheNumbersAlone();
     static void forgettingTheTextSlotsAsksTheSimForTheStringsAgain();
+    static void forgettingTheTextSlotsRebuildsTheStringDefinitionInsteadOfAppendingToIt();
     static void everyWriteToTheSimLandsInTheWritesLog();
     static void aRepeatedWriteIsCountedAndLoggedOnceUntilTheValueChanges();
     static void aWriteThatNeverLeftIsNotLogged();
@@ -374,6 +375,23 @@ void VariableGatewayTest::forgettingTheTextSlotsAsksTheSimForTheStringsAgain()
 
     QCOMPARE(FakeSimConnectApi::dataRequests.size(), afterTheFirstFlight + 1);
     QCOMPARE(FakeSimConnectApi::dataRequests.back().defineId, kFirstDefineId);
+}
+
+void VariableGatewayTest::forgettingTheTextSlotsRebuildsTheStringDefinitionInsteadOfAppendingToIt()
+{
+    FakeSimConnectApi::Reset();
+    SimConnectVariableGateway gateway;
+    gateway.Attach(reinterpret_cast<HANDLE>(0x5150));
+
+    char title[kString256] = {};
+
+    QVERIFY(!gateway.FetchAircraftName(title, sizeof title));
+    QCOMPARE(FakeSimConnectApi::DatumsIn(kFirstDefineId), std::size_t{1});
+
+    gateway.ForgetTextSlots();
+    gateway.ForgetTextSlots();
+
+    QCOMPARE(FakeSimConnectApi::DatumsIn(kFirstDefineId), std::size_t{1});
 }
 
 void VariableGatewayTest::everyWriteToTheSimLandsInTheWritesLog()

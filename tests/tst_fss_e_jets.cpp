@@ -131,6 +131,9 @@ namespace
     constexpr int kFiftyTicks = 50;
     constexpr int kTwentyTicks = 20;
     constexpr int kTicksToWaitForTheEcho = 5;
+    constexpr int kCallRampClearingTicks = 5;
+    constexpr double kCallRampLit = 1.0;
+    constexpr double kCallRampDark = 0.0;
     constexpr auto kAutomationRule = "fss-ejet-keep-vendor-automation-off";
     constexpr auto kGpuRule = "fss-ejet-gpu-follows-request";
     constexpr auto kDoorsRule = "fss-ejet-doors-follow-gsx";
@@ -238,6 +241,12 @@ private slots:
     static void theRightCallRampAlsoFiresOnceAndClearsTheCallByWritingActive();
     static void consumingTheSmartSwitchNeverWritesToTheLightsNorToEitherButton();
     static void aCallRampLeftOffNeverFiresNorWrites();
+    static void aToggleLandingAfterTheClearIsClearedAgainOnTheNextTick();
+    static void aToggleLandingAfterADarkTickIsStillClearedButACallAfterTheWindowIsNot();
+    static void theClearingStopsAfterItsWindowWhenTheCallStaysLit();
+    static void aLitCallWithoutAConsumedTouchIsNeverWritten();
+    static void anUnreceivedCallAfterATouchIsNeverWritten();
+    static void aNewTouchReopensTheClearing();
     static void groundPowerStatusReadsTheThreeSettledValues();
     static void pulsesOnceWhenDisconnectedAndRequestedOn();
     static void pulsesNothingWhenTheStatusAlreadyMatchesTheRequest();
@@ -640,6 +649,167 @@ void FssEJetTest::aCallRampLeftOffNeverFiresNorWrites()
 
     QVERIFY(!aircraft.ConsumeSmartSwitch());
     QCOMPARE(gateway.setLVarCalls, 0);
+}
+
+void FssEJetTest::aToggleLandingAfterTheClearIsClearedAgainOnTheNextTick()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    gateway.lvars[kCallRampActive] = kCallRampDark;
+    gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 1.0, true};
+
+    QVERIFY(aircraft.ConsumeSmartSwitch());
+    QCOMPARE(gateway.WriteCount(kCallRampActive), 1);
+
+    gateway.lvars[kCallRampActive] = kCallRampLit;
+    gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 0.0, true};
+
+    QVERIFY(!aircraft.ConsumeSmartSwitch());
+    QCOMPARE(gateway.WriteCount(kCallRampActive), 2);
+    QCOMPARE(gateway.Written(kCallRampActive), kCallRampDark);
+    QCOMPARE(gateway.WriteCount(kCallRampLeftLight), 0);
+    QCOMPARE(gateway.WriteCount(kCallRampRightLight), 0);
+    QCOMPARE(gateway.WriteCount(kCallRampLeft), 0);
+    QCOMPARE(gateway.WriteCount(kCallRampRight), 0);
+}
+
+void FssEJetTest::aToggleLandingAfterADarkTickIsStillClearedButACallAfterTheWindowIsNot()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    gateway.lvars[kCallRampActive] = kCallRampDark;
+    gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 1.0, true};
+
+    QVERIFY(aircraft.ConsumeSmartSwitch());
+
+    gateway.lvars[kCallRampActive] = kCallRampDark;
+    gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 0.0, true};
+
+    QVERIFY(!aircraft.ConsumeSmartSwitch());
+    QCOMPARE(gateway.WriteCount(kCallRampActive), 1);
+
+    gateway.lvars[kCallRampActive] = kCallRampLit;
+    gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 0.0, true};
+
+    QVERIFY(!aircraft.ConsumeSmartSwitch());
+    QCOMPARE(gateway.WriteCount(kCallRampActive), 2);
+    QCOMPARE(gateway.Written(kCallRampActive), kCallRampDark);
+
+    for (int tick = 2; tick < kCallRampClearingTicks; ++tick)
+    {
+        gateway.lvars[kCallRampActive] = kCallRampDark;
+        gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 0.0, true};
+
+        QVERIFY(!aircraft.ConsumeSmartSwitch());
+    }
+
+    QCOMPARE(gateway.WriteCount(kCallRampActive), 2);
+
+    for (int tick = 0; tick < kTwentyTicks; ++tick)
+    {
+        gateway.lvars[kCallRampActive] = kCallRampLit;
+        gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 0.0, true};
+
+        QVERIFY(!aircraft.ConsumeSmartSwitch());
+    }
+
+    QCOMPARE(gateway.WriteCount(kCallRampActive), 2);
+}
+
+void FssEJetTest::theClearingStopsAfterItsWindowWhenTheCallStaysLit()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 1.0, true};
+
+    QVERIFY(aircraft.ConsumeSmartSwitch());
+
+    for (int tick = 0; tick < kTwentyTicks; ++tick)
+    {
+        gateway.lvars[kCallRampActive] = kCallRampLit;
+        gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 0.0, true};
+
+        QVERIFY(!aircraft.ConsumeSmartSwitch());
+    }
+
+    QCOMPARE(gateway.WriteCount(kCallRampActive), 1 + kCallRampClearingTicks);
+}
+
+void FssEJetTest::aLitCallWithoutAConsumedTouchIsNeverWritten()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    for (int tick = 0; tick < kTwentyTicks; ++tick)
+    {
+        gateway.lvars[kCallRampActive] = kCallRampLit;
+        gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 0.0, true};
+
+        QVERIFY(!aircraft.ConsumeSmartSwitch());
+    }
+
+    QCOMPARE(gateway.WriteCount(kCallRampActive), 0);
+    QCOMPARE(gateway.setLVarCalls, 0);
+}
+
+void FssEJetTest::anUnreceivedCallAfterATouchIsNeverWritten()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 1.0, true};
+
+    QVERIFY(aircraft.ConsumeSmartSwitch());
+
+    for (int tick = 0; tick < kTwentyTicks; ++tick)
+    {
+        gateway.lvars.erase(kCallRampActive);
+        gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 0.0, true};
+
+        QVERIFY(!aircraft.ConsumeSmartSwitch());
+    }
+
+    QCOMPARE(gateway.WriteCount(kCallRampActive), 1);
+}
+
+void FssEJetTest::aNewTouchReopensTheClearing()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 1.0, true};
+
+    QVERIFY(aircraft.ConsumeSmartSwitch());
+
+    for (int tick = 0; tick < kTwentyTicks; ++tick)
+    {
+        gateway.lvars[kCallRampActive] = kCallRampLit;
+        gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 0.0, true};
+
+        QVERIFY(!aircraft.ConsumeSmartSwitch());
+    }
+
+    QCOMPARE(gateway.WriteCount(kCallRampActive), 1 + kCallRampClearingTicks);
+
+    gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 1.0, true};
+
+    QVERIFY(aircraft.ConsumeSmartSwitch());
+    QCOMPARE(gateway.WriteCount(kCallRampActive), 2 + kCallRampClearingTicks);
+
+    gateway.lvars[kCallRampActive] = kCallRampLit;
+    gateway.lvarSpans[kCallRampLeft] = LVarSpan{0.0, 0.0, true};
+
+    QVERIFY(!aircraft.ConsumeSmartSwitch());
+    QCOMPARE(gateway.WriteCount(kCallRampActive), 3 + kCallRampClearingTicks);
 }
 
 void FssEJetTest::groundPowerStatusReadsTheThreeSettledValues()

@@ -1628,12 +1628,12 @@ void OperationsViewModelTest::theSmartSwitchTipsNameTheControlAndTheSideThatActs
     service.snapshot.phase = TurnaroundPhase::WaitingForEngines;
     service.Notify();
 
-    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("Confirm a good engine start: flip MIC/INT to INT."));
+    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("Confirm a good engine start: flip MIC/INT on the aircraft to INT."));
 
     service.snapshot.phase = TurnaroundPhase::WaitingNewFlight;
     service.Notify();
 
-    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, flip MIC/INT to INT."));
+    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, flip MIC/INT on the aircraft to INT."));
 
     service.snapshot.connected = true;
     service.snapshot.automationEnabled = true;
@@ -1642,7 +1642,7 @@ void OperationsViewModelTest::theSmartSwitchTipsNameTheControlAndTheSideThatActs
     service.Notify();
 
     QCOMPARE(viewModel.GetPhaseTip(),
-             QStringLiteral("Press START LOADING or flip MIC/INT to INT to begin refueling and boarding."));
+             QStringLiteral("Press START LOADING or flip MIC/INT on the aircraft to INT to begin refueling and boarding."));
 }
 
 void OperationsViewModelTest::theSmartSwitchTipsNameTheMoveOfEachKindOfControl()
@@ -1655,20 +1655,20 @@ void OperationsViewModelTest::theSmartSwitchTipsNameTheMoveOfEachKindOfControl()
 
     service.snapshot.smartSwitch = SmartSwitchCue{.control = "INT/RAD", .side = "", .move = SmartSwitchMove::Flip};
     service.Notify();
-    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, flip INT/RAD."));
+    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, flip INT/RAD on the aircraft."));
 
     service.snapshot.smartSwitch =
         SmartSwitchCue{.control = "R/T-I/C", .side = "", .move = SmartSwitchMove::FlickEitherSide};
     service.Notify();
-    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, flick R/T-I/C to either side."));
+    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, flick R/T-I/C on the aircraft to either side."));
 
     service.snapshot.smartSwitch = SmartSwitchCue{.control = "SERV INT", .side = "", .move = SmartSwitchMove::TurnOn};
     service.Notify();
-    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, turn SERV INT on."));
+    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, turn on SERV INT on the aircraft."));
 
     service.snapshot.smartSwitch = SmartSwitchCue{.control = "Call RAMP", .side = "", .move = SmartSwitchMove::Press};
     service.Notify();
-    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, press Call RAMP."));
+    QCOMPARE(viewModel.GetPhaseTip(), QStringLiteral("To start a new flight, press Call RAMP on the aircraft."));
 }
 
 void OperationsViewModelTest::theSmartSwitchTipsFallBackWhenTheAircraftNamesNoControl()
@@ -1694,7 +1694,7 @@ void OperationsViewModelTest::theOpenDoorAdvisoryNamesTheSmartSwitch()
     service.Notify();
 
     QCOMPARE(viewModel.GetOpenDoorAdvisoryText(),
-             QStringLiteral("A door is open. Close it, or flip INT/RAD to INT to push back with it open."));
+             QStringLiteral("A door is open. Close it, or flip INT/RAD on the aircraft to INT to push back with it open."));
 }
 
 void OperationsViewModelTest::theUnlockTouchOnlyActsWhileADoorHoldsThePushback()

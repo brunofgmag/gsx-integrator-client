@@ -3,6 +3,7 @@
 
 #include "tests/doubles/FakeAircraft.h"
 #include "tests/doubles/FakeDomainLogger.h"
+#include "tests/doubles/FakeFlightPlanSource.h"
 #include "tests/doubles/FakeGsxMenuGateway.h"
 #include "tests/doubles/FakeGsxService.h"
 #include "tests/doubles/FakeVariableWriter.h"
@@ -19,6 +20,7 @@ struct TurnaroundStateFixture
     FakeDomainLogger logger;
     FakeAircraft aircraft;
     FakeVariableWriter variableWriter;
+    FakeFlightPlanSource flightPlanSource{&status};
     TurnaroundContext ctx;
 
     TurnaroundStateFixture()
@@ -31,6 +33,7 @@ struct TurnaroundStateFixture
         ctx.aircraft = &aircraft;
         ctx.logger = &logger;
         ctx.variableWriter = &variableWriter;
+        ctx.flightPlanSource = &flightPlanSource;
     }
 };
 

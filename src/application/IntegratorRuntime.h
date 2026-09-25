@@ -15,6 +15,7 @@
 #include "../infrastructure/commbus/CommBusPluginClient.h"
 #include "../infrastructure/gsx/GsxStateService.h"
 #include "../infrastructure/simbrief/SimbriefClient.h"
+#include "../infrastructure/simbrief/SimbriefFlightPlanSource.h"
 #include "../infrastructure/simconnect/SimConnectSession.h"
 #include "../infrastructure/simconnect/SimConnectVariableGateway.h"
 #include "../domain/model/AutomationStatus.h"
@@ -166,6 +167,7 @@ private:
     GsxMenuNavigator gsxMenu_;
     TurnaroundStateMachine stateMachine_;
     SimbriefClient simbriefClient_;
+    SimbriefFlightPlanSource flightPlanSource_;
     SimConnectSession simConnect_;
     std::unique_ptr<Aircraft> aircraft_;
     const AircraftDescriptor* aircraftDescriptor_ = nullptr;

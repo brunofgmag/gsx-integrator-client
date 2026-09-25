@@ -9,6 +9,7 @@ class Aircraft;
 class GsxGateway;
 class GsxMenuGateway;
 class DomainLogger;
+class FlightPlanSource;
 class VariableWriter;
 
 struct TurnaroundContext
@@ -21,6 +22,7 @@ struct TurnaroundContext
     TurnaroundData data;
     DomainLogger* logger = nullptr;
     VariableWriter* variableWriter = nullptr;
+    FlightPlanSource* flightPlanSource = nullptr;
     bool pilotTouched = false;
 
     bool ConsumePilotTouch()
