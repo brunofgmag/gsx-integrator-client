@@ -244,6 +244,7 @@ private slots:
     static void fixPmdgOptionsWithoutConflictFails();
     static void applySettingsPushesEffectiveSettings();
     static void theAircraftRecommendedFuelRateReachesTheEffectiveSettings();
+    static void theSnapshotSaysWhetherTheAutomationStartsWithTheFlight();
     static void observersAreDedupedAndNotified();
     static void automationToggleEmitsOncePerChange();
     static void runtimeGettersOnEmptyRuntime();
@@ -422,6 +423,24 @@ void RuntimeIntegratorServiceTest::theAircraftRecommendedFuelRateReachesTheEffec
     QCOMPARE(runtime.AircraftRecommendedFuelRateKgs(), kRj85RecommendedFuelRateKgs);
     QCOMPARE(runtime.Settings().fuelRateKgs, kRj85RecommendedFuelRateKgs);
     QCOMPARE(runtime.Snapshot().fuelRateKgs.value, kRj85RecommendedFuelRateKgs);
+}
+
+void RuntimeIntegratorServiceTest::theSnapshotSaysWhetherTheAutomationStartsWithTheFlight()
+{
+    IntegratorRuntime runtime;
+    RuntimeIntegratorService service(&runtime);
+
+    AppSettings settings;
+    settings.autoStartFlow = false;
+    service.ApplySettings(settings);
+
+    QVERIFY(!runtime.Snapshot().automationStartsWithFlight);
+
+    settings.autoStartFlow = true;
+    service.ApplySettings(settings);
+
+    QVERIFY(runtime.Snapshot().automationStartsWithFlight);
+    QVERIFY(!runtime.Snapshot().automationEnabled);
 }
 
 void RuntimeIntegratorServiceTest::observersAreDedupedAndNotified()

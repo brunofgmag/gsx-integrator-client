@@ -651,6 +651,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.sessionReady = sessionReady_;
     snapshot.pilotOnFoot = pilotOnFoot_;
     snapshot.automationEnabled = status_.enabled;
+    snapshot.automationStartsWithFlight = settings_.autoStartFlow;
     snapshot.gsxAvailable = status_.gsxAvailable;
     snapshot.aircraftSupported = status_.aircraftSupported;
     snapshot.canToggleAutomation = snapshot.connected;

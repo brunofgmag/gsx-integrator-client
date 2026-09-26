@@ -57,6 +57,10 @@ private slots:
     static void theInitialTipNamesTheGsxThatIsNotThere();
     static void theInitialTipNamesTheAutomationFirstWhenEverythingIsStillDown();
     static void theInitialTipStandsDownOnceNothingHoldsTheTurnaround();
+    static void theInitialTipWaitsForTheFlightWhenTheAutomationStartsWithIt();
+    static void theInitialTipPromisesTheAutomaticStartWhileTheFlightLoads();
+    static void theInitialTipNamesTheAutomationThatIsOffWhenItDoesNotStartWithTheFlight();
+    static void theInitialTipNamesTheAutomationThePilotTurnedOffDuringTheFlight();
     static void exposesGsxProfileConflictFromSnapshot();
     static void fixGsxProfileDelegatesToService();
     static void fixGsxProfileReportsRejectedCommands();
@@ -77,6 +81,9 @@ private slots:
     static void simAndGsxStatusTextsFollowTheConnection();
     static void turnaroundAndLoadingModeTextsFollowTheSettings();
     static void turnaroundModeTextNamesTheConfiguredModeAndWhetherItRuns();
+    static void theTurnaroundChipWaitsForTheFlightWhenTheAutomationStartsWithIt();
+    static void theTurnaroundChipNamesTheManualAutomationThatIsOffBeforeTheFlight();
+    static void theTurnaroundChipNamesTheAutomationThePilotTurnedOffDuringTheFlight();
     static void statusStripLabelsNameEachChip();
     static void announcesADisplaySettingChangeWithoutTheSnapshot();
     static void phaseCounterTextCountsFromOne();
@@ -824,6 +831,85 @@ void OperationsViewModelTest::theInitialTipStandsDownOnceNothingHoldsTheTurnarou
     QVERIFY(viewModel.GetPhaseTip().isEmpty());
 }
 
+void OperationsViewModelTest::theInitialTipWaitsForTheFlightWhenTheAutomationStartsWithIt()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.connected = true;
+    service.snapshot.automationEnabled = false;
+    service.snapshot.automationStartsWithFlight = true;
+    service.snapshot.sessionActive = false;
+    service.snapshot.sessionReady = false;
+    service.snapshot.aircraftSupported = false;
+    service.snapshot.gsxAvailable = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Waiting for a flight. The turnaround starts on its own once you are in the cockpit."));
+}
+
+void OperationsViewModelTest::theInitialTipPromisesTheAutomaticStartWhileTheFlightLoads()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.connected = true;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.automationStartsWithFlight = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = false;
+    service.snapshot.pilotOnFoot = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Waiting for a flight. The turnaround starts on its own once you are in the cockpit."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesTheAutomationThatIsOffWhenItDoesNotStartWithTheFlight()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.connected = true;
+    service.snapshot.automationEnabled = false;
+    service.snapshot.automationStartsWithFlight = false;
+    service.snapshot.sessionActive = false;
+    service.snapshot.sessionReady = false;
+    service.snapshot.aircraftSupported = false;
+    service.snapshot.gsxAvailable = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("The automation is off, so the client is not driving this turnaround."));
+}
+
+void OperationsViewModelTest::theInitialTipNamesTheAutomationThePilotTurnedOffDuringTheFlight()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.connected = true;
+    service.snapshot.automationEnabled = false;
+    service.snapshot.automationStartsWithFlight = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
+    service.snapshot.aircraftSupported = true;
+    service.snapshot.gsxAvailable = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("The automation is off, so the client is not driving this turnaround."));
+}
+
 void OperationsViewModelTest::exposesGsxProfileConflictFromSnapshot()
 {
     FakeIntegratorService service;
@@ -1221,6 +1307,9 @@ void OperationsViewModelTest::turnaroundAndLoadingModeTextsFollowTheSettings()
     FakeOperationsDisplaySettings display;
     const OperationsViewModel viewModel(&service, &display);
 
+    service.snapshot.sessionActive = true;
+    service.Notify();
+
     QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Manual · Off"));
     QCOMPARE(viewModel.GetLoadingModeText(), QStringLiteral("Manual"));
 
@@ -1237,6 +1326,9 @@ void OperationsViewModelTest::turnaroundModeTextNamesTheConfiguredModeAndWhether
     FakeOperationsDisplaySettings display;
     OperationsViewModel viewModel(&service, &display);
 
+    service.snapshot.sessionActive = true;
+    service.Notify();
+
     QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Manual · Off"));
 
     viewModel.SetEnabled(true);
@@ -1246,6 +1338,55 @@ void OperationsViewModelTest::turnaroundModeTextNamesTheConfiguredModeAndWhether
     QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Auto · On"));
 
     viewModel.SetEnabled(false);
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Auto · Off"));
+}
+
+void OperationsViewModelTest::theTurnaroundChipWaitsForTheFlightWhenTheAutomationStartsWithIt()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    display.autoStartFlow = true;
+    service.snapshot.connected = true;
+    service.snapshot.automationEnabled = false;
+    service.snapshot.automationStartsWithFlight = true;
+    service.snapshot.sessionActive = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Auto · Waiting"));
+}
+
+void OperationsViewModelTest::theTurnaroundChipNamesTheManualAutomationThatIsOffBeforeTheFlight()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    display.autoStartFlow = false;
+    service.snapshot.connected = true;
+    service.snapshot.automationEnabled = false;
+    service.snapshot.automationStartsWithFlight = false;
+    service.snapshot.sessionActive = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Manual · Off"));
+}
+
+void OperationsViewModelTest::theTurnaroundChipNamesTheAutomationThePilotTurnedOffDuringTheFlight()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    display.autoStartFlow = true;
+    service.snapshot.connected = true;
+    service.snapshot.automationEnabled = false;
+    service.snapshot.automationStartsWithFlight = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
+    service.Notify();
+
     QCOMPARE(viewModel.GetTurnaroundModeText(), QStringLiteral("Auto · Off"));
 }
 
