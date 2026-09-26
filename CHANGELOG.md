@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.43.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.42.2...v1.43.0) (2026-09-26)
+
+
+* show the empty weight on the deboarding card ([#203](https://github.com/brunofgmag/gsx-integrator-client/issues/203)) ([ed68f85](https://github.com/brunofgmag/gsx-integrator-client/commit/ed68f852a5359988aa13f3c14fbcf3570a51cb6d))
+
+
+### Features
+
+* **operations:** show the empty weight on the deboarding card ([cf41759](https://github.com/brunofgmag/gsx-integrator-client/commit/cf41759ca51a94d37965bedc96331ce073071f86)) ([ed68f85](https://github.com/brunofgmag/gsx-integrator-client/commit/ed68f852a5359988aa13f3c14fbcf3570a51cb6d))
+
 ## [1.42.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.42.1...v1.42.2) (2026-09-26)
 
 
