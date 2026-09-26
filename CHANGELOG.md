@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.40.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.40.0...v1.40.1) (2026-09-26)
+
+
+* record the applied version in the uninstall entry ([#192](https://github.com/brunofgmag/gsx-integrator-client/issues/192)) ([c6a0f6e](https://github.com/brunofgmag/gsx-integrator-client/commit/c6a0f6e87a53f206993ca613ce6d19a71df011bd))
+
+
+### Bug Fixes
+
+* **update:** record the applied version in the uninstall entry ([f4f66d5](https://github.com/brunofgmag/gsx-integrator-client/commit/f4f66d5665505c8804c938e0e2a6fe6b76459bd6)) ([c6a0f6e](https://github.com/brunofgmag/gsx-integrator-client/commit/c6a0f6e87a53f206993ca613ce6d19a71df011bd))
+
 ## [1.40.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.39.2...v1.40.0) (2026-09-25)
 
 
