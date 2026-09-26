@@ -10,6 +10,8 @@ ColumnLayout {
     required property var settingsVm
 
     property bool updateModeVisible: true
+    property var updateVm: null
+    property bool simulatorAddonsVisible: false
     property int sectionIndex: 0
 
     readonly property var sections: [
@@ -102,6 +104,8 @@ ColumnLayout {
 
             AdvancedPane {
                 settingsVm: root.settingsVm
+                updateVm: root.updateVm
+                simulatorAddonsVisible: root.simulatorAddonsVisible
             }
         }
     }

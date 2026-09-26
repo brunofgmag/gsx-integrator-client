@@ -7,6 +7,7 @@ add_custom_target(gsxi-test-qt-runtime
         "$<TARGET_FILE:Qt6::Test>"
         "$<TARGET_FILE:Qt6::Network>"
         "$<TARGET_FILE:Qt6::WebSockets>"
+        "$<TARGET_FILE:Qt6::Xml>"
         "${GSXI_TEST_RUNTIME_DIR}"
         VERBATIM)
 
@@ -873,11 +874,14 @@ target_compile_definitions(gsxi-github-release-parser-tests PRIVATE
         GSX_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures\")
 
 gsxi_add_qt_test(gsxi-update-viewmodel-tests update-viewmodel
+        tests/doubles/FakeSimulatorAddonService.h
         tests/doubles/FakeUpdateService.h
         tests/tst_update_viewmodel.cpp
         src/application/model/CommbusBundleResult.h
         src/application/model/Distribution.h
+        src/application/model/LaunchWithSimulatorResult.h
         src/application/model/UpdateInfo.h
+        src/application/ports/SimulatorAddonService.h
         src/application/ports/UpdateService.h
         src/viewmodel/UpdateViewModel.cpp
         src/viewmodel/UpdateViewModel.h)
@@ -890,16 +894,47 @@ gsxi_add_qt_test(gsxi-commbus-install-probe-tests commbus-install-probe
 gsxi_add_qt_test(gsxi-commbus-bundle-installer-tests commbus-bundle-installer
         tests/tst_commbus_bundle_installer.cpp
         src/application/model/CommbusBundleResult.h
+        src/infrastructure/simulator/SimulatorCandidates.h
         src/infrastructure/update/CommbusBundleInstaller.cpp
         src/infrastructure/update/CommbusBundleInstaller.h
         src/infrastructure/update/CommbusInstallProbe.cpp
         src/infrastructure/update/CommbusInstallProbe.h)
+
+gsxi_add_qt_test(gsxi-exe-xml-tests exe-xml
+        tests/tst_exe_xml.cpp
+        src/infrastructure/simulator/ExeXml.cpp
+        src/infrastructure/simulator/ExeXml.h
+        src/infrastructure/simulator/SimulatorCandidates.h)
+target_link_libraries(gsxi-exe-xml-tests PRIVATE Qt6::Xml)
+
+gsxi_add_qt_test(gsxi-disk-simulator-addon-service-tests disk-simulator-addon-service
+        tests/tst_disk_simulator_addon_service.cpp
+        src/application/model/CommbusBundleResult.h
+        src/application/model/LaunchWithSimulatorResult.h
+        src/application/ports/SimulatorAddonService.h
+        src/infrastructure/simulator/DiskSimulatorAddonService.cpp
+        src/infrastructure/simulator/DiskSimulatorAddonService.h
+        src/infrastructure/simulator/ExeXml.cpp
+        src/infrastructure/simulator/ExeXml.h
+        src/infrastructure/simulator/SimulatorCandidates.h
+        src/infrastructure/update/CommbusBundleInstaller.cpp
+        src/infrastructure/update/CommbusBundleInstaller.h
+        src/infrastructure/update/CommbusInstallProbe.cpp
+        src/infrastructure/update/CommbusInstallProbe.h)
+target_link_libraries(gsxi-disk-simulator-addon-service-tests PRIVATE Qt6::Xml)
 
 gsxi_add_qt_test(gsxi-distribution-parser-tests distribution-parser
         tests/tst_distribution_parser.cpp
         src/application/model/Distribution.h
         src/infrastructure/update/DistributionParser.cpp
         src/infrastructure/update/DistributionParser.h)
+
+gsxi_add_qt_test(gsxi-distribution-flightsim-to-tests distribution-flightsim-to
+        tests/tst_distribution_flightsim_to.cpp
+        src/application/model/Distribution.h
+        src/infrastructure/update/DistributionParser.cpp
+        src/infrastructure/update/DistributionParser.h)
+target_compile_definitions(gsxi-distribution-flightsim-to-tests PRIVATE GSXI_FLIGHTSIM_TO)
 
 gsxi_add_qt_test(gsxi-automation-settings-tests automation-settings
         tests/tst_automation_settings.cpp

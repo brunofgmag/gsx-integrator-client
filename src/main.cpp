@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <cstring>
+#include <memory>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QLocale>
@@ -23,6 +24,7 @@
 #include "infrastructure/platform/ShowWindowMessageFilter.h"
 #include "infrastructure/platform/WindowForeground.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
+#include "infrastructure/simulator/DiskSimulatorAddonService.h"
 #include "infrastructure/update/CommbusBundleInstaller.h"
 #include "infrastructure/update/DistributionParser.h"
 #include "infrastructure/update/GithubUpdateService.h"
@@ -68,23 +70,17 @@ namespace
 
     Distribution LoadDistribution()
     {
-#if defined(GSXI_FLIGHTSIM_TO)
-        return ParseFlightsimToDistribution(ReadDistributionFile());
-#else
-        return ParseDistribution(ReadDistributionFile());
-#endif
+        return DistributionOfThisBuild(ReadDistributionFile());
     }
 
-    CommbusBundleResult InstallBundledCommbus()
+    SimulatorAddonPaths BundledAddonPaths()
     {
-        const std::vector<CommbusInstallTarget> targets = ResolveCommbusInstallTargets(
-            qEnvironmentVariable("GSXI_COMMBUS_COMMUNITY_DIR"),
-            QStandardPaths::writableLocation(QStandardPaths::HomeLocation));
-
-        return InstallCommbusBundle(
+        return {
             QCoreApplication::applicationDirPath() + QStringLiteral("/commbus/gsx-integrator-commbus"),
-            targets,
-            IsProcessRunning);
+            qEnvironmentVariable("GSXI_COMMBUS_COMMUNITY_DIR"),
+            QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
+            QDir::toNativeSeparators(QCoreApplication::applicationFilePath())
+        };
     }
 
     bool LightTaskbar()
@@ -253,9 +249,16 @@ int main(int argc, char* argv[])
                                     startupSettings.updateMode,
                                     UpdatesEnabled(),
                                     distribution);
+    std::unique_ptr<DiskSimulatorAddonService> addonService;
     if (distribution.flightsimTo)
     {
-        updateViewModel.SetCommbusBundleResult(InstallBundledCommbus());
+        addonService = std::make_unique<DiskSimulatorAddonService>(BundledAddonPaths(), IsProcessRunning);
+        updateViewModel.StartSimulatorAddons(addonService.get(), settingsViewModel.GetCommbusManaged());
+        QObject::connect(&updateViewModel, &UpdateViewModel::AddonsChanged, &settingsViewModel,
+                         [&settingsViewModel, &updateViewModel]
+                         {
+                             settingsViewModel.SetCommbusManaged(updateViewModel.IsCommbusManaged());
+                         });
     }
 
     QObject::connect(&settingsViewModel, &SettingsViewModel::UpdateModeChanged, &updateViewModel,

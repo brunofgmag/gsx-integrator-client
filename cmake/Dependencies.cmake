@@ -9,9 +9,9 @@ if (NOT CMAKE_PREFIX_PATH AND EXISTS "C:/Qt")
 endif ()
 
 if (GSXI_TESTS_ONLY)
-    find_package(Qt6 6.8 REQUIRED COMPONENTS Core Test WebSockets)
+    find_package(Qt6 6.8 REQUIRED COMPONENTS Core Test WebSockets Xml)
 else ()
-    find_package(Qt6 6.8 REQUIRED COMPONENTS Quick WebSockets Network LinguistTools)
+    find_package(Qt6 6.8 REQUIRED COMPONENTS Quick WebSockets Network Xml LinguistTools)
 endif ()
 
 qt_standard_project_setup(REQUIRES 6.8)

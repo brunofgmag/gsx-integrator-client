@@ -195,6 +195,15 @@ Item {
                 lineHeight: 1.4
                 wrapMode: Text.WordWrap
             }
+
+            ActionButton {
+                anchors.horizontalCenter: parent.horizontalCenter
+                small: true
+                secondary: true
+                visible: !!root.updateVm && !root.updateVm.commbusBundled
+                text: qsTr("Get installer")
+                onClicked: Qt.openUrlExternally(root.updateVm.installerUrl)
+            }
         }
 
         Column {
@@ -239,9 +248,8 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 small: true
                 tint: Theme.amber
-                visible: !!root.updateVm && root.updateVm.commbusReleaseUrl.length > 0
                 text: qsTr("Get installer")
-                onClicked: Qt.openUrlExternally(root.updateVm.commbusReleaseUrl)
+                onClicked: Qt.openUrlExternally(root.updateVm.installerUrl)
             }
 
 
@@ -266,6 +274,7 @@ Item {
             topPadding: 6
             spacing: 8
             visible: !!root.updateVm && root.updateVm.commbusBundled && !root.updateVm.commbusInstallMissing
+                     && !root.updateVm.commbusRemoved
 
             Rectangle {
                 width: parent.width
@@ -314,6 +323,43 @@ Item {
                 lineHeight: 1.4
                 wrapMode: Text.WordWrap
                 visible: !!root.updateVm && root.updateVm.commbusFailedTargets.length > 0
+            }
+        }
+
+        Column {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: Math.min(400, parent.width)
+            topPadding: 6
+            spacing: 8
+            visible: !!root.updateVm && root.updateVm.commbusRemoved
+
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: Theme.line
+            }
+
+            Text {
+                width: parent.width
+                topPadding: 4
+                horizontalAlignment: Text.AlignHCenter
+                text: qsTr("CommBus plugin removed")
+                color: Theme.muted
+                font.pixelSize: 11
+                font.letterSpacing: 1.2
+                font.capitalization: Font.AllUppercase
+            }
+
+            Text {
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                text: qsTr("You turned the plugin off, so the client removed it from the Community folders. Without it, the EFB app, the GSX panel setting and PMDG loading do not work. Turn it back on in Settings › Advanced.")
+                color: Theme.faint
+                font.pixelSize: 10
+                font.letterSpacing: 0.8
+                font.capitalization: Font.AllUppercase
+                lineHeight: 1.4
+                wrapMode: Text.WordWrap
             }
         }
 

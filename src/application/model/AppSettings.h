@@ -37,6 +37,7 @@ struct AppSettings
     bool minimizeToTray = true;
     bool trayTipShown = false;
     bool loggingEnabled = false;
+    bool commbusManaged = true;
     std::map<std::string, AircraftProfile> profiles;
 };
 

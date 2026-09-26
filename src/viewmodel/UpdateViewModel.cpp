@@ -11,6 +11,7 @@ namespace
     constexpr int kStartupCheckDelayMs = 3000;
     constexpr int kPeriodicCheckIntervalMs = 6 * 60 * 60 * 1000;
     constexpr auto kTargetSeparator = ", ";
+    constexpr auto kInstallerUrl = "https://github.com/brunofgmag/gsx-integrator-installer/releases/latest";
 
     bool IsVersionNewer(const QString& candidate, const QString& reference)
     {
@@ -31,12 +32,12 @@ namespace
         });
     }
 
-    QString LabelsOfFailedTargets(const CommbusBundleResult& result)
+    QString LabelsOfTargetsWith(const CommbusBundleResult& result, const CommbusBundleStatus status)
     {
         QStringList labels;
         for (const CommbusBundleTargetOutcome& target : result.targets)
         {
-            if (target.status == CommbusBundleStatus::Failed)
+            if (target.status == status)
             {
                 labels.append(target.label);
             }
@@ -180,9 +181,9 @@ QString UpdateViewModel::GetCommbusLatestVersion() const
     return commbusLatestVersion_;
 }
 
-QString UpdateViewModel::GetCommbusReleaseUrl() const
+QString UpdateViewModel::GetInstallerUrl() const
 {
-    return commbusReleaseUrl_;
+    return QLatin1String(kInstallerUrl);
 }
 
 bool UpdateViewModel::IsCommbusBundled() const
@@ -277,11 +278,130 @@ void UpdateViewModel::SetCommbusBundleResult(const CommbusBundleResult& result)
 
     commbusInstalledVersion_ = present ? result.bundledVersion : QString();
     commbusLatestVersion_ = result.bundledVersion;
-    commbusReleaseUrl_.clear();
     commbusUpdateAvailable_ = false;
     commbusInstallMissing_ = result.targets.empty();
     commbusSimRunning_ = HasTargetWith(result, {CommbusBundleStatus::SimRunning});
-    commbusFailedTargets_ = LabelsOfFailedTargets(result);
+    commbusFailedTargets_ = LabelsOfTargetsWith(result, CommbusBundleStatus::Failed);
+
+    emit CommbusChanged();
+}
+
+void UpdateViewModel::StartSimulatorAddons(SimulatorAddonService* addons, const bool commbusManaged)
+{
+    addons_ = addons;
+    commbusManaged_ = commbusManaged;
+    launchWithSimulator_ = addons_->IsLaunchedWithSimulator();
+    if (commbusManaged_)
+    {
+        SetCommbusBundleResult(addons_->InstallCommbus());
+    }
+
+    emit AddonsChanged();
+}
+
+bool UpdateViewModel::AreAddonsAvailable() const
+{
+    return addons_ != nullptr;
+}
+
+bool UpdateViewModel::IsLaunchWithSimulator() const
+{
+    return launchWithSimulator_;
+}
+
+void UpdateViewModel::SetLaunchWithSimulator(const bool enabled)
+{
+    if (addons_ == nullptr || launchWithSimulator_ == enabled)
+    {
+        return;
+    }
+
+    const LaunchWithSimulatorResult result = addons_->SetLaunchedWithSimulator(enabled);
+    launchWithSimulator_ = addons_->IsLaunchedWithSimulator();
+
+    if (result.noSimulator)
+    {
+        SetAddonNotice(AddonNotice::NoSimulator);
+        return;
+    }
+
+    SetAddonNotice(result.failedTargets.isEmpty() ? AddonNotice::None : AddonNotice::ExeXmlFailed,
+                   result.failedTargets.join(QLatin1String(kTargetSeparator)));
+}
+
+bool UpdateViewModel::IsCommbusManaged() const
+{
+    return commbusManaged_;
+}
+
+void UpdateViewModel::SetCommbusManaged(const bool managed)
+{
+    if (addons_ == nullptr || commbusManaged_ == managed)
+    {
+        return;
+    }
+
+    const CommbusBundleResult result = managed ? addons_->EnableCommbus() : addons_->RemoveCommbus();
+    const QString running = LabelsOfTargetsWith(result, CommbusBundleStatus::SimRunning);
+    if (!running.isEmpty())
+    {
+        SetAddonNotice(AddonNotice::SimulatorRunning, running);
+        return;
+    }
+
+    commbusManaged_ = managed;
+    if (managed)
+    {
+        SetCommbusBundleResult(result);
+    }
+    else
+    {
+        ClearInstalledCommbus();
+    }
+
+    const QString failed = LabelsOfTargetsWith(result, CommbusBundleStatus::Failed);
+    const AddonNotice failure = managed ? AddonNotice::CommbusInstallFailed : AddonNotice::CommbusRemoveFailed;
+    SetAddonNotice(failed.isEmpty() ? AddonNotice::None : failure, failed);
+}
+
+bool UpdateViewModel::IsCommbusRemoved() const
+{
+    return addons_ != nullptr && !commbusManaged_;
+}
+
+QString UpdateViewModel::GetAddonNotice() const
+{
+    switch (addonNotice_)
+    {
+    case AddonNotice::SimulatorRunning:
+        return tr("Close %1 before changing the CommBus plugin.").arg(addonNoticeTargets_);
+    case AddonNotice::CommbusInstallFailed:
+        return tr("Could not install CommBus in %1.").arg(addonNoticeTargets_);
+    case AddonNotice::CommbusRemoveFailed:
+        return tr("Could not remove CommBus from %1.").arg(addonNoticeTargets_);
+    case AddonNotice::ExeXmlFailed:
+        return tr("Could not update EXE.xml for %1.").arg(addonNoticeTargets_);
+    case AddonNotice::NoSimulator:
+        return tr("No MSFS 2020 or 2024 installation found.");
+    default:
+        return {};
+    }
+}
+
+void UpdateViewModel::SetAddonNotice(const AddonNotice notice, const QString& targets)
+{
+    addonNotice_ = notice;
+    addonNoticeTargets_ = targets;
+
+    emit AddonsChanged();
+}
+
+void UpdateViewModel::ClearInstalledCommbus()
+{
+    commbusInstalledVersion_.clear();
+    commbusInstallMissing_ = false;
+    commbusSimRunning_ = false;
+    commbusFailedTargets_.clear();
 
     emit CommbusChanged();
 }
@@ -332,8 +452,7 @@ void UpdateViewModel::OnCheckFinished(const bool ok, const bool updateAvailable,
 
 void UpdateViewModel::OnCommbusCheckFinished(const bool ok,
                                              const QString& installedVersion,
-                                             const QString& latestVersion,
-                                             const QString& releaseUrl)
+                                             const QString& latestVersion)
 {
     if (!ok || IsCommbusBundled())
     {
@@ -341,7 +460,6 @@ void UpdateViewModel::OnCommbusCheckFinished(const bool ok,
     }
     commbusInstalledVersion_ = installedVersion;
     commbusLatestVersion_ = latestVersion;
-    commbusReleaseUrl_ = releaseUrl;
     commbusInstallMissing_ = installedVersion.isEmpty();
     commbusUpdateAvailable_ = !installedVersion.isEmpty()
         && IsVersionNewer(latestVersion, installedVersion);

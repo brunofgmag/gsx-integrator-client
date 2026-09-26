@@ -22,6 +22,11 @@ using ProcessRunningCheck = std::function<bool(const QString& processName)>;
 [[nodiscard]] CommbusBundleResult InstallCommbusBundle(const QString& bundleDir,
                                                        const std::vector<CommbusInstallTarget>& targets,
                                                        const ProcessRunningCheck& isProcessRunning);
+[[nodiscard]] CommbusBundleResult EnableCommbusBundle(const QString& bundleDir,
+                                                      const std::vector<CommbusInstallTarget>& targets,
+                                                      const ProcessRunningCheck& isProcessRunning);
+[[nodiscard]] CommbusBundleResult RemoveCommbusBundle(const std::vector<CommbusInstallTarget>& targets,
+                                                      const ProcessRunningCheck& isProcessRunning);
 [[nodiscard]] bool IsProcessRunning(const QString& exeName);
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_COMMBUSBUNDLEINSTALLER_H

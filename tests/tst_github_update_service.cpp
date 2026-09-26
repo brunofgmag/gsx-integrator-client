@@ -88,7 +88,6 @@ namespace
         bool ok = false;
         QString installed;
         QString latest;
-        QString releaseUrl;
     };
 
     struct StageCall
@@ -112,9 +111,9 @@ namespace
         }
 
         void OnCommbusCheckFinished(const bool ok, const QString& installedVersion,
-                                    const QString& latestVersion, const QString& releaseUrl) override
+                                    const QString& latestVersion) override
         {
-            commbusChecks.push_back({ok, installedVersion, latestVersion, releaseUrl});
+            commbusChecks.push_back({ok, installedVersion, latestVersion});
         }
 
         void OnDownloadProgress(qint64, qint64) override
@@ -332,7 +331,6 @@ void GithubUpdateServiceTest::commbusCheckReportsInstalledAndLatest()
     QCOMPARE(observer.commbusChecks[0].ok, true);
     QCOMPARE(observer.commbusChecks[0].installed, QStringLiteral("1.2.3"));
     QCOMPARE(observer.commbusChecks[0].latest, QStringLiteral("2.0.0"));
-    QCOMPARE(observer.commbusChecks[0].releaseUrl, QStringLiteral("https://example.test/release"));
 }
 
 void GithubUpdateServiceTest::downloadWithoutAssetsFailsImmediately()

@@ -51,7 +51,7 @@ private:
     void StartExtraction(const QString& zipPath, const QString& stagedRoot);
     void NotifyCheckFinished(bool ok, bool available, const UpdateInfo& info, const QString& error) const;
     void NotifyCommbusCheckFinished(bool ok, const QString& installedVersion,
-                                    const QString& latestVersion, const QString& releaseUrl) const;
+                                    const QString& latestVersion) const;
     void NotifyStageFinished(bool ok, const QString& error);
 
     QNetworkAccessManager network_;

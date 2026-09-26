@@ -8,6 +8,7 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QVersionNumber>
 #include "CommbusInstallProbe.h"
+#include "../simulator/SimulatorCandidates.h"
 
 namespace
 {
@@ -15,36 +16,6 @@ namespace
     constexpr auto kVersionMarker = ".gsxi-version";
     constexpr auto kManifestName = "manifest.json";
     constexpr auto kOverrideLabel = "Community";
-
-    struct SimCandidate
-    {
-        const char* label;
-        const char* userCfgSubPath;
-        const char* processName;
-    };
-
-    constexpr SimCandidate kCandidates[] = {
-        {
-            "MSFS 2020 (Steam)",
-            "AppData/Roaming/Microsoft Flight Simulator/UserCfg.opt",
-            "FlightSimulator.exe"
-        },
-        {
-            "MSFS 2020 (Microsoft Store)",
-            "AppData/Local/Packages/Microsoft.FlightSimulator_8wekyb3d8bbwe/LocalCache/UserCfg.opt",
-            "FlightSimulator.exe"
-        },
-        {
-            "MSFS 2024 (Steam)",
-            "AppData/Roaming/Microsoft Flight Simulator 2024/UserCfg.opt",
-            "FlightSimulator2024.exe"
-        },
-        {
-            "MSFS 2024 (Microsoft Store)",
-            "AppData/Local/Packages/Microsoft.Limitless_8wekyb3d8bbwe/LocalCache/UserCfg.opt",
-            "FlightSimulator2024.exe"
-        },
-    };
 
     QByteArray ReadFileIfExists(const QString& path)
     {
@@ -115,6 +86,47 @@ namespace
         return !installed.isNull() && installed >= bundled;
     }
 
+    bool HasPackage(const QString& communityPath)
+    {
+        const QFileInfo entry(PackageDirIn(communityPath));
+
+        return entry.exists() || entry.isJunction() || entry.isSymbolicLink();
+    }
+
+    QString BundledVersionIn(const QString& bundleDir)
+    {
+        return ParseManifestVersion(ReadFileIfExists(bundleDir + u'/' + QLatin1String(kManifestName)));
+    }
+
+    template <typename NeedsChange>
+    std::vector<CommbusBundleTargetOutcome> BlockedTargets(const std::vector<CommbusInstallTarget>& targets,
+                                                           const ProcessRunningCheck& isProcessRunning,
+                                                           const NeedsChange& needsChange)
+    {
+        std::vector<CommbusBundleTargetOutcome> blocked;
+        for (const CommbusInstallTarget& target : targets)
+        {
+            if (needsChange(target) && !target.processName.isEmpty() && isProcessRunning(target.processName))
+            {
+                blocked.push_back({target.label, CommbusBundleStatus::SimRunning});
+            }
+        }
+
+        return blocked;
+    }
+
+    CommbusBundleStatus RemoveFrom(const CommbusInstallTarget& target)
+    {
+        if (!HasPackage(target.communityPath))
+        {
+            return CommbusBundleStatus::Absent;
+        }
+
+        return RemoveExistingPackageDir(PackageDirIn(target.communityPath))
+                   ? CommbusBundleStatus::Removed
+                   : CommbusBundleStatus::Failed;
+    }
+
     CommbusBundleStatus InstallInto(const QString& bundleDir,
                                     const CommbusInstallTarget& target,
                                     const QString& bundledVersion,
@@ -151,7 +163,7 @@ namespace
 std::vector<CommbusInstallTarget> DetectCommbusInstallTargets(const QString& homeDir)
 {
     std::vector<CommbusInstallTarget> targets;
-    for (const SimCandidate& candidate : kCandidates)
+    for (const SimulatorCandidate& candidate : kSimulatorCandidates)
     {
         const QString packagesPath = ParseInstalledPackagesPath(
             ReadFileIfExists(homeDir + u'/' + QLatin1String(candidate.userCfgSubPath)));
@@ -211,6 +223,47 @@ CommbusBundleResult InstallCommbusBundle(const QString& bundleDir,
         result.targets.push_back({
             target.label, InstallInto(bundleDir, target, result.bundledVersion, isProcessRunning)
         });
+    }
+
+    return result;
+}
+
+CommbusBundleResult EnableCommbusBundle(const QString& bundleDir,
+                                        const std::vector<CommbusInstallTarget>& targets,
+                                        const ProcessRunningCheck& isProcessRunning)
+{
+    const QString bundledVersion = BundledVersionIn(bundleDir);
+    const QVersionNumber bundled = QVersionNumber::fromString(bundledVersion);
+    std::vector<CommbusBundleTargetOutcome> blocked = BlockedTargets(
+        targets, isProcessRunning, [&bundled](const CommbusInstallTarget& target)
+        {
+            return !IsUpToDate(InstalledCommbusPackageVersion(target.communityPath), bundled);
+        });
+    if (!blocked.empty())
+    {
+        return {bundledVersion, std::move(blocked)};
+    }
+
+    return InstallCommbusBundle(bundleDir, targets, isProcessRunning);
+}
+
+CommbusBundleResult RemoveCommbusBundle(const std::vector<CommbusInstallTarget>& targets,
+                                        const ProcessRunningCheck& isProcessRunning)
+{
+    std::vector<CommbusBundleTargetOutcome> blocked = BlockedTargets(
+        targets, isProcessRunning, [](const CommbusInstallTarget& target)
+        {
+            return HasPackage(target.communityPath);
+        });
+    if (!blocked.empty())
+    {
+        return {{}, std::move(blocked)};
+    }
+
+    CommbusBundleResult result;
+    for (const CommbusInstallTarget& target : targets)
+    {
+        result.targets.push_back({target.label, RemoveFrom(target)});
     }
 
     return result;

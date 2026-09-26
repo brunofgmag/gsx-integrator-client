@@ -283,7 +283,7 @@ void GithubUpdateService::OnCommbusCheckHttpFinished()
 
     if (reply->error() != QNetworkReply::NoError)
     {
-        NotifyCommbusCheckFinished(false, {}, {}, {});
+        NotifyCommbusCheckFinished(false, {}, {});
 
         return;
     }
@@ -291,13 +291,13 @@ void GithubUpdateService::OnCommbusCheckHttpFinished()
     const auto info = ParseLatestRelease(reply->readAll());
     if (!info.has_value())
     {
-        NotifyCommbusCheckFinished(false, {}, {}, {});
+        NotifyCommbusCheckFinished(false, {}, {});
 
         return;
     }
 
     const QString installed = DetectInstalledCommbusVersion(qEnvironmentVariable("GSXI_COMMBUS_COMMUNITY_DIR"));
-    NotifyCommbusCheckFinished(true, installed, info->version, info->releasePageUrl);
+    NotifyCommbusCheckFinished(true, installed, info->version);
 }
 
 #if !defined(GSXI_FLIGHTSIM_TO)
@@ -452,12 +452,11 @@ void GithubUpdateService::NotifyCheckFinished(const bool ok, const bool availabl
 
 void GithubUpdateService::NotifyCommbusCheckFinished(const bool ok,
                                                      const QString& installedVersion,
-                                                     const QString& latestVersion,
-                                                     const QString& releaseUrl) const
+                                                     const QString& latestVersion) const
 {
     for (auto* observer : observers_)
     {
-        observer->OnCommbusCheckFinished(ok, installedVersion, latestVersion, releaseUrl);
+        observer->OnCommbusCheckFinished(ok, installedVersion, latestVersion);
     }
 }
 
