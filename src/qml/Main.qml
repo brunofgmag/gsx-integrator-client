@@ -352,6 +352,8 @@ ApplicationWindow {
                     SettingsScreen {
                         settingsVm: window.settingsVm
                         updateModeVisible: window.updateVm.downloadsAllowed
+                        updateVm: window.updateVm
+                        simulatorAddonsVisible: window.updateVm.addonsAvailable
                     }
 
                     AboutScreen {

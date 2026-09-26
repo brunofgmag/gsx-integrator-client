@@ -9,6 +9,9 @@ ColumnLayout {
 
     required property var settingsVm
 
+    property var updateVm: null
+    property bool simulatorAddonsVisible: false
+
     readonly property var rendererIds: ["software", "d3d12", "opengl"]
     readonly property var rendererLabels: ({
         "d3d12": "D3D12", "opengl": "OpenGL", "vulkan": "Vulkan",
@@ -63,6 +66,31 @@ ColumnLayout {
               : root.settingsVm.loggingEnabled
                 ? qsTr("Restart GSX Integrator to start logging.")
                 : qsTr("Logging stays on until GSX Integrator restarts.")
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        visible: root.simulatorAddonsVisible
+        title: qsTr("Start with the simulator")
+        caption: qsTr("Open GSX Integrator when MSFS starts")
+        helpText: qsTr("Adds GSX Integrator to the EXE.xml of each MSFS 2020 and 2024 installation, so the simulator opens it in the tray. Turning it off removes the entry.")
+        checked: root.simulatorAddonsVisible && root.updateVm.launchWithSimulator
+        onToggled: checked => root.updateVm.launchWithSimulator = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        visible: root.simulatorAddonsVisible
+        title: qsTr("CommBus plugin")
+        caption: qsTr("Keep the plugin in the Community folder")
+        helpText: qsTr("GSX Integrator installs and updates the gsx-integrator-commbus package in every Community folder it finds. Without it, the EFB app, the GSX panel setting and PMDG loading do not work. Turning it off removes the package. Close the simulator before changing it.")
+        checked: root.simulatorAddonsVisible && root.updateVm.commbusManaged
+        onToggled: checked => root.updateVm.commbusManaged = checked
+    }
+
+    Advisory {
+        Layout.fillWidth: true
+        text: root.simulatorAddonsVisible ? root.updateVm.addonNotice : ""
     }
 
     Item {

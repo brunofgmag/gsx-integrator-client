@@ -50,6 +50,7 @@ target_link_libraries(${APP_NAME} PRIVATE
         Qt6::Quick
         Qt6::Network
         Qt6::WebSockets
+        Qt6::Xml
         "${SIMCONNECT_IMPORT_LIB}"
         dwmapi
 )

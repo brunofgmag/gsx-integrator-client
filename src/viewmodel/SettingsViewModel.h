@@ -211,6 +211,8 @@ public:
 
     [[nodiscard]] bool GetTrayTipShown() const;
     void SetTrayTipShown(bool shown);
+    [[nodiscard]] bool GetCommbusManaged() const;
+    void SetCommbusManaged(bool managed);
 
     [[nodiscard]] bool GetLoggingEnabled() const;
     void SetLoggingEnabled(bool enabled);
@@ -307,6 +309,7 @@ signals:
     void CloseToTrayChanged();
     void MinimizeToTrayChanged();
     void TrayTipShownChanged();
+    void CommbusManagedChanged();
     void LoggingEnabledChanged();
     void LoggingActiveChanged();
     void LogLocationChanged();

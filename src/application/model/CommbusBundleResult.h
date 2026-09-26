@@ -4,7 +4,7 @@
 #include <vector>
 #include <QtCore/QString>
 
-enum class CommbusBundleStatus { Installed, UpToDate, SimRunning, Failed };
+enum class CommbusBundleStatus { Installed, UpToDate, Removed, Absent, SimRunning, Failed };
 
 struct CommbusBundleTargetOutcome
 {

@@ -1,5 +1,7 @@
+#include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
+#include "doubles/FakeSimulatorAddonService.h"
 #include "doubles/FakeUpdateService.h"
 #include "../src/viewmodel/UpdateViewModel.h"
 
@@ -19,6 +21,11 @@ namespace
     Distribution FlightsimTo()
     {
         return {true, QStringLiteral("https://flightsim.to/file/1/gsx-integrator")};
+    }
+
+    CommbusBundleResult OneTarget(const CommbusBundleStatus status)
+    {
+        return {QStringLiteral("0.4.0"), {{QStringLiteral("MSFS 2024 (Steam)"), status}}};
     }
 }
 
@@ -47,6 +54,17 @@ private slots:
     static void flightsimToKeepsCheckingForUpdates();
     static void flightsimToReportsTheBundledCommbus();
     static void flightsimToIgnoresTheCommbusFeed();
+    static void githubChannelHasNoSimulatorAddons();
+    static void startupInstallsTheBundledCommbusWhenManaged();
+    static void startupSkipsTheInstallWhenNotManaged();
+    static void turningCommbusOffRemovesItAndReportsRemoved();
+    static void turningCommbusOffWhileTheSimulatorRunsKeepsItOn();
+    static void turningCommbusOnWhileTheSimulatorRunsKeepsItOff();
+    static void turningCommbusBackOnInstallsIt();
+    static void failedRemovalStillTurnsCommbusOffAndNamesTheTarget();
+    static void launchWithSimulatorFollowsTheService();
+    static void launchWithSimulatorWithoutSimulatorStaysOff();
+    static void launchWithSimulatorFailureNamesTheTarget();
 };
 
 void UpdateViewModelTest::notifyFlowDownloadsAndRestartsOnDemand()
@@ -406,6 +424,193 @@ void UpdateViewModelTest::flightsimToIgnoresTheCommbusFeed()
 
     QVERIFY(!viewModel.IsCommbusUpdateAvailable());
     QCOMPARE(viewModel.GetCommbusInstalledVersion(), QStringLiteral("0.4.0"));
+}
+
+void UpdateViewModelTest::githubChannelHasNoSimulatorAddons()
+{
+    FakeUpdateService service;
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true);
+
+    viewModel.SetLaunchWithSimulator(true);
+    viewModel.SetCommbusManaged(false);
+
+    QVERIFY(!viewModel.AreAddonsAvailable());
+    QVERIFY(!viewModel.IsLaunchWithSimulator());
+    QVERIFY(viewModel.IsCommbusManaged());
+    QVERIFY(!viewModel.IsCommbusRemoved());
+}
+
+void UpdateViewModelTest::startupInstallsTheBundledCommbusWhenManaged()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    addons.launched = true;
+    addons.installResult = OneTarget(CommbusBundleStatus::Installed);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+
+    viewModel.StartSimulatorAddons(&addons, true);
+
+    QCOMPARE(addons.installCalls, 1);
+    QVERIFY(viewModel.AreAddonsAvailable());
+    QVERIFY(viewModel.IsLaunchWithSimulator());
+    QVERIFY(viewModel.IsCommbusManaged());
+    QVERIFY(!viewModel.IsCommbusRemoved());
+    QCOMPARE(viewModel.GetCommbusInstalledVersion(), QStringLiteral("0.4.0"));
+}
+
+void UpdateViewModelTest::startupSkipsTheInstallWhenNotManaged()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    addons.installResult = OneTarget(CommbusBundleStatus::Installed);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+
+    viewModel.StartSimulatorAddons(&addons, false);
+
+    QCOMPARE(addons.installCalls, 0);
+    QVERIFY(!viewModel.IsCommbusManaged());
+    QVERIFY(viewModel.IsCommbusRemoved());
+    QVERIFY(viewModel.GetCommbusInstalledVersion().isEmpty());
+    QVERIFY(!viewModel.IsCommbusInstallMissing());
+}
+
+void UpdateViewModelTest::turningCommbusOffRemovesItAndReportsRemoved()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    addons.installResult = OneTarget(CommbusBundleStatus::Installed);
+    addons.removeResult = OneTarget(CommbusBundleStatus::Removed);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+    viewModel.StartSimulatorAddons(&addons, true);
+    const QSignalSpy addonsChanged(&viewModel, &UpdateViewModel::AddonsChanged);
+
+    viewModel.SetCommbusManaged(false);
+
+    QCOMPARE(addons.removeCalls, 1);
+    QVERIFY(!viewModel.IsCommbusManaged());
+    QVERIFY(viewModel.IsCommbusRemoved());
+    QVERIFY(viewModel.GetCommbusInstalledVersion().isEmpty());
+    QVERIFY(viewModel.GetAddonNotice().isEmpty());
+    QVERIFY(addonsChanged.count() > 0);
+}
+
+void UpdateViewModelTest::turningCommbusOffWhileTheSimulatorRunsKeepsItOn()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    addons.installResult = OneTarget(CommbusBundleStatus::Installed);
+    addons.removeResult = OneTarget(CommbusBundleStatus::SimRunning);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+    viewModel.StartSimulatorAddons(&addons, true);
+    const QSignalSpy addonsChanged(&viewModel, &UpdateViewModel::AddonsChanged);
+
+    viewModel.SetCommbusManaged(false);
+
+    QCOMPARE(addons.removeCalls, 1);
+    QVERIFY(viewModel.IsCommbusManaged());
+    QVERIFY(!viewModel.IsCommbusRemoved());
+    QCOMPARE(viewModel.GetCommbusInstalledVersion(), QStringLiteral("0.4.0"));
+    QCOMPARE(viewModel.GetAddonNotice(), QStringLiteral("Close MSFS 2024 (Steam) before changing the CommBus plugin."));
+    QCOMPARE(addonsChanged.count(), 1);
+}
+
+void UpdateViewModelTest::turningCommbusOnWhileTheSimulatorRunsKeepsItOff()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    addons.enableResult = OneTarget(CommbusBundleStatus::SimRunning);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+    viewModel.StartSimulatorAddons(&addons, false);
+
+    viewModel.SetCommbusManaged(true);
+
+    QCOMPARE(addons.enableCalls, 1);
+    QVERIFY(!viewModel.IsCommbusManaged());
+    QVERIFY(viewModel.IsCommbusRemoved());
+    QCOMPARE(viewModel.GetAddonNotice(), QStringLiteral("Close MSFS 2024 (Steam) before changing the CommBus plugin."));
+}
+
+void UpdateViewModelTest::turningCommbusBackOnInstallsIt()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    addons.enableResult = OneTarget(CommbusBundleStatus::Installed);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+    viewModel.StartSimulatorAddons(&addons, false);
+
+    viewModel.SetCommbusManaged(true);
+
+    QCOMPARE(addons.enableCalls, 1);
+    QCOMPARE(addons.installCalls, 0);
+    QVERIFY(viewModel.IsCommbusManaged());
+    QVERIFY(!viewModel.IsCommbusRemoved());
+    QCOMPARE(viewModel.GetCommbusInstalledVersion(), QStringLiteral("0.4.0"));
+    QVERIFY(viewModel.GetAddonNotice().isEmpty());
+}
+
+void UpdateViewModelTest::failedRemovalStillTurnsCommbusOffAndNamesTheTarget()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    addons.installResult = OneTarget(CommbusBundleStatus::UpToDate);
+    addons.removeResult = OneTarget(CommbusBundleStatus::Failed);
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+    viewModel.StartSimulatorAddons(&addons, true);
+
+    viewModel.SetCommbusManaged(false);
+
+    QVERIFY(!viewModel.IsCommbusManaged());
+    QCOMPARE(viewModel.GetAddonNotice(), QStringLiteral("Could not remove CommBus from MSFS 2024 (Steam)."));
+}
+
+void UpdateViewModelTest::launchWithSimulatorFollowsTheService()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+    viewModel.StartSimulatorAddons(&addons, true);
+
+    QVERIFY(!viewModel.IsLaunchWithSimulator());
+
+    viewModel.SetLaunchWithSimulator(true);
+
+    QCOMPARE(addons.launchCalls, 1);
+    QVERIFY(viewModel.IsLaunchWithSimulator());
+
+    viewModel.SetLaunchWithSimulator(false);
+
+    QCOMPARE(addons.launchCalls, 2);
+    QVERIFY(!viewModel.IsLaunchWithSimulator());
+    QVERIFY(viewModel.GetAddonNotice().isEmpty());
+}
+
+void UpdateViewModelTest::launchWithSimulatorWithoutSimulatorStaysOff()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    addons.launchResult.noSimulator = true;
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+    viewModel.StartSimulatorAddons(&addons, true);
+
+    viewModel.SetLaunchWithSimulator(true);
+
+    QVERIFY(!viewModel.IsLaunchWithSimulator());
+    QCOMPARE(viewModel.GetAddonNotice(), QStringLiteral("No MSFS 2020 or 2024 installation found."));
+}
+
+void UpdateViewModelTest::launchWithSimulatorFailureNamesTheTarget()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    addons.launchResult.failedTargets = {QStringLiteral("MSFS 2020 (Steam)"), QStringLiteral("MSFS 2024 (Steam)")};
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+    viewModel.StartSimulatorAddons(&addons, true);
+
+    viewModel.SetLaunchWithSimulator(true);
+
+    QVERIFY(!viewModel.IsLaunchWithSimulator());
+    QCOMPARE(viewModel.GetAddonNotice(),
+             QStringLiteral("Could not update EXE.xml for MSFS 2020 (Steam), MSFS 2024 (Steam)."));
 }
 
 QTEST_GUILESS_MAIN(UpdateViewModelTest)
