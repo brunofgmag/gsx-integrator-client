@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.42.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.42.1...v1.42.2) (2026-09-26)
+
+
+* say the automation waits for the flight instead of calling it off ([#199](https://github.com/brunofgmag/gsx-integrator-client/issues/199)) ([72d2df7](https://github.com/brunofgmag/gsx-integrator-client/commit/72d2df76e08264e39a0908c16b271963b0a4c524))
+
+
+### Bug Fixes
+
+* **operations:** say the automation waits for the flight instead of calling it off ([98eb07b](https://github.com/brunofgmag/gsx-integrator-client/commit/98eb07b65e178bd0aa14086632422af4c4faa4c0)) ([72d2df7](https://github.com/brunofgmag/gsx-integrator-client/commit/72d2df76e08264e39a0908c16b271963b0a4c524))
+
 ## [1.42.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.42.0...v1.42.1) (2026-09-26)
 
 
