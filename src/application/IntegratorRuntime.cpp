@@ -711,6 +711,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.boardedPax = status_.boardedPassengers;
     snapshot.targetFuelKg = status_.targetFuelKg;
     snapshot.targetZfwKg = status_.targetZfwKg;
+    snapshot.emptyZfwKg = status_.emptyZfwKg;
     snapshot.targetPax = status_.targetPassengers;
     snapshot.delayTicksRemaining = GetDelayTicksRemaining();
     snapshot.autoWeightUnit = static_cast<int>(GetAutoWeightUnit());

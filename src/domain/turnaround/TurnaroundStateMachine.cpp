@@ -195,6 +195,7 @@ void TurnaroundStateMachine::PublishStatus() const
     context_.status->boardedPassengers = context_.data.boardedPassengers;
     context_.status->targetFuelKg = context_.data.plannedFuelKg;
     context_.status->targetZfwKg = context_.data.plannedZfwKg;
+    context_.status->emptyZfwKg = context_.data.initialZfwKg;
     context_.status->targetPassengers = context_.data.plannedPassengers;
 }
 
