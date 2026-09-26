@@ -8,6 +8,7 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QProcess>
 #include <QtCore/QStandardPaths>
+#include <QtCore/QVersionNumber>
 #include <QtNetwork/QNetworkReply>
 #include "CommbusInstallProbe.h"
 #include "GithubReleaseParser.h"
@@ -18,13 +19,20 @@ namespace
     constexpr int kTransferTimeoutMs = 30000;
 
     constexpr auto kApplyScript =
-        R"PS(param([int]$AppPid, [string]$Source, [string]$Dest, [string]$ExeName, [int]$Relaunch)
+        R"PS(param([int]$AppPid, [string]$Source, [string]$Dest, [string]$ExeName, [int]$Relaunch, [string]$Version,
+      [string]$UninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\gsx-integrator-client')
 $root = Split-Path -Parent $PSCommandPath
 Start-Transcript -Path (Join-Path $root 'apply.log') -Append | Out-Null
 Wait-Process -Id $AppPid -Timeout 60 -ErrorAction SilentlyContinue
 if (-not (Test-Path (Join-Path $Dest $ExeName))) { Stop-Transcript | Out-Null; exit 1 }
 robocopy $Source $Dest /MIR /XD (Join-Path $Dest 'maintenance') /R:20 /W:1
 if ($LASTEXITCODE -ge 8) { Stop-Transcript | Out-Null; exit 1 }
+$uninstall = Get-ItemProperty -Path $UninstallKey -ErrorAction SilentlyContinue
+$installLocation = if ($uninstall) { [string]$uninstall.InstallLocation } else { '' }
+if ($Version -and $installLocation -and ($installLocation.TrimEnd('\', '/') -ieq $Dest.TrimEnd('\', '/'))) {
+    Set-ItemProperty -Path $UninstallKey -Name DisplayVersion -Value $Version -ErrorAction SilentlyContinue
+    if (-not $?) { "DisplayVersion not updated: $($Error[0])" }
+}
 if ($Relaunch -eq 1) { Start-Process -FilePath (Join-Path $Dest $ExeName) -WorkingDirectory $Dest }
 Stop-Transcript | Out-Null
 Remove-Item -Recurse -Force (Join-Path $root 'download'), (Join-Path $root 'staged') -ErrorAction SilentlyContinue
@@ -175,25 +183,36 @@ bool GithubUpdateService::LaunchApplyHelper(const bool relaunch)
     }
 
     helperLaunched_ = QProcess::startDetached(QStringLiteral("powershell.exe"),
-                                              BuildApplyArguments(scriptPath, exeName, relaunch));
+                                              BuildApplyArguments(scriptPath,
+                                                                  QCoreApplication::applicationPid(),
+                                                                  StagedAppDir(),
+                                                                  QCoreApplication::applicationDirPath(),
+                                                                  exeName, stagedVersion_, relaunch));
 
     return helperLaunched_;
 }
 
-QStringList GithubUpdateService::BuildApplyArguments(const QString& scriptPath, const QString& exeName,
-                                                     const bool relaunch) const
+QByteArray GithubUpdateService::ApplyScript()
+{
+    return kApplyScript;
+}
+
+QStringList GithubUpdateService::BuildApplyArguments(const QString& scriptPath, const qint64 appPid,
+                                                     const QString& source, const QString& dest,
+                                                     const QString& exeName, const QString& version,
+                                                     const bool relaunch)
 {
     return {
         QStringLiteral("-NoProfile"),
         QStringLiteral("-ExecutionPolicy"), QStringLiteral("Bypass"),
         QStringLiteral("-WindowStyle"), QStringLiteral("Hidden"),
         QStringLiteral("-File"), QDir::toNativeSeparators(scriptPath),
-        QStringLiteral("-AppPid"), QString::number(QCoreApplication::applicationPid()),
-        QStringLiteral("-Source"), QDir::toNativeSeparators(StagedAppDir()),
-        QStringLiteral("-Dest"),
-        QDir::toNativeSeparators(QCoreApplication::applicationDirPath()),
+        QStringLiteral("-AppPid"), QString::number(appPid),
+        QStringLiteral("-Source"), QDir::toNativeSeparators(source),
+        QStringLiteral("-Dest"), QDir::toNativeSeparators(dest),
         QStringLiteral("-ExeName"), exeName,
         QStringLiteral("-Relaunch"), relaunch ? QStringLiteral("1") : QStringLiteral("0"),
+        QStringLiteral("-Version"), QVersionNumber::fromString(version).toString(),
     };
 }
 

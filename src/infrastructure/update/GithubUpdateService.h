@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_GITHUBUPDATESERVICE_H
 
 #include <vector>
+#include <QtCore/QByteArray>
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -30,6 +31,12 @@ public:
     void AddObserver(UpdateServiceObserver* observer) override;
     void RemoveObserver(UpdateServiceObserver* observer) override;
 
+    [[nodiscard]] static QByteArray ApplyScript();
+    [[nodiscard]] static QStringList BuildApplyArguments(const QString& scriptPath, qint64 appPid,
+                                                         const QString& source, const QString& dest,
+                                                         const QString& exeName, const QString& version,
+                                                         bool relaunch);
+
 private:
     void OnClientCheckHttpFinished();
     void OnCommbusCheckHttpFinished();
@@ -42,8 +49,6 @@ private:
     [[nodiscard]] static QString StagedAppDir();
     [[nodiscard]] bool VerifyChecksum(const QString& zipPath) const;
     void StartExtraction(const QString& zipPath, const QString& stagedRoot);
-    [[nodiscard]] QStringList BuildApplyArguments(const QString& scriptPath, const QString& exeName,
-                                                  bool relaunch) const;
     void NotifyCheckFinished(bool ok, bool available, const UpdateInfo& info, const QString& error) const;
     void NotifyCommbusCheckFinished(bool ok, const QString& installedVersion,
                                     const QString& latestVersion, const QString& releaseUrl) const;
