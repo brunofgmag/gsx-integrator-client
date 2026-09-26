@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.42.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.42.0...v1.42.1) (2026-09-26)
+
+
+* open the installer releases from get installer ([#198](https://github.com/brunofgmag/gsx-integrator-client/issues/198)) ([350984a](https://github.com/brunofgmag/gsx-integrator-client/commit/350984a46beecde749ce458aa9cf78fc7b061d91))
+
+
+### Bug Fixes
+
+* **about:** open the installer releases from get installer ([7c9e587](https://github.com/brunofgmag/gsx-integrator-client/commit/7c9e587ef911169aefc7778175c280440bbbf79d)) ([350984a](https://github.com/brunofgmag/gsx-integrator-client/commit/350984a46beecde749ce458aa9cf78fc7b061d91))
+
 ## [1.42.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.41.0...v1.42.0) (2026-09-26)
 
 
