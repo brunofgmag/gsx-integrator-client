@@ -25,6 +25,7 @@ $requiredPaths = @(
     "Qt6Core$suffix.dll",
     "Qt6Network$suffix.dll",
     "Qt6WebSockets$suffix.dll",
+    "Qt6Xml$suffix.dll",
     "Qt6Qml$suffix.dll",
     "Qt6Quick$suffix.dll",
     "platforms/qwindows$suffix.dll",

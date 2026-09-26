@@ -88,6 +88,7 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QCOMPARE(loaded.trayTipShown, false);
     QCOMPARE(loaded.streamerMode, false);
     QCOMPARE(loaded.loggingEnabled, false);
+    QCOMPARE(loaded.commbusManaged, true);
     QVERIFY(loaded.profiles.empty());
 }
 
@@ -319,6 +320,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     values.minimizeToTray = false;
     values.trayTipShown = true;
     values.loggingEnabled = true;
+    values.commbusManaged = false;
 
     AircraftProfile profile;
     profile.useGlobal = false;
@@ -340,6 +342,7 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
 
     QCOMPARE(loaded.simbriefPilotId, values.simbriefPilotId);
     QCOMPARE(loaded.streamerMode, values.streamerMode);
+    QCOMPARE(loaded.commbusManaged, values.commbusManaged);
     QCOMPARE(loaded.fuelRateMode, values.fuelRateMode);
     QCOMPARE(loaded.fuelRateKgs, values.fuelRateKgs);
     QCOMPARE(loaded.autoSelectGsxChoice, values.autoSelectGsxChoice);

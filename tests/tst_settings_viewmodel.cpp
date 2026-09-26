@@ -44,6 +44,7 @@ private slots:
     static void groundServicesPersistImmediately();
     static void traySettingsDefaults();
     static void traySettingsPersistImmediately();
+    static void commbusManagedDefaultsOnAndPersistsImmediately();
     static void loggingEnabledDefaultsToDisabled();
     static void loggingEnabledPersistsWhenToggled();
     static void loggingEnabledEmitsItsSignalOnce();
@@ -334,6 +335,25 @@ void SettingsViewModelTest::traySettingsPersistImmediately()
     viewModel.SetTrayTipShown(true);
 
     QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::commbusManagedDefaultsOnAndPersistsImmediately()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(viewModel.GetCommbusManaged());
+
+    viewModel.SetCommbusManaged(false);
+
+    QCOMPARE(repository.saveCalls, 1);
+    QVERIFY(!repository.stored.commbusManaged);
+    QVERIFY(!viewModel.GetCommbusManaged());
+
+    viewModel.SetCommbusManaged(false);
+
+    QCOMPARE(repository.saveCalls, 1);
 }
 
 void SettingsViewModelTest::loggingEnabledDefaultsToDisabled()

@@ -7,6 +7,7 @@
 #include "../application/model/CommbusBundleResult.h"
 #include "../application/model/Distribution.h"
 #include "../application/model/UpdateInfo.h"
+#include "../application/ports/SimulatorAddonService.h"
 #include "../application/ports/UpdateService.h"
 
 class UpdateViewModel final : public QObject, public UpdateServiceObserver
@@ -34,6 +35,11 @@ class UpdateViewModel final : public QObject, public UpdateServiceObserver
     Q_PROPERTY(QString commbusFailedTargets READ GetCommbusFailedTargets NOTIFY CommbusChanged)
     Q_PROPERTY(bool downloadsAllowed READ AreDownloadsAllowed CONSTANT)
     Q_PROPERTY(QString externalDownloadUrl READ GetExternalDownloadUrl CONSTANT)
+    Q_PROPERTY(bool addonsAvailable READ AreAddonsAvailable NOTIFY AddonsChanged)
+    Q_PROPERTY(bool launchWithSimulator READ IsLaunchWithSimulator WRITE SetLaunchWithSimulator NOTIFY AddonsChanged)
+    Q_PROPERTY(bool commbusManaged READ IsCommbusManaged WRITE SetCommbusManaged NOTIFY AddonsChanged)
+    Q_PROPERTY(bool commbusRemoved READ IsCommbusRemoved NOTIFY AddonsChanged)
+    Q_PROPERTY(QString addonNotice READ GetAddonNotice NOTIFY AddonsChanged)
 
 public:
     enum State { Idle = 0, Checking, UpToDate, UpdateAvailable, Downloading, ReadyToRestart, Error };
@@ -74,6 +80,13 @@ public:
     [[nodiscard]] QString GetCommbusFailedTargets() const;
     [[nodiscard]] bool AreDownloadsAllowed() const;
     [[nodiscard]] QString GetExternalDownloadUrl() const;
+    [[nodiscard]] bool AreAddonsAvailable() const;
+    [[nodiscard]] bool IsLaunchWithSimulator() const;
+    void SetLaunchWithSimulator(bool enabled);
+    [[nodiscard]] bool IsCommbusManaged() const;
+    void SetCommbusManaged(bool managed);
+    [[nodiscard]] bool IsCommbusRemoved() const;
+    [[nodiscard]] QString GetAddonNotice() const;
 
     Q_INVOKABLE void checkForUpdates();
     Q_INVOKABLE void downloadAndInstall();
@@ -82,6 +95,7 @@ public:
     void SetMode(int mode);
     [[nodiscard]] bool ShouldApplyOnExit() const;
     void SetCommbusBundleResult(const CommbusBundleResult& result);
+    void StartSimulatorAddons(SimulatorAddonService* addons, bool commbusManaged);
 
     void OnCheckFinished(bool ok, bool updateAvailable,
                          const UpdateInfo& info, const QString& error) override;
@@ -95,9 +109,14 @@ signals:
     void StateChanged();
     void ProgressChanged();
     void CommbusChanged();
+    void AddonsChanged();
 
 private:
+    enum class AddonNotice { None, SimulatorRunning, CommbusInstallFailed, CommbusRemoveFailed, ExeXmlFailed, NoSimulator };
+
     void StartBackgroundCheck();
+    void SetAddonNotice(AddonNotice notice, const QString& targets = {});
+    void ClearInstalledCommbus();
     void BeginDownload(bool restartWhenStaged);
     void SetState(State state);
 
@@ -121,6 +140,12 @@ private:
     QString commbusReleaseUrl_;
     bool commbusSimRunning_ = false;
     QString commbusFailedTargets_;
+
+    SimulatorAddonService* addons_ = nullptr;
+    bool launchWithSimulator_ = false;
+    bool commbusManaged_ = true;
+    AddonNotice addonNotice_ = AddonNotice::None;
+    QString addonNoticeTargets_;
 
     QTimer startupTimer_;
     QTimer periodicTimer_;

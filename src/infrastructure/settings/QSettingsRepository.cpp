@@ -35,6 +35,7 @@ namespace
     constexpr auto kKeyTrayTipShown = "ui/trayTipShown";
     constexpr auto kKeyStreamerMode = "ui/streamerMode";
     constexpr auto kKeyLoggingEnabled = "logging/enabled";
+    constexpr auto kKeyCommbusManaged = "commbus/managed";
     constexpr auto kGroupProfiles = "profiles";
     constexpr auto kKeyProfileUseGlobal = "useGlobal";
     constexpr auto kKeyProfileFuelRateKgs = "fuelRateKgs";
@@ -186,6 +187,7 @@ AppSettings QSettingsRepository::Load() const
     result.trayTipShown = settings.value(kKeyTrayTipShown, false).toBool();
     result.streamerMode = settings.value(kKeyStreamerMode, false).toBool();
     result.loggingEnabled = settings.value(kKeyLoggingEnabled, false).toBool();
+    result.commbusManaged = settings.value(kKeyCommbusManaged, true).toBool();
 
     settings.beginGroup(kGroupProfiles);
     const QStringList profileIds = settings.childGroups();
@@ -233,6 +235,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyTrayTipShown, values.trayTipShown);
     settings.setValue(kKeyStreamerMode, values.streamerMode);
     settings.setValue(kKeyLoggingEnabled, values.loggingEnabled);
+    settings.setValue(kKeyCommbusManaged, values.commbusManaged);
 
     settings.beginGroup(kGroupProfiles);
     settings.remove("");

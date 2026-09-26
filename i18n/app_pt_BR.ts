@@ -89,27 +89,37 @@
         <translation>Atualização do CommBus disponível · v%1</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="280"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="281"/>
         <source>CommBus v%1 installed</source>
         <translation>CommBus v%1 instalado</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="292"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="293"/>
         <source>Close the simulator and reopen the client to install CommBus v%1.</source>
         <translation>Feche o simulador e reabra o cliente para instalar o CommBus v%1.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="308"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="309"/>
         <source>Could not install CommBus in %1.</source>
         <translation>Não foi possível instalar o CommBus em %1.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="324"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="338"/>
+        <source>CommBus plugin removed</source>
+        <translation>Plugin do CommBus removido</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="348"/>
+        <source>You turned the plugin off, so the client removed it from the Community folders. Without it, the EFB app, the GSX panel setting and PMDG loading do not work. Turn it back on in Settings › Advanced.</source>
+        <translation>Você desligou o plugin, e o cliente o removeu das pastas Community. Sem ele, o app do EFB, a opção do painel do GSX e a carga das aeronaves PMDG não funcionam. Religue-o em Configurações › Avançado.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="362"/>
         <source>By %1</source>
         <translation>Por %1</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="349"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="387"/>
         <source>Contributors: %1</source>
         <translation>Colaboradores: %1</translation>
     </message>
@@ -140,44 +150,74 @@
 <context>
     <name>AdvancedPane</name>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="27"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="30"/>
         <source>Renderer</source>
         <translation>Renderizador</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="28"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="31"/>
         <source>Graphics backend</source>
         <translation>Backend gráfico</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="29"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="32"/>
         <source>Software is the default because it uses the least RAM and VRAM. D3D12 draws on the graphics card; OpenGL is there for drivers that misbehave.</source>
         <translation>Software é o padrão porque usa menos RAM e VRAM. D3D12 desenha na placa de vídeo; OpenGL existe para drivers que se comportam mal.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="51"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="54"/>
         <source>Client logging</source>
         <translation>Log do cliente</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="52"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="55"/>
         <source>Write diagnostic logs to disk</source>
         <translation>Grava logs de diagnóstico em disco</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="53"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="56"/>
         <source>Logs are saved in: %1</source>
         <translation>Logs são salvos em: %1</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="64"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="67"/>
         <source>Restart GSX Integrator to start logging.</source>
         <translation>Reinicie o GSX Integrator para começar a gravar o log.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="65"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="68"/>
         <source>Logging stays on until GSX Integrator restarts.</source>
         <translation>O log continua ligado até o GSX Integrator reiniciar.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="74"/>
+        <source>Start with the simulator</source>
+        <translation>Iniciar com o simulador</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="75"/>
+        <source>Open GSX Integrator when MSFS starts</source>
+        <translation>Abre o GSX Integrator quando o MSFS inicia</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="76"/>
+        <source>Adds GSX Integrator to the EXE.xml of each MSFS 2020 and 2024 installation, so the simulator opens it in the tray. Turning it off removes the entry.</source>
+        <translation>Coloca o GSX Integrator no EXE.xml de cada instalação do MSFS 2020 e 2024, e o simulador passa a abri-lo na bandeja. Desligar remove a entrada.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="84"/>
+        <source>CommBus plugin</source>
+        <translation>Plugin do CommBus</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="85"/>
+        <source>Keep the plugin in the Community folder</source>
+        <translation>Mantém o plugin na pasta Community</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="86"/>
+        <source>GSX Integrator installs and updates the gsx-integrator-commbus package in every Community folder it finds. Without it, the EFB app, the GSX panel setting and PMDG loading do not work. Turning it off removes the package. Close the simulator before changing it.</source>
+        <translation>O GSX Integrator instala e atualiza o pacote gsx-integrator-commbus em cada pasta Community que encontra. Sem ele, o app do EFB, a opção do painel do GSX e a carga das aeronaves PMDG não funcionam. Desligar remove o pacote. Feche o simulador antes de mudar.</translation>
     </message>
     <message>
         <source>Records what the client reads, decides and writes, split by category, under %1.</source>
@@ -200,7 +240,7 @@
         <translation type="vanished">D3D12 é o padrão e mantém o desenho na placa de vídeo. Software desenha no processador: o arrasto da janela fica mais suave, mas queima um núcleo sempre que algo anima na tela, disputando com o simulador. OpenGL e Vulkan existem para drivers que se comportam mal.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="42"/>
+        <location filename="../src/qml/screens/settings/AdvancedPane.qml" line="45"/>
         <source>Restart GSX Integrator to draw with %1. It is still using %2.</source>
         <translation>Reinicie o GSX Integrator para desenhar com %1. Ele ainda está usando %2.</translation>
     </message>
@@ -519,37 +559,37 @@
 <context>
     <name>GithubUpdateService</name>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="120"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="128"/>
         <source>This version does not download updates.</source>
         <translation>Esta versão não baixa atualizações.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="132"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="140"/>
         <source>The release has no download assets.</source>
         <translation>A release não tem arquivos para download.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="247"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="266"/>
         <source>Unexpected release feed format.</source>
         <translation>Formato inesperado do feed de releases.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="298"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="317"/>
         <source>Invalid checksum file.</source>
         <translation>Arquivo de checksum inválido.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="330"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="349"/>
         <source>Could not write the download.</source>
         <translation>Não foi possível gravar o download.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="336"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="355"/>
         <source>Checksum mismatch. Download discarded.</source>
         <translation>Checksum não confere. Download descartado.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="393"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="412"/>
         <source>Could not extract the update.</source>
         <translation>Não foi possível extrair a atualização.</translation>
     </message>
@@ -712,7 +752,7 @@
         <translation>Sobre</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="425"/>
+        <location filename="../src/qml/Main.qml" line="427"/>
         <source>Save settings</source>
         <translation>Salvar ajustes</translation>
     </message>
@@ -1368,32 +1408,32 @@
         <translation type="vanished">SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="18"/>
         <source>Automation</source>
         <translation>Automação</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="18"/>
         <source>General</source>
         <translation>Geral</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="18"/>
         <source>Services</source>
         <translation>Serviços</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="19"/>
         <source>Window</source>
         <translation>Janela</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="19"/>
         <source>Profiles</source>
         <translation>Perfis</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="19"/>
         <source>Advanced</source>
         <translation>Avançado</translation>
     </message>
@@ -1573,28 +1613,28 @@
 <context>
     <name>SettingsViewModel</name>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="783"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="793"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="1084"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="1094"/>
         <source>Enter a valid SimBrief Pilot ID.</source>
         <translation>Informe um SimBrief Pilot ID válido.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="1095"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="1105"/>
         <source>Enter a valid fuel rate.</source>
         <translation>Informe uma taxa de combustível válida.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="1114"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="1124"/>
         <source>Enter a valid fuel rate for %1.</source>
         <translation>Informe uma taxa de combustível válida para %1.</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="715"/>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="1134"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="725"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="1144"/>
         <source>Could not save settings.</source>
         <translation>Não foi possível salvar as configurações.</translation>
     </message>
@@ -1609,7 +1649,7 @@
         <translation>kg/s</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="721"/>
+        <location filename="../src/viewmodel/SettingsViewModel.cpp" line="731"/>
         <source>Settings saved.</source>
         <translation>Configurações salvas.</translation>
     </message>
@@ -2013,6 +2053,31 @@
         <location filename="../src/viewmodel/UpdateViewModel.cpp" line="110"/>
         <source>Update ready: restart to apply</source>
         <translation>Atualização pronta: reinicie para aplicar</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="377"/>
+        <source>Close %1 before changing the CommBus plugin.</source>
+        <translation>Feche o %1 antes de mudar o plugin do CommBus.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="379"/>
+        <source>Could not install CommBus in %1.</source>
+        <translation>Não foi possível instalar o CommBus em %1.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="381"/>
+        <source>Could not remove CommBus from %1.</source>
+        <translation>Não foi possível remover o CommBus de %1.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="383"/>
+        <source>Could not update EXE.xml for %1.</source>
+        <translation>Não foi possível atualizar o EXE.xml de %1.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="385"/>
+        <source>No MSFS 2020 or 2024 installation found.</source>
+        <translation>Nenhuma instalação do MSFS 2020 ou 2024 encontrada.</translation>
     </message>
     <message>
         <source>Update available — v%1</source>

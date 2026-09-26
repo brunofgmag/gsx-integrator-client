@@ -239,8 +239,15 @@ set(APP_SOURCES
         src/infrastructure/simconnect/SimConnectVariableGateway.h
         src/application/model/CommbusBundleResult.h
         src/application/model/Distribution.h
+        src/application/model/LaunchWithSimulatorResult.h
         src/application/model/UpdateInfo.h
+        src/application/ports/SimulatorAddonService.h
         src/application/ports/UpdateService.h
+        src/infrastructure/simulator/DiskSimulatorAddonService.cpp
+        src/infrastructure/simulator/DiskSimulatorAddonService.h
+        src/infrastructure/simulator/ExeXml.cpp
+        src/infrastructure/simulator/ExeXml.h
+        src/infrastructure/simulator/SimulatorCandidates.h
         src/infrastructure/update/CommbusBundleInstaller.cpp
         src/infrastructure/update/CommbusBundleInstaller.h
         src/infrastructure/update/CommbusInstallProbe.cpp

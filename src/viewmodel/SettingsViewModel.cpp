@@ -587,6 +587,16 @@ void SettingsViewModel::SetTrayTipShown(const bool shown)
     SetPersisted(settings_.trayTipShown, shown, &SettingsViewModel::TrayTipShownChanged);
 }
 
+bool SettingsViewModel::GetCommbusManaged() const
+{
+    return settings_.commbusManaged;
+}
+
+void SettingsViewModel::SetCommbusManaged(const bool managed)
+{
+    SetPersisted(settings_.commbusManaged, managed, &SettingsViewModel::CommbusManagedChanged);
+}
+
 bool SettingsViewModel::GetLoggingEnabled() const
 {
     return settings_.loggingEnabled;
