@@ -21,7 +21,7 @@ namespace
         {
         }
 
-        void OnCommbusCheckFinished(bool, const QString&, const QString&, const QString&) override
+        void OnCommbusCheckFinished(bool, const QString&, const QString&) override
         {
         }
 
