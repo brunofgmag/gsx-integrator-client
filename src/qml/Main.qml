@@ -351,6 +351,7 @@ ApplicationWindow {
 
                     SettingsScreen {
                         settingsVm: window.settingsVm
+                        updateModeVisible: window.updateVm.downloadsAllowed
                     }
 
                     AboutScreen {

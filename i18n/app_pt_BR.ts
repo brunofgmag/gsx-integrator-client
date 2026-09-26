@@ -24,54 +24,94 @@
         <translation type="vanished">Atualização pronta — reinicie para aplicar</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="30"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="32"/>
         <source>GSX Integrator</source>
         <translation>GSX Integrator</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="41"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="43"/>
         <source>Ver %1 · MSFS 2020 / 2024 · GSX Pro</source>
         <translation>Ver %1 · MSFS 2020 / 2024 · GSX Pro</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="95"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="80"/>
+        <source>Download the new version from flightsim.to.</source>
+        <translation>Baixe a nova versão no flightsim.to.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="110"/>
         <source>%1%</source>
         <translation>%1%</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="110"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="125"/>
         <source>Check for updates</source>
         <translation>Verificar atualizações</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="117"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="132"/>
         <source>Download &amp; restart</source>
         <translation>Baixar e reiniciar</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="124"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="139"/>
         <source>Restart now</source>
         <translation>Reiniciar agora</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="133"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="146"/>
+        <source>Open flightsim.to</source>
+        <translation>Abrir flightsim.to</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="155"/>
         <source>Release notes</source>
         <translation>Notas da versão</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="156"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="178"/>
         <source>CommBus plugin not found</source>
         <translation>Plugin do CommBus não encontrado</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="166"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="189"/>
+        <source>No MSFS 2020 or 2024 Community folder found, so the client could not install the plugin. Without it, the EFB app, the GSX panel setting and PMDG loading do not work.</source>
+        <translation>Nenhuma pasta Community do MSFS 2020 ou 2024 encontrada, e o cliente não conseguiu instalar o plugin. Sem ele, o app do EFB, a opção do painel do GSX e a carga das aeronaves PMDG não funcionam.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="190"/>
         <source>No plugin found in any Community folder. Without it, the EFB app, the GSX panel setting and PMDG loading do not work. Install it with the installer.</source>
         <translation>Nenhum plugin em nenhuma pasta Community. Sem ele, o app do EFB, a opção do painel do GSX e a carga das aeronaves PMDG não funcionam. Instale-o pelo instalador.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="194"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="218"/>
         <source>CommBus update available · v%1</source>
         <translation>Atualização do CommBus disponível · v%1</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="280"/>
+        <source>CommBus v%1 installed</source>
+        <translation>CommBus v%1 instalado</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="292"/>
+        <source>Close the simulator and reopen the client to install CommBus v%1.</source>
+        <translation>Feche o simulador e reabra o cliente para instalar o CommBus v%1.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="308"/>
+        <source>Could not install CommBus in %1.</source>
+        <translation>Não foi possível instalar o CommBus em %1.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="324"/>
+        <source>By %1</source>
+        <translation>Por %1</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="349"/>
+        <source>Contributors: %1</source>
+        <translation>Colaboradores: %1</translation>
     </message>
     <message>
         <source>No plugin found in any Community folder. The client can&apos;t warn you about new versions.</source>
@@ -82,29 +122,19 @@
         <translation type="vanished">Atualização do CommBus disponível — v%1</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="205"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="229"/>
         <source>The client can&apos;t update the plugin. Use the installer to update it.</source>
         <translation>O cliente não atualiza o plugin. Use o instalador para atualizá-lo.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="219"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="243"/>
         <source>Get installer</source>
         <translation>Baixar instalador</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="228"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="252"/>
         <source>Installed v%1 · latest v%2</source>
         <translation>Instalada v%1 · mais recente v%2</translation>
-    </message>
-    <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="243"/>
-        <source>Automates the full GSX turnaround.</source>
-        <translation>Automatiza o turnaround completo do GSX.</translation>
-    </message>
-    <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="256"/>
-        <source>© 2026 · Not affiliated with FSDreamTeam or Microsoft</source>
-        <translation>© 2026 · Sem afiliação com FSDreamTeam ou Microsoft</translation>
     </message>
 </context>
 <context>
@@ -332,32 +362,32 @@
 <context>
     <name>GeneralPane</name>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="16"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="18"/>
         <source>SimBrief Pilot ID</source>
         <translation>Pilot ID do SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="17"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="19"/>
         <source>Fetches your latest OFP</source>
         <translation>Busca seu OFP mais recente</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="47"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="49"/>
         <source>Streamer mode</source>
         <translation>Modo streamer</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="48"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="50"/>
         <source>Hides personal IDs and credentials</source>
         <translation>Oculta IDs pessoais e credenciais</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="55"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="57"/>
         <source>GSX panel</source>
         <translation>Painel do GSX</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="56"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="58"/>
         <source>When the client opens the GSX window in the sim</source>
         <translation>Quando o cliente abre a janela do GSX no sim</translation>
     </message>
@@ -366,7 +396,7 @@
         <translation type="vanished">No pushback abre o painel para o menu de destino e fecha quando o push começa. Manter fechado dispensa painel deixado aberto. Com Nunca, o painel fica como está. Em todos os pedidos abre sempre que o cliente pede algo ao GSX.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="63"/>
         <source>Never</source>
         <translation>Nunca</translation>
     </message>
@@ -375,27 +405,27 @@
         <translation type="vanished">Manter fechado</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="57"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="59"/>
         <source>On pushback opens the panel for the destination menu and closes it once the push begins. Never leaves the panel alone. All requests opens it whenever the client asks GSX for anything.</source>
         <translation>No pushback abre o painel para o menu de destino e fecha quando o push começa. Com Nunca, o painel fica como está. Em todos os pedidos abre sempre que o cliente pede algo ao GSX.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="63"/>
         <source>On pushback</source>
         <translation>No pushback</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="61"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="63"/>
         <source>All requests</source>
         <translation>Em todos os pedidos</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="69"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="72"/>
         <source>Updates</source>
         <translation>Atualizações</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="70"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="73"/>
         <source>How new versions are installed</source>
         <translation>Como novas versões são instaladas</translation>
     </message>
@@ -404,84 +434,84 @@
         <translation type="vanished">Auto baixa atualizações e aplica ao fechar o app. Avisar só mostra um alerta no cabeçalho. Manual nunca verifica sozinho.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="71"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="74"/>
         <source>Auto downloads updates and applies them when you close the client. Notify only shows an alert in the header. Manual never checks on its own.</source>
         <translation>Auto baixa atualizações e as aplica quando você fecha o cliente. Avisar só mostra um alerta no cabeçalho. Manual nunca verifica sozinho.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="75"/>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="89"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="78"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="92"/>
         <source>Auto</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="75"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="78"/>
         <source>Notify</source>
         <translation>Avisar</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="75"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="78"/>
         <source>Manual</source>
         <translation>Manual</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="83"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="86"/>
         <source>Weight unit</source>
         <translation>Unidade de peso</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="84"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="87"/>
         <source>Units shown for fuel and payload</source>
         <translation>Unidades exibidas para combustível e carga</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="85"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="88"/>
         <source>In Auto the unit comes from SimBrief, when a Pilot ID is set, or from the aircraft&apos;s flight plan when the client can read it. With neither, the client uses KG.</source>
         <translation>Em Auto a unidade vem do SimBrief, com Pilot ID configurado, ou do plano de voo da aeronave, quando o cliente consegue lê-lo. Faltando os dois, o cliente usa KG.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="89"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="92"/>
         <source>KG</source>
         <translation>KG</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="89"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="92"/>
         <source>LB</source>
         <translation>LB</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="97"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="100"/>
         <source>Theme</source>
         <translation>Tema</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="98"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="101"/>
         <source>&quot;Windows&quot; follows the system</source>
         <translation>&quot;Windows&quot; segue o sistema</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="102"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="105"/>
         <source>Light</source>
         <translation>Claro</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="102"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="105"/>
         <source>Dark</source>
         <translation>Escuro</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="102"/>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="115"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="105"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="118"/>
         <source>Windows</source>
         <translation>Windows</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="110"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="113"/>
         <source>Language</source>
         <translation>Idioma</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="111"/>
+        <location filename="../src/qml/screens/settings/GeneralPane.qml" line="114"/>
         <source>&quot;Windows&quot; uses the system language</source>
         <translation>&quot;Windows&quot; usa o idioma do sistema</translation>
     </message>
@@ -489,32 +519,37 @@
 <context>
     <name>GithubUpdateService</name>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="122"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="120"/>
+        <source>This version does not download updates.</source>
+        <translation>Esta versão não baixa atualizações.</translation>
+    </message>
+    <message>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="132"/>
         <source>The release has no download assets.</source>
         <translation>A release não tem arquivos para download.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="224"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="247"/>
         <source>Unexpected release feed format.</source>
         <translation>Formato inesperado do feed de releases.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="274"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="298"/>
         <source>Invalid checksum file.</source>
         <translation>Arquivo de checksum inválido.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="306"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="330"/>
         <source>Could not write the download.</source>
         <translation>Não foi possível gravar o download.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="312"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="336"/>
         <source>Checksum mismatch. Download discarded.</source>
         <translation>Checksum não confere. Download descartado.</translation>
     </message>
     <message>
-        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="369"/>
+        <location filename="../src/infrastructure/update/GithubUpdateService.cpp" line="393"/>
         <source>Could not extract the update.</source>
         <translation>Não foi possível extrair a atualização.</translation>
     </message>
@@ -677,7 +712,7 @@
         <translation>Sobre</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="424"/>
+        <location filename="../src/qml/Main.qml" line="425"/>
         <source>Save settings</source>
         <translation>Salvar ajustes</translation>
     </message>
@@ -1333,32 +1368,32 @@
         <translation type="vanished">SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="15"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
         <source>Automation</source>
         <translation>Automação</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="15"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
         <source>General</source>
         <translation>Geral</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="15"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
         <source>Services</source>
         <translation>Serviços</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
         <source>Window</source>
         <translation>Janela</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
         <source>Profiles</source>
         <translation>Perfis</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="16"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="17"/>
         <source>Advanced</source>
         <translation>Avançado</translation>
     </message>
@@ -1960,22 +1995,22 @@
 <context>
     <name>UpdateViewModel</name>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="75"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="102"/>
         <source>Checking for updates…</source>
         <translation>Verificando atualizações…</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="77"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="104"/>
         <source>Up to date</source>
         <translation>Atualizado</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="79"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="106"/>
         <source>Update available · v%1</source>
         <translation>Atualização disponível · v%1</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="83"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="110"/>
         <source>Update ready: restart to apply</source>
         <translation>Atualização pronta: reinicie para aplicar</translation>
     </message>
@@ -1984,7 +2019,7 @@
         <translation type="vanished">Atualização disponível — v%1</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="81"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="108"/>
         <source>Downloading v%1</source>
         <translation>Baixando v%1</translation>
     </message>
@@ -1993,7 +2028,7 @@
         <translation type="vanished">Atualização pronta — reinicie para aplicar</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="191"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="248"/>
         <source>Could not start the updater.</source>
         <translation>Não foi possível iniciar o atualizador.</translation>
     </message>

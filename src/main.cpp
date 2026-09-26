@@ -1,9 +1,11 @@
 #include <windows.h>
 #include <cstring>
 #include <QtCore/QDir>
+#include <QtCore/QFile>
 #include <QtCore/QLocale>
 #include <QtCore/QSettings>
 #include <QtCore/QSize>
+#include <QtCore/QStandardPaths>
 #include <QtCore/QTimer>
 #include <QtCore/QTranslator>
 #include <QtGui/QFont>
@@ -21,6 +23,8 @@
 #include "infrastructure/platform/ShowWindowMessageFilter.h"
 #include "infrastructure/platform/WindowForeground.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
+#include "infrastructure/update/CommbusBundleInstaller.h"
+#include "infrastructure/update/DistributionParser.h"
 #include "infrastructure/update/GithubUpdateService.h"
 #include "infrastructure/efb/EfbStatePublisher.h"
 #include "infrastructure/efb/EfbCommandReceiver.h"
@@ -49,6 +53,38 @@ namespace
             }
         }
         return true;
+    }
+
+    QByteArray ReadDistributionFile()
+    {
+        QFile file(QCoreApplication::applicationDirPath() + QStringLiteral("/distribution.json"));
+        if (!file.open(QIODevice::ReadOnly))
+        {
+            return {};
+        }
+
+        return file.readAll();
+    }
+
+    Distribution LoadDistribution()
+    {
+#if defined(GSXI_FLIGHTSIM_TO)
+        return ParseFlightsimToDistribution(ReadDistributionFile());
+#else
+        return ParseDistribution(ReadDistributionFile());
+#endif
+    }
+
+    CommbusBundleResult InstallBundledCommbus()
+    {
+        const std::vector<CommbusInstallTarget> targets = ResolveCommbusInstallTargets(
+            qEnvironmentVariable("GSXI_COMMBUS_COMMUNITY_DIR"),
+            QStandardPaths::writableLocation(QStandardPaths::HomeLocation));
+
+        return InstallCommbusBundle(
+            QCoreApplication::applicationDirPath() + QStringLiteral("/commbus/gsx-integrator-commbus"),
+            targets,
+            IsProcessRunning);
     }
 
     bool LightTaskbar()
@@ -200,19 +236,27 @@ int main(int argc, char* argv[])
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &operationsViewModel,
                      [&efbStatePublisher] { efbStatePublisher.PublishDeparture(); });
 
+    const Distribution distribution = LoadDistribution();
     GithubUpdateService updateService(
         qEnvironmentVariable(
             "GSXI_UPDATE_FEED",
             QStringLiteral(
                 "https://api.github.com/repos/brunofgmag/gsx-integrator-client/releases/latest")),
-        qEnvironmentVariable(
-            "GSXI_COMMBUS_UPDATE_FEED",
-            QStringLiteral(
-                "https://api.github.com/repos/brunofgmag/gsx-integrator-commbus/releases/latest")),
+        distribution.flightsimTo
+            ? QString()
+            : qEnvironmentVariable(
+                "GSXI_COMMBUS_UPDATE_FEED",
+                QStringLiteral(
+                    "https://api.github.com/repos/brunofgmag/gsx-integrator-commbus/releases/latest")),
         QGuiApplication::applicationVersion());
     UpdateViewModel updateViewModel(&updateService,
                                     startupSettings.updateMode,
-                                    UpdatesEnabled());
+                                    UpdatesEnabled(),
+                                    distribution);
+    if (distribution.flightsimTo)
+    {
+        updateViewModel.SetCommbusBundleResult(InstallBundledCommbus());
+    }
 
     QObject::connect(&settingsViewModel, &SettingsViewModel::UpdateModeChanged, &updateViewModel,
                      [&settingsViewModel, &updateViewModel]

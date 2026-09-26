@@ -9,6 +9,8 @@ ColumnLayout {
 
     required property var settingsVm
 
+    property bool updateModeVisible: true
+
     spacing: 8
 
     SettingRow {
@@ -66,6 +68,7 @@ ColumnLayout {
 
     SettingRow {
         Layout.fillWidth: true
+        visible: root.updateModeVisible
         title: qsTr("Updates")
         caption: qsTr("How new versions are installed")
         helpText: qsTr("Auto downloads updates and applies them when you close the client. Notify only shows an alert in the header. Manual never checks on its own.")

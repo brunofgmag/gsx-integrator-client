@@ -2,7 +2,8 @@ param(
     [ValidateSet('Debug', 'Release', 'RelWithDebInfo')]
     [string]$Config = 'Release',
     [switch]$RunTests,
-    [switch]$SkipTests
+    [switch]$SkipTests,
+    [switch]$FlightsimTo
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,6 +32,7 @@ if (-not $cmake) {
 }
 
 $preset = $Config.ToLowerInvariant()
+if ($FlightsimTo) { $preset += '-flightsim-to' }
 $buildDir = Join-Path $PSScriptRoot "build/$preset"
 $exe = Join-Path $buildDir 'bin/gsx-integrator-client.exe'
 $cacheFile = Join-Path $buildDir 'CMakeCache.txt'

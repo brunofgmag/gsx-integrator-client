@@ -18,6 +18,7 @@ namespace
     constexpr auto kZipRootDir = "gsx-integrator-client";
     constexpr int kTransferTimeoutMs = 30000;
 
+#if !defined(GSXI_FLIGHTSIM_TO)
     constexpr auto kApplyScript =
         R"PS(param([int]$AppPid, [string]$Source, [string]$Dest, [string]$ExeName, [int]$Relaunch, [string]$Version,
       [string]$UninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\gsx-integrator-client')
@@ -38,6 +39,7 @@ Stop-Transcript | Out-Null
 Remove-Item -Recurse -Force (Join-Path $root 'download'), (Join-Path $root 'staged') -ErrorAction SilentlyContinue
 Remove-Item -Force $PSCommandPath -ErrorAction SilentlyContinue
 )PS";
+#endif
 
     QString HttpError(const QNetworkReply* reply)
     {
@@ -59,6 +61,7 @@ Remove-Item -Force $PSCommandPath -ErrorAction SilentlyContinue
         return reply;
     }
 
+#if !defined(GSXI_FLIGHTSIM_TO)
     bool WriteDownloadedZip(QNetworkReply* reply, const QString& zipPath)
     {
         QFile zipFile(zipPath);
@@ -86,6 +89,7 @@ Remove-Item -Force $PSCommandPath -ErrorAction SilentlyContinue
 
         return true;
     }
+#endif
 }
 
 GithubUpdateService::GithubUpdateService(QString clientFeedUrl,
@@ -118,6 +122,12 @@ void GithubUpdateService::CheckForUpdates()
     }
 }
 
+#if defined(GSXI_FLIGHTSIM_TO)
+void GithubUpdateService::DownloadAndStage(const UpdateInfo&)
+{
+    NotifyStageFinished(false, tr("This version does not download updates."));
+}
+#else
 void GithubUpdateService::DownloadAndStage(const UpdateInfo& info)
 {
     if (shaReply_ || zipReply_ || extractProcess_)
@@ -139,6 +149,7 @@ void GithubUpdateService::DownloadAndStage(const UpdateInfo& info)
     connect(shaReply_, &QNetworkReply::finished,
             this, &GithubUpdateService::OnShaHttpFinished);
 }
+#endif
 
 void GithubUpdateService::DiscardStaged()
 {
@@ -157,6 +168,17 @@ void GithubUpdateService::DiscardStaged()
     stagedVersion_.clear();
 }
 
+#if defined(GSXI_FLIGHTSIM_TO)
+bool GithubUpdateService::HasStagedUpdate() const
+{
+    return false;
+}
+
+bool GithubUpdateService::LaunchApplyHelper(bool)
+{
+    return false;
+}
+#else
 bool GithubUpdateService::HasStagedUpdate() const
 {
     return !stagedVersion_.isEmpty();
@@ -196,6 +218,7 @@ QByteArray GithubUpdateService::ApplyScript()
 {
     return kApplyScript;
 }
+#endif
 
 QStringList GithubUpdateService::BuildApplyArguments(const QString& scriptPath, const qint64 appPid,
                                                      const QString& source, const QString& dest,
@@ -277,6 +300,7 @@ void GithubUpdateService::OnCommbusCheckHttpFinished()
     NotifyCommbusCheckFinished(true, installed, info->version, info->releasePageUrl);
 }
 
+#if !defined(GSXI_FLIGHTSIM_TO)
 void GithubUpdateService::OnShaHttpFinished()
 {
     QNetworkReply* reply = TakeReply(shaReply_);
@@ -393,6 +417,7 @@ void GithubUpdateService::OnExtractFinished(const int exitCode)
     stagedVersion_ = pendingDownload_.version;
     NotifyStageFinished(true, {});
 }
+#endif
 
 QNetworkReply* GithubUpdateService::StartGet(const QString& url)
 {
