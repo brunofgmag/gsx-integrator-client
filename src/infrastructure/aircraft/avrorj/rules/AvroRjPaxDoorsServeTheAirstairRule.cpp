@@ -98,7 +98,7 @@ void AvroRjPaxDoorsServeTheAirstairRule::DriveFrontDoor(VariableWriter& writer)
         if (lastFrontDoorTarget_ != kDoorOpen)
         {
             lastFrontDoorTarget_ = kDoorOpen;
-            probe::Line(QStringLiteral("write front FwdPax open=1"));
+            probe::Line(probe::Channel::Writes, QStringLiteral("write front FwdPax open=1"));
             writer.SetLVar(kFwdPaxDoorLVar, kDoorOpen);
         }
 
@@ -110,7 +110,7 @@ void AvroRjPaxDoorsServeTheAirstairRule::DriveFrontDoor(VariableWriter& writer)
         && variables_->GetLVar(kStairPositionLVar, 0.0) <= kStairStowedPosition)
     {
         lastFrontDoorTarget_ = kDoorClosed;
-        probe::Line(QStringLiteral("write front FwdPax open=0"));
+        probe::Line(probe::Channel::Writes, QStringLiteral("write front FwdPax open=0"));
         writer.SetLVar(kFwdPaxDoorLVar, kDoorClosed);
     }
 }
@@ -130,7 +130,7 @@ void AvroRjPaxDoorsServeTheAirstairRule::KeepAftDoorClosed(VariableWriter& write
     }
 
     aftDoorCloseWritten_ = true;
-    probe::Line(QStringLiteral("write aft AftPax open=0"));
+    probe::Line(probe::Channel::Writes, QStringLiteral("write aft AftPax open=0"));
     LOG_INFO("Closing the 2L: %s", WhatServesTheFrontDoor());
     writer.SetLVar(kAftPaxDoorLVar, kDoorClosed);
 }

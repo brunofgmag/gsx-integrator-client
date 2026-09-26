@@ -32,6 +32,7 @@ struct FlightPlan
     long long generatedEpoch = 0;
     double operatingEmptyKg = 0.0;
     std::optional<double> payloadKg;
+    std::optional<double> cargoKg;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H

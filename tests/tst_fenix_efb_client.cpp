@@ -1,14 +1,115 @@
 #include <QtTest/QTest>
 
+#include <cstring>
+#include <map>
+#include <QtCore/QByteArray>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonValue>
+#include <QtCore/QStringList>
+#include <QtCore/QTemporaryDir>
+#include <QtNetwork/QHostAddress>
+#include <QtNetwork/QTcpServer>
+#include <QtNetwork/QTcpSocket>
+#include "ProbeLines.h"
 #include "../src/infrastructure/fenix/FenixEfbClient.h"
+
+namespace
+{
+    constexpr auto kWritesLog = "writes.log";
+    constexpr auto kReadyDataref = "fenix.test.ready";
+    constexpr auto kFuelTargetDataref = "aircraft.refuel.fuelTarget.kg";
+    constexpr auto kChocksDataref = "fenix.efb.chocks";
+    constexpr auto kSeatOccupationDataref = "aircraft.passengers.seatOccupation.string";
+    constexpr auto kHeaderEnd = "\r\n\r\n";
+    constexpr auto kContentLength = "content-length:";
+    constexpr auto kReadyReply = R"({"data":{"dataRef":{"fenixtestready":{"value":true,"__typename":"DataRef"}}}})";
+
+    qsizetype ContentLength(const QByteArray& headers)
+    {
+        const QList<QByteArray> lines = headers.split('\n');
+        for (const QByteArray& line : lines)
+        {
+            const QByteArray field = line.trimmed().toLower();
+            if (field.startsWith(kContentLength))
+            {
+                return field.mid(static_cast<qsizetype>(std::strlen(kContentLength))).trimmed().toLongLong();
+            }
+        }
+
+        return 0;
+    }
+
+    QByteArray Reply()
+    {
+        const QByteArray body(kReadyReply);
+
+        return QByteArrayLiteral("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ")
+            + QByteArray::number(body.size()) + QByteArrayLiteral("\r\n\r\n") + body;
+    }
+
+    class FakeFenixEfb
+    {
+    public:
+        bool Listen()
+        {
+            QObject::connect(&server_, &QTcpServer::newConnection, &server_, [this] { Accept(); });
+
+            return server_.listen(QHostAddress::LocalHost, 0);
+        }
+
+        [[nodiscard]] QString Endpoint() const
+        {
+            return QStringLiteral("http://127.0.0.1:%1/graphql").arg(server_.serverPort());
+        }
+
+        [[nodiscard]] int Requests() const
+        {
+            return requests_;
+        }
+
+    private:
+        void Accept()
+        {
+            while (QTcpSocket* socket = server_.nextPendingConnection())
+            {
+                QObject::connect(socket, &QTcpSocket::readyRead, socket, [this, socket] { Serve(*socket); });
+            }
+        }
+
+        void Serve(QTcpSocket& socket)
+        {
+            QByteArray& pending = pending_[&socket];
+            pending += socket.readAll();
+
+            for (qsizetype headerEnd = pending.indexOf(kHeaderEnd); headerEnd >= 0;
+                 headerEnd = pending.indexOf(kHeaderEnd))
+            {
+                const qsizetype total = headerEnd + static_cast<qsizetype>(std::strlen(kHeaderEnd))
+                    + ContentLength(pending.left(headerEnd));
+                if (pending.size() < total)
+                {
+                    return;
+                }
+
+                pending.remove(0, total);
+                ++requests_;
+                socket.write(Reply());
+            }
+        }
+
+        QTcpServer server_;
+        std::map<QTcpSocket*, QByteArray> pending_;
+        int requests_ = 0;
+    };
+}
 
 class FenixEfbClientTest final : public QObject
 {
     Q_OBJECT
 
 private slots:
+    void initTestCase();
+
     static void startsUnavailable();
     static void valuesQueryNestsAliasedDataRefs();
     static void parsesNumericAndBooleanValues();
@@ -19,7 +120,19 @@ private slots:
     static void writeMutationUsesVariables();
     static void writeMutationQuotesStrings();
     static void readsCoerceNumbersAndBools();
+    static void aSentWriteLandsInTheWritesLog();
+    static void aWriteWhileTheEfbIsUnreachableIsNotLogged();
+
+private:
+    QTemporaryDir directory_;
 };
+
+void FenixEfbClientTest::initTestCase()
+{
+    QVERIFY(directory_.isValid());
+    qputenv("GSXI_PROBE_DIR", directory_.path().toUtf8());
+    probe::SetEnabled(true);
+}
 
 void FenixEfbClientTest::startsUnavailable()
 {
@@ -117,6 +230,52 @@ void FenixEfbClientTest::readsCoerceNumbersAndBools()
     QVERIFY(client.GetBoolArray("some.number").empty());
 }
 
-QTEST_APPLESS_MAIN(FenixEfbClientTest)
+void FenixEfbClientTest::aSentWriteLandsInTheWritesLog()
+{
+#ifndef NDEBUG
+    FakeFenixEfb efb;
+    QVERIFY(efb.Listen());
+    FenixEfbClient client;
+    client.SetEndpointForTest(efb.Endpoint());
+    client.Subscribe(kReadyDataref);
+    client.Poll();
+    QTRY_VERIFY(client.IsAvailable());
+    const qsizetype before = ProbeLines(kWritesLog).size();
+
+    client.SetFloat(kFuelTargetDataref, 5000.0);
+    client.SetFloat(kFuelTargetDataref, 5000.0);
+    client.SetFloat(kFuelTargetDataref, 5200.5);
+    client.SetBool(kChocksDataref, false);
+    client.SetString(kSeatOccupationDataref, "true,false");
+
+    QCOMPARE(ProbeLines(kWritesLog).mid(before),
+             (QStringList{
+                 QStringLiteral("graphql aircraft.refuel.fuelTarget.kg=5000 n=1"),
+                 QStringLiteral("graphql aircraft.refuel.fuelTarget.kg=5200.5 n=3"),
+                 QStringLiteral("graphql fenix.efb.chocks=false n=1"),
+                 QStringLiteral("graphql aircraft.passengers.seatOccupation.string=\"true,false\" n=1")
+             }));
+    QTRY_COMPARE(efb.Requests(), 6);
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void FenixEfbClientTest::aWriteWhileTheEfbIsUnreachableIsNotLogged()
+{
+#ifndef NDEBUG
+    const qsizetype before = ProbeLines(kWritesLog).size();
+    FenixEfbClient client;
+
+    client.SetFloat(kFuelTargetDataref, 5000.0);
+
+    QVERIFY(!client.IsAvailable());
+    QCOMPARE(ProbeLines(kWritesLog).size(), before);
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+QTEST_GUILESS_MAIN(FenixEfbClientTest)
 
 #include "tst_fenix_efb_client.moc"

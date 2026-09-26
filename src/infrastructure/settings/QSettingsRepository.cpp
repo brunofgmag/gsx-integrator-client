@@ -4,6 +4,7 @@ namespace
 {
     constexpr auto kKeySimbriefPilotId = "simbrief/pilotId";
     constexpr auto kKeyFuelRateKgs = "fuel/rateKgs";
+    constexpr auto kKeyFuelRateMode = "fuel/rateMode";
     constexpr auto kKeyAutoSelectGsxChoice = "gsx/autoSelectGsxChoice";
     constexpr auto kKeyAutoDeice = "gsx/autoDeice";
     constexpr auto kKeyUseAircraftStairs = "gsx/useAircraftStairs";
@@ -18,6 +19,7 @@ namespace
     constexpr auto kKeySkipReposition = "automation/skipReposition";
     constexpr auto kKeyCallGpu = "services/callGpu";
     constexpr auto kKeyCallGpuOnArrival = "services/callGpuOnArrival";
+    constexpr auto kKeyCallBoardingEarly = "services/callBoardingEarly";
     constexpr auto kKeyCallCatering = "services/callCatering";
     constexpr auto kKeyCallLavatory = "services/callLavatory";
     constexpr auto kKeyCallWater = "services/callWater";
@@ -32,12 +34,15 @@ namespace
     constexpr auto kKeyMinimizeToTray = "ui/minimizeToTray";
     constexpr auto kKeyTrayTipShown = "ui/trayTipShown";
     constexpr auto kKeyStreamerMode = "ui/streamerMode";
+    constexpr auto kKeyLoggingEnabled = "logging/enabled";
     constexpr auto kGroupProfiles = "profiles";
     constexpr auto kKeyProfileUseGlobal = "useGlobal";
     constexpr auto kKeyProfileFuelRateKgs = "fuelRateKgs";
+    constexpr auto kKeyProfileFuelRateMode = "fuelRateMode";
     constexpr auto kKeyProfileSkipReposition = "skipReposition";
     constexpr auto kKeyProfileCallGpu = "callGpu";
     constexpr auto kKeyProfileCallGpuOnArrival = "callGpuOnArrival";
+    constexpr auto kKeyProfileCallBoardingEarly = "callBoardingEarly";
     constexpr auto kKeyProfileCallCatering = "callCatering";
     constexpr auto kKeyProfileCallLavatory = "callLavatory";
     constexpr auto kKeyProfileCallWater = "callWater";
@@ -80,6 +85,25 @@ namespace
                    : static_cast<int>(GsxPanelMode::Never);
     }
 
+    FuelRateMode ReadGlobalFuelRateMode(const QSettings& settings)
+    {
+        const int stored = settings.value(kKeyFuelRateMode, static_cast<int>(FuelRateMode::Recommended)).toInt();
+
+        return stored == static_cast<int>(FuelRateMode::Manual) ? FuelRateMode::Manual : FuelRateMode::Recommended;
+    }
+
+    FuelRateMode ReadProfileFuelRateMode(const QSettings& settings)
+    {
+        const int stored = settings.value(kKeyProfileFuelRateMode,
+                                          static_cast<int>(FuelRateMode::Recommended)).toInt();
+        if (stored == static_cast<int>(FuelRateMode::Manual) || stored == static_cast<int>(FuelRateMode::Global))
+        {
+            return static_cast<FuelRateMode>(stored);
+        }
+
+        return FuelRateMode::Recommended;
+    }
+
     int ResolveThemeMode(const QSettings& settings)
     {
         const int themeMode = settings.value(kKeyThemeMode, -1).toInt();
@@ -95,11 +119,13 @@ namespace
     {
         AircraftProfile profile;
         profile.useGlobal = settings.value(kKeyProfileUseGlobal, false).toBool();
+        profile.fuelRateMode = ReadProfileFuelRateMode(settings);
         profile.fuelRateKgs = settings.value(kKeyProfileFuelRateKgs,
                                              AutomationSettings::kDefaultFuelRateKgs).toDouble();
         profile.skipReposition = settings.value(kKeyProfileSkipReposition, false).toBool();
         profile.callGpu = settings.value(kKeyProfileCallGpu, false).toBool();
         profile.callGpuOnArrival = settings.value(kKeyProfileCallGpuOnArrival, false).toBool();
+        profile.callBoardingEarly = settings.value(kKeyProfileCallBoardingEarly, false).toBool();
         profile.callCatering = settings.value(kKeyProfileCallCatering, false).toBool();
         profile.callLavatory = settings.value(kKeyProfileCallLavatory, false).toBool();
         profile.callWater = settings.value(kKeyProfileCallWater, false).toBool();
@@ -111,10 +137,12 @@ namespace
     void SaveProfile(QSettings& settings, const AircraftProfile& profile)
     {
         settings.setValue(kKeyProfileUseGlobal, profile.useGlobal);
+        settings.setValue(kKeyProfileFuelRateMode, static_cast<int>(profile.fuelRateMode));
         settings.setValue(kKeyProfileFuelRateKgs, profile.fuelRateKgs);
         settings.setValue(kKeyProfileSkipReposition, profile.skipReposition);
         settings.setValue(kKeyProfileCallGpu, profile.callGpu);
         settings.setValue(kKeyProfileCallGpuOnArrival, profile.callGpuOnArrival);
+        settings.setValue(kKeyProfileCallBoardingEarly, profile.callBoardingEarly);
         settings.setValue(kKeyProfileCallCatering, profile.callCatering);
         settings.setValue(kKeyProfileCallLavatory, profile.callLavatory);
         settings.setValue(kKeyProfileCallWater, profile.callWater);
@@ -128,6 +156,7 @@ AppSettings QSettingsRepository::Load() const
 
     AppSettings result;
     result.simbriefPilotId = settings.value(kKeySimbriefPilotId, 0).toInt();
+    result.fuelRateMode = ReadGlobalFuelRateMode(settings);
     result.fuelRateKgs = settings.value(kKeyFuelRateKgs, AutomationSettings::kDefaultFuelRateKgs).toDouble();
     result.autoSelectGsxChoice = settings.value(kKeyAutoSelectGsxChoice, true).toBool();
     result.autoDeice = settings.value(kKeyAutoDeice, false).toBool();
@@ -139,6 +168,7 @@ AppSettings QSettingsRepository::Load() const
     result.skipReposition = settings.value(kKeySkipReposition, false).toBool();
     result.callGpu = settings.value(kKeyCallGpu, false).toBool();
     result.callGpuOnArrival = settings.value(kKeyCallGpuOnArrival, false).toBool();
+    result.callBoardingEarly = settings.value(kKeyCallBoardingEarly, false).toBool();
     result.callCatering = settings.value(kKeyCallCatering, false).toBool();
     result.callLavatory = settings.value(kKeyCallLavatory, false).toBool();
     result.callWater = settings.value(kKeyCallWater, false).toBool();
@@ -155,6 +185,7 @@ AppSettings QSettingsRepository::Load() const
     result.minimizeToTray = settings.value(kKeyMinimizeToTray, true).toBool();
     result.trayTipShown = settings.value(kKeyTrayTipShown, false).toBool();
     result.streamerMode = settings.value(kKeyStreamerMode, false).toBool();
+    result.loggingEnabled = settings.value(kKeyLoggingEnabled, false).toBool();
 
     settings.beginGroup(kGroupProfiles);
     const QStringList profileIds = settings.childGroups();
@@ -173,6 +204,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
 {
     QSettings settings;
     settings.setValue(kKeySimbriefPilotId, values.simbriefPilotId);
+    settings.setValue(kKeyFuelRateMode, static_cast<int>(values.fuelRateMode));
     settings.setValue(kKeyFuelRateKgs, values.fuelRateKgs);
     settings.setValue(kKeyAutoSelectGsxChoice, values.autoSelectGsxChoice);
     settings.setValue(kKeyAutoDeice, values.autoDeice);
@@ -184,6 +216,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeySkipReposition, values.skipReposition);
     settings.setValue(kKeyCallGpu, values.callGpu);
     settings.setValue(kKeyCallGpuOnArrival, values.callGpuOnArrival);
+    settings.setValue(kKeyCallBoardingEarly, values.callBoardingEarly);
     settings.setValue(kKeyCallCatering, values.callCatering);
     settings.setValue(kKeyCallLavatory, values.callLavatory);
     settings.setValue(kKeyCallWater, values.callWater);
@@ -199,6 +232,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyMinimizeToTray, values.minimizeToTray);
     settings.setValue(kKeyTrayTipShown, values.trayTipShown);
     settings.setValue(kKeyStreamerMode, values.streamerMode);
+    settings.setValue(kKeyLoggingEnabled, values.loggingEnabled);
 
     settings.beginGroup(kGroupProfiles);
     settings.remove("");

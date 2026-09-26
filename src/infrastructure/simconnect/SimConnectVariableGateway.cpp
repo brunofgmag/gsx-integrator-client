@@ -2,7 +2,11 @@
 
 #include <algorithm>
 #include <cstring>
+#include <optional>
+#include <QtCore/QDateTime>
+#include <QtCore/QString>
 #include "../logging/LogMacros.h"
+#include "../probe/ProbeLog.h"
 
 namespace
 {
@@ -10,6 +14,7 @@ namespace
     constexpr auto kAtcModelKey = "A:ATC MODEL";
     constexpr auto kNumberUnit = "Number";
     constexpr DWORD kFastIntervalFrames = 1;
+    constexpr int kShownDigits = 15;
 }
 
 void SimConnectVariableGateway::Attach(HANDLE hSimConnect)
@@ -38,6 +43,37 @@ void SimConnectVariableGateway::Detach()
         slot.received = false;
         slot.tickMarked = false;
         slot.changedThisTick = true;
+    }
+}
+
+void SimConnectVariableGateway::ForgetTextSlots()
+{
+    for (auto& slot : slots_)
+    {
+        if (!slot.isString)
+        {
+            continue;
+        }
+
+        const bool wasRegistered = slot.registered;
+        slot.received = false;
+        slot.registered = false;
+        slot.text[0] = '\0';
+
+        if (hSimConnect_ == nullptr)
+        {
+            continue;
+        }
+
+        if (wasRegistered)
+        {
+            (void)SimConnect_ClearDataDefinition(hSimConnect_, slot.defineId);
+        }
+
+        if (!RegisterSlot(slot))
+        {
+            LOG_WARN("Failed to re-register variable '%s'", slot.datumName.c_str());
+        }
     }
 }
 
@@ -190,7 +226,7 @@ void SimConnectVariableGateway::SetLVar(const std::string& name, const double va
     WriteSlot(EnsureSlot("L:" + name, "L:" + name, kNumberUnit, false), "L:" + name, value);
 }
 
-void SimConnectVariableGateway::WriteSlot(const Slot& slot, const std::string& name, const double value) const
+void SimConnectVariableGateway::WriteSlot(const Slot& slot, const std::string& name, const double value)
 {
     if (hSimConnect_ == nullptr)
     {
@@ -206,7 +242,30 @@ void SimConnectVariableGateway::WriteSlot(const Slot& slot, const std::string& n
     {
         LOG_ERROR("Failed to set '%s' to value %f: Err code %i",
                   name.c_str(), value, static_cast<int>(hr));
+
+        return;
     }
+
+    ReportWrite(name, slot.unit, value);
+}
+
+void SimConnectVariableGateway::ReportWrite(const std::string& name, const std::string& unit, const double value)
+{
+    if (!probe::IsOn())
+    {
+        return;
+    }
+
+    const QString shown = QString::number(value, 'g', kShownDigits);
+    const std::optional<int> count = writeMemo_.Record(name, shown, QDateTime::currentMSecsSinceEpoch());
+    if (!count)
+    {
+        return;
+    }
+
+    probe::Line(probe::Channel::Writes, QStringLiteral("set %1=%2 unit=%3 n=%4")
+                .arg(QString::fromStdString(name), shown, QString::fromStdString(unit))
+                .arg(*count));
 }
 
 double SimConnectVariableGateway::GetAVar(const std::string& name, const std::string& unit, const double defaultValue)

@@ -93,6 +93,16 @@ SIMCONNECTAPI SimConnect_AddToDataDefinition(HANDLE, const SIMCONNECT_DATA_DEFIN
     return S_OK;
 }
 
+SIMCONNECTAPI SimConnect_ClearDataDefinition(HANDLE, const SIMCONNECT_DATA_DEFINITION_ID DefineID)
+{
+    std::erase_if(FakeSimConnectApi::dataDefinitions, [DefineID](const auto& definition)
+    {
+        return definition.first == DefineID;
+    });
+
+    return S_OK;
+}
+
 SIMCONNECTAPI SimConnect_RequestDataOnSimObject(HANDLE, SIMCONNECT_DATA_REQUEST_ID,
                                                 const SIMCONNECT_DATA_DEFINITION_ID DefineID,
                                                 SIMCONNECT_OBJECT_ID, const SIMCONNECT_PERIOD Period,

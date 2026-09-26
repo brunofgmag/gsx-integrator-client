@@ -65,7 +65,8 @@ std::vector<AircraftProfileInfo> SupportedAircraftProfiles()
     std::vector<AircraftProfileInfo> infos;
     for (const AircraftDescriptor* descriptor : AircraftRegistry())
     {
-        infos.push_back({descriptor->id, descriptor->shortCode, descriptor->name, descriptor->refuelBy});
+        infos.push_back({descriptor->id, descriptor->shortCode, descriptor->name, descriptor->refuelBy,
+                         descriptor->fuelRateKgs});
     }
     std::ranges::sort(infos, {}, &AircraftProfileInfo::shortCode);
 

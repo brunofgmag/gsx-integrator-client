@@ -8,6 +8,7 @@ class FakeAircraft final : public Aircraft
 public:
     bool cargo = false;
     bool flightPlanLoaded = false;
+    bool flightPlanDiffersFromTheOfp = false;
     double plannedFuelKg = 0.0;
     double plannedZfwKg = 0.0;
     double emptyZfwKg = 0.0;
@@ -17,6 +18,8 @@ public:
     double currentFuelKg = 0.0;
     double currentZfwKg = 0.0;
     double fuelCapacityKg = 0.0;
+    int fuelCapacityReadsBeforeArrival = 0;
+    mutable int fuelCapacityReads = 0;
     bool smartSwitchActivated = false;
     bool powered = false;
     bool readyToPush = false;
@@ -55,6 +58,7 @@ public:
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return requiresEfbFlightPlan; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override { return flightPlanLoaded; }
+    [[nodiscard]] bool FlightPlanDiffersFromTheOfp() const override { return flightPlanDiffersFromTheOfp; }
     [[nodiscard]] double GetPlannedFuelKg() const override { return plannedFuelKg; }
     [[nodiscard]] double GetPlannedZfwKg() const override { return plannedZfwKg; }
     [[nodiscard]] double GetEmptyZfwKg() const override { return emptyZfwKg; }
@@ -62,7 +66,13 @@ public:
     [[nodiscard]] double GetCrewOnBoardKg() const override { return crewOnBoardKg; }
     [[nodiscard]] int GetPlannedPassengers() const override { return plannedPax; }
     [[nodiscard]] double GetCurrentFuelKg() const override { return currentFuelKg; }
-    [[nodiscard]] double GetFuelCapacityKg() const override { return fuelCapacityKg; }
+    [[nodiscard]] double GetFuelCapacityKg() const override
+    {
+        ++fuelCapacityReads;
+
+        return fuelCapacityReads > fuelCapacityReadsBeforeArrival ? fuelCapacityKg : 0.0;
+    }
+
     void SetCurrentFuelKg(const double value) override { currentFuelKg = value; }
     [[nodiscard]] double GetCurrentZfwKg() const override { return currentZfwKg; }
     void SetCurrentZfwKg(const double value) override { currentZfwKg = value; }

@@ -15,6 +15,7 @@
 #include "../infrastructure/commbus/CommBusPluginClient.h"
 #include "../infrastructure/gsx/GsxStateService.h"
 #include "../infrastructure/simbrief/SimbriefClient.h"
+#include "../infrastructure/simbrief/SimbriefFlightPlanSource.h"
 #include "../infrastructure/simconnect/SimConnectSession.h"
 #include "../infrastructure/simconnect/SimConnectVariableGateway.h"
 #include "../domain/model/AutomationStatus.h"
@@ -49,6 +50,7 @@ public:
     [[nodiscard]] TurnaroundPhase GetPhase() const { return stateMachine_.GetPhase(); }
     [[nodiscard]] std::string GetAircraftProfileId() const;
     [[nodiscard]] bool AircraftCarriesItsOwnStairs() const;
+    [[nodiscard]] double AircraftRecommendedFuelRateKgs() const;
     [[nodiscard]] bool HasGsxProfileConflict() const { return gsxProfile_.conflict; }
     bool FixGsxProfile();
     [[nodiscard]] bool HasPmdgOptionsConflict() const { return pmdgOptions_.conflict; }
@@ -120,6 +122,7 @@ private:
     [[nodiscard]] bool IsAircraftCargoVariant() const;
     [[nodiscard]] bool IsLoadingCargoPhase() const;
     [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
+    [[nodiscard]] bool AircraftAppliesTheEfbFlightPlanOnItsDeparturePage() const;
     [[nodiscard]] bool AircraftTakesExternalPowerAtTheEngineerPanel() const;
     [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
     [[nodiscard]] bool CanFixGsxProfile() const;
@@ -166,6 +169,7 @@ private:
     GsxMenuNavigator gsxMenu_;
     TurnaroundStateMachine stateMachine_;
     SimbriefClient simbriefClient_;
+    SimbriefFlightPlanSource flightPlanSource_;
     SimConnectSession simConnect_;
     std::unique_ptr<Aircraft> aircraft_;
     const AircraftDescriptor* aircraftDescriptor_ = nullptr;
@@ -176,6 +180,7 @@ private:
     ProbeObserver probe_;
 
     SimVersion simVersion_ = SimVersion::Unknown;
+    bool connectAttemptAnnounced_ = false;
     bool isSessionActive_ = false;
     bool sessionReady_ = false;
     bool pilotOnFoot_ = false;

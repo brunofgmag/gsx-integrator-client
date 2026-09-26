@@ -7,129 +7,164 @@
 
 # GSX Integrator Client
 
-A Windows desktop app that automates GSX Pro ground services in Microsoft Flight Simulator 2024 or 2020 (not tested). It reads your Simbrief flight plan and runs the turnaround for you: refueling and boarding with the numbers you dispatched, then the departure sequence when the aircraft is ready.
+A Windows app that runs your GSX Pro turnaround in Microsoft Flight Simulator. It reads your SimBrief flight plan, asks GSX for refueling and boarding with the numbers you dispatched, and runs the departure sequence once the aircraft is ready.
 
-The app runs outside the simulator and talks to it through SimConnect. Nothing gets installed inside the sim except the CommBus plugin described below.
+It runs outside the simulator and talks to it through SimConnect. The only thing that goes into the sim is the CommBus plugin.
 
-## Project status
+The project is in testing. Expect bugs, and expect behavior to change between releases.
 
-This is a work in progress, currently in a testing phase. Expect bugs, and expect behavior to change between releases. The recommended way to install is the [GSX Integrator Installer](https://github.com/brunofgmag/gsx-integrator-installer), which sets up the client and the CommBus plugin together and keeps both updated. If you prefer to do it by hand, extract the release zip anywhere and start `gsx-integrator-client.exe`.
+## Installing
 
-## What you need
+Use the [GSX Integrator Installer](https://github.com/brunofgmag/gsx-integrator-installer). It installs the client and the CommBus plugin and keeps both up to date. To install by hand, extract the release zip anywhere and run `gsx-integrator-client.exe`.
+
+You need:
 
 - Windows 10 or 11
-- Microsoft Flight Simulator 2024 or 2020 (not tested on 2020)
-- GSX Pro v4.0.19+
-- A Simbrief account
-- The CommBus plugin, which the in-sim EFB app and some aircraft depend on: the PMDG 777 and 737 need version 0.2.0 or newer
+- Microsoft Flight Simulator 2024 (2020 may work but is not tested)
+- GSX Pro 4.0.19 or newer
+- A SimBrief account
+- The CommBus plugin, version 0.2.0 or newer for the PMDG aircraft
 
 ## Supported aircraft
 
-| Aircraft                                    | Minimum version | Fuel                  | Payload               | Smart switch | Chocks & GPU | Status |
-|---------------------------------------------|-----------------|-----------------------|-----------------------|--------------|--------------|--------|
-| TFDi Design MD-11 (passenger and freighter) | Any | Client (at once)      | Client (at once)      | INT/RAD switch | Chocks + GPU | Supported |
-| iFly 737 MAX 8                              | SP1 | GSX (progressive)     | Client (progressive)  | Push-to-talk switch | GPU only | Supported |
-| Toliss A340-600                             | Any | MCDU uplink (at once) | MCDU uplink (at once) | INT/RAD switch | GPU only (visual) | Beta |
-| Fenix A319 / A320 / A321                    | Any | Client (progressive)  | Client (progressive)  | INT/RAD switch | Chocks + GPU | Supported |
-| PMDG 777-300ER / F / -200ER / -200LR        | Any | Client (progressive)  | Client (progressive)  | MIC/INT switch | Chocks + GPU | Supported |
-| PMDG 737-800 / BBJ2 / BCF / BDSF            | Any | Client (progressive)  | Client (progressive)  | R/T-I/C switch | Chocks + GPU | Supported |
-| JustFlight Avro RJ70 / RJ85 / RJ100 (incl. QT) | Any | GSX (progressive) | GSX (progressive)     | R/T-INT switch | Chocks + GPU | Beta |
-| FSS Boeing 727-200F / 200RE Freighter       | Any | Client (progressive)  | Client (progressive)  | SERV INT switch | Chocks + GPU | Beta |
+| Aircraft | Minimum version | Fuel | Payload | Smart switch | Chocks & GPU | Status |
+|---|---|---|---|---|---|---|
+| TFDi Design MD-11 (passenger and freighter) | Any | EFB, at once | EFB, at once | INT/RAD | Chocks + GPU | Supported |
+| iFly 737 MAX 8 | SP1 | GSX, progressive | Client, progressive | R/T-I/C | GPU only | Supported |
+| Fenix A319 / A320 / A321 | Any | Client, progressive | Client, progressive | INT/RAD | Chocks + GPU | Supported |
+| PMDG 777-300ER / F / -200ER / -200LR | Any | Client, progressive | Client, progressive | MIC/INT | Chocks + GPU | Supported |
+| PMDG 737-800 / BBJ2 / BCF / BDSF | Any | Client, progressive | Client, progressive | R/T-I/C | Chocks + GPU | Supported |
+| ToLiss A340-600 | Any | MCDU uplink, at once | MCDU uplink, at once | INT/RAD | GPU only, visual | Beta |
+| JustFlight Avro RJ70 / RJ85 / RJ100 (incl. QT) | Any | GSX, progressive | GSX, progressive | R/T-INT | Chocks + GPU | Beta |
+| FSS Boeing 727-200F / 200RE Freighter | Any | Client, progressive | Client, progressive | SERV INT | Chocks + GPU | Beta |
+| FSS Embraer E190 / E195 (incl. Freighter) | Any | EFB, progressive | EFB, at once | Call RAMP | Chocks + GPU | Beta |
 
-Every aircraft gets the same progress bars during refueling and boarding; the Fuel and Payload columns say how each one loads. On the Fenix, the PMDG 777 and 737, and the Avro RJ, fuel goes in at the rate set in the fuel card while the GSX hose is connected, and passengers and cargo follow GSX's boarding. On the freighters the whole payload goes in as cargo, spread over the main deck and the holds. On the iFly the GSX truck pumps the tanks at its own pace, so the rate in the fuel card reads Auto; if it feels slow, GSX has a Fuel Time Acceleration option. The MD-11 and the A340 load fuel and payload in one step, and the progress bars follow GSX. GSX ships its own automation for the PMDG that types fuel and payload into the FMC; the client turns it off so the two never fight over the numbers.
+Any other aircraft connects but gets no automation.
 
-The iFly needs SP1 or newer because earlier versions lack the built-in GSX integration the client depends on.
+The iFly needs SP1 because older versions lack the GSX integration the client relies on. The A340 is in beta because the aircraft itself is unstable enough to get in the way of testing. The Avro RJ and the FSS aircraft are in beta because they are new and need more flights.
 
-Three aircraft are still Beta: the Toliss A340, because the aircraft itself has stability problems that get in the way of testing, and the Avro RJ and the FSS 727, because they are recent additions and need more flights.
+### How each aircraft loads
 
-The Chocks & GPU column says what the "Call GPU & chocks" settings do on each aircraft. When they are on, the client asks GSX for a ground power unit at the gate (and again after landing, if enabled) and sends it away before pushback. Chocks + GPU means the client also places and removes the aircraft's chocks; GPU only means it leaves the chocks alone. The Fenix brings its own GPU, so the client drives that one through the EFB instead of calling the GSX truck. The 727 does the same with its own ground power, since the aircraft ignores the GSX unit. The flight engineer's EXT POWER switch stays yours, and it is the one that actually brings the buses up. On the A340 the GSX unit is cosmetic: it parks beside the aircraft but does not feed it power, so start the GPU from the Toliss EFB or use the APU, as the setup section below explains.
+The progress bars look the same everywhere. What differs is who moves the fuel and the weight:
 
-The smart switch is the cockpit control you flip to tell the client "go ahead". It works at three moments: at "Requesting fuel" with automatic loading turned off, where it does the same thing as the Start Loading button; during pushback, to confirm the engines started fine; and after a finished turnaround, to start the next one. Where each one is:
+- Client, progressive: fuel flows while the GSX hose is connected, and passengers and cargo follow GSX boarding. Each aircraft comes with a recommended fuel rate taken from its manufacturer's airport planning figures. You can set your own rate in the settings, for every aircraft at once or in an aircraft profile. Freighters take the whole payload as cargo, spread over the main deck and the holds.
+- GSX, progressive: the GSX truck fills the tanks at its own pace, so the fuel card rate reads Auto. If it feels slow, GSX has a Fuel Time Acceleration option.
+- EFB, progressive: the E-Jet's own EFB pumps the fuel from the flight plan imported into it, at its own pace, and puts the whole payload on board once GSX boarding starts. The client watches the tanks, so the fuel card rate reads Auto, and the boarding bar still follows GSX.
+- At once: the MD-11 and the A340 load fuel and payload in one step, and the bars follow GSX.
 
-- TFDi MD-11: the INT/RAD switch on the captain's audio control panel, center pedestal.
-- iFly 737 MAX 8: the R/T-I/C push-to-talk switch on the captain's audio control panel, lower left corner of the pedestal. Flick it to either side and let go.
-- Toliss A340-600: the INT/RAD switch on the captain's audio control panel, center pedestal. Flick it to either side; RAD springs back on its own and the client flips INT back to the middle.
-- Fenix A319/A320/A321: the INT/RAD switch on the captain's audio control panel, center pedestal. Flip it down to INT and the client puts it back in the middle.
-- PMDG 777: the MIC/INT switch on either pilot's audio control panel, center pedestal. Push it down to INT; it springs back on its own. The up position is your radio push-to-talk and the client leaves it alone, so transmitting on VATSIM never triggers anything.
-- PMDG 737: the R/T-I/C switch on the captain's audio control panel, center pedestal. Flick it to R/T and let go. The client ignores the I/C side, which latches where you leave it. R/T is also your radio transmit position, so talking on VATSIM with this switch, rather than a joystick button, counts as a go-ahead.
-- JustFlight Avro RJ: the R/T-INT rocker on the captain's audio control panel. Flick it to INT. The R/T side is your radio transmit and the client ignores it, so transmitting on VATSIM never triggers anything.
-- FSS 727: the SERV INT switch on the audio control panel. The captain's, first officer's and flight engineer's panels share it, so any of the three works. Flip it on and the client switches it back off.
+Refueling and boarding run together, as they often do at a real gate. The client asks GSX for boarding once refueling reaches 75%, or right away when there is little fuel to load. Turn on "Call boarding early on refuel" in the Services settings, or in an aircraft profile, to ask for boarding as soon as refueling starts.
 
-More aircraft are on the way. If you fly something else, the client connects but does not automate anything.
+GSX has its own PMDG automation that types fuel and payload into the FMC. The client turns it off so the two don't fight over the numbers.
 
-## Toliss A340-600 setup
+### Chocks and GPU
 
-The Toliss rejects fuel and payload written from outside, so the client runs a SimBrief uplink through the center MCDU instead. That takes some one-time setup in the EFB, plus the right GSX profile.
+With "Call GPU & chocks" on, the client asks GSX for a ground power unit at the gate and sends it away before pushback. "Call GPU & chocks on arrival" does the same after landing. On "Chocks + GPU" aircraft the client also sets and removes the chocks; on "GPU only" it leaves them alone.
 
-### Toliss EFB
+Some aircraft use their own ground power instead of the GSX unit, and the client drives that one:
 
-Save your SimBrief ID in the SIMBRIEF OFP tab, then turn on both IGNORE AIRAC/AC TYPE MISMATCH and SET PAYLOAD + FUEL TO SIMBRIEF.
+- The Fenix GPU, through the Fenix EFB.
+- The 727 and E-Jet GPU, since neither takes power from GSX. On the 727, the flight engineer's EXT POWER switch stays yours, and that switch is what powers the buses.
+- The A340 is the exception: the GSX unit parks next to it but powers nothing, and the client does not drive the ToLiss GPU. Start it from the ToLiss EFB or run the APU.
 
-The client only counts the aircraft as powered when external power is feeding or the APU is available; batteries alone leave the MCDUs dark. Call the GPU from the Toliss EFB or start the APU (the GSX ground power unit does not power this aircraft). Once refueling starts with the fuel hose connected, the client presses the center MCDU keys for you (MENU, ATSU, AOC MENU, FLT INIT) and the aircraft pulls its fuel and payload from SimBrief. If the uplink does not land, trigger FLT INIT yourself on any MCDU and the flow continues.
+### The smart switch
 
-### GSX profile
+The smart switch is a cockpit control you flip to tell the client "go ahead". It does four things:
 
-Community profiles from flightsim.to often ship with `refueling = 1` in their `gsx.cfg`, which makes the fuel truck park, pop a fuel quantity window and drive away without connecting the hose. This aircraft needs `refueling = 0`. The profile usually lives under `%APPDATA%\Virtuali\Airplanes\aerosoft-a340-600-pro`; the client checks the `gsx.cfg` files there and shows an advisory with a Fix profile button when one is wrong. GSX only picks the change up after you restart Couatl or reload the flight.
+- At "Waiting for start loading", with automatic loading off, it starts loading, same as the Start Loading button.
+- At "Waiting for beacon & brake", with a door still open, it lets the pushback go ahead with the door open.
+- During pushback, it confirms the engines started.
+- After a finished turnaround, it starts the next one.
 
-## PMDG 777 setup
+When the client asks for it, the tip on screen names the control and the side to use on the aircraft you are flying.
 
-The client reads the aircraft through the PMDG SDK broadcast, which is off from the factory. Open `777_Options.ini` under `%APPDATA%\Microsoft Flight Simulator 2024\WASM\MSFS2024\pmdg-aircraft-<variant>\work\` (one file per installed variant: `77w`, `77f`, `77l`, `77er`) and make sure it has:
+| Aircraft | Where | How |
+|---|---|---|
+| TFDi MD-11 | INT/RAD switch, captain's audio panel, center pedestal | Flip it |
+| iFly 737 MAX 8 | R/T-I/C push-to-talk switch, captain's audio panel, lower left of the pedestal | Flick to either side and let go |
+| ToLiss A340-600 | INT/RAD switch, captain's audio panel, center pedestal | Flick to either side. RAD springs back; the client returns INT to center |
+| Fenix A319/A320/A321 | INT/RAD switch, captain's audio panel, center pedestal | Flip down to INT; the client returns it to center |
+| PMDG 777 | MIC/INT switch, either pilot's audio panel, center pedestal | Push down to INT; it springs back. Up is radio transmit and is ignored |
+| PMDG 737 | R/T-I/C switch, captain's audio panel, center pedestal | Flick to R/T and let go. I/C latches and is ignored |
+| JustFlight Avro RJ | R/T-INT rocker, captain's audio panel | Flick to INT. R/T is radio transmit and is ignored |
+| FSS 727 | SERV INT switch, shared by the captain's, first officer's and flight engineer's audio panels | Flip it on; the client turns it back off |
+| FSS E190/E195 | Call RAMP button, audio panel | Press and let go; the client clears the call |
+
+On the PMDG 737, R/T is also radio transmit. If you talk on VATSIM with that switch instead of a joystick button, every transmission counts as a go-ahead.
+
+## Setup
+
+### GSX settings
+
+Check four things on the GSX Settings page before your first flight:
+
+- Turn Ignore Time on (Simulation area, next to the SimBrief username). It ships off, and then GSX rejects any flight plan whose departure time has passed. The turnaround sits at "Waiting for flight plan" until you dispatch again.
+- Turn Trust Simbrief passengers number on (same area). With it off, some aircraft send their own passenger count and GSX boards that instead of your OFP.
+- Leave Assistance Services "Auto" mode off. In Auto mode GSX calls its own services in sequence, which is the client's job. Running both means two dispatchers fighting over one menu.
+- Set the interval between "Waiting for your action" messages to 25 seconds (Timings area). The default 15 is a lot of nagging while the client opens the doors for you. Much longer and you stop noticing when GSX really is stuck.
+
+### GSX aircraft profile
+
+On the MD-11, the Fenix, the PMDG aircraft and the A340, the aircraft's GSX profile needs `refueling = 0` in its `gsx.cfg`. Community profiles from flightsim.to often ship with `refueling = 1`, which hands the fuel back to GSX: on some aircraft the truck fills the tanks behind the client's back, and on the A340 it parks, pops a fuel quantity window and drives off without connecting the hose. The A340 also needs the profile to exist, and the client tells you when none is installed. The client checks the profile under `%APPDATA%\Virtuali\Airplanes\` and, when the setting is wrong, shows an advisory with a Fix profile button. GSX picks up the change after you restart it or reload the flight.
+
+### PMDG 777 and 737
+
+The client reads these aircraft through the PMDG SDK data broadcast, which is off by default. The options file lives under `%APPDATA%\Microsoft Flight Simulator 2024\WASM\MSFS2024\<package>\work\`:
+
+- 777: `777_Options.ini`, one per installed variant, in `pmdg-aircraft-77w`, `pmdg-aircraft-77f`, `pmdg-aircraft-77l` and `pmdg-aircraft-77er`
+- 737: `737_Options.ini` in `pmdg-aircraft-738`, shared by the whole family
+
+It needs:
 
 ```ini
 [SDK]
 EnableDataBroadcast=1
 ```
 
-Edit it with the sim closed, or the aircraft rewrites the file on exit. Without the flag the client stays at "Waiting aircraft".
+When the line is missing, the client shows an advisory with an Enable broadcast button that writes it for you. Edit the file with the sim closed, or the aircraft overwrites it on exit, then reload the flight.
 
-Fuel and payload go through the CommBus plugin, so on this aircraft it is required rather than recommended. The turnaround waits at "Waiting for flight plan" until you import your SimBrief OFP on the tablet's flight plan page or into the FMC.
+The CommBus plugin is required on both, because fuel and payload go through it.
 
-## PMDG 737 setup
+On the 737 BCF and BDSF the whole payload goes in as main deck cargo. That door is hydraulic: with the electric pumps off, the open command waits and the door moves once there is pressure.
 
-The client reads this aircraft through the same PMDG SDK broadcast as the 777, off from the factory here too. The 737 keeps one options file for the whole family: open `737_Options.ini` under `%APPDATA%\Microsoft Flight Simulator 2024\WASM\MSFS2024\pmdg-aircraft-738\work\` and make sure it has:
+### ToLiss A340-600
 
-```ini
-[SDK]
-EnableDataBroadcast=1
-```
+The A340 rejects fuel and payload written from outside, so the client runs a SimBrief uplink through the center MCDU. In the ToLiss EFB:
 
-Edit it with the sim closed, or the aircraft rewrites the file on exit. Without the flag the client stays at "Waiting aircraft" and shows an advisory with an Enable broadcast button that writes the line for you. Reload the flight after you apply it.
+1. Save your SimBrief ID in the SIMBRIEF OFP tab.
+2. Turn on IGNORE AIRAC/AC TYPE MISMATCH.
+3. Turn on SET PAYLOAD + FUEL TO SIMBRIEF.
 
-Fuel and payload go through the CommBus plugin, so on this aircraft it is required rather than recommended. On the BCF and BDSF the whole payload goes in as main deck cargo, and that door runs on hydraulics: with the electric pumps off, the open command sits armed and the door moves once pressure arrives.
+The client counts the aircraft as powered only with external power connected or the APU running; batteries alone leave the MCDUs dark. Once refueling starts and the hose is connected, the client presses MENU, ATSU, AOC MENU and FLT INIT on the center MCDU, and the aircraft pulls fuel and payload from SimBrief. If the uplink doesn't arrive, press FLT INIT yourself on any MCDU and the turnaround carries on.
 
-## The CommBus plugin
+### The CommBus plugin
 
-Install the CommBus plugin (`gsx-integrator-commbus`) in your Community folder; the [`gsx-integrator-installer`](https://github.com/brunofgmag/gsx-integrator-installer) does that for you. The plugin is a small bridge between the client and the parts of the sim only a WASM module can reach. It carries the client's app on the EFB tablet in MSFS 2024, where you follow the turnaround and give the go-ahead without leaving the cockpit, and it lets the client open the GSX panel on the MSFS toolbar. On the PMDG aircraft it also carries the fuel and payload writes: without the plugin, version 0.2.0 or newer, the 777 and the 737 will not refuel or board. Other aircraft run without it; the one menu you would then have to open by hand is the pushback menu, where you pick where the tug leaves you.
+The plugin (`gsx-integrator-commbus`) goes in your Community folder, and the installer puts it there. It bridges the client to the parts of the sim that only a WASM module can reach:
 
-## GSX settings worth changing
+- The client's app on the MSFS 2024 EFB tablet, where you follow the turnaround and give the go-ahead from the cockpit.
+- Opening the GSX panel on the MSFS toolbar.
+- Fuel and payload on the PMDG 777 and 737. Without the plugin they will not refuel or board.
 
-Four settings on the GSX Settings page are worth a visit before your first flight.
+Other aircraft work without it. The one thing you then do by hand is the pushback menu, where you choose where the tug leaves you.
 
-Turn Ignore Time on, in the Simulation area beside the SimBrief username. GSX ships with it off, which makes it reject any flight plan whose departure time has already passed, and the turnaround then waits at "Waiting for flight plan" until you dispatch again.
+## Flying with it
 
-Turn Trust Simbrief passengers number on, in the same area. With it off, some aircraft push their own passenger count to GSX and it boards that number instead of the one you dispatched. With it on, GSX boards the OFP figure.
+1. Dispatch your flight in SimBrief.
+2. Load the flight at a gate with the engines off, cold and dark or powered.
+3. Start the client. It connects and detects the aircraft by itself.
+4. The first time, enter your SimBrief ID in the settings.
+5. Follow the phases in the main window. The client requests refueling and boarding with your OFP figures and moves on as the aircraft gets ready.
 
-Leave Assistance Services "Auto" mode off. In Auto mode GSX calls its own services in sequence, which is what the client is already doing. Run both and you have two dispatchers arguing over one menu.
+Planned fuel and ZFW come from the OFP, so dispatch before boarding, not after. Let the client drive the GSX menu: clicking through it yourself mid-turnaround puts the two of you in a fight.
 
-Set the interval between "Waiting for your action" messages to 25 seconds, in the Timings area. The default of 15 seconds is a lot of nagging when the client is opening the doors for you anyway; much longer than 25 and you stop noticing the times GSX is genuinely stuck.
+Aircraft notes:
 
-## How to use it
+- Fenix, iFly, Avro RJ, PMDG 777 and 737: import your SimBrief plan in the aircraft (its EFB, or on the PMDG the tablet's flight plan page or the FMC). The turnaround waits at "Waiting for flight plan" until you do. On the iFly, use the Balance & Payload page and load only the flight plan, not the weights.
+- Avro RJ: the client asks GSX for the aircraft's own airstairs. At a jetway stand it boards through the jetway.
+- FSS 727: the client loads from your OFP and never reads the tablet, so there is nothing to import. If you do import a plan, make it the same one you dispatched; the client can't see it and won't warn you if they differ. Once loading starts, leave the tablet's fuel player alone: pressing Play drains the tanks to the tablet's figure. During boarding the client opens the main deck door from the cargo door panel when the GSX loader is waiting and closes it when boarding ends. Don't touch that panel while the door moves; cutting its master power halfway freezes the door.
+- FSS E190/E195: import your SimBrief plan into the EFB and open its DEPARTURE page, but don't load the aircraft from it. The EFB only hands the plan to the aircraft once the DEPARTURE page has it, including after you change flights. The client requests refueling and boarding from GSX, and the EFB fills the tanks and loads the payload from that plan as GSX serves them. The turnaround waits at "Waiting for flight plan" until the EFB holds the same fuel as your OFP. If you regenerate the plan in SimBrief, import it into the EFB again; the client fetches the new OFP by itself. The EFB's GSX remote control also opens the GSX menu on its own; if you see that, turn `enableGsxRemoteControl` off in the EFB settings.
 
-1. Dispatch your flight in Simbrief.
-2. Start the simulator and load your flight at a gate. Cold and dark or powered, either works as long as the engines are off.
-3. Start the client. It connects to the sim and detects the aircraft on its own.
-4. Enter your Simbrief ID in the settings the first time you run it.
-5. Watch the phases in the main window. The client requests refueling and boarding from GSX with the planned figures from your OFP and moves through the turnaround as the aircraft becomes ready.
-
-A few tips:
-
-- Let the client drive the GSX menu. If you click through GSX menus manually mid-turnaround, the two of you will fight over it.
-- Planned fuel and ZFW come from your Simbrief OFP, so dispatch before you board, not after.
-- On the Fenix, the iFly and the Avro RJ, import your SimBrief plan in the aircraft's EFB; the turnaround waits at "Waiting for flight plan" until it is in. On the iFly, use the Balance & Payload page and load only the flight plan, not the weights.
-- On the Avro RJ, the client asks GSX for the aircraft's own airstairs; at a jetway stand it boards through the finger instead.
-- On the 727 the client loads from its own OFP and never reads the tablet, so there is nothing to import there. If you do import a plan into the 727 tablet, keep it the same one you dispatched: the client cannot see it and will not warn you that the two disagree. Leave the tablet's fuel player alone once loading starts, because pressing Play drains the tanks to whatever the tablet has. During boarding the client opens the main deck door from the cargo door panel when the GSX loader is waiting at it, and closes it once boarding is done. Leave that panel alone while the door moves: switching its master power off halfway freezes the door where it is.
-- If nothing happens after you load in, check that you are flying one of the supported aircraft and that GSX itself is running normally.
+If nothing happens after loading in, check that the aircraft is on the list above and that GSX itself is running normally.
 
 ## Problems and feedback
 
-Open an issue on GitHub with what you were flying, what you expected, and what happened instead. While the project is in testing, reports from real flights are the most useful thing you can send.
+Open an issue on GitHub with the aircraft, what you expected and what happened. Reports from real flights are the most useful thing you can send while the project is in testing.

@@ -51,6 +51,7 @@ namespace gsx::lvars
     inline constexpr auto kPushbackStatus = "FSDT_GSX_PUSHBACK_STATUS";
     inline constexpr auto kDeiceState = "FSDT_GSX_DEICE_STATE";
 
+    inline constexpr auto kNumPassengers = "FSDT_GSX_NUMPASSENGERS";
     inline constexpr auto kMaxPassengers = "FSDT_GSX_MAX_NUMPASSENGERS";
     inline constexpr auto kNumPassengersBoardingTotal = "FSDT_GSX_NUMPASSENGERS_BOARDING_TOTAL";
     inline constexpr auto kNumPassengersDeboardingTotal = "FSDT_GSX_NUMPASSENGERS_DEBOARDING_TOTAL";

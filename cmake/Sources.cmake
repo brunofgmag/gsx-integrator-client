@@ -16,12 +16,12 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/states/WaitingFlightPlanState.h
         src/domain/turnaround/states/RequestFuelState.cpp
         src/domain/turnaround/states/RequestFuelState.h
-        src/domain/turnaround/states/RefuelingState.cpp
-        src/domain/turnaround/states/RefuelingState.h
-        src/domain/turnaround/states/RequestBoardingState.cpp
-        src/domain/turnaround/states/RequestBoardingState.h
-        src/domain/turnaround/states/BoardingState.cpp
-        src/domain/turnaround/states/BoardingState.h
+        src/domain/turnaround/states/LoadingState.cpp
+        src/domain/turnaround/states/LoadingState.h
+        src/domain/turnaround/states/RefuelingTrack.cpp
+        src/domain/turnaround/states/RefuelingTrack.h
+        src/domain/turnaround/states/BoardingTrack.cpp
+        src/domain/turnaround/states/BoardingTrack.h
         src/domain/turnaround/states/RequestPushbackState.cpp
         src/domain/turnaround/states/RequestPushbackState.h
         src/domain/turnaround/states/WaitingPushbackToStartState.cpp
@@ -87,6 +87,7 @@ set(APP_SOURCES
         src/application/model/AircraftProfile.h
         src/application/model/EffectiveSettings.h
         src/application/model/IntegratorSnapshot.h
+        src/application/model/SmartSwitchCue.h
         src/domain/model/AutomationStatus.h
         src/domain/model/AutomationSettings.h
         src/domain/model/FlightPlan.h
@@ -119,6 +120,14 @@ set(APP_SOURCES
         src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
+        src/infrastructure/aircraft/fss/FssEJet.cpp
+        src/infrastructure/aircraft/fss/FssEJet.h
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/aircraft/fenix/FenixA32x.h
         src/infrastructure/aircraft/fenix/rules/FenixA32xDoorsFollowGsxRule.cpp
@@ -209,12 +218,16 @@ set(APP_SOURCES
         src/infrastructure/gsx/GsxLVars.h
         src/infrastructure/logging/LogMacros.h
         src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeChannels.h
         src/infrastructure/probe/ProbeObserver.cpp
         src/infrastructure/probe/ProbeObserver.h
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
+        src/infrastructure/probe/ProbeWriteMemo.h
         src/infrastructure/simbrief/SimbriefClient.cpp
         src/infrastructure/simbrief/SimbriefClient.h
+        src/infrastructure/simbrief/SimbriefFlightPlanSource.cpp
+        src/infrastructure/simbrief/SimbriefFlightPlanSource.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp
         src/infrastructure/simbrief/SimbriefOfpParser.h
         src/infrastructure/settings/QSettingsRepository.cpp
@@ -224,10 +237,16 @@ set(APP_SOURCES
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
         src/infrastructure/simconnect/SimConnectVariableGateway.h
+        src/application/model/CommbusBundleResult.h
+        src/application/model/Distribution.h
         src/application/model/UpdateInfo.h
         src/application/ports/UpdateService.h
+        src/infrastructure/update/CommbusBundleInstaller.cpp
+        src/infrastructure/update/CommbusBundleInstaller.h
         src/infrastructure/update/CommbusInstallProbe.cpp
         src/infrastructure/update/CommbusInstallProbe.h
+        src/infrastructure/update/DistributionParser.cpp
+        src/infrastructure/update/DistributionParser.h
         src/infrastructure/update/GithubReleaseParser.cpp
         src/infrastructure/update/GithubReleaseParser.h
         src/infrastructure/update/GithubUpdateService.cpp
@@ -242,10 +261,12 @@ set(APP_SOURCES
         src/infrastructure/gsx/GsxMenuNavigator.cpp
         src/infrastructure/gsx/GsxMenuNavigator.h
         src/domain/ports/DomainLogger.h
+        src/domain/ports/FlightPlanSource.h
         src/infrastructure/logging/QtDomainLogger.cpp
         src/infrastructure/logging/QtDomainLogger.h
         src/application/sim/SessionReadiness.h
         src/application/sim/SimVersion.h
+        src/application/sim/TickMode.h
         src/infrastructure/gsx/GsxRemoteState.h
         src/infrastructure/gsx/GsxRemoteStateReducer.cpp
         src/infrastructure/gsx/GsxRemoteStateReducer.h

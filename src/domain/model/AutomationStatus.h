@@ -38,6 +38,7 @@ struct AutomationStatus
     double plannedZfwKg = 0.0;
     double plannedOperatingEmptyKg = 0.0;
     std::optional<double> plannedPayloadKg;
+    std::optional<double> plannedCargoKg;
     double omittedCrewKg = 0.0;
     double operatingEmptyWithCrewKg = 0.0;
     int plannedPassengers = 0;

@@ -65,6 +65,7 @@ void SimbriefClient::ApplyFlightPlan(const FlightPlan& flightPlan)
     automationStatus_->plannedZfwKg = flightPlan.zfwKg;
     automationStatus_->plannedOperatingEmptyKg = flightPlan.operatingEmptyKg;
     automationStatus_->plannedPayloadKg = flightPlan.payloadKg;
+    automationStatus_->plannedCargoKg = flightPlan.cargoKg;
     automationStatus_->plannedPassengers = flightPlan.passengers;
     automationStatus_->simbriefUnit = flightPlan.unit;
     automationStatus_->plannedOrigin = flightPlan.origin;

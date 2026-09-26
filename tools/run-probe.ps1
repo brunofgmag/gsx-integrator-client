@@ -57,6 +57,7 @@ else {
 }
 
 $folder = Join-Path $env:LOCALAPPDATA 'brunofgmag\gsx-integrator-client\probe'
-Write-Host "Probe readings land in $folder"
+Write-Host "Probe readings land in the newest $folder\<yyyyMMdd-HHmmss>\ subfolder, one file per channel."
+Write-Host "session-<stamp>.log is the union of every channel; only the last 5 runs are kept."
 
 & $exe

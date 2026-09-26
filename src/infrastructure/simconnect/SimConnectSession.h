@@ -84,6 +84,7 @@ private:
     void HandleSystemState(const SIMCONNECT_RECV* pData, DWORD cbData) const;
     void HandleClientData(const SIMCONNECT_RECV* pData, DWORD cbData) const;
     static void HandleException(const SIMCONNECT_RECV* pData);
+    void ReportEvent(const char* eventName, DWORD parameter);
 
     template <typename Fn>
     bool SubscribeSystemEvent(Fn& target, Fn fn, SIMCONNECT_CLIENT_EVENT_ID eventId, const char* name);
@@ -102,6 +103,7 @@ private:
     std::unordered_map<DWORD, ClientDataFn> clientDataHandlers_;
     std::unordered_map<std::string, SIMCONNECT_CLIENT_EVENT_ID> mappedEvents_;
     SIMCONNECT_CLIENT_EVENT_ID nextDynamicEvent_ = kDynamicEventBase;
+    std::unordered_map<std::string, int> eventCounts_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_SIMCONNECTSESSION_H

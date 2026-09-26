@@ -14,6 +14,7 @@ private slots:
     static void flightPlanStatusDifferenceBreaksEquivalence();
     static void plannedPaxDifferenceBreaksEquivalence();
     static void autoWeightUnitDifferenceBreaksEquivalence();
+    static void fuelRateDifferenceBreaksEquivalence();
     static void loaderDoorWaitSecondsDifferenceBreaksEquivalence();
     static void floatDifferenceBelowEpsilonStaysEquivalent();
     static void floatDifferenceAboveEpsilonBreaksEquivalence();
@@ -87,6 +88,11 @@ void IntegratorSnapshotTest::boolFieldDifferenceBreaksEquivalence()
     b.refuelBySelf = true;
 
     QVERIFY(!AreEquivalent(a, b));
+
+    b.refuelBySelf = false;
+    b.efbFlightPlanOnDeparturePage = true;
+
+    QVERIFY(!AreEquivalent(a, b));
 }
 
 void IntegratorSnapshotTest::aircraftNameDifferenceBreaksEquivalence()
@@ -104,7 +110,7 @@ void IntegratorSnapshotTest::phaseDifferenceBreaksEquivalence()
     const IntegratorSnapshot a;
     IntegratorSnapshot b;
 
-    b.phase = TurnaroundPhase::Refueling;
+    b.phase = TurnaroundPhase::Loading;
 
     QVERIFY(!AreEquivalent(a, b));
 }
@@ -125,6 +131,16 @@ void IntegratorSnapshotTest::plannedPaxDifferenceBreaksEquivalence()
     IntegratorSnapshot b;
 
     b.plannedPax = 1;
+
+    QVERIFY(!AreEquivalent(a, b));
+}
+
+void IntegratorSnapshotTest::fuelRateDifferenceBreaksEquivalence()
+{
+    const IntegratorSnapshot a;
+    IntegratorSnapshot b;
+
+    b.fuelRateKgs = 17.0;
 
     QVERIFY(!AreEquivalent(a, b));
 }

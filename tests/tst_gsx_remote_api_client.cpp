@@ -1,13 +1,66 @@
+#include <algorithm>
+
+#include <QFile>
+#include <QHostAddress>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QSignalSpy>
+#include <QStringList>
+#include <QTcpServer>
+#include <QTemporaryDir>
 #include <QtTest/QTest>
 
 #include "../src/infrastructure/gsx/GsxRemoteApiClient.h"
+#include "../src/infrastructure/probe/ProbeLog.h"
 
 namespace
 {
     constexpr int kDeadlineMs = 30;
+    constexpr auto kConnecting = "GSX RemoteAPI: connecting to";
+
+    QStringList& Captured()
+    {
+        static QStringList messages;
+
+        return messages;
+    }
+
+    QtMessageHandler& Chained()
+    {
+        static QtMessageHandler handler = nullptr;
+
+        return handler;
+    }
+
+    void Capture(const QtMsgType type, const QMessageLogContext& context, const QString& message)
+    {
+        Captured().append(message);
+        Chained()(type, context, message);
+    }
+
+    qsizetype Announcements()
+    {
+        return std::ranges::count_if(Captured(), [](const QString& message)
+        {
+            return message.contains(QLatin1String(kConnecting));
+        });
+    }
+
+    QStringList WireLines()
+    {
+        QFile file(probe::RunLocation() + QLatin1Char('/') + probe::detail::ChannelFileName(probe::Channel::Wire));
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        {
+            return {};
+        }
+
+        return QString::fromUtf8(file.readAll()).split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    }
+
+    void Reconnect(GsxRemoteApiClient& client)
+    {
+        QMetaObject::invokeMethod(&client, "OnReconnect", Qt::DirectConnection);
+    }
 
     void Deliver(GsxRemoteApiClient& client, const QString& text)
     {
@@ -30,6 +83,10 @@ class GsxRemoteApiClientTest final : public QObject
     Q_OBJECT
 
 private slots:
+    void initTestCase();
+    static void init();
+    static void cleanup();
+
     static void snapshotMessageEmitsSnapshotReceived();
     static void patchMessageEmitsPathAndValue();
     static void successResultEmitsOkWithEmptyCode();
@@ -44,7 +101,35 @@ private slots:
     static void theFirstFrameReportsTheConnection();
     static void aDropAfterAnAnswerReportsTheConnectionLost();
     static void aSocketThatNeverAnswersReportsNoConnection();
+    static void retriesAfterTheFirstAttemptStayQuiet();
+    static void anAnsweredConnectionAnnouncesTheNextAttempt();
+    static void aConnectionGsxNeverAnsweredKeepsTheRetriesQuiet();
+    static void everySentMessageLandsInTheWireLog();
+
+private:
+    QTemporaryDir probeDirectory_;
 };
+
+void GsxRemoteApiClientTest::initTestCase()
+{
+    QVERIFY(probeDirectory_.isValid());
+    qputenv("GSXI_PROBE_DIR", probeDirectory_.path().toUtf8());
+}
+
+void GsxRemoteApiClientTest::init()
+{
+    Captured().clear();
+    Chained() = qInstallMessageHandler(Capture);
+}
+
+void GsxRemoteApiClientTest::cleanup()
+{
+    qInstallMessageHandler(Chained());
+    probe::SetEnabled(false);
+#ifndef NDEBUG
+    probe::ResetForTest();
+#endif
+}
 
 void GsxRemoteApiClientTest::snapshotMessageEmitsSnapshotReceived()
 {
@@ -234,6 +319,75 @@ void GsxRemoteApiClientTest::aSocketThatNeverAnswersReportsNoConnection()
     Disconnect(client);
 
     QCOMPARE(spy.count(), 0);
+}
+
+void GsxRemoteApiClientTest::retriesAfterTheFirstAttemptStayQuiet()
+{
+    QTcpServer server;
+    QVERIFY(server.listen(QHostAddress::LocalHost));
+    GsxRemoteApiClient client;
+    client.SetPortForTest(server.serverPort());
+
+    client.Start();
+    Reconnect(client);
+    Reconnect(client);
+
+    QCOMPARE(Announcements(), 1);
+}
+
+void GsxRemoteApiClientTest::anAnsweredConnectionAnnouncesTheNextAttempt()
+{
+    QTcpServer server;
+    QVERIFY(server.listen(QHostAddress::LocalHost));
+    GsxRemoteApiClient client;
+    client.SetPortForTest(server.serverPort());
+
+    client.Start();
+    Reconnect(client);
+    Connect(client);
+    Deliver(client, QStringLiteral("{\"type\":\"hello\",\"protocol\":1}"));
+    Disconnect(client);
+    Reconnect(client);
+    Reconnect(client);
+
+    QCOMPARE(Announcements(), 2);
+}
+
+void GsxRemoteApiClientTest::aConnectionGsxNeverAnsweredKeepsTheRetriesQuiet()
+{
+    QTcpServer server;
+    QVERIFY(server.listen(QHostAddress::LocalHost));
+    GsxRemoteApiClient client;
+    client.SetPortForTest(server.serverPort());
+
+    client.Start();
+    Connect(client);
+    Disconnect(client);
+    Reconnect(client);
+
+    QCOMPARE(Announcements(), 1);
+}
+
+void GsxRemoteApiClientTest::everySentMessageLandsInTheWireLog()
+{
+#ifndef NDEBUG
+    probe::ResetForTest();
+    probe::SetEnabled(true);
+    GsxRemoteApiClient client;
+
+    Connect(client);
+    QVERIFY(client.SendCommand(QStringLiteral("menu.open"), QJsonObject{{QStringLiteral("index"), 2}}));
+
+    const QStringList lines = WireLines();
+
+    QCOMPARE(lines.size(), 2);
+    QVERIFY(lines.at(0).endsWith(
+        QStringLiteral("{\"type\":\"sent\",\"message\":{\"channels\":[\"state\",\"prompts\",\"toasts\"],\"type\":\"subscribe\"}}")));
+    QVERIFY(lines.at(1).endsWith(
+        QStringLiteral("{\"type\":\"sent\",\"message\":{\"args\":{\"index\":2},\"type\":\"command\",\"verb\":\"menu.open\"}}")));
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
 }
 
 QTEST_GUILESS_MAIN(GsxRemoteApiClientTest)

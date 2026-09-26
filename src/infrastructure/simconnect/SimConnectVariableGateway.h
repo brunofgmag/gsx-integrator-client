@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <windows.h>
 #include <SimConnect.h>
+#include "../probe/ProbeWriteMemo.h"
 #include "../simvars/VariableGateway.h"
 
 class SimConnectVariableGateway final : public VariableGateway, public VariableTickMarker
@@ -13,6 +14,7 @@ class SimConnectVariableGateway final : public VariableGateway, public VariableT
 public:
     void Attach(HANDLE hSimConnect);
     void Detach();
+    void ForgetTextSlots();
 
     void MarkTick() override;
 
@@ -53,7 +55,8 @@ private:
     Slot& EnsureSlot(const std::string& key, const std::string& datumName,
                      const std::string& unit, bool isString, bool fastMode = false);
     static void StoreSample(Slot& slot, const void* payload);
-    void WriteSlot(const Slot& slot, const std::string& name, double value) const;
+    void WriteSlot(const Slot& slot, const std::string& name, double value);
+    void ReportWrite(const std::string& name, const std::string& unit, double value);
     bool RegisterSlot(Slot& slot) const;
     void PromoteToFastRefresh(Slot& slot) const;
     bool FetchStringSlot(const char* key, const char* datumName, char* buffer, int bufferSize);
@@ -62,6 +65,7 @@ private:
     std::unordered_map<std::string, std::size_t> index_;
     std::deque<Slot> slots_;
     DWORD nextDefineId_ = 1;
+    probe::WriteMemo writeMemo_;
 };
 
 #endif //GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_SIMCONNECTVARIABLEGATEWAY_H

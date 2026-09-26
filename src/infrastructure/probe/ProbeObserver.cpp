@@ -3,11 +3,13 @@
 #include <array>
 #include <cmath>
 #include <optional>
+#include <string_view>
 #include <QtCore/QDateTime>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 #include "ProbeLog.h"
 #include "ProbeWatchList.h"
+#include "../gsx/GsxLVars.h"
 #include "../simconnect/SimConnectSession.h"
 #include "../simvars/SimVars.h"
 #include "../simvars/VariableGateway.h"
@@ -18,6 +20,19 @@ using namespace simvars;
 namespace
 {
     constexpr int kObserveIntervalMs = 1000;
+    constexpr auto kRatioDoorMarker = "OPEN_RATIO";
+    constexpr auto kIflyDoorPrefix = "Animation_";
+    constexpr auto kPending = "pending";
+    constexpr int kShownDigits = 15;
+    constexpr int kWholeUnits = 0;
+    constexpr int kTenths = 1;
+    constexpr int kHundredths = 2;
+    constexpr int kThousandths = 3;
+
+    constexpr auto kSimOnGround = "SIM ON GROUND";
+    constexpr auto kSimGroundVelocity = "GROUND VELOCITY";
+    constexpr auto kSimExternalPowerOn = "EXTERNAL POWER ON:1";
+    constexpr auto kKnotsUnit = "Knots";
 
     struct ProbeVar
     {
@@ -117,6 +132,47 @@ namespace
         ProbeAVar{"EXIT OPEN:5", "percent"}
     };
 
+    struct SimSample
+    {
+        const char* name = nullptr;
+        const char* unit = nullptr;
+        int signatureDecimals = 0;
+        int textDecimals = 0;
+    };
+
+    constexpr std::array kDefaultSimAVars = {
+        SimSample{kSimFuelTotalKg, kKgUnit, kWholeUnits, kHundredths},
+        SimSample{kSimTotalWeight, kKgUnit, kWholeUnits, kHundredths},
+        SimSample{kSimEmptyWeight, kKgUnit, kWholeUnits, kHundredths},
+        SimSample{kSimOnGround, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimGroundVelocity, kKnotsUnit, kTenths, kThousandths},
+        SimSample{kSimParkingBrake, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimBeaconLight, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimEng1Combustion, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimEng2Combustion, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimEng3Combustion, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimEng4Combustion, kBoolUnit, kWholeUnits, kWholeUnits},
+        SimSample{kSimExternalPowerOn, kBoolUnit, kWholeUnits, kWholeUnits}
+    };
+
+    constexpr std::array kDefaultGsxLVars = {
+        gsx::lvars::kBoardingState,
+        gsx::lvars::kDeboardingState,
+        gsx::lvars::kRefuelingState,
+        gsx::lvars::kPushbackStatus,
+        gsx::lvars::kDeiceState,
+        gsx::lvars::kFuelHoseConnected,
+        gsx::lvars::kFuelCounter,
+        gsx::lvars::kNumPassengersBoardingTotal,
+        gsx::lvars::kNumPassengersDeboardingTotal,
+        gsx::lvars::kBoardingCargoPercent,
+        gsx::lvars::kDeboardingCargoPercent,
+        gsx::lvars::kGpuConnected,
+        gsx::lvars::kGpuState,
+        gsx::lvars::kJetway,
+        gsx::lvars::kStairs
+    };
+
     struct ProbeProfile
     {
         const char* brakeLVar = nullptr;
@@ -188,6 +244,75 @@ namespace
     QString Number(const double value)
     {
         return QString::number(value, 'f', 3);
+    }
+
+    bool IsRatioDoor(const char* name)
+    {
+        const std::string_view view(name);
+
+        return view.find(kRatioDoorMarker) != std::string_view::npos
+            || view.starts_with(kIflyDoorPrefix);
+    }
+
+    QString RatioSignature(const double value)
+    {
+        return QString::number(value, 'f', 1);
+    }
+
+    QString Fixed(const bool received, const double value, const int decimals)
+    {
+        if (!received)
+        {
+            return QLatin1String(kPending);
+        }
+
+        const double scale = std::pow(10.0, decimals);
+
+        return QString::number(std::round(value * scale) / scale, 'f', decimals);
+    }
+
+    QString FullPrecision(const bool received, const double value)
+    {
+        if (!received)
+        {
+            return QLatin1String(kPending);
+        }
+
+        return QString::number(value, 'g', kShownDigits);
+    }
+
+    void ReportSimAVars(VariableReader& variables)
+    {
+        for (const SimSample& sample : kDefaultSimAVars)
+        {
+            const bool received = variables.HasReceivedAVar(sample.name, sample.unit);
+            const double value = variables.GetAVar(sample.name, sample.unit, 0.0);
+
+            probe::Change(probe::Channel::SimAVars, sample.name,
+                          Fixed(received, value, sample.signatureDecimals),
+                          QStringLiteral("avar  %1=%2 unit=%3")
+                          .arg(QLatin1String(sample.name), Fixed(received, value, sample.textDecimals),
+                               QLatin1String(sample.unit)));
+        }
+    }
+
+    void ReportGsxLVars(VariableReader& variables)
+    {
+        if (variables.GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
+        {
+            return;
+        }
+
+        for (const char* name : kDefaultGsxLVars)
+        {
+            const bool received = variables.HasReceivedLVar(name);
+            const double value = variables.GetLVar(name, 0.0);
+
+            probe::Change(probe::Channel::GsxLVars, name,
+                          Fixed(received, value, kWholeUnits),
+                          QStringLiteral("gsx   %1=%2")
+                          .arg(QLatin1String(name), FullPrecision(received, value)));
+        }
     }
 
     struct LVarWrite
@@ -271,7 +396,11 @@ void ProbeObserver::ReportWatchList(VariableReader& variables, const QString& id
                 .arg(Number(low), Number(high));
         };
 
-        probe::Change("watch." + watched.name,
+        const probe::Channel channel = isLVar
+            ? probe::Channel::AircraftLVars
+            : probe::Channel::AircraftAVars;
+
+        probe::Change(channel, "watch." + watched.name,
                       line(std::round(value), std::round(track.min), std::round(track.max)),
                       line(value, track.min, track.max));
     }
@@ -299,10 +428,10 @@ void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables
     char atcModel[256] = {};
     variables.FetchAircraftName(title, sizeof title);
     variables.FetchAtcModel(atcModel, sizeof atcModel);
-    probe::Change("identity", QStringLiteral("plane %1 title='%2' atcModel='%3'")
+    probe::Change(probe::Channel::Turnaround, "identity", QStringLiteral("plane %1 title='%2' atcModel='%3'")
                   .arg(id, QString::fromLatin1(title), QString::fromLatin1(atcModel)));
 
-    probe::Change("door", QStringLiteral("door  %1 GetDoorStatus=%2 IsParkingBrakeSet=%3 IsHeldInPlace=%4")
+    probe::Change(probe::Channel::Turnaround, "door", QStringLiteral("door  %1 GetDoorStatus=%2 IsParkingBrakeSet=%3 IsHeldInPlace=%4")
                   .arg(id, QLatin1String(StatusText(aircraft.GetDoorStatus())))
                   .arg(aircraft.IsParkingBrakeSet() ? 1 : 0)
                   .arg(aircraft.IsHeldInPlace() ? 1 : 0));
@@ -311,15 +440,21 @@ void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables
     {
         const double vendor = variables.GetLVar(profile.brakeLVar, 0.0);
         const double sim = variables.GetAVar(kSimParkingBrake, kBoolUnit, 0.0);
-        probe::Change("brake", QStringLiteral("brake %1 %2=%3 sim=%4 and=%5 or=%6")
-                      .arg(id, QLatin1String(profile.brakeLVar), Number(vendor), Number(sim))
-                      .arg(vendor > 0.0 && sim > 0.0 ? 1 : 0)
-                      .arg(vendor > 0.0 || sim > 0.0 ? 1 : 0));
+        const auto line = [&](const double shown, const double shownSim)
+        {
+            return QStringLiteral("brake %1 %2=%3 sim=%4 and=%5 or=%6")
+                .arg(id, QLatin1String(profile.brakeLVar), Number(shown), Number(shownSim))
+                .arg(vendor > 0.0 && sim > 0.0 ? 1 : 0)
+                .arg(vendor > 0.0 || sim > 0.0 ? 1 : 0);
+        };
+
+        probe::Change(probe::Channel::AircraftLVars, "brake",
+                      line(std::round(vendor), std::round(sim)), line(vendor, sim));
     }
 
     if (profile.chocksLVar != nullptr)
     {
-        probe::Change("chocks", QStringLiteral("chock %1 %2=%3")
+        probe::Change(probe::Channel::AircraftLVars, "chocks", QStringLiteral("chock %1 %2=%3")
                       .arg(id, QLatin1String(profile.chocksLVar),
                            Number(variables.GetLVar(profile.chocksLVar, 0.0))));
     }
@@ -328,12 +463,19 @@ void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables
     {
         const ProbeVar& door = profile.doors[i];
         const Track& track = Follow(variables, door.name);
-        probe::Change(std::string("door.") + door.name,
-                      QStringLiteral("var   %1 %2 %3=%4 recv=%5 span=[%6..%7]")
-                      .arg(id, QLatin1String(door.label), QLatin1String(door.name),
-                           Number(variables.GetLVar(door.name, 0.0)))
-                      .arg(variables.HasReceivedLVar(door.name) ? 1 : 0)
-                      .arg(Number(track.min), Number(track.max)));
+        const double value = variables.GetLVar(door.name, 0.0);
+        const auto line = [&](const QString& shown)
+        {
+            return QStringLiteral("var   %1 %2 %3=%4 recv=%5 span=[%6..%7]")
+                .arg(id, QLatin1String(door.label), QLatin1String(door.name), shown)
+                .arg(variables.HasReceivedLVar(door.name) ? 1 : 0)
+                .arg(Number(track.min), Number(track.max));
+        };
+
+        const QString shown = Number(value);
+        const QString text = line(shown);
+        const QString signature = IsRatioDoor(door.name) ? line(RatioSignature(value)) : text;
+        probe::Change(probe::Channel::AircraftLVars, std::string("door.") + door.name, signature, text);
     }
 
     int flat = 0;
@@ -348,34 +490,52 @@ void ProbeObserver::Observe(const Aircraft& aircraft, VariableGateway& variables
             continue;
         }
 
-        probe::Change(std::string("cand.") + candidate.name,
-                      QStringLiteral("cand  %1 %2=%3 span=[%4..%5] MOVED")
-                      .arg(id, QLatin1String(candidate.name),
-                           Number(variables.GetLVar(candidate.name, 0.0)),
-                           Number(track.min), Number(track.max)));
+        const double value = variables.GetLVar(candidate.name, 0.0);
+        const auto line = [&](const double shown, const double low, const double high)
+        {
+            return QStringLiteral("cand  %1 %2=%3 span=[%4..%5] MOVED")
+                .arg(id, QLatin1String(candidate.name), Number(shown))
+                .arg(Number(low), Number(high));
+        };
+
+        probe::Change(probe::Channel::AircraftLVars, std::string("cand.") + candidate.name,
+                      line(std::round(value), std::round(track.min), std::round(track.max)),
+                      line(value, track.min, track.max));
     }
 
     if (profile.candidateCount > 0)
     {
-        probe::Change("cand.flat", QStringLiteral("cand  %1 flat=%2 of %3")
+        probe::Change(probe::Channel::AircraftLVars, "cand.flat", QStringLiteral("cand  %1 flat=%2 of %3")
                       .arg(id).arg(flat).arg(profile.candidateCount));
     }
 
     ReportWatchList(variables, id);
 
     QStringList exits;
+    QStringList exitSignatures;
     for (const ProbeAVar& exit : kSimExits)
     {
         const double value = variables.GetAVar(exit.name, exit.unit, -1.0);
         exits.append(QStringLiteral("%1=%2").arg(QLatin1String(exit.name), Number(value)));
+        exitSignatures.append(QStringLiteral("%1=%2").arg(QLatin1String(exit.name), Number(std::round(value))));
     }
-    probe::Change("exits", QStringLiteral("exit  %1 %2").arg(id, exits.join(QLatin1Char(' '))));
+    probe::Change(probe::Channel::AircraftAVars, "exits",
+                  QStringLiteral("exit  %1 %2").arg(id, exitSignatures.join(QLatin1Char(' '))),
+                  QStringLiteral("exit  %1 %2").arg(id, exits.join(QLatin1Char(' '))));
+
+    ReportSimAVars(variables);
+    ReportGsxLVars(variables);
 
     MaybeSetLVar(variables);
 }
 
 void ProbeObserver::MaybeSetLVar(VariableGateway& variables)
 {
+    if (!probe::ActsOnTheSim())
+    {
+        return;
+    }
+
     if (setLVarSent_)
     {
         return;
@@ -391,7 +551,7 @@ void ProbeObserver::MaybeSetLVar(VariableGateway& variables)
     if (!write)
     {
         setLVarSent_ = true;
-        probe::Line(QStringLiteral("probe set-lvar malformed '%1', expected NAME=VALUE[@ARM]").arg(spec));
+        probe::Line(probe::Channel::Writes, QStringLiteral("probe set-lvar malformed '%1', expected NAME=VALUE[@ARM]").arg(spec));
 
         return;
     }
@@ -408,14 +568,14 @@ void ProbeObserver::MaybeSetLVar(VariableGateway& variables)
     }
 
     setLVarSent_ = true;
-    probe::Line(QStringLiteral("probe set-lvar %1 %2 -> %3")
+    probe::Line(probe::Channel::Writes, QStringLiteral("probe set-lvar %1 %2 -> %3")
                 .arg(QString::fromStdString(write->name), Number(current), Number(write->value)));
     variables.SetLVar(write->name, write->value);
 }
 
 void ProbeObserver::MaybeFireEvent(SimConnectSession& session)
 {
-    if (fireEventSent_ || !probe::IsOn())
+    if (fireEventSent_ || !probe::ActsOnTheSim())
     {
         return;
     }
@@ -431,7 +591,7 @@ void ProbeObserver::MaybeFireEvent(SimConnectSession& session)
     if (name.isEmpty())
     {
         fireEventSent_ = true;
-        probe::Line(QStringLiteral("probe fire-event malformed '%1', expected NAME[=PARAM]").arg(spec));
+        probe::Line(probe::Channel::Writes, QStringLiteral("probe fire-event malformed '%1', expected NAME[=PARAM]").arg(spec));
 
         return;
     }
@@ -444,6 +604,6 @@ void ProbeObserver::MaybeFireEvent(SimConnectSession& session)
     const DWORD parameter = equals < 0 ? 0 : spec.mid(equals + 1).trimmed().toUInt();
     fireEventSent_ = true;
     const bool sent = session.TransmitEvent(name.toUtf8().constData(), parameter);
-    probe::Line(QStringLiteral("probe fire-event %1 param=%2 sent=%3")
+    probe::Line(probe::Channel::Writes, QStringLiteral("probe fire-event %1 param=%2 sent=%3")
                 .arg(name).arg(parameter).arg(sent ? 1 : 0));
 }

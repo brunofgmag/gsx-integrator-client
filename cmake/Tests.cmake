@@ -33,6 +33,7 @@ add_library(gsxi-turnaround-state-test-support STATIC
         src/domain/ports/GsxGateway.h
         src/domain/ports/GsxMenuGateway.h
         src/domain/ports/DomainLogger.h
+        src/domain/ports/FlightPlanSource.h
         ${TURNAROUND_STATE_SOURCES})
 target_include_directories(gsxi-turnaround-state-test-support PRIVATE "${CMAKE_SOURCE_DIR}")
 
@@ -41,6 +42,7 @@ function(add_turnaround_state_test TARGET_NAME TEST_NAME TEST_FILE)
             tests/turnaround/TurnaroundStateFixture.h
             tests/doubles/FakeAircraft.h
             tests/doubles/FakeDomainLogger.h
+            tests/doubles/FakeFlightPlanSource.h
             tests/doubles/FakeGsxMenuGateway.h
             tests/doubles/FakeGsxService.h
             tests/doubles/FakeVariableWriter.h
@@ -58,9 +60,7 @@ set(TURNAROUND_STATE_TESTS
         gsxi-turnaround-call-catering-state-tests turnaround-state-call-catering tests/turnaround/states/tst_call_catering_state.cpp
         gsxi-turnaround-waiting-power-on-state-tests turnaround-state-waiting-power-on tests/turnaround/states/tst_waiting_power_on_state.cpp
         gsxi-turnaround-request-fuel-state-tests turnaround-state-request-fuel tests/turnaround/states/tst_request_fuel_state.cpp
-        gsxi-turnaround-refueling-state-tests turnaround-state-refueling tests/turnaround/states/tst_refueling_state.cpp
-        gsxi-turnaround-request-boarding-state-tests turnaround-state-request-boarding tests/turnaround/states/tst_request_boarding_state.cpp
-        gsxi-turnaround-boarding-state-tests turnaround-state-boarding tests/turnaround/states/tst_boarding_state.cpp
+        gsxi-turnaround-loading-state-tests turnaround-state-loading tests/turnaround/states/tst_loading_state.cpp
         gsxi-turnaround-waiting-aircraft-ready-state-tests turnaround-state-waiting-aircraft-ready tests/turnaround/states/tst_waiting_aircraft_ready_state.cpp
         gsxi-turnaround-waiting-ready-to-push-state-tests turnaround-state-waiting-ready-to-push tests/turnaround/states/tst_waiting_ready_to_push_state.cpp
         gsxi-turnaround-wait-catering-state-tests turnaround-state-wait-catering tests/turnaround/states/tst_wait_catering_state.cpp
@@ -91,10 +91,14 @@ foreach (TURNAROUND_STATE_TEST_INDEX RANGE 0 ${TURNAROUND_STATE_TEST_LAST_INDEX}
             ${TURNAROUND_STATE_TEST_FILE})
 endforeach ()
 
+add_turnaround_state_test(gsxi-refueling-track-tests refueling-track tests/turnaround/states/tst_refueling_track.cpp)
+add_turnaround_state_test(gsxi-boarding-track-tests boarding-track tests/turnaround/states/tst_boarding_track.cpp)
+
 add_executable(gsxi-turnaround-rules-tests
         tests/turnaround/TurnaroundStateFixture.h
         tests/doubles/FakeAircraft.h
         tests/doubles/FakeDomainLogger.h
+        tests/doubles/FakeFlightPlanSource.h
         tests/doubles/FakeGsxMenuGateway.h
         tests/doubles/FakeGsxService.h
         tests/doubles/FakeVariableWriter.h
@@ -107,6 +111,7 @@ add_executable(gsxi-turnaround-workflow-tests
         tests/turnaround/TurnaroundStateFixture.h
         tests/doubles/FakeGsxMenuGateway.h
         tests/doubles/FakeDomainLogger.h
+        tests/doubles/FakeFlightPlanSource.h
         tests/tst_state_machine.cpp
         src/domain/turnaround/TurnaroundStateMachine.cpp
         src/domain/turnaround/TurnaroundStateMachine.h)
@@ -160,6 +165,10 @@ gsxi_add_qt_test(gsxi-session-readiness-tests session-readiness
         tests/tst_session_readiness.cpp
         src/application/sim/SessionReadiness.h
         src/application/sim/SimVersion.h)
+
+gsxi_add_qt_test(gsxi-tick-mode-tests tick-mode
+        tests/tst_tick_mode.cpp
+        src/application/sim/TickMode.h)
 
 gsxi_add_qt_test(gsxi-turnaround-math-tests turnaround-math
         tests/tst_turnaround_math.cpp
@@ -240,6 +249,19 @@ gsxi_add_qt_test(gsxi-github-update-service-tests github-update-service
         src/application/model/UpdateInfo.h)
 target_link_libraries(gsxi-github-update-service-tests PRIVATE Qt6::Network)
 
+gsxi_add_qt_test(gsxi-github-update-service-flightsim-to-tests github-update-service-flightsim-to
+        tests/tst_github_update_service_flightsim_to.cpp
+        src/infrastructure/update/GithubUpdateService.cpp
+        src/infrastructure/update/GithubUpdateService.h
+        src/infrastructure/update/GithubReleaseParser.cpp
+        src/infrastructure/update/GithubReleaseParser.h
+        src/infrastructure/update/CommbusInstallProbe.cpp
+        src/infrastructure/update/CommbusInstallProbe.h
+        src/application/ports/UpdateService.h
+        src/application/model/UpdateInfo.h)
+target_link_libraries(gsxi-github-update-service-flightsim-to-tests PRIVATE Qt6::Network)
+target_compile_definitions(gsxi-github-update-service-flightsim-to-tests PRIVATE GSXI_FLIGHTSIM_TO)
+
 gsxi_add_qt_test(gsxi-qsettings-repository-tests qsettings-repository
         tests/tst_qsettings_repository.cpp
         src/infrastructure/settings/QSettingsRepository.cpp
@@ -251,7 +273,11 @@ gsxi_add_qt_test(gsxi-qsettings-repository-tests qsettings-repository
 gsxi_add_qt_test(gsxi-simconnect-session-tests simconnect-session
         tests/doubles/FakeSimConnectApi.h
         tests/doubles/FakeSimConnectApi.cpp
+        tests/ProbeLines.h
         tests/tst_simconnect_session.cpp
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeWriteMemo.h
         src/infrastructure/simconnect/SimConnectSession.cpp
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
@@ -261,7 +287,11 @@ target_include_directories(gsxi-simconnect-session-tests PRIVATE "${SIMCONNECT_I
 gsxi_add_qt_test(gsxi-variable-gateway-tests variable-gateway
         tests/doubles/FakeSimConnectApi.h
         tests/doubles/FakeSimConnectApi.cpp
+        tests/ProbeLines.h
         tests/tst_variable_gateway.cpp
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeWriteMemo.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_include_directories(gsxi-variable-gateway-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
@@ -375,6 +405,29 @@ gsxi_add_qt_test(gsxi-fss-727-tests fss-727
         src/domain/support/Weight.h)
 target_link_libraries(gsxi-fss-727-tests PRIVATE gsxi-turnaround-state-test-support)
 
+gsxi_add_qt_test(gsxi-fss-e-jets-tests fss-e-jets
+        tests/TestDoubles.h
+        tests/AircraftTicks.h
+        tests/tst_fss_e_jets.cpp
+        src/infrastructure/aircraft/AircraftIdentity.h
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/fss/FssEJet.cpp
+        src/infrastructure/aircraft/fss/FssEJet.h
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.h
+        src/infrastructure/aircraft/DoorReading.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
+        src/domain/model/AutomationStatus.h
+        src/domain/support/Weight.h)
+
 gsxi_add_qt_test(gsxi-toliss-a340-tests toliss-a340
         tests/TestDoubles.h
         tests/AircraftTicks.h
@@ -396,10 +449,14 @@ gsxi_add_qt_test(gsxi-toliss-a340-tests toliss-a340
         src/domain/model/AutomationStatus.h)
 
 gsxi_add_qt_test(gsxi-fenix-efb-client-tests fenix-efb-client
+        tests/ProbeLines.h
         tests/tst_fenix_efb_client.cpp
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
-        src/infrastructure/fenix/FenixEfbGateway.h)
+        src/infrastructure/fenix/FenixEfbGateway.h
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeWriteMemo.h)
 target_link_libraries(gsxi-fenix-efb-client-tests PRIVATE Qt6::Network)
 
 gsxi_add_qt_test(gsxi-fenix-a32x-tests fenix-a32x
@@ -645,6 +702,43 @@ gsxi_add_qt_test(gsxi-probe-watch-list-tests probe-watch-list
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h)
 
+gsxi_add_qt_test(gsxi-probe-log-tests probe-log
+        tests/tst_probe_log.cpp
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeChannels.h)
+
+gsxi_add_qt_test(gsxi-probe-channels-tests probe-channels
+        tests/tst_probe_channels.cpp
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h)
+
+gsxi_add_qt_test(gsxi-probe-write-memo-tests probe-write-memo
+        tests/tst_probe_write_memo.cpp
+        src/infrastructure/probe/ProbeWriteMemo.h)
+
+gsxi_add_qt_test(gsxi-probe-observer-tests probe-observer
+        tests/doubles/FakeAircraft.h
+        tests/doubles/FakeSimConnectApi.h
+        tests/doubles/FakeSimConnectApi.cpp
+        tests/doubles/FakeVariableGateway.h
+        tests/ProbeLines.h
+        tests/tst_probe_observer.cpp
+        src/infrastructure/gsx/GsxLVars.h
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeObserver.cpp
+        src/infrastructure/probe/ProbeObserver.h
+        src/infrastructure/probe/ProbeWatchList.cpp
+        src/infrastructure/probe/ProbeWatchList.h
+        src/infrastructure/probe/ProbeWriteMemo.h
+        src/infrastructure/simconnect/SimConnectSession.cpp
+        src/infrastructure/simconnect/SimConnectSession.h
+        src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+        src/infrastructure/simconnect/SimConnectVariableGateway.h
+        src/infrastructure/simvars/SimVars.h
+        src/infrastructure/simvars/VariableGateway.h)
+target_include_directories(gsxi-probe-observer-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+
 gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         tests/TestDoubles.h
         tests/doubles/FakeSimConnectApi.h
@@ -673,6 +767,14 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
+        src/infrastructure/aircraft/fss/FssEJet.cpp
+        src/infrastructure/aircraft/fss/FssEJet.h
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
@@ -773,6 +875,8 @@ target_compile_definitions(gsxi-github-release-parser-tests PRIVATE
 gsxi_add_qt_test(gsxi-update-viewmodel-tests update-viewmodel
         tests/doubles/FakeUpdateService.h
         tests/tst_update_viewmodel.cpp
+        src/application/model/CommbusBundleResult.h
+        src/application/model/Distribution.h
         src/application/model/UpdateInfo.h
         src/application/ports/UpdateService.h
         src/viewmodel/UpdateViewModel.cpp
@@ -782,6 +886,20 @@ gsxi_add_qt_test(gsxi-commbus-install-probe-tests commbus-install-probe
         tests/tst_commbus_install_probe.cpp
         src/infrastructure/update/CommbusInstallProbe.cpp
         src/infrastructure/update/CommbusInstallProbe.h)
+
+gsxi_add_qt_test(gsxi-commbus-bundle-installer-tests commbus-bundle-installer
+        tests/tst_commbus_bundle_installer.cpp
+        src/application/model/CommbusBundleResult.h
+        src/infrastructure/update/CommbusBundleInstaller.cpp
+        src/infrastructure/update/CommbusBundleInstaller.h
+        src/infrastructure/update/CommbusInstallProbe.cpp
+        src/infrastructure/update/CommbusInstallProbe.h)
+
+gsxi_add_qt_test(gsxi-distribution-parser-tests distribution-parser
+        tests/tst_distribution_parser.cpp
+        src/application/model/Distribution.h
+        src/infrastructure/update/DistributionParser.cpp
+        src/infrastructure/update/DistributionParser.h)
 
 gsxi_add_qt_test(gsxi-automation-settings-tests automation-settings
         tests/tst_automation_settings.cpp
@@ -808,6 +926,7 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/application/IntegratorRuntime.cpp
         src/application/IntegratorRuntime.h
         src/infrastructure/probe/ProbeLog.h
+        src/infrastructure/probe/ProbeChannels.h
         src/infrastructure/probe/ProbeObserver.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
@@ -838,6 +957,14 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
+        src/infrastructure/aircraft/fss/FssEJet.cpp
+        src/infrastructure/aircraft/fss/FssEJet.h
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetGpuFollowsRequestRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetKeepVendorAutomationOffRule.h
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.cpp
+        src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.h
         src/infrastructure/aircraft/fenix/FenixA32x.cpp
         src/infrastructure/probe/ProbeWatchList.cpp
         src/infrastructure/probe/ProbeWatchList.h
@@ -925,6 +1052,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/logging/QtDomainLogger.h
         src/infrastructure/simbrief/SimbriefClient.cpp
         src/infrastructure/simbrief/SimbriefClient.h
+        src/infrastructure/simbrief/SimbriefFlightPlanSource.cpp
+        src/infrastructure/simbrief/SimbriefFlightPlanSource.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp
         src/infrastructure/simbrief/SimbriefOfpParser.h
         src/infrastructure/simconnect/SimConnectSession.cpp

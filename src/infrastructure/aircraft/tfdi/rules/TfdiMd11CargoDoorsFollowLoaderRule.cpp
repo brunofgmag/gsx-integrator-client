@@ -58,7 +58,7 @@ void TfdiMd11CargoDoorsFollowLoaderRule::FollowLoader(VariableWriter& writer, co
 
     if (doorTarget != lastDoorTarget)
     {
-        probe::Line(QStringLiteral("write cargo %1=%2 %3=%4 received=%5")
+        probe::Line(probe::Channel::Writes, QStringLiteral("write cargo %1=%2 %3=%4 received=%5")
                         .arg(QLatin1String(doorCmdLVar))
                         .arg(doorTarget)
                         .arg(QLatin1String(loaderStateLVar))

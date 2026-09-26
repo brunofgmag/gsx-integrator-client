@@ -7,12 +7,15 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QProcess>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTemporaryDir>
 #include <QtTest/QTest>
 
+#include "../src/infrastructure/update/GithubReleaseParser.h"
 #include "../src/infrastructure/update/GithubUpdateService.h"
 
 namespace
@@ -151,6 +154,44 @@ namespace
 
         return QJsonDocument(release).toJson(QJsonDocument::Compact);
     }
+
+    constexpr auto kTestUninstallRoot = R"(HKEY_CURRENT_USER\Software\gsxi-test-uninstall)";
+    constexpr auto kTestUninstallProviderRoot = R"(HKCU:\Software\gsxi-test-uninstall)";
+    constexpr auto kTestExeName = "gsx-integrator-client.exe";
+    constexpr auto kStaleDisplayVersion = "1.29.7";
+
+    void DeleteTestUninstallRoot()
+    {
+        QProcess reg;
+        reg.start(QStringLiteral("reg.exe"),
+                  {QStringLiteral("delete"), QString::fromLatin1(kTestUninstallRoot), QStringLiteral("/f")});
+        reg.waitForFinished();
+    }
+
+    qint64 ExitedProcessId()
+    {
+        QProcess process;
+        process.start(QStringLiteral("cmd.exe"), {QStringLiteral("/c"), QStringLiteral("exit 0")});
+        process.waitForStarted();
+        const qint64 pid = process.processId();
+        process.waitForFinished();
+
+        return pid;
+    }
+
+    bool WriteFile(const QString& path, const QByteArray& content)
+    {
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+        {
+            return false;
+        }
+
+        file.write(content);
+        file.close();
+
+        return true;
+    }
 }
 
 class GithubUpdateServiceTest final : public QObject
@@ -168,6 +209,12 @@ private slots:
     static void downloadWithoutAssetsFailsImmediately();
     static void downloadWithInvalidShaFileFails();
     static void downloadWithChecksumMismatchDiscardsZip();
+    static void applyArgumentsCarryTheNormalisedReleaseVersion_data();
+    static void applyArgumentsCarryTheNormalisedReleaseVersion();
+    static void applyScriptUpdatesDisplayVersionOnlyForThisInstall_data();
+    static void applyScriptUpdatesDisplayVersionOnlyForThisInstall();
+
+    static void cleanupTestCase();
 };
 
 void GithubUpdateServiceTest::initTestCase()
@@ -175,6 +222,12 @@ void GithubUpdateServiceTest::initTestCase()
     QCoreApplication::setOrganizationName(QStringLiteral("GsxIntegratorTests"));
     QCoreApplication::setApplicationName(QStringLiteral("GithubUpdateServiceTest"));
     QStandardPaths::setTestModeEnabled(true);
+    DeleteTestUninstallRoot();
+}
+
+void GithubUpdateServiceTest::cleanupTestCase()
+{
+    DeleteTestUninstallRoot();
 }
 
 void GithubUpdateServiceTest::clientCheckSuccessReportsUpdateAvailable()
@@ -345,6 +398,128 @@ void GithubUpdateServiceTest::downloadWithChecksumMismatchDiscardsZip()
     const QString zipPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
         + QStringLiteral("/updates/download/gsx-integrator-client-x.zip");
     QVERIFY(!QFile::exists(zipPath));
+}
+
+void GithubUpdateServiceTest::applyArgumentsCarryTheNormalisedReleaseVersion_data()
+{
+    QTest::addColumn<QString>("tag");
+    QTest::addColumn<QString>("expected");
+
+    QTest::newRow("plain tag") << QStringLiteral("v1.40.0") << QStringLiteral("1.40.0");
+    QTest::newRow("upper-case prefix") << QStringLiteral("V1.34.12") << QStringLiteral("1.34.12");
+    QTest::newRow("pre-release suffix") << QStringLiteral("v1.41.0-rc.1") << QStringLiteral("1.41.0");
+}
+
+void GithubUpdateServiceTest::applyArgumentsCarryTheNormalisedReleaseVersion()
+{
+    QFETCH(QString, tag);
+    QFETCH(QString, expected);
+
+    const auto info = ParseLatestRelease(ReleaseFeed(tag, {}, {}));
+
+    QVERIFY(info.has_value());
+
+    const QStringList arguments = GithubUpdateService::BuildApplyArguments(
+        QStringLiteral("C:/updates/apply.ps1"), 42, QStringLiteral("C:/updates/staged"),
+        QStringLiteral("C:/app"), QString::fromLatin1(kTestExeName), info->version, false);
+    const qsizetype versionIndex = arguments.indexOf(QStringLiteral("-Version"));
+
+    QVERIFY(versionIndex >= 0);
+    QVERIFY(versionIndex + 1 < arguments.size());
+    QCOMPARE(arguments.at(versionIndex + 1), expected);
+}
+
+void GithubUpdateServiceTest::applyScriptUpdatesDisplayVersionOnlyForThisInstall_data()
+{
+    QTest::addColumn<bool>("keyExists");
+    QTest::addColumn<QString>("installLocationSuffix");
+    QTest::addColumn<bool>("otherLocation");
+    QTest::addColumn<QString>("destSuffix");
+    QTest::addColumn<QString>("expectedDisplayVersion");
+
+    QTest::newRow("same location") << true << QString() << false << QString() << QStringLiteral("1.40.0");
+    QTest::newRow("install location with trailing backslash")
+        << true << QStringLiteral("\\") << false << QString() << QStringLiteral("1.40.0");
+    QTest::newRow("install location with trailing slash")
+        << true << QStringLiteral("/") << false << QString() << QStringLiteral("1.40.0");
+    QTest::newRow("dest with trailing separator")
+        << true << QString() << false << QStringLiteral("/") << QStringLiteral("1.40.0");
+    QTest::newRow("other location stays untouched")
+        << true << QString() << true << QString() << QString::fromLatin1(kStaleDisplayVersion);
+    QTest::newRow("missing key is not created") << false << QString() << false << QString() << QString();
+}
+
+void GithubUpdateServiceTest::applyScriptUpdatesDisplayVersionOnlyForThisInstall()
+{
+    QFETCH(bool, keyExists);
+    QFETCH(QString, installLocationSuffix);
+    QFETCH(bool, otherLocation);
+    QFETCH(QString, destSuffix);
+    QFETCH(QString, expectedDisplayVersion);
+
+    const QTemporaryDir root;
+
+    QVERIFY(root.isValid());
+
+    const QString source = root.filePath(QStringLiteral("source"));
+    const QString dest = root.filePath(QStringLiteral("install"));
+    const QString other = root.filePath(QStringLiteral("elsewhere"));
+    const QString scriptDir = root.filePath(QStringLiteral("updates"));
+
+    QVERIFY(QDir().mkpath(source));
+    QVERIFY(QDir().mkpath(dest));
+    QVERIFY(QDir().mkpath(other));
+    QVERIFY(QDir().mkpath(scriptDir));
+    QVERIFY(WriteFile(source + QStringLiteral("/") + QString::fromLatin1(kTestExeName), "new build"));
+    QVERIFY(WriteFile(dest + QStringLiteral("/") + QString::fromLatin1(kTestExeName), "old"));
+
+    const QString scriptPath = scriptDir + QStringLiteral("/apply.ps1");
+
+    QVERIFY(WriteFile(scriptPath, GithubUpdateService::ApplyScript()));
+
+    const QString keyName = QString::fromLatin1(QTest::currentDataTag()).replace(u' ', u'-');
+    const QString installLocation =
+        QDir::toNativeSeparators(otherLocation ? other : dest) + installLocationSuffix;
+
+    DeleteTestUninstallRoot();
+    if (keyExists)
+    {
+        QSettings registry(QString::fromLatin1(kTestUninstallRoot), QSettings::NativeFormat);
+        registry.beginGroup(keyName);
+        registry.setValue(QStringLiteral("InstallLocation"), installLocation);
+        registry.setValue(QStringLiteral("DisplayVersion"), QString::fromLatin1(kStaleDisplayVersion));
+        registry.endGroup();
+        registry.sync();
+
+        QCOMPARE(registry.status(), QSettings::NoError);
+    }
+
+    QStringList arguments = GithubUpdateService::BuildApplyArguments(
+        scriptPath, ExitedProcessId(), source, dest + destSuffix, QString::fromLatin1(kTestExeName),
+        QStringLiteral("1.40.0"), false);
+    arguments << QStringLiteral("-UninstallKey")
+        << QString::fromLatin1(kTestUninstallProviderRoot) + QStringLiteral("\\") + keyName;
+
+    QProcess apply;
+    apply.start(QStringLiteral("powershell.exe"), arguments);
+
+    QVERIFY(apply.waitForFinished(60000));
+    QCOMPARE(apply.exitCode(), 0);
+
+    QFile copied(dest + QStringLiteral("/") + QString::fromLatin1(kTestExeName));
+
+    QVERIFY(copied.open(QIODevice::ReadOnly));
+    QCOMPARE(copied.readAll(), QByteArray("new build"));
+
+    const QSettings registry(QString::fromLatin1(kTestUninstallRoot), QSettings::NativeFormat);
+    const bool keyPresent = registry.childGroups().contains(keyName);
+
+    QCOMPARE(keyPresent, keyExists);
+    if (keyExists)
+    {
+        QCOMPARE(registry.value(keyName + QStringLiteral("/DisplayVersion")).toString(), expectedDisplayVersion);
+        QCOMPARE(registry.value(keyName + QStringLiteral("/InstallLocation")).toString(), installLocation);
+    }
 }
 
 QTEST_GUILESS_MAIN(GithubUpdateServiceTest)

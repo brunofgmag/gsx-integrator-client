@@ -18,6 +18,8 @@ ColumnLayout {
     readonly property bool restartPending: root.settingsVm.activeRenderer.length > 0
                                         && root.settingsVm.activeRenderer !== root.settingsVm.renderer
 
+    readonly property bool loggingRestartPending: root.settingsVm.loggingEnabled !== root.settingsVm.loggingActive
+
     spacing: 8
 
     SettingRow {
@@ -41,6 +43,26 @@ ColumnLayout {
                     .arg(root.rendererLabels[root.settingsVm.renderer] ?? root.settingsVm.renderer)
                     .arg(root.rendererLabels[root.settingsVm.activeRenderer] ?? root.settingsVm.activeRenderer)
               : ""
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        visible: root.settingsVm.debugToolsAvailable
+        title: qsTr("Client logging")
+        caption: qsTr("Write diagnostic logs to disk")
+        helpText: qsTr("Logs are saved in: %1").arg(root.settingsVm.logLocation)
+        checked: root.settingsVm.loggingEnabled
+        onToggled: checked => root.settingsVm.loggingEnabled = checked
+    }
+
+    Advisory {
+        Layout.fillWidth: true
+        visible: root.settingsVm.debugToolsAvailable && root.loggingRestartPending
+        text: !root.loggingRestartPending
+              ? ""
+              : root.settingsVm.loggingEnabled
+                ? qsTr("Restart GSX Integrator to start logging.")
+                : qsTr("Logging stays on until GSX Integrator restarts.")
     }
 
     Item {

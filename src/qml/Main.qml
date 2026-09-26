@@ -30,8 +30,7 @@ ApplicationWindow {
     readonly property bool waitingForInput: window.integratorVm.canStartLoading
     onWaitingForInputChanged: {
         if (window.waitingForInput) {
-            tray.showMessage(qsTr("GSX Integrator"),
-                             qsTr("Waiting for input: press START LOADING or activate the SmartSwitch."))
+            tray.showMessage(qsTr("GSX Integrator"), window.integratorVm.phaseTip)
         }
     }
 
@@ -352,6 +351,7 @@ ApplicationWindow {
 
                     SettingsScreen {
                         settingsVm: window.settingsVm
+                        updateModeVisible: window.updateVm.downloadsAllowed
                     }
 
                     AboutScreen {

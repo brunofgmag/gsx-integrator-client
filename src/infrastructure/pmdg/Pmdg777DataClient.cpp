@@ -13,6 +13,7 @@ namespace
     constexpr DWORD kMouseWheelDown = 0x00002000;
 
     constexpr int kDoorCount = 16;
+    constexpr int kKickLogEvery = 10;
 
     const PmdgClientDataSpec kChannelSpec{
         "GsxIntegratorPmdgData",
@@ -136,8 +137,10 @@ void Pmdg777DataClient::ToggleDoor(const int index)
 
 void Pmdg777DataClient::KickDataRefresh()
 {
-    probe::Line(QStringLiteral("probe pmdg-777 kicking light test, block stale for %1 ms")
-                .arg(nowMs_() - lastKickMs_.value_or(nowMs_())));
+    ++kickCount_;
+    probe::Change(probe::Channel::Writes, "pmdg777.kick",
+                  QString::number(kickCount_ / kKickLogEvery),
+                  QStringLiteral("probe pmdg-777 kicking light test, block stale, kicks=%1").arg(kickCount_));
     lastKickMs_ = nowMs_();
     pendingKickRelease_ = true;
     channel_.TransmitEvent(kLightTestOffset, kMouseWheelUp);
@@ -150,7 +153,7 @@ void Pmdg777DataClient::SetInFlight(const bool inFlight)
 
 void Pmdg777DataClient::MaybeProbeToggle()
 {
-    if (probeToggleSent_ || !probe::IsOn() || !channel_.HasData())
+    if (probeToggleSent_ || !probe::ActsOnTheSim() || !channel_.HasData())
     {
         return;
     }
@@ -168,7 +171,7 @@ void Pmdg777DataClient::MaybeProbeToggle()
     }
 
     probeToggleSent_ = true;
-    probe::Line(QStringLiteral("probe pmdg-777 toggling door slot=%1 event=%2 was=%3")
+    probe::Line(probe::Channel::Writes, QStringLiteral("probe pmdg-777 toggling door slot=%1 event=%2 was=%3")
                 .arg(slot)
                 .arg(DoorEventOffset(slot))
                 .arg(DoorState(slot)));
@@ -189,7 +192,7 @@ void Pmdg777DataClient::ReportProbe() const
     }
 
     const PMDG_777X_Data& data = channel_.Data();
-    probe::Change("pmdg777.doors",
+    probe::Change(probe::Channel::AircraftVendor, "pmdg777.doors",
                   QStringLiteral("sdk   pmdg-777 DOOR_state=[%1] cockpit=%2 chocks=%3 brake=%4 "
                                  "extAvail=[%5,%6] extOn=[%7,%8]")
                   .arg(states.join(QLatin1Char(',')))

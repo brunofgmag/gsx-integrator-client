@@ -139,7 +139,8 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("engineConfirmationAdvisoryText"), view_->GetEngineConfirmationAdvisoryText());
     state.insert(QLatin1String("servicesAdvisoryText"), view_->GetServicesAdvisoryText());
     state.insert(QLatin1String("servicesWaitSeconds"), view_->GetServicesWaitSeconds());
-    state.insert(QLatin1String("openDoorAdvisoryText"), OperationsViewModel::GetOpenDoorAdvisoryText());
+    state.insert(QLatin1String("openDoorAdvisoryText"), view_->GetOpenDoorAdvisoryText());
+    state.insert(QLatin1String("advisoryLabel"), OperationsViewModel::GetAdvisoryLabel());
     state.insert(QLatin1String("serviceInterruptedAdvisoryText"),
                  OperationsViewModel::GetServiceInterruptedAdvisoryText());
     state.insert(QLatin1String("gsxProfileFixable"), view_->IsGsxProfileFixable());

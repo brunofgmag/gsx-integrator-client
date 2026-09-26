@@ -15,7 +15,7 @@ ColumnLayout {
         Layout.fillWidth: true
         title: qsTr("Call GPU & chocks")
         caption: qsTr("Places ground power and chocks at the gate, removes them before pushback")
-        helpText: qsTr("Only on aircraft that accept external chocks control.")
+        helpText: qsTr("Chocks are only placed on aircraft that let the client control them.")
         checked: root.settingsVm.callGpu
         onToggled: checked => root.settingsVm.callGpu = checked
     }
@@ -24,7 +24,7 @@ ColumnLayout {
         Layout.fillWidth: true
         title: qsTr("Call GPU & chocks on arrival")
         caption: qsTr("Places ground power and chocks with engines off and the brake set")
-        helpText: qsTr("Only on aircraft that accept external chocks control.")
+        helpText: qsTr("Chocks are only placed on aircraft that let the client control them.")
         checked: root.settingsVm.callGpuOnArrival
         onToggled: checked => root.settingsVm.callGpuOnArrival = checked
     }
@@ -35,6 +35,14 @@ ColumnLayout {
         helpText: qsTr("Cargo aircraft skip catering automatically, even when this is on.")
         checked: root.settingsVm.callCatering
         onToggled: checked => root.settingsVm.callCatering = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        title: qsTr("Call boarding early on refuel")
+        caption: qsTr("Requests boarding once refueling is under way (1%) instead of at 75%")
+        checked: root.settingsVm.callBoardingEarly
+        onToggled: checked => root.settingsVm.callBoardingEarly = checked
     }
 
     SwitchRow {
@@ -93,7 +101,7 @@ ColumnLayout {
         Layout.fillWidth: true
         title: qsTr("Always use aircraft stairs")
         caption: qsTr("Answers \"Yes\" when GSX offers the aircraft's own airstairs")
-        helpText: qsTr("GSX only asks this on aircraft that have their own airstairs. When off, the integrator answers with the airport stairs.")
+        helpText: qsTr("GSX only asks this on aircraft that have their own airstairs. When off, the client answers with the airport stairs.")
         checked: root.settingsVm.useAircraftStairs
         onToggled: checked => root.settingsVm.useAircraftStairs = checked
     }

@@ -22,6 +22,9 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
         WRITE SetSimbriefPilotIdText NOTIFY SimbriefPilotIdTextChanged)
     Q_PROPERTY(bool streamerMode READ GetStreamerMode WRITE SetStreamerMode NOTIFY StreamerModeChanged)
     Q_PROPERTY(QString fuelRateText READ GetFuelRateText WRITE SetFuelRateText NOTIFY FuelRateTextChanged)
+    Q_PROPERTY(int fuelRateModeIndex READ GetFuelRateModeIndex
+        WRITE SetFuelRateModeIndex NOTIFY FuelRateModeChanged)
+    Q_PROPERTY(bool fuelRateEditable READ IsFuelRateEditable NOTIFY FuelRateModeChanged)
     Q_PROPERTY(bool weightIsLb READ GetWeightIsLb NOTIFY WeightUnitDisplayChanged)
     Q_PROPERTY(QString fuelRateUnitText READ GetFuelRateUnitText NOTIFY WeightUnitDisplayChanged)
     Q_PROPERTY(bool autoSelectGsxChoice READ GetAutoSelectGsxChoice
@@ -36,6 +39,8 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(bool skipReposition READ GetSkipReposition WRITE SetSkipReposition NOTIFY SkipRepositionChanged)
     Q_PROPERTY(bool callGpu READ GetCallGpu WRITE SetCallGpu NOTIFY CallGpuChanged)
     Q_PROPERTY(bool callGpuOnArrival READ GetCallGpuOnArrival WRITE SetCallGpuOnArrival NOTIFY CallGpuOnArrivalChanged)
+    Q_PROPERTY(bool callBoardingEarly READ GetCallBoardingEarly
+        WRITE SetCallBoardingEarly NOTIFY CallBoardingEarlyChanged)
     Q_PROPERTY(bool callCatering READ GetCallCatering WRITE SetCallCatering NOTIFY CallCateringChanged)
     Q_PROPERTY(bool callLavatory READ GetCallLavatory WRITE SetCallLavatory NOTIFY CallLavatoryChanged)
     Q_PROPERTY(bool callWater READ GetCallWater WRITE SetCallWater NOTIFY CallWaterChanged)
@@ -52,6 +57,10 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(bool closeToTray READ GetCloseToTray WRITE SetCloseToTray NOTIFY CloseToTrayChanged)
     Q_PROPERTY(bool minimizeToTray READ GetMinimizeToTray WRITE SetMinimizeToTray NOTIFY MinimizeToTrayChanged)
     Q_PROPERTY(bool trayTipShown READ GetTrayTipShown WRITE SetTrayTipShown NOTIFY TrayTipShownChanged)
+    Q_PROPERTY(bool loggingEnabled READ GetLoggingEnabled WRITE SetLoggingEnabled NOTIFY LoggingEnabledChanged)
+    Q_PROPERTY(bool loggingActive READ GetLoggingActive NOTIFY LoggingActiveChanged)
+    Q_PROPERTY(bool debugToolsAvailable READ AreDebugToolsAvailable CONSTANT)
+    Q_PROPERTY(QString logLocation READ GetLogLocation NOTIFY LogLocationChanged)
     Q_PROPERTY(bool canSave READ CanSave NOTIFY ValidationChanged)
     Q_PROPERTY(QString validationMessage READ GetValidationMessage NOTIFY ValidationChanged)
     Q_PROPERTY(QString saveMessage READ GetSaveMessage NOTIFY SaveResultChanged)
@@ -66,12 +75,19 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
         WRITE SetProfileUseGlobal NOTIFY ProfileDraftChanged)
     Q_PROPERTY(QString profileFuelRateText READ GetProfileFuelRateText
         WRITE SetProfileFuelRateText NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(int profileFuelRateModeIndex READ GetProfileFuelRateModeIndex
+        WRITE SetProfileFuelRateModeIndex NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profileFuelRateEditable READ IsProfileFuelRateEditable NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(QString profileRecommendedFuelRateText READ GetProfileRecommendedFuelRateText
+        NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileSkipReposition READ GetProfileSkipReposition
         WRITE SetProfileSkipReposition NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileCallGpu READ GetProfileCallGpu
         WRITE SetProfileCallGpu NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileCallGpuOnArrival READ GetProfileCallGpuOnArrival
         WRITE SetProfileCallGpuOnArrival NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profileCallBoardingEarly READ GetProfileCallBoardingEarly
+        WRITE SetProfileCallBoardingEarly NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileCallCatering READ GetProfileCallCatering
         WRITE SetProfileCallCatering NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileCallLavatory READ GetProfileCallLavatory
@@ -108,8 +124,12 @@ public:
     [[nodiscard]] bool GetStreamerMode() const;
     void SetStreamerMode(bool enabled);
 
-    [[nodiscard]] QString GetFuelRateText() const override;
+    [[nodiscard]] QString GetFuelRateText() const;
     void SetFuelRateText(const QString& rate);
+
+    [[nodiscard]] int GetFuelRateModeIndex() const;
+    void SetFuelRateModeIndex(int index);
+    [[nodiscard]] bool IsFuelRateEditable() const;
 
     [[nodiscard]] bool GetAutoSelectGsxChoice() const;
     void SetAutoSelectGsxChoice(bool enabled);
@@ -139,6 +159,9 @@ public:
 
     [[nodiscard]] bool GetCallGpuOnArrival() const;
     void SetCallGpuOnArrival(bool enabled);
+
+    [[nodiscard]] bool GetCallBoardingEarly() const;
+    void SetCallBoardingEarly(bool enabled);
 
     [[nodiscard]] bool GetCallCatering() const;
     void SetCallCatering(bool enabled);
@@ -189,6 +212,14 @@ public:
     [[nodiscard]] bool GetTrayTipShown() const;
     void SetTrayTipShown(bool shown);
 
+    [[nodiscard]] bool GetLoggingEnabled() const;
+    void SetLoggingEnabled(bool enabled);
+    [[nodiscard]] bool GetLoggingActive() const;
+    void SetLoggingActive(bool active);
+    [[nodiscard]] static bool AreDebugToolsAvailable();
+    [[nodiscard]] QString GetLogLocation() const;
+    void SetLogLocation(const QString& location);
+
     void RetranslateUi();
 
     [[nodiscard]] bool CanSave() const;
@@ -215,6 +246,11 @@ public:
     [[nodiscard]] QString GetProfileFuelRateText() const;
     void SetProfileFuelRateText(const QString& rate);
 
+    [[nodiscard]] int GetProfileFuelRateModeIndex() const;
+    void SetProfileFuelRateModeIndex(int index);
+    [[nodiscard]] bool IsProfileFuelRateEditable() const;
+    [[nodiscard]] QString GetProfileRecommendedFuelRateText() const;
+
     [[nodiscard]] bool GetProfileSkipReposition() const;
     void SetProfileSkipReposition(bool enabled);
 
@@ -223,6 +259,9 @@ public:
 
     [[nodiscard]] bool GetProfileCallGpuOnArrival() const;
     void SetProfileCallGpuOnArrival(bool enabled);
+
+    [[nodiscard]] bool GetProfileCallBoardingEarly() const;
+    void SetProfileCallBoardingEarly(bool enabled);
 
     [[nodiscard]] bool GetProfileCallCatering() const;
     void SetProfileCallCatering(bool enabled);
@@ -240,6 +279,7 @@ signals:
     void SimbriefPilotIdTextChanged();
     void StreamerModeChanged();
     void FuelRateTextChanged();
+    void FuelRateModeChanged();
     void AutoSelectGsxChoiceChanged();
     void AutoDeiceChanged();
     void UseAircraftStairsChanged();
@@ -250,6 +290,7 @@ signals:
     void SkipRepositionChanged();
     void CallGpuChanged();
     void CallGpuOnArrivalChanged();
+    void CallBoardingEarlyChanged();
     void CallCateringChanged();
     void CallLavatoryChanged();
     void CallWaterChanged();
@@ -266,6 +307,9 @@ signals:
     void CloseToTrayChanged();
     void MinimizeToTrayChanged();
     void TrayTipShownChanged();
+    void LoggingEnabledChanged();
+    void LoggingActiveChanged();
+    void LogLocationChanged();
     void ValidationChanged();
     void SaveResultChanged();
     void ProfileModelChanged();
@@ -285,10 +329,12 @@ private:
     struct ProfileDraft
     {
         bool useGlobal = true;
+        FuelRateMode fuelRateMode = FuelRateMode::Recommended;
         QString fuelRateText;
         bool skipReposition = false;
         bool callGpu = false;
         bool callGpuOnArrival = false;
+        bool callBoardingEarly = false;
         bool callCatering = false;
         bool callLavatory = false;
         bool callWater = false;
@@ -329,11 +375,14 @@ private:
     AppSettings settings_;
 
     QString activeRenderer_;
+    bool loggingActive_ = false;
+    QString logLocation_;
 
     std::function<bool()> systemDarkProvider_;
 
     QString simbriefPilotIdText_;
     QString fuelRateText_;
+    FuelRateMode fuelRateMode_ = FuelRateMode::Recommended;
     bool displayIsLb_ = false;
     QString saveMessage_;
     bool saveError_ = false;

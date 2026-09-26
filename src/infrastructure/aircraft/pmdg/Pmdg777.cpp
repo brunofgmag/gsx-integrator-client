@@ -16,9 +16,13 @@ using namespace simvars;
 
 namespace
 {
+    constexpr double kRecommendedFuelRateKgs = 50.0;
+
     constexpr auto kSmartSwitchCaptLVar = "switch_554_a";
     constexpr auto kSmartSwitchFoLVar = "switch_773_a";
     constexpr double kSmartSwitchNeutral = 50.0;
+    constexpr auto kSmartSwitchControl = "MIC/INT";
+    constexpr auto kSmartSwitchSide = "INT";
 
     constexpr int kDoorSlots = 16;
     constexpr int kMainDeckCargoDoor = 12;
@@ -185,7 +189,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, kTitle300Er}
         },
-        &CreatePmdg777, "pmdg-777-300er", "77W", RefuelBy::Client
+        &CreatePmdg777, "pmdg-777-300er", "77W", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
     };
 
     const AircraftDescriptor kPmdg777FreighterDescriptor{
@@ -193,7 +197,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, kTitleFreighter}
         },
-        &CreatePmdg777, "pmdg-777f", "77F", RefuelBy::Client
+        &CreatePmdg777, "pmdg-777f", "77F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
     };
 
     const AircraftDescriptor kPmdg777200LrDescriptor{
@@ -201,7 +205,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, kTitle200Lr}
         },
-        &CreatePmdg777, "pmdg-777-200lr", "77L", RefuelBy::Client
+        &CreatePmdg777, "pmdg-777-200lr", "77L", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
     };
 
     const AircraftDescriptor kPmdg777200ErDescriptor{
@@ -209,7 +213,7 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, kTitle200Er}
         },
-        &CreatePmdg777, "pmdg-777-200er", "77ER", RefuelBy::Client
+        &CreatePmdg777, "pmdg-777-200er", "77ER", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
     };
 
     [[maybe_unused]] const AircraftRegistration kPmdg777300ErRegistration{kPmdg777300ErDescriptor};

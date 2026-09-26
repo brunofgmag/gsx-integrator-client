@@ -1,6 +1,9 @@
 #include <algorithm>
 #include <string>
 
+#include <QtCore/QScopeGuard>
+#include <QtCore/QStringList>
+#include <QtCore/QTemporaryDir>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
@@ -10,6 +13,7 @@
 #include "../src/domain/turnaround/PilotTouch.h"
 #include "../src/application/RuntimeIntegratorService.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
+#include "../src/infrastructure/probe/ProbeChannels.h"
 #include "../src/infrastructure/simvars/SimVars.h"
 
 namespace
@@ -26,11 +30,18 @@ namespace
     constexpr auto kMd11Title = "TFDi Design MD-11 PAX";
     constexpr auto kMd11AtcModel = "MD11";
     constexpr auto kMd11ProfileId = "tfdi-md11";
+    constexpr auto kRj85Title = "Just Flight RJ85";
+    constexpr auto kRj85AtcModel = "RJ85";
+    constexpr auto kRj85ProfileId = "justflight-rj85";
+    constexpr double kRj85RecommendedFuelRateKgs = 12.0;
     constexpr auto kMd11EfbZfw = "L:MD11_EFB_PAYLOAD_ZFW";
     constexpr double kMd11EmptyWeightKg = 150000.0;
     constexpr double kJetwayInPlace = 5.0;
     constexpr int kFlowTickBudget = 12;
     constexpr int kLoaderNoticeTickBudget = 120;
+    constexpr int kReconnectWaitMs = 6000;
+    constexpr int kPersonalPilotId = 4815162;
+    constexpr auto kOpeningSimConnect = "Opening SimConnect...";
 
     void PushSimRunning(const int running)
     {
@@ -108,7 +119,8 @@ namespace
                                    [defineId](const auto& write) { return write.first == defineId; });
     }
 
-    bool DetectTheMd11WithTheGsxUp(const IntegratorRuntime& runtime, QSignalSpy& updated)
+    bool DetectWithTheGsxUp(const IntegratorRuntime& runtime, QSignalSpy& updated, const char* titleText,
+                            const char* atcModelText, const char* profileId)
     {
         PushUnpaused();
         if (!TickAndWait(updated))
@@ -123,10 +135,15 @@ namespace
             return false;
         }
 
-        FakeSimConnectApi::PushSimObjectString(title, kMd11Title);
-        FakeSimConnectApi::PushSimObjectString(atcModel, kMd11AtcModel);
+        FakeSimConnectApi::PushSimObjectString(title, titleText);
+        FakeSimConnectApi::PushSimObjectString(atcModel, atcModelText);
 
-        return TickAndWait(updated) && runtime.GetAircraftProfileId() == kMd11ProfileId;
+        return TickAndWait(updated) && runtime.GetAircraftProfileId() == profileId;
+    }
+
+    bool DetectTheMd11WithTheGsxUp(const IntegratorRuntime& runtime, QSignalSpy& updated)
+    {
+        return DetectWithTheGsxUp(runtime, updated, kMd11Title, kMd11AtcModel, kMd11ProfileId);
     }
 
     bool DriveTheFlowInto(const TurnaroundPhase phase, const IntegratorRuntime& runtime, QSignalSpy& updated)
@@ -157,6 +174,60 @@ namespace
             ++notifications;
         }
     };
+
+#ifndef NDEBUG
+    void TurnTheProbeOff()
+    {
+        probe::SetEnabled(false);
+        probe::ResetForTest();
+    }
+#endif
+
+    class LogCapture
+    {
+    public:
+        LogCapture()
+            : previous_(qInstallMessageHandler(Collect))
+        {
+            Lines().clear();
+        }
+
+        ~LogCapture()
+        {
+            qInstallMessageHandler(previous_);
+        }
+
+        LogCapture(const LogCapture&) = delete;
+        LogCapture& operator=(const LogCapture&) = delete;
+        LogCapture(LogCapture&&) = delete;
+        LogCapture& operator=(LogCapture&&) = delete;
+
+        [[nodiscard]] static qsizetype Count(const QString& fragment)
+        {
+            return std::ranges::count_if(Lines(),
+                                         [&fragment](const QString& line) { return line.contains(fragment); });
+        }
+
+        [[nodiscard]] static bool Contains(const QString& fragment)
+        {
+            return Count(fragment) > 0;
+        }
+
+    private:
+        static QStringList& Lines()
+        {
+            static QStringList lines;
+
+            return lines;
+        }
+
+        static void Collect(QtMsgType, const QMessageLogContext&, const QString& message)
+        {
+            Lines().append(message);
+        }
+
+        QtMessageHandler previous_;
+    };
 }
 
 class RuntimeIntegratorServiceTest final : public QObject
@@ -164,6 +235,7 @@ class RuntimeIntegratorServiceTest final : public QObject
     Q_OBJECT
 
 private slots:
+    void initTestCase();
     static void init();
 
     static void freshSnapshotHasDisconnectedDefaults();
@@ -171,6 +243,7 @@ private slots:
     static void fixGsxProfileWithoutConflictFails();
     static void fixPmdgOptionsWithoutConflictFails();
     static void applySettingsPushesEffectiveSettings();
+    static void theAircraftRecommendedFuelRateReachesTheEffectiveSettings();
     static void observersAreDedupedAndNotified();
     static void automationToggleEmitsOncePerChange();
     static void runtimeGettersOnEmptyRuntime();
@@ -189,9 +262,24 @@ private slots:
     static void theAircraftIsDetectedOnlyOnceTheAtcModelArrives();
     static void theSnapshotCountsTheJetwayWaitDownWithTheFlow();
     static void theSnapshotCarriesTheLoaderCountdownWhileTheLoaderHoldsBoarding();
+    static void theSnapshotCarriesTheDeboardingWaitOnceTheGsxTakesTheRequest();
     static void theSlowTickWritesNothingWhileTheGsxIsDown();
     static void theFuelWaitsUntilTheRemoteApiAnnouncesItsConnection();
+    static void openingSimConnectIsAnnouncedOncePerDisconnectedPeriod();
+    static void theLoggingToggleAloneLeavesTheAircraftUntouched();
+    static void theRunHeaderNamesTheRunFolderAndLeavesThePilotIdOut();
+
+private:
+    QTemporaryDir probeDirectory_;
 };
+
+void RuntimeIntegratorServiceTest::initTestCase()
+{
+    qunsetenv("GSXI_PROBE");
+
+    QVERIFY(probeDirectory_.isValid());
+    qputenv("GSXI_PROBE_DIR", probeDirectory_.path().toUtf8());
+}
 
 void RuntimeIntegratorServiceTest::init()
 {
@@ -222,6 +310,7 @@ void RuntimeIntegratorServiceTest::freshSnapshotHasDisconnectedDefaults()
     QVERIFY(!snapshot.pmdgOptionsFixable);
     QVERIFY(!snapshot.cargoAircraft);
     QVERIFY(!snapshot.engineerPanelExternalPower);
+    QVERIFY(!snapshot.efbFlightPlanOnDeparturePage);
     QCOMPARE(snapshot.aircraftName, std::string{});
     QCOMPARE(snapshot.aircraftProfileId, std::string{});
     QCOMPARE(snapshot.phase, TurnaroundPhase::WaitingSupportedAircraft);
@@ -299,14 +388,40 @@ void RuntimeIntegratorServiceTest::applySettingsPushesEffectiveSettings()
 
     AppSettings settings;
     settings.simbriefPilotId = 123;
+    settings.fuelRateMode = FuelRateMode::Manual;
     settings.fuelRateKgs = 7.5;
     settings.callCatering = true;
+    settings.callBoardingEarly = true;
 
     service.ApplySettings(settings);
 
     QCOMPARE(runtime.Settings().simbriefPilotId, 123);
     QCOMPARE(runtime.Settings().fuelRateKgs, 7.5);
     QCOMPARE(runtime.Settings().callCatering, true);
+    QCOMPARE(runtime.Settings().callBoardingEarly, true);
+    QCOMPARE(runtime.Snapshot().fuelRateKgs.value, 7.5);
+}
+
+void RuntimeIntegratorServiceTest::theAircraftRecommendedFuelRateReachesTheEffectiveSettings()
+{
+    IntegratorRuntime runtime;
+    RuntimeIntegratorService service(&runtime);
+
+    AppSettings settings;
+    settings.fuelRateKgs = 7.5;
+    service.ApplySettings(settings);
+
+    QCOMPARE(runtime.AircraftRecommendedFuelRateKgs(), 0.0);
+    QCOMPARE(runtime.Settings().fuelRateKgs, AutomationSettings::kDefaultFuelRateKgs);
+
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kRj85Title, kRj85AtcModel, kRj85ProfileId));
+
+    QCOMPARE(runtime.AircraftRecommendedFuelRateKgs(), kRj85RecommendedFuelRateKgs);
+    QCOMPARE(runtime.Settings().fuelRateKgs, kRj85RecommendedFuelRateKgs);
+    QCOMPARE(runtime.Snapshot().fuelRateKgs.value, kRj85RecommendedFuelRateKgs);
 }
 
 void RuntimeIntegratorServiceTest::observersAreDedupedAndNotified()
@@ -365,6 +480,7 @@ void RuntimeIntegratorServiceTest::runtimeGettersOnEmptyRuntime()
     QVERIFY(!snapshot.refuelBySelf);
     QVERIFY(!snapshot.cargoAircraft);
     QVERIFY(!snapshot.engineerPanelExternalPower);
+    QVERIFY(!snapshot.efbFlightPlanOnDeparturePage);
     QVERIFY(!snapshot.gsxProfileConflict);
     QVERIFY(!snapshot.gsxProfileFixable);
     QVERIFY(!snapshot.pmdgOptionsConflict);
@@ -676,8 +792,8 @@ void RuntimeIntegratorServiceTest::theSnapshotCarriesTheLoaderCountdownWhileTheL
 
     QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
 
-    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::Boarding) - static_cast<int>(runtime.GetPhase()));
-    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::Boarding);
+    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::Loading) - static_cast<int>(runtime.GetPhase()));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::Loading);
 
     QVERIFY(PushLVar(gsx::lvars::kBoardingState, static_cast<double>(GsxStateStatus::Active)));
     QVERIFY(TickAndWait(updated));
@@ -693,6 +809,35 @@ void RuntimeIntegratorServiceTest::theSnapshotCarriesTheLoaderCountdownWhileTheL
 
     QCOMPARE(snapshot.loaderHoldingBoarding, CargoLoader::MainDeck);
     QVERIFY(snapshot.loaderDoorWaitSeconds > 0);
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
+}
+
+void RuntimeIntegratorServiceTest::theSnapshotCarriesTheDeboardingWaitOnceTheGsxTakesTheRequest()
+{
+#ifndef NDEBUG
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+
+    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::RequestDeboarding)
+                           - static_cast<int>(runtime.GetPhase()));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::RequestDeboarding);
+
+    QVERIFY(PushLVar(gsx::lvars::kDeboardingState, static_cast<double>(GsxStateStatus::Unavailable)));
+    QVERIFY(TickAndWait(updated));
+
+    QVERIFY(!runtime.Snapshot().deboardingAwaitsGsx);
+
+    QVERIFY(PushLVar(gsx::lvars::kDeboardingState, static_cast<double>(GsxStateStatus::Requested)));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::RequestDeboarding);
+    QVERIFY(runtime.Snapshot().deboardingAwaitsGsx);
 #else
     QSKIP("DebugSkipPhase is compiled out of Release builds");
 #endif
@@ -742,8 +887,8 @@ void RuntimeIntegratorServiceTest::theFuelWaitsUntilTheRemoteApiAnnouncesItsConn
 
     QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
 
-    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::Refueling) - static_cast<int>(runtime.GetPhase()));
-    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::Refueling);
+    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::Loading) - static_cast<int>(runtime.GetPhase()));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::Loading);
 
     QVERIFY(PushLVar(gsx::lvars::kRefuelingState, static_cast<double>(GsxStateStatus::Completed)));
     QVERIFY(TickAndWait(updated));
@@ -756,6 +901,84 @@ void RuntimeIntegratorServiceTest::theFuelWaitsUntilTheRemoteApiAnnouncesItsConn
     QCOMPARE(runtime.Snapshot().fuelProgress, 100.0);
 #else
     QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
+}
+
+void RuntimeIntegratorServiceTest::openingSimConnectIsAnnouncedOncePerDisconnectedPeriod()
+{
+    const LogCapture log;
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QCOMPARE(LogCapture::Count(QLatin1String(kOpeningSimConnect)), 1);
+
+    const QSignalSpy quits(&runtime, &IntegratorRuntime::SimulatorQuit);
+    FakeSimConnectApi::openSucceeds = false;
+    constexpr SIMCONNECT_RECV quit{};
+    FakeSimConnectApi::Push(quit, SIMCONNECT_RECV_ID_QUIT);
+
+    QVERIFY(QTest::qWaitFor([&quits] { return quits.count() > 0; }, 2000));
+
+    QSignalSpy retries(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(retries.wait(kReconnectWaitMs));
+    QVERIFY(!runtime.IsConnected());
+    QCOMPARE(LogCapture::Count(QLatin1String(kOpeningSimConnect)), 2);
+
+    QVERIFY(retries.wait(kReconnectWaitMs));
+    QVERIFY(!runtime.IsConnected());
+    QCOMPARE(LogCapture::Count(QLatin1String(kOpeningSimConnect)), 2);
+}
+
+void RuntimeIntegratorServiceTest::theLoggingToggleAloneLeavesTheAircraftUntouched()
+{
+#ifndef NDEBUG
+    probe::SetEnabled(true);
+    const auto probeOff = qScopeGuard(TurnTheProbeOff);
+
+    IntegratorRuntime runtime;
+
+    AutomationSettings settings;
+    settings.autoStartFlow = false;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(!DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+
+    QVERIFY(!runtime.Snapshot().automationEnabled);
+    QCOMPARE(runtime.GetAircraftProfileId(), std::string{});
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void RuntimeIntegratorServiceTest::theRunHeaderNamesTheRunFolderAndLeavesThePilotIdOut()
+{
+#ifndef NDEBUG
+    probe::SetEnabled(true);
+    const auto probeOff = qScopeGuard(TurnTheProbeOff);
+
+    const LogCapture log;
+    IntegratorRuntime runtime;
+    RuntimeIntegratorService service(&runtime);
+
+    AppSettings settings;
+    settings.simbriefPilotId = kPersonalPilotId;
+    settings.callCatering = true;
+    service.ApplySettings(settings);
+
+    runtime.Setup();
+
+    QVERIFY(LogCapture::Contains(QStringLiteral("Logging run: folder=") + probe::RunLocation()));
+    QVERIFY(LogCapture::Contains(QStringLiteral("build=debug")));
+    QVERIFY(LogCapture::Contains(QStringLiteral("simbriefPilotId=set")));
+    QVERIFY(LogCapture::Contains(QStringLiteral("callCatering=1")));
+    QVERIFY(!LogCapture::Contains(QString::number(kPersonalPilotId)));
+#else
+    QSKIP("probe recording is compiled out of Release builds");
 #endif
 }
 

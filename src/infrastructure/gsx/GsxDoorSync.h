@@ -50,6 +50,7 @@ private:
 
     VariableReader* variableGateway_;
     std::array<double, static_cast<std::size_t>(GsxDoor::Count)> lastTargets_{};
+    std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> holdLogged_{};
     std::array<ExitWatch, static_cast<std::size_t>(GsxDoor::Count)> exits_{};
     bool heldForDeparture_ = false;
     bool couatlSeenStarted_ = false;

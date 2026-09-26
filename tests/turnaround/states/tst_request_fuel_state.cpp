@@ -24,6 +24,8 @@ private slots:
     static void flagsAPlanThatExceedsTheAirframeCapacity();
     static void staysQuietWhenThePlanFitsTheTanks();
     static void staysQuietWhenTheAircraftDoesNotKnowItsCapacity();
+    static void flagsThePlanOnceTheCapacityArrivesAfterTheRequest();
+    static void warnsOnlyOnceWhileItKeepsWatchingTheCapacity();
     static void doesNotAskAgainForTheRefuelingItSawFinish();
 };
 
@@ -57,7 +59,7 @@ void RequestFuelStateTest::advancesWhenRequestFuelServiceIsActive()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::Refueling);
+    QCOMPARE(transition->next, TurnaroundPhase::Loading);
     QCOMPARE(f.menuGateway.refuelingCalls, 1);
     QCOMPARE(f.gsxService.takeOverCalls, 1);
     QVERIFY(f.ctx.data.refuelingRequested);
@@ -103,7 +105,7 @@ void RequestFuelStateTest::advancesWhenRefuelingAlreadyCompleted()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::Refueling);
+    QCOMPARE(transition->next, TurnaroundPhase::Loading);
     QCOMPARE(f.menuGateway.refuelingCalls, 0);
 }
 
@@ -157,7 +159,7 @@ void RequestFuelStateTest::advancesFromExternalRefuelingWhileHolding()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::Refueling);
+    QCOMPARE(transition->next, TurnaroundPhase::Loading);
     QCOMPARE(f.menuGateway.refuelingCalls, 0);
 }
 
@@ -298,6 +300,45 @@ void RequestFuelStateTest::staysQuietWhenTheAircraftDoesNotKnowItsCapacity()
     QVERIFY(!f.ctx.data.fuelPlanOverCapacity);
 }
 
+void RequestFuelStateTest::flagsThePlanOnceTheCapacityArrivesAfterTheRequest()
+{
+    TurnaroundStateFixture f;
+    RequestFuelState state;
+
+    f.gsxService.refuelingState = GsxStateStatus::Callable;
+    f.ctx.data.plannedFuelKg = 10360.0;
+    f.aircraft.fuelCapacityKg = 9418.0;
+    f.aircraft.fuelCapacityReadsBeforeArrival = 1;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.menuGateway.refuelingCalls, 1);
+    QVERIFY(!f.ctx.data.fuelPlanOverCapacity);
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QVERIFY(f.ctx.data.fuelPlanOverCapacity);
+}
+
+void RequestFuelStateTest::warnsOnlyOnceWhileItKeepsWatchingTheCapacity()
+{
+    TurnaroundStateFixture f;
+    RequestFuelState state;
+
+    f.gsxService.refuelingState = GsxStateStatus::Callable;
+    f.ctx.data.plannedFuelKg = 10360.0;
+    f.aircraft.fuelCapacityKg = 9418.0;
+    f.aircraft.fuelCapacityReadsBeforeArrival = 3;
+
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QVERIFY(f.ctx.data.fuelPlanOverCapacity);
+    QCOMPARE(f.logger.messages.size(), 1U);
+}
+
 void RequestFuelStateTest::doesNotAskAgainForTheRefuelingItSawFinish()
 {
     TurnaroundStateFixture f;
@@ -309,7 +350,7 @@ void RequestFuelStateTest::doesNotAskAgainForTheRefuelingItSawFinish()
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::Refueling);
+    QCOMPARE(transition->next, TurnaroundPhase::Loading);
     QCOMPARE(f.menuGateway.refuelingCalls, 0);
     QCOMPARE(f.gsxService.takeOverCalls, 0);
     QVERIFY(!f.ctx.data.refuelingRequested);

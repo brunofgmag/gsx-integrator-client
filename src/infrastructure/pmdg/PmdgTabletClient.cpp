@@ -183,7 +183,7 @@ void PmdgTabletClient::Poll()
 
 void PmdgTabletClient::MaybeProbePress()
 {
-    if (probePressSent_ || !probe::IsOn() || !IsAvailable())
+    if (probePressSent_ || !probe::ActsOnTheSim() || !IsAvailable())
     {
         return;
     }
@@ -195,7 +195,7 @@ void PmdgTabletClient::MaybeProbePress()
     }
 
     probePressSent_ = true;
-    probe::Line(QStringLiteral("probe pmdg tablet pressing %1").arg(conn));
+    probe::Line(probe::Channel::Writes, QStringLiteral("probe pmdg tablet pressing %1").arg(conn));
     SendToPlane(BuildGroundConn(conn.toStdString()));
 }
 
@@ -381,7 +381,7 @@ void PmdgTabletClient::ReportProbe(const std::string& payload)
         return;
     }
 
-    probe::Change("efb." + tag.toStdString(),
+    probe::Change(probe::Channel::AircraftVendor, "efb." + tag.toStdString(),
                   QString::fromStdString(ProbeSignature(payload)),
                   QStringLiteral("efb   %1").arg(QString::fromStdString(payload)));
 }
@@ -497,7 +497,7 @@ void PmdgTabletClient::SendToPlane(const std::string& payload) const
                             .object().value(QStringLiteral("message_tag")).toString();
         if (tag != QLatin1String(kTagQueryState))
         {
-            probe::Line(QStringLiteral("write efb   %1").arg(QString::fromStdString(payload)));
+            probe::Line(probe::Channel::Writes, QStringLiteral("write efb   %1").arg(QString::fromStdString(payload)));
         }
     }
 

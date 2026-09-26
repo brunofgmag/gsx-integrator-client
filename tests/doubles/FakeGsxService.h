@@ -39,11 +39,13 @@ public:
     bool pushbackCompleted = false;
     bool deboardingCompleted = false;
     bool simbriefLoaded = false;
+    int simbriefGeneration = 0;
     std::string simbriefError;
     bool onGround = true;
     bool goodEngineStartConfirmation = false;
     GroundPowerStatus gpuStatus = GroundPowerStatus::Disconnected;
     int takeOverCalls = 0;
+    int turnaroundTurnedCalls = 0;
     bool couatlAlive = true;
     bool couatlRestartedBetweenTicks = false;
     bool gsxDownSinceLastObserve = false;
@@ -177,6 +179,7 @@ public:
     [[nodiscard]] bool IsJetwayOrStairsOperating() const override { return jetwayOrStairsOperating; }
     [[nodiscard]] bool IsServiceVehicleActive() const override { return serviceVehicleActive; }
     [[nodiscard]] bool IsSimbriefLoaded() const override { return simbriefLoaded; }
+    [[nodiscard]] int GetServedSimbriefGeneration() const override { return simbriefGeneration; }
     [[nodiscard]] bool IsAircraftOnGround() const override { return onGround; }
     [[nodiscard]] double GetGroundSpeedKnots() const override { return groundSpeedKnots; }
     [[nodiscard]] bool IsGoodEngineStartConfirmationEnabled() const override { return goodEngineStartConfirmation; }
@@ -210,6 +213,16 @@ public:
     void TakeOverFuelAndPayload() override
     {
         ++takeOverCalls;
+    }
+
+    void OnTurnaroundTurned() override
+    {
+        ++turnaroundTurnedCalls;
+        refuelingCompleted = false;
+        boardingCompleted = false;
+        pushbackCompleted = false;
+        deboardingCompleted = false;
+        couatlDiedDuringRun = {};
     }
 };
 

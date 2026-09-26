@@ -18,8 +18,11 @@ using namespace simvars;
 
 namespace
 {
+    constexpr double kRecommendedFuelRateKgs = 0.0;
+
     constexpr auto kSmartSwitch = "MD11_PED_CPT_AUDIO_PNL_INT_RADIO_SW";
     constexpr double kSmartSwitchNeutral = 1.0;
+    constexpr auto kSmartSwitchControl = "INT/RAD";
 
     constexpr auto kPowerOnLVar = "MD11_CABIN_POWER";
     constexpr auto kBatteryOnLVar = "MD11_OVHD_ELEC_BATT_BT";
@@ -225,7 +228,7 @@ namespace
             {MatchField::AtcModel, MatchOp::Equals, "MD11"},
             {MatchField::AtcModel, MatchOp::Equals, "MD11F"}
         },
-        &CreateTfdiMd11, "tfdi-md11", "MD11", RefuelBy::Self
+        &CreateTfdiMd11, "tfdi-md11", "MD11", RefuelBy::Self, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
     };
 
     [[maybe_unused]] const AircraftRegistration kTfdiMd11Registration{kTfdiMd11Descriptor};

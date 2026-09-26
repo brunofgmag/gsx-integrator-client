@@ -25,9 +25,7 @@ namespace
         TurnaroundPhase::WaitingPowerOn,
         TurnaroundPhase::CallCatering,
         TurnaroundPhase::RequestFuel,
-        TurnaroundPhase::Refueling,
-        TurnaroundPhase::RequestBoarding,
-        TurnaroundPhase::Boarding,
+        TurnaroundPhase::Loading,
         TurnaroundPhase::WaitingReadyToPush,
         TurnaroundPhase::WaitCatering,
         TurnaroundPhase::RemoveGroundEquipment,
@@ -269,23 +267,16 @@ namespace
             f.gsxService.refuelingState = GsxStateStatus::Active;
             f.gsxService.hoseConnected = true;
 
-            TickTo(TurnaroundPhase::Refueling);
-        }
-
-        void BeginRefuelingDelay()
-        {
-            f.gsxService.refuelingState = GsxStateStatus::Completed;
-            f.gsxService.hoseConnected = false;
-
-            TickHolding(TurnaroundPhase::Refueling);
+            TickTo(TurnaroundPhase::Loading);
         }
 
         void CompleteRefueling()
         {
-            BeginRefuelingDelay();
-
+            f.gsxService.refuelingState = GsxStateStatus::Completed;
+            f.gsxService.hoseConnected = false;
             f.gsxService.boardingState = GsxStateStatus::Callable;
-            FinishDelay(30, TurnaroundPhase::RequestBoarding);
+
+            TickHolding(TurnaroundPhase::Loading);
         }
 
         void StartBoarding()
@@ -294,14 +285,14 @@ namespace
             f.gsxService.boardedPassengers = f.aircraft.plannedPax;
             f.gsxService.cargoPercent = 100.0;
 
-            TickTo(TurnaroundPhase::Boarding);
+            TickHolding(TurnaroundPhase::Loading);
         }
 
         void BeginBoardingDelay()
         {
             f.gsxService.boardingState = GsxStateStatus::Completed;
 
-            TickHolding(TurnaroundPhase::Boarding);
+            TickHolding(TurnaroundPhase::Loading);
         }
 
         void CompleteBoarding()
@@ -460,7 +451,7 @@ private slots:
     static void holdsRepositionUntilGsxAvailable();
     static void resetReturnsToWaitingSupportedAircraft();
     static void holdsAtRequestFuelUntilLoadingConfirmed();
-    static void waitsForRefuelingTransitionDelay();
+    static void theRefuelEndingAloneKeepsTheLoadingPhase();
     static void waitsWithTheWarningWhenTheCouatlDropsTheRefueling();
     static void aDelayedTransitionKeepsTheFastRulesRunning();
     static void theSlowTickActsOnlyWhenTheMachineIsDriving();
@@ -472,6 +463,8 @@ private slots:
     static void theCouatlDyingDuringTheBoardingHoldsTheFlowWithTheWarning();
     static void completesReachableWorkflowAndReturnsToStart();
     static void theTurnaroundTurnNotifiesTheMenuGateway();
+    static void theTurnaroundTurnForgetsTheGsxCompletions();
+    static void theSecondTurnaroundAsksForBoardingAgain();
     static void theStartOfThePushMovementNotifiesTheMenuGateway();
     static void aGsxRestartThatDropsThePushbackWarnsAndTheTaxiStillReachesTheArrival();
     static void publishesThatTheDeboardingWaitsForGsxUntilTheTurnaroundTurns();
@@ -669,22 +662,20 @@ void TurnaroundStateMachineTest::holdsAtRequestFuelUntilLoadingConfirmed()
     workflow.StartRefueling();
 }
 
-void TurnaroundStateMachineTest::waitsForRefuelingTransitionDelay()
+void TurnaroundStateMachineTest::theRefuelEndingAloneKeepsTheLoadingPhase()
 {
     TurnaroundWorkflow workflow;
     ReachRefueling(workflow);
 
-    workflow.BeginRefuelingDelay();
-
-    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 30);
-
-    workflow.FinishDelay(29, TurnaroundPhase::Refueling);
-
-    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 1);
-
-    workflow.TickTo(TurnaroundPhase::RequestBoarding);
+    workflow.CompleteRefueling();
 
     QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 0);
+    QCOMPARE(workflow.f.menuGateway.boardingCalls, 1);
+
+    for (int tick = 0; tick < 60; ++tick)
+    {
+        workflow.TickHolding(TurnaroundPhase::Loading);
+    }
 }
 
 void TurnaroundStateMachineTest::waitsForBoardingTransitionDelay()
@@ -693,7 +684,7 @@ void TurnaroundStateMachineTest::waitsForBoardingTransitionDelay()
     ReachBoarding(workflow);
 
     workflow.BeginBoardingDelay();
-    workflow.FinishDelay(59, TurnaroundPhase::Boarding);
+    workflow.FinishDelay(59, TurnaroundPhase::Loading);
     workflow.TickTo(TurnaroundPhase::WaitingReadyToPush);
 }
 
@@ -706,13 +697,13 @@ void TurnaroundStateMachineTest::holdsBoardingWhileCargoIsPending()
     workflow.f.gsxService.cargoPercent = 67.0;
     workflow.f.gsxService.boardingState = GsxStateStatus::Completed;
 
-    workflow.TickHolding(TurnaroundPhase::Boarding);
+    workflow.TickHolding(TurnaroundPhase::Loading);
     QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 0);
 
     workflow.f.gsxService.loaderWaitingForDoor = CargoLoader::None;
     workflow.f.gsxService.loadingCargo = true;
 
-    workflow.TickHolding(TurnaroundPhase::Boarding);
+    workflow.TickHolding(TurnaroundPhase::Loading);
     QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 0);
 
     workflow.f.gsxService.loadingCargo = false;
@@ -727,7 +718,7 @@ void TurnaroundStateMachineTest::theLoaderCountdownRunsOutOnTheTickTheClientGive
     ReachBoarding(workflow);
 
     workflow.f.gsxService.loaderWaitingForDoor = CargoLoader::Front;
-    workflow.TickHolding(TurnaroundPhase::Boarding);
+    workflow.TickHolding(TurnaroundPhase::Loading);
 
     QVERIFY(workflow.f.status.boardingProgress < 100.0);
 
@@ -736,7 +727,7 @@ void TurnaroundStateMachineTest::theLoaderCountdownRunsOutOnTheTickTheClientGive
 
     while (workflow.f.status.boardingProgress < 100.0 && ticks < 600)
     {
-        workflow.TickHolding(TurnaroundPhase::Boarding);
+        workflow.TickHolding(TurnaroundPhase::Loading);
         ++ticks;
 
         QCOMPARE(workflow.f.status.loaderDoorWaitSeconds, secondsLeft - 1);
@@ -752,10 +743,10 @@ void TurnaroundStateMachineTest::thePilotEndingTheBoardingFromTheGsxMenuComplete
 {
     TurnaroundWorkflow workflow;
     ReachBoarding(workflow);
-    workflow.TickHolding(TurnaroundPhase::Boarding);
+    workflow.TickHolding(TurnaroundPhase::Loading);
 
     workflow.f.gsxService.boardingState = GsxStateStatus::Callable;
-    workflow.TickHolding(TurnaroundPhase::Boarding);
+    workflow.TickHolding(TurnaroundPhase::Loading);
 
     QVERIFY(!workflow.f.status.serviceInterrupted);
     QVERIFY(!Logged(workflow, "GSX dropped the boarding it had already started"));
@@ -773,14 +764,14 @@ void TurnaroundStateMachineTest::aCompleteNowThatLeavesTheCargoFlagUpStillEndsTh
     workflow.f.aircraft.cargo = true;
     workflow.f.gsxService.cargoPercent = 0.0;
     workflow.f.gsxService.loadingCargo = true;
-    workflow.TickHolding(TurnaroundPhase::Boarding);
+    workflow.TickHolding(TurnaroundPhase::Loading);
 
     workflow.f.gsxService.boardingState = GsxStateStatus::Callable;
 
     int ticks = 0;
     while (workflow.machine.GetDelayTicksRemaining() == 0 && ticks < 600)
     {
-        workflow.TickHolding(TurnaroundPhase::Boarding);
+        workflow.TickHolding(TurnaroundPhase::Loading);
         ++ticks;
     }
 
@@ -797,14 +788,14 @@ void TurnaroundStateMachineTest::theCouatlDyingDuringTheBoardingHoldsTheFlowWith
 {
     TurnaroundWorkflow workflow;
     ReachBoarding(workflow);
-    workflow.TickHolding(TurnaroundPhase::Boarding);
+    workflow.TickHolding(TurnaroundPhase::Loading);
 
     workflow.f.gsxService.couatlAlive = false;
     workflow.f.gsxService.boardingState = GsxStateStatus::Callable;
 
     for (int tick = 0; tick < 61; ++tick)
     {
-        workflow.TickHolding(TurnaroundPhase::Boarding);
+        workflow.TickHolding(TurnaroundPhase::Loading);
     }
 
     QVERIFY(workflow.f.status.serviceInterrupted);
@@ -831,6 +822,86 @@ void TurnaroundStateMachineTest::theTurnaroundTurnNotifiesTheMenuGateway()
     workflow.CompleteDeboarding();
 
     QCOMPARE(workflow.f.menuGateway.turnaroundTurnedCalls, 1);
+}
+
+void TurnaroundStateMachineTest::theTurnaroundTurnForgetsTheGsxCompletions()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+    workflow.StartPushbackMovement();
+    workflow.ConfirmEngineStart();
+    workflow.Depart();
+    workflow.Land();
+    workflow.RequestDeboarding();
+    workflow.StartDeboarding();
+
+    QCOMPARE(workflow.f.gsxService.turnaroundTurnedCalls, 0);
+    QVERIFY(workflow.f.gsxService.WasStateCompleted(GsxState::Refueling));
+    QVERIFY(workflow.f.gsxService.WasStateCompleted(GsxState::Boarding));
+
+    workflow.CompleteDeboarding();
+
+    QCOMPARE(workflow.f.gsxService.turnaroundTurnedCalls, 1);
+    QVERIFY(!workflow.f.gsxService.WasStateCompleted(GsxState::Refueling));
+    QVERIFY(!workflow.f.gsxService.WasStateCompleted(GsxState::Boarding));
+}
+
+void TurnaroundStateMachineTest::theSecondTurnaroundAsksForBoardingAgain()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+    workflow.StartPushbackMovement();
+    workflow.ConfirmEngineStart();
+    workflow.Depart();
+    workflow.Land();
+    workflow.RequestDeboarding();
+    workflow.StartDeboarding();
+
+    workflow.f.gsxService.refuelingState = GsxStateStatus::Callable;
+    workflow.f.gsxService.boardingState = GsxStateStatus::Callable;
+    workflow.f.gsxService.boardedPassengers = 0;
+    workflow.f.gsxService.cargoPercent = 0.0;
+
+    workflow.CompleteDeboarding();
+    workflow.StartNewFlightCycle();
+
+    QCOMPARE(workflow.f.menuGateway.boardingCalls, 1);
+
+    workflow.f.aircraft.smartSwitchActivated = false;
+    workflow.f.aircraft.powered = false;
+    workflow.f.aircraft.readyToPush = false;
+    workflow.f.aircraft.readyToDeboard = false;
+    workflow.f.gsxService.stairsInPlace = false;
+
+    workflow.AttachAircraft();
+    workflow.CompleteReposition();
+    workflow.CompleteGroundServiceSetup();
+    workflow.LoadFlightPlan();
+    workflow.RequestFuel();
+    workflow.StartRefueling();
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        workflow.TickHolding(TurnaroundPhase::Loading);
+    }
+
+    QCOMPARE(workflow.f.menuGateway.boardingCalls, 1);
+    QVERIFY(workflow.f.status.boardingProgress < 100.0);
+
+    workflow.CompleteRefueling();
+
+    QCOMPARE(workflow.f.menuGateway.boardingCalls, 2);
+
+    workflow.StartBoarding();
+    workflow.CompleteBoarding();
 }
 
 void TurnaroundStateMachineTest::theStartOfThePushMovementNotifiesTheMenuGateway()
@@ -1045,12 +1116,12 @@ void TurnaroundStateMachineTest::aPhaseOutsideTheClosedListIgnoresTheSmartSwitch
     workflow.f.gsxService.boardedPassengers = workflow.f.aircraft.plannedPax;
     workflow.f.gsxService.cargoPercent = 50.0;
 
-    workflow.TickTo(TurnaroundPhase::Boarding);
+    workflow.TickHolding(TurnaroundPhase::Loading);
 
     workflow.f.aircraft.smartSwitchActivated = true;
 
-    workflow.TickHolding(TurnaroundPhase::Boarding);
-    workflow.TickHolding(TurnaroundPhase::Boarding);
+    workflow.TickHolding(TurnaroundPhase::Loading);
+    workflow.TickHolding(TurnaroundPhase::Loading);
 }
 
 void TurnaroundStateMachineTest::advancingByReadingPublishesTheReadingOrigin()
@@ -1178,20 +1249,20 @@ void TurnaroundStateMachineTest::resetDiscardsAPendingAppTouch()
 void TurnaroundStateMachineTest::aDelayedTransitionKeepsTheFastRulesRunning()
 {
     TurnaroundWorkflow workflow;
-    ReachRefueling(workflow);
+    ReachBoarding(workflow);
 
     CountingRule rule;
     workflow.f.aircraft.rules = {&rule};
 
-    workflow.BeginRefuelingDelay();
+    workflow.BeginBoardingDelay();
 
-    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 30);
+    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 60);
 
     const int actsAtDelayStart = rule.actCalls;
 
-    workflow.FinishDelay(29, TurnaroundPhase::Refueling);
+    workflow.FinishDelay(59, TurnaroundPhase::Loading);
 
-    QCOMPARE(rule.actCalls, actsAtDelayStart + 29);
+    QCOMPARE(rule.actCalls, actsAtDelayStart + 59);
 }
 
 void TurnaroundStateMachineTest::theSlowTickActsOnlyWhenTheMachineIsDriving()
@@ -1292,14 +1363,14 @@ void TurnaroundStateMachineTest::waitsWithTheWarningWhenTheCouatlDropsTheRefueli
 
     for (int tick = 0; tick < 30; ++tick)
     {
-        workflow.TickHolding(TurnaroundPhase::Refueling);
+        workflow.TickHolding(TurnaroundPhase::Loading);
     }
 
     workflow.f.gsxService.hoseConnected = false;
 
     for (int tick = 0; tick < 17; ++tick)
     {
-        workflow.TickHolding(TurnaroundPhase::Refueling);
+        workflow.TickHolding(TurnaroundPhase::Loading);
     }
 
     QVERIFY(!workflow.f.status.serviceInterrupted);
@@ -1309,7 +1380,7 @@ void TurnaroundStateMachineTest::waitsWithTheWarningWhenTheCouatlDropsTheRefueli
 
     for (int tick = 0; tick < 120; ++tick)
     {
-        workflow.TickHolding(TurnaroundPhase::Refueling);
+        workflow.TickHolding(TurnaroundPhase::Loading);
     }
 
     QVERIFY(workflow.f.status.serviceInterrupted);
@@ -1318,7 +1389,7 @@ void TurnaroundStateMachineTest::waitsWithTheWarningWhenTheCouatlDropsTheRefueli
 
     workflow.f.gsxService.couatlAlive = true;
     workflow.f.gsxService.refuelingState = GsxStateStatus::Requested;
-    workflow.TickHolding(TurnaroundPhase::Refueling);
+    workflow.TickHolding(TurnaroundPhase::Loading);
 
     QVERIFY(!workflow.f.status.serviceInterrupted);
 

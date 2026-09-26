@@ -23,6 +23,8 @@ using namespace simvars;
 
 namespace
 {
+    constexpr double kRecommendedFuelRateKgs = 30.0;
+
     constexpr auto kPoundsUnit = "pounds";
     constexpr auto kGallonsUnit = "gallons";
 
@@ -68,6 +70,7 @@ namespace
     constexpr double kEquipmentPlaced = 1.0;
 
     constexpr auto kServiceInterphoneLVar = "FSS_B727_ADP_SERV_INT_SWITCH";
+    constexpr auto kSmartSwitchControl = "SERV INT";
     constexpr double kServiceInterphoneOff = 0.0;
 
     constexpr auto kPercentOver100Unit = "percent over 100";
@@ -345,7 +348,7 @@ std::optional<GroundPowerStatus> Fss727::GetGroundPowerStatus() const
 
 void Fss727::SetGroundPower(const bool on)
 {
-    probe::Line(QStringLiteral("write gpu FSS_B727_GPU_AVAIL=%1").arg(on ? 1 : 0));
+    probe::Line(probe::Channel::Writes, QStringLiteral("write gpu FSS_B727_GPU_AVAIL=%1").arg(on ? 1 : 0));
     variableGateway_->SetLVar(kGpuAvailableLVar, on ? kGpuRaised : kGpuStowed);
 
     LOG_INFO("FSS 727 own ground power %s; the EXT POWER switch is the pilot's", on ? "raised" : "stowed");
@@ -520,7 +523,7 @@ namespace
             {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200F"},
             {MatchField::Title, MatchOp::StartsWith, "Boeing B727-200 Freighter"}
         },
-        &CreateFss727200F, "fss-727-200f", "722F", RefuelBy::Client
+        &CreateFss727200F, "fss-727-200f", "722F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}, kRecommendedFuelRateKgs
     };
 
     const AircraftDescriptor kFss727200ReFreighterDescriptor{
@@ -530,7 +533,7 @@ namespace
             {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200RE Super 27 Freighter"},
             {MatchField::AtcModel, MatchOp::Equals, "B727RE"}
         },
-        &CreateFss727200ReFreighter, "fss-727-200re", "R72F", RefuelBy::Client
+        &CreateFss727200ReFreighter, "fss-727-200re", "R72F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}, kRecommendedFuelRateKgs
     };
 
     [[maybe_unused]] const AircraftRegistration kFss727200FRegistration{kFss727200FDescriptor};

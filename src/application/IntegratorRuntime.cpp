@@ -1,7 +1,12 @@
 #include "IntegratorRuntime.h"
 
+#include <array>
+#include <QtCore/QCoreApplication>
+#include "../infrastructure/probe/ProbeChannels.h"
 #include "../infrastructure/probe/ProbeLog.h"
+#include "../infrastructure/probe/ProbeWatchList.h"
 #include "sim/SessionReadiness.h"
+#include "sim/TickMode.h"
 #include "../infrastructure/aircraft/AircraftFactory.h"
 #include "../infrastructure/aircraft/AircraftRegistry.h"
 #include "../infrastructure/logging/LogMacros.h"
@@ -11,6 +16,18 @@
 
 namespace
 {
+    constexpr auto kNoSessionPhase = "NoSession";
+    constexpr auto kGateChangeKey = "gates";
+    constexpr auto kSimAVarsChangeKey = "sim.avars";
+    constexpr std::array<const char*, 3> kSessionAVars = {"CAMERA STATE", "IS AIRCRAFT", "IS AVATAR"};
+    constexpr auto kPilotIdSet = "set";
+    constexpr auto kPilotIdUnset = "unset";
+#ifdef NDEBUG
+    constexpr auto kBuildConfiguration = "release";
+#else
+    constexpr auto kBuildConfiguration = "debug";
+#endif
+
     bool NeedsRefuelingFix(const std::filesystem::path& cfg)
     {
         const std::optional<int> refueling = GsxAircraftProfile::ReadRefueling(cfg);
@@ -33,21 +50,41 @@ namespace
         return joined;
     }
 
-    enum class TickMode
+    int Flag(const bool value)
     {
-        Idle,
-        ObserveOnly,
-        Driving
-    };
+        return value ? 1 : 0;
+    }
 
-    TickMode ResolveTickMode(const bool automationEnabled, const bool gsxAvailable)
+    void LogRunHeader(const AutomationSettings& settings)
     {
-        if (automationEnabled && gsxAvailable)
-        {
-            return TickMode::Driving;
-        }
-
-        return automationEnabled || probe::IsOn() ? TickMode::ObserveOnly : TickMode::Idle;
+        LOG_INFO("Logging run: folder=%s", qUtf8Printable(probe::RunLocation()));
+        LOG_INFO("Logging run: version=%s build=%s gsxiProbe=%d watchList=%d",
+                 qUtf8Printable(QCoreApplication::applicationVersion()),
+                 kBuildConfiguration,
+                 Flag(probe::ActsOnTheSim()),
+                 static_cast<int>(probe::WatchList().size()));
+        LOG_INFO("Startup settings: simbriefPilotId=%s fuelRateKgs=%g autoSelectGsxChoice=%d autoDeice=%d "
+                 "useAircraftStairs=%d crewBoarding=%d crewDeboarding=%d autoStartFlow=%d autoStartLoading=%d",
+                 settings.simbriefPilotId > 0 ? kPilotIdSet : kPilotIdUnset,
+                 settings.fuelRateKgs,
+                 Flag(settings.autoSelectGsxChoice),
+                 Flag(settings.autoDeice),
+                 Flag(settings.useAircraftStairs),
+                 static_cast<int>(settings.crewBoarding),
+                 static_cast<int>(settings.crewDeboarding),
+                 Flag(settings.autoStartFlow),
+                 Flag(settings.autoStartLoading));
+        LOG_INFO("Startup settings: skipReposition=%d callGpu=%d callGpuOnArrival=%d callBoardingEarly=%d "
+                 "callCatering=%d callLavatory=%d callWater=%d callCleaning=%d gsxPanelMode=%d",
+                 Flag(settings.skipReposition),
+                 Flag(settings.callGpu),
+                 Flag(settings.callGpuOnArrival),
+                 Flag(settings.callBoardingEarly),
+                 Flag(settings.callCatering),
+                 Flag(settings.callLavatory),
+                 Flag(settings.callWater),
+                 Flag(settings.callCleaning),
+                 static_cast<int>(settings.gsxPanelMode));
     }
 }
 
@@ -57,8 +94,11 @@ IntegratorRuntime::IntegratorRuntime(QObject* parent)
       gsxService_(&varGateway_, &gsxRemoteState_),
       gsxMenu_(&gsxRemoteClient_, &gsxRemoteState_, &settings_, &qtLogger_, &pluginClient_),
       stateMachine_(&status_, &settings_, &gsxService_, &gsxMenu_, &qtLogger_, &varGateway_),
-      simbriefClient_(&status_, &settings_, this)
+      simbriefClient_(&status_, &settings_, this),
+      flightPlanSource_(&simbriefClient_)
 {
+    stateMachine_.AttachFlightPlanSource(&flightPlanSource_);
+
     dispatchTimer_.setInterval(kDispatchIntervalMs);
     connect(&dispatchTimer_, &QTimer::timeout, this, &IntegratorRuntime::OnDispatchTimer);
 
@@ -77,8 +117,7 @@ void IntegratorRuntime::Setup()
 
     if (probe::IsOn())
     {
-        LOG_INFO("Probe mode is on: readings go to %s",
-                 qUtf8Printable(probe::Location()));
+        LogRunHeader(settings_);
     }
 
     TryConnect();
@@ -168,7 +207,12 @@ void IntegratorRuntime::TryConnect()
         return;
     }
 
-    LOG_INFO("Opening SimConnect...");
+    if (!connectAttemptAnnounced_)
+    {
+        LOG_INFO("Opening SimConnect...");
+        connectAttemptAnnounced_ = true;
+    }
+
     if (!simConnect_.Open("GSX Integrator"))
     {
         reconnectTimer_.start();
@@ -241,6 +285,7 @@ void IntegratorRuntime::HandleDisconnected()
 {
     LOG_INFO("Lost connection to the simulator.");
 
+    connectAttemptAnnounced_ = false;
     simVersion_ = SimVersion::Unknown;
 
     varGateway_.Detach();
@@ -300,19 +345,31 @@ void IntegratorRuntime::ProbeGates()
     char title[256] = {};
     varGateway_.FetchAircraftName(title, sizeof title);
 
-    probe::Change("gates",
+    const double camera = varGateway_.GetAVar(kSessionAVars[0], "Number", -1.0);
+    const double isAircraft = varGateway_.GetAVar(kSessionAVars[1], "Number", -1.0);
+    const double isAvatar = varGateway_.GetAVar(kSessionAVars[2], "Number", -1.0);
+
+    probe::Change(probe::Channel::Turnaround,
+                  kGateChangeKey,
                   QStringLiteral("gate  ready=%1 pauseFlags=%2 pauseEvents=%3 camera=%4 isAircraft=%5 "
                                  "isAvatar=%6 sessionActive=%7 sim=%8 aircraft=%9 title='%10'")
                   .arg(IsSessionReady() ? 1 : 0)
                   .arg(pauseFlags_)
                   .arg(pauseEvents_)
-                  .arg(varGateway_.GetAVar("CAMERA STATE", "Number", -1.0))
-                  .arg(varGateway_.GetAVar("IS AIRCRAFT", "Number", -1.0))
-                  .arg(varGateway_.GetAVar("IS AVATAR", "Number", -1.0))
+                  .arg(camera)
+                  .arg(isAircraft)
+                  .arg(isAvatar)
                   .arg(isSessionActive_ ? 1 : 0)
                   .arg(static_cast<int>(simVersion_))
                   .arg(aircraft_ ? 1 : 0)
                   .arg(QString::fromLatin1(title)));
+
+    probe::Change(probe::Channel::SimAVars,
+                  kSimAVarsChangeKey,
+                  QStringLiteral("sim camera=%1 aircraft=%2 avatar=%3")
+                  .arg(camera)
+                  .arg(isAircraft)
+                  .arg(isAvatar));
 }
 
 void IntegratorRuntime::Update()
@@ -347,7 +404,7 @@ void IntegratorRuntime::Update()
 
     simbriefClient_.Poll();
 
-    const TickMode mode = ResolveTickMode(status_.enabled, gsxOk);
+    const TickMode mode = TickModeResolution::Resolve(status_.enabled, gsxOk, probe::ActsOnTheSim());
     if (mode == TickMode::Idle)
     {
         return;
@@ -361,6 +418,8 @@ void IntegratorRuntime::Update()
     }
 
     varGateway_.MarkTick();
+
+    probe::SetPhase(TurnaroundPhaseToString(GetPhase()));
 
     if (mode == TickMode::Driving)
     {
@@ -384,8 +443,7 @@ bool IntegratorRuntime::IsLoadingCargoPhase() const
 {
     const TurnaroundPhase phase = GetPhase();
 
-    return phase == TurnaroundPhase::RequestBoarding
-        || phase == TurnaroundPhase::Boarding
+    return phase == TurnaroundPhase::Loading
         || phase == TurnaroundPhase::RequestDeboarding
         || phase == TurnaroundPhase::Deboarding;
 }
@@ -403,7 +461,7 @@ bool IntegratorRuntime::IsFuelRequestStalled() const
 bool IntegratorRuntime::IsFuelPlanOverCapacity() const
 {
     return status_.fuelPlanOverCapacity
-        && (GetPhase() == TurnaroundPhase::RequestFuel || GetPhase() == TurnaroundPhase::Refueling);
+        && (GetPhase() == TurnaroundPhase::RequestFuel || GetPhase() == TurnaroundPhase::Loading);
 }
 
 bool IntegratorRuntime::DidFuelNotStay() const
@@ -449,7 +507,8 @@ void IntegratorRuntime::UpdateSlow()
 
     stateMachine_.AttachAircraft(aircraft_.get());
 
-    if (ResolveTickMode(status_.enabled, gsxService_.IsAvailable()) == TickMode::Driving)
+    if (TickModeResolution::Resolve(status_.enabled, gsxService_.IsAvailable(), probe::ActsOnTheSim())
+        == TickMode::Driving)
     {
         stateMachine_.TickSlowRules();
     }
@@ -466,6 +525,9 @@ void IntegratorRuntime::UpdateSlow()
 void IntegratorRuntime::Shutdown()
 {
     LOG_INFO("Shutting down GSX Integrator...");
+
+    probe::SetPhase(kNoSessionPhase);
+    probe::SetAircraft(QString());
 
     dispatchTimer_.stop();
     reconnectTimer_.stop();
@@ -497,6 +559,8 @@ void IntegratorRuntime::ResetSession()
 
 void IntegratorRuntime::ClearFlightState()
 {
+    probe::SetAircraft(QString());
+
     aircraft_.reset();
     gsxProfile_.Reset();
     pmdgOptions_.Reset();
@@ -519,7 +583,11 @@ void IntegratorRuntime::OnSessionEnd()
 
     isSessionActive_ = false;
 
+    probe::SetPhase(kNoSessionPhase);
+
     ClearFlightState();
+
+    varGateway_.ForgetTextSlots();
 
     emit Updated();
 }
@@ -534,6 +602,7 @@ void IntegratorRuntime::ResolveAircraft()
     aircraft_ = DetectAircraft({&varGateway_, &status_, &bridgeClient_, &gsxService_}, &aircraftDescriptor_);
     if (aircraft_)
     {
+        probe::SetAircraft(QString::fromUtf8(aircraftDescriptor_->id));
         status_.aircraftSupported = true;
         gsxProfile_.roots = GsxAircraftProfile::ProfileRootsFor(aircraftDescriptor_->name);
         gsxProfile_.flagsMissing = GsxAircraftProfile::FlagsMissingProfile(aircraftDescriptor_->name);
@@ -596,11 +665,14 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
         && GetPhase() <= TurnaroundPhase::WaitingFlightPlan;
     snapshot.aircraftName = GetAircraftName().toStdString();
     snapshot.aircraftProfileId = GetAircraftProfileId();
+    snapshot.smartSwitch = aircraft_ && aircraftDescriptor_ ? aircraftDescriptor_->smartSwitch : SmartSwitchCue{};
     snapshot.refuelByGsx = IsAircraftRefuelByGsx();
     snapshot.refuelBySelf = IsAircraftRefuelBySelf();
     snapshot.cargoAircraft = IsAircraftCargoVariant();
     snapshot.efbFlightPlan = AircraftRequiresEfbFlightPlan();
+    snapshot.efbFlightPlanOnDeparturePage = AircraftAppliesTheEfbFlightPlanOnItsDeparturePage();
     snapshot.engineerPanelExternalPower = AircraftTakesExternalPowerAtTheEngineerPanel();
+    snapshot.groundPowerByClient = settings_.callGpu || settings_.callGpuOnArrival;
     snapshot.gsxProfileConflict = HasGsxProfileConflict();
     snapshot.gsxProfileFixable = CanFixGsxProfile();
     snapshot.pmdgOptionsConflict = HasPmdgOptionsConflict();
@@ -632,6 +704,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.plannedFuelKg = status_.plannedFuelKg;
     snapshot.loadedFuelKg = status_.loadedFuelKg;
     snapshot.settledFuelKg = status_.settledFuelKg;
+    snapshot.fuelRateKgs = settings_.fuelRateKgs;
     snapshot.plannedZfwKg = status_.plannedZfwKg;
     snapshot.plannedPax = status_.plannedPassengers;
     snapshot.boardedPax = status_.boardedPassengers;
@@ -757,6 +830,11 @@ bool IntegratorRuntime::AircraftCarriesItsOwnStairs() const
     return aircraft_ && aircraft_->CarriesItsOwnStairs();
 }
 
+double IntegratorRuntime::AircraftRecommendedFuelRateKgs() const
+{
+    return aircraft_ && aircraftDescriptor_ ? aircraftDescriptor_->fuelRateKgs : 0.0;
+}
+
 bool IntegratorRuntime::IsAircraftRefuelByGsx() const
 {
     return aircraft_ && aircraft_->GetRefuelMethod() == RefuelBy::Gsx;
@@ -775,6 +853,11 @@ bool IntegratorRuntime::IsAircraftCargoVariant() const
 bool IntegratorRuntime::AircraftRequiresEfbFlightPlan() const
 {
     return aircraft_ && aircraft_->RequiresEfbFlightPlan();
+}
+
+bool IntegratorRuntime::AircraftAppliesTheEfbFlightPlanOnItsDeparturePage() const
+{
+    return aircraft_ && aircraft_->AppliesTheEfbFlightPlanOnItsDeparturePage();
 }
 
 bool IntegratorRuntime::AircraftTakesExternalPowerAtTheEngineerPanel() const

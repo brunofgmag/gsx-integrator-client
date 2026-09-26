@@ -25,6 +25,9 @@ private slots:
     static void convertsTheOperatingEmptyWeightAndThePayloadLineFromPounds();
     static void keepsAPlanWithoutAPayloadLineAndLeavesTheLineAbsent();
     static void leavesAnUnreadablePayloadLineAbsent();
+    static void readsTheCargoLine();
+    static void convertsTheCargoLineFromPounds();
+    static void keepsAPlanWithoutACargoLineAndLeavesTheLineAbsent();
 };
 
 void SimbriefOfpTest::parsesKilograms()
@@ -217,6 +220,43 @@ void SimbriefOfpTest::leavesAnUnreadablePayloadLineAbsent()
         QVERIFY2(plan.has_value(), line);
         QVERIFY2(!plan->payloadKg.has_value(), line);
     }
+}
+
+void SimbriefOfpTest::readsTheCargoLine()
+{
+    constexpr char payload[] =
+        "<units>kgs</units><plan_ramp>10127</plan_ramp><est_zfw>45558</est_zfw>"
+        "<oew>27303</oew><payload>5940</payload><cargo>660</cargo>";
+
+    const auto plan = ParseSimbriefOfp(payload);
+
+    QVERIFY(plan.has_value());
+    QVERIFY(plan->cargoKg.has_value());
+    QCOMPARE(*plan->cargoKg, 660.0);
+}
+
+void SimbriefOfpTest::convertsTheCargoLineFromPounds()
+{
+    constexpr char payload[] =
+        "<units>lbs</units><plan_ramp>22046.2262185</plan_ramp><est_zfw>129645.0379004</est_zfw>"
+        "<cargo>1455.05093042</cargo>";
+
+    const auto plan = ParseSimbriefOfp(payload);
+
+    QVERIFY(plan.has_value());
+    QVERIFY(plan->cargoKg.has_value());
+    QVERIFY(qAbs(*plan->cargoKg - 660.0) < 0.01);
+}
+
+void SimbriefOfpTest::keepsAPlanWithoutACargoLineAndLeavesTheLineAbsent()
+{
+    constexpr char payload[] =
+        "<units>kgs</units><plan_ramp>12000</plan_ramp><est_zfw>180000</est_zfw>";
+
+    const auto plan = ParseSimbriefOfp(payload);
+
+    QVERIFY(plan.has_value());
+    QVERIFY(!plan->cargoKg.has_value());
 }
 
 QTEST_APPLESS_MAIN(SimbriefOfpTest)

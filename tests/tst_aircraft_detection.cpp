@@ -1,5 +1,6 @@
 #include <QtTest/QTest>
 
+#include <algorithm>
 #include <memory>
 #include <set>
 #include "TestDoubles.h"
@@ -42,9 +43,15 @@ private slots:
     static void detectsFss727200reFreighterFromItsTitles();
     static void detectsFss727200reFreighterFromAThirdPartyLiveryByItsAtcModel();
     static void detectsFss727200reFreighterByItsAtcModelOverA200fTitle();
+    static void aSecondFlightOnOneConnectionIsNotPinnedByThePreviousAtcModel();
     static void leavesTheFss727PassengerVariantUndetected();
     static void doesNotDetectFss727FromAGenericFreighterTitle();
     static void detectionReportsFss727ClientRefuel();
+    static void detectsFssE190PassengerAndFreighterFromTheirTitles();
+    static void detectsFssE195FreighterFromItsTitle();
+    static void doesNotDetectFssEJetByGenericAtcModel();
+    static void fssEJetRegistrationOrderDoesNotChangeTheWinner();
+    static void detectionReportsFssEJetGsxRefuelWithoutARecommendedRate();
     static void detectsFenixA319FromPresetTitle();
     static void detectsFenixA320FromPresetTitle();
     static void detectsFenixA321FromPresetTitle();
@@ -57,6 +64,10 @@ private slots:
     static void doesNotDetectPmdg777ByBareIcao();
     static void detectionReportsFenixClientRefuel();
     static void everyDescriptorHasUniqueProfileMetadata();
+    static void everyDescriptorNamesItsSmartSwitch();
+    static void onlyTheFssEJetsApplyTheEfbFlightPlanOnTheirDeparturePage();
+    static void aRecommendedFuelRateExistsOnlyWhereTheClientRefuels();
+    static void supportedProfilesCarryTheRecommendedFuelRate();
     static void supportedProfilesAreSortedByShortCode();
     static void detectionReportsMatchedDescriptor();
 };
@@ -464,6 +475,35 @@ void AircraftDetectionTest::detectsFss727200reFreighterByItsAtcModelOverA200fTit
     QVERIFY(aircraft->IsCargoVariant());
 }
 
+void AircraftDetectionTest::aSecondFlightOnOneConnectionIsNotPinnedByThePreviousAtcModel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "Boeing 727-200RE Super 27 Freighter";
+    gateway.atcModel = "B727RE";
+
+    const AircraftDescriptor* first = nullptr;
+
+    QVERIFY(DetectAircraft({&gateway, &status}, &first) != nullptr);
+    QCOMPARE(std::string(first->id), std::string("fss-727-200re"));
+
+    gateway.aircraftName = "Boeing B727-200 Freighter Custom Repaint";
+    gateway.aircraftNameAvailable = false;
+    gateway.atcModelAvailable = false;
+
+    const AircraftDescriptor* second = nullptr;
+
+    QVERIFY(DetectAircraft({&gateway, &status}, &second) == nullptr);
+
+    gateway.aircraftNameAvailable = true;
+    gateway.atcModel = "B722";
+    gateway.atcModelAvailable = true;
+
+    QVERIFY(DetectAircraft({&gateway, &status}, &second) != nullptr);
+    QCOMPARE(std::string(second->id), std::string("fss-727-200f"));
+}
+
 void AircraftDetectionTest::leavesTheFss727PassengerVariantUndetected()
 {
     for (const char* title : {"Boeing 727-200RE Super 27 Passenger", "Boeing 727-200RE Passenger - Eastern",
@@ -504,6 +544,111 @@ void AircraftDetectionTest::detectionReportsFss727ClientRefuel()
 
         QVERIFY2(aircraft != nullptr, title);
         QCOMPARE(descriptor->refuelBy, RefuelBy::Client);
+    }
+}
+
+void AircraftDetectionTest::detectsFssE190PassengerAndFreighterFromTheirTitles()
+{
+    for (const char* title : {"FSS Embraer E190", "FSS Embraer E190 JetBlue - Good, Better, Blue",
+                              "FSS Embraer E190 Helvetic Airways"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+        gateway.atcModel = "E190";
+
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
+
+        QVERIFY2(aircraft != nullptr, title);
+        QCOMPARE(std::string(descriptor->id), std::string("fss-e190"));
+        QVERIFY2(!aircraft->IsCargoVariant(), title);
+    }
+
+    for (const char* title : {"FSS Embraer E190 Freighter - DHL", "FSS Embraer E190 Freighter"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+        gateway.atcModel = "E190F";
+
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
+
+        QVERIFY2(aircraft != nullptr, title);
+        QCOMPARE(std::string(descriptor->id), std::string("fss-e190"));
+        QVERIFY2(aircraft->IsCargoVariant(), title);
+    }
+}
+
+void AircraftDetectionTest::detectsFssE195FreighterFromItsTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "FSS Embraer E195 Freighter - TNT";
+    gateway.atcModel = "E195F";
+
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(std::string(descriptor->id), std::string("fss-e195"));
+    QVERIFY(aircraft->IsCargoVariant());
+}
+
+void AircraftDetectionTest::doesNotDetectFssEJetByGenericAtcModel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "Embraer E190";
+    gateway.atcModel = "E190";
+
+    QVERIFY(DetectAircraft({&gateway, &status}) == nullptr);
+}
+
+void AircraftDetectionTest::fssEJetRegistrationOrderDoesNotChangeTheWinner()
+{
+    const AircraftDescriptor e190{
+        "FSS Embraer E190",
+        {{MatchField::Title, MatchOp::StartsWith, "FSS Embraer E190"}},
+        nullptr, "fss-e190", "E190"
+    };
+    const AircraftDescriptor e195{
+        "FSS Embraer E195",
+        {{MatchField::Title, MatchOp::StartsWith, "FSS Embraer E195"}},
+        nullptr, "fss-e195", "E195"
+    };
+
+    const AircraftIdentity identity{"FSS Embraer E195 Freighter - TNT", "E195F"};
+
+    const AircraftDescriptor* forward = MatchAircraft({&e190, &e195}, identity);
+    const AircraftDescriptor* reversed = MatchAircraft({&e195, &e190}, identity);
+
+    QVERIFY(forward != nullptr);
+    QVERIFY(reversed != nullptr);
+    QCOMPARE(std::string(forward->id), std::string(reversed->id));
+    QCOMPARE(std::string(forward->id), std::string("fss-e195"));
+}
+
+void AircraftDetectionTest::detectionReportsFssEJetGsxRefuelWithoutARecommendedRate()
+{
+    for (const char* title : {"FSS Embraer E190", "FSS Embraer E195"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft = DetectAircraft({&gateway, &status}, &descriptor);
+
+        QVERIFY2(aircraft != nullptr, title);
+        QCOMPARE(descriptor->refuelBy, RefuelBy::Gsx);
+        QCOMPARE(descriptor->fuelRateKgs, 0.0);
     }
 }
 
@@ -684,6 +829,58 @@ void AircraftDetectionTest::everyDescriptorHasUniqueProfileMetadata()
         QVERIFY(descriptor->shortCode != nullptr && descriptor->shortCode[0] != '\0');
         QVERIFY(ids.insert(descriptor->id).second);
         QVERIFY(codes.insert(descriptor->shortCode).second);
+    }
+}
+
+void AircraftDetectionTest::everyDescriptorNamesItsSmartSwitch()
+{
+    for (const AircraftDescriptor* descriptor : AircraftRegistry())
+    {
+        QVERIFY2(!descriptor->smartSwitch.control.empty(), descriptor->id);
+    }
+}
+
+void AircraftDetectionTest::onlyTheFssEJetsApplyTheEfbFlightPlanOnTheirDeparturePage()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    for (const AircraftDescriptor* descriptor : AircraftRegistry())
+    {
+        const std::unique_ptr<Aircraft> aircraft = descriptor->create({&gateway, &status}, {descriptor->name, ""});
+        const std::string id = descriptor->id;
+
+        QVERIFY2(aircraft != nullptr, descriptor->id);
+        QVERIFY2(aircraft->AppliesTheEfbFlightPlanOnItsDeparturePage() == (id == "fss-e190" || id == "fss-e195"),
+                 descriptor->id);
+    }
+}
+
+void AircraftDetectionTest::aRecommendedFuelRateExistsOnlyWhereTheClientRefuels()
+{
+    for (const AircraftDescriptor* descriptor : AircraftRegistry())
+    {
+        if (descriptor->refuelBy == RefuelBy::Client)
+        {
+            QVERIFY2(descriptor->fuelRateKgs > 0.0, descriptor->id);
+        }
+        else
+        {
+            QVERIFY2(descriptor->fuelRateKgs == 0.0, descriptor->id);
+        }
+    }
+}
+
+void AircraftDetectionTest::supportedProfilesCarryTheRecommendedFuelRate()
+{
+    for (const AircraftProfileInfo& info : SupportedAircraftProfiles())
+    {
+        const auto descriptor = std::ranges::find_if(AircraftRegistry(), [&info](const AircraftDescriptor* candidate)
+        {
+            return info.id == candidate->id;
+        });
+        QVERIFY(descriptor != AircraftRegistry().end());
+        QCOMPARE(info.recommendedFuelRateKgs, (*descriptor)->fuelRateKgs);
     }
 }
 

@@ -12,9 +12,7 @@ enum class TurnaroundPhase : int
     WaitingPowerOn,
     CallCatering,
     RequestFuel,
-    Refueling,
-    RequestBoarding,
-    Boarding,
+    Loading,
     WaitingReadyToPush,
     WaitCatering,
     RemoveGroundEquipment,
@@ -44,9 +42,7 @@ inline const char* TurnaroundPhaseToString(const TurnaroundPhase phase)
     case TurnaroundPhase::WaitingPowerOn: return "WaitingPowerOn";
     case TurnaroundPhase::CallCatering: return "CallCatering";
     case TurnaroundPhase::RequestFuel: return "RequestFuel";
-    case TurnaroundPhase::Refueling: return "Refueling";
-    case TurnaroundPhase::RequestBoarding: return "RequestBoarding";
-    case TurnaroundPhase::Boarding: return "Boarding";
+    case TurnaroundPhase::Loading: return "Loading";
     case TurnaroundPhase::WaitingReadyToPush: return "WaitingReadyToPush";
     case TurnaroundPhase::WaitCatering: return "WaitCatering";
     case TurnaroundPhase::RemoveGroundEquipment: return "RemoveGroundEquipment";

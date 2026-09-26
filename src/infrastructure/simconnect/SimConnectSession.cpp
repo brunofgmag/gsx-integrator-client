@@ -2,8 +2,10 @@
 
 #include <cstddef>
 #include <utility>
+#include <QtCore/QString>
 #include "SimConnectVariableGateway.h"
 #include "../logging/LogMacros.h"
+#include "../probe/ProbeLog.h"
 
 bool SimConnectSession::Open(const char* name)
 {
@@ -74,7 +76,23 @@ bool SimConnectSession::TransmitEvent(const char* eventName, const DWORD paramet
         return false;
     }
 
+    ReportEvent(eventName, parameter);
+
     return true;
+}
+
+void SimConnectSession::ReportEvent(const char* eventName, const DWORD parameter)
+{
+    if (!probe::IsOn())
+    {
+        return;
+    }
+
+    const int count = ++eventCounts_[eventName];
+
+    probe::Line(probe::Channel::Writes, QStringLiteral("event %1 param=%2 n=%3")
+                .arg(QString::fromLatin1(eventName), QString::number(parameter))
+                .arg(count));
 }
 
 bool SimConnectSession::MapClientDataArea(const char* areaName,

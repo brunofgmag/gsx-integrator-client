@@ -1,6 +1,8 @@
 #include "FenixEfbClient.h"
 
 #include <algorithm>
+#include <optional>
+#include <QtCore/QDateTime>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
@@ -10,6 +12,7 @@
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
 #include "../logging/LogMacros.h"
+#include "../probe/ProbeLog.h"
 
 namespace
 {
@@ -32,16 +35,26 @@ namespace
         return QJsonDocument(payload).toJson(QJsonDocument::Compact);
     }
 
-    QNetworkRequest JsonRequest(const char* url)
+    QNetworkRequest JsonRequest(const QString& url)
     {
-        QNetworkRequest request{QUrl(QString::fromLatin1(url))};
+        QNetworkRequest request{QUrl(url)};
         request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
 
         return request;
     }
+
+    QString ShownValue(const QJsonValue& value)
+    {
+        const QByteArray encoded = QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact);
+
+        return QString::fromUtf8(encoded.mid(1, encoded.size() - 2));
+    }
 }
 
-FenixEfbClient::FenixEfbClient() = default;
+FenixEfbClient::FenixEfbClient()
+    : endpoint_(QString::fromLatin1(kGraphQlUrl))
+{
+}
 
 FenixEfbClient::~FenixEfbClient() = default;
 
@@ -113,7 +126,7 @@ void FenixEfbClient::Poll()
     }
 
     QNetworkAccessManager& network = EnsureNetwork();
-    pollReply_ = network.post(JsonRequest(kGraphQlUrl), BuildValuesQuery(subscriptions_));
+    pollReply_ = network.post(JsonRequest(endpoint_), BuildValuesQuery(subscriptions_));
     if (pollReply_ == nullptr)
     {
         RegisterPollResult(false);
@@ -155,7 +168,7 @@ void FenixEfbClient::RegisterPollResult(const bool succeeded)
     {
         if (!available_)
         {
-            LOG_INFO("Fenix EFB reachable: GraphQL responding at %s", kGraphQlUrl);
+            LOG_INFO("Fenix EFB reachable: GraphQL responding at %s", qUtf8Printable(endpoint_));
         }
 
         consecutivePollFailures_ = 0;
@@ -246,11 +259,33 @@ void FenixEfbClient::SendMutation(const std::string& operation, const std::strin
     }
 
     const QNetworkReply* reply =
-        EnsureNetwork().post(JsonRequest(kGraphQlUrl), BuildWriteMutation(operation, typeName, name, value));
-    if (reply != nullptr)
+        EnsureNetwork().post(JsonRequest(endpoint_), BuildWriteMutation(operation, typeName, name, value));
+    if (reply == nullptr)
     {
-        QObject::connect(reply, &QNetworkReply::finished, reply, &QObject::deleteLater);
+        return;
     }
+
+    QObject::connect(reply, &QNetworkReply::finished, reply, &QObject::deleteLater);
+    ReportWrite(name, value);
+}
+
+void FenixEfbClient::ReportWrite(const std::string& name, const QJsonValue& value)
+{
+    if (!probe::IsOn())
+    {
+        return;
+    }
+
+    const QString shown = ShownValue(value);
+    const std::optional<int> count = writeMemo_.Record(name, shown, QDateTime::currentMSecsSinceEpoch());
+    if (!count)
+    {
+        return;
+    }
+
+    probe::Line(probe::Channel::Writes, QStringLiteral("graphql %1=%2 n=%3")
+                .arg(QString::fromStdString(name), shown)
+                .arg(*count));
 }
 
 void FenixEfbClient::RequestLoadsheet(const std::string& type)

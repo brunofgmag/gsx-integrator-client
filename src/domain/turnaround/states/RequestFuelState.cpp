@@ -29,12 +29,13 @@ std::optional<TurnaroundTransition> RequestFuelState::EvaluatePhase(TurnaroundCo
     const GsxStateStatus refuelingState = ctx.gsxGateway->GetStateStatus(GsxState::Refueling);
     if (refuelingState == GsxStateStatus::Completed || ctx.gsxGateway->WasStateCompleted(GsxState::Refueling))
     {
-        return TurnaroundTransition{TurnaroundPhase::Refueling};
+        return TurnaroundTransition{TurnaroundPhase::Loading};
     }
+
+    WarnWhenPlanExceedsCapacity(ctx);
 
     if (loadingAllowed && refuelingState == GsxStateStatus::Callable && !data.refuelingRequested)
     {
-        WarnWhenPlanExceedsCapacity(ctx);
         ctx.gsxGateway->TakeOverFuelAndPayload();
         ctx.menuGateway->RequestRefueling();
         data.refuelingRequested = true;
@@ -42,7 +43,7 @@ std::optional<TurnaroundTransition> RequestFuelState::EvaluatePhase(TurnaroundCo
 
     if (ctx.gsxGateway->IsFuelHoseConnected() && refuelingState == GsxStateStatus::Active)
     {
-        return TurnaroundTransition{TurnaroundPhase::Refueling};
+        return TurnaroundTransition{TurnaroundPhase::Loading};
     }
 
     if (refuelingState == GsxStateStatus::Callable && data.refuelingRequested && ctx.TickCondition(kRetryTicks))
@@ -59,8 +60,18 @@ void RequestFuelState::WarnWhenPlanExceedsCapacity(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 
+    if (data.fuelPlanOverCapacity)
+    {
+        return;
+    }
+
     const double capacityKg = ctx.aircraft->GetFuelCapacityKg();
-    data.fuelPlanOverCapacity = capacityKg > 0.0 && data.plannedFuelKg > capacityKg + 1.0;
+    if (capacityKg <= 0.0)
+    {
+        return;
+    }
+
+    data.fuelPlanOverCapacity = data.plannedFuelKg > capacityKg + 1.0;
 
     if (data.fuelPlanOverCapacity)
     {

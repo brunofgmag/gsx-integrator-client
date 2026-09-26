@@ -8,7 +8,9 @@
 #include <vector>
 #include <QtCore/QByteArray>
 #include <QtCore/QJsonValue>
+#include <QtCore/QString>
 #include "FenixEfbGateway.h"
+#include "../probe/ProbeWriteMemo.h"
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -30,6 +32,8 @@ public:
     void SetString(const std::string& name, const std::string& value) override;
     void RequestLoadsheet(const std::string& type) override;
 
+    void SetEndpointForTest(const QString& url) { endpoint_ = url; }
+
     [[nodiscard]] static QByteArray BuildValuesQuery(const std::vector<std::string>& names);
     [[nodiscard]] static std::optional<std::map<std::string, QJsonValue>> ParseValuesResponse(
         const QByteArray& body, const std::vector<std::string>& names);
@@ -44,13 +48,16 @@ private:
                       const std::string& name, const QJsonValue& value);
     void OnPollFinished();
     void RegisterPollResult(bool succeeded);
+    void ReportWrite(const std::string& name, const QJsonValue& value);
 
+    QString endpoint_;
     std::unique_ptr<QNetworkAccessManager> network_;
     QNetworkReply* pollReply_ = nullptr;
     std::vector<std::string> subscriptions_;
     std::map<std::string, QJsonValue> values_;
     bool available_ = false;
     int consecutivePollFailures_ = 0;
+    probe::WriteMemo writeMemo_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FENIXEFBCLIENT_H

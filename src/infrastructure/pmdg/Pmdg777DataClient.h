@@ -43,6 +43,7 @@ private:
     PmdgClientDataChannel<PMDG_777X_Data> channel_;
     bool pendingKickRelease_ = false;
     bool probeToggleSent_ = false;
+    int kickCount_ = 0;
     std::optional<long long> lastKickMs_;
     std::function<long long()> nowMs_;
 };

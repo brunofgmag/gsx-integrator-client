@@ -1,5 +1,123 @@
 # Changelog
 
+## [1.41.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.40.1...v1.41.0) (2026-09-26)
+
+
+* add a flightsim.to build that bundles commbus and only notifies ([#194](https://github.com/brunofgmag/gsx-integrator-client/issues/194)) ([4d0b381](https://github.com/brunofgmag/gsx-integrator-client/commit/4d0b381e7b85afb7ad761cf6b48a26b274d982da))
+
+
+### Features
+
+* **update:** add a flightsim.to build that bundles commbus and only notifies ([0670dda](https://github.com/brunofgmag/gsx-integrator-client/commit/0670dda677c3b3e91cfcda421b5d5b3bd760fb18)) ([4d0b381](https://github.com/brunofgmag/gsx-integrator-client/commit/4d0b381e7b85afb7ad761cf6b48a26b274d982da))
+
+## [1.40.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.40.0...v1.40.1) (2026-09-26)
+
+
+* record the applied version in the uninstall entry ([#192](https://github.com/brunofgmag/gsx-integrator-client/issues/192)) ([c6a0f6e](https://github.com/brunofgmag/gsx-integrator-client/commit/c6a0f6e87a53f206993ca613ce6d19a71df011bd))
+
+
+### Bug Fixes
+
+* **update:** record the applied version in the uninstall entry ([f4f66d5](https://github.com/brunofgmag/gsx-integrator-client/commit/f4f66d5665505c8804c938e0e2a6fe6b76459bd6)) ([c6a0f6e](https://github.com/brunofgmag/gsx-integrator-client/commit/c6a0f6e87a53f206993ca613ce6d19a71df011bd))
+
+## [1.40.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.39.2...v1.40.0) (2026-09-25)
+
+
+* refuel and board together with per-aircraft fuel rates ([#190](https://github.com/brunofgmag/gsx-integrator-client/issues/190)) ([9a48f21](https://github.com/brunofgmag/gsx-integrator-client/commit/9a48f21d8e54b5d1f90101414a8fd4aa2bb04173))
+
+
+### Features
+
+* **turnaround:** refuel and board together with per-aircraft fuel rates ([5839423](https://github.com/brunofgmag/gsx-integrator-client/commit/58394238a3dd0ef3e663f9e53b65e7b088cdf9e3)) ([9a48f21](https://github.com/brunofgmag/gsx-integrator-client/commit/9a48f21d8e54b5d1f90101414a8fd4aa2bb04173))
+
+## [1.39.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.39.1...v1.39.2) (2026-09-25)
+
+
+* keep the call ramp light off and refetch the ofp after a gsx refusal ([#188](https://github.com/brunofgmag/gsx-integrator-client/issues/188)) ([8497dd1](https://github.com/brunofgmag/gsx-integrator-client/commit/8497dd1ccbb94570b3d8c38feec4a02e043e62c2))
+
+
+### Bug Fixes
+
+* **fss-e-jets:** keep the call ramp light off and refetch the ofp after a gsx refusal ([9607076](https://github.com/brunofgmag/gsx-integrator-client/commit/960707611fc75e404318bf5e8902d13b5684e453)) ([8497dd1](https://github.com/brunofgmag/gsx-integrator-client/commit/8497dd1ccbb94570b3d8c38feec4a02e043e62c2))
+
+## [1.39.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.39.0...v1.39.1) (2026-09-25)
+
+
+* name the smart switch control in tips and advisories ([#186](https://github.com/brunofgmag/gsx-integrator-client/issues/186)) ([b745d39](https://github.com/brunofgmag/gsx-integrator-client/commit/b745d39c0516016fbdb28b977d812eb556083c5f))
+
+
+### Bug Fixes
+
+* **ui:** name the smart switch control in tips and advisories ([c054cd1](https://github.com/brunofgmag/gsx-integrator-client/commit/c054cd1a7a55e5dd125a397c5e811c39dd66ebe6)) ([b745d39](https://github.com/brunofgmag/gsx-integrator-client/commit/b745d39c0516016fbdb28b977d812eb556083c5f))
+
+## [1.39.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.38.0...v1.39.0) (2026-09-22)
+
+
+* make the client log cover a whole turnaround ([#182](https://github.com/brunofgmag/gsx-integrator-client/issues/182)) ([c688064](https://github.com/brunofgmag/gsx-integrator-client/commit/c6880641751aa6586315bdbac32f30034cbf2b31))
+
+
+### Features
+
+* **probe:** make the client log cover a whole turnaround ([22d924e](https://github.com/brunofgmag/gsx-integrator-client/commit/22d924eea3ef04b94d30399961e6bf6d017f5e41)) ([c688064](https://github.com/brunofgmag/gsx-integrator-client/commit/c6880641751aa6586315bdbac32f30034cbf2b31))
+
+## [1.38.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.37.1...v1.38.0) (2026-09-18)
+
+
+* client logging toggle with per-channel files ([#180](https://github.com/brunofgmag/gsx-integrator-client/issues/180)) ([8467993](https://github.com/brunofgmag/gsx-integrator-client/commit/8467993f08d8e7d538ac39ce6ae0df3cb73b66dc))
+
+
+### Features
+
+* **probe:** client logging toggle with per-channel files ([da6c0fa](https://github.com/brunofgmag/gsx-integrator-client/commit/da6c0fa6c7b6ebbdf178782078774275111a5e32)) ([8467993](https://github.com/brunofgmag/gsx-integrator-client/commit/8467993f08d8e7d538ac39ce6ae0df3cb73b66dc))
+
+## [1.37.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.37.0...v1.37.1) (2026-09-18)
+
+
+* warn over capacity, exit the engine wait, and forget stale text slots ([#178](https://github.com/brunofgmag/gsx-integrator-client/issues/178)) ([205506f](https://github.com/brunofgmag/gsx-integrator-client/commit/205506fc48135c1de4705344f0c05b42030191b5))
+
+
+### Bug Fixes
+
+* **simconnect:** forget the text slots when the session ends ([5d890c2](https://github.com/brunofgmag/gsx-integrator-client/commit/5d890c2ee47af8fbbe5cd8677b26b38536c35de0)) ([205506f](https://github.com/brunofgmag/gsx-integrator-client/commit/205506fc48135c1de4705344f0c05b42030191b5))
+* **turnaround:** leave the engine wait when the aircraft taxis or flies ([bcacc14](https://github.com/brunofgmag/gsx-integrator-client/commit/bcacc14311ccd9ada4353f51a96484126d862418)) ([205506f](https://github.com/brunofgmag/gsx-integrator-client/commit/205506fc48135c1de4705344f0c05b42030191b5))
+* **turnaround:** warn about a fuel plan over capacity once the capacity arrives ([0293829](https://github.com/brunofgmag/gsx-integrator-client/commit/029382993f3b34801b05b1e5318c7c762ee61600)) ([205506f](https://github.com/brunofgmag/gsx-integrator-client/commit/205506fc48135c1de4705344f0c05b42030191b5))
+
+## [1.37.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.36.0...v1.37.0) (2026-09-17)
+
+
+* fuel and load the E-Jets from the plan ([#176](https://github.com/brunofgmag/gsx-integrator-client/issues/176)) ([e34b445](https://github.com/brunofgmag/gsx-integrator-client/commit/e34b445ac326d5abfd9f6549ffd1a5953c9bc3bb))
+
+
+### Features
+
+* **fss-e-jets:** refuel by tank level and load the stations from the plan ([85214ea](https://github.com/brunofgmag/gsx-integrator-client/commit/85214eadf0c6e74c4a91855e4cf5cf32d14d7654)) ([e34b445](https://github.com/brunofgmag/gsx-integrator-client/commit/e34b445ac326d5abfd9f6549ffd1a5953c9bc3bb))
+* **simbrief:** read the cargo line from the OFP ([0a8a967](https://github.com/brunofgmag/gsx-integrator-client/commit/0a8a967d605ae65e01f48619322bb359ab7fb04a)) ([e34b445](https://github.com/brunofgmag/gsx-integrator-client/commit/e34b445ac326d5abfd9f6549ffd1a5953c9bc3bb))
+
+
+### Bug Fixes
+
+* **fss-e-jets:** account for unusable fuel reserve when writing tank level ([eb5c374](https://github.com/brunofgmag/gsx-integrator-client/commit/eb5c37482ddf71f5535d7a878a0b7253ba6aea76)) ([e34b445](https://github.com/brunofgmag/gsx-integrator-client/commit/e34b445ac326d5abfd9f6549ffd1a5953c9bc3bb))
+
+## [1.36.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.35.0...v1.36.0) (2026-09-17)
+
+
+* move doors by the crew, clear ramp call on touch ([#174](https://github.com/brunofgmag/gsx-integrator-client/issues/174)) ([4f8a6a1](https://github.com/brunofgmag/gsx-integrator-client/commit/4f8a6a1c4af4741f3f13b6b00cbffa1f9bdd2ef0))
+
+
+### Features
+
+* **fss-e-jets:** move doors by the crew ([f9ca179](https://github.com/brunofgmag/gsx-integrator-client/commit/f9ca1796d5b23ef62d4843776322469eb306e634)) ([4f8a6a1](https://github.com/brunofgmag/gsx-integrator-client/commit/4f8a6a1c4af4741f3f13b6b00cbffa1f9bdd2ef0))
+
+## [1.35.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.12...v1.35.0) (2026-09-17)
+
+
+* recognize, power and position the FSS E-Jets ([#172](https://github.com/brunofgmag/gsx-integrator-client/issues/172)) ([ec49253](https://github.com/brunofgmag/gsx-integrator-client/commit/ec49253e9ad5be4286516d1c84cbbe50a1890240))
+
+
+### Features
+
+* **fss-e-jets:** recognize, power and position the FSS E-Jets ([684a2f4](https://github.com/brunofgmag/gsx-integrator-client/commit/684a2f4e92c4db39aa3c61ea7d7f414e60011025)) ([ec49253](https://github.com/brunofgmag/gsx-integrator-client/commit/ec49253e9ad5be4286516d1c84cbbe50a1890240))
+
 ## [1.34.12](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.34.11...v1.34.12) (2026-09-16)
 
 
