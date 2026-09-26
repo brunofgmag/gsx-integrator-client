@@ -11,6 +11,7 @@ namespace
     constexpr int kStartupCheckDelayMs = 3000;
     constexpr int kPeriodicCheckIntervalMs = 6 * 60 * 60 * 1000;
     constexpr auto kTargetSeparator = ", ";
+    constexpr auto kInstallerUrl = "https://github.com/brunofgmag/gsx-integrator-installer/releases/latest";
 
     bool IsVersionNewer(const QString& candidate, const QString& reference)
     {
@@ -180,9 +181,9 @@ QString UpdateViewModel::GetCommbusLatestVersion() const
     return commbusLatestVersion_;
 }
 
-QString UpdateViewModel::GetCommbusReleaseUrl() const
+QString UpdateViewModel::GetInstallerUrl() const
 {
-    return commbusReleaseUrl_;
+    return QLatin1String(kInstallerUrl);
 }
 
 bool UpdateViewModel::IsCommbusBundled() const
@@ -277,7 +278,6 @@ void UpdateViewModel::SetCommbusBundleResult(const CommbusBundleResult& result)
 
     commbusInstalledVersion_ = present ? result.bundledVersion : QString();
     commbusLatestVersion_ = result.bundledVersion;
-    commbusReleaseUrl_.clear();
     commbusUpdateAvailable_ = false;
     commbusInstallMissing_ = result.targets.empty();
     commbusSimRunning_ = HasTargetWith(result, {CommbusBundleStatus::SimRunning});
@@ -452,8 +452,7 @@ void UpdateViewModel::OnCheckFinished(const bool ok, const bool updateAvailable,
 
 void UpdateViewModel::OnCommbusCheckFinished(const bool ok,
                                              const QString& installedVersion,
-                                             const QString& latestVersion,
-                                             const QString& releaseUrl)
+                                             const QString& latestVersion)
 {
     if (!ok || IsCommbusBundled())
     {
@@ -461,7 +460,6 @@ void UpdateViewModel::OnCommbusCheckFinished(const bool ok,
     }
     commbusInstalledVersion_ = installedVersion;
     commbusLatestVersion_ = latestVersion;
-    commbusReleaseUrl_ = releaseUrl;
     commbusInstallMissing_ = installedVersion.isEmpty();
     commbusUpdateAvailable_ = !installedVersion.isEmpty()
         && IsVersionNewer(latestVersion, installedVersion);

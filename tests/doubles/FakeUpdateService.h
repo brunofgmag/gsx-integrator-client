@@ -54,12 +54,11 @@ public:
         }
     }
 
-    void FireCommbusCheckFinished(const bool ok, const QString& installed, const QString& latest,
-                                  const QString& url = {}) const
+    void FireCommbusCheckFinished(const bool ok, const QString& installed, const QString& latest) const
     {
         for (auto* observer : observers)
         {
-            observer->OnCommbusCheckFinished(ok, installed, latest, url);
+            observer->OnCommbusCheckFinished(ok, installed, latest);
         }
     }
 

@@ -44,6 +44,7 @@ private slots:
     static void switchingToAutoStartsPendingDownload();
     static void disabledViewModelIgnoresChecks();
     static void commbusComparesInstalledAndLatest();
+    static void installerUrlPointsAtTheInstallerReleases();
     static void derivedFlagsAndStatusTextFollowState();
     static void stagedUpdateExposesRestartText();
     static void errorStateExposesHasErrorAndMessage();
@@ -219,8 +220,7 @@ void UpdateViewModelTest::commbusComparesInstalledAndLatest()
     UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true);
 
     service.FireCommbusCheckFinished(true, QStringLiteral("0.2.1"),
-                                     QStringLiteral("0.3.0"),
-                                     QStringLiteral("https://example.com"));
+                                     QStringLiteral("0.3.0"));
 
     QVERIFY(viewModel.IsCommbusUpdateAvailable());
     QCOMPARE(viewModel.GetCommbusInstalledVersion(), QStringLiteral("0.2.1"));
@@ -240,6 +240,15 @@ void UpdateViewModelTest::commbusComparesInstalledAndLatest()
 
     service.FireCommbusCheckFinished(false, {}, {});
     QVERIFY(viewModel.IsCommbusUpdateAvailable());
+}
+
+void UpdateViewModelTest::installerUrlPointsAtTheInstallerReleases()
+{
+    FakeUpdateService service;
+    const UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true);
+
+    QCOMPARE(viewModel.GetInstallerUrl(),
+             QStringLiteral("https://github.com/brunofgmag/gsx-integrator-installer/releases/latest"));
 }
 
 void UpdateViewModelTest::derivedFlagsAndStatusTextFollowState()
@@ -419,8 +428,7 @@ void UpdateViewModelTest::flightsimToIgnoresTheCommbusFeed()
         QStringLiteral("0.4.0"),
         {{QStringLiteral("MSFS 2024 (Steam)"), CommbusBundleStatus::Installed}}
     });
-    service.FireCommbusCheckFinished(true, QStringLiteral("0.3.0"), QStringLiteral("0.5.0"),
-                                     QStringLiteral("https://example.com"));
+    service.FireCommbusCheckFinished(true, QStringLiteral("0.3.0"), QStringLiteral("0.5.0"));
 
     QVERIFY(!viewModel.IsCommbusUpdateAvailable());
     QCOMPARE(viewModel.GetCommbusInstalledVersion(), QStringLiteral("0.4.0"));

@@ -84,42 +84,42 @@
         <translation>Nenhum plugin em nenhuma pasta Community. Sem ele, o app do EFB, a opção do painel do GSX e a carga das aeronaves PMDG não funcionam. Instale-o pelo instalador.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="218"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="227"/>
         <source>CommBus update available · v%1</source>
         <translation>Atualização do CommBus disponível · v%1</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="281"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="289"/>
         <source>CommBus v%1 installed</source>
         <translation>CommBus v%1 instalado</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="293"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="301"/>
         <source>Close the simulator and reopen the client to install CommBus v%1.</source>
         <translation>Feche o simulador e reabra o cliente para instalar o CommBus v%1.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="309"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="317"/>
         <source>Could not install CommBus in %1.</source>
         <translation>Não foi possível instalar o CommBus em %1.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="338"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="346"/>
         <source>CommBus plugin removed</source>
         <translation>Plugin do CommBus removido</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="348"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="356"/>
         <source>You turned the plugin off, so the client removed it from the Community folders. Without it, the EFB app, the GSX panel setting and PMDG loading do not work. Turn it back on in Settings › Advanced.</source>
         <translation>Você desligou o plugin, e o cliente o removeu das pastas Community. Sem ele, o app do EFB, a opção do painel do GSX e a carga das aeronaves PMDG não funcionam. Religue-o em Configurações › Avançado.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="362"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="370"/>
         <source>By %1</source>
         <translation>Por %1</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="387"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="395"/>
         <source>Contributors: %1</source>
         <translation>Colaboradores: %1</translation>
     </message>
@@ -132,17 +132,18 @@
         <translation type="vanished">Atualização do CommBus disponível — v%1</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="229"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="238"/>
         <source>The client can&apos;t update the plugin. Use the installer to update it.</source>
         <translation>O cliente não atualiza o plugin. Use o instalador para atualizá-lo.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="243"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="204"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="251"/>
         <source>Get installer</source>
         <translation>Baixar instalador</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/AboutScreen.qml" line="252"/>
+        <location filename="../src/qml/screens/AboutScreen.qml" line="260"/>
         <source>Installed v%1 · latest v%2</source>
         <translation>Instalada v%1 · mais recente v%2</translation>
     </message>
@@ -2035,22 +2036,22 @@
 <context>
     <name>UpdateViewModel</name>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="102"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="103"/>
         <source>Checking for updates…</source>
         <translation>Verificando atualizações…</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="104"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="105"/>
         <source>Up to date</source>
         <translation>Atualizado</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="106"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="107"/>
         <source>Update available · v%1</source>
         <translation>Atualização disponível · v%1</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="110"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="111"/>
         <source>Update ready: restart to apply</source>
         <translation>Atualização pronta: reinicie para aplicar</translation>
     </message>
@@ -2084,7 +2085,7 @@
         <translation type="vanished">Atualização disponível — v%1</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="108"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="109"/>
         <source>Downloading v%1</source>
         <translation>Baixando v%1</translation>
     </message>
@@ -2093,7 +2094,7 @@
         <translation type="vanished">Atualização pronta — reinicie para aplicar</translation>
     </message>
     <message>
-        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="248"/>
+        <location filename="../src/viewmodel/UpdateViewModel.cpp" line="249"/>
         <source>Could not start the updater.</source>
         <translation>Não foi possível iniciar o atualizador.</translation>
     </message>

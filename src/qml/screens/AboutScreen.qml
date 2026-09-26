@@ -195,6 +195,15 @@ Item {
                 lineHeight: 1.4
                 wrapMode: Text.WordWrap
             }
+
+            ActionButton {
+                anchors.horizontalCenter: parent.horizontalCenter
+                small: true
+                secondary: true
+                visible: !!root.updateVm && !root.updateVm.commbusBundled
+                text: qsTr("Get installer")
+                onClicked: Qt.openUrlExternally(root.updateVm.installerUrl)
+            }
         }
 
         Column {
@@ -239,9 +248,8 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 small: true
                 tint: Theme.amber
-                visible: !!root.updateVm && root.updateVm.commbusReleaseUrl.length > 0
                 text: qsTr("Get installer")
-                onClicked: Qt.openUrlExternally(root.updateVm.commbusReleaseUrl)
+                onClicked: Qt.openUrlExternally(root.updateVm.installerUrl)
             }
 
 

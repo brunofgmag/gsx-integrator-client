@@ -28,7 +28,7 @@ class UpdateViewModel final : public QObject, public UpdateServiceObserver
     Q_PROPERTY(bool commbusUpdateAvailable READ IsCommbusUpdateAvailable NOTIFY CommbusChanged)
     Q_PROPERTY(QString commbusInstalledVersion READ GetCommbusInstalledVersion NOTIFY CommbusChanged)
     Q_PROPERTY(QString commbusLatestVersion READ GetCommbusLatestVersion NOTIFY CommbusChanged)
-    Q_PROPERTY(QString commbusReleaseUrl READ GetCommbusReleaseUrl NOTIFY CommbusChanged)
+    Q_PROPERTY(QString installerUrl READ GetInstallerUrl CONSTANT)
     Q_PROPERTY(bool commbusInstallMissing READ IsCommbusInstallMissing NOTIFY CommbusChanged)
     Q_PROPERTY(bool commbusBundled READ IsCommbusBundled CONSTANT)
     Q_PROPERTY(bool commbusSimRunning READ IsCommbusSimRunning NOTIFY CommbusChanged)
@@ -74,7 +74,7 @@ public:
     [[nodiscard]] bool IsCommbusInstallMissing() const;
     [[nodiscard]] QString GetCommbusInstalledVersion() const;
     [[nodiscard]] QString GetCommbusLatestVersion() const;
-    [[nodiscard]] QString GetCommbusReleaseUrl() const;
+    [[nodiscard]] QString GetInstallerUrl() const;
     [[nodiscard]] bool IsCommbusBundled() const;
     [[nodiscard]] bool IsCommbusSimRunning() const;
     [[nodiscard]] QString GetCommbusFailedTargets() const;
@@ -100,8 +100,7 @@ public:
     void OnCheckFinished(bool ok, bool updateAvailable,
                          const UpdateInfo& info, const QString& error) override;
     void OnCommbusCheckFinished(bool ok, const QString& installedVersion,
-                                const QString& latestVersion,
-                                const QString& releaseUrl) override;
+                                const QString& latestVersion) override;
     void OnDownloadProgress(qint64 received, qint64 total) override;
     void OnStageFinished(bool ok, const QString& error) override;
 
@@ -137,7 +136,6 @@ private:
     bool commbusInstallMissing_ = false;
     QString commbusInstalledVersion_;
     QString commbusLatestVersion_;
-    QString commbusReleaseUrl_;
     bool commbusSimRunning_ = false;
     QString commbusFailedTargets_;
 
