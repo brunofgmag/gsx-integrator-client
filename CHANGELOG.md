@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.41.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.40.1...v1.41.0) (2026-09-26)
+
+
+* add a flightsim.to build that bundles commbus and only notifies ([#194](https://github.com/brunofgmag/gsx-integrator-client/issues/194)) ([4d0b381](https://github.com/brunofgmag/gsx-integrator-client/commit/4d0b381e7b85afb7ad761cf6b48a26b274d982da))
+
+
+### Features
+
+* **update:** add a flightsim.to build that bundles commbus and only notifies ([0670dda](https://github.com/brunofgmag/gsx-integrator-client/commit/0670dda677c3b3e91cfcda421b5d5b3bd760fb18)) ([4d0b381](https://github.com/brunofgmag/gsx-integrator-client/commit/4d0b381e7b85afb7ad761cf6b48a26b274d982da))
+
 ## [1.40.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.40.0...v1.40.1) (2026-09-26)
 
 
