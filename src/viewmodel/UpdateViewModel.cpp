@@ -1,13 +1,16 @@
 #include "UpdateViewModel.h"
 
+#include <algorithm>
 #include <utility>
 #include <QtCore/QCoreApplication>
+#include <QtCore/QStringList>
 #include <QtCore/QVersionNumber>
 
 namespace
 {
     constexpr int kStartupCheckDelayMs = 3000;
     constexpr int kPeriodicCheckIntervalMs = 6 * 60 * 60 * 1000;
+    constexpr auto kTargetSeparator = ", ";
 
     bool IsVersionNewer(const QString& candidate, const QString& reference)
     {
@@ -19,16 +22,40 @@ namespace
         }
         return lhs > rhs;
     }
+
+    bool HasTargetWith(const CommbusBundleResult& result, const std::initializer_list<CommbusBundleStatus> statuses)
+    {
+        return std::ranges::any_of(result.targets, [statuses](const CommbusBundleTargetOutcome& target)
+        {
+            return std::ranges::find(statuses, target.status) != statuses.end();
+        });
+    }
+
+    QString LabelsOfFailedTargets(const CommbusBundleResult& result)
+    {
+        QStringList labels;
+        for (const CommbusBundleTargetOutcome& target : result.targets)
+        {
+            if (target.status == CommbusBundleStatus::Failed)
+            {
+                labels.append(target.label);
+            }
+        }
+
+        return labels.join(QLatin1String(kTargetSeparator));
+    }
 }
 
 UpdateViewModel::UpdateViewModel(UpdateService* service,
                                  const int initialMode,
                                  const bool updatesEnabled,
+                                 Distribution distribution,
                                  QObject* parent)
     : QObject(parent),
       service_(service),
-      mode_(initialMode),
-      updatesEnabled_(updatesEnabled)
+      mode_(distribution.flightsimTo ? Notify : initialMode),
+      updatesEnabled_(updatesEnabled),
+      distribution_(std::move(distribution))
 {
     service_->AddObserver(this);
 
@@ -100,7 +127,7 @@ bool UpdateViewModel::HasError() const
 
 bool UpdateViewModel::CanDownload() const
 {
-    return state_ == UpdateAvailable;
+    return AreDownloadsAllowed() && state_ == UpdateAvailable;
 }
 
 bool UpdateViewModel::CanCheckForUpdates() const
@@ -158,6 +185,31 @@ QString UpdateViewModel::GetCommbusReleaseUrl() const
     return commbusReleaseUrl_;
 }
 
+bool UpdateViewModel::IsCommbusBundled() const
+{
+    return distribution_.flightsimTo;
+}
+
+bool UpdateViewModel::IsCommbusSimRunning() const
+{
+    return commbusSimRunning_;
+}
+
+QString UpdateViewModel::GetCommbusFailedTargets() const
+{
+    return commbusFailedTargets_;
+}
+
+bool UpdateViewModel::AreDownloadsAllowed() const
+{
+    return !distribution_.flightsimTo;
+}
+
+QString UpdateViewModel::GetExternalDownloadUrl() const
+{
+    return distribution_.pageUrl;
+}
+
 void UpdateViewModel::checkForUpdates()
 {
     if (!updatesEnabled_ || state_ == Checking || state_ == Downloading)
@@ -172,7 +224,7 @@ void UpdateViewModel::checkForUpdates()
 
 void UpdateViewModel::downloadAndInstall()
 {
-    if (!updateKnown_ || state_ == Downloading || state_ == ReadyToRestart)
+    if (!AreDownloadsAllowed() || !updateKnown_ || state_ == Downloading || state_ == ReadyToRestart)
     {
         return;
     }
@@ -182,6 +234,11 @@ void UpdateViewModel::downloadAndInstall()
 
 void UpdateViewModel::restartNow()
 {
+    if (!AreDownloadsAllowed())
+    {
+        return;
+    }
+
     if (service_->LaunchApplyHelper(true))
     {
         QCoreApplication::exit(0);
@@ -195,7 +252,7 @@ void UpdateViewModel::restartNow()
 
 void UpdateViewModel::SetMode(const int mode)
 {
-    if (mode_ == mode)
+    if (!AreDownloadsAllowed() || mode_ == mode)
     {
         return;
     }
@@ -211,7 +268,22 @@ void UpdateViewModel::SetMode(const int mode)
 
 bool UpdateViewModel::ShouldApplyOnExit() const
 {
-    return mode_ == Auto && service_->HasStagedUpdate();
+    return AreDownloadsAllowed() && mode_ == Auto && service_->HasStagedUpdate();
+}
+
+void UpdateViewModel::SetCommbusBundleResult(const CommbusBundleResult& result)
+{
+    const bool present = HasTargetWith(result, {CommbusBundleStatus::Installed, CommbusBundleStatus::UpToDate});
+
+    commbusInstalledVersion_ = present ? result.bundledVersion : QString();
+    commbusLatestVersion_ = result.bundledVersion;
+    commbusReleaseUrl_.clear();
+    commbusUpdateAvailable_ = false;
+    commbusInstallMissing_ = result.targets.empty();
+    commbusSimRunning_ = HasTargetWith(result, {CommbusBundleStatus::SimRunning});
+    commbusFailedTargets_ = LabelsOfFailedTargets(result);
+
+    emit CommbusChanged();
 }
 
 void UpdateViewModel::OnCheckFinished(const bool ok, const bool updateAvailable,
@@ -237,7 +309,7 @@ void UpdateViewModel::OnCheckFinished(const bool ok, const bool updateAvailable,
     updateKnown_ = updateAvailable;
     errorMessage_.clear();
 
-    if (service_->HasStagedUpdate())
+    if (AreDownloadsAllowed() && service_->HasStagedUpdate())
     {
         SetState(ReadyToRestart);
         return;
@@ -263,7 +335,7 @@ void UpdateViewModel::OnCommbusCheckFinished(const bool ok,
                                              const QString& latestVersion,
                                              const QString& releaseUrl)
 {
-    if (!ok)
+    if (!ok || IsCommbusBundled())
     {
         return;
     }

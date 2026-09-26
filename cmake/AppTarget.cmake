@@ -58,6 +58,10 @@ if (MINGW)
     target_compile_definitions(${APP_NAME} PRIVATE MINGW_HAS_SECURE_API)
 endif ()
 
+if (GSXI_FLIGHTSIM_TO)
+    target_compile_definitions(${APP_NAME} PRIVATE GSXI_FLIGHTSIM_TO)
+endif ()
+
 add_library(gsxi-header-self-containment OBJECT
         tools/header-self-containment/IntegratorSnapshot.cpp)
 target_include_directories(gsxi-header-self-containment PRIVATE

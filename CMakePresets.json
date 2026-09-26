@@ -43,6 +43,33 @@
             "inherits": "msvc-qt-base"
         },
         {
+            "name": "debug-flightsim-to",
+            "displayName": "Qt MSVC 2022 x64 - Debug (flightsim.to)",
+            "description": "Build Debug sem o código de download e aplicação de atualização, para o flightsim.to.",
+            "inherits": "debug",
+            "cacheVariables": {
+                "GSXI_FLIGHTSIM_TO": "ON"
+            }
+        },
+        {
+            "name": "release-flightsim-to",
+            "displayName": "Qt MSVC 2022 x64 - Release (flightsim.to)",
+            "description": "Build Release sem o código de download e aplicação de atualização, para o flightsim.to.",
+            "inherits": "release",
+            "cacheVariables": {
+                "GSXI_FLIGHTSIM_TO": "ON"
+            }
+        },
+        {
+            "name": "relwithdebinfo-flightsim-to",
+            "displayName": "Qt MSVC 2022 x64 - RelWithDebInfo (flightsim.to)",
+            "description": "Build RelWithDebInfo sem o código de download e aplicação de atualização, para o flightsim.to.",
+            "inherits": "relwithdebinfo",
+            "cacheVariables": {
+                "GSXI_FLIGHTSIM_TO": "ON"
+            }
+        },
+        {
             "name": "clangd-db",
             "displayName": "Compile DB (Ninja) p/ clangd",
             "description": "Gera compile_commands.json com cl.exe para o include analyzer do clangd/CLion. Configure num x64 Native Tools Command Prompt.",
@@ -75,6 +102,24 @@
             "name": "relwithdebinfo",
             "displayName": "Build Qt MSVC RelWithDebInfo",
             "configurePreset": "relwithdebinfo",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "debug-flightsim-to",
+            "displayName": "Build Qt MSVC Debug (flightsim.to)",
+            "configurePreset": "debug-flightsim-to",
+            "configuration": "Debug"
+        },
+        {
+            "name": "release-flightsim-to",
+            "displayName": "Build Qt MSVC Release (flightsim.to)",
+            "configurePreset": "release-flightsim-to",
+            "configuration": "Release"
+        },
+        {
+            "name": "relwithdebinfo-flightsim-to",
+            "displayName": "Build Qt MSVC RelWithDebInfo (flightsim.to)",
+            "configurePreset": "relwithdebinfo-flightsim-to",
             "configuration": "RelWithDebInfo"
         }
     ],

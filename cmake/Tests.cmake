@@ -249,6 +249,19 @@ gsxi_add_qt_test(gsxi-github-update-service-tests github-update-service
         src/application/model/UpdateInfo.h)
 target_link_libraries(gsxi-github-update-service-tests PRIVATE Qt6::Network)
 
+gsxi_add_qt_test(gsxi-github-update-service-flightsim-to-tests github-update-service-flightsim-to
+        tests/tst_github_update_service_flightsim_to.cpp
+        src/infrastructure/update/GithubUpdateService.cpp
+        src/infrastructure/update/GithubUpdateService.h
+        src/infrastructure/update/GithubReleaseParser.cpp
+        src/infrastructure/update/GithubReleaseParser.h
+        src/infrastructure/update/CommbusInstallProbe.cpp
+        src/infrastructure/update/CommbusInstallProbe.h
+        src/application/ports/UpdateService.h
+        src/application/model/UpdateInfo.h)
+target_link_libraries(gsxi-github-update-service-flightsim-to-tests PRIVATE Qt6::Network)
+target_compile_definitions(gsxi-github-update-service-flightsim-to-tests PRIVATE GSXI_FLIGHTSIM_TO)
+
 gsxi_add_qt_test(gsxi-qsettings-repository-tests qsettings-repository
         tests/tst_qsettings_repository.cpp
         src/infrastructure/settings/QSettingsRepository.cpp
@@ -862,6 +875,8 @@ target_compile_definitions(gsxi-github-release-parser-tests PRIVATE
 gsxi_add_qt_test(gsxi-update-viewmodel-tests update-viewmodel
         tests/doubles/FakeUpdateService.h
         tests/tst_update_viewmodel.cpp
+        src/application/model/CommbusBundleResult.h
+        src/application/model/Distribution.h
         src/application/model/UpdateInfo.h
         src/application/ports/UpdateService.h
         src/viewmodel/UpdateViewModel.cpp
@@ -871,6 +886,20 @@ gsxi_add_qt_test(gsxi-commbus-install-probe-tests commbus-install-probe
         tests/tst_commbus_install_probe.cpp
         src/infrastructure/update/CommbusInstallProbe.cpp
         src/infrastructure/update/CommbusInstallProbe.h)
+
+gsxi_add_qt_test(gsxi-commbus-bundle-installer-tests commbus-bundle-installer
+        tests/tst_commbus_bundle_installer.cpp
+        src/application/model/CommbusBundleResult.h
+        src/infrastructure/update/CommbusBundleInstaller.cpp
+        src/infrastructure/update/CommbusBundleInstaller.h
+        src/infrastructure/update/CommbusInstallProbe.cpp
+        src/infrastructure/update/CommbusInstallProbe.h)
+
+gsxi_add_qt_test(gsxi-distribution-parser-tests distribution-parser
+        tests/tst_distribution_parser.cpp
+        src/application/model/Distribution.h
+        src/infrastructure/update/DistributionParser.cpp
+        src/infrastructure/update/DistributionParser.h)
 
 gsxi_add_qt_test(gsxi-automation-settings-tests automation-settings
         tests/tst_automation_settings.cpp

@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(GSXI_TESTS_ONLY "Configure only the unit tests (host build, e.g. Linux CI)." OFF)
+option(GSXI_FLIGHTSIM_TO "Build the flightsim.to flavor, without the self-update download and apply code." OFF)
 
 if (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR "The project must be configured for x64.")

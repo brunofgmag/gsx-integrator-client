@@ -4,6 +4,8 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QTimer>
+#include "../application/model/CommbusBundleResult.h"
+#include "../application/model/Distribution.h"
 #include "../application/model/UpdateInfo.h"
 #include "../application/ports/UpdateService.h"
 
@@ -27,6 +29,11 @@ class UpdateViewModel final : public QObject, public UpdateServiceObserver
     Q_PROPERTY(QString commbusLatestVersion READ GetCommbusLatestVersion NOTIFY CommbusChanged)
     Q_PROPERTY(QString commbusReleaseUrl READ GetCommbusReleaseUrl NOTIFY CommbusChanged)
     Q_PROPERTY(bool commbusInstallMissing READ IsCommbusInstallMissing NOTIFY CommbusChanged)
+    Q_PROPERTY(bool commbusBundled READ IsCommbusBundled CONSTANT)
+    Q_PROPERTY(bool commbusSimRunning READ IsCommbusSimRunning NOTIFY CommbusChanged)
+    Q_PROPERTY(QString commbusFailedTargets READ GetCommbusFailedTargets NOTIFY CommbusChanged)
+    Q_PROPERTY(bool downloadsAllowed READ AreDownloadsAllowed CONSTANT)
+    Q_PROPERTY(QString externalDownloadUrl READ GetExternalDownloadUrl CONSTANT)
 
 public:
     enum State { Idle = 0, Checking, UpToDate, UpdateAvailable, Downloading, ReadyToRestart, Error };
@@ -40,6 +47,7 @@ public:
     UpdateViewModel(UpdateService* service,
                     int initialMode,
                     bool updatesEnabled,
+                    Distribution distribution = {},
                     QObject* parent = nullptr);
     ~UpdateViewModel() override;
 
@@ -61,6 +69,11 @@ public:
     [[nodiscard]] QString GetCommbusInstalledVersion() const;
     [[nodiscard]] QString GetCommbusLatestVersion() const;
     [[nodiscard]] QString GetCommbusReleaseUrl() const;
+    [[nodiscard]] bool IsCommbusBundled() const;
+    [[nodiscard]] bool IsCommbusSimRunning() const;
+    [[nodiscard]] QString GetCommbusFailedTargets() const;
+    [[nodiscard]] bool AreDownloadsAllowed() const;
+    [[nodiscard]] QString GetExternalDownloadUrl() const;
 
     Q_INVOKABLE void checkForUpdates();
     Q_INVOKABLE void downloadAndInstall();
@@ -68,6 +81,7 @@ public:
 
     void SetMode(int mode);
     [[nodiscard]] bool ShouldApplyOnExit() const;
+    void SetCommbusBundleResult(const CommbusBundleResult& result);
 
     void OnCheckFinished(bool ok, bool updateAvailable,
                          const UpdateInfo& info, const QString& error) override;
@@ -90,6 +104,7 @@ private:
     UpdateService* service_;
     int mode_;
     bool updatesEnabled_;
+    Distribution distribution_;
 
     State state_ = Idle;
     bool updateKnown_ = false;
@@ -104,6 +119,8 @@ private:
     QString commbusInstalledVersion_;
     QString commbusLatestVersion_;
     QString commbusReleaseUrl_;
+    bool commbusSimRunning_ = false;
+    QString commbusFailedTargets_;
 
     QTimer startupTimer_;
     QTimer periodicTimer_;

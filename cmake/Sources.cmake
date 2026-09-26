@@ -237,10 +237,16 @@ set(APP_SOURCES
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
         src/infrastructure/simconnect/SimConnectVariableGateway.h
+        src/application/model/CommbusBundleResult.h
+        src/application/model/Distribution.h
         src/application/model/UpdateInfo.h
         src/application/ports/UpdateService.h
+        src/infrastructure/update/CommbusBundleInstaller.cpp
+        src/infrastructure/update/CommbusBundleInstaller.h
         src/infrastructure/update/CommbusInstallProbe.cpp
         src/infrastructure/update/CommbusInstallProbe.h
+        src/infrastructure/update/DistributionParser.cpp
+        src/infrastructure/update/DistributionParser.h
         src/infrastructure/update/GithubReleaseParser.cpp
         src/infrastructure/update/GithubReleaseParser.h
         src/infrastructure/update/GithubUpdateService.cpp

@@ -65,12 +65,20 @@ jobs:
           VER: ${{ steps.read.outputs.version }}
         run: |
           set -euo pipefail
-          zip="gsx-integrator-client-$VER.zip"
-          sha="$zip.sha256"
+          expected=(
+            "gsx-integrator-client-$VER.zip"
+            "gsx-integrator-client-$VER.zip.sha256"
+            "gsx-integrator-flightsim-to-$VER.zip"
+            "gsx-integrator-flightsim-to-$VER.zip.sha256"
+          )
           if names="$(gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null)"; then
-            if grep -qxF "$zip" <<<"$names" && grep -qxF "$sha" <<<"$names"; then
+            missing=0
+            for asset in "${expected[@]}"; do
+              grep -qxF "$asset" <<<"$names" || missing=1
+            done
+            if [ "$missing" -eq 0 ]; then
               echo "exists=true" >> "$GITHUB_OUTPUT"
-              echo "::notice::Release $TAG already published with both assets; nothing to do."
+              echo "::notice::Release $TAG already published with every asset; nothing to do."
             else
               echo "exists=false" >> "$GITHUB_OUTPUT"
               echo "::warning::Release $TAG exists but is missing assets; rebuilding and re-uploading."
@@ -120,6 +128,10 @@ jobs:
         shell: pwsh
         run: ./build.ps1 -Config Release -SkipTests
 
+      - name: Build flightsim.to flavor
+        shell: pwsh
+        run: ./build.ps1 -Config Release -SkipTests -FlightsimTo
+
       - name: Stage bundle
         shell: pwsh
         run: |
@@ -137,6 +149,46 @@ jobs:
           $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLower()
           "$hash  $zip" | Out-File -FilePath "$zip.sha256" -Encoding ascii -NoNewline
 
+      - name: Fetch CommBus
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $dir = 'commbus-release'
+          gh release download --repo brunofgmag/gsx-integrator-commbus --pattern 'gsx-integrator-commbus-*.zip*' --dir $dir
+          if ($LASTEXITCODE -ne 0) { throw 'Could not download the latest CommBus release.' }
+          $zip = Get-ChildItem -LiteralPath $dir -Filter 'gsx-integrator-commbus-*.zip' | Select-Object -First 1
+          if (-not $zip) { throw 'The latest CommBus release has no zip asset.' }
+          $expected = ((Get-Content -Raw -LiteralPath "$($zip.FullName).sha256") -split '\s+')[0].ToLower()
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip.FullName).Hash.ToLower()
+          if ($expected -ne $actual) { throw "CommBus checksum mismatch: expected $expected, got $actual." }
+          Expand-Archive -LiteralPath $zip.FullName -DestinationPath 'commbus-package' -Force
+          if (-not (Test-Path -LiteralPath 'commbus-package/gsx-integrator-commbus/manifest.json')) { throw 'CommBus zip has no gsx-integrator-commbus/manifest.json.' }
+          Write-Host "Bundling $($zip.Name)"
+
+      - name: Stage flightsim.to bundle
+        shell: pwsh
+        env:
+          FLIGHTSIM_TO_URL: ${{ vars.FLIGHTSIM_TO_URL }}
+        run: |
+          $stage = 'staging-flightsim-to/gsx-integrator-client'
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item -Path 'build/release-flightsim-to/bin/*' -Destination $stage -Recurse -Force
+          New-Item -ItemType Directory -Force -Path "$stage/commbus" | Out-Null
+          Copy-Item -Path 'commbus-package/gsx-integrator-commbus' -Destination "$stage/commbus" -Recurse -Force
+          $pageUrl = if ($env:FLIGHTSIM_TO_URL) { $env:FLIGHTSIM_TO_URL } else { 'https://flightsim.to/' }
+          [ordered]@{ channel = 'flightsim.to'; pageUrl = $pageUrl } | ConvertTo-Json | Out-File -FilePath "$stage/distribution.json" -Encoding utf8NoBOM
+
+      - name: Package + Hash flightsim.to bundle
+        shell: pwsh
+        env:
+          VER: ${{ needs.version.outputs.version }}
+        run: |
+          $zip = "gsx-integrator-flightsim-to-$env:VER.zip"
+          Compress-Archive -Path 'staging-flightsim-to/gsx-integrator-client' -DestinationPath $zip -Force
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLower()
+          "$hash  $zip" | Out-File -FilePath "$zip.sha256" -Encoding ascii -NoNewline
+
       - name: Upload artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -144,6 +196,8 @@ jobs:
           path: |
             gsx-integrator-client-*.zip
             gsx-integrator-client-*.zip.sha256
+            gsx-integrator-flightsim-to-*.zip
+            gsx-integrator-flightsim-to-*.zip.sha256
           if-no-files-found: error
 
   publish:
@@ -174,3 +228,5 @@ jobs:
           assets: |
             gsx-integrator-client-${{ needs.version.outputs.version }}.zip
             gsx-integrator-client-${{ needs.version.outputs.version }}.zip.sha256
+            gsx-integrator-flightsim-to-${{ needs.version.outputs.version }}.zip
+            gsx-integrator-flightsim-to-${{ needs.version.outputs.version }}.zip.sha256

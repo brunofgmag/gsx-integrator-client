@@ -9,6 +9,7 @@ ColumnLayout {
 
     required property var settingsVm
 
+    property bool updateModeVisible: true
     property int sectionIndex: 0
 
     readonly property var sections: [
@@ -80,6 +81,7 @@ ColumnLayout {
 
             GeneralPane {
                 settingsVm: root.settingsVm
+                updateModeVisible: root.updateModeVisible
             }
 
             AutomationPane {

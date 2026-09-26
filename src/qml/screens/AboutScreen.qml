@@ -6,8 +6,10 @@ Item {
     property var updateVm
     property real viewportHeight: 0
 
+    readonly property var contributors: []
+    readonly property bool externalUpdate: !!updateVm && !updateVm.downloadsAllowed && updateVm.updateAvailable
     readonly property bool updProminent: !!updateVm
-        && (updateVm.canDownload || updateVm.downloading || updateVm.readyToRestart)
+        && (updateVm.canDownload || updateVm.downloading || updateVm.readyToRestart || externalUpdate)
 
     implicitHeight: Math.max(col.implicitHeight, viewportHeight - 32)
 
@@ -72,6 +74,19 @@ Item {
                 visible: text.length > 0
             }
 
+            Text {
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                text: qsTr("Download the new version from flightsim.to.")
+                color: Theme.muted
+                font.pixelSize: 10
+                font.letterSpacing: 0.8
+                font.capitalization: Font.AllUppercase
+                lineHeight: 1.4
+                wrapMode: Text.WordWrap
+                visible: root.externalUpdate
+            }
+
             Column {
                 width: parent.width
                 spacing: 5
@@ -127,6 +142,13 @@ Item {
 
                 ActionButton {
                     small: true
+                    visible: root.externalUpdate && root.updateVm.externalDownloadUrl.length > 0
+                    text: qsTr("Open flightsim.to")
+                    onClicked: Qt.openUrlExternally(root.updateVm.externalDownloadUrl)
+                }
+
+                ActionButton {
+                    small: true
                     secondary: true
                     visible: !!root.updateVm && (root.updateVm.canDownload || root.updateVm.readyToRestart)
                              && root.updateVm.releaseUrl.length > 0
@@ -163,7 +185,9 @@ Item {
             Text {
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
-                text: qsTr("No plugin found in any Community folder. Without it, the EFB app, the GSX panel setting and PMDG loading do not work. Install it with the installer.")
+                text: root.updateVm && root.updateVm.commbusBundled
+                      ? qsTr("No MSFS 2020 or 2024 Community folder found, so the client could not install the plugin. Without it, the EFB app, the GSX panel setting and PMDG loading do not work.")
+                      : qsTr("No plugin found in any Community folder. Without it, the EFB app, the GSX panel setting and PMDG loading do not work. Install it with the installer.")
                 color: Theme.faint
                 font.pixelSize: 10
                 font.letterSpacing: 0.8
@@ -236,28 +260,100 @@ Item {
             }
         }
 
-        Text {
+        Column {
             anchors.horizontalCenter: parent.horizontalCenter
             width: Math.min(400, parent.width)
-            horizontalAlignment: Text.AlignHCenter
-            text: qsTr("Automates the full GSX turnaround.")
-            color: Theme.muted
-            font.pixelSize: 11
-            font.letterSpacing: 0.5
-            font.capitalization: Font.AllUppercase
-            lineHeight: 1.5
-            wrapMode: Text.WordWrap
+            topPadding: 6
+            spacing: 8
+            visible: !!root.updateVm && root.updateVm.commbusBundled && !root.updateVm.commbusInstallMissing
+
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: Theme.line
+            }
+
+            Text {
+                width: parent.width
+                topPadding: 4
+                horizontalAlignment: Text.AlignHCenter
+                text: root.updateVm ? qsTr("CommBus v%1 installed").arg(root.updateVm.commbusInstalledVersion) : ""
+                color: Theme.muted
+                font.pixelSize: 10
+                font.letterSpacing: 1
+                font.capitalization: Font.AllUppercase
+                visible: !!root.updateVm && root.updateVm.commbusInstalledVersion.length > 0
+            }
+
+            Text {
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                text: root.updateVm
+                      ? qsTr("Close the simulator and reopen the client to install CommBus v%1.")
+                            .arg(root.updateVm.commbusLatestVersion)
+                      : ""
+                color: Theme.amber
+                font.pixelSize: 10
+                font.letterSpacing: 0.8
+                font.capitalization: Font.AllUppercase
+                lineHeight: 1.4
+                wrapMode: Text.WordWrap
+                visible: !!root.updateVm && root.updateVm.commbusSimRunning
+            }
+
+            Text {
+                width: parent.width
+                horizontalAlignment: Text.AlignHCenter
+                text: root.updateVm
+                      ? qsTr("Could not install CommBus in %1.").arg(root.updateVm.commbusFailedTargets)
+                      : ""
+                color: Theme.red
+                font.pixelSize: 10
+                font.letterSpacing: 0.8
+                font.capitalization: Font.AllUppercase
+                lineHeight: 1.4
+                wrapMode: Text.WordWrap
+                visible: !!root.updateVm && root.updateVm.commbusFailedTargets.length > 0
+            }
         }
 
         Text {
             width: parent.width
             topPadding: 18
             horizontalAlignment: Text.AlignHCenter
-            text: qsTr("© 2026 · Not affiliated with FSDreamTeam or Microsoft")
+            text: qsTr("By %1").arg("Bruno Magalhães")
+            color: Theme.muted
+            font.pixelSize: 10
+            font.letterSpacing: 1.0
+            font.capitalization: Font.AllUppercase
+        }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "github.com/brunofgmag/gsx-integrator-client"
+            color: Theme.accent
+            font.pixelSize: 10
+            font.letterSpacing: 1.0
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Qt.openUrlExternally("https://github.com/brunofgmag/gsx-integrator-client")
+            }
+        }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: Math.min(400, parent.width)
+            horizontalAlignment: Text.AlignHCenter
+            text: qsTr("Contributors: %1").arg(root.contributors.join(", "))
             color: Theme.faint
             font.pixelSize: 10
             font.letterSpacing: 1.0
             font.capitalization: Font.AllUppercase
+            lineHeight: 1.4
+            wrapMode: Text.WordWrap
+            visible: root.contributors.length > 0
         }
     }
 }
