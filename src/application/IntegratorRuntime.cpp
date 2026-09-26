@@ -404,7 +404,7 @@ void IntegratorRuntime::Update()
 
     simbriefClient_.Poll();
 
-    const TickMode mode = TickModeResolution::Resolve(status_.enabled, gsxOk, probe::ActsOnTheSim());
+    const TickMode mode = ResolveTickMode();
     if (mode == TickMode::Idle)
     {
         return;
@@ -498,6 +498,11 @@ bool IntegratorRuntime::AreDoorsHoldingPushback() const
         && aircraft_->GetDoorStatus() == DoorStatus::AnyOpen;
 }
 
+TickMode IntegratorRuntime::ResolveTickMode() const
+{
+    return TickModeResolution::Resolve(status_.enabled, gsxService_.IsAvailable(), probe::ActsOnTheSim());
+}
+
 void IntegratorRuntime::UpdateSlow()
 {
     if (!IsSessionActive() || !aircraft_ || !status_.enabled || !IsSessionReady() || IsSessionPaused())
@@ -507,8 +512,7 @@ void IntegratorRuntime::UpdateSlow()
 
     stateMachine_.AttachAircraft(aircraft_.get());
 
-    if (TickModeResolution::Resolve(status_.enabled, gsxService_.IsAvailable(), probe::ActsOnTheSim())
-        == TickMode::Driving)
+    if (ResolveTickMode() == TickMode::Driving)
     {
         stateMachine_.TickSlowRules();
     }

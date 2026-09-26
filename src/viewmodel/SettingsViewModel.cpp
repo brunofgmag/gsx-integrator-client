@@ -4,6 +4,7 @@
 #include <QtCore/QLocale>
 #include <algorithm>
 #include <array>
+#include <optional>
 #include <utility>
 #include "../application/ports/IntegratorService.h"
 #include "../application/ports/SettingsRepository.h"
@@ -43,6 +44,18 @@ namespace
         }
 
         return lb ? weight::LbToKg(value) : value;
+    }
+
+    std::optional<double> PositiveFuelRate(const QString& text, const bool lb)
+    {
+        bool ok = false;
+        const double rate = ParseFuelRate(text, lb, &ok);
+        if (ok && rate > 0.0)
+        {
+            return rate;
+        }
+
+        return std::nullopt;
     }
 
     QString FormatFuelRate(const double kgs, const bool lb)
@@ -1097,16 +1110,14 @@ SettingsViewModel::Draft SettingsViewModel::Validate() const
         }
     }
 
-    bool rateOk = false;
-    const double globalRate = ParseFuelRate(fuelRateText_, displayIsLb_, &rateOk);
-    const bool globalRateValid = rateOk && globalRate > 0.0;
-    if (!globalRateValid && fuelRateMode_ == FuelRateMode::Manual)
+    const std::optional<double> globalRate = PositiveFuelRate(fuelRateText_, displayIsLb_);
+    if (!globalRate && fuelRateMode_ == FuelRateMode::Manual)
     {
         result.error = tr("Enter a valid fuel rate.");
 
         return result;
     }
-    result.fuelRateKgs = globalRateValid ? globalRate : settings_.fuelRateKgs;
+    result.fuelRateKgs = globalRate.value_or(settings_.fuelRateKgs);
 
     for (size_t i = 0; i < profileInfos_.size(); ++i)
     {
@@ -1116,19 +1127,17 @@ SettingsViewModel::Draft SettingsViewModel::Validate() const
             continue;
         }
 
-        bool profileRateOk = false;
-        const double profileRate = ParseFuelRate(draft.fuelRateText, displayIsLb_, &profileRateOk);
-        const bool profileRateValid = profileRateOk && profileRate > 0.0;
-        if (!profileRateValid && draft.fuelRateMode == FuelRateMode::Manual)
+        const std::optional<double> profileRate = PositiveFuelRate(draft.fuelRateText, displayIsLb_);
+        if (!profileRate && draft.fuelRateMode == FuelRateMode::Manual)
         {
             result.error = tr("Enter a valid fuel rate for %1.")
                 .arg(QString::fromStdString(profileInfos_[i].shortCode));
 
             return result;
         }
-        if (profileRateValid)
+        if (profileRate)
         {
-            result.profileFuelRates.emplace(profileInfos_[i].id, profileRate);
+            result.profileFuelRates.emplace(profileInfos_[i].id, *profileRate);
         }
     }
 

@@ -53,6 +53,8 @@ public:
     [[nodiscard]] bool SupportsGroundPowerControl() const override { return true; }
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override;
     void SetGroundPower(bool on) override;
+    [[nodiscard]] std::optional<bool> RequestedGroundPower() const;
+    [[nodiscard]] int GroundPowerRequests() const;
 
     [[nodiscard]] bool SupportsChocksControl() const override { return true; }
     bool SetChocks(bool placed) override;
@@ -60,6 +62,7 @@ public:
 
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
+    [[nodiscard]] int CloseAllRequests() const;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
 
     [[nodiscard]] bool IsPowered() const override;
@@ -83,6 +86,9 @@ private:
     SmartSwitch smartSwitch_;
     GsxDoorSync doors_;
     std::vector<int> doorMovingTicks_;
+    int closeAllRequests_ = 0;
+    std::optional<bool> requestedGroundPower_;
+    int groundPowerRequests_ = 0;
     FssEJetKeepVendorAutomationOffRule automationRule_;
     FssEJetGpuFollowsRequestRule gpuRule_;
     FssEJetDoorsFollowGsxRule doorsRule_;

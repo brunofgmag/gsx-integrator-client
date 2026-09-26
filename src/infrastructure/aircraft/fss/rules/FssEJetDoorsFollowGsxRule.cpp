@@ -60,11 +60,6 @@ const char* FssEJetDoorsFollowGsxRule::Name() const
     return kRuleName;
 }
 
-void FssEJetDoorsFollowGsxRule::RequestCloseAll()
-{
-    ++closeAllRequests_;
-}
-
 RuleVerdict FssEJetDoorsFollowGsxRule::Evaluate(const RuleContext& context)
 {
     if (cargoVariant_ && context.needs.loading
@@ -78,12 +73,13 @@ RuleVerdict FssEJetDoorsFollowGsxRule::Evaluate(const RuleContext& context)
 
 void FssEJetDoorsFollowGsxRule::Act(const RuleContext&, VariableWriter& writer)
 {
-    const bool closeAllPending = closeAllRequests_ != servedCloseAllRequests_;
+    const int closeAllRequests = aircraft_->CloseAllRequests();
+    const bool closeAllPending = closeAllRequests != servedCloseAllRequests_;
 
     if (closeAllPending)
     {
         doors_->CloseAll([this](const GsxDoor door, const bool open) { SetDesired(door, open); });
-        servedCloseAllRequests_ = closeAllRequests_;
+        servedCloseAllRequests_ = closeAllRequests;
     }
     else
     {

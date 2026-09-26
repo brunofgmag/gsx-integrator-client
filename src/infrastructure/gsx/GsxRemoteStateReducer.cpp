@@ -73,85 +73,69 @@ namespace
             state.apronVerdict.push_back(Str(v));
         }
     }
+
+    void SetMenuShown(GsxRemoteState& state, const QJsonValue& value)
+    {
+        state.menu.shown = value.toBool();
+    }
+
+    void SetMatchedAircraft(GsxRemoteState& state, const QJsonValue& value)
+    {
+        state.matchedAircraftTitle = Str(value);
+    }
+
+    struct StateField
+    {
+        std::string_view key;
+        void (*apply)(GsxRemoteState&, const QJsonValue&);
+    };
+
+    constexpr std::array<StateField, 7> kStateFields = {{
+        {"services", SetServices},
+        {"menu", SetMenu},
+        {"menuShown", SetMenuShown},
+        {"simbrief", SetSimBrief},
+        {"operators", SetOperators},
+        {"gateProperties", SetApronVerdict},
+        {"aircraft", SetMatchedAircraft}
+    }};
+
+    QLatin1StringView JsonKey(const std::string_view key)
+    {
+        return QLatin1StringView(key.data(), static_cast<qsizetype>(key.size()));
+    }
 }
 
 void GsxRemoteStateReducer::ApplySnapshot(GsxRemoteState& state, const QJsonObject& snapshot)
 {
-    if (snapshot.contains("services"))
+    for (const StateField& field : kStateFields)
     {
-        SetServices(state, snapshot.value("services"));
-    }
-
-    if (snapshot.contains("menu"))
-    {
-        SetMenu(state, snapshot.value("menu"));
-    }
-
-    if (snapshot.contains("menuShown"))
-    {
-        state.menu.shown = snapshot.value("menuShown").toBool();
-    }
-
-    if (snapshot.contains("simbrief"))
-    {
-        SetSimBrief(state, snapshot.value("simbrief"));
-    }
-
-    if (snapshot.contains("operators"))
-    {
-        SetOperators(state, snapshot.value("operators"));
-    }
-
-    if (snapshot.contains("gateProperties"))
-    {
-        SetApronVerdict(state, snapshot.value("gateProperties"));
-    }
-
-    if (snapshot.contains("aircraft"))
-    {
-        state.matchedAircraftTitle = Str(snapshot.value("aircraft"));
+        if (snapshot.contains(JsonKey(field.key)))
+        {
+            field.apply(state, snapshot.value(JsonKey(field.key)));
+        }
     }
 }
 
 GsxPatchOutcome GsxRemoteStateReducer::ApplyPatch(GsxRemoteState& state, const std::string& path,
                                                   const QJsonValue& value)
 {
-    if (path == "/services")
+    if (path.starts_with('/'))
     {
-        SetServices(state, value);
+        const std::string_view key = std::string_view(path).substr(1);
+        const auto field = std::ranges::find(kStateFields, key, &StateField::key);
+        if (field != kStateFields.end())
+        {
+            field->apply(state, value);
+
+            return GsxPatchOutcome::Applied;
+        }
     }
-    else if (path == "/menu")
-    {
-        SetMenu(state, value);
-    }
-    else if (path == "/menuShown")
-    {
-        state.menu.shown = value.toBool();
-    }
-    else if (path == "/simbrief")
-    {
-        SetSimBrief(state, value);
-    }
-    else if (path == "/operators")
-    {
-        SetOperators(state, value);
-    }
-    else if (path == "/gateProperties")
-    {
-        SetApronVerdict(state, value);
-    }
-    else if (path == "/aircraft")
-    {
-        state.matchedAircraftTitle = Str(value);
-    }
-    else if (std::ranges::find(kDiscardedPaths, path) != kDiscardedPaths.end())
+
+    if (std::ranges::find(kDiscardedPaths, path) != kDiscardedPaths.end())
     {
         return GsxPatchOutcome::Discarded;
     }
-    else
-    {
-        return GsxPatchOutcome::Unknown;
-    }
 
-    return GsxPatchOutcome::Applied;
+    return GsxPatchOutcome::Unknown;
 }
