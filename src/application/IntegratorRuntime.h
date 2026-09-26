@@ -29,6 +29,7 @@
 
 class Aircraft;
 struct AircraftDescriptor;
+enum class TickMode;
 
 class IntegratorRuntime final : public QObject
 {
@@ -111,6 +112,7 @@ private:
     };
 
     [[nodiscard]] bool IsSessionPaused() const { return pauseFlags_ != 0; }
+    [[nodiscard]] TickMode ResolveTickMode() const;
     [[nodiscard]] bool IsSessionReady();
     [[nodiscard]] bool IsPilotOnFoot();
     [[nodiscard]] const AutomationStatus& Status() const { return status_; }

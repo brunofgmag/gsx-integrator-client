@@ -29,8 +29,6 @@ public:
     [[nodiscard]] RuleVerdict Evaluate(const RuleContext& context) override;
     void Act(const RuleContext& context, VariableWriter& writer) override;
 
-    void RequestCloseAll();
-
 private:
     struct SlotState
     {
@@ -56,7 +54,6 @@ private:
     const FssEJet* aircraft_;
     bool cargoVariant_;
     std::array<SlotState, 6> states_{};
-    int closeAllRequests_ = 0;
     int servedCloseAllRequests_ = 0;
 
     std::optional<bool> mainDeckCommanded_;

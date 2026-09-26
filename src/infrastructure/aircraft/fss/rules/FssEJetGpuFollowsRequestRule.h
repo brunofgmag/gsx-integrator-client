@@ -16,13 +16,14 @@ public:
     [[nodiscard]] RuleVerdict Evaluate(const RuleContext& context) override;
     void Act(const RuleContext& context, VariableWriter& writer) override;
 
-    void Request(bool on);
-
 private:
+    void ServeNewRequest();
+
     const FssEJet* aircraft_;
     std::optional<bool> desired_;
     int attempts_ = 0;
     int ticksSincePulse_;
+    int servedGroundPowerRequests_ = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSSEJETGPUFOLLOWSREQUESTRULE_H

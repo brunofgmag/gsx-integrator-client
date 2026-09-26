@@ -114,8 +114,8 @@ private:
     void DiscardStuckMenu(const std::string& sig);
     void LogMenuLeftOpen(const std::string& sig);
     bool MaybeCloseStaleMenu();
-    bool HandleAutoPicks(const std::string& sig);
-    bool HandlePendingCompletions(const std::string& sig);
+    bool HandleAutoPicks();
+    bool HandlePendingCompletions();
     bool CompleteTheServiceItOpened();
     [[nodiscard]] bool RepositionWalking() const;
     bool HandleRepositionFlow();
