@@ -75,7 +75,9 @@ namespace
 
     QString WaitingSupportedAircraftTip(const IntegratorSnapshot& snapshot)
     {
-        if (!snapshot.automationEnabled)
+        const bool automationWaitsForTheFlight = snapshot.automationStartsWithFlight && !snapshot.sessionActive;
+
+        if (!snapshot.automationEnabled && !automationWaitsForTheFlight)
         {
             return QCoreApplication::translate("Turnaround",
                                                "The automation is off, so the client is not driving this turnaround.");
@@ -87,6 +89,12 @@ namespace
             {
                 return QCoreApplication::translate("Turnaround",
                                                    "This state will hold until you enter the cockpit.");
+            }
+
+            if (snapshot.automationStartsWithFlight)
+            {
+                return QCoreApplication::translate("Turnaround",
+                                                   "Waiting for a flight. The turnaround starts on its own once you are in the cockpit.");
             }
 
             return QCoreApplication::translate("Turnaround",
@@ -400,8 +408,14 @@ QString OperationsViewModel::GetTurnaroundModeLabel()
 
 QString OperationsViewModel::GetTurnaroundModeText() const
 {
+    const bool automatic = display_->GetAutoStartFlow();
+    if (automatic && !snapshot_.automationEnabled && !snapshot_.sessionActive)
+    {
+        return QCoreApplication::translate("OperationsScreen", "Auto · Waiting");
+    }
+
     return QCoreApplication::translate("OperationsScreen", "%1 · %2")
-        .arg(AutomationModeLabel(display_->GetAutoStartFlow()),
+        .arg(AutomationModeLabel(automatic),
              AutomationRunningLabel(snapshot_.automationEnabled));
 }
 
