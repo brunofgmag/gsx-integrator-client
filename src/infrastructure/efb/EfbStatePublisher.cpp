@@ -105,7 +105,7 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("paxProgressText"), view_->GetPaxProgressText());
     state.insert(QLatin1String("paxLabel"), OperationsViewModel::GetPaxLabel());
     state.insert(QLatin1String("paxCountText"), view_->GetPaxCountText());
-    state.insert(QLatin1String("targetZfwLabel"), OperationsViewModel::GetTargetZfwLabel());
+    state.insert(QLatin1String("targetZfwLabel"), view_->GetTargetZfwLabel());
     state.insert(QLatin1String("boardingProgress"), view_->GetBoardingProgress());
     state.insert(QLatin1String("deboardingProgress"), view_->GetDeboardingProgress());
     state.insert(QLatin1String("loadedFuelText"), view_->GetLoadedFuelText());
