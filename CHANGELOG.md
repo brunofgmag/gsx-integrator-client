@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.42.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.41.0...v1.42.0) (2026-09-26)
+
+
+* let the flightsim.to build manage the commbus plugin and the simulator autostart ([#196](https://github.com/brunofgmag/gsx-integrator-client/issues/196)) ([a7f9c9c](https://github.com/brunofgmag/gsx-integrator-client/commit/a7f9c9cd9c2544d50844eb2f2c00b3dcc4c6fad6))
+
+
+### Features
+
+* **settings:** let the flightsim.to build manage the commbus plugin and the simulator autostart ([929af0d](https://github.com/brunofgmag/gsx-integrator-client/commit/929af0d1c569888381967ce871cadea87a7bec2e)) ([a7f9c9c](https://github.com/brunofgmag/gsx-integrator-client/commit/a7f9c9cd9c2544d50844eb2f2c00b3dcc4c6fad6))
+
 ## [1.41.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.40.1...v1.41.0) (2026-09-26)
 
 
