@@ -361,7 +361,7 @@ QString OperationsViewModel::GetTargetFuelText() const
 
 QString OperationsViewModel::GetTargetZfwText() const
 {
-    return WeightText(GetTargetZfwKg());
+    return WeightText(IsInDeboardingPhase() ? GetEmptyZfwKg() : GetTargetZfwKg());
 }
 
 QString OperationsViewModel::GetPlannedZfwText() const
@@ -604,9 +604,11 @@ QString OperationsViewModel::GetPaxCountText() const
         + QString::number(GetTargetPax());
 }
 
-QString OperationsViewModel::GetTargetZfwLabel()
+QString OperationsViewModel::GetTargetZfwLabel() const
 {
-    return QCoreApplication::translate("OperationsScreen", "Planned ZFW");
+    return IsInDeboardingPhase()
+               ? QCoreApplication::translate("OperationsScreen", "OEW")
+               : QCoreApplication::translate("OperationsScreen", "Planned ZFW");
 }
 
 QString OperationsViewModel::GetSimbriefCardLabel()
@@ -864,6 +866,11 @@ double OperationsViewModel::GetTargetFuelKg() const
 double OperationsViewModel::GetTargetZfwKg() const
 {
     return snapshot_.targetZfwKg;
+}
+
+double OperationsViewModel::GetEmptyZfwKg() const
+{
+    return snapshot_.emptyZfwKg;
 }
 
 int OperationsViewModel::GetTargetPax() const

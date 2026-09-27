@@ -515,6 +515,7 @@ void TurnaroundStateMachineTest::publishesLoadingTargetsAfterFlightPlanCapture()
 
     QCOMPARE(workflow.f.status.targetFuelKg, 12000.0);
     QCOMPARE(workflow.f.status.targetZfwKg, 180000.0);
+    QCOMPARE(workflow.f.status.emptyZfwKg, 130000.0);
     QCOMPARE(workflow.f.status.targetPassengers, 210);
 }
 

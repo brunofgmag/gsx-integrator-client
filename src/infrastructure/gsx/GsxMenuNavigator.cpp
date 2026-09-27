@@ -299,19 +299,24 @@ void GsxMenuNavigator::HandleMenu()
     const bool newMenu = LogMenuIfNew(sig);
     MaybeResyncStalledMenu(sig);
 
-    if (HandleAutoPicks(sig))
+    if (sig == lastPickedSig_)
+    {
+        return;
+    }
+
+    if (HandleAutoPicks())
     {
         serviceOpenedBy_ = nullptr;
 
         return;
     }
 
-    if (HandlePendingCompletions(sig))
+    if (HandlePendingCompletions())
     {
         return;
     }
 
-    if (!HasActiveIntent() || sig == lastPickedSig_)
+    if (!HasActiveIntent())
     {
         return;
     }
@@ -398,8 +403,8 @@ void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
         return;
     }
 
-    const bool automationInterested = settings_ == nullptr || settings_->autoSelectGsxChoice
-        || settings_->autoDeice || HasActiveIntent();
+    const bool automationInterested = settings_->autoSelectGsxChoice || settings_->autoDeice
+        || HasActiveIntent();
     if (!automationInterested)
     {
         return;
@@ -482,16 +487,11 @@ bool GsxMenuNavigator::MaybeCloseStaleMenu()
     return true;
 }
 
-bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
+bool GsxMenuNavigator::HandleAutoPicks()
 {
-    if (sig == lastPickedSig_)
-    {
-        return false;
-    }
-
     const auto& menu = state_->menu;
 
-    if (settings_ != nullptr && settings_->autoDeice && !deIceYesSpent_
+    if (settings_->autoDeice && !deIceYesSpent_
         && Contains(menu.title, kDeIceQuestion)
         && PickByContains("Yes"))
     {
@@ -502,7 +502,7 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
 
     if (Contains(menu.title, kAirstairsQuestion))
     {
-        const bool ownStairs = settings_ != nullptr && settings_->useAircraftStairs;
+        const bool ownStairs = settings_->useAircraftStairs;
         if (ownStairs && PickByContains(kJetwayAnswerText))
         {
             return true;
@@ -529,7 +529,7 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
         }
     }
 
-    if ((settings_ == nullptr || settings_->autoSelectGsxChoice)
+    if (settings_->autoSelectGsxChoice
         && !Contains(menu.title, kConfirmationQuestion)
         && (PickByContains(kGsxChoiceText) || PickByContains(kBlockFuelText)))
     {
@@ -538,28 +538,19 @@ bool GsxMenuNavigator::HandleAutoPicks(const std::string& sig)
 
     if (Contains(menu.title, kDeboardCrewQuestion))
     {
-        const CrewChoice choice = settings_ != nullptr ? settings_->crewDeboarding : CrewChoice::Both;
-
-        return PickByContains(CrewChoiceEntry(choice));
+        return PickByContains(CrewChoiceEntry(settings_->crewDeboarding));
     }
 
     if (Contains(menu.title, kBoardCrewQuestion))
     {
-        const CrewChoice choice = settings_ != nullptr ? settings_->crewBoarding : CrewChoice::Both;
-
-        return PickByContains(CrewChoiceEntry(choice));
+        return PickByContains(CrewChoiceEntry(settings_->crewBoarding));
     }
 
     return false;
 }
 
-bool GsxMenuNavigator::HandlePendingCompletions(const std::string& sig)
+bool GsxMenuNavigator::HandlePendingCompletions()
 {
-    if (sig == lastPickedSig_)
-    {
-        return false;
-    }
-
     if (completingPushback_.active && PickByContains(kCompletePushbackText))
     {
         completingPushback_ = {};

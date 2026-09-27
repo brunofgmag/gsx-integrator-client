@@ -29,6 +29,7 @@ private slots:
     static void carriesTheLoaderCountdownTheWindowWrites();
     static void carriesTheEffectiveFuelRateTheFuelCardShows();
     static void carriesTheDeparturePageTipTheWindowWrites();
+    static void carriesTheEmptyWeightThePaxCardTargetsWhileDeboarding();
 };
 
 void EfbStatePublisherTest::publishesTheSnapshotWhenItChanges()
@@ -404,4 +405,27 @@ void EfbStatePublisherTest::carriesTheEffectiveFuelRateTheFuelCardShows()
     publisher.Publish();
 
     QVERIFY(std::get<2>(bridge.calls.back()).find(R"("fuelRateText":"17 kg/s")") != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesTheEmptyWeightThePaxCardTargetsWhileDeboarding()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.phase = TurnaroundPhase::Deboarding;
+    service.snapshot.targetZfwKg = 60000.0;
+    service.snapshot.emptyZfwKg = 42000.0;
+    service.Notify();
+    publisher.Publish();
+
+    const std::string emptyWeight = (QLocale().toString(42000) + QStringLiteral(" kg")).toStdString();
+    const std::string expectedText = R"("targetZfwText":")" + emptyWeight + R"(")";
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("targetZfwLabel":"OEW")") != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(expectedText) != std::string::npos);
 }

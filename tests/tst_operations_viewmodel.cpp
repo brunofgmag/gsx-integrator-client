@@ -93,6 +93,7 @@ private slots:
     static void standingAdvisoryTextsNameTheirCondition();
     static void progressTextsRoundToAWholePercent();
     static void theBoardingCardFollowsTheDeboardingPhase();
+    static void theZfwRowTargetsTheEmptyWeightWhileDeboarding();
     static void fuelRateTextNamesWhoSetsThePace();
     static void fuelRateTextShowsTheEffectiveRateInTheDisplayUnit();
     static void plannedPaxTextPrintsThePlainNumber();
@@ -1525,6 +1526,33 @@ void OperationsViewModelTest::theBoardingCardFollowsTheDeboardingPhase()
     QCOMPARE(viewModel.GetPaxCardLabel(), QStringLiteral("Deboarding"));
     QCOMPARE(viewModel.GetPaxCountText(), QStringLiteral("90 / 180"));
     QCOMPARE(viewModel.GetPaxProgressText(), QStringLiteral("50%"));
+}
+
+void OperationsViewModelTest::theZfwRowTargetsTheEmptyWeightWhileDeboarding()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.targetZfwKg = 60000.0;
+    service.snapshot.emptyZfwKg = 42000.0;
+    service.snapshot.phase = TurnaroundPhase::Loading;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetTargetZfwLabel(), QStringLiteral("Planned ZFW"));
+    QCOMPARE(viewModel.GetTargetZfwText(), QLocale().toString(60000) + QStringLiteral(" kg"));
+
+    service.snapshot.phase = TurnaroundPhase::RequestDeboarding;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetTargetZfwLabel(), QStringLiteral("OEW"));
+    QCOMPARE(viewModel.GetTargetZfwText(), QLocale().toString(42000) + QStringLiteral(" kg"));
+
+    service.snapshot.phase = TurnaroundPhase::Deboarding;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetTargetZfwLabel(), QStringLiteral("OEW"));
+    QCOMPARE(viewModel.GetTargetZfwText(), QLocale().toString(42000) + QStringLiteral(" kg"));
 }
 
 void OperationsViewModelTest::fuelRateTextNamesWhoSetsThePace()

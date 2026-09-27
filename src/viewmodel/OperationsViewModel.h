@@ -139,7 +139,7 @@ public:
     [[nodiscard]] QString GetPaxProgressText() const;
     [[nodiscard]] static QString GetPaxLabel();
     [[nodiscard]] QString GetPaxCountText() const;
-    [[nodiscard]] static QString GetTargetZfwLabel();
+    [[nodiscard]] QString GetTargetZfwLabel() const;
     [[nodiscard]] static QString GetSimbriefCardLabel();
     [[nodiscard]] static QString GetPlannedFuelLabel();
     [[nodiscard]] static QString GetPlannedZfwLabel();
@@ -190,6 +190,7 @@ public:
     [[nodiscard]] int GetDeboardedPax() const;
     [[nodiscard]] double GetTargetFuelKg() const;
     [[nodiscard]] double GetTargetZfwKg() const;
+    [[nodiscard]] double GetEmptyZfwKg() const;
     [[nodiscard]] int GetTargetPax() const;
     [[nodiscard]] int GetAutoWeightUnit() const;
     [[nodiscard]] bool IsCargoAircraft() const;

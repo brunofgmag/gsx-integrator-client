@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.43.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.0...v1.43.1) (2026-09-27)
+
+
+* detect the 200f by its atc model so any livery is supported ([#206](https://github.com/brunofgmag/gsx-integrator-client/issues/206)) ([c6d1c92](https://github.com/brunofgmag/gsx-integrator-client/commit/c6d1c92a59188d80b704fcf427948da1c84ca78c))
+
+
+### Bug Fixes
+
+* **fss-727:** detect the 200f by its atc model so any livery is supported ([597522d](https://github.com/brunofgmag/gsx-integrator-client/commit/597522db1d62134c17ba9c4501e28660c8965519)) ([c6d1c92](https://github.com/brunofgmag/gsx-integrator-client/commit/c6d1c92a59188d80b704fcf427948da1c84ca78c))
+
+## [1.43.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.42.2...v1.43.0) (2026-09-26)
+
+
+* show the empty weight on the deboarding card ([#203](https://github.com/brunofgmag/gsx-integrator-client/issues/203)) ([ed68f85](https://github.com/brunofgmag/gsx-integrator-client/commit/ed68f852a5359988aa13f3c14fbcf3570a51cb6d))
+
+
+### Features
+
+* **operations:** show the empty weight on the deboarding card ([cf41759](https://github.com/brunofgmag/gsx-integrator-client/commit/cf41759ca51a94d37965bedc96331ce073071f86)) ([ed68f85](https://github.com/brunofgmag/gsx-integrator-client/commit/ed68f852a5359988aa13f3c14fbcf3570a51cb6d))
+
 ## [1.42.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.42.1...v1.42.2) (2026-09-26)
 
 

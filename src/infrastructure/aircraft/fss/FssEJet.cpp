@@ -506,7 +506,18 @@ std::optional<GroundPowerStatus> FssEJet::GetGroundPowerStatus() const
 
 void FssEJet::SetGroundPower(const bool on)
 {
-    gpuRule_.Request(on);
+    requestedGroundPower_ = on;
+    ++groundPowerRequests_;
+}
+
+std::optional<bool> FssEJet::RequestedGroundPower() const
+{
+    return requestedGroundPower_;
+}
+
+int FssEJet::GroundPowerRequests() const
+{
+    return groundPowerRequests_;
 }
 
 bool FssEJet::SetChocks(const bool placed)
@@ -530,7 +541,7 @@ void FssEJet::ClearOwnGroundEquipment()
 
 void FssEJet::CloseAllDoors()
 {
-    doorsRule_.RequestCloseAll();
+    ++closeAllRequests_;
 }
 
 void FssEJet::HoldDoorsClosed(const bool hold)
@@ -539,8 +550,13 @@ void FssEJet::HoldDoorsClosed(const bool hold)
 
     if (hold)
     {
-        doorsRule_.RequestCloseAll();
+        ++closeAllRequests_;
     }
+}
+
+int FssEJet::CloseAllRequests() const
+{
+    return closeAllRequests_;
 }
 
 DoorStatus FssEJet::GetDoorStatus() const

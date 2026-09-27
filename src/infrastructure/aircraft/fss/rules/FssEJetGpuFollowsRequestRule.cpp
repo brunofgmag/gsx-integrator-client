@@ -35,20 +35,31 @@ RuleVerdict FssEJetGpuFollowsRequestRule::Evaluate(const RuleContext&)
     return RuleVerdict::Pass();
 }
 
-void FssEJetGpuFollowsRequestRule::Request(const bool on)
+void FssEJetGpuFollowsRequestRule::ServeNewRequest()
 {
-    if (desired_.has_value() && *desired_ == on)
+    const int requests = aircraft_->GroundPowerRequests();
+    if (requests == servedGroundPowerRequests_)
     {
         return;
     }
 
-    desired_ = on;
+    servedGroundPowerRequests_ = requests;
+
+    const std::optional<bool> requested = aircraft_->RequestedGroundPower();
+    if (!requested.has_value() || desired_ == requested)
+    {
+        return;
+    }
+
+    desired_ = requested;
     attempts_ = 0;
     ticksSincePulse_ = kMinTicksBetweenPulses;
 }
 
 void FssEJetGpuFollowsRequestRule::Act(const RuleContext&, VariableWriter& writer)
 {
+    ServeNewRequest();
+
     if (!desired_.has_value())
     {
         return;

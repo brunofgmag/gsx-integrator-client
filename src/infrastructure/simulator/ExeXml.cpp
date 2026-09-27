@@ -1,5 +1,6 @@
 #include "ExeXml.h"
 
+#include <algorithm>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
@@ -89,6 +90,21 @@ namespace
 
         return disabled.compare(QStringLiteral("True"), Qt::CaseInsensitive) != 0;
     }
+
+    QList<QDomElement> AddonsLaunching(const QDomElement& root, const QString& exeName)
+    {
+        QList<QDomElement> addons;
+        for (QDomElement addon = root.firstChildElement(kLaunchAddonTag); !addon.isNull();
+             addon = addon.nextSiblingElement(kLaunchAddonTag))
+        {
+            if (addon.text().contains(exeName, Qt::CaseInsensitive))
+            {
+                addons.append(addon);
+            }
+        }
+
+        return addons;
+    }
 }
 
 bool ExeXmlAddUpdate(const QString& exeXmlPath, const QString& exePath, const QString& appName)
@@ -105,19 +121,13 @@ bool ExeXmlAddUpdate(const QString& exeXmlPath, const QString& exePath, const QS
         return false;
     }
 
-    const QString exeName = QFileInfo(exePath).fileName();
-    bool found = false;
-    for (QDomElement addon = root.firstChildElement(kLaunchAddonTag); !addon.isNull();
-         addon = addon.nextSiblingElement(kLaunchAddonTag))
+    QList<QDomElement> launching = AddonsLaunching(root, QFileInfo(exePath).fileName());
+    for (QDomElement& addon : launching)
     {
-        if (addon.text().contains(exeName, Qt::CaseInsensitive))
-        {
-            found = true;
-            FillAddon(doc, addon, exePath, appName);
-        }
+        FillAddon(doc, addon, exePath, appName);
     }
 
-    if (!found)
+    if (launching.isEmpty())
     {
         QDomElement addon = doc.createElement(kLaunchAddonTag);
         FillAddon(doc, addon, exePath, appName);
@@ -146,22 +156,13 @@ bool ExeXmlRemove(const QString& exeXmlPath, const QString& exeName)
         return false;
     }
 
-    QList<QDomElement> obsolete;
-    for (QDomElement addon = root.firstChildElement(kLaunchAddonTag); !addon.isNull();
-         addon = addon.nextSiblingElement(kLaunchAddonTag))
-    {
-        if (addon.text().contains(exeName, Qt::CaseInsensitive))
-        {
-            obsolete.append(addon);
-        }
-    }
-
+    const QList<QDomElement> obsolete = AddonsLaunching(root, exeName);
     if (obsolete.isEmpty())
     {
         return true;
     }
 
-    for (QDomElement& addon : obsolete)
+    for (const QDomElement& addon : obsolete)
     {
         root.removeChild(addon);
     }
@@ -177,17 +178,7 @@ bool ExeXmlHasEnabledEntry(const QString& exeXmlPath, const QString& exeName)
         return false;
     }
 
-    const QDomElement root = doc.documentElement();
-    for (QDomElement addon = root.firstChildElement(kLaunchAddonTag); !addon.isNull();
-         addon = addon.nextSiblingElement(kLaunchAddonTag))
-    {
-        if (addon.text().contains(exeName, Qt::CaseInsensitive) && IsEnabled(addon))
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return std::ranges::any_of(AddonsLaunching(doc.documentElement(), exeName), IsEnabled);
 }
 
 std::vector<ExeXmlTarget> CandidateExeXmlTargets(const QString& homeDir)

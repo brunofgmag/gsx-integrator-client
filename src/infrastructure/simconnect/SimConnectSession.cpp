@@ -122,17 +122,7 @@ bool SimConnectSession::RequestClientDataArea(const char* areaName,
                                               const SIMCONNECT_CLIENT_DATA_REQUEST_FLAG flag,
                                               ClientDataFn onData)
 {
-    if (!IsConnected())
-    {
-        return false;
-    }
-
-    if (FAILED(SimConnect_MapClientDataNameToID(hSimConnect_, areaName, areaId)))
-    {
-        return false;
-    }
-
-    if (FAILED(SimConnect_AddToClientDataDefinition(hSimConnect_, defId, 0, size, 0, 0)))
+    if (!MapClientDataArea(areaName, areaId, defId, size))
     {
         return false;
     }

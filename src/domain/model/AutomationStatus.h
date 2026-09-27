@@ -45,6 +45,7 @@ struct AutomationStatus
     int boardedPassengers = 0;
     double targetFuelKg = 0.0;
     double targetZfwKg = 0.0;
+    double emptyZfwKg = 0.0;
     int targetPassengers = 0;
     FlightPlanStatus flightPlanStatus = FlightPlanStatus::Idle;
     FlightPlanFailure flightPlanFailure = FlightPlanFailure::None;
