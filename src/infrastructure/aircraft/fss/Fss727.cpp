@@ -521,7 +521,8 @@ namespace
         Fss727::kName200F,
         {
             {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200F"},
-            {MatchField::Title, MatchOp::StartsWith, "Boeing B727-200 Freighter"}
+            {MatchField::Title, MatchOp::StartsWith, "Boeing B727-200 Freighter"},
+            {MatchField::AtcModel, MatchOp::Equals, "B727"}
         },
         &CreateFss727200F, "fss-727-200f", "722F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}, kRecommendedFuelRateKgs
     };
