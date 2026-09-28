@@ -116,8 +116,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
-        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.cpp
-        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fss/FssEJet.cpp

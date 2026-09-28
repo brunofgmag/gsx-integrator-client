@@ -49,6 +49,7 @@ private:
     void TurnThePanelMasterOff(VariableWriter& writer, double position);
     void ServeThePendingClose(VariableWriter& writer, bool closed);
     void AskForTheDeckClosedOnceTheDeboardingCompletes();
+    void AskForTheDeckClosedOnceTheMainLoaderLeaves();
     [[nodiscard]] int CloseRequests() const;
     [[nodiscard]] bool IsCloseRequestPending() const;
     [[nodiscard]] bool HasTheMainLoaderLeft() const;
@@ -65,6 +66,9 @@ private:
     int servedRequests_ = 0;
     int deboardingCloseRequests_ = 0;
     bool deboardingAtWork_ = false;
+    int loaderDepartureCloseRequests_ = 0;
+    bool loaderDepartureCloseUnserved_ = false;
+    bool mainLoaderSeenAtTheDeck_ = false;
     Travel travel_ = Travel::None;
     Travel cutTravel_ = Travel::None;
     Fss727DoorRest rest_;

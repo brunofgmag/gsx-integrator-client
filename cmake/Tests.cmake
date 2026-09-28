@@ -394,8 +394,8 @@ gsxi_add_qt_test(gsxi-fss-727-tests fss-727
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
-        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.cpp
-        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
         src/infrastructure/aircraft/SmartSwitch.cpp
@@ -764,8 +764,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
-        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.cpp
-        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fss/FssEJet.cpp
@@ -988,8 +988,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.h
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
-        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.cpp
-        src/infrastructure/aircraft/fss/rules/Fss727HoldsCloseOnceTheirLoaderLeavesRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fss/FssEJet.cpp
