@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.43.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.1...v1.43.2) (2026-09-28)
+
+
+* open the cargo doors at the loader and close them as it leaves ([#209](https://github.com/brunofgmag/gsx-integrator-client/issues/209)) ([05c0162](https://github.com/brunofgmag/gsx-integrator-client/commit/05c01625c263ca04d89f2a7f655a9619b6ffa864))
+
+
+### Bug Fixes
+
+* **fss-727:** open the cargo doors at the loader and close them as it leaves ([e6fc131](https://github.com/brunofgmag/gsx-integrator-client/commit/e6fc1314c03037524282fa1e5f490e60c0a8f4b3)) ([05c0162](https://github.com/brunofgmag/gsx-integrator-client/commit/05c01625c263ca04d89f2a7f655a9619b6ffa864))
+
 ## [1.43.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.0...v1.43.1) (2026-09-27)
 
 
