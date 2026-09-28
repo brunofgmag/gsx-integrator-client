@@ -93,6 +93,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::Act(const RuleContext&, VariableWri
 {
     GuardThePanelMasterCut(writer);
     AskForTheDeckClosedOnceTheDeboardingCompletes();
+    AskForTheDeckClosedOnceTheMainLoaderLeaves();
 
     if (travel_ != Travel::None)
     {
@@ -153,6 +154,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::ServeThePendingClose(VariableWriter
     if (closed)
     {
         servedRequests_ = CloseRequests();
+        loaderDepartureCloseUnserved_ = false;
 
         return;
     }
@@ -187,6 +189,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::FinishTravel(VariableWriter& writer
     if (travel_ == Travel::Closing)
     {
         servedRequests_ = CloseRequests();
+        loaderDepartureCloseUnserved_ = false;
     }
 
     cutTravel_ = travel_;
@@ -270,20 +273,48 @@ void Fss727MainDeckMovesByTheCargoPanelRule::AskForTheDeckClosedOnceTheDeboardin
     LOG_INFO("FSS 727 main deck door still open as the GSX deboarding completes: its close is asked for once, and an opening after this is left alone");
 }
 
+void Fss727MainDeckMovesByTheCargoPanelRule::AskForTheDeckClosedOnceTheMainLoaderLeaves()
+{
+    if (variables_->HasReceivedLVar(gsx::lvars::kBaggageLoaderMainState)
+        && gsx::states::IsLoaderAtDoor(doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0)))
+    {
+        mainLoaderSeenAtTheDeck_ = true;
+
+        return;
+    }
+
+    if (!mainLoaderSeenAtTheDeck_ || !HasTheMainLoaderLeft())
+    {
+        return;
+    }
+
+    mainLoaderSeenAtTheDeck_ = false;
+
+    if (aircraft_->IsMainDeckClosed().value_or(true))
+    {
+        return;
+    }
+
+    ++loaderDepartureCloseRequests_;
+    loaderDepartureCloseUnserved_ = true;
+
+    LOG_INFO("FSS 727 main deck door still open as the main loader leaves it: its close is asked for once, even with the GSX boarding or deboarding still at work");
+}
+
 int Fss727MainDeckMovesByTheCargoPanelRule::CloseRequests() const
 {
-    return aircraft_->MainDeckCloseRequests() + deboardingCloseRequests_;
+    return aircraft_->MainDeckCloseRequests() + deboardingCloseRequests_ + loaderDepartureCloseRequests_;
 }
 
 bool Fss727MainDeckMovesByTheCargoPanelRule::IsCloseRequestPending() const
 {
-    return CloseRequests() != servedRequests_ && !IsGsxWorkingTheCargoDoors();
+    return CloseRequests() != servedRequests_ && (loaderDepartureCloseUnserved_ || !IsGsxWorkingTheCargoDoors());
 }
 
 bool Fss727MainDeckMovesByTheCargoPanelRule::HasTheMainLoaderLeft() const
 {
     return variables_->HasReceivedLVar(gsx::lvars::kBaggageLoaderMainState)
-        && doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0) < gsx::states::kVehicleDispatched;
+        && !gsx::states::IsLoaderArriving(doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0));
 }
 
 bool Fss727MainDeckMovesByTheCargoPanelRule::IsTheMainLoaderWaitingForTheDeck() const
