@@ -32,18 +32,19 @@ class PmdgOptionsTest final : public QObject
     Q_OBJECT
 
 private slots:
-    void readsDataBroadcastFlag();
-    void appendsSectionWhenAbsent();
-    void keepsExistingSectionsWhenAppending();
-    void flipsDisabledFlagInPlace();
-    void addsKeyToExistingSection();
-    void leavesEnabledTextUnchanged();
-    void keepsCarriageReturnsOfTheFile();
-    void enablesBroadcastOnDisk();
-    void reportsAbsentFileOnDisk();
-    void mapsEveryPmdgNameToItsPackage();
-    void mapsTheSevenThirtySevenFamilyToItsOwnPackage();
-    void ignoresAircraftWithoutOptionsFile();
+    static void readsDataBroadcastFlag();
+    static void appendsSectionWhenAbsent();
+    static void keepsExistingSectionsWhenAppending();
+    static void flipsDisabledFlagInPlace();
+    static void addsKeyToExistingSection();
+    static void leavesEnabledTextUnchanged();
+    static void aCommentedKeyIsNeitherReadNorReplaced();
+    static void keepsCarriageReturnsOfTheFile();
+    static void enablesBroadcastOnDisk();
+    static void reportsAbsentFileOnDisk();
+    static void mapsEveryPmdgNameToItsPackage();
+    static void mapsTheSevenThirtySevenFamilyToItsOwnPackage();
+    static void ignoresAircraftWithoutOptionsFile();
 };
 
 void PmdgOptionsTest::readsDataBroadcastFlag()
@@ -98,6 +99,18 @@ void PmdgOptionsTest::leavesEnabledTextUnchanged()
     const std::string original = "[SDK]\nEnableDataBroadcast=1\n";
 
     QCOMPARE(PmdgOptions::WithDataBroadcast(original), original);
+}
+
+void PmdgOptionsTest::aCommentedKeyIsNeitherReadNorReplaced()
+{
+    QVERIFY(!PmdgOptions::HasDataBroadcast("[SDK]\n; EnableDataBroadcast=1\n"));
+    QVERIFY(!PmdgOptions::HasDataBroadcast("[SDK]\n  ;EnableDataBroadcast=1\n"));
+    QVERIFY(PmdgOptions::HasDataBroadcast("[SDK]\n; EnableDataBroadcast=0\n  EnableDataBroadcast=1\n"));
+
+    const std::string fixed = PmdgOptions::WithDataBroadcast("[SDK]\n; EnableDataBroadcast=1\nFoo=2\n");
+
+    QVERIFY(PmdgOptions::HasDataBroadcast(fixed));
+    QCOMPARE(fixed, std::string("[SDK]\nEnableDataBroadcast=1\n; EnableDataBroadcast=1\nFoo=2\n"));
 }
 
 void PmdgOptionsTest::keepsCarriageReturnsOfTheFile()

@@ -56,6 +56,8 @@ private slots:
     static void transmitRequiresConnection();
     static void closeClearsCallbacks();
     static void aTransmittedEventLandsInTheWritesLog();
+    static void aLabelledEventNamesTheControlBesideTheSimConnectName();
+    static void theEventCountFollowsTheSimConnectNameNotTheLabel();
     static void aToggleSentTwiceAMomentApartIsLoggedTwice();
     static void anEventThatNeverLeftIsNotLogged();
 
@@ -204,7 +206,7 @@ void SimConnectSessionTest::dispatchRoutesPauseAndMenuEvents()
 
     QVERIFY(session.Dispatch());
 
-    QCOMPARE(pauseState, 2u);
+    QCOMPARE(pauseState, 2U);
     QCOMPARE(menuState, 7);
 }
 
@@ -307,6 +309,44 @@ void SimConnectSessionTest::aTransmittedEventLandsInTheWritesLog()
 
     QCOMPARE(ProbeLines(kWritesLog).mid(before),
              QStringList{QStringLiteral("event #69632 param=536870912 n=1")});
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void SimConnectSessionTest::aLabelledEventNamesTheControlBesideTheSimConnectName()
+{
+#ifndef NDEBUG
+    const qsizetype before = ProbeLines(kWritesLog).size();
+    SimConnectSession session;
+    QVERIFY(session.Open("test"));
+
+    QVERIFY(session.TransmitEvent(kDoorToggleEvent, kMouseLeftSingle, "DOOR_FWD_CARGO"));
+
+    QCOMPARE(ProbeLines(kWritesLog).mid(before),
+             QStringList{QStringLiteral("event DOOR_FWD_CARGO (#83645) param=536870912 n=1")});
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void SimConnectSessionTest::theEventCountFollowsTheSimConnectNameNotTheLabel()
+{
+#ifndef NDEBUG
+    const qsizetype before = ProbeLines(kWritesLog).size();
+    SimConnectSession session;
+    QVERIFY(session.Open("test"));
+
+    QVERIFY(session.TransmitEvent(kDoorToggleEvent, kMouseLeftSingle, "DOOR_FWD_CARGO"));
+    QVERIFY(session.TransmitEvent(kDoorToggleEvent, kMouseLeftSingle));
+    QVERIFY(session.TransmitEvent(kDoorToggleEvent, kMouseLeftSingle, "PROBE_TOGGLE"));
+
+    QCOMPARE(ProbeLines(kWritesLog).mid(before),
+             (QStringList{
+                 QStringLiteral("event DOOR_FWD_CARGO (#83645) param=536870912 n=1"),
+                 QStringLiteral("event #83645 param=536870912 n=2"),
+                 QStringLiteral("event PROBE_TOGGLE (#83645) param=536870912 n=3")
+             }));
 #else
     QSKIP("probe recording is compiled out of Release builds");
 #endif

@@ -26,6 +26,9 @@ namespace
 {
     constexpr double kRecommendedFuelRateKgs = 0.0;
 
+    constexpr auto kAtcModelE190F = "E190F";
+    constexpr auto kAtcModelE195F = "E195F";
+
     constexpr auto kElecPwrAcAvailLVar = "FSS_EXX_ELEC_PWR_AC_AVAIL";
     constexpr auto kBeaconSwitchLVar = "FSS_EXX_OVHD_EXLT_RED_BCN_SWITCH";
     constexpr auto kParkBrakeLeverLVar = "FSS_EXX_PARKBRAKE_BV_LEVER";
@@ -194,25 +197,53 @@ namespace
     constexpr int kPaxDoorMovingLimitTicks = 14;
 
     constexpr std::array kPassengerDoorReadPoints = {
-        DoorReadPoint{"FSS_EXX_DOOR_FWD_L_OPEN", "FSS_EXX_DOOR_FWD_L_MOVING", nullptr, kPaxDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_AFT_L_OPEN", "FSS_EXX_DOOR_AFT_L_MOVING", nullptr, kPaxDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_FWD_R_OPEN", "FSS_EXX_DOOR_FWD_R_MOVING", nullptr, kPaxDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_AFT_R_OPEN", "FSS_EXX_DOOR_AFT_R_MOVING", nullptr, kPaxDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_CARGO_FWD_OPEN", "FSS_EXX_DOOR_CARGO_FWD_MOVING", nullptr,
-                      doors::kCargoDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_CARGO_AFT_OPEN", "FSS_EXX_DOOR_CARGO_AFT_MOVING", nullptr,
-                      doors::kCargoDoorMovingLimitTicks}
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_FWD_L_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_FWD_L_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = kPaxDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_AFT_L_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_AFT_L_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = kPaxDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_FWD_R_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_FWD_R_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = kPaxDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_AFT_R_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_AFT_R_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = kPaxDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_CARGO_FWD_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_CARGO_FWD_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = doors::kCargoDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_CARGO_AFT_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_CARGO_AFT_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = doors::kCargoDoorMovingLimitTicks}
     };
 
     constexpr std::array kCargoDoorReadPoints = {
-        DoorReadPoint{"FSS_EXX_DOOR_FWD_L_OPEN", "FSS_EXX_DOOR_FWD_L_MOVING", nullptr, kPaxDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_FWD_R_OPEN", "FSS_EXX_DOOR_FWD_R_MOVING", nullptr, kPaxDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_CARGO_FWD_OPEN", "FSS_EXX_DOOR_CARGO_FWD_MOVING", nullptr,
-                      doors::kCargoDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_CARGO_AFT_OPEN", "FSS_EXX_DOOR_CARGO_AFT_MOVING", nullptr,
-                      doors::kCargoDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_CARGO_MAIN_OPEN", "FSS_EXX_DOOR_CARGO_MAIN_MOVING_UP",
-                      "FSS_EXX_DOOR_CARGO_MAIN_MOVING_DN", doors::kMainDeckDoorMovingLimitTicks}
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_FWD_L_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_FWD_L_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = kPaxDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_FWD_R_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_FWD_R_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = kPaxDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_CARGO_FWD_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_CARGO_FWD_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = doors::kCargoDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_CARGO_AFT_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_CARGO_AFT_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = doors::kCargoDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_CARGO_MAIN_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_CARGO_MAIN_MOVING_UP",
+                      .movingLVar2 = "FSS_EXX_DOOR_CARGO_MAIN_MOVING_DN",
+                      .movingLimitTicks = doors::kMainDeckDoorMovingLimitTicks}
     };
 
     std::span<const DoorReadPoint> DoorReadPointsFor(const bool cargoVariant)
@@ -620,7 +651,9 @@ namespace
     std::unique_ptr<Aircraft> MakeFssEJet(const AircraftContext& context, const AircraftIdentity& identity,
                                           const char* name)
     {
-        const bool cargo = MatchText(identity.title, MatchOp::Contains, "Freighter");
+        const bool cargo = MatchText(identity.title, MatchOp::Contains, "Freighter")
+            || MatchText(identity.atcModel, MatchOp::Equals, kAtcModelE190F)
+            || MatchText(identity.atcModel, MatchOp::Equals, kAtcModelE195F);
 
         return std::make_unique<FssEJet>(context.variableGateway, context.status, name, cargo);
     }

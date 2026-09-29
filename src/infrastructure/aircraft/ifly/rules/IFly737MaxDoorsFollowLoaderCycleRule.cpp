@@ -1,6 +1,7 @@
 #include "IFly737MaxDoorsFollowLoaderCycleRule.h"
 
 #include "../IFly737Max.h"
+#include "../../../gsx/GsxDoorSync.h"
 #include "../../../gsx/GsxLVars.h"
 #include "../../../logging/LogMacros.h"
 #include "../../../simvars/VariableGateway.h"
@@ -36,32 +37,35 @@ namespace
 }
 
 IFly737MaxDoorsFollowLoaderCycleRule::IFly737MaxDoorsFollowLoaderCycleRule(VariableReader& variables,
-                                                                          const IFly737Max& aircraft)
-    : variables_(&variables), aircraft_(&aircraft),
+                                                                          const IFly737Max& aircraft,
+                                                                          GsxDoorSync& doors)
+    : variables_(&variables), aircraft_(&aircraft), doors_(&doors),
       fwdCargoDoor_{
-          "FWD", kFwdCargoAnimLVar, gsx::lvars::kAircraftCargo1Toggle,
-          gsx::lvars::kBaggageLoaderFrontState
+          .doorName = "FWD", .animLVar = kFwdCargoAnimLVar, .toggleLVar = gsx::lvars::kAircraftCargo1Toggle,
+          .loaderLVar = gsx::lvars::kBaggageLoaderFrontState
       },
       aftCargoDoor_{
-          "AFT", kAftCargoAnimLVar, gsx::lvars::kAircraftCargo2Toggle,
-          gsx::lvars::kBaggageLoaderRearState
+          .doorName = "AFT", .animLVar = kAftCargoAnimLVar, .toggleLVar = gsx::lvars::kAircraftCargo2Toggle,
+          .loaderLVar = gsx::lvars::kBaggageLoaderRearState
       },
       paxDoors_{
           Door{
-              "1L", "ANIMATION_FWD_ENTRY_VAL", gsx::lvars::kAircraftExit1Toggle,
-              gsx::lvars::kPassengerStairsFrontState, DoorKind::JetwayOrStairs
+              .doorName = "1L", .animLVar = "ANIMATION_FWD_ENTRY_VAL", .toggleLVar = gsx::lvars::kAircraftExit1Toggle,
+              .loaderLVar = gsx::lvars::kPassengerStairsFrontState, .kind = DoorKind::JetwayOrStairs
           },
           Door{
-              "2L", "ANIMATION_AFT_ENTRY_VAL", gsx::lvars::kAircraftExit4Toggle,
-              gsx::lvars::kPassengerStairsRearState, DoorKind::Stairs
+              .doorName = "2L", .animLVar = "ANIMATION_AFT_ENTRY_VAL", .toggleLVar = gsx::lvars::kAircraftExit4Toggle,
+              .loaderLVar = gsx::lvars::kPassengerStairsRearState, .kind = DoorKind::Stairs
           },
           Door{
-              "1R", "ANIMATION_FWD_SERVICE_VAL", gsx::lvars::kAircraftService1Toggle,
-              gsx::lvars::kCateringFrontState, DoorKind::Catering
+              .doorName = "1R", .animLVar = "ANIMATION_FWD_SERVICE_VAL",
+              .toggleLVar = gsx::lvars::kAircraftService1Toggle,
+              .loaderLVar = gsx::lvars::kCateringFrontState, .kind = DoorKind::Catering
           },
           Door{
-              "2R", "ANIMATION_AFT_SERVICE_VAL", gsx::lvars::kAircraftService2Toggle,
-              gsx::lvars::kCateringRearState, DoorKind::Catering
+              .doorName = "2R", .animLVar = "ANIMATION_AFT_SERVICE_VAL",
+              .toggleLVar = gsx::lvars::kAircraftService2Toggle,
+              .loaderLVar = gsx::lvars::kCateringRearState, .kind = DoorKind::Catering
           }
       }
 {
@@ -189,7 +193,7 @@ void IFly737MaxDoorsFollowLoaderCycleRule::TrackDoorTravel(Door& door) const
 
 void IFly737MaxDoorsFollowLoaderCycleRule::TrackBaggageLoader(Door& door) const
 {
-    const double loaderState = variables_->GetLVar(door.loaderLVar, 0.0);
+    const double loaderState = doors_->VehicleState(door.loaderLVar, 0.0);
 
     if (loaderState == gsx::states::kLoaderUnloading || loaderState == gsx::states::kLoaderLoading)
     {
@@ -254,7 +258,7 @@ bool IFly737MaxDoorsFollowLoaderCycleRule::AdvancePulse(Door& door, VariableWrit
 }
 
 bool IFly737MaxDoorsFollowLoaderCycleRule::Pulse(Door& door, VariableWriter& writer, int& attempts,
-                                                 const char* verb) const
+                                                 const char* verb)
 {
     ++attempts;
     writer.SetLVar(door.toggleLVar, kTogglePressed);
@@ -324,7 +328,7 @@ bool IFly737MaxDoorsFollowLoaderCycleRule::HasPendingCargoDoorWork() const
 bool IFly737MaxDoorsFollowLoaderCycleRule::IsBaggageLoaderPresent(const char* loaderLVar) const
 {
     return variables_->HasReceivedLVar(loaderLVar)
-        && gsx::states::IsLoaderPresent(variables_->GetLVar(loaderLVar, 0.0));
+        && gsx::states::IsLoaderPresent(doors_->VehicleState(loaderLVar, 0.0));
 }
 
 bool IFly737MaxDoorsFollowLoaderCycleRule::IsLoaderAtDoorNow(const Door& door) const
@@ -332,20 +336,26 @@ bool IFly737MaxDoorsFollowLoaderCycleRule::IsLoaderAtDoorNow(const Door& door) c
     return door.kind == DoorKind::Cargo && WantsOpen(door);
 }
 
+bool IFly737MaxDoorsFollowLoaderCycleRule::IsClosingForDeparture(const Door& door) const
+{
+    return aircraft_->IsHeldForDeparture() || (closeRequested_ && !WantsOpen(door));
+}
+
 bool IFly737MaxDoorsFollowLoaderCycleRule::IsDoorReleased(const Door& door) const
 {
     if (door.kind != DoorKind::Cargo)
     {
-        return aircraft_->IsHeldForDeparture() || (closeRequested_ && !WantsOpen(door));
+        return IsClosingForDeparture(door);
     }
 
     if (armedCycle_ == CargoCycle::Boarding)
     {
-        return boardingCompleteSeen_ && !IsLoaderAtDoorNow(door);
+        return IsClosingForDeparture(door) || (boardingCompleteSeen_ && !IsLoaderAtDoorNow(door));
     }
 
-    return (door.loaderDone || (deboardingCompleteSeen_ && door.servedSeen))
-        && !IsLoaderAtDoorNow(door);
+    return IsClosingForDeparture(door)
+        || ((door.loaderDone || (deboardingCompleteSeen_ && door.servedSeen))
+            && !IsLoaderAtDoorNow(door));
 }
 
 bool IFly737MaxDoorsFollowLoaderCycleRule::IsDoorCloseable(const Door& door) const
@@ -378,7 +388,7 @@ bool IFly737MaxDoorsFollowLoaderCycleRule::IsDoorClosePending(const Door& door) 
 
 bool IFly737MaxDoorsFollowLoaderCycleRule::WantsOpen(const Door& door) const
 {
-    const double equipment = variables_->GetLVar(door.loaderLVar, 0.0);
+    const double equipment = doors_->VehicleState(door.loaderLVar, 0.0);
 
     switch (door.kind)
     {
@@ -395,11 +405,10 @@ bool IFly737MaxDoorsFollowLoaderCycleRule::WantsOpen(const Door& door) const
     }
 }
 
-std::array<IFly737MaxDoorsFollowLoaderCycleRule::Door*, 6>
-IFly737MaxDoorsFollowLoaderCycleRule::AllDoors()
+IFly737MaxDoorsFollowLoaderCycleRule::DoorList IFly737MaxDoorsFollowLoaderCycleRule::AllDoors()
 {
     return {
         &fwdCargoDoor_, &aftCargoDoor_,
-        &paxDoors_[0], &paxDoors_[1], &paxDoors_[2], &paxDoors_[3]
+        paxDoors_.data(), &paxDoors_[1], &paxDoors_[2], &paxDoors_[3]
     };
 }

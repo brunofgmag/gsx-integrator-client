@@ -10,8 +10,10 @@ ApplicationWindow {
     id: window
 
     width: 720
+    height: 640
     maximumWidth: 1080
     minimumWidth: 720
+    minimumHeight: 500
     visibility: startHidden ? Window.Hidden
               : startMinimized ? Window.Minimized
               : Window.AutomaticVisibility
@@ -37,57 +39,13 @@ ApplicationWindow {
     // 0 = ops, 1 = settings, 2 = about. Header buttons toggle back to ops.
     property int screen: 0
 
-    readonly property int fittedHeight: Math.min(
-        header.height + (screens.children[window.screen]?.implicitHeight ?? 0) + 32
-            + (window.screen === 1 ? settingsFooter.implicitHeight : 0),
-        Screen.desktopAvailableHeight - 48)
-
-    readonly property int lockedHeight: window.integratorVm.connected
-        ? window.fittedHeight
-        : Math.max(500, window.fittedHeight)
-
-    property bool heightReady: false
-
-    onLockedHeightChanged: Qt.callLater(window.applyLockedHeight)
-    Component.onCompleted: Qt.callLater(() => {
-        window.applyLockedHeight()
-        window.heightReady = true
-    })
-
-    function pinHeight(h) {
-        if (h > window.maximumHeight)
-            window.maximumHeight = h
-        window.minimumHeight = h
-        window.maximumHeight = h
-    }
-
-    readonly property bool animatedHeight: window.settingsVm.activeRenderer !== "software"
-
-    function applyLockedHeight() {
-        const h = window.lockedHeight
-        if (window.heightReady && window.animatedHeight) {
-            window.minimumHeight = Math.min(window.height, h)
-            window.maximumHeight = Math.max(window.height, h)
-            window.height = h
-        } else {
-            window.pinHeight(h)
-            window.height = h
-        }
-    }
-
-    Behavior on height {
-        enabled: window.heightReady && window.animatedHeight
-        NumberAnimation {
-            duration: 140
-            easing.type: Easing.OutCubic
-            onRunningChanged: if (!running) window.pinHeight(window.height)
-        }
-    }
-
     Settings {
         category: "window"
         property alias width: window.width
+        property alias height: window.height
     }
+
+    Component.onCompleted: window.height = Math.min(window.height, Screen.desktopAvailableHeight - 48)
 
     function restoreFromTray() {
         window.showNormal()
@@ -328,19 +286,31 @@ ApplicationWindow {
                 anchors.fill: parent
                 visible: !body.showConnecting
                 contentWidth: width
-                contentHeight: (screens.children[screens.currentIndex]?.implicitHeight ?? 0) + 32
+                contentHeight: window.screen === 1
+                               ? flick.height
+                               : (screens.children[screens.currentIndex]?.implicitHeight ?? 0) + flick.contentPadding * 2
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
+                interactive: flick.contentOverflows
+                onContentOverflowsChanged: if (!flick.contentOverflows) flick.contentY = 0
 
-                ScrollBar.vertical: ScrollBar {
-                    policy: ScrollBar.AsNeeded
+                readonly property int contentPadding: 16
+                readonly property bool contentOverflows: flick.contentHeight - flick.contentPadding > flick.height
+                readonly property int scrollBarWidth: 10
+                readonly property int scrollBarGap: 4
+                readonly property int rightGutter: Math.max(window.shellMargin,
+                                                            flick.scrollBarWidth + flick.scrollBarGap)
+
+                ScrollBar.vertical: ThemedScrollBar {
+                    needed: flick.contentOverflows
                 }
 
                 StackLayout {
                     id: screens
                     x: window.shellMargin
-                    y: 16
-                    width: parent.width - window.shellMargin * 2
+                    y: flick.contentPadding
+                    width: parent.width - window.shellMargin - (window.screen === 1 ? 0 : flick.rightGutter)
+                    height: window.screen === 1 ? Math.max(0, flick.height - flick.contentPadding * 2) : implicitHeight
                     currentIndex: window.screen
                     onCurrentIndexChanged: flick.contentY = 0
 
@@ -350,6 +320,7 @@ ApplicationWindow {
                     }
 
                     SettingsScreen {
+                        paneGutter: flick.rightGutter
                         settingsVm: window.settingsVm
                         updateModeVisible: window.updateVm.downloadsAllowed
                         updateVm: window.updateVm
@@ -369,6 +340,13 @@ ApplicationWindow {
                 anchors.rightMargin: window.shellMargin
                 visible: body.showConnecting
             }
+        }
+
+        OperationsFooter {
+            Layout.fillWidth: true
+            visible: window.screen === 0 && window.integratorVm.connected
+            integratorVm: window.integratorVm
+            shellMargin: window.shellMargin
         }
 
         Rectangle {

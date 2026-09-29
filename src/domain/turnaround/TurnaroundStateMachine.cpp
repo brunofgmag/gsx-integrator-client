@@ -247,7 +247,7 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
 {
     lastTransitionOrigin_ = origin;
 
-    if (context_.logger)
+    if (context_.logger != nullptr)
     {
         context_.logger->LogInfo(
             std::format("Transitioning: {} -> {}{}",
@@ -275,6 +275,13 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
     if (phase == TurnaroundPhase::WaitingForEngines && context_.menuGateway != nullptr)
     {
         context_.menuGateway->OnPushbackStarted();
+    }
+
+    if (phase == TurnaroundPhase::WaitingDeparture
+        && phase_ == TurnaroundPhase::WaitingPushbackToStart
+        && context_.menuGateway != nullptr)
+    {
+        context_.menuGateway->ClosePushbackPanel();
     }
 
     if (phase == TurnaroundPhase::WaitingSupportedAircraft

@@ -1,7 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INTEGRATORRUNTIME_H
 #define GSX_INTEGRATOR_CLIENT_INTEGRATORRUNTIME_H
 
+#include <chrono>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <set>
 #include <string>
@@ -31,12 +33,20 @@ class Aircraft;
 struct AircraftDescriptor;
 enum class TickMode;
 
+struct IntegratorRuntimeOptions
+{
+    static constexpr std::chrono::milliseconds kDefaultReconnectInterval{5000};
+
+    std::chrono::milliseconds reconnectInterval = kDefaultReconnectInterval;
+    std::function<bool()> actsOnTheSim;
+};
+
 class IntegratorRuntime final : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit IntegratorRuntime(QObject* parent = nullptr);
+    explicit IntegratorRuntime(IntegratorRuntimeOptions options = {}, QObject* parent = nullptr);
     ~IntegratorRuntime() override;
 
     void Setup();
@@ -153,7 +163,6 @@ private:
     void AnnounceWireFacts();
 
     static constexpr int kDispatchIntervalMs = 80;
-    static constexpr int kReconnectIntervalMs = 5000;
 
     SimConnectVariableGateway varGateway_;
     CommBusBridgeClient bridgeClient_;
@@ -178,6 +187,7 @@ private:
 
     QTimer dispatchTimer_;
     QTimer reconnectTimer_;
+    std::function<bool()> actsOnTheSim_;
     QtDomainLogger qtLogger_;
     ProbeObserver probe_;
 

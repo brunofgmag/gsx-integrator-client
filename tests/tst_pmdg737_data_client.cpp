@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <string>
+#include <QtCore/QStringList>
+#include <QtCore/QTemporaryDir>
+#include "ProbeLines.h"
 #include "doubles/FakeSimConnectApi.h"
 #include "../src/infrastructure/pmdg/Pmdg737DataClient.h"
 #include "../src/infrastructure/pmdg/Pmdg737SdkData.h"
@@ -18,9 +21,9 @@ namespace
         data.LTS_AntiCollisionSw = true;
         data.PED_annunParkingBrake = true;
         data.IRS_aligned = true;
-        data.FUEL_QtyLeft = 8000.0f;
-        data.FUEL_QtyRight = 8000.0f;
-        data.FUEL_QtyCenter = 2000.0f;
+        data.FUEL_QtyLeft = 8000.0F;
+        data.FUEL_QtyRight = 8000.0F;
+        data.FUEL_QtyCenter = 2000.0F;
 
         return data;
     }
@@ -30,13 +33,21 @@ namespace
         return std::ranges::find(FakeSimConnectApi::mappedEventNames, name)
             != FakeSimConnectApi::mappedEventNames.end();
     }
+
+    QStringList EventLines(const qsizetype before)
+    {
+        return ProbeLines(QStringLiteral("writes.log")).mid(before).filter(QStringLiteral("event "));
+    }
 }
 
 class Pmdg737DataClientTest final : public QObject
 {
     Q_OBJECT
 
+    QTemporaryDir directory_;
+
 private slots:
+    void initTestCase();
     static void init();
 
     static void noDataBeforeFirstPacket();
@@ -48,7 +59,37 @@ private slots:
     static void pollNeverTransmitsAnEvent();
     static void doorEventsSkipTheTwoNumbersTheSdkReserves();
     static void groundPowerSeparatesAvailableFromPowered();
+    static void aDoorToggleIsLoggedUnderItsDoorName();
 };
+
+void Pmdg737DataClientTest::initTestCase()
+{
+    QVERIFY(directory_.isValid());
+    qputenv("GSXI_PROBE_DIR", directory_.path().toUtf8());
+    probe::SetEnabled(true);
+}
+
+void Pmdg737DataClientTest::aDoorToggleIsLoggedUnderItsDoorName()
+{
+#ifndef NDEBUG
+    Pmdg737DataClient client;
+    client.Poll();
+    const qsizetype before = ProbeLines(QStringLiteral("writes.log")).size();
+
+    client.ToggleDoor(Pmdg737Door::FwdEntry);
+    client.ToggleDoor(Pmdg737Door::FwdCargo);
+    client.ToggleDoor(Pmdg737Door::Airstair);
+
+    QCOMPARE(EventLines(before),
+             (QStringList{
+                 QStringLiteral("event DOOR_FWD_ENTRY (#83637) param=536870912 n=1"),
+                 QStringLiteral("event DOOR_FWD_CARGO (#83645) param=536870912 n=1"),
+                 QStringLiteral("event DOOR_AIRSTAIR (#83649) param=536870912 n=1")
+             }));
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
 
 void Pmdg737DataClientTest::init()
 {
@@ -121,10 +162,10 @@ void Pmdg737DataClientTest::pollNeverTransmitsAnEvent()
 
 void Pmdg737DataClientTest::doorEventsSkipTheTwoNumbersTheSdkReserves()
 {
-    QCOMPARE(Pmdg737DataClient::DoorEventOffsetFor(Pmdg737Door::FwdEntry), 14005u);
-    QCOMPARE(Pmdg737DataClient::DoorEventOffsetFor(Pmdg737Door::AftService), 14008u);
-    QCOMPARE(Pmdg737DataClient::DoorEventOffsetFor(Pmdg737Door::FwdCargo), 14013u);
-    QCOMPARE(Pmdg737DataClient::DoorEventOffsetFor(Pmdg737Door::Airstair), 14017u);
+    QCOMPARE(Pmdg737DataClient::DoorEventOffsetFor(Pmdg737Door::FwdEntry), 14005U);
+    QCOMPARE(Pmdg737DataClient::DoorEventOffsetFor(Pmdg737Door::AftService), 14008U);
+    QCOMPARE(Pmdg737DataClient::DoorEventOffsetFor(Pmdg737Door::FwdCargo), 14013U);
+    QCOMPARE(Pmdg737DataClient::DoorEventOffsetFor(Pmdg737Door::Airstair), 14017U);
 
     Pmdg737DataClient client;
     client.Poll();
@@ -140,7 +181,7 @@ void Pmdg737DataClientTest::doorEventsSkipTheTwoNumbersTheSdkReserves()
     client.ToggleDoor(Pmdg737Door::Airstair);
     QVERIFY(MappedEvent("#83649"));
 
-    QCOMPARE(Pmdg737DataClient::DoorEventOffsetFor(Pmdg737Door::MainCargo), 14015u);
+    QCOMPARE(Pmdg737DataClient::DoorEventOffsetFor(Pmdg737Door::MainCargo), 14015U);
 }
 
 void Pmdg737DataClientTest::groundPowerSeparatesAvailableFromPowered()

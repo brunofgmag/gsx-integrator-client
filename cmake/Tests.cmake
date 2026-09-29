@@ -322,6 +322,8 @@ gsxi_add_qt_test(gsxi-tfdi-md11-tests tfdi-md11
         src/infrastructure/aircraft/tfdi/rules/TfdiMd11CommitEfbTargetsRule.h
         src/infrastructure/aircraft/tfdi/rules/TfdiMd11PaxDoorsFollowStairsRule.cpp
         src/infrastructure/aircraft/tfdi/rules/TfdiMd11PaxDoorsFollowStairsRule.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
         src/domain/model/AutomationStatus.h
         src/domain/support/Weight.h)
 
@@ -345,7 +347,9 @@ gsxi_add_qt_test(gsxi-ifly-737max-tests ifly-737max
         src/infrastructure/ifly/IFlyPlanFile.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp
         src/infrastructure/simbrief/SimbriefOfpParser.h
-        src/domain/model/AutomationStatus.h)
+        src/domain/model/AutomationStatus.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h)
 
 gsxi_add_qt_test(gsxi-ifly-plan-file-tests ifly-plan-file
         tests/tst_ifly_plan_file.cpp
@@ -1110,16 +1114,7 @@ if (NOT GSXI_TESTS_ONLY)
             VERSION 1.0
             OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/qml-tests/GsxIntegratorClientTests"
             QML_FILES
-            src/qml/Theme.qml
-            src/qml/components/ActionButton.qml
-            src/qml/components/Advisory.qml
-            src/qml/components/HelpHint.qml
-            src/qml/components/KeyValueRow.qml
-            src/qml/components/SegmentedControl.qml
-            src/qml/components/SettingRow.qml
-            src/qml/components/SquareSwitch.qml
-            src/qml/components/StatusChip.qml
-            src/qml/components/SwitchRow.qml
+            ${APP_QML_FILES}
     )
 
     target_link_libraries(gsxi-qml-tests PRIVATE Qt6::QuickTest Qt6::Quick)

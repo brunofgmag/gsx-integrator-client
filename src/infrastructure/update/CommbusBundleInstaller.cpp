@@ -16,6 +16,22 @@ namespace
     constexpr auto kVersionMarker = ".gsxi-version";
     constexpr auto kManifestName = "manifest.json";
     constexpr auto kOverrideLabel = "Community";
+    constexpr auto kCommunityDirName = "Community";
+
+    bool IsPlainCommunityDir(const QString& communityPath)
+    {
+        return QFileInfo(communityPath).fileName().compare(QLatin1String(kCommunityDirName), Qt::CaseInsensitive) == 0;
+    }
+
+    QString LabelFor(const QLatin1String simulatorLabel, const QString& communityPath)
+    {
+        if (IsPlainCommunityDir(communityPath))
+        {
+            return simulatorLabel;
+        }
+
+        return simulatorLabel + QStringLiteral(" / ") + QFileInfo(communityPath).fileName();
+    }
 
     QByteArray ReadFileIfExists(const QString& path)
     {
@@ -93,6 +109,35 @@ namespace
         return entry.exists() || entry.isJunction() || entry.isSymbolicLink();
     }
 
+    QStringList TargetDirsUnder(const QString& packagesPath)
+    {
+        const QStringList siblings = CommunityDirsUnder(packagesPath);
+
+        QStringList holders;
+        for (const QString& sibling : siblings)
+        {
+            if (HasPackage(sibling))
+            {
+                holders.append(sibling);
+            }
+        }
+
+        if (!holders.isEmpty())
+        {
+            return holders;
+        }
+
+        for (const QString& sibling : siblings)
+        {
+            if (IsPlainCommunityDir(sibling))
+            {
+                return {sibling};
+            }
+        }
+
+        return {};
+    }
+
     QString BundledVersionIn(const QString& bundleDir)
     {
         return ParseManifestVersion(ReadFileIfExists(bundleDir + u'/' + QLatin1String(kManifestName)));
@@ -108,7 +153,7 @@ namespace
         {
             if (needsChange(target) && !target.processName.isEmpty() && isProcessRunning(target.processName))
             {
-                blocked.push_back({target.label, CommbusBundleStatus::SimRunning});
+                blocked.push_back({.label = target.label, .status = CommbusBundleStatus::SimRunning});
             }
         }
 
@@ -172,15 +217,14 @@ std::vector<CommbusInstallTarget> DetectCommbusInstallTargets(const QString& hom
             continue;
         }
 
-        const QString communityPath = packagesPath + QStringLiteral("/Community");
-        if (!QDir(communityPath).exists())
+        for (const QString& communityPath : TargetDirsUnder(packagesPath))
         {
-            continue;
+            targets.push_back({
+                .label = LabelFor(QLatin1String(candidate.label), communityPath),
+                .communityPath = communityPath,
+                .processName = QLatin1String(candidate.processName)
+            });
         }
-
-        targets.push_back({
-            QLatin1String(candidate.label), communityPath, QLatin1String(candidate.processName)
-        });
     }
 
     return targets;
@@ -190,7 +234,7 @@ std::vector<CommbusInstallTarget> ResolveCommbusInstallTargets(const QString& ov
 {
     if (!overrideDir.isEmpty())
     {
-        return {{QLatin1String(kOverrideLabel), QDir::fromNativeSeparators(overrideDir), {}}};
+        return {{.label = QLatin1String(kOverrideLabel), .communityPath = QDir::fromNativeSeparators(overrideDir)}};
     }
 
     return DetectCommbusInstallTargets(homeDir);
@@ -202,12 +246,10 @@ QString InstalledCommbusPackageVersion(const QString& communityPath)
 
     const QString marker = QString::fromUtf8(
         ReadFileIfExists(packageDir + u'/' + QLatin1String(kVersionMarker))).trimmed();
-    if (!marker.isEmpty())
-    {
-        return marker;
-    }
 
-    return ParseManifestVersion(ReadFileIfExists(packageDir + u'/' + QLatin1String(kManifestName)));
+    return marker.isEmpty()
+        ? ParseManifestVersion(ReadFileIfExists(packageDir + u'/' + QLatin1String(kManifestName)))
+        : marker;
 }
 
 CommbusBundleResult InstallCommbusBundle(const QString& bundleDir,
@@ -221,7 +263,8 @@ CommbusBundleResult InstallCommbusBundle(const QString& bundleDir,
     for (const CommbusInstallTarget& target : targets)
     {
         result.targets.push_back({
-            target.label, InstallInto(bundleDir, target, result.bundledVersion, isProcessRunning)
+            .label = target.label,
+            .status = InstallInto(bundleDir, target, result.bundledVersion, isProcessRunning)
         });
     }
 
@@ -241,7 +284,7 @@ CommbusBundleResult EnableCommbusBundle(const QString& bundleDir,
         });
     if (!blocked.empty())
     {
-        return {bundledVersion, std::move(blocked)};
+        return {.bundledVersion = bundledVersion, .targets = std::move(blocked)};
     }
 
     return InstallCommbusBundle(bundleDir, targets, isProcessRunning);
@@ -257,13 +300,13 @@ CommbusBundleResult RemoveCommbusBundle(const std::vector<CommbusInstallTarget>&
         });
     if (!blocked.empty())
     {
-        return {{}, std::move(blocked)};
+        return {.targets = std::move(blocked)};
     }
 
     CommbusBundleResult result;
     for (const CommbusInstallTarget& target : targets)
     {
-        result.targets.push_back({target.label, RemoveFrom(target)});
+        result.targets.push_back({.label = target.label, .status = RemoveFrom(target)});
     }
 
     return result;
@@ -271,7 +314,7 @@ CommbusBundleResult RemoveCommbusBundle(const std::vector<CommbusInstallTarget>&
 
 bool IsProcessRunning(const QString& exeName)
 {
-    const HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    const HANDLE& snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snapshot == INVALID_HANDLE_VALUE)
     {
         return false;
@@ -281,7 +324,7 @@ bool IsProcessRunning(const QString& exeName)
     entry.dwSize = sizeof(entry);
 
     bool found = false;
-    if (Process32FirstW(snapshot, &entry))
+    if (Process32FirstW(snapshot, &entry) != FALSE)
     {
         do
         {
@@ -290,7 +333,7 @@ bool IsProcessRunning(const QString& exeName)
                 found = true;
                 break;
             }
-        } while (Process32NextW(snapshot, &entry));
+        } while (Process32NextW(snapshot, &entry) != FALSE);
     }
     CloseHandle(snapshot);
 

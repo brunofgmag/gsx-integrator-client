@@ -24,6 +24,7 @@ set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/states/BoardingTrack.h
         src/domain/turnaround/states/RequestPushbackState.cpp
         src/domain/turnaround/states/RequestPushbackState.h
+        src/domain/turnaround/states/StandDeparture.h
         src/domain/turnaround/states/WaitingPushbackToStartState.cpp
         src/domain/turnaround/states/WaitingPushbackToStartState.h
         src/domain/turnaround/states/WaitingEnginesState.cpp
@@ -297,9 +298,11 @@ set(APP_QML_FILES
         src/qml/components/SquareSwitch.qml
         src/qml/components/StatusChip.qml
         src/qml/components/SwitchRow.qml
+        src/qml/components/ThemedScrollBar.qml
         src/qml/components/UpdatePill.qml
         src/qml/screens/AboutScreen.qml
         src/qml/screens/ConnectingPanel.qml
+        src/qml/screens/OperationsFooter.qml
         src/qml/screens/OperationsScreen.qml
         src/qml/screens/SettingsScreen.qml
         src/qml/screens/settings/AdvancedPane.qml

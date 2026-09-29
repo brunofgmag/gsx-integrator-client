@@ -15,6 +15,7 @@ public:
     virtual void RequestPushback() = 0;
     virtual void RequestDepartureClearance() = 0;
     virtual void OpenPushbackPanel() = 0;
+    virtual void ClosePushbackPanel() = 0;
     virtual void RequestRefueling() = 0;
     virtual void CompleteRefuel() = 0;
     virtual void CompleteBoarding() = 0;

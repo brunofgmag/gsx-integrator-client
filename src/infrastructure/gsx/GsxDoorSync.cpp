@@ -68,7 +68,7 @@ GsxDoorSync::GsxDoorSync(VariableReader* variableGateway) : variableGateway_(var
 
 void GsxDoorSync::WatchExit(const GsxDoor door, const int exitIndex)
 {
-    exits_[static_cast<std::size_t>(door)] = ExitWatch{exitIndex};
+    exits_[static_cast<std::size_t>(door)] = ExitWatch{.index = exitIndex};
 }
 
 bool GsxDoorSync::IsMoving(const GsxDoor door) const
@@ -220,22 +220,22 @@ void GsxDoorSync::Report() const
                       .arg(IsDesiredOpen(door) ? 1 : 0));
     }
 
-    static constexpr std::array kUnknownToTheClient = {
-        "FSDT_GSX_LOADER_EXIT_0",
-        "FSDT_GSX_LOADER_EXIT_1",
-        "FSDT_GSX_LOADER_EXIT_2",
-        "FSDT_GSX_OPERATESTAIRS_STATE",
-        "FSDT_GSX_OPERATEJETWAYS_STATE",
-        "FSDT_GSX_STAIRS",
-        "FSDT_GSX_JETWAY_AIR",
-        "FSDT_GSX_JETWAY_POWER",
-        "FSDT_GSX_SET_LOADERS_STAY_UNTIL_DEPARTURE",
-        "FSDT_GSX_SET_AUTO_STAIRS",
-        "FSDT_GSX_SET_DISABLE_REAR_STAIRS"
+    static constexpr std::array kCandidates = {
+        gsx::lvars::kLoaderExit0,
+        gsx::lvars::kLoaderExit1,
+        gsx::lvars::kLoaderExit2,
+        gsx::lvars::kOperateStairsState,
+        gsx::lvars::kOperateJetwaysState,
+        gsx::lvars::kStairs,
+        gsx::lvars::kJetwayAir,
+        gsx::lvars::kJetwayPower,
+        gsx::lvars::kSetLoadersStayUntilDeparture,
+        gsx::lvars::kSetAutoStairs,
+        gsx::lvars::kSetDisableRearStairs
     };
 
     QStringList candidates;
-    for (const char* name : kUnknownToTheClient)
+    for (const char* name : kCandidates)
     {
         candidates.append(QStringLiteral("%1=%2").arg(QLatin1String(name))
                           .arg(variableGateway_->GetLVar(name, -1.0), 0, 'f', 1));

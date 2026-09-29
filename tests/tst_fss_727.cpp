@@ -85,6 +85,7 @@ namespace
 
     constexpr int kMainDeckRestingTicks = 3;
     constexpr int kMasterCutGuardTicks = 3;
+    constexpr int kTravelStartTicks = 30;
     constexpr int kMainLoaderDeadlineTicks = 120;
     constexpr int kMeasuredCompletingTicks = 22;
     constexpr double kMeasuredMainDeckTravelPerTick = 0.02;
@@ -97,7 +98,7 @@ namespace
     constexpr double kStepAboveTheRestTolerance = 0.002;
     constexpr double kStaleRestInsideTheClosedEnd = 0.018;
     constexpr double kWhereTheDeckReallyWas =
-        kStaleRestInsideTheClosedEnd + kMainDeckRestingTicks * kMeasuredMainDeckTravelPerTick;
+        kStaleRestInsideTheClosedEnd + (kMainDeckRestingTicks * kMeasuredMainDeckTravelPerTick);
     constexpr double kMeasuredMasterCutWhileClosing = 0.0381;
     constexpr double kMeasuredMasterCutWhileOpening = 0.9577;
     constexpr double kWobbleInsideTheRestTolerance = 0.0004;
@@ -163,15 +164,24 @@ namespace
     };
 
     constexpr std::array kCargoStations = {
-        CargoStation{4, 4000.0, 0.0}, CargoStation{5, 7562.0, 0.0},
-        CargoStation{6, 7562.0, 0.75}, CargoStation{7, 7562.0, 0.75},
-        CargoStation{8, 8402.0, 0.75}, CargoStation{9, 8402.0, 0.75},
-        CargoStation{10, 10000.0, 0.75}, CargoStation{11, 10000.0, 0.75},
-        CargoStation{12, 8327.0, 1.0}, CargoStation{13, 7769.0, 1.0},
-        CargoStation{14, 7769.0, 1.0}, CargoStation{15, 4000.0, 1.0},
-        CargoStation{16, 6673.0, 0.35}, CargoStation{17, 3805.0, 1.0},
-        CargoStation{18, 4557.0, 1.0}, CargoStation{19, 3653.0, 1.0},
-        CargoStation{20, 3649.0, 1.0}, CargoStation{21, 4026.0, 1.0}
+        CargoStation{.index = 4, .efbCapacityLb = 4000.0, .ratio = 0.0},
+        CargoStation{.index = 5, .efbCapacityLb = 7562.0, .ratio = 0.0},
+        CargoStation{.index = 6, .efbCapacityLb = 7562.0, .ratio = 0.75},
+        CargoStation{.index = 7, .efbCapacityLb = 7562.0, .ratio = 0.75},
+        CargoStation{.index = 8, .efbCapacityLb = 8402.0, .ratio = 0.75},
+        CargoStation{.index = 9, .efbCapacityLb = 8402.0, .ratio = 0.75},
+        CargoStation{.index = 10, .efbCapacityLb = 10000.0, .ratio = 0.75},
+        CargoStation{.index = 11, .efbCapacityLb = 10000.0, .ratio = 0.75},
+        CargoStation{.index = 12, .efbCapacityLb = 8327.0, .ratio = 1.0},
+        CargoStation{.index = 13, .efbCapacityLb = 7769.0, .ratio = 1.0},
+        CargoStation{.index = 14, .efbCapacityLb = 7769.0, .ratio = 1.0},
+        CargoStation{.index = 15, .efbCapacityLb = 4000.0, .ratio = 1.0},
+        CargoStation{.index = 16, .efbCapacityLb = 6673.0, .ratio = 0.35},
+        CargoStation{.index = 17, .efbCapacityLb = 3805.0, .ratio = 1.0},
+        CargoStation{.index = 18, .efbCapacityLb = 4557.0, .ratio = 1.0},
+        CargoStation{.index = 19, .efbCapacityLb = 3653.0, .ratio = 1.0},
+        CargoStation{.index = 20, .efbCapacityLb = 3649.0, .ratio = 1.0},
+        CargoStation{.index = 21, .efbCapacityLb = 4026.0, .ratio = 1.0}
     };
 
     constexpr double kEffectiveCapacitiesLb = 88836.55;
@@ -460,6 +470,9 @@ private slots:
     static void aSampleRepeatedEveryThirdTickIsNotTheEndOfTheTravel();
     static void aRestThatWobblesInsideTheToleranceIsStillARest();
     static void aDeckReadingThatStopsArrivingNeverEndsTheTravel();
+    static void aCommandedDeckThatNeverMovesDropsTheTravelAndServesTheNextClose();
+    static void aDeckThatStartsMovingOnTheLastTickBeforeTheCeilingKeepsTheTravel();
+    static void aResumedTravelWhoseDeckNeverMovesIsDroppedToo();
     static void takesExternalPowerAtTheEngineerPanel();
     static void automodeRuleNeverHoldsThePhase();
     static void observingEvaluatingAndReadingWriteNoVariable();
@@ -944,7 +957,7 @@ void Fss727Test::loadingSpreadsThePayloadOverTheEffectiveCapacitiesInPounds()
 
         QCOMPARE(gateway.AVarWriteCount(name), 1);
         QCOMPARE(gateway.AVarWriteUnit(name), std::string(kPoundsUnit));
-        QVERIFY(std::abs(gateway.WrittenAVar(name) - station.EffectiveCapacityLb() / 2.0) < kPoundTolerance);
+        QVERIFY(std::abs(gateway.WrittenAVar(name) - (station.EffectiveCapacityLb() / 2.0)) < kPoundTolerance);
     }
 
     for (const int crewStation : kCrewStations)
@@ -1259,13 +1272,13 @@ void Fss727Test::aServiceInterphoneFlipFiresOnceAndIsSwitchedBackOff()
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
-    gateway.lvarSpans[kServiceInterphone] = LVarSpan{0.0, 1.0, true};
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{.min = 0.0, .max = 1.0, .received = true};
 
     QVERIFY(aircraft.ConsumeSmartSwitch());
     QCOMPARE(gateway.lvarWrites[kServiceInterphone], 1);
     QCOMPARE(gateway.lvars[kServiceInterphone], 0.0);
 
-    gateway.lvarSpans[kServiceInterphone] = LVarSpan{0.0, 0.0, true};
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{.min = 0.0, .max = 0.0, .received = true};
 
     QVERIFY(!aircraft.ConsumeSmartSwitch());
     QCOMPARE(gateway.lvarWrites[kServiceInterphone], 1);
@@ -1277,15 +1290,15 @@ void Fss727Test::aServiceInterphoneLeftOnFiresOnceAcrossThreeTicks()
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
-    gateway.lvarSpans[kServiceInterphone] = LVarSpan{0.0, 1.0, true};
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{.min = 0.0, .max = 1.0, .received = true};
 
     QVERIFY(aircraft.ConsumeSmartSwitch());
 
-    gateway.lvarSpans[kServiceInterphone] = LVarSpan{1.0, 1.0, true};
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{.min = 1.0, .max = 1.0, .received = true};
 
     QVERIFY(!aircraft.ConsumeSmartSwitch());
 
-    gateway.lvarSpans[kServiceInterphone] = LVarSpan{1.0, 1.0, true};
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{.min = 1.0, .max = 1.0, .received = true};
 
     QVERIFY(!aircraft.ConsumeSmartSwitch());
     QCOMPARE(gateway.lvarWrites[kServiceInterphone], 3);
@@ -1298,11 +1311,11 @@ void Fss727Test::aServiceInterphoneLeftOffNeverFiresNorWrites()
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
-    gateway.lvarSpans[kServiceInterphone] = LVarSpan{0.0, 0.0, true};
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{.min = 0.0, .max = 0.0, .received = true};
 
     QVERIFY(!aircraft.ConsumeSmartSwitch());
 
-    gateway.lvarSpans[kServiceInterphone] = LVarSpan{0.0, 0.0, true};
+    gateway.lvarSpans[kServiceInterphone] = LVarSpan{.min = 0.0, .max = 0.0, .received = true};
 
     QVERIFY(!aircraft.ConsumeSmartSwitch());
     QCOMPARE(gateway.setLVarCalls, 0);
@@ -1605,8 +1618,8 @@ void Fss727Test::closingEveryDoorLeavesTheFrontEntryOpenWhileTheGroundAccessServ
         double docked;
     };
 
-    for (const GroundAccess access : {GroundAccess{kFrontStairsState, kStairsDocked},
-                                      GroundAccess{kJetway, kJetwayDocked}})
+    for (const GroundAccess access : {GroundAccess{.lVar = kFrontStairsState, .docked = kStairsDocked},
+                                      GroundAccess{.lVar = kJetway, .docked = kJetwayDocked}})
     {
         FakeVariableGateway gateway;
         AutomationStatus status;
@@ -2735,11 +2748,11 @@ void Fss727Test::neverOpensTheMainDeckOutsideAGsxBoardingOrDeboarding()
         GsxStateStatus deboarding;
     };
 
-    for (const GsxWindow window : {GsxWindow{GsxStateStatus::Completed, GsxStateStatus::Callable},
-                                   GsxWindow{GsxStateStatus::Callable, GsxStateStatus::Completed},
-                                   GsxWindow{GsxStateStatus::Completing, GsxStateStatus::Callable},
-                                   GsxWindow{GsxStateStatus::Callable, GsxStateStatus::Completing},
-                                   GsxWindow{GsxStateStatus::Callable, GsxStateStatus::Callable}})
+    for (const GsxWindow window : {GsxWindow{.boarding = GsxStateStatus::Completed, .deboarding = GsxStateStatus::Callable},
+                                   GsxWindow{.boarding = GsxStateStatus::Callable, .deboarding = GsxStateStatus::Completed},
+                                   GsxWindow{.boarding = GsxStateStatus::Completing, .deboarding = GsxStateStatus::Callable},
+                                   GsxWindow{.boarding = GsxStateStatus::Callable, .deboarding = GsxStateStatus::Completing},
+                                   GsxWindow{.boarding = GsxStateStatus::Callable, .deboarding = GsxStateStatus::Callable}})
     {
         FakeVariableGateway gateway;
         AutomationStatus status;
@@ -3196,6 +3209,94 @@ void Fss727Test::aDeckReadingThatStopsArrivingNeverEndsTheTravel()
     QCOMPARE(gateway.Written(kPanelMaster), 0.0);
 }
 
+void Fss727Test::aCommandedDeckThatNeverMovesDropsTheTravelAndServesTheNextClose()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FakeGsxService gsx;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
+    const LogCapture log;
+
+    CommandTheMainDeckClosed(aircraft, gateway);
+    TickTimes(aircraft, gateway, kTravelStartTicks - 1);
+
+    QVERIFY(!LogCapture::Contains("main deck never moved after the panel command"));
+
+    aircraft.CloseAllDoors();
+    TickAircraft(aircraft, gateway);
+
+    QVERIFY(LogCapture::Contains("main deck never moved after the panel command"));
+    QCOMPARE(PanelWrites(gateway), 3);
+
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(PanelWrites(gateway), 3);
+
+    aircraft.CloseAllDoors();
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(PanelWrites(gateway), 6);
+    QCOMPARE(gateway.WriteCount(kPanelDoorSwitch), 2);
+    QCOMPARE(gateway.Written(kPanelDoorSwitch), 0.0);
+}
+
+void Fss727Test::aDeckThatStartsMovingOnTheLastTickBeforeTheCeilingKeepsTheTravel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FakeGsxService gsx;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
+    const LogCapture log;
+
+    CommandTheMainDeckClosed(aircraft, gateway);
+    TickTimes(aircraft, gateway, kTravelStartTicks - 2);
+
+    gateway.avars[kMainDeckDoorPoint] = kMeasuredOpenSettle - kMeasuredMainDeckTravelPerTick;
+    TickAircraft(aircraft, gateway);
+    MoveMainDeckTo(aircraft, gateway, kMeasuredClosedSettle);
+    TickTimes(aircraft, gateway, kMainDeckRestingTicks);
+
+    QVERIFY(!LogCapture::Contains("main deck never moved after the panel command"));
+    QCOMPARE(gateway.WriteCount(kPanelMaster), 2);
+    QCOMPARE(gateway.Written(kPanelMaster), 0.0);
+}
+
+void Fss727Test::aResumedTravelWhoseDeckNeverMovesIsDroppedToo()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FakeGsxService gsx;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
+    const LogCapture log;
+
+    CommandTheMainDeckOpen(aircraft, gateway, gsx);
+
+    gateway.avars[kMainDeckDoorPoint] = kStaleRestInsideTheClosedEnd;
+    TickTimes(aircraft, gateway, 1 + kMainDeckRestingTicks);
+
+    gateway.avars[kMainDeckDoorPoint] = kWhereTheDeckReallyWas;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPanelMaster), 3);
+
+    TickTimes(aircraft, gateway, kTravelStartTicks - 2);
+
+    QVERIFY(!LogCapture::Contains("main deck never moved after the panel command"));
+
+    TickAircraft(aircraft, gateway);
+
+    QVERIFY(LogCapture::Contains("main deck never moved after the panel command"));
+
+    gateway.lvars[kMainLoaderState] = kLoaderIdle;
+    gsx.boardingState = GsxStateStatus::Completed;
+    aircraft.HoldDoorsClosed(true);
+    aircraft.CloseAllDoors();
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPanelDoorSwitch), 2);
+    QCOMPARE(gateway.Written(kPanelDoorSwitch), 0.0);
+}
+
 void Fss727Test::takesExternalPowerAtTheEngineerPanel()
 {
     for (const char* variantName : kVariants)
@@ -3225,7 +3326,7 @@ void Fss727Test::observingEvaluatingAndReadingWriteNoVariable()
         gateway.lvars[kParkBrakeLever] = 1.0;
         gateway.lvars[kChocks] = 1.0;
         ParkWithTheMeasuredCrew(gateway);
-        gateway.lvarSpans[kServiceInterphone] = LVarSpan{0.0, 0.0, true};
+        gateway.lvarSpans[kServiceInterphone] = LVarSpan{.min = 0.0, .max = 0.0, .received = true};
         PlanTheMeasuredFlight(status);
 
         for (int tick = 0; tick < kFiftyTicks; ++tick)
