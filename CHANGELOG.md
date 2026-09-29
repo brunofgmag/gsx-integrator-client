@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.43.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.2...v1.43.3) (2026-09-29)
+
+
+* pay sixteen open debts across detection, doors, logging and the window layout ([#211](https://github.com/brunofgmag/gsx-integrator-client/issues/211)) ([3009c90](https://github.com/brunofgmag/gsx-integrator-client/commit/3009c906f75ce670987acb1e5095d47e16ee102e))
+
+
+### Bug Fixes
+
+* pay sixteen open debts across detection, doors, logging and the window layout ([6654e83](https://github.com/brunofgmag/gsx-integrator-client/commit/6654e83386698626f0c5e7f58c646dc87fa0eccb)) ([3009c90](https://github.com/brunofgmag/gsx-integrator-client/commit/3009c906f75ce670987acb1e5095d47e16ee102e))
+
 ## [1.43.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.1...v1.43.2) (2026-09-28)
 
 
