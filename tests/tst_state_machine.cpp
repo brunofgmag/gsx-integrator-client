@@ -14,6 +14,7 @@
 namespace
 {
     constexpr auto kWatchedLVar = "EXT_Door_stairs_pos";
+    constexpr double kPushbackGroundSpeedKnots = 12.0;
 
     constexpr auto kReachableWorkflowPhases = std::array{
         TurnaroundPhase::WaitingSupportedAircraft,
@@ -466,6 +467,9 @@ private slots:
     static void theTurnaroundTurnForgetsTheGsxCompletions();
     static void theSecondTurnaroundAsksForBoardingAgain();
     static void theStartOfThePushMovementNotifiesTheMenuGateway();
+    static void thePushbackFinishingBeforeTheMovementClosesThePushbackPanelOnce();
+    static void theAircraftLeavingWithoutAPushbackClosesThePushbackPanelOnce();
+    static void thePushMovementLeavesTheClosingToOnPushbackStarted();
     static void aGsxRestartThatDropsThePushbackWarnsAndTheTaxiStillReachesTheArrival();
     static void publishesThatTheDeboardingWaitsForGsxUntilTheTurnaroundTurns();
     static void publishesCurrentTankFuelBeforeRefuel();
@@ -921,6 +925,73 @@ void TurnaroundStateMachineTest::theStartOfThePushMovementNotifiesTheMenuGateway
     QCOMPARE(workflow.f.menuGateway.pushbackStartedCalls, 1);
 }
 
+void TurnaroundStateMachineTest::thePushbackFinishingBeforeTheMovementClosesThePushbackPanelOnce()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+
+    workflow.TickHolding(TurnaroundPhase::WaitingPushbackToStart);
+
+    QCOMPARE(workflow.f.menuGateway.closePushbackPanelCalls, 0);
+
+    workflow.f.gsxService.pushbackFinished = true;
+    workflow.TickTo(TurnaroundPhase::WaitingDeparture);
+
+    QCOMPARE(workflow.f.menuGateway.closePushbackPanelCalls, 1);
+    QCOMPARE(workflow.f.menuGateway.pushbackStartedCalls, 0);
+
+    workflow.TickHolding(TurnaroundPhase::WaitingDeparture);
+
+    QCOMPARE(workflow.f.menuGateway.closePushbackPanelCalls, 1);
+}
+
+void TurnaroundStateMachineTest::theAircraftLeavingWithoutAPushbackClosesThePushbackPanelOnce()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+
+    workflow.TickHolding(TurnaroundPhase::WaitingPushbackToStart);
+
+    QCOMPARE(workflow.f.menuGateway.closePushbackPanelCalls, 0);
+
+    workflow.f.aircraft.engineRunning = true;
+    workflow.f.gsxService.groundSpeedKnots = kPushbackGroundSpeedKnots;
+    workflow.TickTo(TurnaroundPhase::WaitingDeparture);
+
+    QCOMPARE(workflow.f.menuGateway.closePushbackPanelCalls, 1);
+    QCOMPARE(workflow.f.menuGateway.pushbackStartedCalls, 0);
+
+    workflow.TickHolding(TurnaroundPhase::WaitingDeparture);
+
+    QCOMPARE(workflow.f.menuGateway.closePushbackPanelCalls, 1);
+}
+
+void TurnaroundStateMachineTest::thePushMovementLeavesTheClosingToOnPushbackStarted()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+    workflow.StartPushbackMovement();
+
+    QCOMPARE(workflow.f.menuGateway.pushbackStartedCalls, 1);
+    QCOMPARE(workflow.f.menuGateway.closePushbackPanelCalls, 0);
+
+    workflow.ConfirmEngineStart();
+
+    QCOMPARE(workflow.f.menuGateway.closePushbackPanelCalls, 0);
+}
+
 void TurnaroundStateMachineTest::aGsxRestartThatDropsThePushbackWarnsAndTheTaxiStillReachesTheArrival()
 {
     TurnaroundWorkflow workflow;
@@ -1327,7 +1398,7 @@ void TurnaroundStateMachineTest::theSpanPairAnswersTheSecondRuleDifferently()
     workflow.machine.AttachAircraft(&workflow.f.aircraft);
 
     gateway.lvars[kWatchedLVar] = 120.0;
-    gateway.lvarSpans[kWatchedLVar] = LVarSpan{50.0, 120.0, true};
+    gateway.lvarSpans[kWatchedLVar] = LVarSpan{.min = 50.0, .max = 120.0, .received = true};
     gateway.MarkTick();
     workflow.machine.Tick();
 

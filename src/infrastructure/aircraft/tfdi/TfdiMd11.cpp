@@ -36,6 +36,10 @@ namespace
     constexpr auto kChocksLVar = "MD11_EXT_CHOCKS";
     constexpr auto kExtGpuLVar = "MD11_EXT_GPU";
 
+    constexpr auto kFreighterTitleMark = "MD-11F";
+    constexpr auto kFreighterTitleWord = "Freighter";
+    constexpr auto kFreighterAtcModel = "MD11F";
+
     constexpr std::array kDoorStateLVars =
         {"MD11_EXT_DOOR_PAX_1L", "MD11_EXT_DOOR_PAX_2L", "MD11_EXT_DOOR_PAX_4L",
          "MD11_EXT_DOOR_CARGO_1R", "MD11_EXT_DOOR_CARGO_2R", "MD11_EXT_DOOR_CARGO_MAIN"};
@@ -46,7 +50,8 @@ TfdiMd11::TfdiMd11(VariableGateway* variableGateway, const AutomationStatus* sta
       smartSwitch_(*variableGateway, {kSmartSwitch},
                    [](double, const double max) { return max > kSmartSwitchNeutral; },
                    kSmartSwitchNeutral),
-      cargoDoorRule_(*variableGateway, cargo),
+      doors_(variableGateway),
+      cargoDoorRule_(*variableGateway, doors_, cargo),
       paxDoorRule_(*variableGateway),
       efbTargetRule_(*variableGateway, *this),
       rules_{&cargoDoorRule_, &paxDoorRule_, &efbTargetRule_}
@@ -64,6 +69,11 @@ bool TfdiMd11::IsCargoVariant() const
 const std::vector<AircraftRule*>& TfdiMd11::Rules() const
 {
     return rules_;
+}
+
+void TfdiMd11::Observe()
+{
+    doors_.Observe();
 }
 
 bool TfdiMd11::IsFlightPlanLoaded() const
@@ -216,8 +226,10 @@ namespace
 {
     std::unique_ptr<Aircraft> CreateTfdiMd11(const AircraftContext& context, const AircraftIdentity& identity)
     {
-        const bool cargo = MatchText(identity.title, MatchOp::Contains, "MD-11F")
-            || MatchText(identity.atcModel, MatchOp::Equals, "MD11F");
+        const bool cargo = MatchText(identity.title, MatchOp::Contains, kFreighterTitleMark)
+            || MatchText(identity.title, MatchOp::Contains, kFreighterTitleWord)
+            || MatchText(identity.atcModel, MatchOp::Equals, kFreighterAtcModel);
+
         return std::make_unique<TfdiMd11>(context.variableGateway, context.status, cargo);
     }
 

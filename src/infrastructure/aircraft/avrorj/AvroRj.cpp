@@ -21,6 +21,10 @@ namespace
 {
     constexpr double kRecommendedFuelRateKgs = 12.0;
 
+    constexpr auto kTitleQtSpaced = "RJ100 QT";
+    constexpr auto kTitleQtJoined = "RJ100QT";
+    constexpr auto kTitleFreighter = "Freighter";
+
     constexpr auto kGallonsUnit = "Gallons";
 
     constexpr auto kSimFuelWeightPerGallon = "FUEL WEIGHT PER GALLON";
@@ -30,23 +34,27 @@ namespace
 
     struct FuelTank
     {
-        const char* quantity;
-        const char* capacity;
+        const char* quantity = nullptr;
+        const char* capacity = nullptr;
         const char* fitted = nullptr;
     };
 
     constexpr std::array kMainTanks = {
-        FuelTank{"FUEL TANK LEFT MAIN QUANTITY", "FUEL TANK LEFT MAIN CAPACITY"},
-        FuelTank{"FUEL TANK RIGHT MAIN QUANTITY", "FUEL TANK RIGHT MAIN CAPACITY"}
+        FuelTank{.quantity = "FUEL TANK LEFT MAIN QUANTITY", .capacity = "FUEL TANK LEFT MAIN CAPACITY"},
+        FuelTank{.quantity = "FUEL TANK RIGHT MAIN QUANTITY", .capacity = "FUEL TANK RIGHT MAIN CAPACITY"}
     };
 
     constexpr std::array kCenterTanks = {
-        FuelTank{"FUEL TANK CENTER QUANTITY", "FUEL TANK CENTER CAPACITY"}
+        FuelTank{.quantity = "FUEL TANK CENTER QUANTITY", .capacity = "FUEL TANK CENTER CAPACITY"}
     };
 
     constexpr std::array kAuxTanks = {
-        FuelTank{"FUEL TANK LEFT AUX QUANTITY", "FUEL TANK LEFT AUX CAPACITY", kLeftAuxFittedLVar},
-        FuelTank{"FUEL TANK RIGHT AUX QUANTITY", "FUEL TANK RIGHT AUX CAPACITY", kRightAuxFittedLVar}
+        FuelTank{.quantity = "FUEL TANK LEFT AUX QUANTITY",
+                 .capacity = "FUEL TANK LEFT AUX CAPACITY",
+                 .fitted = kLeftAuxFittedLVar},
+        FuelTank{.quantity = "FUEL TANK RIGHT AUX QUANTITY",
+                 .capacity = "FUEL TANK RIGHT AUX CAPACITY",
+                 .fitted = kRightAuxFittedLVar}
     };
 
     constexpr auto kPlannedBlockFuelLVar = "146_SimBrief_Block_Fuel";
@@ -76,9 +84,6 @@ namespace
         kFwdPaxDoorLVar, kFwdServiceDoorLVar, kAftPaxDoorLVar, kAftServiceDoorLVar,
         kFwdCargoDoorLVar, kAftCargoDoorLVar, kFuselageCargoDoorLVar
     };
-
-    constexpr double kDoorOpen = 1.0;
-    constexpr double kDoorClosed = 0.0;
 
     constexpr double kJetwayUnavailable = 2.0;
 
@@ -381,7 +386,9 @@ namespace
 {
     std::unique_ptr<Aircraft> CreateAvroRj(const AircraftContext& context, const AircraftIdentity& identity)
     {
-        const bool cargo = MatchText(identity.title, MatchOp::Contains, "RJ100 QT");
+        const bool cargo = MatchText(identity.title, MatchOp::Contains, kTitleQtSpaced)
+            || MatchText(identity.title, MatchOp::Contains, kTitleQtJoined)
+            || MatchText(identity.title, MatchOp::Contains, kTitleFreighter);
 
         return std::make_unique<AvroRj>(context.variableGateway, cargo);
     }

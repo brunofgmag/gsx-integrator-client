@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "../SmartSwitch.h"
+#include "../../gsx/GsxDoorSync.h"
 #include "rules/TfdiMd11CargoDoorsFollowLoaderRule.h"
 #include "rules/TfdiMd11CommitEfbTargetsRule.h"
 #include "rules/TfdiMd11PaxDoorsFollowStairsRule.h"
@@ -23,6 +24,7 @@ public:
     [[nodiscard]] bool IsCargoVariant() const override;
 
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
+    void Observe() override;
     void OnLoadingStarted() override {}
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -64,6 +66,7 @@ private:
 
     bool cargo_;
     SmartSwitch smartSwitch_;
+    GsxDoorSync doors_;
     TfdiMd11CargoDoorsFollowLoaderRule cargoDoorRule_;
     TfdiMd11PaxDoorsFollowStairsRule paxDoorRule_;
     TfdiMd11CommitEfbTargetsRule efbTargetRule_;

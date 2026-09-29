@@ -58,7 +58,8 @@ IFly737Max::IFly737Max(VariableGateway* variableGateway, const AutomationStatus*
                    {
                        return min < kSmartSwitchNeutral || max > kSmartSwitchNeutral;
                    }),
-      doorRule_(*variableGateway, *this),
+      doors_(variableGateway),
+      doorRule_(*variableGateway, *this, doors_),
       planImportRule_(planImport_, *status, std::move(planAppDataRoot)),
       rules_{&doorRule_, &planImportRule_}
 {
@@ -70,6 +71,11 @@ IFly737Max::IFly737Max(VariableGateway* variableGateway, const AutomationStatus*
 const std::vector<AircraftRule*>& IFly737Max::Rules() const
 {
     return rules_;
+}
+
+void IFly737Max::Observe()
+{
+    doors_.Observe();
 }
 
 void IFly737Max::CloseAllDoors()

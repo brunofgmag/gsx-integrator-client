@@ -25,6 +25,7 @@ namespace
 
     constexpr int kRestingTicks = 3;
     constexpr int kMasterCutGuardTicks = 3;
+    constexpr int kTravelStartTicks = 30;
     constexpr int kMainLoaderGiveUpTicks = 120;
     constexpr double kStillWithin = 0.001;
     constexpr double kRestsClosedAtMost = 0.02;
@@ -138,6 +139,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::StartTravel(VariableWriter& writer,
     travel_ = travel;
     masterCutGuardTicks_ = 0;
     mayResumeTravel_ = true;
+    unmovedTicks_ = 0;
     rest_ = Fss727DoorRest{.lastPosition = aircraft_->MainDeckPosition()};
 }
 
@@ -181,6 +183,13 @@ void Fss727MainDeckMovesByTheCargoPanelRule::FinishTravel(VariableWriter& writer
     }
 
     rest_.Follow(*position);
+    if (!rest_.HasMoved() && ++unmovedTicks_ >= kTravelStartTicks)
+    {
+        DropTheTravelThatNeverMoved();
+
+        return;
+    }
+
     if (!HasComeToRest())
     {
         return;
@@ -210,7 +219,21 @@ void Fss727MainDeckMovesByTheCargoPanelRule::ResumeTravel(const double position)
 {
     mayResumeTravel_ = false;
     travel_ = cutTravel_;
+    unmovedTicks_ = 0;
     rest_ = Fss727DoorRest{.lastPosition = position};
+}
+
+void Fss727MainDeckMovesByTheCargoPanelRule::DropTheTravelThatNeverMoved()
+{
+    if (travel_ == Travel::Closing)
+    {
+        servedRequests_ = CloseRequests();
+        loaderDepartureCloseUnserved_ = false;
+    }
+
+    travel_ = Travel::None;
+
+    LOG_INFO("FSS 727 main deck never moved after the panel command; the travel is dropped");
 }
 
 void Fss727MainDeckMovesByTheCargoPanelRule::GuardThePanelMasterCut(VariableWriter& writer)

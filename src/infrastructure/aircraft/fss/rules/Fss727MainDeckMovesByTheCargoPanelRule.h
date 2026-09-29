@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727MAINDECKMOVESBYTHECARGOPANELRULE_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727MAINDECKMOVESBYTHECARGOPANELRULE_H
 
+#include <cstdint>
 #include <optional>
 
 #include "../../../../domain/ports/AircraftRule.h"
@@ -34,7 +35,7 @@ public:
     void Act(const RuleContext& context, VariableWriter& writer) override;
 
 private:
-    enum class Travel
+    enum class Travel : std::uint8_t
     {
         None,
         Opening,
@@ -44,6 +45,7 @@ private:
     void StartTravel(VariableWriter& writer, Travel travel);
     void FinishTravel(VariableWriter& writer);
     void ResumeTravel(double position);
+    void DropTheTravelThatNeverMoved();
     void GuardThePanelMasterCut(VariableWriter& writer);
     [[nodiscard]] bool HasComeToRest() const;
     void TurnThePanelMasterOff(VariableWriter& writer, double position);
@@ -72,6 +74,7 @@ private:
     Travel travel_ = Travel::None;
     Travel cutTravel_ = Travel::None;
     Fss727DoorRest rest_;
+    int unmovedTicks_ = 0;
     int masterCutGuardTicks_ = 0;
     bool mayResumeTravel_ = false;
     int loaderHoldTicks_ = 0;

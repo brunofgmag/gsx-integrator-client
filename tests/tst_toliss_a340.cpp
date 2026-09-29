@@ -97,7 +97,7 @@ class TolissA340Test final : public QObject
     Q_OBJECT
 
 private slots:
-    static void reportsCargoVariant();
+    static void isNeverACargoVariant();
     static void evaluatingTheDoorRuleWritesNoVariable();
     static void evaluatingTheUplinkRuleWritesNoVariable();
     static void readsCurrentFuelFromSim();
@@ -152,22 +152,20 @@ private slots:
     static void reportsLoadMethods();
 };
 
-void TolissA340Test::reportsCargoVariant()
+void TolissA340Test::isNeverACargoVariant()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 passenger(&gateway, &status, false);
-    const TolissA340 freighter(&gateway, &status, true);
+    const TolissA340 aircraft(&gateway, &status);
 
-    QVERIFY(!passenger.IsCargoVariant());
-    QVERIFY(freighter.IsCargoVariant());
+    QVERIFY(!aircraft.IsCargoVariant());
 }
 
 void TolissA340Test::readsCurrentFuelFromSim()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     gateway.avars[kSimFuelTotalKg] = 41300.0;
 
@@ -178,7 +176,7 @@ void TolissA340Test::currentZfwSubtractsFuelFromTotalWeight()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
     gateway.avars[kSimTotalWeight] = 260000.0;
@@ -191,7 +189,7 @@ void TolissA340Test::currentZfwDoesNotDropBelowEmptyWeight()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
     gateway.avars[kSimTotalWeight] = 190000.0;
@@ -204,7 +202,7 @@ void TolissA340Test::currentZfwHoldsAtZeroUntilEmptyWeightArrives()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     gateway.avars[kSimTotalWeight] = 260000.0;
     gateway.avars[kSimFuelTotalKg] = 40000.0;
@@ -220,7 +218,7 @@ void TolissA340Test::emptyZfwReadsSimEmptyWeight()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
 
@@ -231,7 +229,7 @@ void TolissA340Test::plannedValuesComeFromSession()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     status.plannedFuelKg = 52000.0;
     status.plannedZfwKg = 230000.0;
@@ -246,7 +244,7 @@ void TolissA340Test::flightPlanLoadedWhenSessionReady()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     status.flightPlanStatus = FlightPlanStatus::Idle;
 
@@ -261,7 +259,7 @@ void TolissA340Test::fuelSetterWritesNothing()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     aircraft.SetCurrentFuelKg(30000.0);
 
@@ -273,7 +271,7 @@ void TolissA340Test::uplinkPressesMcduKeysInSequence()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kExtAPb] = 1.0;
     gateway.lvars[kExtAAuto] = 10.0;
@@ -301,7 +299,7 @@ void TolissA340Test::uplinkWaitsForPower()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kBattery1] = 1.0;
 
@@ -324,7 +322,7 @@ void TolissA340Test::uplinkFiresOnApuPowerAlone()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kApuAvail] = 10.0;
 
@@ -337,7 +335,7 @@ void TolissA340Test::uplinkFiresImmediatelyWhenAlreadyPowered()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kExtAPb] = 1.0;
     gateway.lvars[kExtAAuto] = 10.0;
@@ -358,7 +356,7 @@ void TolissA340Test::uplinkRunsOncePerTrigger()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kExtAPb] = 1.0;
     gateway.lvars[kExtAAuto] = 10.0;
@@ -384,7 +382,7 @@ void TolissA340Test::uplinkIdleWithoutTrigger()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     for (int tick = 0; tick < 20; ++tick)
     {
@@ -398,7 +396,7 @@ void TolissA340Test::zfwSetterWritesNothing()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
     aircraft.SetCurrentZfwKg(230000.0);
@@ -411,7 +409,7 @@ void TolissA340Test::registersSmartSwitchForFastRefresh()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     QCOMPARE(gateway.fastRefreshNames.size(), static_cast<std::size_t>(1));
     QVERIFY(gateway.fastRefreshNames.front() == kSmartSwitch);
@@ -421,7 +419,7 @@ void TolissA340Test::smartSwitchFiresOnceAndResetsTheSwitch()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kSmartSwitch] = 1.0;
 
@@ -454,7 +452,7 @@ void TolissA340Test::smartSwitchStaysQuietUntilDataArrives()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     QVERIFY(!aircraft.ConsumeSmartSwitch());
     QCOMPARE(gateway.setLVarCalls, 0);
@@ -464,7 +462,7 @@ void TolissA340Test::powerIgnoresBatteriesAlone()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     QVERIFY(!aircraft.IsPowered());
 
@@ -478,7 +476,7 @@ void TolissA340Test::powerFollowsApuAvailability()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kApuAvail] = 0.0;
 
@@ -493,7 +491,7 @@ void TolissA340Test::powerRequiresEnergizedExternalSource()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kExtAPb] = 1.0;
 
@@ -518,7 +516,7 @@ void TolissA340Test::powerFollowsExternalOnAnnunciator()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kExtAOn] = 10.0;
 
@@ -538,7 +536,7 @@ void TolissA340Test::engineRunningDetectsAnyOfFourEngines()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     for (int engine = 1; engine <= 4; ++engine)
     {
@@ -556,7 +554,7 @@ void TolissA340Test::engineAssumedRunningUntilFuelFlowDataArrives()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     QVERIFY(aircraft.IsEngineRunning());
 }
@@ -565,7 +563,7 @@ void TolissA340Test::parkingBrakeReadsTheLeverAndIgnoresTheSimVar()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     QVERIFY(!aircraft.IsParkingBrakeSet());
 
@@ -586,7 +584,7 @@ void TolissA340Test::heldInPlaceFollowsTheLeverWithoutAChocksSource()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     QVERIFY(!aircraft.IsHeldInPlace());
 
@@ -599,7 +597,7 @@ void TolissA340Test::readyToPushFollowsPowerBeaconAndEngines()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kApuAvail] = 10.0;
     gateway.avars[kSimBeaconLight] = 1.0;
@@ -629,7 +627,7 @@ void TolissA340Test::readyToDeboardFollowsSafetyState()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     for (int engine = 1; engine <= 4; ++engine)
     {
@@ -660,7 +658,7 @@ void TolissA340Test::holdForDepartureClosesPaxAndCargoButNotCatering()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kGsxJetway] = 5.0;
@@ -690,7 +688,7 @@ void TolissA340Test::doorsUntouchedByDefaultWhenGsxAvailable()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
 
@@ -703,7 +701,7 @@ void TolissA340Test::cargoDoorsOpenPerLoaderAndCloseWhenDone()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kGsxLoaderFront] = 6.0;
@@ -734,7 +732,7 @@ void TolissA340Test::cargoDoorsUntouchedWithoutGsx()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kGsxLoaderFront] = 6.0;
 
@@ -751,7 +749,7 @@ void TolissA340Test::paxDoorsOpenPerStairsAndCloseWhenGone()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
 
@@ -779,7 +777,7 @@ void TolissA340Test::paxDoorsOpenOnceTheStairsAreApproaching()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
 
@@ -808,7 +806,7 @@ void TolissA340Test::jetwayOpensOnlyDoor1L()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
 
@@ -829,7 +827,7 @@ void TolissA340Test::jetwayAndStairsEitherHoldsDoor1LOpen()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
 
@@ -859,7 +857,7 @@ void TolissA340Test::closeAllDoorsForcesEveryDoorClosed()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     aircraft.CloseAllDoors();
 
@@ -875,7 +873,7 @@ void TolissA340Test::stairsReopenDoorAfterCloseAllDoors()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
 
@@ -897,7 +895,7 @@ void TolissA340Test::paxDoorsUntouchedWithoutGsx()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kStairsFront] = 3.0;
 
@@ -913,7 +911,7 @@ void TolissA340Test::cateringDoorsOpenWhenVehicleWaitsAndCloseWhenFinished()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
 
@@ -950,7 +948,7 @@ void TolissA340Test::cateringDoorsOpenOnceTheTruckIsApproaching()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
 
@@ -970,7 +968,7 @@ void TolissA340Test::cateringDoorsUntouchedWithoutGsx()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kGsxCateringFront] = 6.0;
 
@@ -987,7 +985,7 @@ void TolissA340Test::reportsLoadMethods()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     QVERIFY(aircraft.GetRefuelMethod() == RefuelBy::Self);
     QVERIFY(aircraft.GetBoardMethod() == BoardBy::Self);
@@ -998,7 +996,7 @@ void TolissA340Test::doorStatusOpenWhenAModeReadsOpen()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     AllDoorModesClosed(gateway);
     gateway.lvars[kPaxDoorMode1L] = kDoorModeOpen;
@@ -1010,7 +1008,7 @@ void TolissA340Test::doorStatusUnknownUntilDoorModesArrive()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     QVERIFY(aircraft.GetDoorStatus() == DoorStatus::Unknown);
 }
@@ -1019,7 +1017,7 @@ void TolissA340Test::doorStatusUnknownWhileADoorSitsInAutoMode()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     AllDoorModesClosed(gateway);
     gateway.lvars[kPaxDoorMode2R] = kDoorModeAuto;
@@ -1031,7 +1029,7 @@ void TolissA340Test::doorStatusAllClosedWhenEveryModeReadsClosed()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     AllDoorModesClosed(gateway);
 
@@ -1042,7 +1040,7 @@ void TolissA340Test::doorStillMovingIsNotReportedClosed()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     AllDoorModesClosed(gateway);
     AllDoorRatiosClosed(gateway);
@@ -1055,7 +1053,7 @@ void TolissA340Test::positionBeatsTheCommandOnceItArrives()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     AllDoorModesClosed(gateway);
     gateway.lvars[kPaxDoorMode2R] = kDoorModeAuto;
@@ -1068,7 +1066,7 @@ void TolissA340Test::doorStatusFallsBackToTheModeUntilThePositionArrives()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    const TolissA340 aircraft(&gateway, &status, false);
+    const TolissA340 aircraft(&gateway, &status);
 
     AllDoorModesClosed(gateway);
 
@@ -1079,7 +1077,7 @@ void TolissA340Test::evaluatingTheDoorRuleWritesNoVariable()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
     FakeVariableWriter writer;
 
     gateway.lvars[kCouatlStarted] = 1.0;
@@ -1109,7 +1107,7 @@ void TolissA340Test::evaluatingTheUplinkRuleWritesNoVariable()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
-    TolissA340 aircraft(&gateway, &status, false);
+    TolissA340 aircraft(&gateway, &status);
     FakeVariableWriter writer;
 
     gateway.lvars[kExtAPb] = 1.0;

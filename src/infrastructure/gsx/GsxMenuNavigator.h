@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_GSXMENUNAVIGATOR_H
 #define GSX_INTEGRATOR_CLIENT_GSXMENUNAVIGATOR_H
 
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <string>
@@ -55,6 +56,7 @@ public:
 
     void OpenMenu() const;
     void OpenPushbackPanel() override;
+    void ClosePushbackPanel() override;
     void OnTurnaroundTurned() override;
     void OnPushbackStarted() override;
 
@@ -87,7 +89,7 @@ private:
     void TriggerService(const char* serviceId, bool toggles = false);
     void SyncGsxToolbar() const;
     [[nodiscard]] GsxPanelMode PanelMode() const;
-    void ClosePanelAfterPushback();
+    void CloseThePanelWeOpened(const char* logLine);
     void RearmPanelLatches();
     [[nodiscard]] bool IsWaitingForThePanel();
     void ArmRequest(QString verb, QJsonObject args, std::string label, std::string confirmId,
@@ -121,7 +123,7 @@ private:
     bool HandleRepositionFlow();
     bool HandleIntentPrompts();
 
-    enum class Intent { None, Reposition, Service };
+    enum class Intent : std::uint8_t { None, Reposition, Service };
 
     [[nodiscard]] bool HasActiveIntent() const;
     void OpenIntent(Intent intent);
@@ -133,7 +135,7 @@ private:
     DomainLogger* logger_;
     CommBusPluginClient* pluginClient_;
 
-    enum class Reposition { Idle, Opening, PickingRoot, AwaitingSubmenu, Done };
+    enum class Reposition : std::uint8_t { Idle, Opening, PickingRoot, AwaitingSubmenu, Done };
 
     Reposition reposition_ = Reposition::Idle;
     TimedIntent completingPushback_;

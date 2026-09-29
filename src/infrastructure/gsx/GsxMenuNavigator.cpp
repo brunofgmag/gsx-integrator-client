@@ -198,7 +198,7 @@ bool GsxMenuNavigator::PickNowOrArm(const char* entry, TimedIntent& intent)
         return true;
     }
 
-    intent = {true, nowMs_()};
+    intent = {.active = true, .sinceMs = nowMs_()};
 
     OpenIntent(Intent::Service);
     OpenMenu();
@@ -218,7 +218,7 @@ bool GsxMenuNavigator::CompletePushback()
 
 void GsxMenuNavigator::CompleteRefuel()
 {
-    completingRefuel_ = {true, nowMs_()};
+    completingRefuel_ = {.active = true, .sinceMs = nowMs_()};
 
     OpenIntent(Intent::Service);
     OpenMenu();
@@ -226,7 +226,7 @@ void GsxMenuNavigator::CompleteRefuel()
 
 void GsxMenuNavigator::CompleteBoarding()
 {
-    completingBoarding_ = {true, nowMs_()};
+    completingBoarding_ = {.active = true, .sinceMs = nowMs_()};
 
     OpenIntent(Intent::Service);
     OpenMenu();
@@ -374,7 +374,10 @@ bool GsxMenuNavigator::LogMenuIfNew(const std::string& sig)
     std::string joined;
     for (const auto& entry : state_->menu.entries)
     {
-        if (!joined.empty()) joined += " | ";
+        if (!joined.empty())
+        {
+            joined += " | ";
+        }
         joined += entry;
     }
     logger_->LogInfo(std::format("RemoteAPI menu: '{}' -> [{}]", state_->menu.title, joined));
@@ -689,8 +692,11 @@ void GsxMenuNavigator::ArmRequest(QString verb, QJsonObject args, std::string la
         return request.verb == verb && request.label == label;
     });
 
-    PendingRequest request{std::move(verb), std::move(args), std::move(label), std::move(confirmId),
-                           0, 0, toggles};
+    PendingRequest request{.verb = std::move(verb),
+                           .args = std::move(args),
+                           .label = std::move(label),
+                           .confirmId = std::move(confirmId),
+                           .toggles = toggles};
 
     if (same != pending_.end())
     {
@@ -903,7 +909,7 @@ void GsxMenuNavigator::OpenPushbackPanel()
     logger_->LogInfo("RemoteAPI opening the GSX toolbar for the pushback menu");
 }
 
-void GsxMenuNavigator::ClosePanelAfterPushback()
+void GsxMenuNavigator::CloseThePanelWeOpened(const char* const logLine)
 {
     if (pluginClient_ == nullptr || PanelMode() != GsxPanelMode::OnPushback)
     {
@@ -921,7 +927,12 @@ void GsxMenuNavigator::ClosePanelAfterPushback()
     }
 
     panelCloseSpent_ = true;
-    logger_->LogInfo("RemoteAPI closing the GSX toolbar now that the pushback has started");
+    logger_->LogInfo(logLine);
+}
+
+void GsxMenuNavigator::ClosePushbackPanel()
+{
+    CloseThePanelWeOpened("RemoteAPI closing the GSX toolbar the client opened for the pushback");
 }
 
 bool GsxMenuNavigator::IsWaitingForThePanel()
@@ -971,7 +982,7 @@ bool GsxMenuNavigator::WereStairsKeptInPlace() const
 
 void GsxMenuNavigator::OnPushbackStarted()
 {
-    ClosePanelAfterPushback();
+    CloseThePanelWeOpened("RemoteAPI closing the GSX toolbar now that the pushback has started");
 }
 
 void GsxMenuNavigator::OpenMenu() const
@@ -992,20 +1003,20 @@ bool GsxMenuNavigator::IsMenuSettled() const
 
 bool GsxMenuNavigator::PickFirstMatching(const std::function<bool(const std::string&)>& matches)
 {
-    const auto& e = state_->menu.entries;
+    const auto& entries = state_->menu.entries;
     const auto& disabled = state_->menu.disabled;
-    for (std::size_t i = 0; i < e.size(); ++i)
+    for (std::size_t i = 0; i < entries.size(); ++i)
     {
         if (i < disabled.size() && disabled[i])
         {
             continue;
         }
 
-        if (matches(e[i]))
+        if (matches(entries[i]))
         {
             lastActionMs_ = nowMs_();
             client_->SendCommand("menu.pick", QJsonObject{{"index", static_cast<int>(i)}});
-            logger_->LogInfo(std::format("RemoteAPI menu.pick {} ({})", i, e[i]));
+            logger_->LogInfo(std::format("RemoteAPI menu.pick {} ({})", i, entries[i]));
             lastPickedSig_ = MenuSignature();
 
             return true;

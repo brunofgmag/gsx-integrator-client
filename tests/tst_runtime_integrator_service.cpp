@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <string>
 
 #include <QtCore/QScopeGuard>
@@ -39,9 +40,20 @@ namespace
     constexpr double kJetwayInPlace = 5.0;
     constexpr int kFlowTickBudget = 12;
     constexpr int kLoaderNoticeTickBudget = 120;
-    constexpr int kReconnectWaitMs = 6000;
+    constexpr int kReconnectWaitMs = 1000;
+    constexpr std::chrono::milliseconds kFastReconnectInterval{50};
     constexpr int kPersonalPilotId = 4815162;
     constexpr auto kOpeningSimConnect = "Opening SimConnect...";
+    constexpr auto kMd11SlowRuleObserved = "Rule tfdi-md11-commit-efb-targets would pass";
+    constexpr auto kTakingOverFuelAndPayload = "Taking over fuel and payload insertion";
+    constexpr auto kRetakingFuelAndPayload = "GSX automation flags reset by couatl; re-taking fuel and payload";
+    constexpr auto kRj85PlannedFuelLVar = "146_SimBrief_Block_Fuel";
+    constexpr auto kRj85PlannedZfwLVar = "146_SimBrief_ZFW";
+    constexpr auto kRj85PlannedPassengersLVar = "146_SimBrief_PaxQt";
+    constexpr double kRj85PlannedFuelKg = 4200.0;
+    constexpr double kRj85PlannedZfwKg = 27500.0;
+    constexpr double kRj85PlannedPassengers = 70.0;
+    constexpr double kRj85EmptyWeightKg = 24100.0;
 
     void PushSimRunning(const int running)
     {
@@ -146,6 +158,19 @@ namespace
         return DetectWithTheGsxUp(runtime, updated, kMd11Title, kMd11AtcModel, kMd11ProfileId);
     }
 
+    bool TheCameraMovesTo(const double cameraState, QSignalSpy& updated)
+    {
+        const DWORD camera = FakeSimConnectApi::DefineIdOf("CAMERA STATE");
+        if (camera == 0)
+        {
+            return false;
+        }
+
+        FakeSimConnectApi::PushSimObjectDouble(camera, cameraState);
+
+        return TickAndWait(updated);
+    }
+
     bool DriveTheFlowInto(const TurnaroundPhase phase, const IntegratorRuntime& runtime, QSignalSpy& updated)
     {
         for (int tick = 0; tick < kFlowTickBudget && runtime.GetPhase() != phase; ++tick)
@@ -174,6 +199,14 @@ namespace
             ++notifications;
         }
     };
+
+    IntegratorRuntimeOptions TheProbeActsOnTheSim()
+    {
+        IntegratorRuntimeOptions options;
+        options.actsOnTheSim = [] { return true; };
+
+        return options;
+    }
 
 #ifndef NDEBUG
     void TurnTheProbeOff()
@@ -228,6 +261,34 @@ namespace
 
         QtMessageHandler previous_;
     };
+
+#ifndef NDEBUG
+    bool TheFuelTakeoverStarts(QSignalSpy& updated)
+    {
+        return PushLVar(gsx::lvars::kRefuelingState, static_cast<double>(GsxStateStatus::Callable))
+            && TickAndWait(updated)
+            && LogCapture::Contains(QLatin1String(kTakingOverFuelAndPayload));
+    }
+
+    bool TheCouatlRaisesTheAutomationFlags()
+    {
+        return PushLVar(gsx::lvars::kAutomationFuel, 1.0)
+            && PushLVar(gsx::lvars::kAutomationPayload, 1.0);
+    }
+
+    bool TheRj85PlanReachesWaitingPowerOn(const IntegratorRuntime& runtime, QSignalSpy& updated)
+    {
+        return PushDatum(simvars::kSimEmptyWeight, kRj85EmptyWeightKg)
+            && PushLVar(kRj85PlannedFuelLVar, kRj85PlannedFuelKg)
+            && TickAndWait(updated)
+            && PushLVar(kRj85PlannedZfwLVar, kRj85PlannedZfwKg)
+            && TickAndWait(updated)
+            && PushLVar(kRj85PlannedPassengersLVar, kRj85PlannedPassengers)
+            && TickAndWait(updated)
+            && PushLVar(gsx::lvars::kSimbriefSuccess, 1.0)
+            && DriveTheFlowInto(TurnaroundPhase::WaitingPowerOn, runtime, updated);
+    }
+#endif
 }
 
 class RuntimeIntegratorServiceTest final : public QObject
@@ -265,6 +326,10 @@ private slots:
     static void theSnapshotCarriesTheLoaderCountdownWhileTheLoaderHoldsBoarding();
     static void theSnapshotCarriesTheDeboardingWaitOnceTheGsxTakesTheRequest();
     static void theSlowTickWritesNothingWhileTheGsxIsDown();
+    static void theSlowRulesAreObservedWhileTheAutomationIsOffAndTheProbeActs();
+    static void theSlowTickLeavesTheTakeoversAloneWhileTheAutomationIsOff();
+    static void endingTheSessionForgetsTheAircraftStrings();
+    static void theSnapshotCarriesTheZfwTargetAndTheEmptyZfw();
     static void theFuelWaitsUntilTheRemoteApiAnnouncesItsConnection();
     static void openingSimConnectIsAnnouncedOncePerDisconnectedPeriod();
     static void theLoggingToggleAloneLeavesTheAircraftUntouched();
@@ -896,6 +961,114 @@ void RuntimeIntegratorServiceTest::theSlowTickWritesNothingWhileTheGsxIsDown()
     QVERIFY(WasWritten(kMd11EfbZfw));
 }
 
+void RuntimeIntegratorServiceTest::theSlowRulesAreObservedWhileTheAutomationIsOffAndTheProbeActs()
+{
+    const LogCapture log;
+    IntegratorRuntime runtime(TheProbeActsOnTheSim());
+
+    AutomationSettings settings;
+    settings.autoStartFlow = false;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(!runtime.Snapshot().automationEnabled);
+    QVERIFY(!LogCapture::Contains(QLatin1String(kMd11SlowRuleObserved)));
+
+    FakeSimConnectApi::writtenSimObjectData.clear();
+
+    PushFourSecondTick();
+
+    QVERIFY(QTest::qWaitFor([] { return LogCapture::Contains(QLatin1String(kMd11SlowRuleObserved)); }, 2000));
+    QVERIFY(FakeSimConnectApi::writtenSimObjectData.empty());
+}
+
+void RuntimeIntegratorServiceTest::theSlowTickLeavesTheTakeoversAloneWhileTheAutomationIsOff()
+{
+#ifndef NDEBUG
+    const LogCapture log;
+    IntegratorRuntime runtime(TheProbeActsOnTheSim());
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+
+    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::RequestFuel) - static_cast<int>(runtime.GetPhase()));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::RequestFuel);
+
+    QVERIFY(TheFuelTakeoverStarts(updated));
+
+    runtime.SetAutomationEnabled(false);
+    QVERIFY(TheCouatlRaisesTheAutomationFlags());
+
+    PushFourSecondTick();
+    QVERIFY(DispatchPending());
+
+    QVERIFY(!LogCapture::Contains(QLatin1String(kRetakingFuelAndPayload)));
+
+    runtime.SetAutomationEnabled(true);
+    PushFourSecondTick();
+
+    QVERIFY(QTest::qWaitFor([] { return LogCapture::Contains(QLatin1String(kRetakingFuelAndPayload)); }, 2000));
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
+}
+
+void RuntimeIntegratorServiceTest::endingTheSessionForgetsTheAircraftStrings()
+{
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+
+    QVERIFY(TheCameraMovesTo(kWorldMapCamera, updated));
+
+    QVERIFY(!runtime.IsSessionActive());
+
+    QVERIFY(TheCameraMovesTo(kCockpitCamera, updated));
+    QVERIFY(TickAndWait(updated));
+
+    QVERIFY(runtime.IsSessionActive());
+    QCOMPARE(runtime.GetAircraftProfileId(), std::string{});
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kRj85Title, kRj85AtcModel, kRj85ProfileId));
+}
+
+void RuntimeIntegratorServiceTest::theSnapshotCarriesTheZfwTargetAndTheEmptyZfw()
+{
+#ifndef NDEBUG
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kRj85Title, kRj85AtcModel, kRj85ProfileId));
+
+    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::WaitingFlightPlan)
+                           - static_cast<int>(runtime.GetPhase()));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::WaitingFlightPlan);
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.Snapshot().targetZfwKg, 0.0);
+    QCOMPARE(runtime.Snapshot().emptyZfwKg, 0.0);
+
+    QVERIFY(TheRj85PlanReachesWaitingPowerOn(runtime, updated));
+
+    const IntegratorSnapshot snapshot = runtime.Snapshot();
+
+    QCOMPARE(snapshot.targetZfwKg, kRj85PlannedZfwKg);
+    QCOMPARE(snapshot.emptyZfwKg, kRj85EmptyWeightKg);
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
+}
+
 void RuntimeIntegratorServiceTest::theFuelWaitsUntilTheRemoteApiAnnouncesItsConnection()
 {
 #ifndef NDEBUG
@@ -926,7 +1099,9 @@ void RuntimeIntegratorServiceTest::theFuelWaitsUntilTheRemoteApiAnnouncesItsConn
 void RuntimeIntegratorServiceTest::openingSimConnectIsAnnouncedOncePerDisconnectedPeriod()
 {
     const LogCapture log;
-    IntegratorRuntime runtime;
+    IntegratorRuntimeOptions options;
+    options.reconnectInterval = kFastReconnectInterval;
+    IntegratorRuntime runtime(options);
     runtime.Setup();
 
     QCOMPARE(LogCapture::Count(QLatin1String(kOpeningSimConnect)), 1);

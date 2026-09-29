@@ -7,6 +7,7 @@
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/domain/model/FlightPlan.h"
 #include "../src/domain/support/Weight.h"
+#include "../src/infrastructure/aircraft/AircraftRegistry.h"
 #include "../src/infrastructure/aircraft/tfdi/TfdiMd11.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
 
@@ -77,6 +78,8 @@ class TfdiMd11Test final : public QObject
 
 private slots:
     static void reportsCargoVariant();
+    static void resolvesAFreighterTitleWithAPassengerAtcModelAsCargo();
+    static void keepsAPassengerTitleWithAPassengerAtcModelAsPassenger();
     static void evaluatingTheCargoDoorRuleWritesNoVariable();
     static void evaluatingThePaxDoorRuleWritesNoVariable();
     static void evaluatingTheEfbTargetRuleWritesNoVariable();
@@ -111,6 +114,7 @@ private slots:
     static void cargoDoorsOpenPerLoaderAndCloseWhenDone();
     static void mainCargoDoorOpensOnlyOnFreighter();
     static void cargoDoorsUntouchedWithoutGsx();
+    static void cargoDoorFollowsALoaderStateOnlyOnceItChangesAfterACouatlRestart();
     static void paxDoorsOpenPerStairsAndCloseWhenGone();
     static void paxDoorsOpenOnceTheStairsAreApproaching();
     static void paxDoorsUntouchedWithoutGsx();
@@ -130,6 +134,38 @@ void TfdiMd11Test::reportsCargoVariant()
 
     QVERIFY(!passenger.IsCargoVariant());
     QVERIFY(freighter.IsCargoVariant());
+}
+
+void TfdiMd11Test::resolvesAFreighterTitleWithAPassengerAtcModelAsCargo()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const AircraftIdentity identity{.title = "TFDi Design MD-11 Freighter FedEx", .atcModel = "MD11"};
+
+    const AircraftDescriptor* descriptor = MatchAircraft(AircraftRegistry(), identity);
+
+    QVERIFY(descriptor != nullptr);
+
+    const std::unique_ptr<Aircraft> aircraft = descriptor->create({.variableGateway = &gateway, .status = &status}, identity);
+
+    QVERIFY(aircraft != nullptr);
+    QVERIFY(aircraft->IsCargoVariant());
+}
+
+void TfdiMd11Test::keepsAPassengerTitleWithAPassengerAtcModelAsPassenger()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const AircraftIdentity identity{.title = "TFDi Design MD-11 Delta", .atcModel = "MD11"};
+
+    const AircraftDescriptor* descriptor = MatchAircraft(AircraftRegistry(), identity);
+
+    QVERIFY(descriptor != nullptr);
+
+    const std::unique_ptr<Aircraft> aircraft = descriptor->create({.variableGateway = &gateway, .status = &status}, identity);
+
+    QVERIFY(aircraft != nullptr);
+    QVERIFY(!aircraft->IsCargoVariant());
 }
 
 void TfdiMd11Test::readsCurrentFuelFromSim()
@@ -323,10 +359,10 @@ void TfdiMd11Test::parkingBrakeReadsTheLeverAndIgnoresTheSimVar()
     };
 
     constexpr auto cases = std::array{
-        TestCase{"released", 0.0, 0.0, false},
-        TestCase{"lever only", 1.0, 0.0, true},
-        TestCase{"chocks drive the sim var", 0.0, 1.0, false},
-        TestCase{"both", 1.0, 1.0, true},
+        TestCase{.name = "released", .lever = 0.0, .simBrake = 0.0, .expected = false},
+        TestCase{.name = "lever only", .lever = 1.0, .simBrake = 0.0, .expected = true},
+        TestCase{.name = "chocks drive the sim var", .lever = 0.0, .simBrake = 1.0, .expected = false},
+        TestCase{.name = "both", .lever = 1.0, .simBrake = 1.0, .expected = true},
     };
 
     for (const auto& testCase : cases)
@@ -353,10 +389,10 @@ void TfdiMd11Test::heldInPlaceAcceptsChocksWithoutTheLever()
     };
 
     constexpr auto cases = std::array{
-        TestCase{"rolling", 0.0, 0.0, false},
-        TestCase{"lever only", 1.0, 0.0, true},
-        TestCase{"chocks only", 0.0, 1.0, true},
-        TestCase{"both", 1.0, 1.0, true},
+        TestCase{.name = "rolling", .lever = 0.0, .chocks = 0.0, .expected = false},
+        TestCase{.name = "lever only", .lever = 1.0, .chocks = 0.0, .expected = true},
+        TestCase{.name = "chocks only", .lever = 0.0, .chocks = 1.0, .expected = true},
+        TestCase{.name = "both", .lever = 1.0, .chocks = 1.0, .expected = true},
     };
 
     for (const auto& testCase : cases)
@@ -385,11 +421,16 @@ void TfdiMd11Test::readyToDeboardFollowsSafetyState()
     };
 
     constexpr auto cases = std::array{
-        TestCase{"brake set", 1.0, 0.0, 0.0, 0.0, true},
-        TestCase{"chocks set", 0.0, 1.0, 0.0, 0.0, true},
-        TestCase{"engine running", 1.0, 0.0, 0.0, 1.0, false},
-        TestCase{"beacon on", 1.0, 0.0, 1.0, 0.0, false},
-        TestCase{"brake released", 0.0, 0.0, 0.0, 0.0, false},
+        TestCase{.name = "brake set", .parkingBrake = 1.0, .chocks = 0.0, .beacon = 0.0, .engineCombustion = 0.0,
+                 .expected = true},
+        TestCase{.name = "chocks set", .parkingBrake = 0.0, .chocks = 1.0, .beacon = 0.0, .engineCombustion = 0.0,
+                 .expected = true},
+        TestCase{.name = "engine running", .parkingBrake = 1.0, .chocks = 0.0, .beacon = 0.0,
+                 .engineCombustion = 1.0, .expected = false},
+        TestCase{.name = "beacon on", .parkingBrake = 1.0, .chocks = 0.0, .beacon = 1.0, .engineCombustion = 0.0,
+                 .expected = false},
+        TestCase{.name = "brake released", .parkingBrake = 0.0, .chocks = 0.0, .beacon = 0.0,
+                 .engineCombustion = 0.0, .expected = false},
     };
 
     for (const auto& testCase : cases)
@@ -524,13 +565,20 @@ void TfdiMd11Test::aircraftPowerFollowsElectricalState()
     };
 
     constexpr auto cases = std::array{
-        TestCase{"dark", 0.0, 0.0, 0.0, 0.0, false},
-        TestCase{"cabin", 1.0, 0.0, 0.0, 0.0, true},
-        TestCase{"battery only", 0.0, 1.0, 0.0, 0.0, false},
-        TestCase{"battery external", 0.0, 1.0, 1.0, 0.0, true},
-        TestCase{"battery apu", 0.0, 1.0, 0.0, 1.0, true},
-        TestCase{"cabin battery no source", 1.0, 1.0, 0.0, 0.0, false},
-        TestCase{"cabin battery external", 1.0, 1.0, 1.0, 0.0, true},
+        TestCase{.name = "dark", .cabinPower = 0.0, .battery = 0.0, .externalPower = 0.0, .apu = 0.0,
+                 .expected = false},
+        TestCase{.name = "cabin", .cabinPower = 1.0, .battery = 0.0, .externalPower = 0.0, .apu = 0.0,
+                 .expected = true},
+        TestCase{.name = "battery only", .cabinPower = 0.0, .battery = 1.0, .externalPower = 0.0, .apu = 0.0,
+                 .expected = false},
+        TestCase{.name = "battery external", .cabinPower = 0.0, .battery = 1.0, .externalPower = 1.0, .apu = 0.0,
+                 .expected = true},
+        TestCase{.name = "battery apu", .cabinPower = 0.0, .battery = 1.0, .externalPower = 0.0, .apu = 1.0,
+                 .expected = true},
+        TestCase{.name = "cabin battery no source", .cabinPower = 1.0, .battery = 1.0, .externalPower = 0.0,
+                 .apu = 0.0, .expected = false},
+        TestCase{.name = "cabin battery external", .cabinPower = 1.0, .battery = 1.0, .externalPower = 1.0,
+                 .apu = 0.0, .expected = true},
     };
 
     for (const auto& testCase : cases)
@@ -592,10 +640,10 @@ void TfdiMd11Test::readyToPushFollowsPowerBeaconAndEngines()
     };
 
     constexpr auto cases = std::array{
-        TestCase{"ready", 1.0, 1.0, 0.0, true},
-        TestCase{"dark", 0.0, 1.0, 0.0, false},
-        TestCase{"beacon off", 1.0, 0.0, 0.0, false},
-        TestCase{"engine running", 1.0, 1.0, 1.0, false},
+        TestCase{.name = "ready", .power = 1.0, .beacon = 1.0, .engineCombustion = 0.0, .expected = true},
+        TestCase{.name = "dark", .power = 0.0, .beacon = 1.0, .engineCombustion = 0.0, .expected = false},
+        TestCase{.name = "beacon off", .power = 1.0, .beacon = 0.0, .engineCombustion = 0.0, .expected = false},
+        TestCase{.name = "engine running", .power = 1.0, .beacon = 1.0, .engineCombustion = 1.0, .expected = false},
     };
 
     for (const auto& testCase : cases)
@@ -626,10 +674,10 @@ void TfdiMd11Test::engineRunningDetectsAnyCombustion()
     };
 
     constexpr auto cases = std::array{
-        TestCase{"stopped", 0.0, 0.0, 0.0, false},
-        TestCase{"engine 1", 1.0, 0.0, 0.0, true},
-        TestCase{"engine 2", 0.0, 1.0, 0.0, true},
-        TestCase{"engine 3", 0.0, 0.0, 1.0, true},
+        TestCase{.name = "stopped", .eng1 = 0.0, .eng2 = 0.0, .eng3 = 0.0, .expected = false},
+        TestCase{.name = "engine 1", .eng1 = 1.0, .eng2 = 0.0, .eng3 = 0.0, .expected = true},
+        TestCase{.name = "engine 2", .eng1 = 0.0, .eng2 = 1.0, .eng3 = 0.0, .expected = true},
+        TestCase{.name = "engine 3", .eng1 = 0.0, .eng2 = 0.0, .eng3 = 1.0, .expected = true},
     };
 
     for (const auto& testCase : cases)
@@ -750,6 +798,35 @@ void TfdiMd11Test::cargoDoorsUntouchedWithoutGsx()
 
     QVERIFY(!gateway.HasReceivedLVar(kCargoDoor1R));
     QCOMPARE(gateway.setLVarCalls, 0);
+}
+
+void TfdiMd11Test::cargoDoorFollowsALoaderStateOnlyOnceItChangesAfterACouatlRestart()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderLoading;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
+
+    gateway.lvars[kCouatlStarted] = 0.0;
+    TickAircraft(aircraft, gateway);
+    gateway.lvars[kCouatlStarted] = 1.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
+
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderWaitingForDoor;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
 }
 
 void TfdiMd11Test::paxDoorsOpenPerStairsAndCloseWhenGone()

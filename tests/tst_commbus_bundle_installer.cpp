@@ -6,10 +6,12 @@
 #include <QtTest/QTest>
 
 #include "../src/infrastructure/update/CommbusBundleInstaller.h"
+#include "../src/infrastructure/update/CommbusInstallProbe.h"
 
 namespace
 {
     constexpr auto kSimProcess = "FlightSimulator2024.exe";
+    constexpr auto kBridgePackageDir = "gsx-integrator-commbus";
 
     void WriteFile(const QString& path, const QByteArray& content)
     {
@@ -17,6 +19,27 @@ namespace
         QFile file(path);
         QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
         file.write(content);
+    }
+
+    QString PackagesOf(const QString& home)
+    {
+        return home + QStringLiteral("/packages2024");
+    }
+
+    void MakeInstall(const QString& home, const QStringList& folders, const QStringList& holders)
+    {
+        for (const QString& folder : folders)
+        {
+            QDir().mkpath(PackagesOf(home) + u'/' + folder);
+        }
+
+        for (const QString& holder : holders)
+        {
+            QDir().mkpath(PackagesOf(home) + u'/' + holder + u'/' + QLatin1String(kBridgePackageDir));
+        }
+
+        WriteFile(home + QStringLiteral("/AppData/Local/Packages/Microsoft.Limitless_8wekyb3d8bbwe/LocalCache/UserCfg.opt"),
+                  "InstalledPackagesPath \"" + QDir::toNativeSeparators(PackagesOf(home)).toUtf8() + "\"\n");
     }
 
     QByteArray ReadFile(const QString& path)
@@ -49,7 +72,9 @@ namespace
 
     std::vector<CommbusInstallTarget> OneTarget(const QString& communityPath)
     {
-        return {{QStringLiteral("MSFS 2024 (Steam)"), communityPath, QLatin1String(kSimProcess)}};
+        return {{.label = QStringLiteral("MSFS 2024 (Steam)"),
+                 .communityPath = communityPath,
+                 .processName = QLatin1String(kSimProcess)}};
     }
 
     bool NothingRunning(const QString&)
@@ -72,6 +97,10 @@ private slots:
     static void bundleWithoutManifestFailsEveryTarget();
     static void installedVersionPrefersTheMarkerOverTheManifest();
     static void detectsTargetsWhoseCommunityFolderExists();
+    static void theSiblingHoldingTheBridgeIsTheOnlyTarget();
+    static void aFreshInstallTargetsOnlyThePlainCommunityFolder();
+    static void everySiblingHoldingTheBridgeIsATargetInProbeOrder();
+    static void aSuffixedSiblingWithoutTheBridgeIsNeverATarget();
     static void overrideDirIsTheOnlyTargetAndHasNoProcess();
 };
 
@@ -86,7 +115,7 @@ void CommbusBundleInstallerTest::freshInstallCopiesTheBundleAndWritesTheMarker()
     const CommbusBundleResult result = InstallCommbusBundle(bundle, OneTarget(community), NothingRunning);
 
     QCOMPARE(result.bundledVersion, QStringLiteral("0.4.0"));
-    QCOMPARE(result.targets.size(), 1u);
+    QCOMPARE(result.targets.size(), 1U);
     QCOMPARE(result.targets[0].label, QStringLiteral("MSFS 2024 (Steam)"));
     QCOMPARE(result.targets[0].status, CommbusBundleStatus::Installed);
     QCOMPARE(ReadFile(PackageDir(community) + QStringLiteral("/SimObjects/bridge.wasm")), QByteArray("wasm 0.4.0"));
@@ -234,10 +263,59 @@ void CommbusBundleInstallerTest::detectsTargetsWhoseCommunityFolderExists()
 
     const std::vector<CommbusInstallTarget> targets = DetectCommbusInstallTargets(home.path());
 
-    QCOMPARE(targets.size(), 1u);
+    QCOMPARE(targets.size(), 1U);
     QCOMPARE(targets[0].label, QStringLiteral("MSFS 2024 (Microsoft Store)"));
     QCOMPARE(targets[0].communityPath, packages2024 + QStringLiteral("/Community"));
     QCOMPARE(targets[0].processName, QStringLiteral("FlightSimulator2024.exe"));
+}
+
+void CommbusBundleInstallerTest::theSiblingHoldingTheBridgeIsTheOnlyTarget()
+{
+    const QTemporaryDir home;
+    MakeInstall(home.path(), {"Community", "Community2024", "Official"}, {"Community2024"});
+
+    const std::vector<CommbusInstallTarget> targets = DetectCommbusInstallTargets(home.path());
+
+    QCOMPARE(targets.size(), 1U);
+    QCOMPARE(targets[0].communityPath, PackagesOf(home.path()) + QStringLiteral("/Community2024"));
+    QCOMPARE(targets[0].label, QStringLiteral("MSFS 2024 (Microsoft Store) / Community2024"));
+    QCOMPARE(targets[0].processName, QStringLiteral("FlightSimulator2024.exe"));
+}
+
+void CommbusBundleInstallerTest::aFreshInstallTargetsOnlyThePlainCommunityFolder()
+{
+    const QTemporaryDir home;
+    MakeInstall(home.path(), {"Community", "Community2024"}, {});
+
+    const std::vector<CommbusInstallTarget> targets = DetectCommbusInstallTargets(home.path());
+
+    QCOMPARE(targets.size(), 1U);
+    QCOMPARE(targets[0].communityPath, PackagesOf(home.path()) + QStringLiteral("/Community"));
+    QCOMPARE(targets[0].label, QStringLiteral("MSFS 2024 (Microsoft Store)"));
+}
+
+void CommbusBundleInstallerTest::everySiblingHoldingTheBridgeIsATargetInProbeOrder()
+{
+    const QTemporaryDir home;
+    MakeInstall(home.path(), {"Community", "Community2024"}, {"Community", "Community2024"});
+
+    const std::vector<CommbusInstallTarget> targets = DetectCommbusInstallTargets(home.path());
+    const QStringList expected = CommunityDirsUnder(PackagesOf(home.path()));
+
+    QCOMPARE(expected.size(), 2);
+    QCOMPARE(targets.size(), 2U);
+    QCOMPARE(targets[0].communityPath, expected.at(0));
+    QCOMPARE(targets[1].communityPath, expected.at(1));
+    QCOMPARE(targets[0].label, QStringLiteral("MSFS 2024 (Microsoft Store)"));
+    QCOMPARE(targets[1].label, QStringLiteral("MSFS 2024 (Microsoft Store) / Community2024"));
+}
+
+void CommbusBundleInstallerTest::aSuffixedSiblingWithoutTheBridgeIsNeverATarget()
+{
+    const QTemporaryDir home;
+    MakeInstall(home.path(), {"Community2024"}, {});
+
+    QVERIFY(DetectCommbusInstallTargets(home.path()).empty());
 }
 
 void CommbusBundleInstallerTest::overrideDirIsTheOnlyTargetAndHasNoProcess()
@@ -251,7 +329,7 @@ void CommbusBundleInstallerTest::overrideDirIsTheOnlyTargetAndHasNoProcess()
     const std::vector<CommbusInstallTarget> targets =
         ResolveCommbusInstallTargets(QDir::toNativeSeparators(community), root.path());
 
-    QCOMPARE(targets.size(), 1u);
+    QCOMPARE(targets.size(), 1U);
     QCOMPARE(targets[0].communityPath, community);
     QVERIFY(targets[0].processName.isEmpty());
 

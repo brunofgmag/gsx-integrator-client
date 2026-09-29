@@ -62,6 +62,9 @@ namespace
 
     constexpr double kEmptyOperatingZfwKg = 45070.0;
 
+    constexpr int kQuietTicks = 20;
+    constexpr int kLoaderReactionTicks = 12;
+
     double State(const GsxStateStatus status)
     {
         return static_cast<double>(status);
@@ -129,6 +132,11 @@ private slots:
     static void keepsThePassengerDoorClosedForDepartureDespiteTheJetway();
     static void leavesThePassengerDoorAloneWhileTheJetwayIsStillOperating();
     static void theTurnaroundStartDoesNotRefillTheReopenBudget();
+    static void closesACargoDoorTheLoaderCycleOpenedWhenTheAircraftIsHeldForDeparture();
+    static void closesACargoDoorWhenCloseAllDoorsIsRequestedAndTheLoaderIsGone();
+    static void keepsACargoDoorOpenWhileItsLoaderIsAtTheDoorAfterCloseAllDoors();
+    static void closesACargoDoorWhoseLoaderStateOutlivedACouatlRestart();
+    static void actsOnALoaderStateOnlyOnceItChangesAfterACouatlRestart();
 };
 
 void IFly737MaxTest::reportsCargoVariant()
@@ -323,8 +331,8 @@ void IFly737MaxTest::zfwSetterDistributesPayloadAcrossStations()
     const double paxB = gateway.avars["PAYLOAD STATION WEIGHT:2"];
     const double cargoAft = gateway.avars["PAYLOAD STATION WEIGHT:9"];
 
-    QVERIFY(std::abs(paxB - 20000.0 * 5250.0 / 34070.0) < 0.001);
-    QVERIFY(std::abs(cargoAft - 20000.0 * 8018.0 / 34070.0) < 0.001);
+    QVERIFY(std::abs(paxB - (20000.0 * 5250.0 / 34070.0)) < 0.001);
+    QVERIFY(std::abs(cargoAft - (20000.0 * 8018.0 / 34070.0)) < 0.001);
 }
 
 void IFly737MaxTest::zfwSetterHoldsUntilEmptyWeightArrives()
@@ -386,10 +394,10 @@ void IFly737MaxTest::parkingBrakeReadsTheSwitchAndIgnoresTheSimVar()
     };
 
     constexpr auto cases = std::array{
-        TestCase{"released", 0.0, 0.0, false},
-        TestCase{"switch only", 1.0, 0.0, true},
-        TestCase{"cold sim brake lies", 0.0, 1.0, false},
-        TestCase{"both", 1.0, 1.0, true},
+        TestCase{.name = "released", .lever = 0.0, .simBrake = 0.0, .expected = false},
+        TestCase{.name = "switch only", .lever = 1.0, .simBrake = 0.0, .expected = true},
+        TestCase{.name = "cold sim brake lies", .lever = 0.0, .simBrake = 1.0, .expected = false},
+        TestCase{.name = "both", .lever = 1.0, .simBrake = 1.0, .expected = true},
     };
 
     for (const auto& testCase : cases)
@@ -416,10 +424,10 @@ void IFly737MaxTest::heldInPlaceAcceptsChocksWithoutTheSwitch()
     };
 
     constexpr auto cases = std::array{
-        TestCase{"rolling", 0.0, 0.0, false},
-        TestCase{"switch only", 1.0, 0.0, true},
-        TestCase{"chocks only", 0.0, 1.0, true},
-        TestCase{"both", 1.0, 1.0, true},
+        TestCase{.name = "rolling", .lever = 0.0, .chocks = 0.0, .expected = false},
+        TestCase{.name = "switch only", .lever = 1.0, .chocks = 0.0, .expected = true},
+        TestCase{.name = "chocks only", .lever = 0.0, .chocks = 1.0, .expected = true},
+        TestCase{.name = "both", .lever = 1.0, .chocks = 1.0, .expected = true},
     };
 
     for (const auto& testCase : cases)
@@ -448,11 +456,16 @@ void IFly737MaxTest::readyToDeboardFollowsSafetyState()
     };
 
     constexpr auto cases = std::array{
-        TestCase{"brake set", 1.0, 0.0, 0.0, 0.0, true},
-        TestCase{"chocks set", 0.0, 1.0, 0.0, 0.0, true},
-        TestCase{"engine running", 1.0, 0.0, 0.0, 1.0, false},
-        TestCase{"beacon on", 1.0, 0.0, 1.0, 0.0, false},
-        TestCase{"brake released", 0.0, 0.0, 0.0, 0.0, false},
+        TestCase{.name = "brake set", .parkingBrake = 1.0, .chocks = 0.0, .beacon = 0.0, .combustion = 0.0,
+                 .expected = true},
+        TestCase{.name = "chocks set", .parkingBrake = 0.0, .chocks = 1.0, .beacon = 0.0, .combustion = 0.0,
+                 .expected = true},
+        TestCase{.name = "engine running", .parkingBrake = 1.0, .chocks = 0.0, .beacon = 0.0, .combustion = 1.0,
+                 .expected = false},
+        TestCase{.name = "beacon on", .parkingBrake = 1.0, .chocks = 0.0, .beacon = 1.0, .combustion = 0.0,
+                 .expected = false},
+        TestCase{.name = "brake released", .parkingBrake = 0.0, .chocks = 0.0, .beacon = 0.0, .combustion = 0.0,
+                 .expected = false},
     };
 
     for (const auto& testCase : cases)
@@ -482,8 +495,8 @@ void IFly737MaxTest::aircraftPowerFollowsAvionicsBus()
     };
 
     constexpr auto cases = std::array{
-        TestCase{"dark", 0.0, false},
-        TestCase{"powered", 28.0, true},
+        TestCase{.name = "dark", .busVoltage = 0.0, .expected = false},
+        TestCase{.name = "powered", .busVoltage = 28.0, .expected = true},
     };
 
     for (const auto& testCase : cases)
@@ -510,10 +523,10 @@ void IFly737MaxTest::readyToPushFollowsPowerBeaconAndEngines()
     };
 
     constexpr auto cases = std::array{
-        TestCase{"ready", 28.0, 1.0, 0.0, true},
-        TestCase{"dark", 0.0, 1.0, 0.0, false},
-        TestCase{"beacon off", 28.0, 0.0, 0.0, false},
-        TestCase{"engine running", 28.0, 1.0, 1.0, false},
+        TestCase{.name = "ready", .busVoltage = 28.0, .beacon = 1.0, .combustion = 0.0, .expected = true},
+        TestCase{.name = "dark", .busVoltage = 0.0, .beacon = 1.0, .combustion = 0.0, .expected = false},
+        TestCase{.name = "beacon off", .busVoltage = 28.0, .beacon = 0.0, .combustion = 0.0, .expected = false},
+        TestCase{.name = "engine running", .busVoltage = 28.0, .beacon = 1.0, .combustion = 1.0, .expected = false},
     };
 
     for (const auto& testCase : cases)
@@ -542,10 +555,10 @@ void IFly737MaxTest::engineRunningDetectsAnyCombustion()
     };
 
     constexpr auto cases = std::array{
-        TestCase{"stopped", 0.0, 0.0, false},
-        TestCase{"engine 1", 1.0, 0.0, true},
-        TestCase{"engine 2", 0.0, 1.0, true},
-        TestCase{"both", 1.0, 1.0, true},
+        TestCase{.name = "stopped", .eng1Combustion = 0.0, .eng2Combustion = 0.0, .expected = false},
+        TestCase{.name = "engine 1", .eng1Combustion = 1.0, .eng2Combustion = 0.0, .expected = true},
+        TestCase{.name = "engine 2", .eng1Combustion = 0.0, .eng2Combustion = 1.0, .expected = true},
+        TestCase{.name = "both", .eng1Combustion = 1.0, .eng2Combustion = 1.0, .expected = true},
     };
 
     for (const auto& testCase : cases)
@@ -1264,6 +1277,128 @@ void IFly737MaxTest::ignoresStaleLoaderStateFromPreviousTurnaround()
 
     QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo1Toggle), 1.0);
     QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo2Toggle), -1.0);
+}
+
+void IFly737MaxTest::closesACargoDoorTheLoaderCycleOpenedWhenTheAircraftIsHeldForDeparture()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kDeboardingState] = State(GsxStateStatus::Active);
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderUnloading;
+    gateway.lvars[kFwdCargoAnim] = 100.0;
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    aircraft.HoldDoorsClosed(true);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo1Toggle), 1.0);
+}
+
+void IFly737MaxTest::closesACargoDoorWhenCloseAllDoorsIsRequestedAndTheLoaderIsGone()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[kFwdCargoAnim] = 100.0;
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    aircraft.CloseAllDoors();
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo1Toggle), 1.0);
+}
+
+void IFly737MaxTest::keepsACargoDoorOpenWhileItsLoaderIsAtTheDoorAfterCloseAllDoors()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderInPosition;
+    gateway.lvars[kFwdCargoAnim] = 100.0;
+
+    aircraft.CloseAllDoors();
+
+    for (int tick = 0; tick < kQuietTicks; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+}
+
+void IFly737MaxTest::closesACargoDoorWhoseLoaderStateOutlivedACouatlRestart()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    gateway.lvars[gsx::lvars::kDeboardingState] = State(GsxStateStatus::Active);
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderUnloading;
+    gateway.lvars[kFwdCargoAnim] = 100.0;
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.lvars[gsx::lvars::kCouatlStarted] = 0.0;
+    TickAircraft(aircraft, gateway);
+    gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo1Toggle), 1.0);
+}
+
+void IFly737MaxTest::actsOnALoaderStateOnlyOnceItChangesAfterACouatlRestart()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    gateway.lvars[gsx::lvars::kDeboardingState] = State(GsxStateStatus::Active);
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderInPosition;
+    gateway.lvars[kFwdCargoAnim] = 0.0;
+    TickAircraft(aircraft, gateway);
+
+    gateway.lvars[gsx::lvars::kCouatlStarted] = 0.0;
+    TickAircraft(aircraft, gateway);
+    gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+
+    for (int tick = 0; tick < kQuietTicks; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderLoading;
+
+    for (int tick = 0; tick < kLoaderReactionTicks && gateway.setLVarCalls == 0; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.Written(gsx::lvars::kAircraftCargo1Toggle), 1.0);
 }
 
 void IFly737MaxTest::doorStatusOpenWhenACargoDoorAnimationReadsOpen()
