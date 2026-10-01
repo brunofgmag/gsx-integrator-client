@@ -19,6 +19,12 @@ namespace
     constexpr auto kGroundVelocity = "GROUND VELOCITY";
     constexpr auto kKnotsUnit = "Knots";
 
+    constexpr std::array kServicesThatCancelOnReposition = {
+        GsxState::Refueling,
+        GsxState::Boarding,
+        GsxState::Deboarding,
+    };
+
     constexpr std::array kBaggageLoaders = {
         std::pair{kBaggageLoaderMainState, CargoLoader::MainDeck},
         std::pair{kBaggageLoaderRearState, CargoLoader::Rear},
@@ -168,6 +174,26 @@ bool GsxStateService::IsWaitingForEngines() const
 bool GsxStateService::IsRepositioning() const
 {
     return varManager_->GetLVar(kRepositioning) == 1.0;
+}
+
+std::optional<bool> GsxStateService::HasServiceUnderway() const
+{
+    const bool allArrived = std::ranges::all_of(kServicesThatCancelOnReposition, [this](const GsxState gsxState)
+    {
+        return varManager_->HasReceivedLVar(StateLVarName(gsxState));
+    });
+    if (!allArrived)
+    {
+        return std::nullopt;
+    }
+
+    return std::ranges::any_of(kServicesThatCancelOnReposition, [this](const GsxState gsxState)
+    {
+        const GsxStateStatus status = GetStateStatus(gsxState);
+
+        return status == GsxStateStatus::Requested || status == GsxStateStatus::Active
+            || status == GsxStateStatus::Completing;
+    });
 }
 
 int GsxStateService::GetPlannedPassengers() const

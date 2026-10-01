@@ -740,6 +740,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.targetFuelKg = status_.targetFuelKg;
     snapshot.targetZfwKg = status_.targetZfwKg;
     snapshot.emptyZfwKg = status_.emptyZfwKg;
+    snapshot.fuelOnBoardKg = aircraft_ ? aircraft_->GetCurrentFuelKg() : 0.0;
     snapshot.targetPax = status_.targetPassengers;
     snapshot.delayTicksRemaining = GetDelayTicksRemaining();
     snapshot.autoWeightUnit = static_cast<int>(GetAutoWeightUnit());

@@ -47,7 +47,6 @@ private:
     void ReconcileMainDeck(bool forceClosed, VariableWriter& writer);
     static void WriteMainDeckRequest(bool open, VariableWriter& writer);
     [[nodiscard]] bool IsMainLoaderWaitingForTheDeck() const;
-    [[nodiscard]] bool IsAircraftEnergized() const;
 
     VariableReader* variables_;
     GsxDoorSync* doors_;

@@ -54,6 +54,7 @@ namespace
     constexpr double kRj85PlannedZfwKg = 27500.0;
     constexpr double kRj85PlannedPassengers = 70.0;
     constexpr double kRj85EmptyWeightKg = 24100.0;
+    constexpr double kRj85FuelOnBoardKg = 3225.0;
 
     void PushSimRunning(const int running)
     {
@@ -330,6 +331,7 @@ private slots:
     static void theSlowTickLeavesTheTakeoversAloneWhileTheAutomationIsOff();
     static void endingTheSessionForgetsTheAircraftStrings();
     static void theSnapshotCarriesTheZfwTargetAndTheEmptyZfw();
+    static void theSnapshotCarriesTheFuelOnBoardTheAircraftReportsNow();
     static void theFuelWaitsUntilTheRemoteApiAnnouncesItsConnection();
     static void openingSimConnectIsAnnouncedOncePerDisconnectedPeriod();
     static void theLoggingToggleAloneLeavesTheAircraftUntouched();
@@ -1067,6 +1069,28 @@ void RuntimeIntegratorServiceTest::theSnapshotCarriesTheZfwTargetAndTheEmptyZfw(
 #else
     QSKIP("DebugSkipPhase is compiled out of Release builds");
 #endif
+}
+
+void RuntimeIntegratorServiceTest::theSnapshotCarriesTheFuelOnBoardTheAircraftReportsNow()
+{
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kRj85Title, kRj85AtcModel, kRj85ProfileId));
+
+    QCOMPARE(runtime.Snapshot().fuelOnBoardKg, 0.0);
+
+    QVERIFY(PushDatum(simvars::kSimFuelTotalKg, kRj85FuelOnBoardKg));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.Snapshot().fuelOnBoardKg, kRj85FuelOnBoardKg);
+
+    QVERIFY(PushDatum(simvars::kSimFuelTotalKg, kRj85FuelOnBoardKg - 100.0));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.Snapshot().fuelOnBoardKg, kRj85FuelOnBoardKg - 100.0);
 }
 
 void RuntimeIntegratorServiceTest::theFuelWaitsUntilTheRemoteApiAnnouncesItsConnection()

@@ -25,8 +25,6 @@ namespace
     constexpr auto kMainDeckReqLVar = "FSS_GNDSVC_CARGO_MAIN_REQ";
     constexpr auto kMainDeckOpenLVar = "FSS_EXX_DOOR_CARGO_MAIN_OPEN";
     constexpr int kMainDeckReaffirmTicks = kCargoDoorReaffirmTicks;
-    constexpr int kMainDeckPowerHoldTicks = 120;
-    constexpr auto kMainDeckPowerHoldReason = "the FSS E-Jet freighter is not energized yet";
 
     constexpr std::array<FssEJetDoorSlot, 6> kDoorSlots{{
         {GsxDoor::FwdPax, "FSS_GNDSVC_MAINDOOR_FWD_L_REQ", "FSS_FLTCREW_MAINDOOR_FWD_L_REQ",
@@ -60,14 +58,8 @@ const char* FssEJetDoorsFollowGsxRule::Name() const
     return kRuleName;
 }
 
-RuleVerdict FssEJetDoorsFollowGsxRule::Evaluate(const RuleContext& context)
+RuleVerdict FssEJetDoorsFollowGsxRule::Evaluate(const RuleContext&)
 {
-    if (cargoVariant_ && context.needs.loading
-        && IsMainLoaderWaitingForTheDeck() && !IsAircraftEnergized())
-    {
-        return RuleVerdict::Hold(kMainDeckPowerHoldTicks, kMainDeckPowerHoldReason);
-    }
-
     return RuleVerdict::Pass();
 }
 
@@ -188,7 +180,7 @@ void FssEJetDoorsFollowGsxRule::WriteRequest(const FssEJetDoorSlot& slot, const 
 
 void FssEJetDoorsFollowGsxRule::ReconcileMainDeck(const bool forceClosed, VariableWriter& writer)
 {
-    const bool wantOpen = !forceClosed && IsAircraftEnergized() && IsMainLoaderWaitingForTheDeck();
+    const bool wantOpen = !forceClosed && IsMainLoaderWaitingForTheDeck();
     const bool pending = wantOpen ? mainDeckCommanded_ != true : mainDeckCommanded_ == true;
 
     if (pending)
@@ -235,10 +227,5 @@ void FssEJetDoorsFollowGsxRule::WriteMainDeckRequest(const bool open, VariableWr
 bool FssEJetDoorsFollowGsxRule::IsMainLoaderWaitingForTheDeck() const
 {
     return gsx::states::IsLoaderArriving(doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0));
-}
-
-bool FssEJetDoorsFollowGsxRule::IsAircraftEnergized() const
-{
-    return aircraft_->IsPowered();
 }
 

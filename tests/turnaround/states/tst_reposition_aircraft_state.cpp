@@ -14,6 +14,10 @@ private slots:
     static void skipsRepositioningWhenSettingEnabled();
     static void completesRepositionWhenSkipEnabledMidRun();
     static void holdsWithoutRequestingUntilGsxAvailable();
+    static void skipsTheRepositionWhenAServiceIsUnderway();
+    static void holdsWithoutRequestingWhileTheAnswerIsUnknown();
+    static void givesUpWithoutRequestingWhenTheAnswerNeverArrives();
+    static void aServiceStartingBeforeTheRetryStopsTheSecondRequest();
 };
 
 void RepositionAircraftStateTest::holdsWithoutRequestingUntilGsxAvailable()
@@ -35,6 +39,90 @@ void RepositionAircraftStateTest::holdsWithoutRequestingUntilGsxAvailable()
     f.status.gsxAvailable = true;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.repositionCalls, 1);
+}
+
+void RepositionAircraftStateTest::skipsTheRepositionWhenAServiceIsUnderway()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.gsxService.serviceUnderway = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::PlaceGroundEquipment);
+    QCOMPARE(f.menuGateway.repositionCalls, 0);
+    QVERIFY(f.ctx.data.repositionCompleted);
+    QCOMPARE(f.logger.messages.size(), static_cast<size_t>(1));
+}
+
+void RepositionAircraftStateTest::holdsWithoutRequestingWhileTheAnswerIsUnknown()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.gsxService.serviceUnderway = std::nullopt;
+
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.repositionCalls, 0);
+    QVERIFY(!f.ctx.data.repositionRequested);
+
+    f.gsxService.serviceUnderway = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.repositionCalls, 1);
+    QVERIFY(f.ctx.data.repositionRequested);
+}
+
+void RepositionAircraftStateTest::givesUpWithoutRequestingWhenTheAnswerNeverArrives()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.gsxService.serviceUnderway = std::nullopt;
+
+    std::optional<TurnaroundTransition> transition;
+    for (int tick = 0; tick < 70 && !transition; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        transition = state.Evaluate(f.ctx);
+    }
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::PlaceGroundEquipment);
+    QCOMPARE(f.menuGateway.repositionCalls, 0);
+}
+
+void RepositionAircraftStateTest::aServiceStartingBeforeTheRetryStopsTheSecondRequest()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.gsxService.repositioning = false;
+
+    ++f.ctx.data.stateTickCount;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.repositionCalls, 1);
+
+    f.gsxService.serviceUnderway = true;
+
+    std::optional<TurnaroundTransition> transition;
+    for (int tick = 0; tick < 20 && !transition; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        transition = state.Evaluate(f.ctx);
+    }
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::PlaceGroundEquipment);
     QCOMPARE(f.menuGateway.repositionCalls, 1);
 }
 

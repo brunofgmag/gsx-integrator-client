@@ -111,6 +111,8 @@ private slots:
     static void engineRunningDetectsAnyCombustion();
     static void engineAssumedRunningUntilCombustionDataArrives();
     static void cargoDoorsClosedByDefaultWhenGsxAvailable();
+    static void cargoDoorsAreNotCommandedBeforeTheLoaderReadingArrives();
+    static void aLoaderAlreadyAtTheDoorOnTheFirstReadingIsNeverCommandedClosed();
     static void cargoDoorsOpenPerLoaderAndCloseWhenDone();
     static void mainCargoDoorOpensOnlyOnFreighter();
     static void cargoDoorsUntouchedWithoutGsx();
@@ -723,10 +725,52 @@ void TfdiMd11Test::cargoDoorsClosedByDefaultWhenGsxAvailable()
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kGsxLoaderFront] = 0.0;
+    gateway.lvars[kGsxLoaderRear] = 0.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
     QCOMPARE(gateway.Written(kCargoDoor2R), 0.0);
+}
+
+void TfdiMd11Test::cargoDoorsAreNotCommandedBeforeTheLoaderReadingArrives()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, true);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QVERIFY(!gateway.HasReceivedLVar(kCargoDoor1R));
+    QVERIFY(!gateway.HasReceivedLVar(kCargoDoor2R));
+    QVERIFY(!gateway.HasReceivedLVar(kCargoDoorMain));
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 0);
+    QCOMPARE(gateway.WriteCount(kCargoDoor2R), 0);
+    QCOMPARE(gateway.WriteCount(kCargoDoorMain), 0);
+}
+
+void TfdiMd11Test::aLoaderAlreadyAtTheDoorOnTheFirstReadingIsNeverCommandedClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 0);
+
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderWaitingForDoor;
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 1);
+    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
 }
 
 void TfdiMd11Test::cargoDoorsOpenPerLoaderAndCloseWhenDone()
@@ -737,6 +781,7 @@ void TfdiMd11Test::cargoDoorsOpenPerLoaderAndCloseWhenDone()
 
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kGsxLoaderFront] = 6.0;
+    gateway.lvars[kGsxLoaderRear] = 0.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);

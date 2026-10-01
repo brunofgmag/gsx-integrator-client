@@ -1013,8 +1013,8 @@
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="610"/>
-        <source>OEW</source>
-        <translation>OEW</translation>
+        <source>Est. Weight</source>
+        <translation>Est. Weight</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="611"/>

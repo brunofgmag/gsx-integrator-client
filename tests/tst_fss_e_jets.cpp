@@ -275,8 +275,9 @@ private slots:
     static void aPassengerDoorHeardWithinTheWaitIsNeverReaffirmed();
     static void aPassengerDoorWithNoAckIsReaffirmedTwiceAtMost();
     static void aCargoBayWithoutAckReaffirmsAfterTwoTicks();
-    static void theMainDeckOpensOnlyWithTheAircraftEnergized();
-    static void theMainDeckRuleHoldsWhileTheLoaderWaitsUnpowered();
+    static void theMainDeckRequestGoesOutOnTheFirstTickWithTheAircraftCold();
+    static void theMainDeckStaysOpenWhenAircraftPowerFallsWhileTheLoaderWaits();
+    static void theMainDeckRuleNeverHoldsTheLoadingPhaseWhileTheAircraftIsCold();
     static void closeAllDoorsWritesZeroEverywhereItManages();
     static void doorStatusCombinesOpenMovingAndClosedWithAPrazo();
     static void theFreighterDoorStatusIgnoresL2AndR2AndIncludesTheMainDeck();
@@ -291,6 +292,7 @@ private slots:
     static void loadingNeverTouchesTheCrewStations();
     static void loadingWritesNothingUntilTheEmptyWeightArrives();
     static void repeatingTheSameZfwEveryTickWritesTheStationsOnce();
+    static void aRepeatedZfwIsWrittenAgainWhenTheStationsWereChangedFromOutside();
     static void mirrorsThePlannedCargoIntoThePlaneSetupWeightsOnce();
     static void mirrorsNoPlaneSetupWeightsWithoutACargoLineInThePlan();
     static void reportsPlannedPassengersToGsxOnce();
@@ -1293,30 +1295,41 @@ void FssEJetTest::aCargoBayWithoutAckReaffirmsAfterTwoTicks()
     QCOMPARE(gateway.WriteCount(kCargoFwdReq), 2);
 }
 
-void FssEJetTest::theMainDeckOpensOnlyWithTheAircraftEnergized()
+void FssEJetTest::theMainDeckRequestGoesOutOnTheFirstTickWithTheAircraftCold()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, true);
 
+    gateway.lvars[kAcPowerAvailable] = 0.0;
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kMainLoaderState] = kLoaderWaitingForDoor;
-    TickAircraft(aircraft, gateway);
-
-    QCOMPARE(gateway.WriteCount(kMainDeckReq), 0);
-
-    TickTimes(aircraft, gateway, kFiftyTicks);
-
-    QCOMPARE(gateway.WriteCount(kMainDeckReq), 0);
-
-    gateway.lvars[kAcPowerAvailable] = 1.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.WriteCount(kMainDeckReq), 1);
     QCOMPARE(gateway.Written(kMainDeckReq), 1.0);
 }
 
-void FssEJetTest::theMainDeckRuleHoldsWhileTheLoaderWaitsUnpowered()
+void FssEJetTest::theMainDeckStaysOpenWhenAircraftPowerFallsWhileTheLoaderWaits()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, true);
+
+    gateway.lvars[kAcPowerAvailable] = 1.0;
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kMainLoaderState] = kLoaderWaitingForDoor;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kMainDeckReq), 1.0);
+
+    gateway.lvars[kAcPowerAvailable] = 0.0;
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.Written(kMainDeckReq), 1.0);
+}
+
+void FssEJetTest::theMainDeckRuleNeverHoldsTheLoadingPhaseWhileTheAircraftIsCold()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -1325,16 +1338,10 @@ void FssEJetTest::theMainDeckRuleHoldsWhileTheLoaderWaitsUnpowered()
     AircraftRule* const rule = FindRule(aircraft, kDoorsRule);
 
     QVERIFY(rule != nullptr);
-    QVERIFY(!rule->Evaluate(kLoading).holds);
 
+    gateway.lvars[kAcPowerAvailable] = 0.0;
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kMainLoaderState] = kLoaderWaitingForDoor;
-
-    QVERIFY(rule->Evaluate(kLoading).holds);
-    QVERIFY(!rule->Evaluate(kPassengerAccess).holds);
-    QVERIFY(!rule->Evaluate(RuleContext{}).holds);
-
-    gateway.lvars[kAcPowerAvailable] = 1.0;
 
     QVERIFY(!rule->Evaluate(kLoading).holds);
 }
@@ -1361,7 +1368,6 @@ void FssEJetTest::closeAllDoorsWritesZeroEverywhereItManages()
         else
         {
             gateway.lvars[kMainLoaderState] = kLoaderWaitingForDoor;
-            gateway.lvars[kAcPowerAvailable] = 1.0;
         }
 
         TickTimes(aircraft, gateway, 3);
@@ -1691,6 +1697,31 @@ void FssEJetTest::repeatingTheSameZfwEveryTickWritesTheStationsOnce()
 
     for (const char* station : {kStation3, kStation4, kStation5, kStation6})
     {
+        QCOMPARE(gateway.AVarWriteCount(station), 2);
+    }
+}
+
+void FssEJetTest::aRepeatedZfwIsWrittenAgainWhenTheStationsWereChangedFromOutside()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, true);
+
+    PlanTheMeasuredFlight(status, 13400.0, 0);
+    ParkWithTheMeasuredEmptyWeight(gateway, 27451.93);
+
+    aircraft.SetCurrentZfwKg(0.0);
+
+    gateway.avars[kStation3] = 3350.0;
+    gateway.avars[kStation4] = 1340.0;
+    gateway.avars[kStation5] = 6030.0;
+    gateway.avars[kStation6] = 2680.0;
+
+    aircraft.SetCurrentZfwKg(0.0);
+
+    for (const char* station : {kStation3, kStation4, kStation5, kStation6})
+    {
+        QCOMPARE(gateway.WrittenAVar(station), 0.0);
         QCOMPARE(gateway.AVarWriteCount(station), 2);
     }
 }

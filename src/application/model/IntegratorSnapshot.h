@@ -95,6 +95,7 @@ struct IntegratorSnapshot
     SnapshotDouble targetFuelKg;
     SnapshotDouble targetZfwKg;
     SnapshotDouble emptyZfwKg;
+    SnapshotDouble fuelOnBoardKg;
     int targetPax = 0;
     int delayTicksRemaining = 0;
     int autoWeightUnit = 0;

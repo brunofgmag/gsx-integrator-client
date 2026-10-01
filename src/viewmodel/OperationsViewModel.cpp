@@ -361,7 +361,7 @@ QString OperationsViewModel::GetTargetFuelText() const
 
 QString OperationsViewModel::GetTargetZfwText() const
 {
-    return WeightText(IsInDeboardingPhase() ? GetEmptyZfwKg() : GetTargetZfwKg());
+    return WeightText(IsInDeboardingPhase() ? GetEmptyZfwKg() + snapshot_.fuelOnBoardKg : GetTargetZfwKg());
 }
 
 QString OperationsViewModel::GetPlannedZfwText() const
@@ -607,7 +607,7 @@ QString OperationsViewModel::GetPaxCountText() const
 QString OperationsViewModel::GetTargetZfwLabel() const
 {
     return IsInDeboardingPhase()
-               ? QCoreApplication::translate("OperationsScreen", "OEW")
+               ? QCoreApplication::translate("OperationsScreen", "Est. Weight")
                : QCoreApplication::translate("OperationsScreen", "Planned ZFW");
 }
 

@@ -93,7 +93,7 @@ private slots:
     static void standingAdvisoryTextsNameTheirCondition();
     static void progressTextsRoundToAWholePercent();
     static void theBoardingCardFollowsTheDeboardingPhase();
-    static void theZfwRowTargetsTheEmptyWeightWhileDeboarding();
+    static void theZfwRowShowsTheEmptyWeightPlusTheFuelOnBoardWhileDeboarding();
     static void fuelRateTextNamesWhoSetsThePace();
     static void fuelRateTextShowsTheEffectiveRateInTheDisplayUnit();
     static void plannedPaxTextPrintsThePlainNumber();
@@ -1528,7 +1528,7 @@ void OperationsViewModelTest::theBoardingCardFollowsTheDeboardingPhase()
     QCOMPARE(viewModel.GetPaxProgressText(), QStringLiteral("50%"));
 }
 
-void OperationsViewModelTest::theZfwRowTargetsTheEmptyWeightWhileDeboarding()
+void OperationsViewModelTest::theZfwRowShowsTheEmptyWeightPlusTheFuelOnBoardWhileDeboarding()
 {
     FakeIntegratorService service;
     FakeOperationsDisplaySettings display;
@@ -1536,6 +1536,7 @@ void OperationsViewModelTest::theZfwRowTargetsTheEmptyWeightWhileDeboarding()
 
     service.snapshot.targetZfwKg = 60000.0;
     service.snapshot.emptyZfwKg = 42000.0;
+    service.snapshot.fuelOnBoardKg = 3225.0;
     service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
 
@@ -1545,14 +1546,14 @@ void OperationsViewModelTest::theZfwRowTargetsTheEmptyWeightWhileDeboarding()
     service.snapshot.phase = TurnaroundPhase::RequestDeboarding;
     service.Notify();
 
-    QCOMPARE(viewModel.GetTargetZfwLabel(), QStringLiteral("OEW"));
-    QCOMPARE(viewModel.GetTargetZfwText(), QLocale().toString(42000) + QStringLiteral(" kg"));
+    QCOMPARE(viewModel.GetTargetZfwLabel(), QStringLiteral("Est. Weight"));
+    QCOMPARE(viewModel.GetTargetZfwText(), QLocale().toString(45225) + QStringLiteral(" kg"));
 
     service.snapshot.phase = TurnaroundPhase::Deboarding;
     service.Notify();
 
-    QCOMPARE(viewModel.GetTargetZfwLabel(), QStringLiteral("OEW"));
-    QCOMPARE(viewModel.GetTargetZfwText(), QLocale().toString(42000) + QStringLiteral(" kg"));
+    QCOMPARE(viewModel.GetTargetZfwLabel(), QStringLiteral("Est. Weight"));
+    QCOMPARE(viewModel.GetTargetZfwText(), QLocale().toString(45225) + QStringLiteral(" kg"));
 }
 
 void OperationsViewModelTest::fuelRateTextNamesWhoSetsThePace()
