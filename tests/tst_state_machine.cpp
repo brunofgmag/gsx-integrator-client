@@ -430,6 +430,13 @@ namespace
         workflow.StartBoarding();
     }
 
+#ifndef NDEBUG
+    void SkipTo(TurnaroundWorkflow& workflow, const TurnaroundPhase target)
+    {
+        workflow.machine.DebugSkipPhase(static_cast<int>(target) - static_cast<int>(workflow.machine.GetPhase()));
+    }
+#endif
+
     bool Logged(const TurnaroundWorkflow& workflow, const std::string& fragment)
     {
         return std::ranges::any_of(workflow.f.logger.messages, [&fragment](const std::string& message)
@@ -476,6 +483,9 @@ private slots:
     static void publishesLoadingTargetsAfterFlightPlanCapture();
     static void publishesTheCrewThePlanLeftOutAfterFlightPlanCapture();
     static void debugSkipPhaseClampsToEnumRange();
+    static void skippingPastTheFlightPlanKeepsThePlan();
+    static void theBoardingBaselineAfterSkippingTheFlightPlanKeepsTheEmptyWeight();
+    static void aSkipThatDoesNotCrossTheFlightPlanDoesNotCaptureAgain();
     static void theClosedListHoldsOnlyTheGateTheSliceNamed();
     static void theSmartSwitchUnlocksThePushbackGateHeldByADoor();
     static void aTouchOnTheTickTheGateIsReachedIsNotSwallowed();
@@ -1102,6 +1112,62 @@ void TurnaroundStateMachineTest::debugSkipPhaseClampsToEnumRange()
     workflow.machine.DebugSkipPhase(1);
 
     QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::WaitingNewFlight);
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
+}
+
+void TurnaroundStateMachineTest::skippingPastTheFlightPlanKeepsThePlan()
+{
+#ifndef NDEBUG
+    TurnaroundWorkflow workflow;
+    workflow.AttachAircraft();
+    PrepareFlightPlan(workflow.f.aircraft);
+
+    SkipTo(workflow, TurnaroundPhase::RequestFuel);
+    workflow.machine.Tick();
+
+    QCOMPARE(workflow.f.status.targetZfwKg, 180000.0);
+    QCOMPARE(workflow.f.status.targetFuelKg, 12000.0);
+    QCOMPARE(workflow.f.status.targetPassengers, 210);
+    QCOMPARE(workflow.f.status.emptyZfwKg, 130000.0);
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
+}
+
+void TurnaroundStateMachineTest::theBoardingBaselineAfterSkippingTheFlightPlanKeepsTheEmptyWeight()
+{
+#ifndef NDEBUG
+    TurnaroundWorkflow workflow;
+    workflow.AttachAircraft();
+    PrepareFlightPlan(workflow.f.aircraft);
+    workflow.f.aircraft.powered = true;
+
+    SkipTo(workflow, TurnaroundPhase::RequestFuel);
+    workflow.RequestFuel();
+    workflow.StartRefueling();
+    workflow.CompleteRefueling();
+    workflow.StartBoarding();
+
+    QCOMPARE(workflow.f.status.emptyZfwKg, 130000.0);
+    QCOMPARE(workflow.f.aircraft.currentZfwKg, 180000.0);
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
+}
+
+void TurnaroundStateMachineTest::aSkipThatDoesNotCrossTheFlightPlanDoesNotCaptureAgain()
+{
+#ifndef NDEBUG
+    TurnaroundWorkflow workflow;
+    ReachRequestFuel(workflow);
+    workflow.f.aircraft.plannedZfwKg = 200000.0;
+
+    SkipTo(workflow, TurnaroundPhase::Loading);
+    workflow.machine.Tick();
+
+    QCOMPARE(workflow.f.status.targetZfwKg, 180000.0);
 #else
     QSKIP("DebugSkipPhase is compiled out of Release builds");
 #endif

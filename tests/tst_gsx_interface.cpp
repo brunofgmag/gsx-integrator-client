@@ -63,6 +63,8 @@ private slots:
     static void detectsPushbackStarted();
     static void detectsPushbackFinished();
     static void detectsRepositioning();
+    static void aServiceUnderwayIsUnknownUntilTheThreeStateLVarsArrive();
+    static void aServiceUnderwayIsRequestedActiveOrCompletingOnAnyOfTheThree();
     static void cargoPercentReadsLVars();
     static void boardingCargoPercentIgnoresTheStalePercentUntilItMoves();
     static void deboardingCargoPercentIgnoresTheStalePercentUntilItMoves();
@@ -358,6 +360,53 @@ void GsxInterfaceTest::detectsPushbackFinished()
     gateway.lvars[kPushbackVehicleState] = static_cast<double>(GsxStateStatus::Completed);
 
     QVERIFY(!gsx.IsPushbackFinished());
+}
+
+void GsxInterfaceTest::aServiceUnderwayIsUnknownUntilTheThreeStateLVarsArrive()
+{
+    FakeVariableGateway gateway;
+    const GsxStateService gsx(&gateway);
+
+    QVERIFY(!gsx.HasServiceUnderway().has_value());
+
+    gateway.lvars[kRefuelingState] = static_cast<double>(GsxStateStatus::Active);
+
+    QVERIFY(!gsx.HasServiceUnderway().has_value());
+
+    gateway.lvars[kBoardingState] = static_cast<double>(GsxStateStatus::Callable);
+
+    QVERIFY(!gsx.HasServiceUnderway().has_value());
+
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Callable);
+
+    QVERIFY(gsx.HasServiceUnderway() == std::optional(true));
+}
+
+void GsxInterfaceTest::aServiceUnderwayIsRequestedActiveOrCompletingOnAnyOfTheThree()
+{
+    for (const auto& underway : kServicesThatEndThroughCompleted)
+    {
+        FakeVariableGateway gateway;
+        const GsxStateService gsx(&gateway);
+
+        for (const auto& idle : kServicesThatEndThroughCompleted)
+        {
+            gateway.lvars[idle.lvar] = static_cast<double>(GsxStateStatus::Callable);
+        }
+
+        QVERIFY(gsx.HasServiceUnderway() == std::optional(false));
+
+        for (const auto status : {GsxStateStatus::Requested, GsxStateStatus::Active, GsxStateStatus::Completing})
+        {
+            gateway.lvars[underway.lvar] = static_cast<double>(status);
+
+            QVERIFY2(gsx.HasServiceUnderway().value_or(false), underway.lvar);
+        }
+
+        gateway.lvars[underway.lvar] = static_cast<double>(GsxStateStatus::Completed);
+
+        QVERIFY2(gsx.HasServiceUnderway() == std::optional(false), underway.lvar);
+    }
 }
 
 void GsxInterfaceTest::detectsRepositioning()

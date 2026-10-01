@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <utility>
 #include "../../src/domain/ports/GsxGateway.h"
@@ -19,6 +20,7 @@ public:
     bool pushbackStarted = false;
     bool pushbackFinished = false;
     bool repositioning = false;
+    std::optional<bool> serviceUnderway = false;
     bool stairsInPlace = false;
     bool jetwayInPlace = false;
     bool stairsAvailable = false;
@@ -165,6 +167,7 @@ public:
     [[nodiscard]] bool HasPushbackStarted() const override { return pushbackStarted; }
     [[nodiscard]] bool IsPushbackFinished() const override { return pushbackFinished; }
     [[nodiscard]] bool IsRepositioning() const override { return repositioning; }
+    [[nodiscard]] std::optional<bool> HasServiceUnderway() const override { return serviceUnderway; }
     [[nodiscard]] int GetPlannedPassengers() const override { return plannedPassengers; }
     [[nodiscard]] int GetBoardedPassengers() override { return boardedPassengers; }
     [[nodiscard]] int GetDeboardedPassengers() override { return deboardedPassengers; }

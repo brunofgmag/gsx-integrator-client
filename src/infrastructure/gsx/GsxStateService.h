@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_GSXSTATESERVICE_H
 
 #include <map>
+#include <optional>
 #include "../../domain/ports/GsxGateway.h"
 #include "GsxRemoteState.h"
 
@@ -26,6 +27,7 @@ public:
     [[nodiscard]] bool IsPushbackFinished() const override;
     [[nodiscard]] bool IsWaitingForEngines() const override;
     [[nodiscard]] bool IsRepositioning() const override;
+    [[nodiscard]] std::optional<bool> HasServiceUnderway() const override;
     [[nodiscard]] int GetPlannedPassengers() const override;
     [[nodiscard]] int GetBoardedPassengers() override;
     [[nodiscard]] int GetDeboardedPassengers() override;

@@ -29,7 +29,7 @@ private slots:
     static void carriesTheLoaderCountdownTheWindowWrites();
     static void carriesTheEffectiveFuelRateTheFuelCardShows();
     static void carriesTheDeparturePageTipTheWindowWrites();
-    static void carriesTheEmptyWeightThePaxCardTargetsWhileDeboarding();
+    static void carriesTheEstimatedWeightThePaxCardTargetsWhileDeboarding();
 };
 
 void EfbStatePublisherTest::publishesTheSnapshotWhenItChanges()
@@ -407,7 +407,7 @@ void EfbStatePublisherTest::carriesTheEffectiveFuelRateTheFuelCardShows()
     QVERIFY(std::get<2>(bridge.calls.back()).find(R"("fuelRateText":"17 kg/s")") != std::string::npos);
 }
 
-void EfbStatePublisherTest::carriesTheEmptyWeightThePaxCardTargetsWhileDeboarding()
+void EfbStatePublisherTest::carriesTheEstimatedWeightThePaxCardTargetsWhileDeboarding()
 {
     FakeIntegratorService service;
     FakeOperationsDisplaySettings display;
@@ -420,12 +420,13 @@ void EfbStatePublisherTest::carriesTheEmptyWeightThePaxCardTargetsWhileDeboardin
     service.snapshot.phase = TurnaroundPhase::Deboarding;
     service.snapshot.targetZfwKg = 60000.0;
     service.snapshot.emptyZfwKg = 42000.0;
+    service.snapshot.fuelOnBoardKg = 3225.0;
     service.Notify();
     publisher.Publish();
 
-    const std::string emptyWeight = (QLocale().toString(42000) + QStringLiteral(" kg")).toStdString();
-    const std::string expectedText = R"("targetZfwText":")" + emptyWeight + R"(")";
+    const std::string estimatedWeight = (QLocale().toString(45225) + QStringLiteral(" kg")).toStdString();
+    const std::string expectedText = R"("targetZfwText":")" + estimatedWeight + R"(")";
 
-    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("targetZfwLabel":"OEW")") != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("targetZfwLabel":"Est. Weight")") != std::string::npos);
     QVERIFY(std::get<2>(bridge.calls.back()).find(expectedText) != std::string::npos);
 }

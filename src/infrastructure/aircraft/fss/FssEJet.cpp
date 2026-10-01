@@ -98,6 +98,8 @@ namespace
     constexpr double kEfbPlanFuelMissing = 0.0;
     constexpr double kEfbPlanFuelToleranceKg = 5.0;
 
+    constexpr double kStationChangedFromOutsideToleranceKg = 1.0;
+
     constexpr double kMaxPassengersE190 = 114.0;
     constexpr double kMaxPassengersE195 = 124.0;
 
@@ -143,6 +145,34 @@ namespace
     std::string PayloadStationVar(const int station)
     {
         return kSimPayloadStationPrefix + std::to_string(station);
+    }
+
+    struct StationWriteKg
+    {
+        int station = 0;
+        double kg = 0.0;
+    };
+
+    std::array<StationWriteKg, 4> StationWritesKg(const StationTargetsKg& targets, const double progress)
+    {
+        return {{
+            {.station = kZoneAOrDeckFwdStation, .kg = targets.zoneAOrDeckFwdKg * progress},
+            {.station = kHoldFwdStation, .kg = targets.holdFwdKg * progress},
+            {.station = kZoneBOrDeckAftStation, .kg = targets.zoneBOrDeckAftKg * progress},
+            {.station = kHoldAftStation, .kg = targets.holdAftKg * progress}
+        }};
+    }
+
+    bool WasAnyStationChangedFromOutside(VariableGateway& variables, const std::array<StationWriteKg, 4>& writes)
+    {
+        return std::ranges::any_of(writes, [&variables](const StationWriteKg& write)
+        {
+            const std::string stationVariable = PayloadStationVar(write.station);
+
+            return variables.HasReceivedAVar(stationVariable, kKgUnit)
+                && std::abs(variables.GetAVar(stationVariable, kKgUnit, write.kg) - write.kg)
+                > kStationChangedFromOutsideToleranceKg;
+        });
     }
 
     std::optional<double> PoundsPerGallon(VariableGateway& variables)
@@ -454,7 +484,7 @@ double FssEJet::GetCurrentZfwKg() const
 
 void FssEJet::SetCurrentZfwKg(const double zfwKg)
 {
-    if (!variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit) || zfwKg == lastZfwKg_)
+    if (!variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit))
     {
         return;
     }
@@ -465,18 +495,22 @@ void FssEJet::SetCurrentZfwKg(const double zfwKg)
         return;
     }
 
-    lastZfwKg_ = zfwKg;
-
     const double payloadLineKg = status_->plannedPayloadKg.value_or(0.0);
     const double onBoardKg = std::clamp(zfwKg - GetEmptyZfwKg(), 0.0, payloadLineKg);
     const double progress = payloadLineKg > 0.0 ? onBoardKg / payloadLineKg : 0.0;
+    const std::array<StationWriteKg, 4> writes = StationWritesKg(*targets, progress);
 
-    variableGateway_->SetAVar(PayloadStationVar(kZoneAOrDeckFwdStation), kKgUnit,
-                              targets->zoneAOrDeckFwdKg * progress);
-    variableGateway_->SetAVar(PayloadStationVar(kHoldFwdStation), kKgUnit, targets->holdFwdKg * progress);
-    variableGateway_->SetAVar(PayloadStationVar(kZoneBOrDeckAftStation), kKgUnit,
-                              targets->zoneBOrDeckAftKg * progress);
-    variableGateway_->SetAVar(PayloadStationVar(kHoldAftStation), kKgUnit, targets->holdAftKg * progress);
+    if (zfwKg == lastZfwKg_ && !WasAnyStationChangedFromOutside(*variableGateway_, writes))
+    {
+        return;
+    }
+
+    lastZfwKg_ = zfwKg;
+
+    for (const StationWriteKg& write : writes)
+    {
+        variableGateway_->SetAVar(PayloadStationVar(write.station), kKgUnit, write.kg);
+    }
 }
 
 bool FssEJet::ConsumeSmartSwitch()

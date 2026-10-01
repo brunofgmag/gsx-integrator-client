@@ -1,8 +1,11 @@
 #include "RepositionAircraftState.h"
 
+#include <optional>
+
 #include "../TurnaroundContext.h"
 #include "../../model/AutomationSettings.h"
 #include "../../model/AutomationStatus.h"
+#include "../../ports/DomainLogger.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
@@ -10,6 +13,14 @@ namespace
 {
     constexpr int kRetryTicks = 10;
     constexpr int kGiveUpTicks = 60;
+
+    TurnaroundTransition SkipRepositionOverTheService(TurnaroundContext& ctx)
+    {
+        ctx.logger->LogInfo("A GSX service is underway: skipping the reposition because it would cancel it");
+        ctx.data.repositionCompleted = true;
+
+        return TurnaroundTransition{TurnaroundPhase::PlaceGroundEquipment};
+    }
 }
 
 std::optional<TurnaroundTransition> RepositionAircraftState::EvaluatePhase(TurnaroundContext& ctx)
@@ -35,6 +46,17 @@ std::optional<TurnaroundTransition> RepositionAircraftState::EvaluatePhase(Turna
 
     if (!repositionRequested && !repositionCompleted)
     {
+        const std::optional<bool> serviceUnderway = ctx.gsxGateway->HasServiceUnderway();
+        if (!serviceUnderway.has_value())
+        {
+            return std::nullopt;
+        }
+
+        if (*serviceUnderway)
+        {
+            return SkipRepositionOverTheService(ctx);
+        }
+
         ctx.menuGateway->RepositionAircraft();
         repositionRequested = true;
         return std::nullopt;

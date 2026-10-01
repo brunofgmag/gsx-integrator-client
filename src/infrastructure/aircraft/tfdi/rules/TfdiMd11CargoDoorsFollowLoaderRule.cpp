@@ -55,6 +55,11 @@ void TfdiMd11CargoDoorsFollowLoaderRule::Act(const RuleContext&, VariableWriter&
 void TfdiMd11CargoDoorsFollowLoaderRule::FollowLoader(VariableWriter& writer, const char* loaderStateLVar,
                                                       const char* doorCmdLVar, double& lastDoorTarget) const
 {
+    if (!variables_->HasReceivedLVar(loaderStateLVar))
+    {
+        return;
+    }
+
     const double loaderState = doors_->VehicleState(loaderStateLVar, 0.0);
     const double doorTarget = gsx::states::IsLoaderArriving(loaderState) ? kDoorOpen : kDoorClosed;
 
