@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.43.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.3...v1.43.4) (2026-10-01)
+
+
+* open the e-jet main deck cold, show the estimated weight on deboarding and never reposition over a live service ([#213](https://github.com/brunofgmag/gsx-integrator-client/issues/213)) ([ff2c767](https://github.com/brunofgmag/gsx-integrator-client/commit/ff2c767c28823750d542c5fd7cd231ba1162149f))
+
+
+### Bug Fixes
+
+* open the e-jet main deck cold, show the estimated weight on deboarding and never reposition over a live service ([75a90c8](https://github.com/brunofgmag/gsx-integrator-client/commit/75a90c8b636794cdb2ce789c0cd8fc2241ac1bfa)) ([ff2c767](https://github.com/brunofgmag/gsx-integrator-client/commit/ff2c767c28823750d542c5fd7cd231ba1162149f))
+
 ## [1.43.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.2...v1.43.3) (2026-09-29)
 
 
