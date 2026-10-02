@@ -18,6 +18,15 @@ namespace
     constexpr auto kNoPushbackVerdict = "no pushback";
     constexpr auto kGroundVelocity = "GROUND VELOCITY";
     constexpr auto kKnotsUnit = "Knots";
+    constexpr auto kOperateStairsService = "OperateStairs";
+
+    constexpr double kAccessStillEvaluated = 0.0;
+    constexpr double kAccessNotOffered = 2.0;
+    constexpr double kAccessInPlace = 5.0;
+
+    constexpr double kPushbackUnderway = 5.0;
+    constexpr double kPushbackWaitingForEngines = 8.0;
+    constexpr double kPushbackFinished = 11.0;
 
     constexpr std::array kServicesThatCancelOnReposition = {
         GsxState::Refueling,
@@ -29,6 +38,12 @@ namespace
         std::pair{kBaggageLoaderMainState, CargoLoader::MainDeck},
         std::pair{kBaggageLoaderRearState, CargoLoader::Rear},
         std::pair{kBaggageLoaderFrontState, CargoLoader::Front},
+    };
+
+    constexpr std::array kPassengerStairsVehicles = {
+        kPassengerStairsFrontState,
+        kPassengerStairsMiddleState,
+        kPassengerStairsRearState,
     };
 
     bool EqualsFold(const std::string& lhs, const std::string_view rhs)
@@ -55,6 +70,20 @@ namespace
     bool EndsWithoutCompleted(const GsxState gsxState)
     {
         return gsxState == GsxState::Pushback || gsxState == GsxState::Deice;
+    }
+
+    bool RemoteApiListsCallable(const GsxRemoteState* remote, const char* serviceId)
+    {
+        if (remote == nullptr || !remote->connected)
+        {
+            return false;
+        }
+
+        const GsxRemoteService* service = FindService(*remote, serviceId);
+
+        return service != nullptr
+            && service->stateRaw == static_cast<int>(GsxStateStatus::Callable)
+            && service->canTrigger;
     }
 }
 
@@ -158,17 +187,17 @@ double GsxStateService::GetRefuelCounterGallons() const
 
 bool GsxStateService::HasPushbackStarted() const
 {
-    return varManager_->GetLVar(kPushbackStatus) >= 5.0;
+    return varManager_->GetLVar(kPushbackStatus) >= kPushbackUnderway;
 }
 
 bool GsxStateService::IsPushbackFinished() const
 {
-    return varManager_->GetLVar(kPushbackStatus) == 11;
+    return varManager_->GetLVar(kPushbackStatus) == kPushbackFinished;
 }
 
 bool GsxStateService::IsWaitingForEngines() const
 {
-    return varManager_->GetLVar(kPushbackStatus) == 8;
+    return varManager_->GetLVar(kPushbackStatus) == kPushbackWaitingForEngines;
 }
 
 bool GsxStateService::IsRepositioning() const
@@ -313,12 +342,12 @@ double GsxStateService::GetDeboardingCargoPercent()
 
 bool GsxStateService::AreStairsInPlace() const
 {
-    return varManager_->GetLVar(kStairs) == 5.0;
+    return varManager_->GetLVar(kStairs) == kAccessInPlace;
 }
 
 bool GsxStateService::IsJetwayInPlace() const
 {
-    return varManager_->GetLVar(kJetway) == 5.0;
+    return varManager_->GetLVar(kJetway) == kAccessInPlace;
 }
 
 GroundPowerStatus GsxStateService::GetGpuStatus() const
@@ -393,16 +422,23 @@ bool GsxStateService::WasGsxDownSinceLastObserve() const
 
 bool GsxStateService::AreStairsAvailable() const
 {
-    const double state = varManager_->GetLVar(kStairs, 0.0);
+    const double state = varManager_->GetLVar(kStairs, kAccessStillEvaluated);
 
-    return state != 0.0 && state != 2.0;
+    if (state == kAccessStillEvaluated)
+    {
+        const bool noJetwayHere = varManager_->GetLVar(kJetway, kAccessStillEvaluated) == kAccessNotOffered;
+
+        return noJetwayHere && RemoteApiListsCallable(remote_, kOperateStairsService);
+    }
+
+    return state != kAccessNotOffered;
 }
 
 bool GsxStateService::IsJetwayAvailable() const
 {
-    const double state = varManager_->GetLVar(kJetway, 0.0);
+    const double state = varManager_->GetLVar(kJetway, kAccessStillEvaluated);
 
-    return state != 0.0 && state != 2.0;
+    return state != kAccessStillEvaluated && state != kAccessNotOffered;
 }
 
 bool GsxStateService::IsJetwayOrStairsOperating() const
@@ -413,16 +449,10 @@ bool GsxStateService::IsJetwayOrStairsOperating() const
 
 bool GsxStateService::IsServiceVehicleActive() const
 {
-    for (const char* vehicle : {kPassengerStairsFrontState, kPassengerStairsMiddleState,
-                                kPassengerStairsRearState})
+    return std::ranges::any_of(kPassengerStairsVehicles, [this](const char* vehicle)
     {
-        if (varManager_->GetLVar(vehicle, 0.0) >= gsx::states::kVehicleDispatched)
-        {
-            return true;
-        }
-    }
-
-    return false;
+        return varManager_->GetLVar(vehicle, 0.0) >= gsx::states::kVehicleDispatched;
+    });
 }
 
 bool GsxStateService::IsAircraftOnGround() const
