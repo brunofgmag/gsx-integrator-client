@@ -66,6 +66,7 @@ public:
     void SetGroundPower(bool on) override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
+    void HoldPassengerDoorsClosed(bool hold) override;
     [[nodiscard]] bool IsHeldForDeparture() const;
     [[nodiscard]] int FrontEntryCloseRequests() const;
     [[nodiscard]] int MainDeckCloseRequests() const;

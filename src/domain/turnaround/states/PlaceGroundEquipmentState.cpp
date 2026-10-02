@@ -3,12 +3,44 @@
 #include "../TurnaroundContext.h"
 #include "../../model/AutomationSettings.h"
 #include "../../ports/Aircraft.h"
+#include "../../ports/DomainLogger.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
 namespace
 {
     constexpr int kGiveUpTicks = 240;
+    constexpr auto kLeavingDoorsOverService =
+        "A GSX service is underway: leaving the doors as they are because closing them would interrupt it";
+
+    bool WaitsForTheServiceStateBeforeTouchingDoors(TurnaroundContext& ctx)
+    {
+        if (ctx.data.doorsClosed)
+        {
+            return false;
+        }
+
+        const std::optional<bool> serviceUnderway = ctx.gsxGateway->HasServiceUnderway();
+        if (!serviceUnderway.has_value() && ctx.data.stateTickCount < kGiveUpTicks)
+        {
+            return true;
+        }
+
+        ctx.aircraft->HoldDoorsClosed(false);
+
+        if (serviceUnderway.value_or(false))
+        {
+            ctx.logger->LogInfo(kLeavingDoorsOverService);
+        }
+        else
+        {
+            ctx.aircraft->CloseAllDoors();
+        }
+
+        ctx.data.doorsClosed = true;
+
+        return false;
+    }
 }
 
 std::optional<TurnaroundTransition> PlaceGroundEquipmentState::EvaluatePhase(TurnaroundContext& ctx)
@@ -19,11 +51,9 @@ std::optional<TurnaroundTransition> PlaceGroundEquipmentState::EvaluatePhase(Tur
         ctx.data.ownGroundEquipmentCleared = true;
     }
 
-    if (!ctx.data.doorsClosed)
+    if (WaitsForTheServiceStateBeforeTouchingDoors(ctx))
     {
-        ctx.aircraft->HoldDoorsClosed(false);
-        ctx.aircraft->CloseAllDoors();
-        ctx.data.doorsClosed = true;
+        return std::nullopt;
     }
 
     if (ctx.settings == nullptr || !ctx.settings->callGpu)

@@ -264,3 +264,8 @@ void PmdgAircraft::HoldDoorsClosed(const bool hold)
 {
     doors_.HoldClosedForDeparture(hold);
 }
+
+void PmdgAircraft::HoldPassengerDoorsClosed(const bool hold)
+{
+    doors_.HoldPassengerDoorsClosed(hold);
+}

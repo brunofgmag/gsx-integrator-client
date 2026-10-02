@@ -42,6 +42,8 @@ struct TurnaroundData
     int loaderDoorWaitTicks = 0;
     int loaderDoorWaitSeconds = 0;
     int cargoFlagAfterServiceTicks = 0;
+    int loaderAtHoldAfterServiceTicks = 0;
+    bool passengerDoorsHeldClosed = false;
     bool deboardingBaselined = false;
     bool refuelingRequested = false;
     int fuelRequestStallTicks = 0;

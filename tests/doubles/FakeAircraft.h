@@ -43,6 +43,8 @@ public:
     int closeAllDoorsCalls = 0;
     bool doorsHeldClosed = false;
     int holdDoorsClosedCalls = 0;
+    bool passengerDoorsHeldClosed = false;
+    int holdPassengerDoorsClosedCalls = 0;
     int clearOwnGroundEquipmentCalls = 0;
     RefuelBy refuelMethod = RefuelBy::Self;
     BoardBy boardMethod = BoardBy::Self;
@@ -121,6 +123,12 @@ public:
     {
         ++holdDoorsClosedCalls;
         doorsHeldClosed = hold;
+    }
+
+    void HoldPassengerDoorsClosed(const bool hold) override
+    {
+        ++holdPassengerDoorsClosedCalls;
+        passengerDoorsHeldClosed = hold;
     }
 
     void ClearOwnGroundEquipment() override { ++clearOwnGroundEquipmentCalls; }

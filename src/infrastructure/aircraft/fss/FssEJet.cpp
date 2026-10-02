@@ -391,14 +391,26 @@ bool FssEJet::IsFlightPlanLoaded() const
     return status_->flightPlanStatus == FlightPlanStatus::Ready
         && status_->plannedPayloadKg.has_value()
         && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit)
-        && HasTheOfpFuelPlanOnTheEfb();
+        && (GsxIsFillingTheTanks() || HasTheOfpFuelPlanOnTheEfb());
 }
 
 bool FssEJet::FlightPlanDiffersFromTheOfp() const
 {
+    if (GsxIsFillingTheTanks())
+    {
+        return false;
+    }
+
     const std::optional<bool> matched = CompareTheEfbFuelPlanWithTheOfp();
 
     return matched.has_value() && !*matched;
+}
+
+bool FssEJet::GsxIsFillingTheTanks() const
+{
+    const int refuelingState = static_cast<int>(variableGateway_->GetLVar(gsx::lvars::kRefuelingState, 0.0));
+
+    return refuelingState == static_cast<int>(GsxStateStatus::Active);
 }
 
 bool FssEJet::HasTheOfpFuelPlanOnTheEfb() const
@@ -617,6 +629,11 @@ void FssEJet::HoldDoorsClosed(const bool hold)
     {
         ++closeAllRequests_;
     }
+}
+
+void FssEJet::HoldPassengerDoorsClosed(const bool hold)
+{
+    doors_.HoldPassengerDoorsClosed(hold);
 }
 
 int FssEJet::CloseAllRequests() const

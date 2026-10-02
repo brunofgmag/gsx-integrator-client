@@ -34,6 +34,7 @@ public:
     [[nodiscard]] double GetBoardingCargoPercent() override;
     [[nodiscard]] bool IsLoadingCargo() const override;
     [[nodiscard]] CargoLoader GetLoaderWaitingForDoor() const override;
+    [[nodiscard]] bool IsALoaderAtAHold() const override;
     [[nodiscard]] double GetDeboardingCargoPercent() override;
     [[nodiscard]] bool AreStairsInPlace() const override;
     [[nodiscard]] bool IsJetwayInPlace() const override;
@@ -67,6 +68,8 @@ private:
         GsxStateStatus status = GsxStateStatus::Unavailable;
         bool completed = false;
         bool couatlDiedDuringRun = false;
+        bool firstReadingSeen = false;
+        bool foundUnderway = false;
     };
 
     struct PassengerCounter
@@ -77,7 +80,7 @@ private:
         bool moved = false;
         bool grown = false;
 
-        int Update(int current, bool active);
+        int Update(int current, bool active, bool foundUnderway);
     };
 
     struct CargoPercentReading
@@ -86,9 +89,10 @@ private:
         bool counting = false;
         bool moved = false;
 
-        double Update(double current, bool active);
+        double Update(double current, bool active, bool foundUnderway);
     };
 
+    [[nodiscard]] bool FoundServiceUnderway(GsxState gsxState) const;
     void ObserveState(GsxState gsxState);
     void ObserveGpuConnected();
 

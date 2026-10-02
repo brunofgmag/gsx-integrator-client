@@ -46,6 +46,11 @@ namespace
         return std::ranges::find(kDoorsHeldForDeparture, door) != kDoorsHeldForDeparture.end();
     }
 
+    bool IsPassengerDoor(const GsxDoor door)
+    {
+        return door == GsxDoor::FwdPax || door == GsxDoor::MidPax || door == GsxDoor::AftPax;
+    }
+
     const char* DoorName(const GsxDoor door)
     {
         switch (door)
@@ -264,11 +269,25 @@ void GsxDoorSync::CloseAll(const DoorWriter& write)
 void GsxDoorSync::HoldClosedForDeparture(const bool hold)
 {
     heldForDeparture_ = hold;
+    if (!hold)
+    {
+        passengerDoorsHeld_ = false;
+    }
+}
+
+void GsxDoorSync::HoldPassengerDoorsClosed(const bool hold)
+{
+    passengerDoorsHeld_ = hold;
 }
 
 bool GsxDoorSync::IsDesiredOpen(const GsxDoor door) const
 {
     if (heldForDeparture_ && IsHeldForDeparture(door))
+    {
+        return false;
+    }
+
+    if (passengerDoorsHeld_ && IsPassengerDoor(door))
     {
         return false;
     }

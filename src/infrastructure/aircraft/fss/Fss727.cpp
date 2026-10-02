@@ -372,6 +372,11 @@ void Fss727::HoldDoorsClosed(const bool hold)
     }
 }
 
+void Fss727::HoldPassengerDoorsClosed(const bool hold)
+{
+    doors_.HoldPassengerDoorsClosed(hold);
+}
+
 bool Fss727::IsHeldForDeparture() const
 {
     return heldForDeparture_;

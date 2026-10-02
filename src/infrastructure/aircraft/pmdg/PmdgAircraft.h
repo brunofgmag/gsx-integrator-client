@@ -49,6 +49,7 @@ public:
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
+    void HoldPassengerDoorsClosed(bool hold) override;
     void ClearOwnGroundEquipment() override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
 
