@@ -73,6 +73,9 @@ private slots:
     static void jetwayAndStairsAvailability();
     static void jetwayAndStairsUnavailableUntilLVarsReceived();
     static void jetwayAndStairsUnavailableWhileGsxStillEvaluatesTheParking();
+    static void stairsAreAvailableWhenTheLVarReadsZeroAndTheRemoteApiListsThemCallable();
+    static void stairsTheLVarRulesOutStayUnavailableWhateverTheRemoteApiLists();
+    static void theJetwayNeverFollowsTheRemoteApiListing();
     static void serviceVehicleActiveFollowsTheStairsVehicles();
     static void goodEngineStartAssumedEnabledUntilLVarReceived();
     static void aircraftOnGroundFollowsSimVar();
@@ -586,6 +589,83 @@ void GsxInterfaceTest::jetwayAndStairsUnavailableWhileGsxStillEvaluatesTheParkin
 
     QVERIFY(!gsx.IsJetwayAvailable());
     QVERIFY(!gsx.AreStairsAvailable());
+}
+
+void GsxInterfaceTest::stairsAreAvailableWhenTheLVarReadsZeroAndTheRemoteApiListsThemCallable()
+{
+    FakeVariableGateway gateway;
+    GsxRemoteState remote;
+    const GsxStateService gsx(&gateway, &remote);
+
+    gateway.lvars[kStairs] = 0.0;
+    gateway.lvars[kJetway] = 2.0;
+    remote.connected = true;
+    remote.services.push_back(GsxRemoteService{.id = "OperateStairs",
+                                               .stateRaw = static_cast<int>(GsxStateStatus::Callable),
+                                               .canTrigger = true});
+
+    QVERIFY(gsx.AreStairsAvailable());
+
+    for (const double jetwayReading : {0.0, 1.0, 5.0})
+    {
+        gateway.lvars[kJetway] = jetwayReading;
+
+        QVERIFY(!gsx.AreStairsAvailable());
+    }
+
+    gateway.lvars[kJetway] = 2.0;
+    remote.services.front().canTrigger = false;
+
+    QVERIFY(!gsx.AreStairsAvailable());
+
+    remote.services.front().canTrigger = true;
+    remote.services.front().stateRaw = static_cast<int>(GsxStateStatus::Requested);
+
+    QVERIFY(!gsx.AreStairsAvailable());
+
+    remote.services.front().stateRaw = static_cast<int>(GsxStateStatus::Callable);
+    remote.connected = false;
+
+    QVERIFY(!gsx.AreStairsAvailable());
+
+    remote.connected = true;
+    remote.services.clear();
+
+    QVERIFY(!gsx.AreStairsAvailable());
+}
+
+void GsxInterfaceTest::stairsTheLVarRulesOutStayUnavailableWhateverTheRemoteApiLists()
+{
+    FakeVariableGateway gateway;
+    GsxRemoteState remote;
+    const GsxStateService gsx(&gateway, &remote);
+
+    gateway.lvars[kStairs] = 2.0;
+    remote.connected = true;
+    remote.services.push_back(GsxRemoteService{.id = "OperateStairs",
+                                               .stateRaw = static_cast<int>(GsxStateStatus::Callable),
+                                               .canTrigger = true});
+
+    QVERIFY(!gsx.AreStairsAvailable());
+}
+
+void GsxInterfaceTest::theJetwayNeverFollowsTheRemoteApiListing()
+{
+    FakeVariableGateway gateway;
+    GsxRemoteState remote;
+    const GsxStateService gsx(&gateway, &remote);
+
+    remote.connected = true;
+    remote.services.push_back(GsxRemoteService{.id = "OperateJetways",
+                                               .stateRaw = static_cast<int>(GsxStateStatus::Callable),
+                                               .canTrigger = true});
+
+    for (const double reading : {0.0, 2.0})
+    {
+        gateway.lvars[kJetway] = reading;
+
+        QVERIFY(!gsx.IsJetwayAvailable());
+    }
 }
 
 void GsxInterfaceTest::serviceVehicleActiveFollowsTheStairsVehicles()
