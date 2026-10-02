@@ -186,6 +186,11 @@ void AvroRj::HoldDoorsClosed(const bool hold)
     doors_.HoldClosedForDeparture(hold);
 }
 
+void AvroRj::HoldPassengerDoorsClosed(const bool hold)
+{
+    doors_.HoldPassengerDoorsClosed(hold);
+}
+
 bool AvroRj::IsHeldForDeparture() const
 {
     return heldForDeparture_;

@@ -31,11 +31,12 @@ public:
 
     void Observe() override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
-    [[nodiscard]] const char* DoorDataref(GsxDoor door) const;
+    [[nodiscard]] static const char* DoorDataref(GsxDoor door);
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
     void OnLoadingStarted() override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
+    void HoldPassengerDoorsClosed(bool hold) override;
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override;

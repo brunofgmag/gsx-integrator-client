@@ -56,6 +56,14 @@ private slots:
     static void restartsTheFreighterCountWhenTheCargoStartsLoadingAgain();
     static void doesNotAskGsxToCompleteAFreighterWhoseStairsWereNotKept();
     static void reportsTheBoardingGsxDroppedAfterStartingIt();
+    static void waitsForALoaderAtAHoldAfterGsxClosesTheService();
+    static void givesUpOnALoaderAtAHoldAfterNineHundredTicks();
+    static void aLoaderAtAHoldHoldsTheBoardingPastTheCargoFlagGiveUp();
+    static void doesNotCountTheLoaderAtAHoldWhileTheServiceIsActive();
+    static void holdsOnlyThePassengerDoorsOnceBoardingIsDoneWhileALoaderWorks();
+    static void doesNotHoldThePassengerDoorsWhileBoardingIsStillActive();
+    static void neverHoldsThePassengerDoorsOfAFreighter();
+    static void staysSilentAboutTheCargoFlagWhileALoaderIsAtAHold();
 };
 
 void BoardingTrackTest::holdsUntilGsxActive()
@@ -869,6 +877,225 @@ void BoardingTrackTest::reportsTheBoardingGsxDroppedAfterStartingIt()
 
     QVERIFY(!BoardingTrack::Advance(f.ctx));
     QVERIFY(!BoardingTrack::IsInterrupted(f.ctx));
+}
+
+namespace
+{
+    constexpr auto kLoaderAtHoldGiveUpMessage =
+        "Boarding: GSX closed the service and a loader is still at a hold; the client stops waiting for it";
+
+    void ArrangeServiceClosedWithALoaderAtAHold(TurnaroundStateFixture& f)
+    {
+        ArrangeCargoFlagLeftUpByACompleteNow(f);
+        f.gsxService.loadingCargo = false;
+        f.gsxService.loaderWaitingForDoor = CargoLoader::None;
+        f.gsxService.loaderAtAHold = true;
+        f.gsxService.cargoPercent = 50.0;
+    }
+
+    int CountGiveUpMessages(const TurnaroundStateFixture& f)
+    {
+        return static_cast<int>(std::ranges::count(f.logger.messages, std::string(kLoaderAtHoldGiveUpMessage)));
+    }
+}
+
+void BoardingTrackTest::waitsForALoaderAtAHoldAfterGsxClosesTheService()
+{
+    RefueledFixture f;
+
+    ArrangeServiceClosedWithALoaderAtAHold(f);
+
+    QVERIFY(!BoardingTrack::Advance(f.ctx));
+    QVERIFY(!f.aircraft.doorsHeldClosed);
+    QCOMPARE(f.aircraft.holdDoorsClosedCalls, 0);
+    QVERIFY(f.ctx.data.boardingProgress <= 99.0);
+
+    f.gsxService.loaderAtAHold = false;
+
+    QVERIFY(BoardingTrack::Advance(f.ctx));
+    QVERIFY(f.aircraft.doorsHeldClosed);
+}
+
+void BoardingTrackTest::givesUpOnALoaderAtAHoldAfterNineHundredTicks()
+{
+    RefueledFixture f;
+
+    ArrangeServiceClosedWithALoaderAtAHold(f);
+
+    for (int tick = 0; tick < 899; ++tick)
+    {
+        QVERIFY(!BoardingTrack::Advance(f.ctx));
+    }
+
+    QVERIFY(!f.aircraft.doorsHeldClosed);
+    QCOMPARE(CountGiveUpMessages(f), 0);
+
+    QVERIFY(BoardingTrack::Advance(f.ctx));
+    QVERIFY(f.aircraft.doorsHeldClosed);
+    QCOMPARE(CountGiveUpMessages(f), 1);
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        QVERIFY(BoardingTrack::Advance(f.ctx));
+    }
+
+    QCOMPARE(CountGiveUpMessages(f), 1);
+}
+
+void BoardingTrackTest::aLoaderAtAHoldHoldsTheBoardingPastTheCargoFlagGiveUp()
+{
+    RefueledFixture f;
+
+    ArrangeServiceClosedWithALoaderAtAHold(f);
+    f.gsxService.loadingCargo = true;
+
+    for (int tick = 0; tick < 300; ++tick)
+    {
+        QVERIFY(!BoardingTrack::Advance(f.ctx));
+    }
+
+    QVERIFY(!f.aircraft.doorsHeldClosed);
+
+    f.gsxService.loadingCargo = false;
+
+    QVERIFY(!BoardingTrack::Advance(f.ctx));
+    QVERIFY(!f.aircraft.doorsHeldClosed);
+}
+
+void BoardingTrackTest::doesNotCountTheLoaderAtAHoldWhileTheServiceIsActive()
+{
+    RefueledFixture f;
+
+    ArrangeServiceClosedWithALoaderAtAHold(f);
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardingCompleted = false;
+
+    for (int tick = 0; tick < 1000; ++tick)
+    {
+        QVERIFY(!BoardingTrack::Advance(f.ctx));
+    }
+
+    QCOMPARE(f.ctx.data.loaderAtHoldAfterServiceTicks, 0);
+    QCOMPARE(CountGiveUpMessages(f), 0);
+
+    f.gsxService.boardingState = GsxStateStatus::Completed;
+
+    for (int tick = 0; tick < 899; ++tick)
+    {
+        QVERIFY(!BoardingTrack::Advance(f.ctx));
+    }
+
+    QVERIFY(BoardingTrack::Advance(f.ctx));
+    QCOMPARE(CountGiveUpMessages(f), 1);
+}
+
+namespace
+{
+    constexpr auto kCargoFlagGiveUpMessage =
+        "Boarding: GSX closed the service and still flags cargo loading; the client stops waiting for it";
+
+    int CountCargoFlagMessages(const TurnaroundStateFixture& f)
+    {
+        return static_cast<int>(std::ranges::count(f.logger.messages, std::string(kCargoFlagGiveUpMessage)));
+    }
+}
+
+void BoardingTrackTest::holdsOnlyThePassengerDoorsOnceBoardingIsDoneWhileALoaderWorks()
+{
+    RefueledFixture f;
+
+    ArrangeServiceClosedWithALoaderAtAHold(f);
+    f.aircraft.cargo = false;
+
+    QVERIFY(!BoardingTrack::Advance(f.ctx));
+    QVERIFY(f.aircraft.passengerDoorsHeldClosed);
+    QCOMPARE(f.aircraft.holdPassengerDoorsClosedCalls, 1);
+    QVERIFY(!f.aircraft.doorsHeldClosed);
+    QCOMPARE(f.aircraft.holdDoorsClosedCalls, 0);
+
+    for (int tick = 0; tick < 300; ++tick)
+    {
+        QVERIFY(!BoardingTrack::Advance(f.ctx));
+    }
+
+    QCOMPARE(f.aircraft.holdPassengerDoorsClosedCalls, 1);
+
+    f.gsxService.loaderAtAHold = false;
+
+    QVERIFY(BoardingTrack::Advance(f.ctx));
+    QVERIFY(f.aircraft.doorsHeldClosed);
+    QCOMPARE(f.aircraft.holdPassengerDoorsClosedCalls, 1);
+}
+
+void BoardingTrackTest::doesNotHoldThePassengerDoorsWhileBoardingIsStillActive()
+{
+    RefueledFixture f;
+
+    ArrangeServiceClosedWithALoaderAtAHold(f);
+    f.aircraft.cargo = false;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardingCompleted = false;
+
+    for (int tick = 0; tick < 50; ++tick)
+    {
+        QVERIFY(!BoardingTrack::Advance(f.ctx));
+    }
+
+    QCOMPARE(f.aircraft.holdPassengerDoorsClosedCalls, 0);
+    QVERIFY(!f.aircraft.passengerDoorsHeldClosed);
+}
+
+void BoardingTrackTest::neverHoldsThePassengerDoorsOfAFreighter()
+{
+    RefueledFixture f;
+
+    ArrangeServiceClosedWithALoaderAtAHold(f);
+    f.aircraft.cargo = true;
+
+    for (int tick = 0; tick < 50; ++tick)
+    {
+        QVERIFY(!BoardingTrack::Advance(f.ctx));
+    }
+
+    f.gsxService.loaderAtAHold = false;
+
+    QVERIFY(BoardingTrack::Advance(f.ctx));
+    QCOMPARE(f.aircraft.holdPassengerDoorsClosedCalls, 0);
+    QVERIFY(f.aircraft.doorsHeldClosed);
+}
+
+void BoardingTrackTest::staysSilentAboutTheCargoFlagWhileALoaderIsAtAHold()
+{
+    RefueledFixture f;
+
+    ArrangeServiceClosedWithALoaderAtAHold(f);
+    f.gsxService.loadingCargo = true;
+
+    for (int tick = 0; tick < 200; ++tick)
+    {
+        QVERIFY(!BoardingTrack::Advance(f.ctx));
+    }
+
+    QCOMPARE(CountCargoFlagMessages(f), 0);
+
+    f.gsxService.loaderAtAHold = false;
+
+    for (int tick = 0; tick < 119; ++tick)
+    {
+        QVERIFY(!BoardingTrack::Advance(f.ctx));
+    }
+
+    QCOMPARE(CountCargoFlagMessages(f), 0);
+
+    QVERIFY(BoardingTrack::Advance(f.ctx));
+    QCOMPARE(CountCargoFlagMessages(f), 1);
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        QVERIFY(BoardingTrack::Advance(f.ctx));
+    }
+
+    QCOMPARE(CountCargoFlagMessages(f), 1);
 }
 
 QTEST_APPLESS_MAIN(BoardingTrackTest)

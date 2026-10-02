@@ -1,5 +1,8 @@
 #include <QtTest/QTest>
 
+#include <algorithm>
+#include <string>
+
 #include "../TurnaroundStateFixture.h"
 #include "../../../src/domain/turnaround/states/PlaceGroundEquipmentState.h"
 
@@ -24,6 +27,11 @@ private slots:
     static void placesChocksEvenWhileGpuUnknown();
     static void closesAllDoorsEvenWhenCallGpuDisabled();
     static void closesAllDoorsOnlyOnce();
+    static void leavesTheDoorsAloneWhileAGsxServiceIsUnderway();
+    static void holdsThePhaseWithoutTouchingTheDoorsWhileTheServiceStateIsUnknown();
+    static void closesTheDoorsOnceTheUnknownServiceStateResolvesToIdle();
+    static void leavesTheDoorsAloneOnceTheUnknownServiceStateResolvesToUnderway();
+    static void closesTheDoorsWhenTheServiceStateNeverArrives();
     static void releasesTheDepartureDoorHoldOnANewTurnaround();
     static void clearsTheGroundEquipmentTheAircraftPlacedItself();
     static void clearsTheAircraftGroundEquipmentOnlyOnce();
@@ -301,6 +309,113 @@ void PlaceGroundEquipmentStateTest::closesAllDoorsOnlyOnce()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 
     QCOMPARE(f.aircraft.closeAllDoorsCalls, 1);
+}
+
+void PlaceGroundEquipmentStateTest::leavesTheDoorsAloneWhileAGsxServiceIsUnderway()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.gsxService.serviceUnderway = true;
+    f.aircraft.doorsHeldClosed = true;
+
+    const auto first = state.Evaluate(f.ctx);
+    const auto second = state.Evaluate(f.ctx);
+    const auto third = state.Evaluate(f.ctx);
+
+    QVERIFY(first.has_value());
+    QCOMPARE(first->next, TurnaroundPhase::CallServices);
+    QVERIFY(second.has_value());
+    QVERIFY(third.has_value());
+    QCOMPARE(f.aircraft.closeAllDoorsCalls, 0);
+    QVERIFY(!f.aircraft.doorsHeldClosed);
+    QVERIFY(f.ctx.data.doorsClosed);
+    QCOMPARE(
+        std::count(
+            f.logger.messages.begin(),
+            f.logger.messages.end(),
+            std::string("A GSX service is underway: leaving the doors as they are because closing them would "
+                        "interrupt it")),
+        1);
+}
+
+void PlaceGroundEquipmentStateTest::holdsThePhaseWithoutTouchingTheDoorsWhileTheServiceStateIsUnknown()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.gsxService.serviceUnderway = std::nullopt;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.aircraft.closeAllDoorsCalls, 0);
+    QVERIFY(!f.ctx.data.doorsClosed);
+    QCOMPARE(f.aircraft.clearOwnGroundEquipmentCalls, 1);
+}
+
+void PlaceGroundEquipmentStateTest::closesTheDoorsOnceTheUnknownServiceStateResolvesToIdle()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.gsxService.serviceUnderway = std::nullopt;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    f.gsxService.serviceUnderway = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.aircraft.closeAllDoorsCalls, 1);
+    QVERIFY(f.ctx.data.doorsClosed);
+}
+
+void PlaceGroundEquipmentStateTest::leavesTheDoorsAloneOnceTheUnknownServiceStateResolvesToUnderway()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.gsxService.serviceUnderway = std::nullopt;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    f.gsxService.serviceUnderway = true;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.aircraft.closeAllDoorsCalls, 0);
+    QVERIFY(f.ctx.data.doorsClosed);
+}
+
+void PlaceGroundEquipmentStateTest::closesTheDoorsWhenTheServiceStateNeverArrives()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.gsxService.serviceUnderway = std::nullopt;
+
+    f.ctx.data.stateTickCount = 239;
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.closeAllDoorsCalls, 0);
+
+    f.ctx.data.stateTickCount = 240;
+
+    const auto transition = state.Evaluate(f.ctx);
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.aircraft.closeAllDoorsCalls, 1);
+    QVERIFY(f.ctx.data.doorsClosed);
 }
 
 void PlaceGroundEquipmentStateTest::clearsTheGroundEquipmentTheAircraftPlacedItself()

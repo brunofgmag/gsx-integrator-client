@@ -65,6 +65,7 @@ public:
     bool SetChocks(bool placed) override;
 
     void HoldDoorsClosed(bool hold) override;
+    void HoldPassengerDoorsClosed(bool hold) override;
 
     [[nodiscard]] bool IsPowered() const override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;

@@ -234,17 +234,24 @@ int GsxStateService::GetBoardedPassengers()
 {
     const bool active = varManager_->GetLVar(kBoardingState) == static_cast<double>(GsxStateStatus::Active);
 
-    return boarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersBoardingTotal)), active);
+    return boarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersBoardingTotal)), active,
+                            FoundServiceUnderway(GsxState::Boarding));
 }
 
 int GsxStateService::GetDeboardedPassengers()
 {
     const bool active = varManager_->GetLVar(kDeboardingState) == static_cast<double>(GsxStateStatus::Active);
 
-    return deboarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersDeboardingTotal)), active);
+    return deboarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersDeboardingTotal)), active,
+                              FoundServiceUnderway(GsxState::Deboarding));
 }
 
-int GsxStateService::PassengerCounter::Update(const int current, const bool active)
+bool GsxStateService::FoundServiceUnderway(const GsxState gsxState) const
+{
+    return states_.at(gsxState).foundUnderway;
+}
+
+int GsxStateService::PassengerCounter::Update(const int current, const bool active, const bool foundUnderway)
 {
     if (!counting)
     {
@@ -255,6 +262,14 @@ int GsxStateService::PassengerCounter::Update(const int current, const bool acti
 
         counting = true;
         last = current;
+
+        if (foundUnderway)
+        {
+            moved = true;
+            grown = current > 0;
+
+            return current;
+        }
 
         return 0;
     }
@@ -292,10 +307,12 @@ double GsxStateService::GetBoardingCargoPercent()
 {
     const bool active = varManager_->GetLVar(kBoardingState) == static_cast<double>(GsxStateStatus::Active);
 
-    return boardingCargo_.Update(varManager_->GetLVar(kBoardingCargoPercent), active);
+    return boardingCargo_.Update(varManager_->GetLVar(kBoardingCargoPercent), active,
+                                 FoundServiceUnderway(GsxState::Boarding));
 }
 
-double GsxStateService::CargoPercentReading::Update(const double current, const bool active)
+double GsxStateService::CargoPercentReading::Update(const double current, const bool active,
+                                                    const bool foundUnderway)
 {
     if (!counting)
     {
@@ -306,6 +323,13 @@ double GsxStateService::CargoPercentReading::Update(const double current, const 
 
         counting = true;
         first = current;
+
+        if (foundUnderway)
+        {
+            moved = true;
+
+            return current;
+        }
 
         return 0.0;
     }
@@ -333,11 +357,22 @@ CargoLoader GsxStateService::GetLoaderWaitingForDoor() const
     return CargoLoader::None;
 }
 
+bool GsxStateService::IsALoaderAtAHold() const
+{
+    return std::ranges::any_of(kBaggageLoaders, [this](const auto& loader)
+    {
+        const double state = varManager_->GetLVar(loader.first);
+
+        return state == gsx::states::kLoaderInPosition || state == gsx::states::kLoaderLoading;
+    });
+}
+
 double GsxStateService::GetDeboardingCargoPercent()
 {
     const bool active = varManager_->GetLVar(kDeboardingState) == static_cast<double>(GsxStateStatus::Active);
 
-    return deboardingCargo_.Update(varManager_->GetLVar(kDeboardingCargoPercent), active);
+    return deboardingCargo_.Update(varManager_->GetLVar(kDeboardingCargoPercent), active,
+                                   FoundServiceUnderway(GsxState::Deboarding));
 }
 
 bool GsxStateService::AreStairsInPlace() const
@@ -531,6 +566,14 @@ void GsxStateService::ObserveState(const GsxState gsxState)
 
     const auto stateStatus = static_cast<GsxStateStatus>(varManager_->GetLVar(stateLVar));
     StateTrack& track = states_.at(gsxState);
+
+    if (!track.firstReadingSeen && varManager_->HasReceivedLVar(stateLVar))
+    {
+        track.firstReadingSeen = true;
+        track.foundUnderway = stateStatus == GsxStateStatus::Active;
+    }
+
+    track.foundUnderway = track.foundUnderway && stateStatus == GsxStateStatus::Active;
 
     if (gsxDownSinceLastObserve_)
     {

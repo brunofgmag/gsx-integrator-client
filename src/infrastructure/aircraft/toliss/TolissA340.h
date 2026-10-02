@@ -26,6 +26,7 @@ public:
     void OnLoadingStarted() override {}
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
+    void HoldPassengerDoorsClosed(bool hold) override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
     [[nodiscard]] static const char* DoorModeLVar(GsxDoor door);
 

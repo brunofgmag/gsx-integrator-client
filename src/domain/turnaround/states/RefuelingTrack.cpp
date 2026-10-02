@@ -15,6 +15,7 @@ namespace
 {
     constexpr int kRefuelStallTicks = 60;
     constexpr double kFuelShortfallToleranceKg = 100.0;
+    constexpr double kStallWatchProgress = 95.0;
 
     GsxStateStatus RefuelingStatus(const TurnaroundContext& ctx)
     {
@@ -56,6 +57,19 @@ namespace
                    : std::max(initialKg - pumpedKg, plannedKg);
     }
 
+    double RebuildInitialFuel(const double currentKg, const double plannedKg, const double pumpedKg)
+    {
+        return plannedKg >= currentKg
+                   ? std::max(0.0, currentKg - pumpedKg)
+                   : currentKg + pumpedKg;
+    }
+
+    bool JoinedAGsxRefuel(const TurnaroundContext& ctx)
+    {
+        return !ctx.data.refuelingRequested
+            && ctx.aircraft->GetRefuelMethod() != RefuelBy::Client;
+    }
+
     void EnsureBaseline(TurnaroundContext& ctx)
     {
         auto& data = ctx.data;
@@ -64,9 +78,15 @@ namespace
             return;
         }
 
+        const double currentKg = ctx.aircraft->GetCurrentFuelKg();
+
         data.refuelBaselined = true;
-        data.initialFuelKg = ctx.aircraft->GetCurrentFuelKg();
-        data.loadedFuelKg = data.initialFuelKg;
+        data.initialFuelKg = JoinedAGsxRefuel(ctx)
+                                 ? RebuildInitialFuel(
+                                     currentKg, data.plannedFuelKg,
+                                     ctx.gsxGateway->GetRefuelCounterGallons() * turnaround::kJetFuelKgPerUsGallon)
+                                 : currentKg;
+        data.loadedFuelKg = currentKg;
     }
 
     void NotifyLoadingStarted(TurnaroundContext& ctx)
@@ -129,7 +149,7 @@ namespace
     void MaybeForceCompletion(TurnaroundContext& ctx, const GsxStateStatus refuelingState)
     {
         auto& data = ctx.data;
-        if (data.fuelProgress <= 95.0)
+        if (data.fuelProgress <= kStallWatchProgress)
         {
             return;
         }

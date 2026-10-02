@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <string>
 
@@ -130,6 +131,16 @@ namespace
         return defineId != 0
             && std::ranges::any_of(FakeSimConnectApi::writtenSimObjectData,
                                    [defineId](const auto& write) { return write.first == defineId; });
+    }
+
+    bool PublishTheIdleGsxServices()
+    {
+        return std::ranges::all_of(
+            std::array{gsx::lvars::kRefuelingState, gsx::lvars::kBoardingState, gsx::lvars::kDeboardingState},
+            [](const char* state)
+            {
+                return PushLVar(state, static_cast<double>(GsxStateStatus::Callable));
+            });
     }
 
     bool DetectWithTheGsxUp(const IntegratorRuntime& runtime, QSignalSpy& updated, const char* titleText,
@@ -855,6 +866,8 @@ void RuntimeIntegratorServiceTest::theSnapshotCountsTheJetwayWaitDownWithTheFlow
     QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
 
     QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, runtime, updated));
+    QVERIFY(PublishTheIdleGsxServices());
     QVERIFY(DriveTheFlowInto(TurnaroundPhase::CallServices, runtime, updated));
 
     QVERIFY(PushLVar(gsx::lvars::kJetway, static_cast<double>(GsxStateStatus::Requested)));
@@ -941,6 +954,8 @@ void RuntimeIntegratorServiceTest::theSlowTickWritesNothingWhileTheGsxIsDown()
     QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
 
     QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, runtime, updated));
+    QVERIFY(PublishTheIdleGsxServices());
     QVERIFY(DriveTheFlowInto(TurnaroundPhase::CallServices, runtime, updated));
     QVERIFY(PushLVar(gsx::lvars::kJetway, kJetwayInPlace));
     QVERIFY(DriveTheFlowInto(TurnaroundPhase::WaitingFlightPlan, runtime, updated));

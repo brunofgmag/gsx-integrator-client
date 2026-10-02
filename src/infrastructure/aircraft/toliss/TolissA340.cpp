@@ -304,3 +304,8 @@ void TolissA340::HoldDoorsClosed(const bool hold)
 {
     doors_.HoldClosedForDeparture(hold);
 }
+
+void TolissA340::HoldPassengerDoorsClosed(const bool hold)
+{
+    doors_.HoldPassengerDoorsClosed(hold);
+}

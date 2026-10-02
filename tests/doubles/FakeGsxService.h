@@ -35,6 +35,7 @@ public:
     double cargoPercent = 0.0;
     bool loadingCargo = false;
     CargoLoader loaderWaitingForDoor = CargoLoader::None;
+    bool loaderAtAHold = false;
     double deboardingCargoPercent = 0.0;
     bool refuelingCompleted = false;
     bool boardingCompleted = false;
@@ -174,6 +175,7 @@ public:
     [[nodiscard]] double GetBoardingCargoPercent() override { return cargoPercent; }
     [[nodiscard]] bool IsLoadingCargo() const override { return loadingCargo; }
     [[nodiscard]] CargoLoader GetLoaderWaitingForDoor() const override { return loaderWaitingForDoor; }
+    [[nodiscard]] bool IsALoaderAtAHold() const override { return loaderAtAHold; }
     [[nodiscard]] double GetDeboardingCargoPercent() override { return deboardingCargoPercent; }
     [[nodiscard]] bool AreStairsInPlace() const override { return stairsInPlace; }
     [[nodiscard]] bool IsJetwayInPlace() const override { return jetwayInPlace; }

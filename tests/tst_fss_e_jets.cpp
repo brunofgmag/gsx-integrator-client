@@ -9,8 +9,10 @@
 #include "TestDoubles.h"
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/domain/model/FlightPlan.h"
+#include "../src/domain/ports/GsxGateway.h"
 #include "../src/domain/support/Weight.h"
 #include "../src/infrastructure/aircraft/fss/FssEJet.h"
+#include "../src/infrastructure/gsx/GsxLVars.h"
 
 namespace
 {
@@ -82,6 +84,22 @@ namespace
     {
         gateway.lvars[kEfbPlanFuelLeft] = fuelKg / 2.0;
         gateway.lvars[kEfbPlanFuelRight] = fuelKg / 2.0;
+    }
+
+    constexpr double kMeasuredOfpFuelKg = 6500.0;
+    constexpr double kMeasuredEfbFuelKgWhileGsxFills = 1730.0;
+
+    void LetTheEfbFollowTheTanksAwayFromTheOfp(AutomationStatus& status, FakeVariableGateway& gateway)
+    {
+        status.plannedFuelKg = kMeasuredOfpFuelKg;
+        PlanTheMeasuredFlight(status, 6000.0, 50);
+        ParkWithTheMeasuredEmptyWeight(gateway, 34000.0);
+        LoadAFuelPlanOnTheEfb(gateway, kMeasuredEfbFuelKgWhileGsxFills);
+    }
+
+    void GsxReportsTheRefuelingAs(FakeVariableGateway& gateway, const GsxStateStatus state)
+    {
+        gateway.lvars[gsx::lvars::kRefuelingState] = static_cast<double>(state);
     }
 
     constexpr auto kAcPowerAvailable = "FSS_EXX_ELEC_PWR_AC_AVAIL";
@@ -235,6 +253,10 @@ private slots:
     static void holdsWhenTheEfbCarriesAnotherFlightPlan();
     static void logsTheEfbFuelPlanMismatchOnceWhileItLasts();
     static void saysItsFlightPlanDiffersFromTheOfpOnlyWhenTheEfbCarriesAnother();
+    static void trustsTheFlightPlanWhileGsxIsFillingTheTanksEvenThoughTheEfbFollowsThem();
+    static void keepsComparingTheEfbWhileTheRefuelingIsAnyOtherState();
+    static void keepsComparingTheEfbWhileTheRefuelingStateHasNotArrived();
+    static void doesNotLetTheFillingGuardStandInForAMissingPlan();
     static void requiresTheFlightPlanOnTheEfbOnBothTypes();
     static void appliesTheEfbFlightPlanOnItsDeparturePageOnBothTypes();
     static void targetsTheEmptyWeightPlusThePlannedPayload();
@@ -272,6 +294,7 @@ private slots:
     static void vendorAutomationRuleNeverHoldsThePhase();
     static void doorsFollowTheGsxVehicleThatServesEach();
     static void theFreighterNeverWritesToL2NorR2();
+    static void holdingThePassengerDoorsClosedLeavesTheCargoDoorToGsx();
     static void aPassengerDoorHeardWithinTheWaitIsNeverReaffirmed();
     static void aPassengerDoorWithNoAckIsReaffirmedTwiceAtMost();
     static void aCargoBayWithoutAckReaffirmsAfterTwoTicks();
@@ -497,6 +520,73 @@ void FssEJetTest::saysItsFlightPlanDiffersFromTheOfpOnlyWhenTheEfbCarriesAnother
 
     LoadAFuelPlanOnTheEfb(gateway, 3582.0);
     QVERIFY(!aircraft.FlightPlanDiffersFromTheOfp());
+}
+
+void FssEJetTest::trustsTheFlightPlanWhileGsxIsFillingTheTanksEvenThoughTheEfbFollowsThem()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const LogCapture log;
+    const FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    LetTheEfbFollowTheTanksAwayFromTheOfp(status, gateway);
+    GsxReportsTheRefuelingAs(gateway, GsxStateStatus::Active);
+
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+    QVERIFY(!aircraft.FlightPlanDiffersFromTheOfp());
+    QCOMPARE(LogCapture::Count("differs from the OFP"), 0LL);
+}
+
+void FssEJetTest::keepsComparingTheEfbWhileTheRefuelingIsAnyOtherState()
+{
+    constexpr std::array otherStates = {GsxStateStatus::Callable, GsxStateStatus::Requested,
+                                        GsxStateStatus::Completed, GsxStateStatus::Completing};
+
+    for (const GsxStateStatus state : otherStates)
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        const FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+        LetTheEfbFollowTheTanksAwayFromTheOfp(status, gateway);
+        GsxReportsTheRefuelingAs(gateway, state);
+
+        QVERIFY2(!aircraft.IsFlightPlanLoaded(), qPrintable(QString::number(static_cast<int>(state))));
+        QVERIFY2(aircraft.FlightPlanDiffersFromTheOfp(), qPrintable(QString::number(static_cast<int>(state))));
+    }
+}
+
+void FssEJetTest::keepsComparingTheEfbWhileTheRefuelingStateHasNotArrived()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    LetTheEfbFollowTheTanksAwayFromTheOfp(status, gateway);
+
+    QVERIFY(!gateway.HasReceivedLVar(gsx::lvars::kRefuelingState));
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+    QVERIFY(aircraft.FlightPlanDiffersFromTheOfp());
+}
+
+void FssEJetTest::doesNotLetTheFillingGuardStandInForAMissingPlan()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const FssEJet aircraft(&gateway, &status, FssEJet::kNameE195, false);
+
+    LetTheEfbFollowTheTanksAwayFromTheOfp(status, gateway);
+    GsxReportsTheRefuelingAs(gateway, GsxStateStatus::Active);
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+
+    status.flightPlanStatus = FlightPlanStatus::Fetching;
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+
+    status.flightPlanStatus = FlightPlanStatus::Ready;
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+
+    status.plannedPayloadKg.reset();
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
 }
 
 void FssEJetTest::requiresTheFlightPlanOnTheEfbOnBothTypes()
@@ -1205,6 +1295,27 @@ void FssEJetTest::doorsFollowTheGsxVehicleThatServesEach()
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kL1Req), 1.0);
+}
+
+void FssEJetTest::holdingThePassengerDoorsClosedLeavesTheCargoDoorToGsx()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    gateway.lvars[kRearLoaderState] = kLoaderWaitingForDoor;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kL1Req), 1.0);
+    QCOMPARE(gateway.Written(kCargoAftReq), 1.0);
+
+    aircraft.HoldPassengerDoorsClosed(true);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kL1Req), 0.0);
+    QCOMPARE(gateway.Written(kCargoAftReq), 1.0);
 }
 
 void FssEJetTest::theFreighterNeverWritesToL2NorR2()

@@ -62,6 +62,7 @@ public:
 
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
+    void HoldPassengerDoorsClosed(bool hold) override;
     [[nodiscard]] int CloseAllRequests() const;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
 
@@ -75,6 +76,7 @@ public:
 private:
     [[nodiscard]] bool IsBeaconOn() const;
     [[nodiscard]] bool AreChocksSet() const;
+    [[nodiscard]] bool GsxIsFillingTheTanks() const;
     [[nodiscard]] bool HasTheOfpFuelPlanOnTheEfb() const;
     [[nodiscard]] std::optional<bool> CompareTheEfbFuelPlanWithTheOfp() const;
     void KeepClearingCallRamp();
