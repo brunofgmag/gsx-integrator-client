@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.43.6](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.5...v1.43.6) (2026-10-02)
+
+
+* survive a client relaunch over live gsx services and keep the cargo door open for a working loader ([#217](https://github.com/brunofgmag/gsx-integrator-client/issues/217)) ([8009ed2](https://github.com/brunofgmag/gsx-integrator-client/commit/8009ed2d28933c87bb56275831ee5158848670fb))
+
+
+### Bug Fixes
+
+* survive a client relaunch over live gsx services and keep the cargo door open for a working loader ([8b519dd](https://github.com/brunofgmag/gsx-integrator-client/commit/8b519dd34f87db81a3aa2886f1da7101d1990512)) ([8009ed2](https://github.com/brunofgmag/gsx-integrator-client/commit/8009ed2d28933c87bb56275831ee5158848670fb))
+
 ## [1.43.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.4...v1.43.5) (2026-10-02)
 
 
