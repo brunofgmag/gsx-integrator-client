@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.43.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.4...v1.43.5) (2026-10-02)
+
+
+* call the stairs when the gsx variable reads zero and the remote api lists them callable ([#215](https://github.com/brunofgmag/gsx-integrator-client/issues/215)) ([670e9fd](https://github.com/brunofgmag/gsx-integrator-client/commit/670e9fdc3aedaec44877ab0bbe9b706016e62c06))
+
+
+### Bug Fixes
+
+* call the stairs when the gsx variable reads zero and the remote api lists them callable ([70e7309](https://github.com/brunofgmag/gsx-integrator-client/commit/70e7309525f76d2115462708a0f3584dc080ed1b)) ([670e9fd](https://github.com/brunofgmag/gsx-integrator-client/commit/670e9fdc3aedaec44877ab0bbe9b706016e62c06))
+
 ## [1.43.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.3...v1.43.4) (2026-10-01)
 
 
