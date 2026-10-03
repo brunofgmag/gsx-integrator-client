@@ -31,6 +31,15 @@ namespace
     constexpr double kUsableTankGallons = kTankGallons * 2.0 - kReserveGallons;
     constexpr double kFuelCapacityKg = weight::LbToKg(kFuelPoundsPerGallon * kUsableTankGallons);
     constexpr double kKgTolerance = 1e-6;
+    constexpr auto kPercentOver100Unit = "percent over 100";
+    constexpr double kBenchPlannedFuelKg = 5811.0;
+    constexpr double kBenchPlannedFuelLevel = 0.451861;
+    constexpr double kBenchToppedUpFuelKg = 5911.0;
+    constexpr double kBenchToppedUpFuelLevel = 0.459517;
+    constexpr double kLevelTolerance = 1e-6;
+    constexpr auto kToggleGpu = "FSS_EXX_TOGGLE_CGPU";
+    constexpr int kTicksUntilTheSecondPulse = 15;
+    constexpr int kTicksTheAircraftTookToReact = 7;
 
     constexpr auto kStation1 = "PAYLOAD STATION WEIGHT:1";
     constexpr auto kStation2 = "PAYLOAD STATION WEIGHT:2";
@@ -263,7 +272,7 @@ private slots:
     static void appliesTheEfbFlightPlanOnItsDeparturePageOnBothTypes();
     static void targetsTheEmptyWeightPlusThePlannedPayload();
     static void writesKgAsTheNativeUnit();
-    static void leavesTheFuelAndTheLoadToTheEfbOnBothTypes();
+    static void fuelsThroughGsxAndLoadsThroughItselfOnBothTypes();
     static void energizedFollowsAcAvailable();
     static void engineRunningFollowsCombustion();
     static void defaultsHoldTheStateUntilDataArrives();
@@ -286,6 +295,7 @@ private slots:
     static void aNewTouchReopensTheClearing();
     static void groundPowerStatusReadsTheThreeSettledValues();
     static void pulsesOnceWhenDisconnectedAndRequestedOn();
+    static void doesNotPulseAgainWhileTheAircraftMayStillBeReacting();
     static void pulsesNothingWhenTheStatusAlreadyMatchesTheRequest();
     static void neverPulsesWhileTheStateIsInTransit();
     static void stopsRequestingOnceTheStateSettlesOnTheTarget();
@@ -311,7 +321,12 @@ private slots:
     static void observingEvaluatingAndReadingWriteNoVariable();
     static void fuelCapacitySumsBothTanksMinusTheReserveInKg();
     static void fuelCapacityWaitsForTheWeightPerGallonTheTwoCapacitiesAndTheReserve();
-    static void leavesTheTanksToTheEfbPump();
+    static void writesBothTankLevelsFromTheMeasuredBenchNumbers();
+    static void writesTheSameFuelAgainWhenAskedAgain();
+    static void writesNoTankLevelUntilEveryReadingHasArrived();
+    static void clampsTheTankLevelBetweenEmptyAndFull();
+    static void supportsTheFuelTopUpOnBothTypes();
+    static void neverWritesTheTanksOnItsOwnWhileTheEngineTicks();
     static void loadsPassengerZonesThenHoldsByTheMeasuredSplit();
     static void writesNoStationsWithoutACargoLineInThePlan();
     static void loadsTheFreighterStationsByTheFixedRatios();
@@ -642,7 +657,7 @@ void FssEJetTest::writesKgAsTheNativeUnit()
     QVERIFY(aircraft.GetNativeWeightUnit() == WeightUnit::Kg);
 }
 
-void FssEJetTest::leavesTheFuelAndTheLoadToTheEfbOnBothTypes()
+void FssEJetTest::fuelsThroughGsxAndLoadsThroughItselfOnBothTypes()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -1143,6 +1158,32 @@ void FssEJetTest::neverPulsesWhileTheStateIsInTransit()
     TickTimes(aircraft, gateway, kTwentyTicks);
 
     QCOMPARE(gateway.WriteCount("FSS_EXX_TOGGLE_CGPU"), 0);
+}
+
+void FssEJetTest::doesNotPulseAgainWhileTheAircraftMayStillBeReacting()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kGpuState] = kGpuInactive;
+    aircraft.SetGroundPower(true);
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kToggleGpu), 1);
+
+    TickTimes(aircraft, gateway, kTicksTheAircraftTookToReact);
+
+    QCOMPARE(gateway.WriteCount(kToggleGpu), 1);
+
+    TickTimes(aircraft, gateway, kTicksUntilTheSecondPulse - kTicksTheAircraftTookToReact - 1);
+
+    QCOMPARE(gateway.WriteCount(kToggleGpu), 1);
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kToggleGpu), 2);
 }
 
 void FssEJetTest::stopsRequestingOnceTheStateSettlesOnTheTarget()
@@ -1703,7 +1744,7 @@ void FssEJetTest::fuelCapacityWaitsForTheWeightPerGallonTheTwoCapacitiesAndTheRe
     QVERIFY(std::abs(aircraft.GetFuelCapacityKg() - kFuelCapacityKg) < kKgTolerance);
 }
 
-void FssEJetTest::leavesTheTanksToTheEfbPump()
+void FssEJetTest::writesBothTankLevelsFromTheMeasuredBenchNumbers()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -1712,14 +1753,123 @@ void FssEJetTest::leavesTheTanksToTheEfbPump()
     GiveTanks(gateway);
     GiveReserve(gateway);
 
-    Aircraft& port = aircraft;
-    port.SetCurrentFuelKg(kFuelCapacityKg / 2.0);
+    aircraft.SetCurrentFuelKg(kBenchPlannedFuelKg);
+
+    for (const char* level : kTankLevels)
+    {
+        QVERIFY(std::abs(gateway.WrittenAVar(level) - kBenchPlannedFuelLevel) < kLevelTolerance);
+        QCOMPARE(gateway.AVarWriteUnit(level), std::string(kPercentOver100Unit));
+    }
+
+    aircraft.SetCurrentFuelKg(kBenchToppedUpFuelKg);
+
+    for (const char* level : kTankLevels)
+    {
+        QVERIFY(std::abs(gateway.WrittenAVar(level) - kBenchToppedUpFuelLevel) < kLevelTolerance);
+    }
+}
+
+void FssEJetTest::writesTheSameFuelAgainWhenAskedAgain()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    GiveTanks(gateway);
+    GiveReserve(gateway);
+
+    aircraft.SetCurrentFuelKg(kBenchPlannedFuelKg);
+    aircraft.SetCurrentFuelKg(kBenchPlannedFuelKg);
+
+    for (const char* level : kTankLevels)
+    {
+        QCOMPARE(gateway.AVarWriteCount(level), 2);
+    }
+}
+
+void FssEJetTest::writesNoTankLevelUntilEveryReadingHasArrived()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    aircraft.SetCurrentFuelKg(kBenchPlannedFuelKg);
+
+    QCOMPARE(gateway.setAVarCalls, 0);
+
+    gateway.avars[kTankCapacity1] = kTankGallons;
+    gateway.avars[kTankCapacity2] = kTankGallons;
+
+    aircraft.SetCurrentFuelKg(kBenchPlannedFuelKg);
+
+    QCOMPARE(gateway.setAVarCalls, 0);
+
+    gateway.avars[kFuelWeightPerGallon] = kFuelPoundsPerGallon;
+
+    aircraft.SetCurrentFuelKg(kBenchPlannedFuelKg);
+
+    QCOMPARE(gateway.setAVarCalls, 0);
+
+    GiveReserve(gateway);
+
+    aircraft.SetCurrentFuelKg(kBenchPlannedFuelKg);
+
+    for (const char* level : kTankLevels)
+    {
+        QCOMPARE(gateway.AVarWriteCount(level), 1);
+    }
+}
+
+void FssEJetTest::clampsTheTankLevelBetweenEmptyAndFull()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    GiveTanks(gateway);
+    GiveReserve(gateway);
+
+    aircraft.SetCurrentFuelKg(kFuelCapacityKg * 2.0);
+
+    for (const char* level : kTankLevels)
+    {
+        QCOMPARE(gateway.WrittenAVar(level), 1.0);
+    }
+
+    aircraft.SetCurrentFuelKg(-100000.0);
+
+    for (const char* level : kTankLevels)
+    {
+        QCOMPARE(gateway.WrittenAVar(level), 0.0);
+    }
+}
+
+void FssEJetTest::supportsTheFuelTopUpOnBothTypes()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const FssEJet e190(&gateway, &status, FssEJet::kNameE190, false);
+    const FssEJet e195(&gateway, &status, FssEJet::kNameE195, false);
+
+    QVERIFY(e190.SupportsFuelTopUp());
+    QVERIFY(e195.SupportsFuelTopUp());
+}
+
+void FssEJetTest::neverWritesTheTanksOnItsOwnWhileTheEngineTicks()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    GiveTanks(gateway);
+    GiveReserve(gateway);
+
+    TickTimes(aircraft, gateway, kFiftyTicks);
 
     for (const char* level : kTankLevels)
     {
         QCOMPARE(gateway.AVarWriteCount(level), 0);
     }
-    QCOMPARE(gateway.setAVarCalls, 0);
 }
 
 void FssEJetTest::loadsPassengerZonesThenHoldsByTheMeasuredSplit()
