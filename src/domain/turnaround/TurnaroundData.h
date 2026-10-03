@@ -55,6 +55,7 @@ struct TurnaroundData
     bool fuelDidNotStay = false;
     bool fuelStayChecked = false;
     bool fuelStayDismissed = false;
+    bool fuelTopUpStarted = false;
     double fuelShortfallKg = 0.0;
     double settledFuelKg = 0.0;
     EngineConfirmationBlock engineConfirmationBlock = EngineConfirmationBlock::None;

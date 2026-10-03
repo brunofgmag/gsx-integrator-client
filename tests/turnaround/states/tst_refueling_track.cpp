@@ -1,9 +1,38 @@
 #include <QtTest/QTest>
 
+#include <algorithm>
 #include <cmath>
+#include <string>
 
 #include "../../../tests/turnaround/TurnaroundStateFixture.h"
 #include "../../../src/domain/turnaround/states/RefuelingTrack.h"
+
+namespace
+{
+    constexpr double kPlannedFuelKg = 5811.0;
+    constexpr double kPausedFuelKg = 2030.0;
+    constexpr const char* kTopUpLog =
+        "GSX ended the refuel 3781 kg short of the plan; the client tops the tanks up";
+
+    void ArrangeAGsxRefuelThatEndedAt(TurnaroundStateFixture& f, const double currentKg)
+    {
+        f.settings.fuelRateKgs = 1000.0;
+        f.aircraft.refuelMethod = RefuelBy::Gsx;
+        f.aircraft.fuelCapacityKg = 10000.0;
+        f.aircraft.currentFuelKg = currentKg;
+        f.ctx.data.plannedFuelKg = kPlannedFuelKg;
+        f.ctx.data.refuelBaselined = true;
+        f.ctx.data.initialFuelKg = 500.0;
+        f.ctx.data.loadedFuelKg = currentKg;
+        f.gsxService.refuelingState = GsxStateStatus::Completed;
+        f.gsxService.hoseConnected = false;
+    }
+
+    bool Logged(const TurnaroundStateFixture& f, const std::string& message)
+    {
+        return std::ranges::find(f.logger.messages, message) != f.logger.messages.end();
+    }
+}
 
 class RefuelingTrackTest final : public QObject
 {
@@ -35,6 +64,13 @@ private slots:
     static void rebaselinesInitialFuelWhenCapturedBeforeSimData();
     static void staysQuietWhenThePlanSimplyDidNotFit();
     static void warnsWhenTheAircraftRefusedFuelThatWasWritten();
+    static void topsUpAGsxRefuelThatEndedShortOnAnAircraftThatCanWriteFuel();
+    static void keepsTheWarningWhenTheAircraftCannotWriteFuel();
+    static void doesNotTopUpAShortfallWithinTheTolerance();
+    static void doesNotTopUpFromATankReadingThatHasNotArrived();
+    static void endsWithTheWarningWhenTheTopUpDoesNotStay();
+    static void measuresTheTopUpShortfallAgainstTheCappedPlan();
+    static void doesNotTopUpAClientLedRefuel();
     static void rebuildsTheStartingFuelFromTheCounterWhenJoiningARefuel();
     static void keepsTheTankBaselineWhenTheClientAskedForTheRefuel();
     static void keepsTheTankBaselineForAClientWrittenRefuelEvenWhenJoined();
@@ -652,6 +688,133 @@ void RefuelingTrackTest::warnsWhenTheAircraftRefusedFuelThatWasWritten()
     QVERIFY(RefuelingTrack::Advance(f.ctx));
     QVERIFY(f.ctx.data.fuelDidNotStay);
     QCOMPARE(f.ctx.data.fuelShortfallKg, 942.0);
+}
+
+void RefuelingTrackTest::topsUpAGsxRefuelThatEndedShortOnAnAircraftThatCanWriteFuel()
+{
+    TurnaroundStateFixture f;
+
+    ArrangeAGsxRefuelThatEndedAt(f, kPausedFuelKg);
+    f.aircraft.supportsFuelTopUp = true;
+
+    QVERIFY(!RefuelingTrack::Advance(f.ctx));
+    QCOMPARE(f.aircraft.currentFuelKg, 3030.0);
+    QVERIFY(Logged(f, kTopUpLog));
+    QVERIFY(f.ctx.data.fuelProgress < 100.0);
+
+    QVERIFY(!RefuelingTrack::Advance(f.ctx));
+    QCOMPARE(f.aircraft.currentFuelKg, 4030.0);
+
+    QVERIFY(!RefuelingTrack::Advance(f.ctx));
+    QCOMPARE(f.aircraft.currentFuelKg, 5030.0);
+
+    QVERIFY(!RefuelingTrack::Advance(f.ctx));
+    QCOMPARE(f.aircraft.currentFuelKg, kPlannedFuelKg);
+
+    QVERIFY(RefuelingTrack::Advance(f.ctx));
+    QCOMPARE(f.aircraft.currentFuelKg, kPlannedFuelKg);
+    QCOMPARE(f.ctx.data.fuelProgress, 100.0);
+    QVERIFY(!f.ctx.data.fuelDidNotStay);
+    QCOMPARE(f.aircraft.setCurrentFuelCalls, 4);
+}
+
+void RefuelingTrackTest::keepsTheWarningWhenTheAircraftCannotWriteFuel()
+{
+    TurnaroundStateFixture f;
+
+    ArrangeAGsxRefuelThatEndedAt(f, kPausedFuelKg);
+
+    QVERIFY(RefuelingTrack::Advance(f.ctx));
+    QVERIFY(f.ctx.data.fuelDidNotStay);
+    QCOMPARE(f.ctx.data.fuelShortfallKg, 3781.0);
+    QCOMPARE(f.aircraft.setCurrentFuelCalls, 0);
+    QCOMPARE(f.aircraft.currentFuelKg, kPausedFuelKg);
+    QVERIFY(!Logged(f, kTopUpLog));
+}
+
+void RefuelingTrackTest::doesNotTopUpAShortfallWithinTheTolerance()
+{
+    TurnaroundStateFixture f;
+
+    ArrangeAGsxRefuelThatEndedAt(f, kPlannedFuelKg - 80.0);
+    f.aircraft.supportsFuelTopUp = true;
+
+    QVERIFY(RefuelingTrack::Advance(f.ctx));
+    QCOMPARE(f.aircraft.setCurrentFuelCalls, 0);
+    QCOMPARE(f.aircraft.currentFuelKg, kPlannedFuelKg - 80.0);
+    QVERIFY(!f.ctx.data.fuelDidNotStay);
+}
+
+void RefuelingTrackTest::doesNotTopUpFromATankReadingThatHasNotArrived()
+{
+    TurnaroundStateFixture f;
+
+    ArrangeAGsxRefuelThatEndedAt(f, 0.0);
+    f.aircraft.supportsFuelTopUp = true;
+
+    QVERIFY(RefuelingTrack::Advance(f.ctx));
+    QCOMPARE(f.aircraft.setCurrentFuelCalls, 0);
+    QVERIFY(!f.ctx.data.fuelTopUpStarted);
+    QVERIFY(!Logged(f, "GSX ended the refuel 5811 kg short of the plan; the client tops the tanks up"));
+}
+
+void RefuelingTrackTest::endsWithTheWarningWhenTheTopUpDoesNotStay()
+{
+    TurnaroundStateFixture f;
+
+    ArrangeAGsxRefuelThatEndedAt(f, kPausedFuelKg);
+    f.aircraft.supportsFuelTopUp = true;
+    f.aircraft.ignoresFuelWrites = true;
+
+    QVERIFY(!RefuelingTrack::Advance(f.ctx));
+    QVERIFY(!RefuelingTrack::Advance(f.ctx));
+    QVERIFY(!RefuelingTrack::Advance(f.ctx));
+    QVERIFY(!RefuelingTrack::Advance(f.ctx));
+    QVERIFY(RefuelingTrack::Advance(f.ctx));
+
+    QCOMPARE(f.aircraft.setCurrentFuelCalls, 4);
+    QCOMPARE(f.aircraft.currentFuelKg, kPausedFuelKg);
+    QVERIFY(f.ctx.data.fuelDidNotStay);
+    QCOMPARE(f.ctx.data.fuelShortfallKg, 3781.0);
+}
+
+void RefuelingTrackTest::measuresTheTopUpShortfallAgainstTheCappedPlan()
+{
+    TurnaroundStateFixture full;
+
+    ArrangeAGsxRefuelThatEndedAt(full, 9418.0);
+    full.aircraft.supportsFuelTopUp = true;
+    full.aircraft.fuelCapacityKg = 9418.0;
+    full.ctx.data.plannedFuelKg = 10360.0;
+
+    QVERIFY(RefuelingTrack::Advance(full.ctx));
+    QCOMPARE(full.aircraft.setCurrentFuelCalls, 0);
+    QVERIFY(!full.ctx.data.fuelDidNotStay);
+
+    TurnaroundStateFixture shortOfCapacity;
+
+    ArrangeAGsxRefuelThatEndedAt(shortOfCapacity, 8000.0);
+    shortOfCapacity.aircraft.supportsFuelTopUp = true;
+    shortOfCapacity.aircraft.fuelCapacityKg = 9418.0;
+    shortOfCapacity.ctx.data.plannedFuelKg = 10360.0;
+
+    QVERIFY(!RefuelingTrack::Advance(shortOfCapacity.ctx));
+    QVERIFY(Logged(shortOfCapacity, "GSX ended the refuel 1418 kg short of the plan; the client tops the tanks up"));
+}
+
+void RefuelingTrackTest::doesNotTopUpAClientLedRefuel()
+{
+    TurnaroundStateFixture f;
+
+    ArrangeAGsxRefuelThatEndedAt(f, kPausedFuelKg);
+    f.aircraft.refuelMethod = RefuelBy::Client;
+    f.aircraft.supportsFuelTopUp = true;
+    f.ctx.data.loadedFuelKg = kPlannedFuelKg;
+    f.ctx.data.fuelProgress = 100.0;
+
+    QVERIFY(RefuelingTrack::Advance(f.ctx));
+    QVERIFY(!Logged(f, kTopUpLog));
+    QVERIFY(!f.ctx.data.fuelTopUpStarted);
 }
 
 void RefuelingTrackTest::rebuildsTheStartingFuelFromTheCounterWhenJoiningARefuel()

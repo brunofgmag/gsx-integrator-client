@@ -15,7 +15,7 @@ namespace
     constexpr auto kToggleLVar = "FSS_EXX_TOGGLE_CGPU";
     constexpr double kTogglePulse = 1.0;
 
-    constexpr int kMinTicksBetweenPulses = 2;
+    constexpr int kMinTicksBetweenPulses = 15;
     constexpr int kMaxAttempts = 3;
 }
 

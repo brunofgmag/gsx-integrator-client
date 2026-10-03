@@ -40,6 +40,8 @@ public:
 
     [[nodiscard]] double GetCurrentFuelKg() const override;
     [[nodiscard]] double GetFuelCapacityKg() const override;
+    void SetCurrentFuelKg(double fuelKg) override;
+    [[nodiscard]] bool SupportsFuelTopUp() const override { return true; }
     [[nodiscard]] double GetCurrentZfwKg() const override;
     void SetCurrentZfwKg(double zfwKg) override;
 
