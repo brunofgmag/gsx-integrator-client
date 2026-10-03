@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.43.8](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.7...v1.43.8) (2026-10-03)
+
+
+* top up fuel after a short gsx-led refuel and space out the e-jet ground power pulses ([#221](https://github.com/brunofgmag/gsx-integrator-client/issues/221)) ([f8435ce](https://github.com/brunofgmag/gsx-integrator-client/commit/f8435ce64c64c668fbe6d8e829437f9966631f6d))
+
+
+### Bug Fixes
+
+* top up fuel after a short gsx-led refuel and space out the e-jet ground power pulses ([62f3601](https://github.com/brunofgmag/gsx-integrator-client/commit/62f3601038f1cb99df189279442a87db7ef9c1a5)) ([f8435ce](https://github.com/brunofgmag/gsx-integrator-client/commit/f8435ce64c64c668fbe6d8e829437f9966631f6d))
+
 ## [1.43.7](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.6...v1.43.7) (2026-10-03)
 
 
