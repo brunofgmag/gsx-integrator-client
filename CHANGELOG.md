@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.43.7](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.6...v1.43.7) (2026-10-03)
+
+
+* close cargo doors once the gsx loader starts retracting its platform ([#219](https://github.com/brunofgmag/gsx-integrator-client/issues/219)) ([c9d932e](https://github.com/brunofgmag/gsx-integrator-client/commit/c9d932e36b5a3a750a6d263f5fa0454e0276fb1c))
+
+
+### Bug Fixes
+
+* close cargo doors once the gsx loader starts retracting its platform ([af93c47](https://github.com/brunofgmag/gsx-integrator-client/commit/af93c478e9db4588db57e4c2d152ab9b11e1ef5a)) ([c9d932e](https://github.com/brunofgmag/gsx-integrator-client/commit/c9d932e36b5a3a750a6d263f5fa0454e0276fb1c))
+
 ## [1.43.6](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.5...v1.43.6) (2026-10-02)
 
 
