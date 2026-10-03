@@ -114,6 +114,7 @@ private slots:
     static void cargoDoorsAreNotCommandedBeforeTheLoaderReadingArrives();
     static void aLoaderAlreadyAtTheDoorOnTheFirstReadingIsNeverCommandedClosed();
     static void cargoDoorsOpenPerLoaderAndCloseWhenDone();
+    static void cargoDoorCommandGoesToClosedOnceTheLoaderStartsFinishing();
     static void mainCargoDoorOpensOnlyOnFreighter();
     static void cargoDoorsUntouchedWithoutGsx();
     static void cargoDoorFollowsALoaderStateOnlyOnceItChangesAfterACouatlRestart();
@@ -800,6 +801,24 @@ void TfdiMd11Test::cargoDoorsOpenPerLoaderAndCloseWhenDone()
     QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
 
     gateway.lvars[kGsxLoaderFront] = 4.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
+}
+
+void TfdiMd11Test::cargoDoorCommandGoesToClosedOnceTheLoaderStartsFinishing()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kGsxLoaderFront] = 9.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
+
+    gateway.lvars[kGsxLoaderFront] = 10.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);

@@ -55,7 +55,7 @@ namespace
     constexpr double kLoaderWaitingForDoor = 6.0;
     constexpr double kLoaderInPosition = 8.0;
     constexpr double kLoaderLoading = 9.0;
-    constexpr std::array kLoaderStatesAtTheDoor = {6.0, 7.0, 8.0, 9.0, 10.0};
+    constexpr std::array kLoaderStatesAtTheDoor = {6.0, 7.0, 8.0, 9.0};
 
     constexpr auto kEntryDoorGoal = "INTERACTIVE POINT GOAL:0";
     constexpr auto kAftStairGoal = "INTERACTIVE POINT GOAL:4";
@@ -428,7 +428,7 @@ private slots:
     static void closesAHoldWhenItsLoaderLeavesTheDoorTheWayTheFleetDoes();
     static void neverMovesAHoldBeforeCouatlStarts();
     static void keepsTheHoldsClosedWhileHeldForDeparture();
-    static void countsAHoldLoaderAtElevenOrFourAsGoneFromTheHold();
+    static void countsAHoldLoaderAtTenElevenOrFourAsGoneFromTheHold();
     static void keepsThePanelMasterOnWhileTheClosingDeckPassesTheClosedReading();
     static void turnsThePanelMasterOffOnTheThirdTickTheClosedDeckRests();
     static void neverTurnsTheCargoDoorSwitchOffWhileTheGsxIsLoading();
@@ -443,7 +443,7 @@ private slots:
     static void closesTheMainDeckItOpenedAsSoonAsTheMainLoaderLeavesWithTheServiceStillActive();
     static void closesTheMainDeckTheVendorOpenedAsSoonAsTheMainLoaderLeaves();
     static void neverClosesTheMainDeckForAMainLoaderNeverSeenAtIt();
-    static void countsAMainLoaderAtElevenOrFourAsGoneFromTheDeck();
+    static void countsAMainLoaderAtTenElevenOrFourAsGoneFromTheDeck();
     static void asksForTheMainDeckClosedOnlyOnceForOneMainLoaderDeparture();
     static void closesTheMainDeckItOpenedForADeboardingWhenTheLoaderLeavesAndTheCompletionAsksNothingMore();
     static void opensTheMainDeckForADeboardingWithTheRelaunchCloseStillPending();
@@ -1933,7 +1933,7 @@ void Fss727Test::closesAHoldWhenItsLoaderLeavesTheDoorTheWayTheFleetDoes()
     MainDeckClosed(gateway);
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kRearLoaderState] = kLoaderIdle;
-    for (const double atTheDoor : {kLoaderWaitingForDoor, kLoaderInPosition, kLoaderLoading, 10.0})
+    for (const double atTheDoor : {kLoaderWaitingForDoor, kLoaderInPosition, kLoaderLoading})
     {
         gateway.lvars[kFrontLoaderState] = atTheDoor;
         TickTimes(aircraft, gateway, kThreeTicks);
@@ -2003,17 +2003,17 @@ void Fss727Test::keepsTheHoldsClosedWhileHeldForDeparture()
     QCOMPARE(gateway.AVarWriteCount(kAftHoldGoal), 0);
 }
 
-void Fss727Test::countsAHoldLoaderAtElevenOrFourAsGoneFromTheHold()
+void Fss727Test::countsAHoldLoaderAtTenElevenOrFourAsGoneFromTheHold()
 {
-    for (const double gone : {11.0, 4.0})
+    for (const double gone : {10.0, 11.0, 4.0})
     {
         FakeVariableGateway gateway;
         AutomationStatus status;
         Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
         MainDeckClosed(gateway);
-        gateway.lvars[kFrontLoaderState] = 10.0;
-        gateway.lvars[kRearLoaderState] = 10.0;
+        gateway.lvars[kFrontLoaderState] = kLoaderLoading;
+        gateway.lvars[kRearLoaderState] = kLoaderLoading;
         TickAircraft(aircraft, gateway);
 
         aircraft.CloseAllDoors();
@@ -2358,7 +2358,7 @@ void Fss727Test::closesTheMainDeckItOpenedAsSoonAsTheMainLoaderLeavesWithTheServ
 
         QCOMPARE(gateway.Written(kPanelMaster), 0.0);
 
-        for (const double atWork : {kLoaderInPosition, kLoaderLoading, 10.0})
+        for (const double atWork : {kLoaderInPosition, kLoaderLoading})
         {
             gateway.lvars[kMainLoaderState] = atWork;
             TickTimes(aircraft, gateway, kThreeTicks);
@@ -2420,9 +2420,9 @@ void Fss727Test::neverClosesTheMainDeckForAMainLoaderNeverSeenAtIt()
     QCOMPARE(PanelWrites(gateway), 0);
 }
 
-void Fss727Test::countsAMainLoaderAtElevenOrFourAsGoneFromTheDeck()
+void Fss727Test::countsAMainLoaderAtTenElevenOrFourAsGoneFromTheDeck()
 {
-    for (const double gone : {11.0, 4.0})
+    for (const double gone : {10.0, 11.0, 4.0})
     {
         FakeVariableGateway gateway;
         AutomationStatus status;
@@ -2432,7 +2432,7 @@ void Fss727Test::countsAMainLoaderAtElevenOrFourAsGoneFromTheDeck()
         MainDeckOpen(gateway);
         HoldLoadersIdle(gateway);
         gsx.boardingState = GsxStateStatus::Active;
-        gateway.lvars[kMainLoaderState] = 10.0;
+        gateway.lvars[kMainLoaderState] = kLoaderLoading;
         TickTimes(aircraft, gateway, kTwentyTicks);
 
         QCOMPARE(PanelWrites(gateway), 0);

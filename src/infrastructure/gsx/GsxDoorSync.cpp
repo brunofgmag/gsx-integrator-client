@@ -311,8 +311,8 @@ bool GsxDoorSync::IsDesiredOpen(const GsxDoor door) const
     case GsxDoor::AftCatering:
         return gsx::states::IsCateringArriving(vehicleState(gsx::lvars::kCateringRearState));
     case GsxDoor::FwdCargo:
-        return gsx::states::IsLoaderArriving(vehicleState(gsx::lvars::kBaggageLoaderFrontState));
+        return gsx::states::IsLoaderServingTheDoor(vehicleState(gsx::lvars::kBaggageLoaderFrontState));
     default:
-        return gsx::states::IsLoaderArriving(vehicleState(gsx::lvars::kBaggageLoaderRearState));
+        return gsx::states::IsLoaderServingTheDoor(vehicleState(gsx::lvars::kBaggageLoaderRearState));
     }
 }

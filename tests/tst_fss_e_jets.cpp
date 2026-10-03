@@ -168,6 +168,8 @@ namespace
     constexpr double kStairsDocked = 3.0;
     constexpr double kVehicleApproaching = 5.0;
     constexpr double kLoaderWaitingForDoor = 6.0;
+    constexpr double kLoaderLoading = 9.0;
+    constexpr double kLoaderFinishing = 10.0;
     constexpr double kVehicleGone = 0.0;
 
     constexpr auto kL1Req = "FSS_GNDSVC_MAINDOOR_FWD_L_REQ";
@@ -300,6 +302,7 @@ private slots:
     static void aCargoBayWithoutAckReaffirmsAfterTwoTicks();
     static void theMainDeckRequestGoesOutOnTheFirstTickWithTheAircraftCold();
     static void theMainDeckStaysOpenWhenAircraftPowerFallsWhileTheLoaderWaits();
+    static void theMainDeckRequestGoesToClosedOnceTheLoaderStartsFinishing();
     static void theMainDeckRuleNeverHoldsTheLoadingPhaseWhileTheAircraftIsCold();
     static void closeAllDoorsWritesZeroEverywhereItManages();
     static void doorStatusCombinesOpenMovingAndClosedWithAPrazo();
@@ -1438,6 +1441,25 @@ void FssEJetTest::theMainDeckStaysOpenWhenAircraftPowerFallsWhileTheLoaderWaits(
     TickTimes(aircraft, gateway, kTwentyTicks);
 
     QCOMPARE(gateway.Written(kMainDeckReq), 1.0);
+}
+
+void FssEJetTest::theMainDeckRequestGoesToClosedOnceTheLoaderStartsFinishing()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, true);
+
+    gateway.lvars[kAcPowerAvailable] = 1.0;
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kMainLoaderState] = kLoaderLoading;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kMainDeckReq), 1.0);
+
+    gateway.lvars[kMainLoaderState] = kLoaderFinishing;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kMainDeckReq), 0.0);
 }
 
 void FssEJetTest::theMainDeckRuleNeverHoldsTheLoadingPhaseWhileTheAircraftIsCold()

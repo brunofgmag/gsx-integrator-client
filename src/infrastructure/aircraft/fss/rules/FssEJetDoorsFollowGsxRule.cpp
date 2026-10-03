@@ -226,6 +226,6 @@ void FssEJetDoorsFollowGsxRule::WriteMainDeckRequest(const bool open, VariableWr
 
 bool FssEJetDoorsFollowGsxRule::IsMainLoaderWaitingForTheDeck() const
 {
-    return gsx::states::IsLoaderArriving(doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0));
+    return gsx::states::IsLoaderServingTheDoor(doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0));
 }
 
