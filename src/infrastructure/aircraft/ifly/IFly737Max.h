@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../SmartSwitch.h"
+#include "../../gsx/GsxDoorSync.h"
 #include "rules/IFly737MaxDoorsFollowLoaderCycleRule.h"
 #include "rules/IFly737MaxWatchPlanFileRule.h"
 #include "../../ifly/IFlyPlanFile.h"
@@ -23,6 +24,7 @@ public:
     [[nodiscard]] bool IsCargoVariant() const override;
 
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
+    void Observe() override;
     void OnLoadingStarted() override {}
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
@@ -62,6 +64,7 @@ private:
 
     SmartSwitch smartSwitch_;
     IFlyPlanImport planImport_;
+    GsxDoorSync doors_;
     IFly737MaxDoorsFollowLoaderCycleRule doorRule_;
     IFly737MaxWatchPlanFileRule planImportRule_;
     std::vector<AircraftRule*> rules_;

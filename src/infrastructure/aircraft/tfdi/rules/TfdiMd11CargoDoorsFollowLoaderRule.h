@@ -3,12 +3,13 @@
 
 #include "../../../../domain/ports/AircraftRule.h"
 
+class GsxDoorSync;
 class VariableReader;
 
 class TfdiMd11CargoDoorsFollowLoaderRule final : public AircraftRule
 {
 public:
-    TfdiMd11CargoDoorsFollowLoaderRule(VariableReader& variables, bool cargoVariant);
+    TfdiMd11CargoDoorsFollowLoaderRule(VariableReader& variables, GsxDoorSync& doors, bool cargoVariant);
 
     [[nodiscard]] const char* Name() const override;
     [[nodiscard]] RuleVerdict Evaluate(const RuleContext& context) override;
@@ -19,6 +20,7 @@ private:
                       double& lastDoorTarget) const;
 
     VariableReader* variables_;
+    GsxDoorSync* doors_;
     bool cargoVariant_;
     double fwdDoorTarget_ = -1.0;
     double aftDoorTarget_ = -1.0;

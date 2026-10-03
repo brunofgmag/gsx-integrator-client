@@ -45,6 +45,7 @@ public:
     [[nodiscard]] virtual double GetCurrentFuelKg() const = 0;
     [[nodiscard]] virtual double GetFuelCapacityKg() const { return 0.0; }
     virtual void SetCurrentFuelKg(double) {}
+    [[nodiscard]] virtual bool SupportsFuelTopUp() const { return false; }
     [[nodiscard]] virtual double GetCurrentZfwKg() const = 0;
     virtual void SetCurrentZfwKg(double) {}
 
@@ -65,6 +66,7 @@ public:
     virtual void SetGroundPower(bool) {}
     virtual void CloseAllDoors() {}
     virtual void HoldDoorsClosed(bool) {}
+    virtual void HoldPassengerDoorsClosed(bool) {}
     virtual void ClearOwnGroundEquipment() {}
     [[nodiscard]] virtual DoorStatus GetDoorStatus() const { return DoorStatus::Unknown; }
     [[nodiscard]] virtual bool IsMainDeckCargoDoorStuck() const { return false; }

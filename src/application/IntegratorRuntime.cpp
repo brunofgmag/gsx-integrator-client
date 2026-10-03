@@ -1,6 +1,7 @@
 #include "IntegratorRuntime.h"
 
 #include <array>
+#include <utility>
 #include <QtCore/QCoreApplication>
 #include "../infrastructure/probe/ProbeChannels.h"
 #include "../infrastructure/probe/ProbeLog.h"
@@ -22,6 +23,8 @@ namespace
     constexpr std::array<const char*, 3> kSessionAVars = {"CAMERA STATE", "IS AIRCRAFT", "IS AVATAR"};
     constexpr auto kPilotIdSet = "set";
     constexpr auto kPilotIdUnset = "unset";
+    constexpr double kMenuCameraState = 12.0;
+    constexpr int kAircraftTitleSize = 256;
 #ifdef NDEBUG
     constexpr auto kBuildConfiguration = "release";
 #else
@@ -88,21 +91,27 @@ namespace
     }
 }
 
-IntegratorRuntime::IntegratorRuntime(QObject* parent)
+IntegratorRuntime::IntegratorRuntime(IntegratorRuntimeOptions options, QObject* parent)
     : QObject(parent),
       pluginClient_(&bridgeClient_),
       gsxService_(&varGateway_, &gsxRemoteState_),
       gsxMenu_(&gsxRemoteClient_, &gsxRemoteState_, &settings_, &qtLogger_, &pluginClient_),
       stateMachine_(&status_, &settings_, &gsxService_, &gsxMenu_, &qtLogger_, &varGateway_),
       simbriefClient_(&status_, &settings_, this),
-      flightPlanSource_(&simbriefClient_)
+      flightPlanSource_(&simbriefClient_),
+      actsOnTheSim_(std::move(options.actsOnTheSim))
 {
+    if (!actsOnTheSim_)
+    {
+        actsOnTheSim_ = &probe::ActsOnTheSim;
+    }
+
     stateMachine_.AttachFlightPlanSource(&flightPlanSource_);
 
     dispatchTimer_.setInterval(kDispatchIntervalMs);
     connect(&dispatchTimer_, &QTimer::timeout, this, &IntegratorRuntime::OnDispatchTimer);
 
-    reconnectTimer_.setInterval(kReconnectIntervalMs);
+    reconnectTimer_.setInterval(options.reconnectInterval);
     connect(&reconnectTimer_, &QTimer::timeout, this, &IntegratorRuntime::TryConnect);
 }
 
@@ -129,18 +138,18 @@ void IntegratorRuntime::Setup()
             });
 
     connect(&gsxRemoteClient_, &GsxRemoteApiClient::SnapshotReceived,
-            &gsxRemoteClient_, [this](const QJsonObject& s)
+            &gsxRemoteClient_, [this](const QJsonObject& snapshot)
             {
-                GsxRemoteStateReducer::ApplySnapshot(gsxRemoteState_, s);
+                GsxRemoteStateReducer::ApplySnapshot(gsxRemoteState_, snapshot);
                 AnnounceWireFacts();
                 gsxMenu_.OnSnapshot();
             });
 
     connect(&gsxRemoteClient_, &GsxRemoteApiClient::PatchReceived,
-            &gsxRemoteClient_, [this](const QString& p, const QJsonValue& v)
+            &gsxRemoteClient_, [this](const QString& patchPath, const QJsonValue& value)
             {
-                const std::string path = p.toStdString();
-                if (GsxRemoteStateReducer::ApplyPatch(gsxRemoteState_, path, v) == GsxPatchOutcome::Unknown
+                const std::string path = patchPath.toStdString();
+                if (GsxRemoteStateReducer::ApplyPatch(gsxRemoteState_, path, value) == GsxPatchOutcome::Unknown
                     && unknownPatchPaths_.insert(path).second)
                 {
                     LOG_WARN("GSX published an unknown path: %s", path.c_str());
@@ -190,14 +199,14 @@ void IntegratorRuntime::AnnounceWireFacts()
 
 bool IntegratorRuntime::IsSimOnMenu()
 {
-    return varGateway_.GetAVar("CAMERA STATE", "Number", 0.0) == 12.0;
+    return varGateway_.GetAVar("CAMERA STATE", "Number", 0.0) == kMenuCameraState;
 }
 
 void IntegratorRuntime::OnSimOpen(const char* appName)
 {
-    simVersion_ = SimVersionDetect::FromAppName(appName ? appName : "");
+    simVersion_ = SimVersionDetect::FromAppName(appName != nullptr ? appName : "");
 
-    LOG_INFO("Connected simulator: '%s' (%s)", appName ? appName : "?", SimVersionLabel(simVersion_));
+    LOG_INFO("Connected simulator: '%s' (%s)", appName != nullptr ? appName : "?", SimVersionLabel(simVersion_));
 }
 
 void IntegratorRuntime::TryConnect()
@@ -342,8 +351,8 @@ void IntegratorRuntime::ProbeGates()
         return;
     }
 
-    char title[256] = {};
-    varGateway_.FetchAircraftName(title, sizeof title);
+    std::array<char, kAircraftTitleSize> title{};
+    varGateway_.FetchAircraftName(title.data(), kAircraftTitleSize);
 
     const double camera = varGateway_.GetAVar(kSessionAVars[0], "Number", -1.0);
     const double isAircraft = varGateway_.GetAVar(kSessionAVars[1], "Number", -1.0);
@@ -362,7 +371,7 @@ void IntegratorRuntime::ProbeGates()
                   .arg(isSessionActive_ ? 1 : 0)
                   .arg(static_cast<int>(simVersion_))
                   .arg(aircraft_ ? 1 : 0)
-                  .arg(QString::fromLatin1(title)));
+                  .arg(QString::fromLatin1(title.data())));
 
     probe::Change(probe::Channel::SimAVars,
                   kSimAVarsChangeKey,
@@ -500,25 +509,36 @@ bool IntegratorRuntime::AreDoorsHoldingPushback() const
 
 TickMode IntegratorRuntime::ResolveTickMode() const
 {
-    return TickModeResolution::Resolve(status_.enabled, gsxService_.IsAvailable(), probe::ActsOnTheSim());
+    return TickModeResolution::Resolve(status_.enabled, gsxService_.IsAvailable(), actsOnTheSim_());
 }
 
 void IntegratorRuntime::UpdateSlow()
 {
-    if (!IsSessionActive() || !aircraft_ || !status_.enabled || !IsSessionReady() || IsSessionPaused())
+    if (!IsSessionActive() || !aircraft_ || !IsSessionReady() || IsSessionPaused())
+    {
+        return;
+    }
+
+    const TickMode mode = ResolveTickMode();
+    if (mode == TickMode::Idle)
     {
         return;
     }
 
     stateMachine_.AttachAircraft(aircraft_.get());
 
-    if (ResolveTickMode() == TickMode::Driving)
+    if (mode == TickMode::Driving)
     {
         stateMachine_.TickSlowRules();
     }
     else
     {
         stateMachine_.ObserveSlowRules();
+    }
+
+    if (!status_.enabled)
+    {
+        return;
     }
 
     gsxService_.ReassertTakeovers();
@@ -603,7 +623,11 @@ void IntegratorRuntime::ResolveAircraft()
         return;
     }
 
-    aircraft_ = DetectAircraft({&varGateway_, &status_, &bridgeClient_, &gsxService_}, &aircraftDescriptor_);
+    aircraft_ = DetectAircraft({.variableGateway = &varGateway_,
+                                .status = &status_,
+                                .commBusBridge = &bridgeClient_,
+                                .gsxGateway = &gsxService_},
+                               &aircraftDescriptor_);
     if (aircraft_)
     {
         probe::SetAircraft(QString::fromUtf8(aircraftDescriptor_->id));
@@ -670,7 +694,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
         && GetPhase() <= TurnaroundPhase::WaitingFlightPlan;
     snapshot.aircraftName = GetAircraftName().toStdString();
     snapshot.aircraftProfileId = GetAircraftProfileId();
-    snapshot.smartSwitch = aircraft_ && aircraftDescriptor_ ? aircraftDescriptor_->smartSwitch : SmartSwitchCue{};
+    snapshot.smartSwitch = aircraft_ && aircraftDescriptor_ != nullptr ? aircraftDescriptor_->smartSwitch : SmartSwitchCue{};
     snapshot.refuelByGsx = IsAircraftRefuelByGsx();
     snapshot.refuelBySelf = IsAircraftRefuelBySelf();
     snapshot.cargoAircraft = IsAircraftCargoVariant();
@@ -716,6 +740,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.targetFuelKg = status_.targetFuelKg;
     snapshot.targetZfwKg = status_.targetZfwKg;
     snapshot.emptyZfwKg = status_.emptyZfwKg;
+    snapshot.fuelOnBoardKg = aircraft_ ? aircraft_->GetCurrentFuelKg() : 0.0;
     snapshot.targetPax = status_.targetPassengers;
     snapshot.delayTicksRemaining = GetDelayTicksRemaining();
     snapshot.autoWeightUnit = static_cast<int>(GetAutoWeightUnit());
@@ -823,12 +848,12 @@ bool IntegratorRuntime::IsPilotOnFoot()
 
 QString IntegratorRuntime::GetAircraftName() const
 {
-    return aircraftDescriptor_ ? QString::fromUtf8(aircraftDescriptor_->name) : QString();
+    return aircraftDescriptor_ != nullptr ? QString::fromUtf8(aircraftDescriptor_->name) : QString();
 }
 
 std::string IntegratorRuntime::GetAircraftProfileId() const
 {
-    return aircraft_ && aircraftDescriptor_ ? aircraftDescriptor_->id : std::string();
+    return aircraft_ && aircraftDescriptor_ != nullptr ? aircraftDescriptor_->id : std::string();
 }
 
 bool IntegratorRuntime::AircraftCarriesItsOwnStairs() const
@@ -838,7 +863,7 @@ bool IntegratorRuntime::AircraftCarriesItsOwnStairs() const
 
 double IntegratorRuntime::AircraftRecommendedFuelRateKgs() const
 {
-    return aircraft_ && aircraftDescriptor_ ? aircraftDescriptor_->fuelRateKgs : 0.0;
+    return aircraft_ && aircraftDescriptor_ != nullptr ? aircraftDescriptor_->fuelRateKgs : 0.0;
 }
 
 bool IntegratorRuntime::IsAircraftRefuelByGsx() const

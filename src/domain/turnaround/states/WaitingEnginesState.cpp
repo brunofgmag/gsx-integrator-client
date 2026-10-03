@@ -1,5 +1,6 @@
 #include "WaitingEnginesState.h"
 
+#include "StandDeparture.h"
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
 #include "../../ports/DomainLogger.h"
@@ -8,19 +9,6 @@
 
 namespace
 {
-    constexpr double kTaxiGroundSpeedKnots = 5.0;
-
-    bool HasLeftWithoutConfirmingEngines(const TurnaroundContext& ctx)
-    {
-        if (!ctx.gsxGateway->IsAircraftOnGround())
-        {
-            return true;
-        }
-
-        return ctx.aircraft->IsEngineRunning()
-            && ctx.gsxGateway->GetGroundSpeedKnots() >= kTaxiGroundSpeedKnots;
-    }
-
     EngineConfirmationBlock BlockingReason(const TurnaroundContext& ctx, const bool viaInterruptMenu)
     {
         if (ctx.data.engineConfirmationSent)
@@ -63,7 +51,7 @@ std::optional<TurnaroundTransition> WaitingEnginesState::EvaluatePhase(Turnaroun
         return TurnaroundTransition{TurnaroundPhase::WaitingDeparture};
     }
 
-    if (HasLeftWithoutConfirmingEngines(ctx))
+    if (turnaround::HasLeftTheStand(ctx))
     {
         data.engineConfirmationBlock = EngineConfirmationBlock::None;
 

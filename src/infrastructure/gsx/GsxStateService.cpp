@@ -18,11 +18,32 @@ namespace
     constexpr auto kNoPushbackVerdict = "no pushback";
     constexpr auto kGroundVelocity = "GROUND VELOCITY";
     constexpr auto kKnotsUnit = "Knots";
+    constexpr auto kOperateStairsService = "OperateStairs";
+
+    constexpr double kAccessStillEvaluated = 0.0;
+    constexpr double kAccessNotOffered = 2.0;
+    constexpr double kAccessInPlace = 5.0;
+
+    constexpr double kPushbackUnderway = 5.0;
+    constexpr double kPushbackWaitingForEngines = 8.0;
+    constexpr double kPushbackFinished = 11.0;
+
+    constexpr std::array kServicesThatCancelOnReposition = {
+        GsxState::Refueling,
+        GsxState::Boarding,
+        GsxState::Deboarding,
+    };
 
     constexpr std::array kBaggageLoaders = {
         std::pair{kBaggageLoaderMainState, CargoLoader::MainDeck},
         std::pair{kBaggageLoaderRearState, CargoLoader::Rear},
         std::pair{kBaggageLoaderFrontState, CargoLoader::Front},
+    };
+
+    constexpr std::array kPassengerStairsVehicles = {
+        kPassengerStairsFrontState,
+        kPassengerStairsMiddleState,
+        kPassengerStairsRearState,
     };
 
     bool EqualsFold(const std::string& lhs, const std::string_view rhs)
@@ -49,6 +70,20 @@ namespace
     bool EndsWithoutCompleted(const GsxState gsxState)
     {
         return gsxState == GsxState::Pushback || gsxState == GsxState::Deice;
+    }
+
+    bool RemoteApiListsCallable(const GsxRemoteState* remote, const char* serviceId)
+    {
+        if (remote == nullptr || !remote->connected)
+        {
+            return false;
+        }
+
+        const GsxRemoteService* service = FindService(*remote, serviceId);
+
+        return service != nullptr
+            && service->stateRaw == static_cast<int>(GsxStateStatus::Callable)
+            && service->canTrigger;
     }
 }
 
@@ -152,22 +187,42 @@ double GsxStateService::GetRefuelCounterGallons() const
 
 bool GsxStateService::HasPushbackStarted() const
 {
-    return varManager_->GetLVar(kPushbackStatus) >= 5.0;
+    return varManager_->GetLVar(kPushbackStatus) >= kPushbackUnderway;
 }
 
 bool GsxStateService::IsPushbackFinished() const
 {
-    return varManager_->GetLVar(kPushbackStatus) == 11;
+    return varManager_->GetLVar(kPushbackStatus) == kPushbackFinished;
 }
 
 bool GsxStateService::IsWaitingForEngines() const
 {
-    return varManager_->GetLVar(kPushbackStatus) == 8;
+    return varManager_->GetLVar(kPushbackStatus) == kPushbackWaitingForEngines;
 }
 
 bool GsxStateService::IsRepositioning() const
 {
     return varManager_->GetLVar(kRepositioning) == 1.0;
+}
+
+std::optional<bool> GsxStateService::HasServiceUnderway() const
+{
+    const bool allArrived = std::ranges::all_of(kServicesThatCancelOnReposition, [this](const GsxState gsxState)
+    {
+        return varManager_->HasReceivedLVar(StateLVarName(gsxState));
+    });
+    if (!allArrived)
+    {
+        return std::nullopt;
+    }
+
+    return std::ranges::any_of(kServicesThatCancelOnReposition, [this](const GsxState gsxState)
+    {
+        const GsxStateStatus status = GetStateStatus(gsxState);
+
+        return status == GsxStateStatus::Requested || status == GsxStateStatus::Active
+            || status == GsxStateStatus::Completing;
+    });
 }
 
 int GsxStateService::GetPlannedPassengers() const
@@ -179,17 +234,24 @@ int GsxStateService::GetBoardedPassengers()
 {
     const bool active = varManager_->GetLVar(kBoardingState) == static_cast<double>(GsxStateStatus::Active);
 
-    return boarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersBoardingTotal)), active);
+    return boarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersBoardingTotal)), active,
+                            FoundServiceUnderway(GsxState::Boarding));
 }
 
 int GsxStateService::GetDeboardedPassengers()
 {
     const bool active = varManager_->GetLVar(kDeboardingState) == static_cast<double>(GsxStateStatus::Active);
 
-    return deboarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersDeboardingTotal)), active);
+    return deboarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersDeboardingTotal)), active,
+                              FoundServiceUnderway(GsxState::Deboarding));
 }
 
-int GsxStateService::PassengerCounter::Update(const int current, const bool active)
+bool GsxStateService::FoundServiceUnderway(const GsxState gsxState) const
+{
+    return states_.at(gsxState).foundUnderway;
+}
+
+int GsxStateService::PassengerCounter::Update(const int current, const bool active, const bool foundUnderway)
 {
     if (!counting)
     {
@@ -200,6 +262,14 @@ int GsxStateService::PassengerCounter::Update(const int current, const bool acti
 
         counting = true;
         last = current;
+
+        if (foundUnderway)
+        {
+            moved = true;
+            grown = current > 0;
+
+            return current;
+        }
 
         return 0;
     }
@@ -237,10 +307,12 @@ double GsxStateService::GetBoardingCargoPercent()
 {
     const bool active = varManager_->GetLVar(kBoardingState) == static_cast<double>(GsxStateStatus::Active);
 
-    return boardingCargo_.Update(varManager_->GetLVar(kBoardingCargoPercent), active);
+    return boardingCargo_.Update(varManager_->GetLVar(kBoardingCargoPercent), active,
+                                 FoundServiceUnderway(GsxState::Boarding));
 }
 
-double GsxStateService::CargoPercentReading::Update(const double current, const bool active)
+double GsxStateService::CargoPercentReading::Update(const double current, const bool active,
+                                                    const bool foundUnderway)
 {
     if (!counting)
     {
@@ -251,6 +323,13 @@ double GsxStateService::CargoPercentReading::Update(const double current, const 
 
         counting = true;
         first = current;
+
+        if (foundUnderway)
+        {
+            moved = true;
+
+            return current;
+        }
 
         return 0.0;
     }
@@ -278,21 +357,32 @@ CargoLoader GsxStateService::GetLoaderWaitingForDoor() const
     return CargoLoader::None;
 }
 
+bool GsxStateService::IsALoaderAtAHold() const
+{
+    return std::ranges::any_of(kBaggageLoaders, [this](const auto& loader)
+    {
+        const double state = varManager_->GetLVar(loader.first);
+
+        return state == gsx::states::kLoaderInPosition || state == gsx::states::kLoaderLoading;
+    });
+}
+
 double GsxStateService::GetDeboardingCargoPercent()
 {
     const bool active = varManager_->GetLVar(kDeboardingState) == static_cast<double>(GsxStateStatus::Active);
 
-    return deboardingCargo_.Update(varManager_->GetLVar(kDeboardingCargoPercent), active);
+    return deboardingCargo_.Update(varManager_->GetLVar(kDeboardingCargoPercent), active,
+                                   FoundServiceUnderway(GsxState::Deboarding));
 }
 
 bool GsxStateService::AreStairsInPlace() const
 {
-    return varManager_->GetLVar(kStairs) == 5.0;
+    return varManager_->GetLVar(kStairs) == kAccessInPlace;
 }
 
 bool GsxStateService::IsJetwayInPlace() const
 {
-    return varManager_->GetLVar(kJetway) == 5.0;
+    return varManager_->GetLVar(kJetway) == kAccessInPlace;
 }
 
 GroundPowerStatus GsxStateService::GetGpuStatus() const
@@ -367,16 +457,23 @@ bool GsxStateService::WasGsxDownSinceLastObserve() const
 
 bool GsxStateService::AreStairsAvailable() const
 {
-    const double state = varManager_->GetLVar(kStairs, 0.0);
+    const double state = varManager_->GetLVar(kStairs, kAccessStillEvaluated);
 
-    return state != 0.0 && state != 2.0;
+    if (state == kAccessStillEvaluated)
+    {
+        const bool noJetwayHere = varManager_->GetLVar(kJetway, kAccessStillEvaluated) == kAccessNotOffered;
+
+        return noJetwayHere && RemoteApiListsCallable(remote_, kOperateStairsService);
+    }
+
+    return state != kAccessNotOffered;
 }
 
 bool GsxStateService::IsJetwayAvailable() const
 {
-    const double state = varManager_->GetLVar(kJetway, 0.0);
+    const double state = varManager_->GetLVar(kJetway, kAccessStillEvaluated);
 
-    return state != 0.0 && state != 2.0;
+    return state != kAccessStillEvaluated && state != kAccessNotOffered;
 }
 
 bool GsxStateService::IsJetwayOrStairsOperating() const
@@ -387,16 +484,10 @@ bool GsxStateService::IsJetwayOrStairsOperating() const
 
 bool GsxStateService::IsServiceVehicleActive() const
 {
-    for (const char* vehicle : {kPassengerStairsFrontState, kPassengerStairsMiddleState,
-                                kPassengerStairsRearState})
+    return std::ranges::any_of(kPassengerStairsVehicles, [this](const char* vehicle)
     {
-        if (varManager_->GetLVar(vehicle, 0.0) >= gsx::states::kVehicleDispatched)
-        {
-            return true;
-        }
-    }
-
-    return false;
+        return varManager_->GetLVar(vehicle, 0.0) >= gsx::states::kVehicleDispatched;
+    });
 }
 
 bool GsxStateService::IsAircraftOnGround() const
@@ -475,6 +566,14 @@ void GsxStateService::ObserveState(const GsxState gsxState)
 
     const auto stateStatus = static_cast<GsxStateStatus>(varManager_->GetLVar(stateLVar));
     StateTrack& track = states_.at(gsxState);
+
+    if (!track.firstReadingSeen && varManager_->HasReceivedLVar(stateLVar))
+    {
+        track.firstReadingSeen = true;
+        track.foundUnderway = stateStatus == GsxStateStatus::Active;
+    }
+
+    track.foundUnderway = track.foundUnderway && stateStatus == GsxStateStatus::Active;
 
     if (gsxDownSinceLastObserve_)
     {

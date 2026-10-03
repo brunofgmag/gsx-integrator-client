@@ -95,12 +95,13 @@ On the PMDG 737, R/T is also radio transmit. If you talk on VATSIM with that swi
 
 ### GSX settings
 
-Check four things on the GSX Settings page before your first flight:
+Check five things on the GSX Settings page before your first flight:
 
 - Turn Ignore Time on (Simulation area, next to the SimBrief username). It ships off, and then GSX rejects any flight plan whose departure time has passed. The turnaround sits at "Waiting for flight plan" until you dispatch again.
 - Turn Trust Simbrief passengers number on (same area). With it off, some aircraft send their own passenger count and GSX boards that instead of your OFP.
 - Leave Assistance Services "Auto" mode off. In Auto mode GSX calls its own services in sequence, which is the client's job. Running both means two dispatchers fighting over one menu.
 - Set the interval between "Waiting for your action" messages to 25 seconds (Timings area). The default 15 is a lot of nagging while the client opens the doors for you. Much longer and you stop noticing when GSX really is stuck.
+- Turn Loaders stay until departure off. With it on, GSX keeps the loaders docked until departure, next to cargo doors the client already closed when boarding ended.
 
 ### GSX aircraft profile
 

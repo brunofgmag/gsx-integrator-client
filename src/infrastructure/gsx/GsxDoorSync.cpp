@@ -46,6 +46,11 @@ namespace
         return std::ranges::find(kDoorsHeldForDeparture, door) != kDoorsHeldForDeparture.end();
     }
 
+    bool IsPassengerDoor(const GsxDoor door)
+    {
+        return door == GsxDoor::FwdPax || door == GsxDoor::MidPax || door == GsxDoor::AftPax;
+    }
+
     const char* DoorName(const GsxDoor door)
     {
         switch (door)
@@ -68,7 +73,7 @@ GsxDoorSync::GsxDoorSync(VariableReader* variableGateway) : variableGateway_(var
 
 void GsxDoorSync::WatchExit(const GsxDoor door, const int exitIndex)
 {
-    exits_[static_cast<std::size_t>(door)] = ExitWatch{exitIndex};
+    exits_[static_cast<std::size_t>(door)] = ExitWatch{.index = exitIndex};
 }
 
 bool GsxDoorSync::IsMoving(const GsxDoor door) const
@@ -220,22 +225,22 @@ void GsxDoorSync::Report() const
                       .arg(IsDesiredOpen(door) ? 1 : 0));
     }
 
-    static constexpr std::array kUnknownToTheClient = {
-        "FSDT_GSX_LOADER_EXIT_0",
-        "FSDT_GSX_LOADER_EXIT_1",
-        "FSDT_GSX_LOADER_EXIT_2",
-        "FSDT_GSX_OPERATESTAIRS_STATE",
-        "FSDT_GSX_OPERATEJETWAYS_STATE",
-        "FSDT_GSX_STAIRS",
-        "FSDT_GSX_JETWAY_AIR",
-        "FSDT_GSX_JETWAY_POWER",
-        "FSDT_GSX_SET_LOADERS_STAY_UNTIL_DEPARTURE",
-        "FSDT_GSX_SET_AUTO_STAIRS",
-        "FSDT_GSX_SET_DISABLE_REAR_STAIRS"
+    static constexpr std::array kCandidates = {
+        gsx::lvars::kLoaderExit0,
+        gsx::lvars::kLoaderExit1,
+        gsx::lvars::kLoaderExit2,
+        gsx::lvars::kOperateStairsState,
+        gsx::lvars::kOperateJetwaysState,
+        gsx::lvars::kStairs,
+        gsx::lvars::kJetwayAir,
+        gsx::lvars::kJetwayPower,
+        gsx::lvars::kSetLoadersStayUntilDeparture,
+        gsx::lvars::kSetAutoStairs,
+        gsx::lvars::kSetDisableRearStairs
     };
 
     QStringList candidates;
-    for (const char* name : kUnknownToTheClient)
+    for (const char* name : kCandidates)
     {
         candidates.append(QStringLiteral("%1=%2").arg(QLatin1String(name))
                           .arg(variableGateway_->GetLVar(name, -1.0), 0, 'f', 1));
@@ -264,11 +269,25 @@ void GsxDoorSync::CloseAll(const DoorWriter& write)
 void GsxDoorSync::HoldClosedForDeparture(const bool hold)
 {
     heldForDeparture_ = hold;
+    if (!hold)
+    {
+        passengerDoorsHeld_ = false;
+    }
+}
+
+void GsxDoorSync::HoldPassengerDoorsClosed(const bool hold)
+{
+    passengerDoorsHeld_ = hold;
 }
 
 bool GsxDoorSync::IsDesiredOpen(const GsxDoor door) const
 {
     if (heldForDeparture_ && IsHeldForDeparture(door))
+    {
+        return false;
+    }
+
+    if (passengerDoorsHeld_ && IsPassengerDoor(door))
     {
         return false;
     }
@@ -292,8 +311,8 @@ bool GsxDoorSync::IsDesiredOpen(const GsxDoor door) const
     case GsxDoor::AftCatering:
         return gsx::states::IsCateringArriving(vehicleState(gsx::lvars::kCateringRearState));
     case GsxDoor::FwdCargo:
-        return gsx::states::IsLoaderArriving(vehicleState(gsx::lvars::kBaggageLoaderFrontState));
+        return gsx::states::IsLoaderServingTheDoor(vehicleState(gsx::lvars::kBaggageLoaderFrontState));
     default:
-        return gsx::states::IsLoaderArriving(vehicleState(gsx::lvars::kBaggageLoaderRearState));
+        return gsx::states::IsLoaderServingTheDoor(vehicleState(gsx::lvars::kBaggageLoaderRearState));
     }
 }

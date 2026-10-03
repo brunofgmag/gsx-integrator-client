@@ -78,6 +78,15 @@ namespace gsx::lvars
     inline constexpr auto kRepositioning = "FSDT_GSX_REPOSITIONING";
     inline constexpr auto kGpuConnected = "FSDT_GSX_GPU_CONNECTED";
     inline constexpr auto kGpuState = "FSDT_GSX_GPU_STATE";
+    inline constexpr auto kLoaderExit0 = "FSDT_GSX_LOADER_EXIT_0";
+    inline constexpr auto kLoaderExit1 = "FSDT_GSX_LOADER_EXIT_1";
+    inline constexpr auto kLoaderExit2 = "FSDT_GSX_LOADER_EXIT_2";
+    inline constexpr auto kOperateStairsState = "FSDT_GSX_OPERATESTAIRS_STATE";
+    inline constexpr auto kJetwayAir = "FSDT_GSX_JETWAY_AIR";
+    inline constexpr auto kJetwayPower = "FSDT_GSX_JETWAY_POWER";
+    inline constexpr auto kSetLoadersStayUntilDeparture = "FSDT_GSX_SET_LOADERS_STAY_UNTIL_DEPARTURE";
+    inline constexpr auto kSetAutoStairs = "FSDT_GSX_SET_AUTO_STAIRS";
+    inline constexpr auto kSetDisableRearStairs = "FSDT_GSX_SET_DISABLE_REAR_STAIRS";
 
     inline constexpr auto kGoodEngineStart = "FSDT_GSX_SETTINGS_GOOD_ENGINE_START";
 }
@@ -118,9 +127,12 @@ namespace gsx::states
             || state == kCateringInProgress;
     }
 
-    [[nodiscard]] inline bool IsLoaderArriving(const double state)
+    [[nodiscard]] inline bool IsLoaderServingTheDoor(const double state)
     {
-        return IsLoaderAtDoor(state);
+        return state == kLoaderWaitingForDoor
+            || state == kLoaderUnloading
+            || state == kLoaderInPosition
+            || state == kLoaderLoading;
     }
 
     [[nodiscard]] inline bool IsCateringArriving(const double state)

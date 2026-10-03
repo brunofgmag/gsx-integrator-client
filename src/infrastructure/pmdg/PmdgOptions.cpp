@@ -22,28 +22,28 @@ namespace
     {
         if (aircraftName == Pmdg777::kName300Er)
         {
-            return PackageFile{"pmdg-aircraft-77w", "777_Options.ini"};
+            return PackageFile{.package = "pmdg-aircraft-77w", .iniName = "777_Options.ini"};
         }
 
         if (aircraftName == Pmdg777::kNameFreighter)
         {
-            return PackageFile{"pmdg-aircraft-77f", "777_Options.ini"};
+            return PackageFile{.package = "pmdg-aircraft-77f", .iniName = "777_Options.ini"};
         }
 
         if (aircraftName == Pmdg777::kName200Lr)
         {
-            return PackageFile{"pmdg-aircraft-77l", "777_Options.ini"};
+            return PackageFile{.package = "pmdg-aircraft-77l", .iniName = "777_Options.ini"};
         }
 
         if (aircraftName == Pmdg777::kName200Er)
         {
-            return PackageFile{"pmdg-aircraft-77er", "777_Options.ini"};
+            return PackageFile{.package = "pmdg-aircraft-77er", .iniName = "777_Options.ini"};
         }
 
         if (aircraftName == Pmdg737::kNamePax800 || aircraftName == Pmdg737::kNameBcf800
             || aircraftName == Pmdg737::kNameBdsf800 || aircraftName == Pmdg737::kNameBbj2)
         {
-            return PackageFile{"pmdg-aircraft-738", "737_Options.ini"};
+            return PackageFile{.package = "pmdg-aircraft-738", .iniName = "737_Options.ini"};
         }
 
         return std::nullopt;
@@ -104,13 +104,12 @@ std::optional<std::filesystem::path> PmdgOptions::PathFor(const std::string& air
         return std::nullopt;
     }
 
-    const std::filesystem::path path = std::filesystem::path(appData)
-        / "Microsoft Flight Simulator 2024" / "WASM" / "MSFS2024" / package->package
-        / "work" / package->iniName;
+    const std::filesystem::path appDataPath(appData);
 
     std::free(appData);
 
-    return path;
+    return appDataPath / "Microsoft Flight Simulator 2024" / "WASM" / "MSFS2024" / package->package
+        / "work" / package->iniName;
 }
 
 bool PmdgOptions::HasDataBroadcast(const std::string& iniText)
@@ -132,7 +131,7 @@ bool PmdgOptions::HasDataBroadcast(const std::string& iniText)
             continue;
         }
 
-        if (inSdkSection && line.find(kKey) != std::string::npos
+        if (inSdkSection && line.find(kKey, begin) == begin
             && line.find('1', line.find('=')) != std::string::npos)
         {
             return true;

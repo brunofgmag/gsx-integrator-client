@@ -44,7 +44,7 @@ void SimConnectSession::Close()
     nextDynamicEvent_ = kDynamicEventBase;
 }
 
-bool SimConnectSession::TransmitEvent(const char* eventName, const DWORD parameter)
+bool SimConnectSession::TransmitEvent(const char* eventName, const DWORD parameter, const char* label)
 {
     if (!IsConnected() || eventName == nullptr)
     {
@@ -76,12 +76,12 @@ bool SimConnectSession::TransmitEvent(const char* eventName, const DWORD paramet
         return false;
     }
 
-    ReportEvent(eventName, parameter);
+    ReportEvent(eventName, parameter, label);
 
     return true;
 }
 
-void SimConnectSession::ReportEvent(const char* eventName, const DWORD parameter)
+void SimConnectSession::ReportEvent(const char* eventName, const DWORD parameter, const char* label)
 {
     if (!probe::IsOn())
     {
@@ -89,9 +89,12 @@ void SimConnectSession::ReportEvent(const char* eventName, const DWORD parameter
     }
 
     const int count = ++eventCounts_[eventName];
+    const QString name = label != nullptr
+        ? QStringLiteral("%1 (%2)").arg(QString::fromLatin1(label), QString::fromLatin1(eventName))
+        : QString::fromLatin1(eventName);
 
     probe::Line(probe::Channel::Writes, QStringLiteral("event %1 param=%2 n=%3")
-                .arg(QString::fromLatin1(eventName), QString::number(parameter))
+                .arg(name, QString::number(parameter))
                 .arg(count));
 }
 
@@ -177,7 +180,7 @@ bool SimConnectSession::TransmitExternalSystemToggle(const int state) const
 }
 
 template <typename Fn>
-bool SimConnectSession::SubscribeSystemEvent(Fn& target, Fn fn, const SIMCONNECT_CLIENT_EVENT_ID eventId,
+bool SimConnectSession::SubscribeSystemEvent(Fn& target, Fn handler, const SIMCONNECT_CLIENT_EVENT_ID eventId,
                                              const char* name)
 {
     if (!IsConnected())
@@ -185,7 +188,7 @@ bool SimConnectSession::SubscribeSystemEvent(Fn& target, Fn fn, const SIMCONNECT
         return false;
     }
 
-    target = std::move(fn);
+    target = std::move(handler);
 
     if (FAILED(SimConnect_SubscribeToSystemEvent(hSimConnect_, eventId, name)))
     {
@@ -280,7 +283,7 @@ bool SimConnectSession::Dispatch()
 
 void CALLBACK SimConnectSession::DispatchTrampoline(SIMCONNECT_RECV* pData, const DWORD cbData, void* ctx)
 {
-    if (!ctx || !pData)
+    if (ctx == nullptr || pData == nullptr)
     {
         return;
     }
@@ -305,7 +308,7 @@ void SimConnectSession::HandleMessage(SIMCONNECT_RECV* pData, const DWORD cbData
         break;
 
     case SIMCONNECT_RECV_ID_SIMOBJECT_DATA:
-        if (varManager_)
+        if (varManager_ != nullptr)
         {
             varManager_->HandleSimObjectData(static_cast<const SIMCONNECT_RECV_SIMOBJECT_DATA*>(pData));
         }
@@ -331,11 +334,11 @@ void SimConnectSession::HandleMessage(SIMCONNECT_RECV* pData, const DWORD cbData
 
 void SimConnectSession::HandleException(const SIMCONNECT_RECV* pData)
 {
-    const auto* ex = static_cast<const SIMCONNECT_RECV_EXCEPTION*>(pData);
+    const auto* exception = static_cast<const SIMCONNECT_RECV_EXCEPTION*>(pData);
     LOG_WARN("SimConnect exception %u (sendId=%u, index=%u)",
-             static_cast<unsigned>(ex->dwException),
-             static_cast<unsigned>(ex->dwSendID),
-             static_cast<unsigned>(ex->dwIndex));
+             static_cast<unsigned>(exception->dwException),
+             static_cast<unsigned>(exception->dwSendID),
+             static_cast<unsigned>(exception->dwIndex));
 }
 
 void SimConnectSession::HandleOpen(const SIMCONNECT_RECV* pData, const DWORD cbData) const

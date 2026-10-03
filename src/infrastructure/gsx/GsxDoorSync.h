@@ -33,6 +33,7 @@ public:
     void Sync(const DoorWriter& write);
     void CloseAll(const DoorWriter& write);
     void HoldClosedForDeparture(bool hold);
+    void HoldPassengerDoorsClosed(bool hold);
     [[nodiscard]] double VehicleState(const char* lVar, double absent) const;
 
 private:
@@ -53,6 +54,7 @@ private:
     std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> holdLogged_{};
     std::array<ExitWatch, static_cast<std::size_t>(GsxDoor::Count)> exits_{};
     bool heldForDeparture_ = false;
+    bool passengerDoorsHeld_ = false;
     bool couatlSeenStarted_ = false;
     bool couatlRestarting_ = false;
     mutable std::map<std::string, double> inheritedVehicles_;

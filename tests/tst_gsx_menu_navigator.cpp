@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
@@ -30,7 +31,7 @@ namespace
 
         bool SendCommand(const QString& verb, const QJsonObject& args = {}) override
         {
-            sent.push_back({verb, args});
+            sent.push_back({.verb = verb, .args = args});
             return true;
         }
 
@@ -53,15 +54,15 @@ namespace
 
         [[nodiscard]] int Count(const QString& verb) const
         {
-            int n = 0;
-            for (const Sent& s : sent)
+            int count = 0;
+            for (const Sent& request : sent)
             {
-                if (s.verb == verb)
+                if (request.verb == verb)
                 {
-                    ++n;
+                    ++count;
                 }
             }
-            return n;
+            return count;
         }
     };
 
@@ -76,7 +77,7 @@ namespace
 
     void OfferService(GsxRemoteState& state, const std::string& id)
     {
-        state.services.push_back(GsxRemoteService{id, 1, true});
+        state.services.push_back(GsxRemoteService{.id = id, .stateRaw = 1, .canTrigger = true});
     }
 
     void MarkServiceTaken(GsxRemoteState& state, const std::string& id)
@@ -92,20 +93,13 @@ namespace
             }
         }
 
-        state.services.push_back(GsxRemoteService{id, 5, false});
+        state.services.push_back(GsxRemoteService{.id = id, .stateRaw = 5, .canTrigger = false});
     }
 
     bool Logged(const FakeDomainLogger& logger, const std::string& needle)
     {
-        for (const std::string& message : logger.messages)
-        {
-            if (message.find(needle) != std::string::npos)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return std::ranges::any_of(logger.messages, [&needle](const std::string& message)
+                                   { return message.find(needle) != std::string::npos; });
     }
 }
 
@@ -125,6 +119,8 @@ private slots:
     static void aPanelThatConfirmedIsNeverReportedAsUnconfirmed();
     static void onPushbackClosesThePanelWhenThePushStarts();
     static void aPanelFoundOpenIsNotClosedWhenThePushStarts();
+    static void closePushbackPanelClosesThePanelTheClientOpenedOnce();
+    static void closePushbackPanelLeavesAPanelTheClientDidNotOpen();
     static void onPushbackIgnoresAPanelLeftOpenOutsideTheWindow();
     static void onPushbackDoesNotReopenThePanelThePilotClosed();
     static void aDroppedOpenKeepsThePushbackOpenOwed();
@@ -265,15 +261,15 @@ void GsxMenuNavigatorTest::serviceTriggersUseCanonicalVerbs()
 
     std::vector<QString> services;
     QString simbriefCommand;
-    for (const Sent& s : client.sent)
+    for (const Sent& request : client.sent)
     {
-        if (s.verb == "service.trigger")
+        if (request.verb == "service.trigger")
         {
-            services.push_back(s.args.value("service").toString());
+            services.push_back(request.args.value("service").toString());
         }
-        else if (s.verb == "command.run")
+        else if (request.verb == "command.run")
         {
-            simbriefCommand = s.args.value("command").toString();
+            simbriefCommand = request.args.value("command").toString();
         }
     }
 
@@ -480,6 +476,46 @@ void GsxMenuNavigatorTest::onPushbackClosesThePanelWhenThePushStarts()
 
     QCOMPARE(rig.PanelCommands(), 2);
     QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandClose));
+}
+
+void GsxMenuNavigatorTest::closePushbackPanelClosesThePanelTheClientOpenedOnce()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("closed");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.OpenPushbackPanel();
+    rig.PanelIs("open");
+
+    QCOMPARE(rig.PanelCommands(), 1);
+
+    nav.ClosePushbackPanel();
+
+    QCOMPARE(rig.PanelCommands(), 2);
+    QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandClose));
+    QVERIFY(Logged(rig.logger, "closing the GSX toolbar the client opened for the pushback"));
+    QVERIFY(!Logged(rig.logger, "now that the pushback has started"));
+
+    nav.ClosePushbackPanel();
+    nav.OnPushbackStarted();
+
+    QCOMPARE(rig.PanelCommands(), 2);
+}
+
+void GsxMenuNavigatorTest::closePushbackPanelLeavesAPanelTheClientDidNotOpen()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("open");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.OpenPushbackPanel();
+    nav.ClosePushbackPanel();
+
+    QCOMPARE(rig.PanelCommands(), 0);
+
+    nav.ClosePushbackPanel();
+
+    QCOMPARE(rig.PanelCommands(), 0);
 }
 
 void GsxMenuNavigatorTest::aPanelFoundOpenIsNotClosedWhenThePushStarts()
@@ -1433,7 +1469,7 @@ void GsxMenuNavigatorTest::theStairsAreKeptWhilePassengersAreDeboarding()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    state.services.push_back(GsxRemoteService{"Deboarding", 4, false});
+    state.services.push_back(GsxRemoteService{.id = "Deboarding", .stateRaw = 4, .canTrigger = false});
     ShowMenu(state,
              "The front cargo loader is waiting for the spot where the stairs at AFT Pax are parked. Remove the stairs?",
              {"No, keep the stairs", "Yes, remove the stairs"});
@@ -1622,9 +1658,9 @@ namespace
     int YesPicks(const FakeRemoteClient& client)
     {
         int yes = 0;
-        for (const Sent& s : client.sent)
+        for (const Sent& request : client.sent)
         {
-            if (s.verb == "menu.pick" && s.args.value("index").toInt() == 0)
+            if (request.verb == "menu.pick" && request.args.value("index").toInt() == 0)
             {
                 ++yes;
             }
@@ -2195,7 +2231,7 @@ void GsxMenuNavigatorTest::stalledMenuResyncIsBounded()
 
     for (int i = 1; i <= 10; ++i)
     {
-        fakeNow = i * 2000;
+        fakeNow = static_cast<long long>(i) * 2000;
         nav.OnMenuChanged();
     }
 

@@ -108,10 +108,9 @@ namespace
     }
 }
 
-TolissA340::TolissA340(VariableGateway* variableGateway, const AutomationStatus* status, const bool cargoVariant)
+TolissA340::TolissA340(VariableGateway* variableGateway, const AutomationStatus* status)
     : variableGateway_(variableGateway),
       status_(status),
-      cargoVariant_(cargoVariant),
       doors_(variableGateway),
       smartSwitch_(*variableGateway, {kSmartSwitchLVar},
                    [](const double min, const double max)
@@ -130,7 +129,7 @@ TolissA340::TolissA340(VariableGateway* variableGateway, const AutomationStatus*
 
 bool TolissA340::IsCargoVariant() const
 {
-    return cargoVariant_;
+    return false;
 }
 
 void TolissA340::Observe()
@@ -156,7 +155,7 @@ DoorStatus TolissA340::GetDoorStatus() const
     return status;
 }
 
-const char* TolissA340::DoorModeLVar(const GsxDoor door) const
+const char* TolissA340::DoorModeLVar(const GsxDoor door)
 {
     switch (door)
     {
@@ -283,10 +282,9 @@ bool TolissA340::IsBeaconOn() const
 
 namespace
 {
-    std::unique_ptr<Aircraft> CreateTolissA340(const AircraftContext& context, const AircraftIdentity& identity)
+    std::unique_ptr<Aircraft> CreateTolissA340(const AircraftContext& context, const AircraftIdentity&)
     {
-        const bool cargo = MatchText(identity.title, MatchOp::Contains, "cargo");
-        return std::make_unique<TolissA340>(context.variableGateway, context.status, cargo);
+        return std::make_unique<TolissA340>(context.variableGateway, context.status);
     }
 
     const AircraftDescriptor kTolissA340Descriptor{
@@ -305,4 +303,9 @@ namespace
 void TolissA340::HoldDoorsClosed(const bool hold)
 {
     doors_.HoldClosedForDeparture(hold);
+}
+
+void TolissA340::HoldPassengerDoorsClosed(const bool hold)
+{
+    doors_.HoldPassengerDoorsClosed(hold);
 }

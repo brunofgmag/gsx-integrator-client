@@ -42,6 +42,8 @@ struct TurnaroundData
     int loaderDoorWaitTicks = 0;
     int loaderDoorWaitSeconds = 0;
     int cargoFlagAfterServiceTicks = 0;
+    int loaderAtHoldAfterServiceTicks = 0;
+    bool passengerDoorsHeldClosed = false;
     bool deboardingBaselined = false;
     bool refuelingRequested = false;
     int fuelRequestStallTicks = 0;
@@ -53,6 +55,7 @@ struct TurnaroundData
     bool fuelDidNotStay = false;
     bool fuelStayChecked = false;
     bool fuelStayDismissed = false;
+    bool fuelTopUpStarted = false;
     double fuelShortfallKg = 0.0;
     double settledFuelKg = 0.0;
     EngineConfirmationBlock engineConfirmationBlock = EngineConfirmationBlock::None;

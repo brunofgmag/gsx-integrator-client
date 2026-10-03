@@ -56,7 +56,7 @@ void PmdgDoorsFollowGsxRule::Act(const RuleContext&, VariableWriter& writer)
 
 void PmdgDoorsFollowGsxRule::SyncMainDeckDoor()
 {
-    const bool loaderPresent = gsx::states::IsLoaderArriving(
+    const bool loaderPresent = gsx::states::IsLoaderServingTheDoor(
         doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0));
 
     if (loaderPresent)

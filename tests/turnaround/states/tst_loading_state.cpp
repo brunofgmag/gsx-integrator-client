@@ -212,6 +212,7 @@ void LoadingStateTest::selfRefuelRequestsBoardingFromTheGsxCounter()
     ArrangeClientRefuel(f, 0.0, 1000.0, 5000.0);
     f.aircraft.refuelMethod = RefuelBy::Self;
     f.gsxService.refuelCounterGallons = 900.0;
+    f.ctx.data.refuelingRequested = true;
 
     QVERIFY(!Tick(state, f).has_value());
     QCOMPARE(f.menuGateway.boardingCalls, 0);

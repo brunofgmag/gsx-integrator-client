@@ -1,26 +1,11 @@
 #include "WaitingPushbackToStartState.h"
 
+#include "StandDeparture.h"
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
 #include "../../ports/DomainLogger.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
-
-namespace
-{
-    constexpr double kTaxiGroundSpeedKnots = 5.0;
-
-    bool HasLeftWithoutPushback(const TurnaroundContext& ctx)
-    {
-        if (!ctx.gsxGateway->IsAircraftOnGround())
-        {
-            return true;
-        }
-
-        return ctx.aircraft->IsEngineRunning()
-            && ctx.gsxGateway->GetGroundSpeedKnots() >= kTaxiGroundSpeedKnots;
-    }
-}
 
 std::optional<TurnaroundTransition> WaitingPushbackToStartState::EvaluatePhase(TurnaroundContext& ctx)
 {
@@ -34,7 +19,7 @@ std::optional<TurnaroundTransition> WaitingPushbackToStartState::EvaluatePhase(T
         return TurnaroundTransition{TurnaroundPhase::WaitingForEngines};
     }
 
-    if (HasLeftWithoutPushback(ctx))
+    if (turnaround::HasLeftTheStand(ctx))
     {
         if (ctx.logger != nullptr)
         {

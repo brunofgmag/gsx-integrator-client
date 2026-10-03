@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_SIMCONNECTSESSION_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_SIMCONNECTSESSION_H
 
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -26,8 +27,8 @@ public:
     [[nodiscard]] bool IsConnected() const { return hSimConnect_ != nullptr; }
     [[nodiscard]] HANDLE Handle() const { return hSimConnect_; }
 
-    bool TransmitExternalSystemToggle(int state) const;
-    bool TransmitEvent(const char* eventName, DWORD parameter);
+    [[nodiscard]] bool TransmitExternalSystemToggle(int state) const;
+    bool TransmitEvent(const char* eventName, DWORD parameter, const char* label = nullptr);
 
     bool MapClientDataArea(const char* areaName,
                            SIMCONNECT_CLIENT_DATA_ID areaId,
@@ -59,7 +60,7 @@ public:
     bool Dispatch();
 
 private:
-    enum : SIMCONNECT_CLIENT_EVENT_ID
+    enum : std::uint8_t
     {
         kEvent1Sec = 1,
         kEvent4Sec = 2,
@@ -69,7 +70,7 @@ private:
         kEventPauseEx1 = 6,
     };
 
-    enum : SIMCONNECT_NOTIFICATION_GROUP_ID
+    enum : std::uint8_t
     {
         kGroupMenu = 1,
     };
@@ -84,10 +85,10 @@ private:
     void HandleSystemState(const SIMCONNECT_RECV* pData, DWORD cbData) const;
     void HandleClientData(const SIMCONNECT_RECV* pData, DWORD cbData) const;
     static void HandleException(const SIMCONNECT_RECV* pData);
-    void ReportEvent(const char* eventName, DWORD parameter);
+    void ReportEvent(const char* eventName, DWORD parameter, const char* label);
 
     template <typename Fn>
-    bool SubscribeSystemEvent(Fn& target, Fn fn, SIMCONNECT_CLIENT_EVENT_ID eventId, const char* name);
+    bool SubscribeSystemEvent(Fn& target, Fn handler, SIMCONNECT_CLIENT_EVENT_ID eventId, const char* name);
 
     HANDLE hSimConnect_ = nullptr;
     SimConnectVariableGateway* varManager_ = nullptr;

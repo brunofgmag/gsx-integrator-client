@@ -17,7 +17,7 @@ class TolissA340 final : public Aircraft
 public:
     static constexpr auto kName = "ToLiss A340-600";
 
-    TolissA340(VariableGateway* variableGateway, const AutomationStatus* status, bool cargoVariant);
+    TolissA340(VariableGateway* variableGateway, const AutomationStatus* status);
 
     [[nodiscard]] bool IsCargoVariant() const override;
 
@@ -26,8 +26,9 @@ public:
     void OnLoadingStarted() override {}
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
+    void HoldPassengerDoorsClosed(bool hold) override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
-    [[nodiscard]] const char* DoorModeLVar(GsxDoor door) const;
+    [[nodiscard]] static const char* DoorModeLVar(GsxDoor door);
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
@@ -57,7 +58,6 @@ private:
 
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;
-    bool cargoVariant_;
     GsxDoorSync doors_;
     SmartSwitch smartSwitch_;
     TolissA340DoorsFollowGsxRule doorRule_;

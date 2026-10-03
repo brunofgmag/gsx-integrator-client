@@ -13,6 +13,9 @@ ColumnLayout {
     property var updateVm: null
     property bool simulatorAddonsVisible: false
     property int sectionIndex: 0
+    property int paneGutter: 20
+
+    onSectionIndexChanged: paneFlick.contentY = 0
 
     readonly property var sections: [
         qsTr("General"), qsTr("Automation"), qsTr("Services"),
@@ -23,13 +26,14 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        Layout.preferredHeight: Math.max(rail.implicitHeight,
-                                         paneStack.children[root.sectionIndex]?.implicitHeight ?? 0)
+        Layout.fillHeight: true
+        Layout.minimumHeight: rail.implicitHeight
         spacing: 12
 
         ColumnLayout {
             id: rail
             Layout.preferredWidth: 116
+            Layout.fillWidth: false
             Layout.alignment: Qt.AlignTop
             spacing: 2
 
@@ -75,37 +79,55 @@ ColumnLayout {
             }
         }
 
-        StackLayout {
-            id: paneStack
+        Flickable {
+            id: paneFlick
             Layout.fillWidth: true
             Layout.fillHeight: true
-            currentIndex: root.sectionIndex
+            contentWidth: width
+            contentHeight: paneStack.height
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: paneFlick.contentOverflows
+            onContentOverflowsChanged: if (!paneFlick.contentOverflows) paneFlick.contentY = 0
 
-            GeneralPane {
-                settingsVm: root.settingsVm
-                updateModeVisible: root.updateModeVisible
+            readonly property bool contentOverflows: paneFlick.contentHeight > paneFlick.height
+
+            ScrollBar.vertical: ThemedScrollBar {
+                needed: paneFlick.contentOverflows
             }
 
-            AutomationPane {
-                settingsVm: root.settingsVm
-            }
+            StackLayout {
+                id: paneStack
+                width: paneFlick.width - root.paneGutter
+                height: children[root.sectionIndex]?.implicitHeight ?? 0
+                currentIndex: root.sectionIndex
 
-            ServicesPane {
-                settingsVm: root.settingsVm
-            }
+                GeneralPane {
+                    settingsVm: root.settingsVm
+                    updateModeVisible: root.updateModeVisible
+                }
 
-            ProfilesPane {
-                settingsVm: root.settingsVm
-            }
+                AutomationPane {
+                    settingsVm: root.settingsVm
+                }
 
-            WindowPane {
-                settingsVm: root.settingsVm
-            }
+                ServicesPane {
+                    settingsVm: root.settingsVm
+                }
 
-            AdvancedPane {
-                settingsVm: root.settingsVm
-                updateVm: root.updateVm
-                simulatorAddonsVisible: root.simulatorAddonsVisible
+                ProfilesPane {
+                    settingsVm: root.settingsVm
+                }
+
+                WindowPane {
+                    settingsVm: root.settingsVm
+                }
+
+                AdvancedPane {
+                    settingsVm: root.settingsVm
+                    updateVm: root.updateVm
+                    simulatorAddonsVisible: root.simulatorAddonsVisible
+                }
             }
         }
     }

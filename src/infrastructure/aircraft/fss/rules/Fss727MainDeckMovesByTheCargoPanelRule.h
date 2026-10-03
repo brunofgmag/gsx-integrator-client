@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727MAINDECKMOVESBYTHECARGOPANELRULE_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727MAINDECKMOVESBYTHECARGOPANELRULE_H
 
+#include <cstdint>
 #include <optional>
 
 #include "../../../../domain/ports/AircraftRule.h"
@@ -34,7 +35,7 @@ public:
     void Act(const RuleContext& context, VariableWriter& writer) override;
 
 private:
-    enum class Travel
+    enum class Travel : std::uint8_t
     {
         None,
         Opening,
@@ -44,11 +45,13 @@ private:
     void StartTravel(VariableWriter& writer, Travel travel);
     void FinishTravel(VariableWriter& writer);
     void ResumeTravel(double position);
+    void DropTheTravelThatNeverMoved();
     void GuardThePanelMasterCut(VariableWriter& writer);
     [[nodiscard]] bool HasComeToRest() const;
     void TurnThePanelMasterOff(VariableWriter& writer, double position);
     void ServeThePendingClose(VariableWriter& writer, bool closed);
     void AskForTheDeckClosedOnceTheDeboardingCompletes();
+    void AskForTheDeckClosedOnceTheMainLoaderLeaves();
     [[nodiscard]] int CloseRequests() const;
     [[nodiscard]] bool IsCloseRequestPending() const;
     [[nodiscard]] bool HasTheMainLoaderLeft() const;
@@ -65,9 +68,13 @@ private:
     int servedRequests_ = 0;
     int deboardingCloseRequests_ = 0;
     bool deboardingAtWork_ = false;
+    int loaderDepartureCloseRequests_ = 0;
+    bool loaderDepartureCloseUnserved_ = false;
+    bool mainLoaderSeenAtTheDeck_ = false;
     Travel travel_ = Travel::None;
     Travel cutTravel_ = Travel::None;
     Fss727DoorRest rest_;
+    int unmovedTicks_ = 0;
     int masterCutGuardTicks_ = 0;
     bool mayResumeTravel_ = false;
     int loaderHoldTicks_ = 0;

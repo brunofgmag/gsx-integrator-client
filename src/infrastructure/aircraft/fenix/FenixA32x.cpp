@@ -263,7 +263,7 @@ void FenixA32x::OnLoadingStarted()
     }
 }
 
-const char* FenixA32x::DoorDataref(const GsxDoor door) const
+const char* FenixA32x::DoorDataref(const GsxDoor door)
 {
     switch (door)
     {
@@ -370,7 +370,7 @@ double FenixA32x::GetPlannedFuelKg() const
 
 double FenixA32x::GetPlannedZfwKg() const
 {
-    return GetEmptyZfwKg() + GetPlannedPassengers() * kPassengerWeightKg + PlannedCargoKg();
+    return GetEmptyZfwKg() + (GetPlannedPassengers() * kPassengerWeightKg) + PlannedCargoKg();
 }
 
 int FenixA32x::GetPlannedPassengers() const
@@ -389,7 +389,7 @@ std::optional<WeightUnit> FenixA32x::GetNativeWeightUnit() const
 {
     std::string unit = efb_->GetString(kWeightUnitDataref, "");
     std::ranges::transform(unit, unit.begin(),
-                           [](const unsigned char c) { return static_cast<char>(std::toupper(c)); });
+                           [](const unsigned char character) { return static_cast<char>(std::toupper(character)); });
 
     if (unit == "KG")
     {
@@ -633,4 +633,9 @@ namespace
 void FenixA32x::HoldDoorsClosed(const bool hold)
 {
     doors_.HoldClosedForDeparture(hold);
+}
+
+void FenixA32x::HoldPassengerDoorsClosed(const bool hold)
+{
+    doors_.HoldPassengerDoorsClosed(hold);
 }

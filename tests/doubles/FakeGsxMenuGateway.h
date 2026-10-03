@@ -19,6 +19,7 @@ public:
     int pushbackCalls = 0;
     int departureClearanceCalls = 0;
     int openPushbackPanelCalls = 0;
+    int closePushbackPanelCalls = 0;
     int refuelingCalls = 0;
     int confirmGoodEnginesCalls = 0;
     int completePushbackCalls = 0;
@@ -49,6 +50,7 @@ public:
     void RequestDepartureClearance() override { ++departureClearanceCalls; }
 
     void OpenPushbackPanel() override { ++openPushbackPanelCalls; }
+    void ClosePushbackPanel() override { ++closePushbackPanelCalls; }
 
     void RequestRefueling() override { ++refuelingCalls; }
 

@@ -1,6 +1,7 @@
 #include "AircraftFactory.h"
 
 #include <algorithm>
+#include <array>
 #include <string>
 #include "AircraftIdentity.h"
 #include "AircraftRegistry.h"
@@ -9,6 +10,8 @@
 
 namespace
 {
+    constexpr int kAircraftStringSize = 256;
+
     bool ShouldLogUnsupported(const AircraftIdentity& identity)
     {
         static std::string lastTitle;
@@ -25,18 +28,18 @@ namespace
 std::unique_ptr<Aircraft> DetectAircraft(const AircraftContext& context,
                                          const AircraftDescriptor** outDescriptor)
 {
-    char title[64] = {};
-    const bool titleArrived = context.variableGateway->FetchAircraftName(title, sizeof(title));
+    std::array<char, kAircraftStringSize> title{};
+    const bool titleArrived = context.variableGateway->FetchAircraftName(title.data(), kAircraftStringSize);
 
-    char atcModel[64] = {};
-    const bool atcModelArrived = context.variableGateway->FetchAtcModel(atcModel, sizeof(atcModel));
+    std::array<char, kAircraftStringSize> atcModel{};
+    const bool atcModelArrived = context.variableGateway->FetchAtcModel(atcModel.data(), kAircraftStringSize);
 
     if (!titleArrived || !atcModelArrived)
     {
         return nullptr;
     }
 
-    const AircraftIdentity identity{title, atcModel};
+    const AircraftIdentity identity{.title = title.data(), .atcModel = atcModel.data()};
     const AircraftDescriptor* descriptor = MatchAircraft(AircraftRegistry(), identity);
     if (descriptor == nullptr)
     {
@@ -65,8 +68,11 @@ std::vector<AircraftProfileInfo> SupportedAircraftProfiles()
     std::vector<AircraftProfileInfo> infos;
     for (const AircraftDescriptor* descriptor : AircraftRegistry())
     {
-        infos.push_back({descriptor->id, descriptor->shortCode, descriptor->name, descriptor->refuelBy,
-                         descriptor->fuelRateKgs});
+        infos.push_back({.id = descriptor->id,
+                         .shortCode = descriptor->shortCode,
+                         .name = descriptor->name,
+                         .refuelBy = descriptor->refuelBy,
+                         .recommendedFuelRateKgs = descriptor->fuelRateKgs});
     }
     std::ranges::sort(infos, {}, &AircraftProfileInfo::shortCode);
 

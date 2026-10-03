@@ -1,5 +1,75 @@
 # Changelog
 
+## [1.43.8](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.7...v1.43.8) (2026-10-03)
+
+
+* top up fuel after a short gsx-led refuel and space out the e-jet ground power pulses ([#221](https://github.com/brunofgmag/gsx-integrator-client/issues/221)) ([f8435ce](https://github.com/brunofgmag/gsx-integrator-client/commit/f8435ce64c64c668fbe6d8e829437f9966631f6d))
+
+
+### Bug Fixes
+
+* top up fuel after a short gsx-led refuel and space out the e-jet ground power pulses ([62f3601](https://github.com/brunofgmag/gsx-integrator-client/commit/62f3601038f1cb99df189279442a87db7ef9c1a5)) ([f8435ce](https://github.com/brunofgmag/gsx-integrator-client/commit/f8435ce64c64c668fbe6d8e829437f9966631f6d))
+
+## [1.43.7](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.6...v1.43.7) (2026-10-03)
+
+
+* close cargo doors once the gsx loader starts retracting its platform ([#219](https://github.com/brunofgmag/gsx-integrator-client/issues/219)) ([c9d932e](https://github.com/brunofgmag/gsx-integrator-client/commit/c9d932e36b5a3a750a6d263f5fa0454e0276fb1c))
+
+
+### Bug Fixes
+
+* close cargo doors once the gsx loader starts retracting its platform ([af93c47](https://github.com/brunofgmag/gsx-integrator-client/commit/af93c478e9db4588db57e4c2d152ab9b11e1ef5a)) ([c9d932e](https://github.com/brunofgmag/gsx-integrator-client/commit/c9d932e36b5a3a750a6d263f5fa0454e0276fb1c))
+
+## [1.43.6](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.5...v1.43.6) (2026-10-02)
+
+
+* survive a client relaunch over live gsx services and keep the cargo door open for a working loader ([#217](https://github.com/brunofgmag/gsx-integrator-client/issues/217)) ([8009ed2](https://github.com/brunofgmag/gsx-integrator-client/commit/8009ed2d28933c87bb56275831ee5158848670fb))
+
+
+### Bug Fixes
+
+* survive a client relaunch over live gsx services and keep the cargo door open for a working loader ([8b519dd](https://github.com/brunofgmag/gsx-integrator-client/commit/8b519dd34f87db81a3aa2886f1da7101d1990512)) ([8009ed2](https://github.com/brunofgmag/gsx-integrator-client/commit/8009ed2d28933c87bb56275831ee5158848670fb))
+
+## [1.43.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.4...v1.43.5) (2026-10-02)
+
+
+* call the stairs when the gsx variable reads zero and the remote api lists them callable ([#215](https://github.com/brunofgmag/gsx-integrator-client/issues/215)) ([670e9fd](https://github.com/brunofgmag/gsx-integrator-client/commit/670e9fdc3aedaec44877ab0bbe9b706016e62c06))
+
+
+### Bug Fixes
+
+* call the stairs when the gsx variable reads zero and the remote api lists them callable ([70e7309](https://github.com/brunofgmag/gsx-integrator-client/commit/70e7309525f76d2115462708a0f3584dc080ed1b)) ([670e9fd](https://github.com/brunofgmag/gsx-integrator-client/commit/670e9fdc3aedaec44877ab0bbe9b706016e62c06))
+
+## [1.43.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.3...v1.43.4) (2026-10-01)
+
+
+* open the e-jet main deck cold, show the estimated weight on deboarding and never reposition over a live service ([#213](https://github.com/brunofgmag/gsx-integrator-client/issues/213)) ([ff2c767](https://github.com/brunofgmag/gsx-integrator-client/commit/ff2c767c28823750d542c5fd7cd231ba1162149f))
+
+
+### Bug Fixes
+
+* open the e-jet main deck cold, show the estimated weight on deboarding and never reposition over a live service ([75a90c8](https://github.com/brunofgmag/gsx-integrator-client/commit/75a90c8b636794cdb2ce789c0cd8fc2241ac1bfa)) ([ff2c767](https://github.com/brunofgmag/gsx-integrator-client/commit/ff2c767c28823750d542c5fd7cd231ba1162149f))
+
+## [1.43.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.2...v1.43.3) (2026-09-29)
+
+
+* pay sixteen open debts across detection, doors, logging and the window layout ([#211](https://github.com/brunofgmag/gsx-integrator-client/issues/211)) ([3009c90](https://github.com/brunofgmag/gsx-integrator-client/commit/3009c906f75ce670987acb1e5095d47e16ee102e))
+
+
+### Bug Fixes
+
+* pay sixteen open debts across detection, doors, logging and the window layout ([6654e83](https://github.com/brunofgmag/gsx-integrator-client/commit/6654e83386698626f0c5e7f58c646dc87fa0eccb)) ([3009c90](https://github.com/brunofgmag/gsx-integrator-client/commit/3009c906f75ce670987acb1e5095d47e16ee102e))
+
+## [1.43.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.1...v1.43.2) (2026-09-28)
+
+
+* open the cargo doors at the loader and close them as it leaves ([#209](https://github.com/brunofgmag/gsx-integrator-client/issues/209)) ([05c0162](https://github.com/brunofgmag/gsx-integrator-client/commit/05c01625c263ca04d89f2a7f655a9619b6ffa864))
+
+
+### Bug Fixes
+
+* **fss-727:** open the cargo doors at the loader and close them as it leaves ([e6fc131](https://github.com/brunofgmag/gsx-integrator-client/commit/e6fc1314c03037524282fa1e5f490e60c0a8f4b3)) ([05c0162](https://github.com/brunofgmag/gsx-integrator-client/commit/05c01625c263ca04d89f2a7f655a9619b6ffa864))
+
 ## [1.43.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.0...v1.43.1) (2026-09-27)
 
 

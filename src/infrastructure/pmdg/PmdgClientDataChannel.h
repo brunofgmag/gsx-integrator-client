@@ -68,9 +68,9 @@ public:
         return inFlight_;
     }
 
-    void TransmitEvent(const unsigned offset, const DWORD input)
+    void TransmitEvent(const unsigned offset, const DWORD input, const char* label = nullptr)
     {
-        session_.TransmitEvent(EventName(offset).c_str(), input);
+        session_.TransmitEvent(EventName(offset).c_str(), input, label);
     }
 
 private:
@@ -118,7 +118,7 @@ private:
         }
 
         std::memcpy(&data_, data, sizeof(TData));
-        if (data_.AircraftModel == 0 && data_.FUEL_QtyLeft <= 0.0f)
+        if (data_.AircraftModel == 0 && data_.FUEL_QtyLeft <= 0.0F)
         {
             return;
         }

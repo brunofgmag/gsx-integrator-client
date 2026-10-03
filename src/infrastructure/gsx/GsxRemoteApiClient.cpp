@@ -18,7 +18,10 @@
 
 namespace
 {
+    constexpr int kInitialBackoffMs = 1000;
     constexpr int kMaxBackoffMs = 15000;
+    constexpr int kPortLimit = 65536;
+    constexpr quint16 kFallbackPort = 8744;
     constexpr int kSupportedProtocol = 1;
 
     void WarnOnProtocolMismatch(const QJsonObject& msg)
@@ -154,14 +157,17 @@ bool GsxRemoteApiClient::SendCommand(const QString& verb, const QJsonObject& arg
 
     QJsonObject cmd{{"type", "command"}, {"verb", verb}};
 
-    if (!args.isEmpty()) cmd.insert("args", args);
+    if (!args.isEmpty())
     {
-        const QString text = QString::fromUtf8(QJsonDocument(cmd).toJson(QJsonDocument::Compact));
-        probe::WireSent(text);
-
-        const auto numBytes = socket_->sendTextMessage(text);
-        return numBytes != -1;
+        cmd.insert("args", args);
     }
+
+    const QString text = QString::fromUtf8(QJsonDocument(cmd).toJson(QJsonDocument::Compact));
+    probe::WireSent(text);
+
+    const auto numBytes = socket_->sendTextMessage(text);
+
+    return numBytes != -1;
 }
 
 void GsxRemoteApiClient::OnTextMessage(const QString& text)
@@ -172,7 +178,7 @@ void GsxRemoteApiClient::OnTextMessage(const QString& text)
     {
         handshakeDone_ = true;
         handshakeTimer_->stop();
-        backoffMs_ = 1000;
+        backoffMs_ = kInitialBackoffMs;
         announceNextAttempt_ = true;
 
         emit ConnectionChanged(true);
@@ -231,12 +237,12 @@ quint16 GsxRemoteApiClient::ResolvePort()
     if (QFileInfo::exists(ini))
     {
         const QSettings cfg(ini, QSettings::IniFormat);
-        const int p = cfg.value("gsx/remote_server_port", 0).toInt();
-        if (p > 0 && p < 65536)
+        const int port = cfg.value("gsx/remote_server_port", 0).toInt();
+        if (port > 0 && port < kPortLimit)
         {
-            return static_cast<quint16>(p);
+            return static_cast<quint16>(port);
         }
     }
 
-    return 8744;
+    return kFallbackPort;
 }

@@ -26,6 +26,9 @@ namespace
 {
     constexpr double kRecommendedFuelRateKgs = 0.0;
 
+    constexpr auto kAtcModelE190F = "E190F";
+    constexpr auto kAtcModelE195F = "E195F";
+
     constexpr auto kElecPwrAcAvailLVar = "FSS_EXX_ELEC_PWR_AC_AVAIL";
     constexpr auto kBeaconSwitchLVar = "FSS_EXX_OVHD_EXLT_RED_BCN_SWITCH";
     constexpr auto kParkBrakeLeverLVar = "FSS_EXX_PARKBRAKE_BV_LEVER";
@@ -70,6 +73,8 @@ namespace
     constexpr auto kSimFuelWeightPerGallon = "FUEL WEIGHT PER GALLON";
     constexpr auto kSimUnusableFuelTotal = "UNUSABLE FUEL TOTAL QUANTITY";
     constexpr std::array kTankCapacities = {"FUELSYSTEM TANK CAPACITY:1", "FUELSYSTEM TANK CAPACITY:2"};
+    constexpr std::array kTankLevels = {"FUELSYSTEM TANK LEVEL:1", "FUELSYSTEM TANK LEVEL:2"};
+    constexpr auto kPercentOver100Unit = "percent over 100";
 
     constexpr auto kSimPayloadStationPrefix = "PAYLOAD STATION WEIGHT:";
     constexpr int kZoneAOrDeckFwdStation = 3;
@@ -94,6 +99,8 @@ namespace
     constexpr auto kEfbPlanFuelRightLVar = "FSS_EXX_PLANE_SETUP_WEIGHT_FUEL_R";
     constexpr double kEfbPlanFuelMissing = 0.0;
     constexpr double kEfbPlanFuelToleranceKg = 5.0;
+
+    constexpr double kStationChangedFromOutsideToleranceKg = 1.0;
 
     constexpr double kMaxPassengersE190 = 114.0;
     constexpr double kMaxPassengersE195 = 124.0;
@@ -140,6 +147,34 @@ namespace
     std::string PayloadStationVar(const int station)
     {
         return kSimPayloadStationPrefix + std::to_string(station);
+    }
+
+    struct StationWriteKg
+    {
+        int station = 0;
+        double kg = 0.0;
+    };
+
+    std::array<StationWriteKg, 4> StationWritesKg(const StationTargetsKg& targets, const double progress)
+    {
+        return {{
+            {.station = kZoneAOrDeckFwdStation, .kg = targets.zoneAOrDeckFwdKg * progress},
+            {.station = kHoldFwdStation, .kg = targets.holdFwdKg * progress},
+            {.station = kZoneBOrDeckAftStation, .kg = targets.zoneBOrDeckAftKg * progress},
+            {.station = kHoldAftStation, .kg = targets.holdAftKg * progress}
+        }};
+    }
+
+    bool WasAnyStationChangedFromOutside(VariableGateway& variables, const std::array<StationWriteKg, 4>& writes)
+    {
+        return std::ranges::any_of(writes, [&variables](const StationWriteKg& write)
+        {
+            const std::string stationVariable = PayloadStationVar(write.station);
+
+            return variables.HasReceivedAVar(stationVariable, kKgUnit)
+                && std::abs(variables.GetAVar(stationVariable, kKgUnit, write.kg) - write.kg)
+                > kStationChangedFromOutsideToleranceKg;
+        });
     }
 
     std::optional<double> PoundsPerGallon(VariableGateway& variables)
@@ -194,25 +229,53 @@ namespace
     constexpr int kPaxDoorMovingLimitTicks = 14;
 
     constexpr std::array kPassengerDoorReadPoints = {
-        DoorReadPoint{"FSS_EXX_DOOR_FWD_L_OPEN", "FSS_EXX_DOOR_FWD_L_MOVING", nullptr, kPaxDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_AFT_L_OPEN", "FSS_EXX_DOOR_AFT_L_MOVING", nullptr, kPaxDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_FWD_R_OPEN", "FSS_EXX_DOOR_FWD_R_MOVING", nullptr, kPaxDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_AFT_R_OPEN", "FSS_EXX_DOOR_AFT_R_MOVING", nullptr, kPaxDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_CARGO_FWD_OPEN", "FSS_EXX_DOOR_CARGO_FWD_MOVING", nullptr,
-                      doors::kCargoDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_CARGO_AFT_OPEN", "FSS_EXX_DOOR_CARGO_AFT_MOVING", nullptr,
-                      doors::kCargoDoorMovingLimitTicks}
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_FWD_L_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_FWD_L_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = kPaxDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_AFT_L_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_AFT_L_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = kPaxDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_FWD_R_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_FWD_R_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = kPaxDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_AFT_R_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_AFT_R_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = kPaxDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_CARGO_FWD_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_CARGO_FWD_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = doors::kCargoDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_CARGO_AFT_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_CARGO_AFT_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = doors::kCargoDoorMovingLimitTicks}
     };
 
     constexpr std::array kCargoDoorReadPoints = {
-        DoorReadPoint{"FSS_EXX_DOOR_FWD_L_OPEN", "FSS_EXX_DOOR_FWD_L_MOVING", nullptr, kPaxDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_FWD_R_OPEN", "FSS_EXX_DOOR_FWD_R_MOVING", nullptr, kPaxDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_CARGO_FWD_OPEN", "FSS_EXX_DOOR_CARGO_FWD_MOVING", nullptr,
-                      doors::kCargoDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_CARGO_AFT_OPEN", "FSS_EXX_DOOR_CARGO_AFT_MOVING", nullptr,
-                      doors::kCargoDoorMovingLimitTicks},
-        DoorReadPoint{"FSS_EXX_DOOR_CARGO_MAIN_OPEN", "FSS_EXX_DOOR_CARGO_MAIN_MOVING_UP",
-                      "FSS_EXX_DOOR_CARGO_MAIN_MOVING_DN", doors::kMainDeckDoorMovingLimitTicks}
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_FWD_L_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_FWD_L_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = kPaxDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_FWD_R_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_FWD_R_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = kPaxDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_CARGO_FWD_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_CARGO_FWD_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = doors::kCargoDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_CARGO_AFT_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_CARGO_AFT_MOVING",
+                      .movingLVar2 = nullptr,
+                      .movingLimitTicks = doors::kCargoDoorMovingLimitTicks},
+        DoorReadPoint{.openLVar = "FSS_EXX_DOOR_CARGO_MAIN_OPEN",
+                      .movingLVar = "FSS_EXX_DOOR_CARGO_MAIN_MOVING_UP",
+                      .movingLVar2 = "FSS_EXX_DOOR_CARGO_MAIN_MOVING_DN",
+                      .movingLimitTicks = doors::kMainDeckDoorMovingLimitTicks}
     };
 
     std::span<const DoorReadPoint> DoorReadPointsFor(const bool cargoVariant)
@@ -330,14 +393,26 @@ bool FssEJet::IsFlightPlanLoaded() const
     return status_->flightPlanStatus == FlightPlanStatus::Ready
         && status_->plannedPayloadKg.has_value()
         && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit)
-        && HasTheOfpFuelPlanOnTheEfb();
+        && (GsxIsFillingTheTanks() || HasTheOfpFuelPlanOnTheEfb());
 }
 
 bool FssEJet::FlightPlanDiffersFromTheOfp() const
 {
+    if (GsxIsFillingTheTanks())
+    {
+        return false;
+    }
+
     const std::optional<bool> matched = CompareTheEfbFuelPlanWithTheOfp();
 
     return matched.has_value() && !*matched;
+}
+
+bool FssEJet::GsxIsFillingTheTanks() const
+{
+    const int refuelingState = static_cast<int>(variableGateway_->GetLVar(gsx::lvars::kRefuelingState, 0.0));
+
+    return refuelingState == static_cast<int>(GsxStateStatus::Active);
 }
 
 bool FssEJet::HasTheOfpFuelPlanOnTheEfb() const
@@ -416,6 +491,27 @@ double FssEJet::GetFuelCapacityKg() const
     return weight::LbToKg(usableGallons * *poundsPerGallon);
 }
 
+void FssEJet::SetCurrentFuelKg(const double fuelKg)
+{
+    const std::optional<double> poundsPerGallon = PoundsPerGallon(*variableGateway_);
+    const std::optional<double> capacityGallons = TankCapacityGallons(*variableGateway_);
+    const std::optional<double> unusableGallons = UnusableFuelGallons(*variableGateway_);
+    if (!poundsPerGallon.has_value() || *poundsPerGallon <= 0.0
+        || !capacityGallons.has_value() || *capacityGallons <= 0.0
+        || !unusableGallons.has_value())
+    {
+        return;
+    }
+
+    const double targetGallons = weight::KgToLb(fuelKg) / *poundsPerGallon;
+    const double level = std::clamp((targetGallons + *unusableGallons) / *capacityGallons, 0.0, 1.0);
+
+    for (const char* tankLevel : kTankLevels)
+    {
+        variableGateway_->SetAVar(tankLevel, kPercentOver100Unit, level);
+    }
+}
+
 double FssEJet::GetCurrentZfwKg() const
 {
     return CurrentZfwKg(*variableGateway_);
@@ -423,7 +519,7 @@ double FssEJet::GetCurrentZfwKg() const
 
 void FssEJet::SetCurrentZfwKg(const double zfwKg)
 {
-    if (!variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit) || zfwKg == lastZfwKg_)
+    if (!variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit))
     {
         return;
     }
@@ -434,18 +530,22 @@ void FssEJet::SetCurrentZfwKg(const double zfwKg)
         return;
     }
 
-    lastZfwKg_ = zfwKg;
-
     const double payloadLineKg = status_->plannedPayloadKg.value_or(0.0);
     const double onBoardKg = std::clamp(zfwKg - GetEmptyZfwKg(), 0.0, payloadLineKg);
     const double progress = payloadLineKg > 0.0 ? onBoardKg / payloadLineKg : 0.0;
+    const std::array<StationWriteKg, 4> writes = StationWritesKg(*targets, progress);
 
-    variableGateway_->SetAVar(PayloadStationVar(kZoneAOrDeckFwdStation), kKgUnit,
-                              targets->zoneAOrDeckFwdKg * progress);
-    variableGateway_->SetAVar(PayloadStationVar(kHoldFwdStation), kKgUnit, targets->holdFwdKg * progress);
-    variableGateway_->SetAVar(PayloadStationVar(kZoneBOrDeckAftStation), kKgUnit,
-                              targets->zoneBOrDeckAftKg * progress);
-    variableGateway_->SetAVar(PayloadStationVar(kHoldAftStation), kKgUnit, targets->holdAftKg * progress);
+    if (zfwKg == lastZfwKg_ && !WasAnyStationChangedFromOutside(*variableGateway_, writes))
+    {
+        return;
+    }
+
+    lastZfwKg_ = zfwKg;
+
+    for (const StationWriteKg& write : writes)
+    {
+        variableGateway_->SetAVar(PayloadStationVar(write.station), kKgUnit, write.kg);
+    }
 }
 
 bool FssEJet::ConsumeSmartSwitch()
@@ -554,6 +654,11 @@ void FssEJet::HoldDoorsClosed(const bool hold)
     }
 }
 
+void FssEJet::HoldPassengerDoorsClosed(const bool hold)
+{
+    doors_.HoldPassengerDoorsClosed(hold);
+}
+
 int FssEJet::CloseAllRequests() const
 {
     return closeAllRequests_;
@@ -620,7 +725,9 @@ namespace
     std::unique_ptr<Aircraft> MakeFssEJet(const AircraftContext& context, const AircraftIdentity& identity,
                                           const char* name)
     {
-        const bool cargo = MatchText(identity.title, MatchOp::Contains, "Freighter");
+        const bool cargo = MatchText(identity.title, MatchOp::Contains, "Freighter")
+            || MatchText(identity.atcModel, MatchOp::Equals, kAtcModelE190F)
+            || MatchText(identity.atcModel, MatchOp::Equals, kAtcModelE195F);
 
         return std::make_unique<FssEJet>(context.variableGateway, context.status, name, cargo);
     }

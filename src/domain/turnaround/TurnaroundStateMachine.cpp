@@ -44,6 +44,13 @@ namespace
 
         return fromSwitch ? "SmartSwitch" : "EFB app";
     }
+
+#ifndef NDEBUG
+    constexpr bool SkipsPastTheFlightPlan(const TurnaroundPhase current, const TurnaroundPhase target)
+    {
+        return current <= TurnaroundPhase::WaitingFlightPlan && target > TurnaroundPhase::WaitingFlightPlan;
+    }
+#endif
 }
 
 TurnaroundStateMachine::TurnaroundStateMachine(AutomationStatus* status,
@@ -227,8 +234,15 @@ void TurnaroundStateMachine::DebugSkipPhase(const int delta)
 {
     const int target = std::clamp(static_cast<int>(phase_) + delta,
                                   0, static_cast<int>(TurnaroundPhase::Count) - 1);
+    const auto targetPhase = static_cast<TurnaroundPhase>(target);
     ticksRemaining_ = 0;
-    TransitionTo(static_cast<TurnaroundPhase>(target), TransitionOrigin::Reading);
+
+    if (context_.aircraft != nullptr && SkipsPastTheFlightPlan(phase_, targetPhase))
+    {
+        WaitingFlightPlanState::CaptureFlightPlan(context_);
+    }
+
+    TransitionTo(targetPhase, TransitionOrigin::Reading);
 }
 #endif
 
@@ -247,7 +261,7 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
 {
     lastTransitionOrigin_ = origin;
 
-    if (context_.logger)
+    if (context_.logger != nullptr)
     {
         context_.logger->LogInfo(
             std::format("Transitioning: {} -> {}{}",
@@ -275,6 +289,13 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
     if (phase == TurnaroundPhase::WaitingForEngines && context_.menuGateway != nullptr)
     {
         context_.menuGateway->OnPushbackStarted();
+    }
+
+    if (phase == TurnaroundPhase::WaitingDeparture
+        && phase_ == TurnaroundPhase::WaitingPushbackToStart
+        && context_.menuGateway != nullptr)
+    {
+        context_.menuGateway->ClosePushbackPanel();
     }
 
     if (phase == TurnaroundPhase::WaitingSupportedAircraft

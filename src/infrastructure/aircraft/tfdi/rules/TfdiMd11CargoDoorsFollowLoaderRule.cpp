@@ -2,6 +2,7 @@
 
 #include <QtCore/QString>
 
+#include "../../../gsx/GsxDoorSync.h"
 #include "../../../gsx/GsxLVars.h"
 #include "../../../probe/ProbeLog.h"
 #include "../../../simvars/VariableGateway.h"
@@ -19,8 +20,9 @@ namespace
 }
 
 TfdiMd11CargoDoorsFollowLoaderRule::TfdiMd11CargoDoorsFollowLoaderRule(VariableReader& variables,
+                                                                      GsxDoorSync& doors,
                                                                       const bool cargoVariant)
-    : variables_(&variables), cargoVariant_(cargoVariant)
+    : variables_(&variables), doors_(&doors), cargoVariant_(cargoVariant)
 {
 }
 
@@ -53,8 +55,13 @@ void TfdiMd11CargoDoorsFollowLoaderRule::Act(const RuleContext&, VariableWriter&
 void TfdiMd11CargoDoorsFollowLoaderRule::FollowLoader(VariableWriter& writer, const char* loaderStateLVar,
                                                       const char* doorCmdLVar, double& lastDoorTarget) const
 {
-    const double loaderState = variables_->GetLVar(loaderStateLVar, 0.0);
-    const double doorTarget = gsx::states::IsLoaderArriving(loaderState) ? kDoorOpen : kDoorClosed;
+    if (!variables_->HasReceivedLVar(loaderStateLVar))
+    {
+        return;
+    }
+
+    const double loaderState = doors_->VehicleState(loaderStateLVar, 0.0);
+    const double doorTarget = gsx::states::IsLoaderServingTheDoor(loaderState) ? kDoorOpen : kDoorClosed;
 
     if (doorTarget != lastDoorTarget)
     {

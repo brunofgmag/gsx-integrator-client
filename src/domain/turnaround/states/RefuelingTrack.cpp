@@ -15,6 +15,7 @@ namespace
 {
     constexpr int kRefuelStallTicks = 60;
     constexpr double kFuelShortfallToleranceKg = 100.0;
+    constexpr double kStallWatchProgress = 95.0;
 
     GsxStateStatus RefuelingStatus(const TurnaroundContext& ctx)
     {
@@ -56,6 +57,19 @@ namespace
                    : std::max(initialKg - pumpedKg, plannedKg);
     }
 
+    double RebuildInitialFuel(const double currentKg, const double plannedKg, const double pumpedKg)
+    {
+        return plannedKg >= currentKg
+                   ? std::max(0.0, currentKg - pumpedKg)
+                   : currentKg + pumpedKg;
+    }
+
+    bool JoinedAGsxRefuel(const TurnaroundContext& ctx)
+    {
+        return !ctx.data.refuelingRequested
+            && ctx.aircraft->GetRefuelMethod() != RefuelBy::Client;
+    }
+
     void EnsureBaseline(TurnaroundContext& ctx)
     {
         auto& data = ctx.data;
@@ -64,9 +78,15 @@ namespace
             return;
         }
 
+        const double currentKg = ctx.aircraft->GetCurrentFuelKg();
+
         data.refuelBaselined = true;
-        data.initialFuelKg = ctx.aircraft->GetCurrentFuelKg();
-        data.loadedFuelKg = data.initialFuelKg;
+        data.initialFuelKg = JoinedAGsxRefuel(ctx)
+                                 ? RebuildInitialFuel(
+                                     currentKg, data.plannedFuelKg,
+                                     ctx.gsxGateway->GetRefuelCounterGallons() * turnaround::kJetFuelKgPerUsGallon)
+                                 : currentKg;
+        data.loadedFuelKg = currentKg;
     }
 
     void NotifyLoadingStarted(TurnaroundContext& ctx)
@@ -102,6 +122,64 @@ namespace
         ctx.aircraft->SetCurrentFuelKg(data.loadedFuelKg);
     }
 
+    double PlannedFuelWithinCapacityKg(const TurnaroundContext& ctx)
+    {
+        const double capacityKg = ctx.aircraft->GetFuelCapacityKg();
+
+        return capacityKg > 0.0
+                   ? std::min(ctx.data.plannedFuelKg, capacityKg)
+                   : ctx.data.plannedFuelKg;
+    }
+
+    bool StartsFuelTopUp(TurnaroundContext& ctx)
+    {
+        auto& data = ctx.data;
+
+        const double currentKg = ctx.aircraft->GetCurrentFuelKg();
+        if (currentKg <= 0.0)
+        {
+            return false;
+        }
+
+        const double shortfallKg = PlannedFuelWithinCapacityKg(ctx) - currentKg;
+        if (shortfallKg <= kFuelShortfallToleranceKg)
+        {
+            return false;
+        }
+
+        data.fuelTopUpStarted = true;
+        data.loadedFuelKg = currentKg;
+        ctx.logger->LogInfo(std::format(
+            "GSX ended the refuel {:.0f} kg short of the plan; the client tops the tanks up", shortfallKg));
+
+        return true;
+    }
+
+    bool TopsUpAShortGsxRefuel(TurnaroundContext& ctx)
+    {
+        auto& data = ctx.data;
+
+        if (ctx.aircraft->GetRefuelMethod() != RefuelBy::Gsx || !ctx.aircraft->SupportsFuelTopUp())
+        {
+            return false;
+        }
+
+        if (!data.fuelTopUpStarted && !StartsFuelTopUp(ctx))
+        {
+            return false;
+        }
+
+        if (std::abs(data.plannedFuelKg - data.loadedFuelKg) <= turnaround::kWeightEpsilonKg)
+        {
+            return false;
+        }
+
+        RefuelProgressively(ctx);
+        data.fuelProgress = turnaround::ProgressPercent(data.initialFuelKg, data.loadedFuelKg, data.plannedFuelKg);
+
+        return true;
+    }
+
     void AccumulateFuel(TurnaroundContext& ctx)
     {
         auto& data = ctx.data;
@@ -129,7 +207,7 @@ namespace
     void MaybeForceCompletion(TurnaroundContext& ctx, const GsxStateStatus refuelingState)
     {
         auto& data = ctx.data;
-        if (data.fuelProgress <= 95.0)
+        if (data.fuelProgress <= kStallWatchProgress)
         {
             return;
         }
@@ -187,10 +265,7 @@ namespace
         data.fuelStayChecked = true;
         data.settledFuelKg = settledKg;
 
-        const double capacityKg = ctx.aircraft->GetFuelCapacityKg();
-        const double writtenKg = capacityKg > 0.0
-                                     ? std::min(data.plannedFuelKg, capacityKg)
-                                     : data.plannedFuelKg;
+        const double writtenKg = PlannedFuelWithinCapacityKg(ctx);
 
         const double shortfallKg = writtenKg - settledKg;
         data.fuelDidNotStay = shortfallKg > kFuelShortfallToleranceKg;
@@ -234,7 +309,7 @@ bool RefuelingTrack::Advance(TurnaroundContext& ctx)
     EnsureBaseline(ctx);
     NotifyLoadingStarted(ctx);
 
-    if (data.fuelProgress < 100.0)
+    if (data.fuelProgress < 100.0 && !data.fuelTopUpStarted)
     {
         AccumulateFuel(ctx);
     }
@@ -244,6 +319,11 @@ bool RefuelingTrack::Advance(TurnaroundContext& ctx)
     MaybeForceCompletion(ctx, refuelingState);
 
     if (!IsWeightDone(ctx, refuelingState) || ctx.gsxGateway->IsFuelHoseConnected())
+    {
+        return false;
+    }
+
+    if (TopsUpAShortGsxRefuel(ctx))
     {
         return false;
     }

@@ -2,12 +2,18 @@
 
 #include <algorithm>
 #include <string>
+#include <QtCore/QStringList>
+#include <QtCore/QTemporaryDir>
+#include "ProbeLines.h"
 #include "doubles/FakeSimConnectApi.h"
 #include "../src/infrastructure/pmdg/Pmdg777DataClient.h"
 #include "../src/infrastructure/pmdg/Pmdg777SdkData.h"
 
 namespace
 {
+    constexpr int kMainCargoDoorSlot = 12;
+    constexpr long long kPastTheKickIntervalMs = 6000;
+
     PMDG_777X_Data MakeSampleData()
     {
         PMDG_777X_Data data{};
@@ -17,9 +23,9 @@ namespace
         data.BRAKES_ParkingBrakeLeverOn = true;
         data.APURunning = true;
         data.WheelChocksSet = true;
-        data.FUEL_QtyLeft = 20000.0f;
-        data.FUEL_QtyRight = 20000.0f;
-        data.FUEL_QtyCenter = 10000.0f;
+        data.FUEL_QtyLeft = 20000.0F;
+        data.FUEL_QtyRight = 20000.0F;
+        data.FUEL_QtyCenter = 10000.0F;
         data.DOOR_state[0] = 0;
         data.FMC_CruiseAlt = 32000;
 
@@ -31,13 +37,21 @@ namespace
         return std::ranges::find(FakeSimConnectApi::mappedEventNames, name)
             != FakeSimConnectApi::mappedEventNames.end();
     }
+
+    QStringList EventLines(const qsizetype before)
+    {
+        return ProbeLines(QStringLiteral("writes.log")).mid(before).filter(QStringLiteral("event "));
+    }
 }
 
 class Pmdg777DataClientTest final : public QObject
 {
     Q_OBJECT
 
+    QTemporaryDir directory_;
+
 private slots:
+    void initTestCase();
     static void init();
 
     static void noDataBeforeFirstPacket();
@@ -53,7 +67,59 @@ private slots:
     static void invalidPacketDoesNotLatchData();
     static void toggleDoorTransmitsMappedEvent();
     static void fmcFlightPlanFromCruiseAltOrFlightNumber();
+    static void aDoorToggleIsLoggedUnderItsDoorName();
+    static void theKickIsLoggedUnderTheLightTest();
 };
+
+void Pmdg777DataClientTest::initTestCase()
+{
+    QVERIFY(directory_.isValid());
+    qputenv("GSXI_PROBE_DIR", directory_.path().toUtf8());
+    probe::SetEnabled(true);
+}
+
+void Pmdg777DataClientTest::aDoorToggleIsLoggedUnderItsDoorName()
+{
+#ifndef NDEBUG
+    Pmdg777DataClient client;
+    client.SetClockForTest([] { return 0LL; });
+    client.Poll();
+    const qsizetype before = ProbeLines(QStringLiteral("writes.log")).size();
+
+    client.ToggleDoor(0);
+    client.ToggleDoor(kMainCargoDoorSlot);
+
+    QCOMPARE(EventLines(before),
+             (QStringList{
+                 QStringLiteral("event DOOR_ENTRY_1L (#83643) param=536870912 n=1"),
+                 QStringLiteral("event DOOR_CARGO_MAIN (#83655) param=536870912 n=1")
+             }));
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
+
+void Pmdg777DataClientTest::theKickIsLoggedUnderTheLightTest()
+{
+#ifndef NDEBUG
+    Pmdg777DataClient client;
+    long long now = 0;
+    client.SetClockForTest([&now] { return now; });
+    client.Poll();
+    const qsizetype before = ProbeLines(QStringLiteral("writes.log")).size();
+
+    now = kPastTheKickIntervalMs;
+    client.Poll();
+    client.Poll();
+
+    const QStringList lines = EventLines(before);
+    QCOMPARE(lines.size(), 2);
+    QVERIFY2(lines.at(0).startsWith(QStringLiteral("event LIGHT_TEST (#69750) param=16384")), qPrintable(lines.at(0)));
+    QVERIFY2(lines.at(1).startsWith(QStringLiteral("event LIGHT_TEST (#69750) param=8192")), qPrintable(lines.at(1)));
+#else
+    QSKIP("probe recording is compiled out of Release builds");
+#endif
+}
 
 void Pmdg777DataClientTest::init()
 {

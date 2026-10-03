@@ -1,4 +1,5 @@
 #include "Pmdg737DataClient.h"
+#include <array>
 #include <QtCore/QString>
 #include "../probe/ProbeLog.h"
 
@@ -6,15 +7,54 @@ namespace
 {
     constexpr DWORD kMouseLeftSingle = 0x20000000;
 
+    constexpr auto kProbeToggleLabel = "PROBE_TOGGLE";
+
+    int Flag(const bool value)
+    {
+        return value ? 1 : 0;
+    }
+
+    struct DoorEvent
+    {
+        Pmdg737Door door;
+        unsigned offset;
+        const char* label;
+    };
+
+    constexpr std::array kDoorEvents = {
+        DoorEvent{.door = Pmdg737Door::FwdEntry, .offset = 14005, .label = "DOOR_FWD_ENTRY"},
+        DoorEvent{.door = Pmdg737Door::FwdService, .offset = 14006, .label = "DOOR_FWD_SERVICE"},
+        DoorEvent{.door = Pmdg737Door::AftEntry, .offset = 14007, .label = "DOOR_AFT_ENTRY"},
+        DoorEvent{.door = Pmdg737Door::AftService, .offset = 14008, .label = "DOOR_AFT_SERVICE"},
+        DoorEvent{.door = Pmdg737Door::FwdCargo, .offset = 14013, .label = "DOOR_FWD_CARGO"},
+        DoorEvent{.door = Pmdg737Door::AftCargo, .offset = 14014, .label = "DOOR_AFT_CARGO"},
+        DoorEvent{.door = Pmdg737Door::MainCargo, .offset = 14015, .label = "DOOR_MAIN_CARGO"},
+        DoorEvent{.door = Pmdg737Door::EquipmentHatch, .offset = 14016, .label = "DOOR_EQUIPMENT_HATCH"},
+        DoorEvent{.door = Pmdg737Door::Airstair, .offset = 14017, .label = "DOOR_AIRSTAIR"}
+    };
+
+    const DoorEvent* FindDoorEvent(const Pmdg737Door door)
+    {
+        for (const DoorEvent& event : kDoorEvents)
+        {
+            if (event.door == door)
+            {
+                return &event;
+            }
+        }
+
+        return nullptr;
+    }
+
     const PmdgClientDataSpec kChannelSpec{
-        "GsxIntegratorPmdg737Data",
-        PMDG_NG3_DATA_NAME,
-        PMDG_NG3_DATA_ID,
-        PMDG_NG3_DATA_DEFINITION,
-        PMDG_NG3_DATA_DEFINITION,
-        SIMCONNECT_CLIENT_DATA_PERIOD_SECOND,
-        SIMCONNECT_CLIENT_DATA_REQUEST_FLAG_DEFAULT,
-        "PMDG 737"
+        .connectionName = "GsxIntegratorPmdg737Data",
+        .areaName = PMDG_NG3_DATA_NAME,
+        .areaId = PMDG_NG3_DATA_ID,
+        .definitionId = PMDG_NG3_DATA_DEFINITION,
+        .requestId = PMDG_NG3_DATA_DEFINITION,
+        .period = SIMCONNECT_CLIENT_DATA_PERIOD_SECOND,
+        .requestFlag = SIMCONNECT_CLIENT_DATA_REQUEST_FLAG_DEFAULT,
+        .label = "PMDG 737"
     };
 }
 
@@ -24,19 +64,9 @@ Pmdg737DataClient::Pmdg737DataClient() : channel_(kChannelSpec)
 
 unsigned Pmdg737DataClient::DoorEventOffsetFor(const Pmdg737Door door)
 {
-    switch (door)
-    {
-    case Pmdg737Door::FwdEntry: return 14005;
-    case Pmdg737Door::FwdService: return 14006;
-    case Pmdg737Door::AftEntry: return 14007;
-    case Pmdg737Door::AftService: return 14008;
-    case Pmdg737Door::FwdCargo: return 14013;
-    case Pmdg737Door::AftCargo: return 14014;
-    case Pmdg737Door::MainCargo: return 14015;
-    case Pmdg737Door::EquipmentHatch: return 14016;
-    case Pmdg737Door::Airstair: return 14017;
-    default: return 0;
-    }
+    const DoorEvent* event = FindDoorEvent(door);
+
+    return event != nullptr ? event->offset : 0;
 }
 
 void Pmdg737DataClient::Poll()
@@ -61,7 +91,7 @@ void Pmdg737DataClient::MaybeProbeToggle()
 
     probeToggleSent_ = true;
     probe::Line(probe::Channel::Writes, QStringLiteral("probe pmdg-737 sending SDK event offset=%1").arg(offset));
-    channel_.TransmitEvent(static_cast<unsigned>(offset), kMouseLeftSingle);
+    channel_.TransmitEvent(static_cast<unsigned>(offset), kMouseLeftSingle, kProbeToggleLabel);
 }
 
 void Pmdg737DataClient::ReportProbe() const
@@ -76,23 +106,23 @@ void Pmdg737DataClient::ReportProbe() const
                   QStringLiteral("sdk   pmdg-737 doors fwdEntry=%1 fwdService=%2 airstair=%3 "
                                  "fwdOverwingL=%4 fwdOverwingR=%5 fwdCargo=%6 equip=%7 "
                                  "aftOverwingL=%8 aftOverwingR=%9 aftCargo=%10 aftEntry=%11 aftService=%12")
-                  .arg(data.DOOR_annunFWD_ENTRY).arg(data.DOOR_annunFWD_SERVICE)
-                  .arg(data.DOOR_annunAIRSTAIR)
-                  .arg(data.DOOR_annunLEFT_FWD_OVERWING).arg(data.DOOR_annunRIGHT_FWD_OVERWING)
-                  .arg(data.DOOR_annunFWD_CARGO).arg(data.DOOR_annunEQUIP)
-                  .arg(data.DOOR_annunLEFT_AFT_OVERWING).arg(data.DOOR_annunRIGHT_AFT_OVERWING)
-                  .arg(data.DOOR_annunAFT_CARGO).arg(data.DOOR_annunAFT_ENTRY)
-                  .arg(data.DOOR_annunAFT_SERVICE));
+                  .arg(Flag(data.DOOR_annunFWD_ENTRY)).arg(Flag(data.DOOR_annunFWD_SERVICE))
+                  .arg(Flag(data.DOOR_annunAIRSTAIR))
+                  .arg(Flag(data.DOOR_annunLEFT_FWD_OVERWING)).arg(Flag(data.DOOR_annunRIGHT_FWD_OVERWING))
+                  .arg(Flag(data.DOOR_annunFWD_CARGO)).arg(Flag(data.DOOR_annunEQUIP))
+                  .arg(Flag(data.DOOR_annunLEFT_AFT_OVERWING)).arg(Flag(data.DOOR_annunRIGHT_AFT_OVERWING))
+                  .arg(Flag(data.DOOR_annunAFT_CARGO)).arg(Flag(data.DOOR_annunAFT_ENTRY))
+                  .arg(Flag(data.DOOR_annunAFT_SERVICE)));
 
     probe::Change(probe::Channel::AircraftVendor, "pmdg737.hyd",
                   QStringLiteral("sdk   pmdg-737 hyd pumpEng=[%1,%2] pumpElec=[%3,%4] "
                                  "lowPressEng=[%5,%6] lowPressElec=[%7,%8] acMain=[%9,%10] gpu=%11 brake=%12")
-                  .arg(data.HYD_PumpSw_eng[0]).arg(data.HYD_PumpSw_eng[1])
-                  .arg(data.HYD_PumpSw_elec[0]).arg(data.HYD_PumpSw_elec[1])
-                  .arg(data.HYD_annunLOW_PRESS_eng[0]).arg(data.HYD_annunLOW_PRESS_eng[1])
-                  .arg(data.HYD_annunLOW_PRESS_elec[0]).arg(data.HYD_annunLOW_PRESS_elec[1])
-                  .arg(data.ELEC_BusPowered[kAcMain1Bus]).arg(data.ELEC_BusPowered[kAcMain2Bus])
-                  .arg(data.ELEC_annunGRD_POWER_AVAILABLE).arg(data.PED_annunParkingBrake));
+                  .arg(Flag(data.HYD_PumpSw_eng[0])).arg(Flag(data.HYD_PumpSw_eng[1]))
+                  .arg(Flag(data.HYD_PumpSw_elec[0])).arg(Flag(data.HYD_PumpSw_elec[1]))
+                  .arg(Flag(data.HYD_annunLOW_PRESS_eng[0])).arg(Flag(data.HYD_annunLOW_PRESS_eng[1]))
+                  .arg(Flag(data.HYD_annunLOW_PRESS_elec[0])).arg(Flag(data.HYD_annunLOW_PRESS_elec[1]))
+                  .arg(Flag(data.ELEC_BusPowered[kAcMain1Bus])).arg(Flag(data.ELEC_BusPowered[kAcMain2Bus]))
+                  .arg(Flag(data.ELEC_annunGRD_POWER_AVAILABLE)).arg(Flag(data.PED_annunParkingBrake)));
 }
 
 bool Pmdg737DataClient::HasData() const
@@ -128,13 +158,13 @@ bool Pmdg737DataClient::ParkingBrakeOn() const
 
 void Pmdg737DataClient::ToggleDoor(const Pmdg737Door door)
 {
-    const unsigned offset = DoorEventOffsetFor(door);
-    if (offset == 0)
+    const DoorEvent* event = FindDoorEvent(door);
+    if (event == nullptr)
     {
         return;
     }
 
-    channel_.TransmitEvent(offset, kMouseLeftSingle);
+    channel_.TransmitEvent(event->offset, kMouseLeftSingle, event->label);
 }
 
 void Pmdg737DataClient::SetInFlight(const bool inFlight)

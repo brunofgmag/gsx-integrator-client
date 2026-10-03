@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_GSXSTATESERVICE_H
 
 #include <map>
+#include <optional>
 #include "../../domain/ports/GsxGateway.h"
 #include "GsxRemoteState.h"
 
@@ -26,12 +27,14 @@ public:
     [[nodiscard]] bool IsPushbackFinished() const override;
     [[nodiscard]] bool IsWaitingForEngines() const override;
     [[nodiscard]] bool IsRepositioning() const override;
+    [[nodiscard]] std::optional<bool> HasServiceUnderway() const override;
     [[nodiscard]] int GetPlannedPassengers() const override;
     [[nodiscard]] int GetBoardedPassengers() override;
     [[nodiscard]] int GetDeboardedPassengers() override;
     [[nodiscard]] double GetBoardingCargoPercent() override;
     [[nodiscard]] bool IsLoadingCargo() const override;
     [[nodiscard]] CargoLoader GetLoaderWaitingForDoor() const override;
+    [[nodiscard]] bool IsALoaderAtAHold() const override;
     [[nodiscard]] double GetDeboardingCargoPercent() override;
     [[nodiscard]] bool AreStairsInPlace() const override;
     [[nodiscard]] bool IsJetwayInPlace() const override;
@@ -65,6 +68,8 @@ private:
         GsxStateStatus status = GsxStateStatus::Unavailable;
         bool completed = false;
         bool couatlDiedDuringRun = false;
+        bool firstReadingSeen = false;
+        bool foundUnderway = false;
     };
 
     struct PassengerCounter
@@ -75,7 +80,7 @@ private:
         bool moved = false;
         bool grown = false;
 
-        int Update(int current, bool active);
+        int Update(int current, bool active, bool foundUnderway);
     };
 
     struct CargoPercentReading
@@ -84,9 +89,10 @@ private:
         bool counting = false;
         bool moved = false;
 
-        double Update(double current, bool active);
+        double Update(double current, bool active, bool foundUnderway);
     };
 
+    [[nodiscard]] bool FoundServiceUnderway(GsxState gsxState) const;
     void ObserveState(GsxState gsxState);
     void ObserveGpuConnected();
 

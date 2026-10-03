@@ -16,6 +16,8 @@ namespace
     constexpr int kLoaderDoorNoticeTicks = 45;
     constexpr int kLoaderDoorGiveUpTicks = 120;
     constexpr int kCargoFlagGiveUpTicks = kLoaderDoorGiveUpTicks;
+    constexpr int kLoaderAtHoldGiveUpTicks = 900;
+    constexpr double kPendingCargoProgressCap = 99.0;
 
     GsxStateStatus BoardingStatus(const TurnaroundContext& ctx)
     {
@@ -39,9 +41,19 @@ namespace
         return ctx.data.cargoFlagAfterServiceTicks >= kCargoFlagGiveUpTicks;
     }
 
+    bool HasGivenUpOnTheLoaderAtAHold(const TurnaroundContext& ctx)
+    {
+        return ctx.data.loaderAtHoldAfterServiceTicks >= kLoaderAtHoldGiveUpTicks;
+    }
+
     bool IsCargoPending(const TurnaroundContext& ctx)
     {
         if (ctx.gsxGateway->IsLoadingCargo() && !HasGivenUpOnTheCargoFlag(ctx))
+        {
+            return true;
+        }
+
+        if (ctx.gsxGateway->IsALoaderAtAHold() && !HasGivenUpOnTheLoaderAtAHold(ctx))
         {
             return true;
         }
@@ -149,7 +161,7 @@ namespace
     {
         auto& data = ctx.data;
 
-        if (!serviceClosed || !ctx.gsxGateway->IsLoadingCargo())
+        if (!serviceClosed || !ctx.gsxGateway->IsLoadingCargo() || ctx.gsxGateway->IsALoaderAtAHold())
         {
             data.cargoFlagAfterServiceTicks = 0;
 
@@ -161,6 +173,36 @@ namespace
             ctx.logger->LogInfo(
                 "Boarding: GSX closed the service and still flags cargo loading; the client stops waiting for it");
         }
+    }
+
+    void NoteLoaderAtAHoldAfterTheService(TurnaroundContext& ctx, const bool serviceClosed)
+    {
+        auto& data = ctx.data;
+
+        if (!serviceClosed || !ctx.gsxGateway->IsALoaderAtAHold())
+        {
+            data.loaderAtHoldAfterServiceTicks = 0;
+
+            return;
+        }
+
+        if (++data.loaderAtHoldAfterServiceTicks == kLoaderAtHoldGiveUpTicks)
+        {
+            ctx.logger->LogInfo(
+                "Boarding: GSX closed the service and a loader is still at a hold; the client stops waiting for it");
+        }
+    }
+
+    void HoldPassengerDoorsOnce(TurnaroundContext& ctx)
+    {
+        auto& data = ctx.data;
+        if (data.passengerDoorsHeldClosed || ctx.aircraft->IsCargoVariant())
+        {
+            return;
+        }
+
+        data.passengerDoorsHeldClosed = true;
+        ctx.aircraft->HoldPassengerDoorsClosed(true);
     }
 
     void EnsureBaseline(TurnaroundContext& ctx)
@@ -202,7 +244,7 @@ namespace
                                     : std::abs((cargoPercent + passengerPercent) / 2.0);
 
         data.loadedZfwKg = std::clamp(
-            data.initialZfwKg + (data.plannedZfwKg - data.initialZfwKg) * (progress / 100.0),
+            data.initialZfwKg + ((data.plannedZfwKg - data.initialZfwKg) * (progress / 100.0)),
             0.0,
             data.plannedZfwKg);
     }
@@ -234,6 +276,12 @@ bool BoardingTrack::Advance(TurnaroundContext& ctx)
     EnsureBaseline(ctx);
     NoteLoaderAwaitingDoor(ctx);
     NoteCargoFlagAfterTheService(ctx, isCompleted);
+    NoteLoaderAtAHoldAfterTheService(ctx, isCompleted);
+
+    if (isCompleted)
+    {
+        HoldPassengerDoorsOnce(ctx);
+    }
 
     if (isCompleted && !IsCargoPending(ctx))
     {
@@ -257,7 +305,7 @@ bool BoardingTrack::Advance(TurnaroundContext& ctx)
 
     if (IsCargoPending(ctx))
     {
-        data.boardingProgress = std::min(data.boardingProgress, 99.0);
+        data.boardingProgress = std::min(data.boardingProgress, kPendingCargoProgressCap);
     }
 
     MaybeForceCompletion(ctx);

@@ -43,8 +43,13 @@ public:
     int closeAllDoorsCalls = 0;
     bool doorsHeldClosed = false;
     int holdDoorsClosedCalls = 0;
+    bool passengerDoorsHeldClosed = false;
+    int holdPassengerDoorsClosedCalls = 0;
     int clearOwnGroundEquipmentCalls = 0;
     RefuelBy refuelMethod = RefuelBy::Self;
+    bool supportsFuelTopUp = false;
+    bool ignoresFuelWrites = false;
+    int setCurrentFuelCalls = 0;
     BoardBy boardMethod = BoardBy::Self;
     int consumeSmartSwitchCalls = 0;
     int onLoadingStartedCalls = 0;
@@ -73,7 +78,16 @@ public:
         return fuelCapacityReads > fuelCapacityReadsBeforeArrival ? fuelCapacityKg : 0.0;
     }
 
-    void SetCurrentFuelKg(const double value) override { currentFuelKg = value; }
+    void SetCurrentFuelKg(const double value) override
+    {
+        ++setCurrentFuelCalls;
+        if (!ignoresFuelWrites)
+        {
+            currentFuelKg = value;
+        }
+    }
+
+    [[nodiscard]] bool SupportsFuelTopUp() const override { return supportsFuelTopUp; }
     [[nodiscard]] double GetCurrentZfwKg() const override { return currentZfwKg; }
     void SetCurrentZfwKg(const double value) override { currentZfwKg = value; }
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return supportsStairsOrJetways; }
@@ -121,6 +135,12 @@ public:
     {
         ++holdDoorsClosedCalls;
         doorsHeldClosed = hold;
+    }
+
+    void HoldPassengerDoorsClosed(const bool hold) override
+    {
+        ++holdPassengerDoorsClosedCalls;
+        passengerDoorsHeldClosed = hold;
     }
 
     void ClearOwnGroundEquipment() override { ++clearOwnGroundEquipmentCalls; }

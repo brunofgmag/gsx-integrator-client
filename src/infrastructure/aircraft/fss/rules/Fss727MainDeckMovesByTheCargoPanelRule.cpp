@@ -25,6 +25,7 @@ namespace
 
     constexpr int kRestingTicks = 3;
     constexpr int kMasterCutGuardTicks = 3;
+    constexpr int kTravelStartTicks = 30;
     constexpr int kMainLoaderGiveUpTicks = 120;
     constexpr double kStillWithin = 0.001;
     constexpr double kRestsClosedAtMost = 0.02;
@@ -93,6 +94,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::Act(const RuleContext&, VariableWri
 {
     GuardThePanelMasterCut(writer);
     AskForTheDeckClosedOnceTheDeboardingCompletes();
+    AskForTheDeckClosedOnceTheMainLoaderLeaves();
 
     if (travel_ != Travel::None)
     {
@@ -137,6 +139,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::StartTravel(VariableWriter& writer,
     travel_ = travel;
     masterCutGuardTicks_ = 0;
     mayResumeTravel_ = true;
+    unmovedTicks_ = 0;
     rest_ = Fss727DoorRest{.lastPosition = aircraft_->MainDeckPosition()};
 }
 
@@ -153,6 +156,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::ServeThePendingClose(VariableWriter
     if (closed)
     {
         servedRequests_ = CloseRequests();
+        loaderDepartureCloseUnserved_ = false;
 
         return;
     }
@@ -179,6 +183,13 @@ void Fss727MainDeckMovesByTheCargoPanelRule::FinishTravel(VariableWriter& writer
     }
 
     rest_.Follow(*position);
+    if (!rest_.HasMoved() && ++unmovedTicks_ >= kTravelStartTicks)
+    {
+        DropTheTravelThatNeverMoved();
+
+        return;
+    }
+
     if (!HasComeToRest())
     {
         return;
@@ -187,6 +198,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::FinishTravel(VariableWriter& writer
     if (travel_ == Travel::Closing)
     {
         servedRequests_ = CloseRequests();
+        loaderDepartureCloseUnserved_ = false;
     }
 
     cutTravel_ = travel_;
@@ -207,7 +219,21 @@ void Fss727MainDeckMovesByTheCargoPanelRule::ResumeTravel(const double position)
 {
     mayResumeTravel_ = false;
     travel_ = cutTravel_;
+    unmovedTicks_ = 0;
     rest_ = Fss727DoorRest{.lastPosition = position};
+}
+
+void Fss727MainDeckMovesByTheCargoPanelRule::DropTheTravelThatNeverMoved()
+{
+    if (travel_ == Travel::Closing)
+    {
+        servedRequests_ = CloseRequests();
+        loaderDepartureCloseUnserved_ = false;
+    }
+
+    travel_ = Travel::None;
+
+    LOG_INFO("FSS 727 main deck never moved after the panel command; the travel is dropped");
 }
 
 void Fss727MainDeckMovesByTheCargoPanelRule::GuardThePanelMasterCut(VariableWriter& writer)
@@ -270,20 +296,48 @@ void Fss727MainDeckMovesByTheCargoPanelRule::AskForTheDeckClosedOnceTheDeboardin
     LOG_INFO("FSS 727 main deck door still open as the GSX deboarding completes: its close is asked for once, and an opening after this is left alone");
 }
 
+void Fss727MainDeckMovesByTheCargoPanelRule::AskForTheDeckClosedOnceTheMainLoaderLeaves()
+{
+    if (variables_->HasReceivedLVar(gsx::lvars::kBaggageLoaderMainState)
+        && gsx::states::IsLoaderServingTheDoor(doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0)))
+    {
+        mainLoaderSeenAtTheDeck_ = true;
+
+        return;
+    }
+
+    if (!mainLoaderSeenAtTheDeck_ || !HasTheMainLoaderLeft())
+    {
+        return;
+    }
+
+    mainLoaderSeenAtTheDeck_ = false;
+
+    if (aircraft_->IsMainDeckClosed().value_or(true))
+    {
+        return;
+    }
+
+    ++loaderDepartureCloseRequests_;
+    loaderDepartureCloseUnserved_ = true;
+
+    LOG_INFO("FSS 727 main deck door still open as the main loader leaves it: its close is asked for once, even with the GSX boarding or deboarding still at work");
+}
+
 int Fss727MainDeckMovesByTheCargoPanelRule::CloseRequests() const
 {
-    return aircraft_->MainDeckCloseRequests() + deboardingCloseRequests_;
+    return aircraft_->MainDeckCloseRequests() + deboardingCloseRequests_ + loaderDepartureCloseRequests_;
 }
 
 bool Fss727MainDeckMovesByTheCargoPanelRule::IsCloseRequestPending() const
 {
-    return CloseRequests() != servedRequests_ && !IsGsxWorkingTheCargoDoors();
+    return CloseRequests() != servedRequests_ && (loaderDepartureCloseUnserved_ || !IsGsxWorkingTheCargoDoors());
 }
 
 bool Fss727MainDeckMovesByTheCargoPanelRule::HasTheMainLoaderLeft() const
 {
     return variables_->HasReceivedLVar(gsx::lvars::kBaggageLoaderMainState)
-        && doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0) < gsx::states::kVehicleDispatched;
+        && !gsx::states::IsLoaderServingTheDoor(doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0));
 }
 
 bool Fss727MainDeckMovesByTheCargoPanelRule::IsTheMainLoaderWaitingForTheDeck() const
