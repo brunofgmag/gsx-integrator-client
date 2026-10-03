@@ -61,7 +61,7 @@ void TfdiMd11CargoDoorsFollowLoaderRule::FollowLoader(VariableWriter& writer, co
     }
 
     const double loaderState = doors_->VehicleState(loaderStateLVar, 0.0);
-    const double doorTarget = gsx::states::IsLoaderArriving(loaderState) ? kDoorOpen : kDoorClosed;
+    const double doorTarget = gsx::states::IsLoaderServingTheDoor(loaderState) ? kDoorOpen : kDoorClosed;
 
     if (doorTarget != lastDoorTarget)
     {

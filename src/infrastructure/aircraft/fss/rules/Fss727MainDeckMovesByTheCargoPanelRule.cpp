@@ -299,7 +299,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::AskForTheDeckClosedOnceTheDeboardin
 void Fss727MainDeckMovesByTheCargoPanelRule::AskForTheDeckClosedOnceTheMainLoaderLeaves()
 {
     if (variables_->HasReceivedLVar(gsx::lvars::kBaggageLoaderMainState)
-        && gsx::states::IsLoaderAtDoor(doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0)))
+        && gsx::states::IsLoaderServingTheDoor(doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0)))
     {
         mainLoaderSeenAtTheDeck_ = true;
 
@@ -337,7 +337,7 @@ bool Fss727MainDeckMovesByTheCargoPanelRule::IsCloseRequestPending() const
 bool Fss727MainDeckMovesByTheCargoPanelRule::HasTheMainLoaderLeft() const
 {
     return variables_->HasReceivedLVar(gsx::lvars::kBaggageLoaderMainState)
-        && !gsx::states::IsLoaderArriving(doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0));
+        && !gsx::states::IsLoaderServingTheDoor(doors_->VehicleState(gsx::lvars::kBaggageLoaderMainState, 0.0));
 }
 
 bool Fss727MainDeckMovesByTheCargoPanelRule::IsTheMainLoaderWaitingForTheDeck() const

@@ -112,5 +112,5 @@ void Fss727HoldsFollowTheirLoaderRule::CloseTheHoldsOnRequest(VariableWriter& wr
 bool Fss727HoldsFollowTheirLoaderRule::HasItsLoaderLeft(const char* loaderLVar) const
 {
     return variables_->HasReceivedLVar(loaderLVar)
-        && !gsx::states::IsLoaderArriving(doors_->VehicleState(loaderLVar, 0.0));
+        && !gsx::states::IsLoaderServingTheDoor(doors_->VehicleState(loaderLVar, 0.0));
 }

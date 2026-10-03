@@ -127,9 +127,12 @@ namespace gsx::states
             || state == kCateringInProgress;
     }
 
-    [[nodiscard]] inline bool IsLoaderArriving(const double state)
+    [[nodiscard]] inline bool IsLoaderServingTheDoor(const double state)
     {
-        return IsLoaderAtDoor(state);
+        return state == kLoaderWaitingForDoor
+            || state == kLoaderUnloading
+            || state == kLoaderInPosition
+            || state == kLoaderLoading;
     }
 
     [[nodiscard]] inline bool IsCateringArriving(const double state)
