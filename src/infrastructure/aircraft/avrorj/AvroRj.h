@@ -3,6 +3,7 @@
 
 #include "../SmartSwitch.h"
 #include "rules/AvroRjHoldForOwnAirstairRule.h"
+#include "rules/AvroRjHoldsFollowTheirLoaderRule.h"
 #include "rules/AvroRjPaxDoorsServeTheAirstairRule.h"
 #include "rules/AvroRjWatchModuleFuelMirrorRule.h"
 #include "../../gsx/GsxDoorSync.h"
@@ -89,6 +90,7 @@ private:
     bool heldForDeparture_ = false;
     double lastFuelKg_ = -1.0;
     AvroRjPaxDoorsServeTheAirstairRule doorRule_;
+    AvroRjHoldsFollowTheirLoaderRule holdsRule_;
     AvroRjHoldForOwnAirstairRule airstairRule_;
     AvroRjWatchModuleFuelMirrorRule livenessRule_;
     std::vector<AircraftRule*> rules_;

@@ -29,11 +29,6 @@ namespace
     {
         return lvarValue == static_cast<double>(state);
     }
-
-    bool IsServiceRunning(const double state)
-    {
-        return IsState(state, GsxStateStatus::Requested) || IsState(state, GsxStateStatus::Active);
-    }
 }
 
 IFly737MaxDoorsFollowLoaderCycleRule::IFly737MaxDoorsFollowLoaderCycleRule(VariableReader& variables,
@@ -300,7 +295,7 @@ bool IFly737MaxDoorsFollowLoaderCycleRule::HasCycleEnded(const char* stateLVar, 
         return true;
     }
 
-    if (IsServiceRunning(state))
+    if (gsx::states::IsServiceRunning(state))
     {
         wasRunning = true;
 
@@ -314,7 +309,7 @@ bool IFly737MaxDoorsFollowLoaderCycleRule::IsJetwayOnItsWay() const
 {
     const double state = variables_->GetLVar(gsx::lvars::kOperateJetwaysState, 0.0);
 
-    return IsServiceRunning(state);
+    return gsx::states::IsServiceRunning(state);
 }
 
 bool IFly737MaxDoorsFollowLoaderCycleRule::HasPendingCargoDoorWork() const

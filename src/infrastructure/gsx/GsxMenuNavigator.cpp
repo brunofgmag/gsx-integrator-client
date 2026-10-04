@@ -191,7 +191,7 @@ void GsxMenuNavigator::RequestCleaning()
 
 bool GsxMenuNavigator::PickNowOrArm(const char* entry, TimedIntent& intent)
 {
-    if (PickByContains(entry))
+    if (state_->menu.shown && PickByContains(entry))
     {
         intent = {};
 

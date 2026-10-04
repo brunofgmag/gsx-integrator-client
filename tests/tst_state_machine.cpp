@@ -337,10 +337,15 @@ namespace
             f.gsxService.waitingForEngines = true;
             f.aircraft.smartSwitchActivated = true;
 
-            TickTo(TurnaroundPhase::WaitingDeparture);
+            TickHolding(TurnaroundPhase::WaitingForEngines);
 
             f.aircraft.smartSwitchActivated = false;
             f.gsxService.waitingForEngines = false;
+            f.gsxService.pushbackFinished = true;
+
+            TickTo(TurnaroundPhase::WaitingDeparture);
+
+            f.gsxService.pushbackFinished = false;
         }
 
         void Depart()
@@ -477,6 +482,7 @@ private slots:
     static void thePushbackFinishingBeforeTheMovementClosesThePushbackPanelOnce();
     static void theAircraftLeavingWithoutAPushbackClosesThePushbackPanelOnce();
     static void thePushMovementLeavesTheClosingToOnPushbackStarted();
+    static void theDepartureWaitReturnsToTheEngineWaitWhileGsxStillAsksAndLeavesOnceItFinishes();
     static void aGsxRestartThatDropsThePushbackWarnsAndTheTaxiStillReachesTheArrival();
     static void publishesThatTheDeboardingWaitsForGsxUntilTheTurnaroundTurns();
     static void publishesCurrentTankFuelBeforeRefuel();
@@ -982,6 +988,33 @@ void TurnaroundStateMachineTest::theAircraftLeavingWithoutAPushbackClosesThePush
     workflow.TickHolding(TurnaroundPhase::WaitingDeparture);
 
     QCOMPARE(workflow.f.menuGateway.closePushbackPanelCalls, 1);
+}
+
+void TurnaroundStateMachineTest::theDepartureWaitReturnsToTheEngineWaitWhileGsxStillAsksAndLeavesOnceItFinishes()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+    workflow.StartPushbackMovement();
+
+    workflow.f.gsxService.goodEngineStartConfirmation = true;
+    workflow.f.gsxService.pushbackFinished = true;
+    workflow.TickTo(TurnaroundPhase::WaitingDeparture);
+
+    workflow.f.gsxService.pushbackFinished = false;
+    workflow.f.gsxService.waitingForEngines = true;
+    workflow.TickTo(TurnaroundPhase::WaitingForEngines);
+
+    workflow.f.gsxService.waitingForEngines = false;
+    workflow.f.gsxService.pushbackFinished = true;
+    workflow.TickTo(TurnaroundPhase::WaitingDeparture);
+
+    workflow.f.gsxService.pushbackFinished = false;
+    workflow.f.gsxService.waitingForEngines = true;
+    workflow.TickHolding(TurnaroundPhase::WaitingDeparture);
 }
 
 void TurnaroundStateMachineTest::thePushMovementLeavesTheClosingToOnPushbackStarted()

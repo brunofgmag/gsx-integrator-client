@@ -107,6 +107,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/avrorj/AvroRj.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjHoldsFollowTheirLoaderRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjHoldsFollowTheirLoaderRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjPaxDoorsServeTheAirstairRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjPaxDoorsServeTheAirstairRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjWatchModuleFuelMirrorRule.cpp
