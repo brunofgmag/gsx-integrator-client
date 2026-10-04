@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.43.9](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.8...v1.43.9) (2026-10-04)
+
+
+* leave an avro rj airstair found extended until departure or gsx takes the door ([#224](https://github.com/brunofgmag/gsx-integrator-client/issues/224)) ([2260731](https://github.com/brunofgmag/gsx-integrator-client/commit/22607317f98b647affcd1296bab090735154f9b6))
+
+
+### Bug Fixes
+
+* leave an avro rj airstair found extended until departure or gsx takes the door ([1a1664b](https://github.com/brunofgmag/gsx-integrator-client/commit/1a1664b70093ec7124b825ead8730bf9edd8de71)) ([2260731](https://github.com/brunofgmag/gsx-integrator-client/commit/22607317f98b647affcd1296bab090735154f9b6))
+
 ## [1.43.8](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.7...v1.43.8) (2026-10-03)
 
 
