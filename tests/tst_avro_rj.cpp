@@ -198,6 +198,10 @@ private slots:
     static void airstairAdoptsAnExtensionMadeOnTheEfb();
     static void airstairIsPutBackOutWhenSomethingElseStowsItMidBoarding();
     static void airstairIsLeftStowedWhenSomethingElseStowsItAtDeparture();
+    static void airstairFoundExtendedIsLeftOutBeforeTheTurnaroundAsks();
+    static void airstairStaysOutWhileCouatlIsDown();
+    static void airstairFoundExtendedIsStowedWhenAGsxStairTakesTheFrontDoor();
+    static void airstairFoundExtendedIsStowedUnderAnAvailableJetway();
     static void frontDoorWaitsForThePhysicallyStowedStair();
     static void reportsTheAirstairExtendedOnlyAfterItStopsMoving();
     static void airstairIsNotCommandedWhileItIsStillMoving();
@@ -1008,6 +1012,106 @@ void AvroRjTest::airstairIsLeftStowedWhenSomethingElseStowsItAtDeparture()
     QVERIFY(!LogCapture::Contains("Something else stowed the airstair"));
     QCOMPARE(gateway.WriteCount(kStairArmClickspot), 1);
     QCOMPARE(gateway.WriteCount(kStairExtendSwitch), 1);
+}
+
+void AvroRjTest::airstairFoundExtendedIsLeftOutBeforeTheTurnaroundAsks()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+    gateway.lvars[kStairExtendSwitch] = 1.0;
+    gateway.lvars["EXT_Door_stairs_pos"] = 190.0;
+
+    for (int tick = 0; tick < 4; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kStairExtendSwitch), 0);
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 0);
+
+    for (int tick = 0; tick < 4; ++tick)
+    {
+        TickAircraft(aircraft, gateway, kPassengerAccess);
+    }
+
+    QVERIFY(aircraft.AreAirstairsSettled());
+    QCOMPARE(gateway.WriteCount(kStairExtendSwitch), 0);
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 0);
+}
+
+void AvroRjTest::airstairStaysOutWhileCouatlIsDown()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+    gateway.lvars[kStairExtendSwitch] = 1.0;
+    gateway.lvars["EXT_Door_stairs_pos"] = 190.0;
+
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+
+    gateway.lvars[kCouatlStarted] = 0.0;
+    gateway.lvars[kJetway] = 0.0;
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kStairExtendSwitch), 0);
+}
+
+void AvroRjTest::airstairFoundExtendedIsStowedWhenAGsxStairTakesTheFrontDoor()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+    gateway.lvars[kStairExtendSwitch] = 1.0;
+    gateway.lvars["EXT_Door_stairs_pos"] = 190.0;
+
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+
+    QCOMPARE(gateway.WriteCount(kStairExtendSwitch), 0);
+
+    gateway.lvars[kStairsFrontState] = 2.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kStairExtendSwitch), 0.0);
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 0);
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 1);
+}
+
+void AvroRjTest::airstairFoundExtendedIsStowedUnderAnAvailableJetway()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = 1.0;
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+    gateway.lvars[kStairExtendSwitch] = 1.0;
+    gateway.lvars["EXT_Door_stairs_pos"] = 190.0;
+
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kStairExtendSwitch), 0.0);
 }
 
 void AvroRjTest::frontDoorWaitsForThePhysicallyStowedStair()

@@ -29,6 +29,9 @@ private:
 
     void ObserveTravel();
     [[nodiscard]] bool IsWanted() const;
+    [[nodiscard]] bool MustStow() const;
+    [[nodiscard]] bool IsCouatlRunning() const;
+    [[nodiscard]] bool IsFrontDoorServedByGsx() const;
     [[nodiscard]] bool IsOutOfItsWell() const;
     [[nodiscard]] bool IsMoving() const;
     [[nodiscard]] bool HasPressure() const;
