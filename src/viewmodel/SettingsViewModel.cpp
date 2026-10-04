@@ -29,7 +29,7 @@ namespace
         return index >= 0 && index < static_cast<int>(modes.size());
     }
 
-    double ParseFuelRate(const QString& text, const bool lb, bool* ok)
+    double ParseFuelRate(const QString& text, const bool inPounds, bool* ok)
     {
         const QString trimmed = text.trimmed();
         double value = QLocale().toDouble(trimmed, ok);
@@ -43,13 +43,13 @@ namespace
             return 0.0;
         }
 
-        return lb ? weight::LbToKg(value) : value;
+        return inPounds ? weight::LbToKg(value) : value;
     }
 
-    std::optional<double> PositiveFuelRate(const QString& text, const bool lb)
+    std::optional<double> PositiveFuelRate(const QString& text, const bool inPounds)
     {
         bool ok = false;
-        const double rate = ParseFuelRate(text, lb, &ok);
+        const double rate = ParseFuelRate(text, inPounds, &ok);
         if (ok && rate > 0.0)
         {
             return rate;
@@ -58,9 +58,9 @@ namespace
         return std::nullopt;
     }
 
-    QString FormatFuelRate(const double kgs, const bool lb)
+    QString FormatFuelRate(const double kgs, const bool inPounds)
     {
-        const double shown = lb ? weight::KgToLb(kgs) : kgs;
+        const double shown = inPounds ? weight::KgToLb(kgs) : kgs;
 
         return QString::number(qRound64(shown));
     }
@@ -84,6 +84,8 @@ namespace
         dst.skipReposition = src.skipReposition;
         dst.callGpu = src.callGpu;
         dst.callGpuOnArrival = src.callGpuOnArrival;
+        dst.placeChocks = src.placeChocks;
+        dst.placeChocksOnArrival = src.placeChocksOnArrival;
         dst.callBoardingEarly = src.callBoardingEarly;
         dst.callCatering = src.callCatering;
         dst.callLavatory = src.callLavatory;
@@ -336,6 +338,32 @@ void SettingsViewModel::SetCallGpuOnArrival(const bool enabled)
     }
 }
 
+bool SettingsViewModel::GetPlaceChocks() const
+{
+    return settings_.placeChocks;
+}
+
+void SettingsViewModel::SetPlaceChocks(const bool enabled)
+{
+    if (SetPersisted(settings_.placeChocks, enabled, &SettingsViewModel::PlaceChocksChanged))
+    {
+        emit ProfileDraftChanged();
+    }
+}
+
+bool SettingsViewModel::GetPlaceChocksOnArrival() const
+{
+    return settings_.placeChocksOnArrival;
+}
+
+void SettingsViewModel::SetPlaceChocksOnArrival(const bool enabled)
+{
+    if (SetPersisted(settings_.placeChocksOnArrival, enabled, &SettingsViewModel::PlaceChocksOnArrivalChanged))
+    {
+        emit ProfileDraftChanged();
+    }
+}
+
 bool SettingsViewModel::GetCallBoardingEarly() const
 {
     return settings_.callBoardingEarly;
@@ -526,9 +554,9 @@ QString SettingsViewModel::GetFuelRateUnitText() const
     return displayIsLb_ ? tr("lb/s") : tr("kg/s");
 }
 
-double SettingsViewModel::kgToLb(const double kg)
+double SettingsViewModel::kgToLb(const double kilograms)
 {
-    return weight::KgToLb(kg);
+    return weight::KgToLb(kilograms);
 }
 
 bool SettingsViewModel::EffectiveIsLb() const
@@ -771,7 +799,7 @@ int SettingsViewModel::GetSelectedProfileIndex() const
 
 void SettingsViewModel::SetSelectedProfileIndex(const int index)
 {
-    if (index < 0 || index >= static_cast<int>(profileInfos_.size()) || selectedProfileIndex_ == index)
+    if (index < 0 || std::cmp_greater_equal(index, profileInfos_.size()) || selectedProfileIndex_ == index)
     {
         return;
     }
@@ -855,6 +883,8 @@ void SettingsViewModel::setProfileAsGlobalDefault()
     emit SkipRepositionChanged();
     emit CallGpuChanged();
     emit CallGpuOnArrivalChanged();
+    emit PlaceChocksChanged();
+    emit PlaceChocksOnArrivalChanged();
     emit CallBoardingEarlyChanged();
     emit CallCateringChanged();
     emit CallLavatoryChanged();
@@ -1023,6 +1053,26 @@ bool SettingsViewModel::GetProfileCallGpuOnArrival() const
 void SettingsViewModel::SetProfileCallGpuOnArrival(const bool enabled)
 {
     SetProfileToggle(&ProfileDraft::callGpuOnArrival, enabled);
+}
+
+bool SettingsViewModel::GetProfilePlaceChocks() const
+{
+    return SelectedDraft().useGlobal ? settings_.placeChocks : SelectedDraft().placeChocks;
+}
+
+void SettingsViewModel::SetProfilePlaceChocks(const bool enabled)
+{
+    SetProfileToggle(&ProfileDraft::placeChocks, enabled);
+}
+
+bool SettingsViewModel::GetProfilePlaceChocksOnArrival() const
+{
+    return SelectedDraft().useGlobal ? settings_.placeChocksOnArrival : SelectedDraft().placeChocksOnArrival;
+}
+
+void SettingsViewModel::SetProfilePlaceChocksOnArrival(const bool enabled)
+{
+    SetProfileToggle(&ProfileDraft::placeChocksOnArrival, enabled);
 }
 
 bool SettingsViewModel::GetProfileCallBoardingEarly() const

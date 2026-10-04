@@ -19,6 +19,8 @@ namespace
     constexpr auto kKeySkipReposition = "automation/skipReposition";
     constexpr auto kKeyCallGpu = "services/callGpu";
     constexpr auto kKeyCallGpuOnArrival = "services/callGpuOnArrival";
+    constexpr auto kKeyPlaceChocks = "services/placeChocks";
+    constexpr auto kKeyPlaceChocksOnArrival = "services/placeChocksOnArrival";
     constexpr auto kKeyCallBoardingEarly = "services/callBoardingEarly";
     constexpr auto kKeyCallCatering = "services/callCatering";
     constexpr auto kKeyCallLavatory = "services/callLavatory";
@@ -43,6 +45,8 @@ namespace
     constexpr auto kKeyProfileSkipReposition = "skipReposition";
     constexpr auto kKeyProfileCallGpu = "callGpu";
     constexpr auto kKeyProfileCallGpuOnArrival = "callGpuOnArrival";
+    constexpr auto kKeyProfilePlaceChocks = "placeChocks";
+    constexpr auto kKeyProfilePlaceChocksOnArrival = "placeChocksOnArrival";
     constexpr auto kKeyProfileCallBoardingEarly = "callBoardingEarly";
     constexpr auto kKeyProfileCallCatering = "callCatering";
     constexpr auto kKeyProfileCallLavatory = "callLavatory";
@@ -126,6 +130,9 @@ namespace
         profile.skipReposition = settings.value(kKeyProfileSkipReposition, false).toBool();
         profile.callGpu = settings.value(kKeyProfileCallGpu, false).toBool();
         profile.callGpuOnArrival = settings.value(kKeyProfileCallGpuOnArrival, false).toBool();
+        profile.placeChocks = settings.value(kKeyProfilePlaceChocks, profile.callGpu).toBool();
+        profile.placeChocksOnArrival = settings.value(kKeyProfilePlaceChocksOnArrival,
+                                                      profile.callGpuOnArrival).toBool();
         profile.callBoardingEarly = settings.value(kKeyProfileCallBoardingEarly, false).toBool();
         profile.callCatering = settings.value(kKeyProfileCallCatering, false).toBool();
         profile.callLavatory = settings.value(kKeyProfileCallLavatory, false).toBool();
@@ -143,6 +150,8 @@ namespace
         settings.setValue(kKeyProfileSkipReposition, profile.skipReposition);
         settings.setValue(kKeyProfileCallGpu, profile.callGpu);
         settings.setValue(kKeyProfileCallGpuOnArrival, profile.callGpuOnArrival);
+        settings.setValue(kKeyProfilePlaceChocks, profile.placeChocks);
+        settings.setValue(kKeyProfilePlaceChocksOnArrival, profile.placeChocksOnArrival);
         settings.setValue(kKeyProfileCallBoardingEarly, profile.callBoardingEarly);
         settings.setValue(kKeyProfileCallCatering, profile.callCatering);
         settings.setValue(kKeyProfileCallLavatory, profile.callLavatory);
@@ -169,6 +178,8 @@ AppSettings QSettingsRepository::Load() const
     result.skipReposition = settings.value(kKeySkipReposition, false).toBool();
     result.callGpu = settings.value(kKeyCallGpu, false).toBool();
     result.callGpuOnArrival = settings.value(kKeyCallGpuOnArrival, false).toBool();
+    result.placeChocks = settings.value(kKeyPlaceChocks, result.callGpu).toBool();
+    result.placeChocksOnArrival = settings.value(kKeyPlaceChocksOnArrival, result.callGpuOnArrival).toBool();
     result.callBoardingEarly = settings.value(kKeyCallBoardingEarly, false).toBool();
     result.callCatering = settings.value(kKeyCallCatering, false).toBool();
     result.callLavatory = settings.value(kKeyCallLavatory, false).toBool();
@@ -218,6 +229,8 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeySkipReposition, values.skipReposition);
     settings.setValue(kKeyCallGpu, values.callGpu);
     settings.setValue(kKeyCallGpuOnArrival, values.callGpuOnArrival);
+    settings.setValue(kKeyPlaceChocks, values.placeChocks);
+    settings.setValue(kKeyPlaceChocksOnArrival, values.placeChocksOnArrival);
     settings.setValue(kKeyCallBoardingEarly, values.callBoardingEarly);
     settings.setValue(kKeyCallCatering, values.callCatering);
     settings.setValue(kKeyCallLavatory, values.callLavatory);

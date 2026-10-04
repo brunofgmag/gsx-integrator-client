@@ -144,7 +144,7 @@ ColumnLayout {
     SwitchRow {
         Layout.fillWidth: true
         enabled: !root.ghost
-        title: qsTr("Call GPU & chocks")
+        title: qsTr("Call GPU")
         checked: root.settingsVm.profileCallGpu
         onToggled: checked => root.settingsVm.profileCallGpu = checked
     }
@@ -152,9 +152,25 @@ ColumnLayout {
     SwitchRow {
         Layout.fillWidth: true
         enabled: !root.ghost
-        title: qsTr("Call GPU & chocks on arrival")
+        title: qsTr("Place chocks")
+        checked: root.settingsVm.profilePlaceChocks
+        onToggled: checked => root.settingsVm.profilePlaceChocks = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        enabled: !root.ghost
+        title: qsTr("Call GPU on arrival")
         checked: root.settingsVm.profileCallGpuOnArrival
         onToggled: checked => root.settingsVm.profileCallGpuOnArrival = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        enabled: !root.ghost
+        title: qsTr("Place chocks on arrival")
+        checked: root.settingsVm.profilePlaceChocksOnArrival
+        onToggled: checked => root.settingsVm.profilePlaceChocksOnArrival = checked
     }
 
     SwitchRow {

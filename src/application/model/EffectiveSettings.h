@@ -30,6 +30,8 @@ inline AutomationSettings ResolveAutomationSettings(const AppSettings& settings,
     result.skipReposition = settings.skipReposition;
     result.callGpu = settings.callGpu;
     result.callGpuOnArrival = settings.callGpuOnArrival;
+    result.placeChocks = settings.placeChocks;
+    result.placeChocksOnArrival = settings.placeChocksOnArrival;
     result.callBoardingEarly = settings.callBoardingEarly;
     result.callCatering = settings.callCatering;
     result.callLavatory = settings.callLavatory;
@@ -52,6 +54,8 @@ inline AutomationSettings ResolveAutomationSettings(const AppSettings& settings,
     result.skipReposition = profile.skipReposition;
     result.callGpu = profile.callGpu;
     result.callGpuOnArrival = profile.callGpuOnArrival;
+    result.placeChocks = profile.placeChocks;
+    result.placeChocksOnArrival = profile.placeChocksOnArrival;
     result.callBoardingEarly = profile.callBoardingEarly;
     result.callCatering = profile.callCatering;
     result.callLavatory = profile.callLavatory;

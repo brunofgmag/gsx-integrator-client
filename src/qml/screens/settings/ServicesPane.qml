@@ -13,20 +13,36 @@ ColumnLayout {
 
     SwitchRow {
         Layout.fillWidth: true
-        title: qsTr("Call GPU & chocks")
-        caption: qsTr("Places ground power and chocks at the gate, removes them before pushback")
-        helpText: qsTr("Chocks are only placed on aircraft that let the client control them.")
+        title: qsTr("Call GPU")
+        caption: qsTr("Places ground power at the gate, removes it before pushback")
         checked: root.settingsVm.callGpu
         onToggled: checked => root.settingsVm.callGpu = checked
     }
 
     SwitchRow {
         Layout.fillWidth: true
-        title: qsTr("Call GPU & chocks on arrival")
-        caption: qsTr("Places ground power and chocks with engines off and the brake set")
+        title: qsTr("Place chocks")
+        caption: qsTr("Places chocks at the gate, removes them before pushback")
         helpText: qsTr("Chocks are only placed on aircraft that let the client control them.")
+        checked: root.settingsVm.placeChocks
+        onToggled: checked => root.settingsVm.placeChocks = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        title: qsTr("Call GPU on arrival")
+        caption: qsTr("Places ground power with engines off and the brake set")
         checked: root.settingsVm.callGpuOnArrival
         onToggled: checked => root.settingsVm.callGpuOnArrival = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
+        title: qsTr("Place chocks on arrival")
+        caption: qsTr("Places chocks with engines off and the brake set")
+        helpText: qsTr("Chocks are only placed on aircraft that let the client control them.")
+        checked: root.settingsVm.placeChocksOnArrival
+        onToggled: checked => root.settingsVm.placeChocksOnArrival = checked
     }
 
     SwitchRow {

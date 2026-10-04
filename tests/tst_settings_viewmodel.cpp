@@ -42,6 +42,7 @@ private slots:
     static void persistsSkipRepositionImmediately();
     static void groundServicesDefaultToDisabled();
     static void groundServicesPersistImmediately();
+    static void placeChocksPersistIndependentlyOfTheGpu();
     static void traySettingsDefaults();
     static void traySettingsPersistImmediately();
     static void commbusManagedDefaultsOnAndPersistsImmediately();
@@ -78,6 +79,7 @@ private slots:
     static void fuelEditabilityAndBadgeFollowRefuelMethod();
     static void profileDefaultsToUseGlobal();
     static void disablingUseGlobalCopiesCurrentGlobals();
+    static void profilePlaceChocksFollowTheGlobalsThenSaveSeparately();
     static void profileEditsAreBufferedUntilSave();
     static void profileDraftLoadsFromStoredSettings();
     static void saveWritesOnlyCustomProfiles();
@@ -235,11 +237,16 @@ void SettingsViewModelTest::groundServicesDefaultToDisabled()
     const SettingsViewModel viewModel(&repository, &service);
 
     QVERIFY(!viewModel.GetCallGpu());
+    QVERIFY(!viewModel.GetCallGpuOnArrival());
+    QVERIFY(!viewModel.GetPlaceChocks());
+    QVERIFY(!viewModel.GetPlaceChocksOnArrival());
     QVERIFY(!viewModel.GetCallCatering());
     QVERIFY(!viewModel.GetCallLavatory());
     QVERIFY(!viewModel.GetCallWater());
     QVERIFY(!viewModel.GetCallCleaning());
     QVERIFY(!service.appliedSettings.callGpu);
+    QVERIFY(!service.appliedSettings.placeChocks);
+    QVERIFY(!service.appliedSettings.placeChocksOnArrival);
     QVERIFY(!service.appliedSettings.callCatering);
     QVERIFY(!service.appliedSettings.callLavatory);
     QVERIFY(!service.appliedSettings.callWater);
@@ -293,6 +300,37 @@ void SettingsViewModelTest::groundServicesPersistImmediately()
     viewModel.SetCallLavatory(true);
     viewModel.SetCallWater(true);
     viewModel.SetCallCleaning(true);
+
+    QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::placeChocksPersistIndependentlyOfTheGpu()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    viewModel.SetPlaceChocks(true);
+
+    QVERIFY(viewModel.GetPlaceChocks());
+    QVERIFY(!viewModel.GetCallGpu());
+    QCOMPARE(repository.saveCalls, 1);
+    QVERIFY(repository.stored.placeChocks);
+    QVERIFY(!repository.stored.callGpu);
+    QVERIFY(service.appliedSettings.placeChocks);
+
+    viewModel.SetPlaceChocksOnArrival(true);
+
+    QVERIFY(viewModel.GetPlaceChocksOnArrival());
+    QVERIFY(!viewModel.GetCallGpuOnArrival());
+    QCOMPARE(repository.saveCalls, 2);
+    QVERIFY(repository.stored.placeChocksOnArrival);
+    QVERIFY(!repository.stored.callGpuOnArrival);
+    QVERIFY(service.appliedSettings.placeChocksOnArrival);
+
+    const int savesBefore = repository.saveCalls;
+    viewModel.SetPlaceChocks(true);
+    viewModel.SetPlaceChocksOnArrival(true);
 
     QCOMPARE(repository.saveCalls, savesBefore);
 }
@@ -910,6 +948,40 @@ void SettingsViewModelTest::disablingUseGlobalCopiesCurrentGlobals()
     QVERIFY(viewModel.GetProfileCallGpu());
     QVERIFY(viewModel.GetProfileSkipReposition());
     QVERIFY(!viewModel.GetProfileCallCatering());
+}
+
+void SettingsViewModelTest::profilePlaceChocksFollowTheGlobalsThenSaveSeparately()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    repository.stored.callGpu = true;
+    repository.stored.placeChocks = false;
+    repository.stored.placeChocksOnArrival = true;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+
+    viewModel.SetSelectedProfileIndex(2);
+
+    QVERIFY(viewModel.GetProfileCallGpu());
+    QVERIFY(!viewModel.GetProfilePlaceChocks());
+    QVERIFY(viewModel.GetProfilePlaceChocksOnArrival());
+
+    viewModel.SetProfileUseGlobal(false);
+
+    QVERIFY(viewModel.GetProfileCallGpu());
+    QVERIFY(!viewModel.GetProfilePlaceChocks());
+    QVERIFY(viewModel.GetProfilePlaceChocksOnArrival());
+
+    viewModel.SetProfilePlaceChocks(true);
+    viewModel.SetProfilePlaceChocksOnArrival(false);
+
+    QVERIFY(!repository.stored.placeChocks);
+    QVERIFY(repository.stored.placeChocksOnArrival);
+    QVERIFY(viewModel.save());
+
+    const AircraftProfile& saved = repository.stored.profiles.at("fictional-client");
+    QVERIFY(saved.callGpu);
+    QVERIFY(saved.placeChocks);
+    QVERIFY(!saved.placeChocksOnArrival);
 }
 
 void SettingsViewModelTest::profileEditsAreBufferedUntilSave()
