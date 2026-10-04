@@ -34,6 +34,9 @@ private slots:
     void storedFuelRateModesAreReadBack() const;
     void savedFuelRateModesAreWrittenAndReread();
     void anAbsentEarlyBoardingKeyReadsAsOff() const;
+    void absentPlaceChocksKeysInheritTheSavedGpuValues() const;
+    void absentProfilePlaceChocksKeysInheritTheSavedGpuValues() const;
+    void storedPlaceChocksKeysWinOverTheGpuValues() const;
 
 private:
     QTemporaryDir tempDir_;
@@ -73,6 +76,8 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QCOMPARE(loaded.skipReposition, false);
     QCOMPARE(loaded.callGpu, false);
     QCOMPARE(loaded.callGpuOnArrival, false);
+    QCOMPARE(loaded.placeChocks, false);
+    QCOMPARE(loaded.placeChocksOnArrival, false);
     QCOMPARE(loaded.callBoardingEarly, false);
     QCOMPARE(loaded.callCatering, false);
     QCOMPARE(loaded.callLavatory, false);
@@ -306,6 +311,8 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     values.skipReposition = true;
     values.callGpu = true;
     values.callGpuOnArrival = true;
+    values.placeChocks = false;
+    values.placeChocksOnArrival = true;
     values.callBoardingEarly = true;
     values.callCatering = true;
     values.callLavatory = true;
@@ -329,6 +336,8 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     profile.skipReposition = true;
     profile.callGpu = true;
     profile.callGpuOnArrival = false;
+    profile.placeChocks = false;
+    profile.placeChocksOnArrival = true;
     profile.callBoardingEarly = true;
     profile.callCatering = true;
     profile.callLavatory = false;
@@ -355,6 +364,8 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     QCOMPARE(loaded.skipReposition, values.skipReposition);
     QCOMPARE(loaded.callGpu, values.callGpu);
     QCOMPARE(loaded.callGpuOnArrival, values.callGpuOnArrival);
+    QCOMPARE(loaded.placeChocks, values.placeChocks);
+    QCOMPARE(loaded.placeChocksOnArrival, values.placeChocksOnArrival);
     QCOMPARE(loaded.callBoardingEarly, values.callBoardingEarly);
     QCOMPARE(loaded.callCatering, values.callCatering);
     QCOMPARE(loaded.callLavatory, values.callLavatory);
@@ -379,6 +390,8 @@ void QSettingsRepositoryTest::saveLoadRoundTrip()
     QCOMPARE(it->second.skipReposition, profile.skipReposition);
     QCOMPARE(it->second.callGpu, profile.callGpu);
     QCOMPARE(it->second.callGpuOnArrival, profile.callGpuOnArrival);
+    QCOMPARE(it->second.placeChocks, profile.placeChocks);
+    QCOMPARE(it->second.placeChocksOnArrival, profile.placeChocksOnArrival);
     QCOMPARE(it->second.callBoardingEarly, profile.callBoardingEarly);
     QCOMPARE(it->second.callCatering, profile.callCatering);
     QCOMPARE(it->second.callLavatory, profile.callLavatory);
@@ -465,6 +478,61 @@ void QSettingsRepositoryTest::anAbsentEarlyBoardingKeyReadsAsOff() const
 
     QVERIFY(!loaded.callBoardingEarly);
     QVERIFY(!loaded.profiles.at("a340").callBoardingEarly);
+}
+
+void QSettingsRepositoryTest::absentPlaceChocksKeysInheritTheSavedGpuValues() const
+{
+    QSettings settings;
+    settings.setValue("services/callGpu", true);
+    settings.setValue("services/callGpuOnArrival", false);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QVERIFY(loaded.callGpu);
+    QVERIFY(loaded.placeChocks);
+    QVERIFY(!loaded.callGpuOnArrival);
+    QVERIFY(!loaded.placeChocksOnArrival);
+}
+
+void QSettingsRepositoryTest::absentProfilePlaceChocksKeysInheritTheSavedGpuValues() const
+{
+    QSettings settings;
+    settings.setValue("profiles/a340/useGlobal", false);
+    settings.setValue("profiles/a340/callGpu", false);
+    settings.setValue("profiles/a340/callGpuOnArrival", true);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+    const AircraftProfile& profile = loaded.profiles.at("a340");
+
+    QVERIFY(!profile.callGpu);
+    QVERIFY(!profile.placeChocks);
+    QVERIFY(profile.callGpuOnArrival);
+    QVERIFY(profile.placeChocksOnArrival);
+}
+
+void QSettingsRepositoryTest::storedPlaceChocksKeysWinOverTheGpuValues() const
+{
+    QSettings settings;
+    settings.setValue("services/callGpu", true);
+    settings.setValue("services/placeChocks", false);
+    settings.setValue("services/callGpuOnArrival", false);
+    settings.setValue("services/placeChocksOnArrival", true);
+    settings.setValue("profiles/a340/useGlobal", false);
+    settings.setValue("profiles/a340/callGpu", true);
+    settings.setValue("profiles/a340/placeChocks", false);
+    settings.setValue("profiles/a340/callGpuOnArrival", false);
+    settings.setValue("profiles/a340/placeChocksOnArrival", true);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+    const AircraftProfile& profile = loaded.profiles.at("a340");
+
+    QVERIFY(!loaded.placeChocks);
+    QVERIFY(loaded.placeChocksOnArrival);
+    QVERIFY(!profile.placeChocks);
+    QVERIFY(profile.placeChocksOnArrival);
 }
 
 QTEST_GUILESS_MAIN(QSettingsRepositoryTest)

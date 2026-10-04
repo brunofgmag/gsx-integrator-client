@@ -129,6 +129,8 @@ private slots:
     static void triggerServiceDoesNotToggleOpenMenu();
     static void confirmGoodEnginesPicksWhenMenuVisible();
     static void confirmGoodEnginesOpensMenuAndDefersPick();
+    static void confirmGoodEnginesOpensTheMenuWhenTheConfirmationEntriesAreLeftOver();
+    static void completePushbackOpensTheMenuWhenTheInterruptEntriesAreLeftOver();
     static void completePushbackPicksEntryOnInterruptPushbackMenu();
     static void deferredConfirmEnginesPicksEntryOnInterruptPushbackMenu();
     static void completeRefuelPicksCompleteNowViaServiceMenu();
@@ -674,6 +676,60 @@ void GsxMenuNavigatorTest::confirmGoodEnginesOpensMenuAndDefersPick()
     QVERIFY(pick != nullptr);
 
     QCOMPARE(pick->args.value("index").toInt(), 0);
+}
+
+void GsxMenuNavigatorTest::confirmGoodEnginesOpensTheMenuWhenTheConfirmationEntriesAreLeftOver()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    ShowMenu(state, "Interrupt pushback?",
+             {"Confirm good engine Start", "Stop here and complete pushback procedure", "Abort pushback"});
+    state.menu.shown = false;
+
+    QVERIFY(!nav.ConfirmGoodEngines());
+
+    QCOMPARE(client.Count("menu.pick"), 0);
+    QCOMPARE(client.Count("menu.toggle"), 1);
+
+    state.menu.shown = true;
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+
+    QCOMPARE(pick->args.value("index").toInt(), 0);
+}
+
+void GsxMenuNavigatorTest::completePushbackOpensTheMenuWhenTheInterruptEntriesAreLeftOver()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    ShowMenu(state, "Interrupt pushback?",
+             {"Confirm good engine Start", "Stop here and complete pushback procedure", "Abort pushback"});
+    state.menu.shown = false;
+
+    QVERIFY(!nav.CompletePushback());
+
+    QCOMPARE(client.Count("menu.pick"), 0);
+    QCOMPARE(client.Count("menu.toggle"), 1);
+
+    state.menu.shown = true;
+    nav.OnMenuChanged();
+
+    const Sent* pick = client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+
+    QCOMPARE(pick->args.value("index").toInt(), 1);
 }
 
 void GsxMenuNavigatorTest::completePushbackPicksEntryOnInterruptPushbackMenu()

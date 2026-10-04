@@ -39,6 +39,9 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(bool skipReposition READ GetSkipReposition WRITE SetSkipReposition NOTIFY SkipRepositionChanged)
     Q_PROPERTY(bool callGpu READ GetCallGpu WRITE SetCallGpu NOTIFY CallGpuChanged)
     Q_PROPERTY(bool callGpuOnArrival READ GetCallGpuOnArrival WRITE SetCallGpuOnArrival NOTIFY CallGpuOnArrivalChanged)
+    Q_PROPERTY(bool placeChocks READ GetPlaceChocks WRITE SetPlaceChocks NOTIFY PlaceChocksChanged)
+    Q_PROPERTY(bool placeChocksOnArrival READ GetPlaceChocksOnArrival
+        WRITE SetPlaceChocksOnArrival NOTIFY PlaceChocksOnArrivalChanged)
     Q_PROPERTY(bool callBoardingEarly READ GetCallBoardingEarly
         WRITE SetCallBoardingEarly NOTIFY CallBoardingEarlyChanged)
     Q_PROPERTY(bool callCatering READ GetCallCatering WRITE SetCallCatering NOTIFY CallCateringChanged)
@@ -86,6 +89,10 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
         WRITE SetProfileCallGpu NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileCallGpuOnArrival READ GetProfileCallGpuOnArrival
         WRITE SetProfileCallGpuOnArrival NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profilePlaceChocks READ GetProfilePlaceChocks
+        WRITE SetProfilePlaceChocks NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profilePlaceChocksOnArrival READ GetProfilePlaceChocksOnArrival
+        WRITE SetProfilePlaceChocksOnArrival NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileCallBoardingEarly READ GetProfileCallBoardingEarly
         WRITE SetProfileCallBoardingEarly NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileCallCatering READ GetProfileCallCatering
@@ -160,6 +167,12 @@ public:
     [[nodiscard]] bool GetCallGpuOnArrival() const;
     void SetCallGpuOnArrival(bool enabled);
 
+    [[nodiscard]] bool GetPlaceChocks() const;
+    void SetPlaceChocks(bool enabled);
+
+    [[nodiscard]] bool GetPlaceChocksOnArrival() const;
+    void SetPlaceChocksOnArrival(bool enabled);
+
     [[nodiscard]] bool GetCallBoardingEarly() const;
     void SetCallBoardingEarly(bool enabled);
 
@@ -201,7 +214,7 @@ public:
     void SetWeightUnitMode(int mode);
     [[nodiscard]] bool GetWeightIsLb() const override;
     [[nodiscard]] QString GetFuelRateUnitText() const override;
-    [[nodiscard]] Q_INVOKABLE static double kgToLb(double kg);
+    [[nodiscard]] Q_INVOKABLE static double kgToLb(double kilograms);
 
     [[nodiscard]] bool GetCloseToTray() const;
     void SetCloseToTray(bool enabled);
@@ -262,6 +275,12 @@ public:
     [[nodiscard]] bool GetProfileCallGpuOnArrival() const;
     void SetProfileCallGpuOnArrival(bool enabled);
 
+    [[nodiscard]] bool GetProfilePlaceChocks() const;
+    void SetProfilePlaceChocks(bool enabled);
+
+    [[nodiscard]] bool GetProfilePlaceChocksOnArrival() const;
+    void SetProfilePlaceChocksOnArrival(bool enabled);
+
     [[nodiscard]] bool GetProfileCallBoardingEarly() const;
     void SetProfileCallBoardingEarly(bool enabled);
 
@@ -292,6 +311,8 @@ signals:
     void SkipRepositionChanged();
     void CallGpuChanged();
     void CallGpuOnArrivalChanged();
+    void PlaceChocksChanged();
+    void PlaceChocksOnArrivalChanged();
     void CallBoardingEarlyChanged();
     void CallCateringChanged();
     void CallLavatoryChanged();
@@ -337,6 +358,8 @@ private:
         bool skipReposition = false;
         bool callGpu = false;
         bool callGpuOnArrival = false;
+        bool placeChocks = false;
+        bool placeChocksOnArrival = false;
         bool callBoardingEarly = false;
         bool callCatering = false;
         bool callLavatory = false;

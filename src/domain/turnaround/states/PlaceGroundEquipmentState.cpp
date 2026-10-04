@@ -56,14 +56,17 @@ std::optional<TurnaroundTransition> PlaceGroundEquipmentState::EvaluatePhase(Tur
         return std::nullopt;
     }
 
-    if (ctx.settings == nullptr || !ctx.settings->callGpu)
-    {
-        return TurnaroundTransition{TurnaroundPhase::CallServices};
-    }
+    const bool placeChocks = ctx.settings != nullptr && ctx.settings->placeChocks;
+    const bool callGpu = ctx.settings != nullptr && ctx.settings->callGpu;
 
-    if (!ctx.data.chocksPlaced && ctx.aircraft->SetChocks(true))
+    if (placeChocks && !ctx.data.chocksPlaced && ctx.aircraft->SetChocks(true))
     {
         ctx.data.chocksPlaced = true;
+    }
+
+    if (!callGpu)
+    {
+        return TurnaroundTransition{TurnaroundPhase::CallServices};
     }
 
     const GroundPowerStatus gpu =

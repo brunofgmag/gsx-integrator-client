@@ -107,6 +107,12 @@ namespace gsx::states
     inline constexpr double kCateringWaitingForDoor = 6.0;
     inline constexpr double kCateringInProgress = 7.0;
 
+    [[nodiscard]] inline bool IsServiceRunning(const double state)
+    {
+        return state == static_cast<double>(GsxStateStatus::Requested)
+            || state == static_cast<double>(GsxStateStatus::Active);
+    }
+
     [[nodiscard]] inline bool IsLoaderAtDoor(const double state)
     {
         return state == kLoaderWaitingForDoor

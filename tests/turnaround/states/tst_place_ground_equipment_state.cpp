@@ -25,6 +25,10 @@ private slots:
     static void placesChocksOnlyOnce();
     static void skipsChocksWhenUnsupported();
     static void placesChocksEvenWhileGpuUnknown();
+    static void placesChocksWithoutGpuAndAdvances();
+    static void callsGpuWithoutPlacingChocks();
+    static void placesChocksAndCallsGpuWhenBothAreOn();
+    static void ignoresPlaceChocksWhenTheAircraftCannotControlThem();
     static void closesAllDoorsEvenWhenCallGpuDisabled();
     static void closesAllDoorsOnlyOnce();
     static void leavesTheDoorsAloneWhileAGsxServiceIsUnderway();
@@ -215,6 +219,7 @@ void PlaceGroundEquipmentStateTest::placesChocksWhenSupported()
     PlaceGroundEquipmentState state;
 
     f.settings.callGpu = true;
+    f.settings.placeChocks = true;
     f.gsxService.gpuStatus = GroundPowerStatus::Connected;
     f.aircraft.supportsChocksControl = true;
 
@@ -232,6 +237,7 @@ void PlaceGroundEquipmentStateTest::placesChocksOnlyOnce()
     PlaceGroundEquipmentState state;
 
     f.settings.callGpu = true;
+    f.settings.placeChocks = true;
     f.gsxService.gpuStatus = GroundPowerStatus::Unknown;
     f.aircraft.supportsChocksControl = true;
 
@@ -247,6 +253,7 @@ void PlaceGroundEquipmentStateTest::skipsChocksWhenUnsupported()
     PlaceGroundEquipmentState state;
 
     f.settings.callGpu = true;
+    f.settings.placeChocks = true;
     f.gsxService.gpuStatus = GroundPowerStatus::Connected;
 
     const auto transition = state.Evaluate(f.ctx);
@@ -262,12 +269,82 @@ void PlaceGroundEquipmentStateTest::placesChocksEvenWhileGpuUnknown()
     PlaceGroundEquipmentState state;
 
     f.settings.callGpu = true;
+    f.settings.placeChocks = true;
     f.gsxService.gpuStatus = GroundPowerStatus::Unknown;
     f.aircraft.supportsChocksControl = true;
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.aircraft.setChocksCalls, 1);
     QVERIFY(f.aircraft.chocksPlaced);
+}
+
+void PlaceGroundEquipmentStateTest::placesChocksWithoutGpuAndAdvances()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.settings.placeChocks = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+    f.aircraft.supportsChocksControl = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QCOMPARE(f.aircraft.setChocksCalls, 1);
+    QVERIFY(f.ctx.data.chocksPlaced);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 0);
+}
+
+void PlaceGroundEquipmentStateTest::callsGpuWithoutPlacingChocks()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.settings.placeChocks = false;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+    f.aircraft.supportsChocksControl = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
+    QVERIFY(!f.ctx.data.chocksPlaced);
+}
+
+void PlaceGroundEquipmentStateTest::placesChocksAndCallsGpuWhenBothAreOn()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.settings.placeChocks = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+    f.aircraft.supportsChocksControl = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.aircraft.setChocksCalls, 1);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
+}
+
+void PlaceGroundEquipmentStateTest::ignoresPlaceChocksWhenTheAircraftCannotControlThem()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.settings.placeChocks = true;
+    f.aircraft.supportsChocksControl = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QVERIFY(!f.ctx.data.chocksPlaced);
 }
 
 void PlaceGroundEquipmentStateTest::releasesTheDepartureDoorHoldOnANewTurnaround()

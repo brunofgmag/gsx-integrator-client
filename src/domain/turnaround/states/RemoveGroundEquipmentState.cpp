@@ -10,15 +10,27 @@
 namespace
 {
     constexpr int kRetryTicks = 60;
+
+    bool ManagesGpu(const TurnaroundContext& ctx)
+    {
+        return ctx.settings != nullptr && (ctx.settings->callGpu || ctx.settings->callGpuOnArrival);
+    }
+
+    bool ShouldRemoveChocks(const TurnaroundContext& ctx)
+    {
+        const bool manageChocks =
+            ctx.settings != nullptr && (ctx.settings->placeChocks || ctx.settings->placeChocksOnArrival);
+
+        return ctx.aircraft->SupportsChocksControl()
+            && (manageChocks || ctx.data.chocksPlaced || ctx.data.arrivalChocksPlaced);
+    }
 }
 
 std::optional<TurnaroundTransition> RemoveGroundEquipmentState::EvaluatePhase(TurnaroundContext& ctx)
 {
-    const bool manageEquipment = ctx.settings != nullptr && (ctx.settings->callGpu || ctx.settings->callGpuOnArrival);
-    const bool removeChocks = ctx.aircraft->SupportsChocksControl()
-        && (manageEquipment || ctx.data.chocksPlaced || ctx.data.arrivalChocksPlaced);
+    const bool manageGpu = ManagesGpu(ctx);
 
-    if (removeChocks && !ctx.data.chocksRemoved)
+    if (ShouldRemoveChocks(ctx) && !ctx.data.chocksRemoved)
     {
         if (!ctx.aircraft->IsParkingBrakeSet())
         {
@@ -36,7 +48,7 @@ std::optional<TurnaroundTransition> RemoveGroundEquipmentState::EvaluatePhase(Tu
         == GroundPowerStatus::Connected;
     const bool gpuBusy = ctx.gsxGateway->IsServiceInProgress(GroundService::Gpu);
     const bool gpuGone = !connected && !gpuBusy;
-    const bool gpuDismissUnneeded = !manageEquipment && !ctx.data.gpuDismissRequested;
+    const bool gpuDismissUnneeded = !manageGpu && !ctx.data.gpuDismissRequested;
 
     if (gpuDismissUnneeded || gpuGone)
     {

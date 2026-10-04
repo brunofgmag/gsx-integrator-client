@@ -15,7 +15,10 @@ std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::EvaluatePh
         ctx.data.arrivalDoorsClosed = true;
     }
 
-    if (ctx.settings == nullptr || !ctx.settings->callGpuOnArrival)
+    const bool placeChocks = ctx.settings != nullptr && ctx.settings->placeChocksOnArrival;
+    const bool callGpu = ctx.settings != nullptr && ctx.settings->callGpuOnArrival;
+
+    if (!placeChocks && !callGpu)
     {
         return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
     }
@@ -25,9 +28,14 @@ std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::EvaluatePh
         return std::nullopt;
     }
 
-    if (!ctx.data.arrivalChocksPlaced && ctx.aircraft->SetChocks(true))
+    if (placeChocks && !ctx.data.arrivalChocksPlaced && ctx.aircraft->SetChocks(true))
     {
         ctx.data.arrivalChocksPlaced = true;
+    }
+
+    if (!callGpu)
+    {
+        return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
     }
 
     const GroundPowerStatus gpu =

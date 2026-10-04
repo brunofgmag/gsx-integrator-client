@@ -18,6 +18,10 @@ private slots:
     static void advancesWithoutToggleWhenGpuAlreadyConnected();
     static void waitsWhileGpuStatusUnknown();
     static void skipsChocksWhenUnsupported();
+    static void placesChocksWithoutGpuAndAdvances();
+    static void chocksWithoutGpuWaitForEnginesOff();
+    static void chocksWithoutGpuWaitForTheAircraftToBeHeld();
+    static void callsGpuWithoutPlacingChocks();
     static void closesAllDoorsEvenWhenOptionDisabled();
     static void closesAllDoorsOnlyOnce();
     static void releasesTheDepartureDoorHoldOnArrival();
@@ -58,6 +62,7 @@ void PlaceArrivalGroundEquipmentStateTest::waitsWhileEnginesRunning()
     PlaceArrivalGroundEquipmentState state;
 
     f.settings.callGpuOnArrival = true;
+    f.settings.placeChocksOnArrival = true;
     f.aircraft.engineRunning = true;
     f.aircraft.parkingBrakeSet = true;
     f.aircraft.supportsChocksControl = true;
@@ -76,6 +81,7 @@ void PlaceArrivalGroundEquipmentStateTest::waitsWhileAircraftNotHeldInPlace()
     PlaceArrivalGroundEquipmentState state;
 
     f.settings.callGpuOnArrival = true;
+    f.settings.placeChocksOnArrival = true;
     f.aircraft.engineRunning = false;
     f.aircraft.parkingBrakeSet = false;
     f.aircraft.heldInPlace = false;
@@ -95,6 +101,7 @@ void PlaceArrivalGroundEquipmentStateTest::chocksAloneHoldTheAircraftEnough()
     PlaceArrivalGroundEquipmentState state;
 
     f.settings.callGpuOnArrival = true;
+    f.settings.placeChocksOnArrival = true;
     f.aircraft.engineRunning = false;
     f.aircraft.parkingBrakeSet = false;
     f.aircraft.heldInPlace = true;
@@ -115,6 +122,7 @@ void PlaceArrivalGroundEquipmentStateTest::placesChocksAndGpuWhenParked()
     PlaceArrivalGroundEquipmentState state;
 
     f.settings.callGpuOnArrival = true;
+    f.settings.placeChocksOnArrival = true;
     f.aircraft.engineRunning = false;
     f.aircraft.parkingBrakeSet = true;
     f.aircraft.supportsChocksControl = true;
@@ -189,6 +197,7 @@ void PlaceArrivalGroundEquipmentStateTest::skipsChocksWhenUnsupported()
     PlaceArrivalGroundEquipmentState state;
 
     f.settings.callGpuOnArrival = true;
+    f.settings.placeChocksOnArrival = true;
     f.aircraft.parkingBrakeSet = true;
     f.gsxService.gpuStatus = GroundPowerStatus::Connected;
 
@@ -196,6 +205,82 @@ void PlaceArrivalGroundEquipmentStateTest::skipsChocksWhenUnsupported()
 
     QVERIFY(transition.has_value());
     QCOMPARE(f.aircraft.setChocksCalls, 0);
+}
+
+void PlaceArrivalGroundEquipmentStateTest::placesChocksWithoutGpuAndAdvances()
+{
+    TurnaroundStateFixture f;
+    PlaceArrivalGroundEquipmentState state;
+
+    f.settings.callGpuOnArrival = false;
+    f.settings.placeChocksOnArrival = true;
+    f.aircraft.engineRunning = false;
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.supportsChocksControl = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestDeboarding);
+    QCOMPARE(f.aircraft.setChocksCalls, 1);
+    QVERIFY(f.ctx.data.arrivalChocksPlaced);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 0);
+    QVERIFY(!f.ctx.data.arrivalGpuRequested);
+}
+
+void PlaceArrivalGroundEquipmentStateTest::chocksWithoutGpuWaitForEnginesOff()
+{
+    TurnaroundStateFixture f;
+    PlaceArrivalGroundEquipmentState state;
+
+    f.settings.callGpuOnArrival = false;
+    f.settings.placeChocksOnArrival = true;
+    f.aircraft.engineRunning = true;
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.supportsChocksControl = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
+}
+
+void PlaceArrivalGroundEquipmentStateTest::chocksWithoutGpuWaitForTheAircraftToBeHeld()
+{
+    TurnaroundStateFixture f;
+    PlaceArrivalGroundEquipmentState state;
+
+    f.settings.callGpuOnArrival = false;
+    f.settings.placeChocksOnArrival = true;
+    f.aircraft.engineRunning = false;
+    f.aircraft.parkingBrakeSet = false;
+    f.aircraft.heldInPlace = false;
+    f.aircraft.supportsChocksControl = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
+}
+
+void PlaceArrivalGroundEquipmentStateTest::callsGpuWithoutPlacingChocks()
+{
+    TurnaroundStateFixture f;
+    PlaceArrivalGroundEquipmentState state;
+
+    f.settings.callGpuOnArrival = true;
+    f.settings.placeChocksOnArrival = false;
+    f.aircraft.engineRunning = false;
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.supportsChocksControl = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestDeboarding);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
+    QVERIFY(f.ctx.data.arrivalGpuRequested);
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
+    QVERIFY(!f.ctx.data.arrivalChocksPlaced);
 }
 
 void PlaceArrivalGroundEquipmentStateTest::closesAllDoorsEvenWhenOptionDisabled()
