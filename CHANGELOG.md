@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.44.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.9...v1.44.0) (2026-10-04)
+
+
+* split the gpu and chocks options and fix the avro rj holds and the engine confirmation ([#226](https://github.com/brunofgmag/gsx-integrator-client/issues/226)) ([bc2cc07](https://github.com/brunofgmag/gsx-integrator-client/commit/bc2cc074a429b3b02c8b32101e3a4db1f8ba82ef))
+
+
+### Features
+
+* split the gpu and chocks options into four ([2628351](https://github.com/brunofgmag/gsx-integrator-client/commit/2628351d973e5f76d3c92adaff51529c492aba22)) ([bc2cc07](https://github.com/brunofgmag/gsx-integrator-client/commit/bc2cc074a429b3b02c8b32101e3a4db1f8ba82ef))
+
+
+### Bug Fixes
+
+* keep avro rj holds shut without a loader and confirm engines only on a shown gsx menu ([d0febe5](https://github.com/brunofgmag/gsx-integrator-client/commit/d0febe5b95e9fb25dd604d9cf525e30f095f83a7)) ([bc2cc07](https://github.com/brunofgmag/gsx-integrator-client/commit/bc2cc074a429b3b02c8b32101e3a4db1f8ba82ef))
+
 ## [1.43.9](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.8...v1.43.9) (2026-10-04)
 
 
