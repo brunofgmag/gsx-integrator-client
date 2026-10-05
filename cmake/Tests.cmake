@@ -379,6 +379,8 @@ gsxi_add_qt_test(gsxi-avro-rj-tests avro-rj
         src/infrastructure/aircraft/avrorj/rules/AvroRjWatchModuleFuelMirrorRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjHoldsFollowTheirLoaderRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjHoldsFollowTheirLoaderRule.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/gsx/GsxDoorSync.cpp
@@ -762,6 +764,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/avrorj/rules/AvroRjWatchModuleFuelMirrorRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjHoldsFollowTheirLoaderRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjHoldsFollowTheirLoaderRule.h
         src/infrastructure/aircraft/fss/Fss727.cpp
         src/infrastructure/aircraft/fss/Fss727.h
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.cpp
@@ -986,6 +990,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/avrorj/rules/AvroRjWatchModuleFuelMirrorRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.h
+        src/infrastructure/aircraft/avrorj/rules/AvroRjHoldsFollowTheirLoaderRule.cpp
+        src/infrastructure/aircraft/avrorj/rules/AvroRjHoldsFollowTheirLoaderRule.h
         src/infrastructure/aircraft/fss/Fss727.cpp
         src/infrastructure/aircraft/fss/Fss727.h
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.cpp

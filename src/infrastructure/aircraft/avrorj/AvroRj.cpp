@@ -161,9 +161,10 @@ AvroRj::AvroRj(VariableGateway* variableGateway, const bool cargoVariant)
                    }),
       doors_(variableGateway),
       doorRule_(*variableGateway, *this, doors_, airstair_),
+      holdsRule_(*variableGateway, *this, doors_),
       airstairRule_(*variableGateway, *this, doors_, airstair_),
       livenessRule_(*variableGateway, module_),
-      rules_{&doorRule_, &airstairRule_, &livenessRule_}
+      rules_{&doorRule_, &holdsRule_, &airstairRule_, &livenessRule_}
 {
     smartSwitch_.Subscribe();
 

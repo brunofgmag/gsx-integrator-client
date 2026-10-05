@@ -48,7 +48,16 @@ namespace
     constexpr auto kStairsFrontState = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSFRONT_STATE";
     constexpr auto kStairsRearState = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSREAR_STATE";
     constexpr auto kBoardingState = "FSDT_GSX_BOARDING_STATE";
+    constexpr double kBoardingRequested = 4.0;
     constexpr double kBoardingActive = 5.0;
+    constexpr auto kDeboardingState = "FSDT_GSX_DEBOARDING_STATE";
+    constexpr auto kLoaderFrontState = "FSDT_GSX_VEHICLE_BAGGAGELOADERFRONT_STATE";
+    constexpr auto kLoaderRearState = "FSDT_GSX_VEHICLE_BAGGAGELOADERREAR_STATE";
+    constexpr auto kFwdHold = "EXT_Door_cargo_fwd";
+    constexpr auto kAftHold = "EXT_Door_cargo_aft";
+    constexpr double kLoaderWaitingForDoor = 6.0;
+    constexpr double kLoaderFinishing = 10.0;
+    constexpr int kHoldHeadStartTicks = 5;
     constexpr auto kParkBrakeAnnunciator = "C_ANNUNS_ParkBrake_il";
     constexpr auto kModuleFuelMirror = "146_FuelWeight_KG";
     constexpr auto kAftPaxDoor = "EXT_Door_pax_2L";
@@ -81,6 +90,14 @@ namespace
     constexpr double kMainCapacityGallons = 1000.0;
     constexpr double kCenterCapacityGallons = 500.0;
     constexpr double kAuxCapacityGallons = 250.0;
+
+    void TickHolds(AvroRj& aircraft, FakeVariableGateway& gateway, const int ticks)
+    {
+        for (int tick = 0; tick < ticks; ++tick)
+        {
+            TickAircraft(aircraft, gateway);
+        }
+    }
 
     void GiveTanks(FakeVariableGateway& gateway)
     {
@@ -182,6 +199,21 @@ private slots:
     static void aftDoorStaysClosedEvenWhenGsxParksAStairAtIt();
     static void aftDoorIsClosedAgainEveryTimeSomethingOpensIt();
     static void aftDoorIsNotWrittenWhileItReadsClosed();
+    static void holdTheAircraftOpenedIsClosedWhileBoardingHasNoLoaderAtIt();
+    static void holdTheAircraftOpenedIsClosedWhileDeboardingHasNoLoaderAtIt();
+    static void openHoldIsClosedWithNoLoaderAtItEvenOutsideAService();
+    static void holdGivesTheAircraftAHeadStartBeforeCommanding();
+    static void holdTheAircraftMovesWithinTheHeadStartIsNotWritten();
+    static void holdHeadStartRestartsAfterTheHoldAgreedAgain();
+    static void holdOpensWhenItsOwnLoaderReachesItAndTheOtherIsLeftAlone();
+    static void holdAlreadyOpenWhenItsLoaderArrivesIsNotWritten();
+    static void holdIsClosedAgainWhenItsLoaderFinishes();
+    static void holdClosedUnderItsLoaderIsOpenedAgain();
+    static void holdThatDoesNotFollowTheCommandIsNotWrittenAgain();
+    static void holdsStayUntouchedUntilTheCouatlStarts();
+    static void holdIsNotWrittenBeforeItsDoorArrives();
+    static void departureHoldKeepsAHoldShutWithItsLoaderAtTheDoor();
+    static void evaluatingTheHoldsRuleWritesNoVariable();
     static void aftDoorCloseNamesTheJetwayWhenOneIsDocked();
     static void aftDoorCloseNamesTheOwnAirstairWithoutAJetway();
     static void frontDoorOpensWithADockedJetway();
@@ -198,6 +230,10 @@ private slots:
     static void airstairAdoptsAnExtensionMadeOnTheEfb();
     static void airstairIsPutBackOutWhenSomethingElseStowsItMidBoarding();
     static void airstairIsLeftStowedWhenSomethingElseStowsItAtDeparture();
+    static void airstairFoundExtendedIsLeftOutBeforeTheTurnaroundAsks();
+    static void airstairStaysOutWhileCouatlIsDown();
+    static void airstairFoundExtendedIsStowedWhenAGsxStairTakesTheFrontDoor();
+    static void airstairFoundExtendedIsStowedUnderAnAvailableJetway();
     static void frontDoorWaitsForThePhysicallyStowedStair();
     static void reportsTheAirstairExtendedOnlyAfterItStopsMoving();
     static void airstairIsNotCommandedWhileItIsStillMoving();
@@ -687,6 +723,286 @@ void AvroRjTest::aftDoorIsNotWrittenWhileItReadsClosed()
     QCOMPARE(gateway.WriteCount(kAftPaxDoor), 0);
 }
 
+void AvroRjTest::holdTheAircraftOpenedIsClosedWhileBoardingHasNoLoaderAtIt()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kFwdHold] = 1.0;
+    gateway.lvars[kAftHold] = 1.0;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks);
+
+    QCOMPARE(gateway.Written(kFwdHold), 0.0);
+    QCOMPARE(gateway.Written(kAftHold), 0.0);
+}
+
+void AvroRjTest::holdTheAircraftOpenedIsClosedWhileDeboardingHasNoLoaderAtIt()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kDeboardingState] = kBoardingRequested;
+    gateway.lvars[kFwdHold] = 1.0;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks);
+
+    QCOMPARE(gateway.Written(kFwdHold), 0.0);
+    QCOMPARE(gateway.WriteCount(kAftHold), 0);
+}
+
+void AvroRjTest::openHoldIsClosedWithNoLoaderAtItEvenOutsideAService()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kFwdHold] = 1.0;
+    gateway.lvars[kAftHold] = 1.0;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks * 2);
+
+    QCOMPARE(gateway.Written(kFwdHold), 0.0);
+    QCOMPARE(gateway.Written(kAftHold), 0.0);
+    QCOMPARE(gateway.WriteCount(kFwdHold), 1);
+    QCOMPARE(gateway.WriteCount(kAftHold), 1);
+}
+
+void AvroRjTest::holdGivesTheAircraftAHeadStartBeforeCommanding()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kFwdHold] = 1.0;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks - 1);
+
+    QCOMPARE(gateway.WriteCount(kFwdHold), 0);
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kFwdHold), 0.0);
+    QCOMPARE(gateway.WriteCount(kFwdHold), 1);
+}
+
+void AvroRjTest::holdTheAircraftMovesWithinTheHeadStartIsNotWritten()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kFwdHold] = 0.0;
+    gateway.lvars[kLoaderFrontState] = kLoaderWaitingForDoor;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks - 2);
+
+    gateway.lvars[kFwdHold] = 1.0;
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks * 2);
+
+    QCOMPARE(gateway.WriteCount(kFwdHold), 0);
+}
+
+void AvroRjTest::holdHeadStartRestartsAfterTheHoldAgreedAgain()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kFwdHold] = 1.0;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks - 2);
+
+    gateway.lvars[kLoaderFrontState] = kLoaderWaitingForDoor;
+    TickAircraft(aircraft, gateway);
+
+    gateway.lvars[kLoaderFrontState] = 0.0;
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks - 1);
+
+    QCOMPARE(gateway.WriteCount(kFwdHold), 0);
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kFwdHold), 1);
+}
+
+void AvroRjTest::holdOpensWhenItsOwnLoaderReachesItAndTheOtherIsLeftAlone()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kFwdHold] = 0.0;
+    gateway.lvars[kAftHold] = 0.0;
+    gateway.lvars[kLoaderRearState] = kLoaderWaitingForDoor;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks);
+
+    QCOMPARE(gateway.Written(kAftHold), 1.0);
+    QCOMPARE(gateway.WriteCount(kFwdHold), 0);
+}
+
+void AvroRjTest::holdAlreadyOpenWhenItsLoaderArrivesIsNotWritten()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kFwdHold] = 1.0;
+    gateway.lvars[kLoaderFrontState] = kLoaderWaitingForDoor;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks * 2);
+
+    QCOMPARE(gateway.WriteCount(kFwdHold), 0);
+}
+
+void AvroRjTest::holdIsClosedAgainWhenItsLoaderFinishes()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kFwdHold] = 0.0;
+    gateway.lvars[kLoaderFrontState] = kLoaderWaitingForDoor;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks);
+
+    QCOMPARE(gateway.Written(kFwdHold), 1.0);
+
+    gateway.lvars[kLoaderFrontState] = kLoaderFinishing;
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks);
+
+    QCOMPARE(gateway.Written(kFwdHold), 0.0);
+    QCOMPARE(gateway.WriteCount(kFwdHold), 2);
+}
+
+void AvroRjTest::holdClosedUnderItsLoaderIsOpenedAgain()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kAftHold] = 0.0;
+    gateway.lvars[kLoaderRearState] = kLoaderWaitingForDoor;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks);
+
+    QCOMPARE(gateway.WriteCount(kAftHold), 1);
+
+    TickAircraft(aircraft, gateway);
+    gateway.lvars[kAftHold] = 0.0;
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks);
+
+    QCOMPARE(gateway.Written(kAftHold), 1.0);
+    QCOMPARE(gateway.WriteCount(kAftHold), 2);
+}
+
+void AvroRjTest::holdThatDoesNotFollowTheCommandIsNotWrittenAgain()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kFwdHold] = 1.0;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks);
+
+    QCOMPARE(gateway.WriteCount(kFwdHold), 1);
+
+    for (int tick = 0; tick < kHoldHeadStartTicks * 2; ++tick)
+    {
+        gateway.lvars[kFwdHold] = 1.0;
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kFwdHold), 1);
+}
+
+void AvroRjTest::holdsStayUntouchedUntilTheCouatlStarts()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kFwdHold] = 1.0;
+    gateway.lvars[kAftHold] = 0.0;
+    gateway.lvars[kLoaderRearState] = kLoaderWaitingForDoor;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks * 2);
+
+    QCOMPARE(gateway.WriteCount(kFwdHold), 0);
+    QCOMPARE(gateway.WriteCount(kAftHold), 0);
+}
+
+void AvroRjTest::holdIsNotWrittenBeforeItsDoorArrives()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kLoaderFrontState] = kLoaderWaitingForDoor;
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks * 2);
+
+    QCOMPARE(gateway.WriteCount(kFwdHold), 0);
+}
+
+void AvroRjTest::departureHoldKeepsAHoldShutWithItsLoaderAtTheDoor()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kFwdHold] = 0.0;
+    gateway.lvars[kLoaderFrontState] = kLoaderWaitingForDoor;
+    aircraft.HoldDoorsClosed(true);
+
+    TickHolds(aircraft, gateway, kHoldHeadStartTicks * 2);
+
+    QCOMPARE(gateway.WriteCount(kFwdHold), 0);
+}
+
+void AvroRjTest::evaluatingTheHoldsRuleWritesNoVariable()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+    FakeVariableWriter writer;
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = kBoardingActive;
+    gateway.lvars[kFwdHold] = 1.0;
+    gateway.lvars[kLoaderRearState] = kLoaderWaitingForDoor;
+    aircraft.Observe();
+
+    AircraftRule* const rule = FindRule(aircraft, "avro-rj-holds-follow-their-loader");
+
+    QVERIFY(rule != nullptr);
+
+    const RuleContext context{};
+    const int writesBefore = gateway.setLVarCalls + gateway.setAVarCalls;
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        QVERIFY(!rule->Evaluate(context).holds);
+    }
+
+    QCOMPARE(gateway.setLVarCalls + gateway.setAVarCalls, writesBefore);
+    QCOMPARE(writer.setLVarCalls + writer.setAVarCalls, 0);
+}
+
 void AvroRjTest::aftDoorCloseNamesTheJetwayWhenOneIsDocked()
 {
     FakeVariableGateway gateway;
@@ -1008,6 +1324,106 @@ void AvroRjTest::airstairIsLeftStowedWhenSomethingElseStowsItAtDeparture()
     QVERIFY(!LogCapture::Contains("Something else stowed the airstair"));
     QCOMPARE(gateway.WriteCount(kStairArmClickspot), 1);
     QCOMPARE(gateway.WriteCount(kStairExtendSwitch), 1);
+}
+
+void AvroRjTest::airstairFoundExtendedIsLeftOutBeforeTheTurnaroundAsks()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+    gateway.lvars[kStairExtendSwitch] = 1.0;
+    gateway.lvars["EXT_Door_stairs_pos"] = 190.0;
+
+    for (int tick = 0; tick < 4; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kStairExtendSwitch), 0);
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 0);
+
+    for (int tick = 0; tick < 4; ++tick)
+    {
+        TickAircraft(aircraft, gateway, kPassengerAccess);
+    }
+
+    QVERIFY(aircraft.AreAirstairsSettled());
+    QCOMPARE(gateway.WriteCount(kStairExtendSwitch), 0);
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 0);
+}
+
+void AvroRjTest::airstairStaysOutWhileCouatlIsDown()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+    gateway.lvars[kStairExtendSwitch] = 1.0;
+    gateway.lvars["EXT_Door_stairs_pos"] = 190.0;
+
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+
+    gateway.lvars[kCouatlStarted] = 0.0;
+    gateway.lvars[kJetway] = 0.0;
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kStairExtendSwitch), 0);
+}
+
+void AvroRjTest::airstairFoundExtendedIsStowedWhenAGsxStairTakesTheFrontDoor()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+    gateway.lvars[kStairExtendSwitch] = 1.0;
+    gateway.lvars["EXT_Door_stairs_pos"] = 190.0;
+
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+
+    QCOMPARE(gateway.WriteCount(kStairExtendSwitch), 0);
+
+    gateway.lvars[kStairsFrontState] = 2.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kStairExtendSwitch), 0.0);
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 0);
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kStairArmClickspot), 1);
+}
+
+void AvroRjTest::airstairFoundExtendedIsStowedUnderAnAvailableJetway()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = 1.0;
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+    gateway.lvars[kStairExtendSwitch] = 1.0;
+    gateway.lvars["EXT_Door_stairs_pos"] = 190.0;
+
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kStairExtendSwitch), 0.0);
 }
 
 void AvroRjTest::frontDoorWaitsForThePhysicallyStowedStair()

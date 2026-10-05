@@ -102,13 +102,17 @@ void AutomationSettingsTest::resolvesGlobalsWhenProfileMissing()
     settings.fuelRateMode = FuelRateMode::Manual;
     settings.fuelRateKgs = 25.0;
     settings.callGpu = true;
-    settings.callGpuOnArrival = true;
+    settings.callGpuOnArrival = false;
+    settings.placeChocks = false;
+    settings.placeChocksOnArrival = true;
 
     const AutomationSettings resolved = ResolveAutomationSettings(settings, "unknown-id", false, 0.0);
 
     QCOMPARE(resolved.fuelRateKgs, 25.0);
     QVERIFY(resolved.callGpu);
-    QVERIFY(resolved.callGpuOnArrival);
+    QVERIFY(!resolved.callGpuOnArrival);
+    QVERIFY(!resolved.placeChocks);
+    QVERIFY(resolved.placeChocksOnArrival);
 }
 
 void AutomationSettingsTest::resolvesGlobalsWhenProfileUsesGlobal()
@@ -137,7 +141,9 @@ void AutomationSettingsTest::customProfileOverridesAutomationFields()
     profile.fuelRateKgs = 12.5;
     profile.skipReposition = true;
     profile.callGpu = true;
-    profile.callGpuOnArrival = true;
+    profile.callGpuOnArrival = false;
+    profile.placeChocks = false;
+    profile.placeChocksOnArrival = true;
     profile.callCatering = true;
     profile.callLavatory = true;
     profile.callWater = true;
@@ -149,7 +155,9 @@ void AutomationSettingsTest::customProfileOverridesAutomationFields()
     QCOMPARE(resolved.fuelRateKgs, 12.5);
     QVERIFY(resolved.skipReposition);
     QVERIFY(resolved.callGpu);
-    QVERIFY(resolved.callGpuOnArrival);
+    QVERIFY(!resolved.callGpuOnArrival);
+    QVERIFY(!resolved.placeChocks);
+    QVERIFY(resolved.placeChocksOnArrival);
     QVERIFY(resolved.callCatering);
     QVERIFY(resolved.callLavatory);
     QVERIFY(resolved.callWater);

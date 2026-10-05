@@ -77,11 +77,14 @@ namespace
                  static_cast<int>(settings.crewDeboarding),
                  Flag(settings.autoStartFlow),
                  Flag(settings.autoStartLoading));
-        LOG_INFO("Startup settings: skipReposition=%d callGpu=%d callGpuOnArrival=%d callBoardingEarly=%d "
+        LOG_INFO("Startup settings: skipReposition=%d callGpu=%d callGpuOnArrival=%d "
+                 "placeChocks=%d placeChocksOnArrival=%d callBoardingEarly=%d "
                  "callCatering=%d callLavatory=%d callWater=%d callCleaning=%d gsxPanelMode=%d",
                  Flag(settings.skipReposition),
                  Flag(settings.callGpu),
                  Flag(settings.callGpuOnArrival),
+                 Flag(settings.placeChocks),
+                 Flag(settings.placeChocksOnArrival),
                  Flag(settings.callBoardingEarly),
                  Flag(settings.callCatering),
                  Flag(settings.callLavatory),

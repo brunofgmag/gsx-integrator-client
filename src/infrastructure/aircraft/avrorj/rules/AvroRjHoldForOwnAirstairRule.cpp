@@ -96,18 +96,25 @@ bool AvroRjHoldForOwnAirstairRule::IsWanted() const
         return false;
     }
 
-    if (variables_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
-    {
-        return false;
-    }
+    return IsCouatlRunning() && !IsFrontDoorServedByGsx();
+}
 
-    if (aircraft_->IsJetwayAvailable())
-    {
-        return false;
-    }
+bool AvroRjHoldForOwnAirstairRule::MustStow() const
+{
+    return aircraft_->IsHeldForDeparture()
+        || (IsCouatlRunning() && IsFrontDoorServedByGsx());
+}
 
-    return doors_->VehicleState(gsx::lvars::kPassengerStairsFrontState, 0.0)
-        < gsx::states::kVehicleDispatched;
+bool AvroRjHoldForOwnAirstairRule::IsCouatlRunning() const
+{
+    return variables_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) >= 1.0;
+}
+
+bool AvroRjHoldForOwnAirstairRule::IsFrontDoorServedByGsx() const
+{
+    return aircraft_->IsJetwayAvailable()
+        || doors_->VehicleState(gsx::lvars::kPassengerStairsFrontState, 0.0)
+            >= gsx::states::kVehicleDispatched;
 }
 
 bool AvroRjHoldForOwnAirstairRule::IsOutOfItsWell() const
@@ -195,7 +202,7 @@ void AvroRjHoldForOwnAirstairRule::Drive(VariableWriter& writer)
             break;
         }
 
-        if (!wanted)
+        if (MustStow())
         {
             if (!PressureReady())
             {

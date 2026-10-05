@@ -23,6 +23,9 @@ private slots:
     static void removesChocksOnlyOnce();
     static void removesChocksEvenWhenGpuDisconnected();
     static void skipsChocksWhenManagementDisabled();
+    static void removesChocksWhenOnlyChocksWereAsked();
+    static void removesChocksWhenOnlyArrivalChocksWereAsked();
+    static void leavesTheChocksAloneWhenOnlyGpuWasAsked();
     static void finishesGpuDismissWhenDisabledMidRun();
     static void removesPlacedChocksWhenGpuTogglesDisabledMidRun();
     static void holdsTheChocksWhileTheParkingBrakeIsReleased();
@@ -267,6 +270,7 @@ void RemoveGroundEquipmentStateTest::removesChocksWhenSupported()
     f.aircraft.parkingBrakeSet = true;
 
     f.settings.callGpu = true;
+    f.settings.placeChocks = true;
     f.ctx.data.gpuRequested = true;
     f.gsxService.gpuStatus = GroundPowerStatus::Connected;
     f.aircraft.supportsChocksControl = true;
@@ -286,6 +290,7 @@ void RemoveGroundEquipmentStateTest::removesChocksOnlyOnce()
     f.aircraft.parkingBrakeSet = true;
 
     f.settings.callGpu = true;
+    f.settings.placeChocks = true;
     f.ctx.data.gpuRequested = true;
     f.gsxService.gpuStatus = GroundPowerStatus::Connected;
     f.aircraft.supportsChocksControl = true;
@@ -304,6 +309,7 @@ void RemoveGroundEquipmentStateTest::removesChocksEvenWhenGpuDisconnected()
     f.aircraft.parkingBrakeSet = true;
 
     f.settings.callGpu = true;
+    f.settings.placeChocks = true;
     f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
     f.aircraft.supportsChocksControl = true;
     f.aircraft.chocksPlaced = true;
@@ -332,6 +338,74 @@ void RemoveGroundEquipmentStateTest::skipsChocksWhenManagementDisabled()
 
     QVERIFY(transition.has_value());
     QCOMPARE(f.aircraft.setChocksCalls, 0);
+}
+
+void RemoveGroundEquipmentStateTest::removesChocksWhenOnlyChocksWereAsked()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = true;
+
+    f.settings.callGpu = false;
+    f.settings.callGpuOnArrival = false;
+    f.settings.placeChocks = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
+    f.aircraft.supportsChocksControl = true;
+    f.aircraft.chocksPlaced = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+    QCOMPARE(f.aircraft.setChocksCalls, 1);
+    QVERIFY(!f.aircraft.chocksPlaced);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 0);
+}
+
+void RemoveGroundEquipmentStateTest::removesChocksWhenOnlyArrivalChocksWereAsked()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = true;
+
+    f.settings.callGpu = false;
+    f.settings.callGpuOnArrival = false;
+    f.settings.placeChocksOnArrival = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+    f.aircraft.supportsChocksControl = true;
+    f.aircraft.chocksPlaced = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+    QCOMPARE(f.aircraft.setChocksCalls, 1);
+    QVERIFY(!f.aircraft.chocksPlaced);
+}
+
+void RemoveGroundEquipmentStateTest::leavesTheChocksAloneWhenOnlyGpuWasAsked()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = true;
+
+    f.settings.callGpu = true;
+    f.settings.placeChocks = false;
+    f.settings.placeChocksOnArrival = false;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+    f.aircraft.supportsChocksControl = true;
+    f.aircraft.chocksPlaced = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
+    QVERIFY(f.aircraft.chocksPlaced);
 }
 
 void RemoveGroundEquipmentStateTest::finishesGpuDismissWhenDisabledMidRun()
@@ -392,6 +466,7 @@ void RemoveGroundEquipmentStateTest::holdsTheChocksWhileTheParkingBrakeIsRelease
 
     f.aircraft.parkingBrakeSet = false;
     f.settings.callGpu = true;
+    f.settings.placeChocks = true;
     f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
     f.aircraft.supportsChocksControl = true;
     f.aircraft.chocksPlaced = true;
@@ -414,6 +489,7 @@ void RemoveGroundEquipmentStateTest::removesTheChocksWhenTheParkingBrakeIsSet()
 
     f.aircraft.parkingBrakeSet = false;
     f.settings.callGpu = true;
+    f.settings.placeChocks = true;
     f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
     f.aircraft.supportsChocksControl = true;
     f.aircraft.chocksPlaced = true;

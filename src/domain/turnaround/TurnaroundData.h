@@ -60,6 +60,7 @@ struct TurnaroundData
     double settledFuelKg = 0.0;
     EngineConfirmationBlock engineConfirmationBlock = EngineConfirmationBlock::None;
     bool engineConfirmationSent = false;
+    bool engineWaitResumed = false;
     bool servicesStalled = false;
     bool serviceInterrupted = false;
     int servicesWaitSeconds = 0;

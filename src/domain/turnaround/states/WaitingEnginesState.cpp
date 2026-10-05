@@ -38,29 +38,37 @@ namespace
 
         return EngineConfirmationBlock::None;
     }
+
+    TurnaroundTransition LeaveForTheDeparture(TurnaroundContext& ctx, const char* const reason)
+    {
+        ctx.data.engineConfirmationBlock = EngineConfirmationBlock::None;
+
+        if (ctx.logger != nullptr)
+        {
+            ctx.logger->LogInfo(reason);
+        }
+
+        return TurnaroundTransition{TurnaroundPhase::WaitingDeparture};
+    }
 }
 
 std::optional<TurnaroundTransition> WaitingEnginesState::EvaluatePhase(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
 
-    if (!ctx.gsxGateway->IsGoodEngineStartConfirmationEnabled() || ctx.gsxGateway->IsPushbackFinished())
+    if (!ctx.gsxGateway->IsGoodEngineStartConfirmationEnabled())
     {
-        data.engineConfirmationBlock = EngineConfirmationBlock::None;
+        return LeaveForTheDeparture(ctx, "GSX has the good engine start confirmation disabled; the flow moves on to the departure");
+    }
 
-        return TurnaroundTransition{TurnaroundPhase::WaitingDeparture};
+    if (ctx.gsxGateway->IsPushbackFinished())
+    {
+        return LeaveForTheDeparture(ctx, "GSX finished the pushback; the flow moves on to the departure");
     }
 
     if (turnaround::HasLeftTheStand(ctx))
     {
-        data.engineConfirmationBlock = EngineConfirmationBlock::None;
-
-        if (ctx.logger != nullptr)
-        {
-            ctx.logger->LogInfo("The aircraft is leaving without the engine confirmation; the flow moves on to the departure");
-        }
-
-        return TurnaroundTransition{TurnaroundPhase::WaitingDeparture};
+        return LeaveForTheDeparture(ctx, "The aircraft is leaving without the engine confirmation; the flow moves on to the departure");
     }
 
     const bool viaInterruptMenu = ctx.aircraft->CompletesPushbackViaInterruptMenu();
@@ -76,9 +84,13 @@ std::optional<TurnaroundTransition> WaitingEnginesState::EvaluatePhase(Turnaroun
     {
         data.engineConfirmationSent = true;
 
-        if (viaInterruptMenu ? ctx.menuGateway->CompletePushback() : ctx.menuGateway->ConfirmGoodEngines())
+        if (viaInterruptMenu)
         {
-            return TurnaroundTransition{TurnaroundPhase::WaitingDeparture};
+            (void)ctx.menuGateway->CompletePushback();
+        }
+        else
+        {
+            (void)ctx.menuGateway->ConfirmGoodEngines();
         }
     }
 

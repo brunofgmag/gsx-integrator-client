@@ -15,7 +15,11 @@ private slots:
     static void holdsWhenOnlyChocksHoldTheAircraft();
     static void holdsWhenConfirmPickFails();
     static void proceedsAfterDeferredConfirmationCompletes();
-    static void confirmsAndProceedsWhenAllConditionsMet();
+    static void confirmsAndKeepsThePhaseWhenAllConditionsMet();
+    static void leavesWhenThePushbackFinishesAfterTheConfirmation();
+    static void sendsTheConfirmationAgainOnALaterTouch();
+    static void namesTheReasonWhenTheConfirmationIsDisabled();
+    static void namesTheReasonWhenThePushbackFinished();
     static void usesCompletePushbackForInterruptMenuAircraft();
     static void proceedsWhenConfirmationNotRequired();
     static void namesTheGateThatIsHoldingTheSmartSwitch();
@@ -122,6 +126,7 @@ void WaitingEnginesStateTest::holdsWhenConfirmPickFails()
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 1);
+    QVERIFY(f.ctx.data.engineConfirmationSent);
 }
 
 void WaitingEnginesStateTest::proceedsAfterDeferredConfirmationCompletes()
@@ -144,19 +149,79 @@ void WaitingEnginesStateTest::proceedsAfterDeferredConfirmationCompletes()
     QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 1);
 }
 
-void WaitingEnginesStateTest::confirmsAndProceedsWhenAllConditionsMet()
+void WaitingEnginesStateTest::confirmsAndKeepsThePhaseWhenAllConditionsMet()
 {
     TurnaroundStateFixture f;
     WaitingEnginesState state;
 
     ArmConfirmationScenario(f);
 
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 1);
+    QVERIFY(f.ctx.data.engineConfirmationSent);
+    QVERIFY(!f.ctx.pilotTouched);
+}
+
+void WaitingEnginesStateTest::leavesWhenThePushbackFinishesAfterTheConfirmation()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    ArmConfirmationScenario(f);
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    f.gsxService.pushbackFinished = true;
+
     const auto transition = state.Evaluate(f.ctx);
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingDeparture);
     QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 1);
-    QVERIFY(!f.ctx.pilotTouched);
+}
+
+void WaitingEnginesStateTest::sendsTheConfirmationAgainOnALaterTouch()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    ArmConfirmationScenario(f);
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 1);
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 1);
+
+    f.ctx.pilotTouched = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 2);
+}
+
+void WaitingEnginesStateTest::namesTheReasonWhenTheConfirmationIsDisabled()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    f.gsxService.goodEngineStartConfirmation = false;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.logger.messages.size(), std::size_t{1});
+    QVERIFY(QString::fromStdString(f.logger.messages.front()).contains(QStringLiteral("disabled")));
+}
+
+void WaitingEnginesStateTest::namesTheReasonWhenThePushbackFinished()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    f.gsxService.goodEngineStartConfirmation = true;
+    f.gsxService.pushbackFinished = true;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.logger.messages.size(), std::size_t{1});
+    QVERIFY(QString::fromStdString(f.logger.messages.front()).contains(QStringLiteral("finished the pushback")));
 }
 
 void WaitingEnginesStateTest::usesCompletePushbackForInterruptMenuAircraft()
@@ -169,10 +234,7 @@ void WaitingEnginesStateTest::usesCompletePushbackForInterruptMenuAircraft()
     f.gsxService.waitingForEngines = false;
     f.aircraft.parkingBrakeSet = false;
 
-    const auto transition = state.Evaluate(f.ctx);
-
-    QVERIFY(transition.has_value());
-    QCOMPARE(transition->next, TurnaroundPhase::WaitingDeparture);
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.completePushbackCalls, 1);
     QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 0);
 }
