@@ -4,7 +4,10 @@
 #include <array>
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
+
+#include "../../domain/model/MemoryBag.h"
 
 class VariableReader;
 
@@ -35,6 +38,8 @@ public:
     void HoldClosedForDeparture(bool hold);
     void HoldPassengerDoorsClosed(bool hold);
     [[nodiscard]] double VehicleState(const char* lVar, double absent) const;
+    void AppendMemory(MemoryBag& memory) const;
+    void RestoreMemory(const MemoryBag& memory, bool gsxRestartedSinceSave);
 
 private:
     struct ExitWatch
@@ -46,18 +51,26 @@ private:
     };
 
     [[nodiscard]] bool IsDesiredOpen(GsxDoor door) const;
+    [[nodiscard]] bool IsHeldClosed(GsxDoor door) const;
+    [[nodiscard]] bool HaveVehiclesArrived(GsxDoor door) const;
     [[nodiscard]] bool IsMoving(GsxDoor door) const;
     void SampleExits();
+    void LogHoldOnce(GsxDoor door);
+    void RecordOwnWrite(GsxDoor door, bool open);
+    void DistrustEveryVehicle();
+    void InheritArrivedVehicles() const;
 
     VariableReader* variableGateway_;
     std::array<double, static_cast<std::size_t>(GsxDoor::Count)> lastTargets_{};
     std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> holdLogged_{};
+    std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> inheritedTargets_{};
     std::array<ExitWatch, static_cast<std::size_t>(GsxDoor::Count)> exits_{};
     bool heldForDeparture_ = false;
     bool passengerDoorsHeld_ = false;
     bool couatlSeenStarted_ = false;
     bool couatlRestarting_ = false;
     mutable std::map<std::string, double> inheritedVehicles_;
+    mutable std::set<std::string> awaitingInheritance_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_GSXDOORSYNC_H

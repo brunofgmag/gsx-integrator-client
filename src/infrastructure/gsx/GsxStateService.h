@@ -3,6 +3,8 @@
 
 #include <map>
 #include <optional>
+#include <string>
+#include "../../domain/model/MemoryBag.h"
 #include "../../domain/ports/GsxGateway.h"
 #include "GsxRemoteState.h"
 
@@ -14,6 +16,10 @@ public:
     explicit GsxStateService(VariableGateway* variableGateway, const GsxRemoteState* remoteState = nullptr);
 
     void Reset();
+
+    [[nodiscard]] MemoryBag TakeMemory() const;
+    void RestoreMemory(const MemoryBag& memory, bool gsxRestartedSinceSave);
+    [[nodiscard]] bool HaveResumeReadingsArrived() const;
 
     [[nodiscard]] bool IsAvailable() const;
 
@@ -65,11 +71,25 @@ private:
     bool gsxDownSinceLastObserve_ = false;
     struct StateTrack
     {
+        enum class Resumption
+        {
+            None,
+            OnSameGsx,
+            AfterGsxRestart
+        };
+
         GsxStateStatus status = GsxStateStatus::Unavailable;
         bool completed = false;
         bool couatlDiedDuringRun = false;
         bool firstReadingSeen = false;
         bool foundUnderway = false;
+        Resumption resumption = Resumption::None;
+
+        [[nodiscard]] bool HadStarted() const;
+        [[nodiscard]] bool WasInterruptedByGsxRestart() const;
+        [[nodiscard]] bool ReturnedToIdle(GsxStateStatus reading, bool endsWithoutCompleted) const;
+        void Save(MemoryBag& memory, const std::string& prefix) const;
+        void Load(const MemoryBag& memory, const std::string& prefix);
     };
 
     struct PassengerCounter
@@ -81,20 +101,30 @@ private:
         bool grown = false;
 
         int Update(int current, bool active, bool foundUnderway);
+        [[nodiscard]] int Reported() const;
+        void Save(MemoryBag& memory, const std::string& prefix) const;
+        void Load(const MemoryBag& memory, const std::string& prefix);
     };
 
     struct CargoPercentReading
     {
         double first = 0.0;
+        double last = 0.0;
         bool counting = false;
         bool moved = false;
 
         double Update(double current, bool active, bool foundUnderway);
+        [[nodiscard]] double Reported() const;
+        void Save(MemoryBag& memory, const std::string& prefix) const;
+        void Load(const MemoryBag& memory, const std::string& prefix);
     };
 
     [[nodiscard]] bool FoundServiceUnderway(GsxState gsxState) const;
     void ObserveState(GsxState gsxState);
     void ObserveGpuConnected();
+    [[nodiscard]] int ReadPassengers(PassengerCounter& counter, GsxState gsxState, const char* counterLVar);
+    [[nodiscard]] double ReadCargoPercent(CargoPercentReading& reading, GsxState gsxState, const char* percentLVar);
+    [[nodiscard]] bool IsAutomationFlagRaised(const char* lVar) const;
 
     VariableGateway* varManager_;
     const GsxRemoteState* remote_;

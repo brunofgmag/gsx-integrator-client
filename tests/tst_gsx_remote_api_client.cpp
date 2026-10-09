@@ -9,6 +9,8 @@
 #include <QTcpServer>
 #include <QTemporaryDir>
 #include <QtTest/QTest>
+#include <QtWebSockets/QWebSocket>
+#include <QtWebSockets/QWebSocketServer>
 
 #include "../src/infrastructure/gsx/GsxRemoteApiClient.h"
 #include "../src/infrastructure/probe/ProbeLog.h"
@@ -17,6 +19,9 @@ namespace
 {
     constexpr int kDeadlineMs = 30;
     constexpr auto kConnecting = "GSX RemoteAPI: connecting to";
+    constexpr auto kDropped = "dropped (offline)";
+    constexpr auto kDeafSocket = "dropping the deaf socket";
+    constexpr auto kHello = R"({"type":"hello","protocol":1})";
 
     QStringList& Captured()
     {
@@ -38,12 +43,17 @@ namespace
         Chained()(type, context, message);
     }
 
+    qsizetype CapturedWith(const char* const needle)
+    {
+        return std::ranges::count_if(Captured(), [needle](const QString& message)
+        {
+            return message.contains(QLatin1String(needle));
+        });
+    }
+
     qsizetype Announcements()
     {
-        return std::ranges::count_if(Captured(), [](const QString& message)
-        {
-            return message.contains(QLatin1String(kConnecting));
-        });
+        return CapturedWith(kConnecting);
     }
 
     QStringList WireLines()
@@ -76,6 +86,48 @@ namespace
     {
         QMetaObject::invokeMethod(&client, "OnDisconnected", Qt::DirectConnection);
     }
+
+    class GsxServer final : public QObject
+    {
+    public:
+        QStringList received;
+
+        GsxServer() : server_(QStringLiteral("gsx"), QWebSocketServer::NonSecureMode)
+        {
+            connect(&server_, &QWebSocketServer::newConnection, this, [this]
+            {
+                peer_ = server_.nextPendingConnection();
+                connect(peer_, &QWebSocket::textMessageReceived, this, [this](const QString& text)
+                {
+                    received.append(text);
+                });
+            });
+        }
+
+        [[nodiscard]] bool Listen()
+        {
+            return server_.listen(QHostAddress::LocalHost);
+        }
+
+        [[nodiscard]] quint16 Port() const
+        {
+            return server_.serverPort();
+        }
+
+        [[nodiscard]] bool HasPeer() const
+        {
+            return peer_ != nullptr;
+        }
+
+        void Say(const QString& text) const
+        {
+            peer_->sendTextMessage(text);
+        }
+
+    private:
+        QWebSocketServer server_;
+        QWebSocket* peer_ = nullptr;
+    };
 }
 
 class GsxRemoteApiClientTest final : public QObject
@@ -96,6 +148,9 @@ private slots:
     static void unknownTypeEmitsNothing();
     static void helloWithOtherProtocolEmitsNothing();
     static void commandIsDroppedWhileOffline();
+    static void theOfflineDropIsLoggedOncePerOutage();
+    static void aCommandIsRefusedUntilGsxHasSpoken();
+    static void aCommandIsRefusedWhenNoBytesLeaveTheSocket();
     static void silentSocketIsDroppedAfterTheHandshakeDeadline();
     static void firstFrameCancelsTheHandshakeDeadline();
     static void theFirstFrameReportsTheConnection();
@@ -246,6 +301,59 @@ void GsxRemoteApiClientTest::commandIsDroppedWhileOffline()
     QVERIFY(!client.SendCommand(QStringLiteral("menu.toggle")));
 }
 
+void GsxRemoteApiClientTest::theOfflineDropIsLoggedOncePerOutage()
+{
+    GsxRemoteApiClient client;
+
+    QVERIFY(!client.SendCommand(QStringLiteral("menu.toggle")));
+    QVERIFY(!client.SendCommand(QStringLiteral("menu.pick")));
+    QVERIFY(!client.SendCommand(QStringLiteral("menu.close")));
+
+    QCOMPARE(CapturedWith(kDropped), 1);
+
+    Connect(client);
+    Deliver(client, QString::fromLatin1(kHello));
+    Disconnect(client);
+
+    QVERIFY(!client.SendCommand(QStringLiteral("menu.toggle")));
+    QVERIFY(!client.SendCommand(QStringLiteral("menu.pick")));
+
+    QCOMPARE(CapturedWith(kDropped), 2);
+}
+
+void GsxRemoteApiClientTest::aCommandIsRefusedUntilGsxHasSpoken()
+{
+    GsxServer gsx;
+    QVERIFY(gsx.Listen());
+    GsxRemoteApiClient client;
+    client.SetPortForTest(gsx.Port());
+    const QSignalSpy connection(&client, &GsxRemoteApiClient::ConnectionChanged);
+
+    client.Start();
+
+    QTRY_COMPARE(gsx.received.size(), 1);
+    QVERIFY(!client.SendCommand(QStringLiteral("menu.toggle")));
+
+    gsx.Say(QString::fromLatin1(kHello));
+
+    QTRY_COMPARE(connection.count(), 1);
+    QVERIFY(client.SendCommand(QStringLiteral("menu.toggle")));
+
+    QTRY_COMPARE(gsx.received.size(), 2);
+    QVERIFY(gsx.received.at(1).contains(QStringLiteral("menu.toggle")));
+
+    client.Stop();
+}
+
+void GsxRemoteApiClientTest::aCommandIsRefusedWhenNoBytesLeaveTheSocket()
+{
+    GsxRemoteApiClient client;
+
+    Deliver(client, QString::fromLatin1(kHello));
+
+    QVERIFY(!client.SendCommand(QStringLiteral("menu.toggle")));
+}
+
 void GsxRemoteApiClientTest::silentSocketIsDroppedAfterTheHandshakeDeadline()
 {
     GsxRemoteApiClient client;
@@ -253,10 +361,12 @@ void GsxRemoteApiClientTest::silentSocketIsDroppedAfterTheHandshakeDeadline()
 
     Connect(client);
 
-    QVERIFY(client.SendCommand(QStringLiteral("menu.toggle")));
+    QVERIFY(!client.SendCommand(QStringLiteral("menu.toggle")));
+    QCOMPARE(CapturedWith(kDeafSocket), 0);
 
     QTest::qWait(kDeadlineMs * 4);
 
+    QCOMPARE(CapturedWith(kDeafSocket), 1);
     QVERIFY(!client.SendCommand(QStringLiteral("menu.toggle")));
 }
 
@@ -266,11 +376,11 @@ void GsxRemoteApiClientTest::firstFrameCancelsTheHandshakeDeadline()
     client.SetHandshakeTimeoutForTest(kDeadlineMs);
 
     Connect(client);
-    Deliver(client, QStringLiteral(R"({"type":"hello","protocol":1})"));
+    Deliver(client, QString::fromLatin1(kHello));
 
     QTest::qWait(kDeadlineMs * 4);
 
-    QVERIFY(client.SendCommand(QStringLiteral("menu.toggle")));
+    QCOMPARE(CapturedWith(kDeafSocket), 0);
 }
 
 void GsxRemoteApiClientTest::theFirstFrameReportsTheConnection()
@@ -373,12 +483,22 @@ void GsxRemoteApiClientTest::everySentMessageLandsInTheWireLog()
 #ifndef NDEBUG
     probe::ResetForTest();
     probe::SetEnabled(true);
+    GsxServer gsx;
+    QVERIFY(gsx.Listen());
     GsxRemoteApiClient client;
+    client.SetPortForTest(gsx.Port());
+    const QSignalSpy connection(&client, &GsxRemoteApiClient::ConnectionChanged);
 
-    Connect(client);
+    client.Start();
+
+    QTRY_VERIFY(gsx.HasPeer());
+
+    gsx.Say(QString::fromLatin1(kHello));
+
+    QTRY_COMPARE(connection.count(), 1);
     QVERIFY(client.SendCommand(QStringLiteral("menu.open"), QJsonObject{{QStringLiteral("index"), 2}}));
 
-    const QStringList lines = WireLines();
+    const QStringList lines = WireLines().filter(QStringLiteral("\"type\":\"sent\""));
 
     QCOMPARE(lines.size(), 2);
     QVERIFY(lines.at(0).endsWith(

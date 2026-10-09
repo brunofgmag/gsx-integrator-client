@@ -19,7 +19,7 @@ public:
     void Start();
     void Stop();
 
-    virtual bool SendCommand(const QString& verb, const QJsonObject& args = {});
+    [[nodiscard]] virtual bool SendCommand(const QString& verb, const QJsonObject& args = {});
 
     void SetHandshakeTimeoutForTest(const int ms) { handshakeTimeoutMs_ = ms; }
     void SetPortForTest(const quint16 port) { portForTest_ = port; }
@@ -51,10 +51,10 @@ private:
     QTimer* handshakeTimer_ = nullptr;
     quint16 port_ = 8744;
     quint16 portForTest_ = 0;
-    bool connected_ = false;
     bool handshakeDone_ = false;
     bool stopping_ = false;
     bool announceNextAttempt_ = true;
+    bool warnNextDrop_ = true;
     int backoffMs_ = 1000;
     int handshakeTimeoutMs_ = kHandshakeTimeoutMs;
 };

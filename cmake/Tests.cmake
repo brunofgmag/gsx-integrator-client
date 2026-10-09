@@ -213,15 +213,18 @@ gsxi_add_qt_test(gsxi-gsx-menu-navigator-tests gsx-menu-navigator
         src/infrastructure/simvars/VariableGateway.h
         src/domain/ports/GsxMenuGateway.h
         src/domain/ports/DomainLogger.h
-        src/domain/model/AutomationSettings.h)
+        src/domain/model/AutomationSettings.h
+        src/domain/model/MemoryBag.h)
 target_link_libraries(gsxi-gsx-menu-navigator-tests PRIVATE Qt6::WebSockets)
 
 gsxi_add_qt_test(gsxi-gsx-door-sync-tests gsx-door-sync
+        tests/doubles/FakeVariableGateway.h
         tests/tst_gsx_door_sync.cpp
         src/infrastructure/gsx/GsxDoorSync.cpp
         src/infrastructure/gsx/GsxDoorSync.h
         src/infrastructure/gsx/GsxLVars.h
-        src/infrastructure/simvars/VariableGateway.h)
+        src/infrastructure/simvars/VariableGateway.h
+        src/domain/model/MemoryBag.h)
 
 gsxi_add_qt_test(gsxi-gsx-interface-tests gsx-interface
         tests/TestDoubles.h
@@ -232,7 +235,8 @@ gsxi_add_qt_test(gsxi-gsx-interface-tests gsx-interface
         src/infrastructure/commbus/CommBusBridgeGateway.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
-        src/infrastructure/simvars/VariableGateway.h)
+        src/infrastructure/simvars/VariableGateway.h
+        src/domain/model/MemoryBag.h)
 
 gsxi_add_qt_test(gsxi-gsx-remote-api-client-tests gsx-remote-api-client
         tests/tst_gsx_remote_api_client.cpp

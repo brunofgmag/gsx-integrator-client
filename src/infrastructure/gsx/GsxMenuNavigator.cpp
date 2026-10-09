@@ -1,9 +1,13 @@
 #include "GsxMenuNavigator.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <format>
+#include <QByteArray>
 #include <QDateTime>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonObject>
 #include <QString>
 #include "GsxLVars.h"
@@ -38,6 +42,26 @@ namespace
     constexpr auto kRemoveStairsText = "Remove the stairs";
     constexpr auto kBoardingServiceId = "Boarding";
     constexpr auto kDeboardingServiceId = "Deboarding";
+    constexpr auto kDeIceYesSpentEntry = "deIceYesSpent";
+    constexpr auto kStairsKeptInPlaceEntry = "stairsKeptInPlace";
+    constexpr auto kPanelOpenSpentEntry = "panelOpenSpent";
+    constexpr auto kPanelCloseSpentEntry = "panelCloseSpent";
+    constexpr auto kPanelOpenedByUsEntry = "panelOpenedByUs";
+    constexpr auto kPendingRequestsEntry = "pendingRequests";
+    constexpr auto kVerbKey = "verb";
+    constexpr auto kArgsKey = "args";
+    constexpr auto kLabelKey = "label";
+    constexpr auto kConfirmIdKey = "confirmId";
+    constexpr auto kLastSentKey = "lastSentMs";
+    constexpr auto kArmedKey = "armedMs";
+    constexpr auto kAttemptsKey = "attempts";
+    constexpr auto kFiresWhileUnderwayKey = "firesWhileUnderway";
+    constexpr auto kMenuCloseVerb = "menu.close";
+    constexpr auto kMenuToggleVerb = "menu.toggle";
+    constexpr auto kMenuPickVerb = "menu.pick";
+    constexpr auto kStateGetVerb = "state.get";
+    constexpr auto kServiceTriggerVerb = "service.trigger";
+    constexpr auto kCommandRunVerb = "command.run";
 
     const char* CrewChoiceEntry(const CrewChoice choice)
     {
@@ -48,7 +72,13 @@ namespace
         case CrewChoice::Pilots: return "Pilots";
         case CrewChoice::Both: return "Both";
         }
+
         return "Both";
+    }
+
+    bool SameIgnoringCase(const char x, const char y)
+    {
+        return std::tolower(static_cast<unsigned char>(x)) == std::tolower(static_cast<unsigned char>(y));
     }
 
     bool StartsWithFold(const std::string& hay, const std::string& needle)
@@ -59,25 +89,49 @@ namespace
         }
 
         return std::ranges::equal(hay.begin(), hay.begin() + static_cast<long long>(needle.size()),
-                                  needle.begin(), needle.end(),
-                                  [](const char x, const char y)
-                                  {
-                                      return std::tolower(static_cast<unsigned char>(x)) == std::tolower(
-                                          static_cast<unsigned char>(y));
-                                  });
+                                  needle.begin(), needle.end(), SameIgnoringCase);
     }
 
     bool Contains(const std::string& hay, const std::string& needle)
     {
-        const auto it = std::ranges::search(hay, needle,
-                                            [](const char x, const char y)
-                                            {
-                                                return std::tolower(static_cast<unsigned char>(x)) == std::tolower(
-                                                    static_cast<unsigned char>(y));
-                                            }).begin();
+        const auto it = std::ranges::search(hay, needle, SameIgnoringCase).begin();
+
         return it != hay.end();
     }
+
+    bool IsArmedVerb(const QString& verb)
+    {
+        return verb == kServiceTriggerVerb || verb == kCommandRunVerb;
+    }
 }
+
+bool GsxMenuNavigator::PendingRequest::UndoneByASecondSend() const
+{
+    return gsx::services::ASecondPickUndoesIt(confirmId);
+}
+
+class GsxMenuNavigator::PassScope
+{
+public:
+    explicit PassScope(const GsxMenuNavigator& owner) : owner_(owner)
+    {
+        if (owner_.passDepth_++ == 0)
+        {
+            owner_.sendRefused_ = false;
+        }
+    }
+
+    ~PassScope()
+    {
+        --owner_.passDepth_;
+    }
+
+    PassScope(const PassScope&) = delete;
+    PassScope& operator=(const PassScope&) = delete;
+
+private:
+    const GsxMenuNavigator& owner_;
+};
 
 GsxMenuNavigator::GsxMenuNavigator(GsxRemoteApiClient* client,
                                    GsxRemoteState* state,
@@ -127,7 +181,7 @@ void GsxMenuNavigator::RepositionAircraft()
 
 void GsxMenuNavigator::RequestSimbriefLoad()
 {
-    ArmRequest("command.run", QJsonObject{{"command", "RELOAD_SIMBRIEF"}}, "RELOAD_SIMBRIEF", {});
+    ArmRequest(kCommandRunVerb, QJsonObject{{"command", "RELOAD_SIMBRIEF"}}, "RELOAD_SIMBRIEF", {});
 }
 
 void GsxMenuNavigator::RequestBoarding()
@@ -152,8 +206,8 @@ void GsxMenuNavigator::RequestDepartureClearance()
     OpenIntent(Intent::Service);
     SyncGsxToolbar();
 
-    const char* departure = gsx::services::Id(GroundService::Departure);
-    ArmRequest("service.trigger",
+    const char* const departure = gsx::services::Id(GroundService::Departure);
+    ArmRequest(kServiceTriggerVerb,
                QJsonObject{{"service", QString::fromLatin1(departure)}},
                departure,
                {});
@@ -189,13 +243,20 @@ void GsxMenuNavigator::RequestCleaning()
     TriggerService(gsx::services::Id(GroundService::Cleaning));
 }
 
-bool GsxMenuNavigator::PickNowOrArm(const char* entry, TimedIntent& intent)
+bool GsxMenuNavigator::PickNowOrArm(const char* const entry, TimedIntent& intent)
 {
+    const PassScope pass(*this);
+
     if (state_->menu.shown && PickByContains(entry))
     {
         intent = {};
 
         return true;
+    }
+
+    if (sendRefused_)
+    {
+        return false;
     }
 
     intent = {.active = true, .sinceMs = nowMs_()};
@@ -234,7 +295,12 @@ void GsxMenuNavigator::CompleteBoarding()
 
 void GsxMenuNavigator::DisableGsxMenu()
 {
-    (void)client_->SendCommand("menu.close");
+    const PassScope pass(*this);
+
+    if (!Send(kMenuCloseVerb))
+    {
+        return;
+    }
 
     reposition_ = Reposition::Idle;
     CloseIntent();
@@ -257,11 +323,124 @@ void GsxMenuNavigator::Reset()
     watchedSig_.reset();
     discardedSig_.clear();
     leftOpenSig_.clear();
+    resyncSig_.clear();
     resyncCount_ = 0;
     resyncPending_ = false;
     lastActionMs_ = 0;
     RearmPanelLatches();
     pending_.clear();
+}
+
+MemoryBag GsxMenuNavigator::TakeMemory() const
+{
+    MemoryBag memory;
+    memory.PutFlag(kDeIceYesSpentEntry, deIceYesSpent_);
+    memory.PutFlag(kStairsKeptInPlaceEntry, stairsKeptInPlace_);
+    memory.PutFlag(kPanelOpenSpentEntry, panelOpenSpent_);
+    memory.PutFlag(kPanelCloseSpentEntry, panelCloseSpent_);
+    memory.PutFlag(kPanelOpenedByUsEntry, panelOpenedByUs_);
+    memory.PutText(kPendingRequestsEntry, PendingToText());
+
+    return memory;
+}
+
+void GsxMenuNavigator::RestoreMemory(const MemoryBag& memory)
+{
+    Reset();
+
+    deIceYesSpent_ = memory.Flag(kDeIceYesSpentEntry, false);
+    stairsKeptInPlace_ = memory.Flag(kStairsKeptInPlaceEntry, false);
+    panelOpenSpent_ = memory.Flag(kPanelOpenSpentEntry, false);
+    panelCloseSpent_ = memory.Flag(kPanelCloseSpentEntry, false);
+    panelOpenedByUs_ = memory.Flag(kPanelOpenedByUsEntry, false);
+
+    const long long now = nowMs_();
+    pending_ = PendingFromText(memory.Text(kPendingRequestsEntry, {}), now);
+    std::ranges::for_each(pending_, [now](PendingRequest& request)
+    {
+        if (!request.WasSent())
+        {
+            request.armedMs = now;
+        }
+    });
+
+    if (!pending_.empty())
+    {
+        OpenIntent(Intent::Service);
+    }
+}
+
+QJsonObject GsxMenuNavigator::PendingToJson(const PendingRequest& request)
+{
+    return QJsonObject{{kVerbKey, request.verb},
+                       {kArgsKey, request.args},
+                       {kLabelKey, QString::fromStdString(request.label)},
+                       {kConfirmIdKey, QString::fromStdString(request.confirmId)},
+                       {kLastSentKey, request.lastSentMs},
+                       {kArmedKey, request.armedMs},
+                       {kAttemptsKey, request.attempts},
+                       {kFiresWhileUnderwayKey, request.firesWhileUnderway}};
+}
+
+std::optional<GsxMenuNavigator::PendingRequest> GsxMenuNavigator::PendingFromJson(const QJsonObject& object,
+                                                                                  const long long now)
+{
+    QString verb = object.value(kVerbKey).toString();
+    if (!IsArmedVerb(verb))
+    {
+        return std::nullopt;
+    }
+
+    const long long newest = std::max(now, 0LL);
+
+    return PendingRequest{.verb = std::move(verb),
+                          .args = object.value(kArgsKey).toObject(),
+                          .label = object.value(kLabelKey).toString().toStdString(),
+                          .confirmId = object.value(kConfirmIdKey).toString().toStdString(),
+                          .lastSentMs = std::clamp(object.value(kLastSentKey).toInteger(), 0LL, newest),
+                          .armedMs = std::clamp(object.value(kArmedKey).toInteger(), 0LL, newest),
+                          .attempts = std::clamp(object.value(kAttemptsKey).toInt(), 0, kMaxTriggerAttempts),
+                          .firesWhileUnderway = object.value(kFiresWhileUnderwayKey).toBool()};
+}
+
+std::string GsxMenuNavigator::PendingToText() const
+{
+    QJsonArray queue;
+    std::ranges::for_each(pending_, [&queue](const PendingRequest& request)
+    {
+        queue.append(PendingToJson(request));
+    });
+
+    const QByteArray text = QJsonDocument(queue).toJson(QJsonDocument::Compact);
+
+    return text.toStdString();
+}
+
+std::vector<GsxMenuNavigator::PendingRequest> GsxMenuNavigator::PendingFromText(const std::string& text,
+                                                                                const long long now)
+{
+    const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(text));
+
+    std::vector<PendingRequest> queue;
+    for (const QJsonValue& value : document.array())
+    {
+        auto request = PendingFromJson(value.toObject(), now);
+        if (!request)
+        {
+            continue;
+        }
+
+        const bool alreadyQueued = std::ranges::any_of(queue, [&request](const PendingRequest& queued)
+        {
+            return queued.Matches(request->verb, request->label);
+        });
+        if (!alreadyQueued)
+        {
+            queue.push_back(std::move(*request));
+        }
+    }
+
+    return queue;
 }
 
 void GsxMenuNavigator::OnSnapshot()
@@ -280,6 +459,8 @@ void GsxMenuNavigator::OnSnapshot()
 
 void GsxMenuNavigator::OnMenuChanged()
 {
+    const PassScope pass(*this);
+
     HandleMenu();
     PumpRequests();
 }
@@ -311,7 +492,7 @@ void GsxMenuNavigator::HandleMenu()
         return;
     }
 
-    if (HandlePendingCompletions())
+    if (sendRefused_ || HandlePendingCompletions())
     {
         return;
     }
@@ -345,7 +526,7 @@ void GsxMenuNavigator::ExpireTimedIntents()
     ExpireIntent(confirmingEngines_, "confirm-engines");
 }
 
-void GsxMenuNavigator::ExpireIntent(TimedIntent& intent, const char* name) const
+void GsxMenuNavigator::ExpireIntent(TimedIntent& intent, const char* const name) const
 {
     if (intent.active && nowMs_() - intent.sinceMs >= kCompleteTtlMs)
     {
@@ -420,12 +601,16 @@ void GsxMenuNavigator::MaybeResyncStalledMenu(const std::string& sig)
         return;
     }
 
-    ++resyncCount_;
     watchedSinceMs_ = nowMs_();
+    if (!Send(kStateGetVerb))
+    {
+        return;
+    }
+
+    ++resyncCount_;
     resyncPending_ = true;
     resyncSig_ = sig;
     lastActionMs_ = nowMs_();
-    (void)client_->SendCommand("state.get");
     logger_->LogInfo(std::format("RemoteAPI menu stalled: requesting snapshot resync {}/{} ('{}')",
                                  resyncCount_, kMaxResyncs, state_->menu.title));
 }
@@ -453,10 +638,14 @@ void GsxMenuNavigator::DiscardStuckMenu(const std::string& sig)
         return;
     }
 
-    discardedSig_ = sig;
     watchedSinceMs_ = nowMs_();
+    if (!Send(kMenuCloseVerb))
+    {
+        return;
+    }
+
+    discardedSig_ = sig;
     lastActionMs_ = nowMs_();
-    (void)client_->SendCommand("menu.close");
     logger_->LogInfo(std::format("RemoteAPI closing the menu the resyncs could not move: '{}'",
                                  state_->menu.title));
 }
@@ -483,9 +672,11 @@ bool GsxMenuNavigator::MaybeCloseStaleMenu()
     }
 
     watchedSinceMs_ = nowMs_();
-    lastActionMs_ = nowMs_();
-    (void)client_->SendCommand("menu.close");
-    logger_->LogInfo(std::format("RemoteAPI closing stale menu '{}'", state_->menu.title));
+    if (Send(kMenuCloseVerb))
+    {
+        lastActionMs_ = nowMs_();
+        logger_->LogInfo(std::format("RemoteAPI closing stale menu '{}'", state_->menu.title));
+    }
 
     return true;
 }
@@ -648,6 +839,11 @@ bool GsxMenuNavigator::HandleRepositionFlow()
         return true;
     }
 
+    if (sendRefused_)
+    {
+        return true;
+    }
+
     reposition_ = Reposition::PickingRoot;
 
     return false;
@@ -672,31 +868,34 @@ bool GsxMenuNavigator::HandleIntentPrompts()
     return false;
 }
 
-void GsxMenuNavigator::TriggerService(const char* serviceId, const bool toggles)
+void GsxMenuNavigator::TriggerService(const char* const serviceId, const bool firesWhileUnderway)
 {
     OpenIntent(Intent::Service);
     SyncGsxToolbar();
 
-    ArmRequest("service.trigger",
+    ArmRequest(kServiceTriggerVerb,
                QJsonObject{{"service", QString::fromLatin1(serviceId)}},
                serviceId,
                serviceId,
-               toggles);
+               firesWhileUnderway);
 }
 
 void GsxMenuNavigator::ArmRequest(QString verb, QJsonObject args, std::string label, std::string confirmId,
-                                  const bool toggles)
+                                  const bool firesWhileUnderway)
 {
+    const PassScope pass(*this);
+
     const auto same = std::ranges::find_if(pending_, [&](const PendingRequest& request)
     {
-        return request.verb == verb && request.label == label;
+        return request.Matches(verb, label);
     });
 
     PendingRequest request{.verb = std::move(verb),
                            .args = std::move(args),
                            .label = std::move(label),
                            .confirmId = std::move(confirmId),
-                           .toggles = toggles};
+                           .armedMs = nowMs_(),
+                           .firesWhileUnderway = firesWhileUnderway};
 
     if (same != pending_.end())
     {
@@ -710,65 +909,87 @@ void GsxMenuNavigator::ArmRequest(QString verb, QJsonObject args, std::string la
     PumpRequests();
 }
 
+GsxMenuNavigator::DropReason GsxMenuNavigator::DropReasonFor(const PendingRequest& request, const long long now) const
+{
+    if (WasTaken(request))
+    {
+        return DropReason::Taken;
+    }
+
+    if (IsAlreadyUnderway(request))
+    {
+        return DropReason::AlreadyUnderway;
+    }
+
+    if (request.WasSent() && request.UndoneByASecondSend() && request.GiveUpWindowElapsed(now))
+    {
+        return DropReason::ToggleGaveUp;
+    }
+
+    if (request.attempts >= kMaxTriggerAttempts && request.RetryWindowElapsed(now))
+    {
+        return DropReason::NeverTaken;
+    }
+
+    if (request.LeftUnsentForTooLong(now))
+    {
+        return DropReason::NeverLeft;
+    }
+
+    return DropReason::None;
+}
+
+void GsxMenuNavigator::LogDrop(const PendingRequest& request, const DropReason reason) const
+{
+    switch (reason)
+    {
+    case DropReason::None:
+    case DropReason::Taken:
+        break;
+    case DropReason::AlreadyUnderway:
+        logger_->LogInfo(std::format("RemoteAPI '{}' already underway; not requesting", request.label));
+        break;
+    case DropReason::ToggleGaveUp:
+        logger_->LogInfo(std::format(
+            "RemoteAPI stopped waiting for '{}'; a service that toggles is never sent twice, so the request is dropped",
+            request.label));
+        break;
+    case DropReason::NeverTaken:
+        logger_->LogInfo(std::format("RemoteAPI '{}' never taken by GSX after {} attempts",
+                                     request.label, request.attempts));
+        break;
+    case DropReason::NeverLeft:
+        logger_->LogInfo(std::format(
+            "RemoteAPI stopped waiting for '{}'; the request never left the client, so it is dropped",
+            request.label));
+        break;
+    }
+}
+
 void GsxMenuNavigator::PumpRequests()
 {
-    for (auto it = pending_.begin(); it != pending_.end();)
+    const long long now = nowMs_();
+
+    std::erase_if(pending_, [this, now](const PendingRequest& request)
     {
-        if (WasTaken(*it))
-        {
-            it = pending_.erase(it);
+        const DropReason reason = DropReasonFor(request, now);
+        LogDrop(request, reason);
 
-            continue;
-        }
-
-        if (IsAlreadyUnderway(*it))
-        {
-            logger_->LogInfo(std::format("RemoteAPI '{}' already underway; not requesting", it->label));
-            it = pending_.erase(it);
-
-            continue;
-        }
-
-        if (gsx::services::ASecondPickUndoesIt(it->confirmId) && it->attempts > 0
-            && (nowMs_() - it->lastSentMs) >= kToggleGiveUpMs)
-        {
-            logger_->LogInfo(std::format(
-                "RemoteAPI stopped waiting for '{}'; a service that toggles is never sent twice, so the request is dropped",
-                it->label));
-            it = pending_.erase(it);
-
-            continue;
-        }
-
-        if (it->attempts >= kMaxTriggerAttempts && (nowMs_() - it->lastSentMs) >= kTriggerRetryMs)
-        {
-            logger_->LogInfo(std::format("RemoteAPI '{}' never taken by GSX after {} attempts",
-                                         it->label, it->attempts));
-            it = pending_.erase(it);
-
-            continue;
-        }
-
-        ++it;
-    }
+        return reason != DropReason::None;
+    });
 
     if (IsWaitingForThePanel() || !IsMenuSettled())
     {
         return;
     }
 
-    for (PendingRequest& request : pending_)
+    const auto due = std::ranges::find_if(pending_, [now](const PendingRequest& request)
     {
-        if (request.attempts > 0
-            && (gsx::services::ASecondPickUndoesIt(request.confirmId)
-                || (nowMs_() - request.lastSentMs) < kTriggerRetryMs))
-        {
-            continue;
-        }
-
-        SendRequest(request);
-
-        return;
+        return request.IsDueToSend(now);
+    });
+    if (due != pending_.end())
+    {
+        SendRequest(*due);
     }
 }
 
@@ -777,13 +998,28 @@ void GsxMenuNavigator::SendRequest(PendingRequest& request)
     const bool closedMenu = state_->menu.shown;
     if (closedMenu)
     {
-        (void)client_->SendCommand("menu.close");
+        if (!Send(kMenuCloseVerb))
+        {
+            return;
+        }
+
         ClearMenuTracking();
+    }
+
+    if (!Send(request.verb, request.args))
+    {
+        return;
     }
 
     lastActionMs_ = nowMs_();
     request.lastSentMs = lastActionMs_;
     ++request.attempts;
+
+    const bool isTheFirstServiceDelivery = request.attempts == 1 && request.verb == kServiceTriggerVerb;
+    if (isTheFirstServiceDelivery && !RepositionWalking())
+    {
+        OpenIntent(Intent::Service);
+    }
 
     std::string note;
     if (request.attempts > 1)
@@ -796,13 +1032,11 @@ void GsxMenuNavigator::SendRequest(PendingRequest& request)
     }
 
     logger_->LogInfo(std::format("RemoteAPI {} '{}'{}", request.verb.toStdString(), request.label, note));
-
-    (void)client_->SendCommand(request.verb, request.args);
 }
 
 bool GsxMenuNavigator::IsAlreadyUnderway(const PendingRequest& request) const
 {
-    if (request.toggles || request.attempts > 0 || request.confirmId.empty())
+    if (request.firesWhileUnderway || request.WasSent() || request.confirmId.empty())
     {
         return false;
     }
@@ -812,7 +1046,7 @@ bool GsxMenuNavigator::IsAlreadyUnderway(const PendingRequest& request) const
 
 bool GsxMenuNavigator::IsServiceUnderway(const std::string& serviceId) const
 {
-    const GsxRemoteService* service = FindService(*state_, serviceId);
+    const GsxRemoteService* const service = FindService(*state_, serviceId);
     if (service == nullptr)
     {
         return false;
@@ -824,29 +1058,20 @@ bool GsxMenuNavigator::IsServiceUnderway(const std::string& serviceId) const
 
 bool GsxMenuNavigator::PassengersAreFlowing() const
 {
-    for (const char* serviceId : {kBoardingServiceId, kDeboardingServiceId})
-    {
-        if (IsServiceUnderway(serviceId))
-        {
-            return true;
-        }
-
-        const bool requestOutstanding = std::ranges::any_of(pending_, [serviceId](const PendingRequest& request)
-        {
-            return request.label == serviceId && request.attempts > 0;
-        });
-        if (requestOutstanding)
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return std::ranges::any_of(std::array{kBoardingServiceId, kDeboardingServiceId},
+                               [this](const char* const serviceId)
+                               {
+                                   return IsServiceUnderway(serviceId)
+                                       || std::ranges::any_of(pending_, [serviceId](const PendingRequest& request)
+                                       {
+                                           return request.label == serviceId && request.WasSent();
+                                       });
+                               });
 }
 
 bool GsxMenuNavigator::WasTaken(const PendingRequest& request) const
 {
-    if (request.attempts == 0)
+    if (!request.WasSent())
     {
         return false;
     }
@@ -856,7 +1081,7 @@ bool GsxMenuNavigator::WasTaken(const PendingRequest& request) const
         return true;
     }
 
-    const GsxRemoteService* service = FindService(*state_, request.confirmId);
+    const GsxRemoteService* const service = FindService(*state_, request.confirmId);
     if (service == nullptr)
     {
         return false;
@@ -886,7 +1111,8 @@ void GsxMenuNavigator::SyncGsxToolbar() const
 
 void GsxMenuNavigator::OpenPushbackPanel()
 {
-    if (pluginClient_ == nullptr || PanelMode() != GsxPanelMode::OnPushback || panelOpenSpent_)
+    if (pluginClient_ == nullptr || PanelMode() != GsxPanelMode::OnPushback || panelOpenSpent_
+        || !pluginClient_->IsBridgeReady())
     {
         return;
     }
@@ -987,13 +1213,26 @@ void GsxMenuNavigator::OnPushbackStarted()
 
 void GsxMenuNavigator::OpenMenu() const
 {
+    const PassScope pass(*this);
+
     SyncGsxToolbar();
 
-    if (!state_->menu.shown)
+    if (!state_->menu.shown && Send(kMenuToggleVerb))
     {
         lastActionMs_ = nowMs_();
-        (void)client_->SendCommand("menu.toggle");
     }
+}
+
+bool GsxMenuNavigator::Send(const QString& verb, const QJsonObject& args) const
+{
+    if (sendRefused_)
+    {
+        return false;
+    }
+
+    sendRefused_ = !client_->SendCommand(verb, args);
+
+    return !sendRefused_;
 }
 
 bool GsxMenuNavigator::IsMenuSettled() const
@@ -1007,20 +1246,22 @@ bool GsxMenuNavigator::PickFirstMatching(const std::function<bool(const std::str
     const auto& disabled = state_->menu.disabled;
     for (std::size_t i = 0; i < entries.size(); ++i)
     {
-        if (i < disabled.size() && disabled[i])
+        const bool isDisabled = i < disabled.size() && disabled[i];
+        if (isDisabled || !matches(entries[i]))
         {
             continue;
         }
 
-        if (matches(entries[i]))
+        if (!Send(kMenuPickVerb, QJsonObject{{"index", static_cast<int>(i)}}))
         {
-            lastActionMs_ = nowMs_();
-            client_->SendCommand("menu.pick", QJsonObject{{"index", static_cast<int>(i)}});
-            logger_->LogInfo(std::format("RemoteAPI menu.pick {} ({})", i, entries[i]));
-            lastPickedSig_ = MenuSignature();
-
-            return true;
+            return false;
         }
+
+        lastActionMs_ = nowMs_();
+        logger_->LogInfo(std::format("RemoteAPI menu.pick {} ({})", i, entries[i]));
+        lastPickedSig_ = MenuSignature();
+
+        return true;
     }
 
     return false;
@@ -1044,6 +1285,7 @@ std::string GsxMenuNavigator::MenuSignature() const
         sig += '\n';
         sig += entry;
     }
+
     return sig;
 }
 
