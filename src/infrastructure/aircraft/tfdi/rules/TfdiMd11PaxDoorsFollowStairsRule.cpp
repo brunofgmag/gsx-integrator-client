@@ -1,5 +1,6 @@
 #include "TfdiMd11PaxDoorsFollowStairsRule.h"
 
+#include "../TfdiMd11.h"
 #include "../../../gsx/GsxLVars.h"
 #include "../../../simvars/VariableGateway.h"
 
@@ -15,8 +16,9 @@ namespace
     constexpr double kDoorClosed = 0.0;
 }
 
-TfdiMd11PaxDoorsFollowStairsRule::TfdiMd11PaxDoorsFollowStairsRule(VariableReader& variables)
-    : variables_(&variables)
+TfdiMd11PaxDoorsFollowStairsRule::TfdiMd11PaxDoorsFollowStairsRule(VariableReader& variables,
+                                                                  const TfdiMd11& aircraft)
+    : variables_(&variables), aircraft_(&aircraft)
 {
 }
 
@@ -37,25 +39,57 @@ void TfdiMd11PaxDoorsFollowStairsRule::Act(const RuleContext&, VariableWriter& w
         return;
     }
 
-    FollowStairs(writer, gsx::lvars::kPassengerStairsFrontState, kPaxDoor1LLVar, fwdDoorTarget_);
-    FollowStairs(writer, gsx::lvars::kPassengerStairsMiddleState, kPaxDoor2LLVar, midDoorTarget_);
-    FollowStairs(writer, gsx::lvars::kPassengerStairsRearState, kPaxDoor4LLVar, aftDoorTarget_);
+    FollowStairs(writer, {gsx::lvars::kPassengerStairsFrontState, kPaxDoor1LLVar}, targets_.fwd);
+    FollowStairs(writer, {gsx::lvars::kPassengerStairsMiddleState, kPaxDoor2LLVar}, targets_.mid);
+    FollowStairs(writer, {gsx::lvars::kPassengerStairsRearState, kPaxDoor4LLVar}, targets_.aft);
 }
 
-void TfdiMd11PaxDoorsFollowStairsRule::FollowStairs(VariableWriter& writer, const char* stairsStateLVar,
-                                                    const char* doorCmdLVar, double& lastDoorTarget) const
+TfdiMd11PaxDoorsFollowStairsRule::DoorTargets TfdiMd11PaxDoorsFollowStairsRule::Targets() const
 {
-    if (gsx::states::AreStairsArriving(variables_->GetLVar(stairsStateLVar, 0.0)))
+    return targets_;
+}
+
+void TfdiMd11PaxDoorsFollowStairsRule::RestoreTargets(const DoorTargets& targets)
+{
+    targets_ = targets;
+}
+
+void TfdiMd11PaxDoorsFollowStairsRule::FollowStairs(VariableWriter& writer, const DoorLVars& door,
+                                                    std::optional<double>& lastDoorTarget) const
+{
+    if (!variables_->HasReceivedLVar(door.stairsState))
+    {
+        return;
+    }
+
+    if (aircraft_->ArePassengerDoorsHeld())
+    {
+        CloseWhileHeld(writer, door, lastDoorTarget);
+
+        return;
+    }
+
+    if (gsx::states::AreStairsArriving(variables_->GetLVar(door.stairsState, 0.0)))
     {
         if (lastDoorTarget != kDoorOpen)
         {
-            writer.SetLVar(doorCmdLVar, kDoorOpen);
+            writer.SetLVar(door.command, kDoorOpen);
             lastDoorTarget = kDoorOpen;
         }
     }
     else if (lastDoorTarget == kDoorOpen)
     {
-        writer.SetLVar(doorCmdLVar, kDoorClosed);
+        writer.SetLVar(door.command, kDoorClosed);
+        lastDoorTarget = kDoorClosed;
+    }
+}
+
+void TfdiMd11PaxDoorsFollowStairsRule::CloseWhileHeld(VariableWriter& writer, const DoorLVars& door,
+                                                      std::optional<double>& lastDoorTarget)
+{
+    if (lastDoorTarget == kDoorOpen)
+    {
+        writer.SetLVar(door.command, kDoorClosed);
         lastDoorTarget = kDoorClosed;
     }
 }

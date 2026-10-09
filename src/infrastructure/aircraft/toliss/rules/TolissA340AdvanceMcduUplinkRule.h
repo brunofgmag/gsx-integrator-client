@@ -14,6 +14,8 @@ public:
     [[nodiscard]] RuleVerdict Evaluate(const RuleContext& context) override;
     void Act(const RuleContext& context, VariableWriter& writer) override;
 
+    void ResumeWithTheUplinkDone();
+
 private:
     const TolissA340* aircraft_;
     bool loadingSeen_ = false;

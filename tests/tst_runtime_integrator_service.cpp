@@ -43,7 +43,9 @@ namespace
     constexpr double kRj85RecommendedFuelRateKgs = 12.0;
     constexpr auto kMd11EfbZfw = "L:MD11_EFB_PAYLOAD_ZFW";
     constexpr double kMd11EmptyWeightKg = 150000.0;
+    constexpr double kMd11FuelOnBoardKg = 10000.0;
     constexpr double kJetwayInPlace = 5.0;
+    constexpr double kNoJetwayAtTheStand = 2.0;
     constexpr int kFlowTickBudget = 12;
     constexpr int kLoaderNoticeTickBudget = 120;
     constexpr int kReconnectWaitMs = 1000;
@@ -233,6 +235,7 @@ namespace
             && DriveTheFlowInto(TurnaroundPhase::WaitingFlightPlan, runtime, updated)
             && TickAndWait(updated)
             && PushDatum(simvars::kSimEmptyWeight, kMd11EmptyWeightKg)
+            && PushDatum(simvars::kSimFuelTotalKg, kMd11FuelOnBoardKg)
             && TickAndWait(updated);
     }
 
@@ -999,6 +1002,7 @@ void RuntimeIntegratorServiceTest::theSnapshotCarriesTheAirstairPressureWaitOnly
 
     QVERIFY(!runtime.Snapshot().ownStairsWaitingForPressure);
 
+    QVERIFY(PushLVar(gsx::lvars::kJetway, kNoJetwayAtTheStand));
     QVERIFY(TickAndWait(updated));
     QVERIFY(PushLVar(kRj85ForwardPassengerDoorLVar, kDoorOpen));
     QVERIFY(TickAndWait(updated));

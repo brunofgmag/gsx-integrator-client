@@ -52,6 +52,28 @@ void AvroRjPaxDoorsServeTheAirstairRule::Act(const RuleContext&, VariableWriter&
     KeepAftDoorClosed(writer);
 }
 
+std::optional<double> AvroRjPaxDoorsServeTheAirstairRule::FrontDoorTarget() const
+{
+    return lastFrontDoorTarget_;
+}
+
+void AvroRjPaxDoorsServeTheAirstairRule::RestoreFrontDoorTarget(const std::optional<double>& target)
+{
+    lastFrontDoorTarget_ = target;
+    restoredOpenTargetAwaitsVehicles_ = target == kDoorOpen;
+}
+
+bool AvroRjPaxDoorsServeTheAirstairRule::AwaitsTheVehiclesOfARestoredTarget()
+{
+    if (variables_->HasReceivedLVar(gsx::lvars::kJetway)
+        && variables_->HasReceivedLVar(gsx::lvars::kPassengerStairsFrontState))
+    {
+        restoredOpenTargetAwaitsVehicles_ = false;
+    }
+
+    return restoredOpenTargetAwaitsVehicles_ && !aircraft_->IsHeldForDeparture();
+}
+
 bool AvroRjPaxDoorsServeTheAirstairRule::IsFrontDoorWanted() const
 {
     if (aircraft_->IsHeldForDeparture())
@@ -104,6 +126,7 @@ void AvroRjPaxDoorsServeTheAirstairRule::DriveFrontDoor(VariableWriter& writer)
     }
 
     if (lastFrontDoorTarget_ == kDoorOpen && airstair_->stowed
+        && !AwaitsTheVehiclesOfARestoredTarget()
         && variables_->HasReceivedLVar(kStairPositionLVar)
         && variables_->GetLVar(kStairPositionLVar, 0.0) <= kStairStowedPosition)
     {

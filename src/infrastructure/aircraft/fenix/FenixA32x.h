@@ -34,6 +34,9 @@ public:
     [[nodiscard]] static const char* DoorDataref(GsxDoor door);
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
     void OnLoadingStarted() override;
+    [[nodiscard]] bool IsReachable() const override;
+    void OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory) override;
+    [[nodiscard]] MemoryBag TurnaroundMemory() const override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
     void HoldPassengerDoorsClosed(bool hold) override;
@@ -91,6 +94,7 @@ private:
     FenixA32xDisarmRefuelWhenDoneRule refuelSystemRule_;
     std::vector<AircraftRule*> rules_;
     bool finalLoadsheetRequested_ = true;
+    bool chocksRefusalReported_ = false;
     double lastFuelKg_ = -1.0;
     double lastZfwKg_ = -1.0;
     int lastPassengersOnBoard_ = -1;

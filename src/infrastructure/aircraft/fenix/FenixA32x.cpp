@@ -263,6 +263,32 @@ void FenixA32x::OnLoadingStarted()
     }
 }
 
+bool FenixA32x::IsReachable() const
+{
+    return efb_->IsAvailable()
+        && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit)
+        && variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit);
+}
+
+void FenixA32x::OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory)
+{
+    if (facts.loadingStarted)
+    {
+        refuelSystemRule_.ResumeLoading(facts.refuelFinished, facts.gsxRestartedSinceSave);
+        finalLoadsheetRequested_ = facts.boardingFinished;
+    }
+
+    doors_.RestoreMemory(memory, facts.gsxRestartedSinceSave);
+}
+
+MemoryBag FenixA32x::TurnaroundMemory() const
+{
+    MemoryBag memory;
+    doors_.AppendMemory(memory);
+
+    return memory;
+}
+
 const char* FenixA32x::DoorDataref(const GsxDoor door)
 {
     switch (door)
@@ -537,6 +563,19 @@ std::optional<GroundPowerStatus> FenixA32x::GetGroundPowerStatus() const
 
 bool FenixA32x::SetChocks(const bool placed)
 {
+    if (!efb_->IsAvailable())
+    {
+        if (!chocksRefusalReported_)
+        {
+            chocksRefusalReported_ = true;
+
+            LOG_WARN("Chocks request refused: the Fenix EFB is unavailable, the client keeps asking until it is back");
+        }
+
+        return false;
+    }
+
+    chocksRefusalReported_ = false;
     efb_->SetBool(kChocksDataref, placed);
 
     return true;

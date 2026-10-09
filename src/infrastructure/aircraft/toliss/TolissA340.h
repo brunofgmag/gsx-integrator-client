@@ -24,6 +24,10 @@ public:
     void Observe() override;
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
     void OnLoadingStarted() override {}
+
+    [[nodiscard]] bool IsReachable() const override;
+    void OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory) override;
+    [[nodiscard]] MemoryBag TurnaroundMemory() const override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
     void HoldPassengerDoorsClosed(bool hold) override;

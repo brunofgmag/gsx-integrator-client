@@ -190,6 +190,30 @@ void TolissA340::CloseAllDoors()
     LOG_INFO("All doors commanded closed: door control is now manual");
 }
 
+bool TolissA340::IsReachable() const
+{
+    return variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit)
+        && variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit);
+}
+
+void TolissA340::OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory)
+{
+    if (facts.loadingStarted)
+    {
+        uplinkRule_.ResumeWithTheUplinkDone();
+    }
+
+    doors_.RestoreMemory(memory, facts.gsxRestartedSinceSave);
+}
+
+MemoryBag TolissA340::TurnaroundMemory() const
+{
+    MemoryBag memory;
+    doors_.AppendMemory(memory);
+
+    return memory;
+}
+
 bool TolissA340::IsFlightPlanLoaded() const
 {
     return status_->flightPlanStatus == FlightPlanStatus::Ready;

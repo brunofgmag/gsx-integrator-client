@@ -24,6 +24,11 @@ namespace
 
     constexpr int kEfbReadyMask = 0x1;
     constexpr double kMtowKg = 283730.0;
+
+    bool IsArrival(const TurnaroundPhase phase)
+    {
+        return phase >= TurnaroundPhase::WaitingEngineShutdown;
+    }
 }
 
 TfdiMd11CommitEfbTargetsRule::TfdiMd11CommitEfbTargetsRule(VariableReader& variables, const TfdiMd11& aircraft)
@@ -46,9 +51,13 @@ RuleVerdict TfdiMd11CommitEfbTargetsRule::Evaluate(const RuleContext&)
     return RuleVerdict::Pass();
 }
 
-void TfdiMd11CommitEfbTargetsRule::Act(const RuleContext&, VariableWriter& writer)
+void TfdiMd11CommitEfbTargetsRule::Act(const RuleContext& context, VariableWriter& writer)
 {
-    const std::optional<double> stagedFuelKg = aircraft_->StagedFuelKg();
+    const bool arriving = IsArrival(context.phase);
+
+    ForgetTheDepartureFuelOnArrival(arriving);
+
+    const std::optional<double> stagedFuelKg = arriving ? std::nullopt : aircraft_->StagedFuelKg();
     const std::optional<double> stagedZfwKg = aircraft_->StagedZfwKg();
 
     if (!stagedFuelKg.has_value() && !stagedZfwKg.has_value())
@@ -61,6 +70,46 @@ void TfdiMd11CommitEfbTargetsRule::Act(const RuleContext&, VariableWriter& write
         return;
     }
 
+    ResolveTargets(stagedFuelKg, stagedZfwKg);
+
+    if (!fuelTarget_.seeded || !zfwTarget_.seeded)
+    {
+        return;
+    }
+
+    if (fuelTarget_.value == committedFuelKg_ && zfwTarget_.value == committedZfwKg_)
+    {
+        return;
+    }
+
+    CommitTargets(writer);
+
+    committedFuelKg_ = fuelTarget_.value;
+    committedZfwKg_ = zfwTarget_.value;
+}
+
+void TfdiMd11CommitEfbTargetsRule::ForgetTargets()
+{
+    fuelTarget_ = {};
+    zfwTarget_ = {};
+    committedFuelKg_ = 0.0;
+    committedZfwKg_ = 0.0;
+    arriving_ = false;
+}
+
+void TfdiMd11CommitEfbTargetsRule::ForgetTheDepartureFuelOnArrival(const bool arriving)
+{
+    if (arriving && !arriving_)
+    {
+        fuelTarget_ = {};
+    }
+
+    arriving_ = arriving;
+}
+
+void TfdiMd11CommitEfbTargetsRule::ResolveTargets(const std::optional<double>& stagedFuelKg,
+                                                  const std::optional<double>& stagedZfwKg)
+{
     if (stagedFuelKg.has_value())
     {
         fuelTarget_ = {*stagedFuelKg, true};
@@ -78,16 +127,6 @@ void TfdiMd11CommitEfbTargetsRule::Act(const RuleContext&, VariableWriter& write
     {
         SeedZfwIfNeeded();
     }
-
-    if (fuelTarget_.value == committedFuelKg_ && zfwTarget_.value == committedZfwKg_)
-    {
-        return;
-    }
-
-    CommitTargets(writer);
-
-    committedFuelKg_ = fuelTarget_.value;
-    committedZfwKg_ = zfwTarget_.value;
 }
 
 void TfdiMd11CommitEfbTargetsRule::SeedFuelIfNeeded()
@@ -102,7 +141,9 @@ void TfdiMd11CommitEfbTargetsRule::SeedFuelIfNeeded()
 
 void TfdiMd11CommitEfbTargetsRule::SeedZfwIfNeeded()
 {
-    if (zfwTarget_.seeded || !variables_->HasReceivedAVar(kSimTotalWeight, kKgUnit))
+    if (zfwTarget_.seeded
+        || !variables_->HasReceivedAVar(kSimTotalWeight, kKgUnit)
+        || !variables_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit))
     {
         return;
     }

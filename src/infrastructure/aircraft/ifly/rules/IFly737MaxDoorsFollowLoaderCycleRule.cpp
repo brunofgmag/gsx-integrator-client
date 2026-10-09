@@ -76,9 +76,24 @@ RuleVerdict IFly737MaxDoorsFollowLoaderCycleRule::Evaluate(const RuleContext&)
     return RuleVerdict::Pass();
 }
 
+void IFly737MaxDoorsFollowLoaderCycleRule::ForgetCloseRequest()
+{
+    closeRequested_ = false;
+    closeRequestSeen_ = false;
+}
+
+void IFly737MaxDoorsFollowLoaderCycleRule::ReleaseTogglesLeftHigh()
+{
+    for (Door* const door : AllDoors())
+    {
+        door->releasePending = true;
+    }
+}
+
 void IFly737MaxDoorsFollowLoaderCycleRule::Act(const RuleContext&, VariableWriter& writer)
 {
     FollowAircraftCommands();
+    ReleaseStuckToggles(writer);
 
     const CargoCycle cycle = CurrentCargoCycle();
 
@@ -102,12 +117,34 @@ void IFly737MaxDoorsFollowLoaderCycleRule::Act(const RuleContext&, VariableWrite
     }
 }
 
+void IFly737MaxDoorsFollowLoaderCycleRule::ReleaseStuckToggles(VariableWriter& writer)
+{
+    for (Door* const door : AllDoors())
+    {
+        if (!door->releasePending || !variables_->HasReceivedLVar(door->toggleLVar))
+        {
+            continue;
+        }
+
+        door->releasePending = false;
+
+        if (!door->pulseHigh && variables_->GetLVar(door->toggleLVar, kToggleReleased) == kTogglePressed)
+        {
+            LOG_INFO("iFly: releasing the %s door toggle the previous client left pressed", door->doorName);
+            writer.SetLVar(door->toggleLVar, kToggleReleased);
+        }
+    }
+}
+
 void IFly737MaxDoorsFollowLoaderCycleRule::FollowAircraftCommands()
 {
-    const bool held = aircraft_->IsHeldForDeparture();
+    const bool departureHeld = aircraft_->IsHeldForDeparture();
+    const bool passengerHeld = aircraft_->ArePassengerDoorsHeld();
     const bool closeRequested = aircraft_->WasCloseRequested();
 
-    if ((held && !heldSeen_) || (closeRequested && !closeRequestSeen_))
+    const bool aHoldBegan = (departureHeld && !departureHeldSeen_) || (passengerHeld && !passengerHeldSeen_);
+
+    if (aHoldBegan || (closeRequested && !closeRequestSeen_))
     {
         for (Door& door : paxDoors_)
         {
@@ -120,7 +157,8 @@ void IFly737MaxDoorsFollowLoaderCycleRule::FollowAircraftCommands()
         closeRequested_ = true;
     }
 
-    heldSeen_ = held;
+    departureHeldSeen_ = departureHeld;
+    passengerHeldSeen_ = passengerHeld;
     closeRequestSeen_ = closeRequested;
 }
 
@@ -331,9 +369,16 @@ bool IFly737MaxDoorsFollowLoaderCycleRule::IsLoaderAtDoorNow(const Door& door) c
     return door.kind == DoorKind::Cargo && WantsOpen(door);
 }
 
+bool IFly737MaxDoorsFollowLoaderCycleRule::IsHeldClosed(const Door& door) const
+{
+    const bool isPassengerEntry = door.kind == DoorKind::JetwayOrStairs || door.kind == DoorKind::Stairs;
+
+    return aircraft_->IsHeldForDeparture() || (isPassengerEntry && aircraft_->ArePassengerDoorsHeld());
+}
+
 bool IFly737MaxDoorsFollowLoaderCycleRule::IsClosingForDeparture(const Door& door) const
 {
-    return aircraft_->IsHeldForDeparture() || (closeRequested_ && !WantsOpen(door));
+    return IsHeldClosed(door) || (closeRequested_ && !WantsOpen(door));
 }
 
 bool IFly737MaxDoorsFollowLoaderCycleRule::IsDoorReleased(const Door& door) const
@@ -363,7 +408,7 @@ bool IFly737MaxDoorsFollowLoaderCycleRule::IsDoorCloseable(const Door& door) con
 
 bool IFly737MaxDoorsFollowLoaderCycleRule::IsDoorOpenable(const Door& door) const
 {
-    return !aircraft_->IsHeldForDeparture()
+    return !IsHeldClosed(door)
         && door.wantsOpenTicks >= kAircraftOpensItselfTicks
         && !door.moving
         && door.openAttempts < kMaxDoorPulseAttempts

@@ -90,6 +90,29 @@ namespace
             gateway.lvars[ratioLVar] = 0.0;
         }
     }
+
+    TurnaroundFacts ResumedFacts(const TurnaroundPhase phase, const bool loadingStarted)
+    {
+        TurnaroundFacts facts;
+        facts.phase = phase;
+        facts.loadingStarted = loadingStarted;
+
+        return facts;
+    }
+
+    RuleContext LoadingIn(const TurnaroundPhase phase)
+    {
+        RuleContext context = kLoading;
+        context.phase = phase;
+
+        return context;
+    }
+
+    void PowerFromTheExternalSource(FakeVariableGateway& gateway)
+    {
+        gateway.lvars[kExtAPb] = 1.0;
+        gateway.lvars[kExtAAuto] = 10.0;
+    }
 }
 
 class TolissA340Test final : public QObject
@@ -150,6 +173,14 @@ private slots:
     static void positionBeatsTheCommandOnceItArrives();
     static void doorStatusFallsBackToTheModeUntilThePositionArrives();
     static void reportsLoadMethods();
+    static void isReachableOnlyOnceTheEmptyWeightAndTheFuelHaveArrived();
+    static void resumedWithTheLoadingStartedNeverPressesTheUplinkKeysAgain();
+    static void resumedWithoutTheLoadingStartedStillRunsTheUplink();
+    static void resumedUplinkRunsAgainOnTheNextTurnaround();
+    static void resumingNeverClosesEveryDoor();
+    static void releasingTheDepartureHoldOnAResumedAdapterReleasesThePassengerHold();
+    static void resumedDoorsFollowTheDoorSyncMemory();
+    static void observingAResumedAdapterWritesNothing();
 };
 
 void TolissA340Test::isNeverACargoVariant()
@@ -1130,6 +1161,213 @@ void TolissA340Test::evaluatingTheUplinkRuleWritesNoVariable()
     rule->Act(context, writer);
 
     QCOMPARE(writer.Written(kMcduMenuKey), 1.0);
+}
+
+void TolissA340Test::isReachableOnlyOnceTheEmptyWeightAndTheFuelHaveArrived()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TolissA340 aircraft(&gateway, &status);
+
+    QVERIFY(!aircraft.IsReachable());
+
+    gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
+
+    QVERIFY(!aircraft.IsReachable());
+
+    gateway.avars[kSimFuelTotalKg] = 41300.0;
+
+    QVERIFY(aircraft.IsReachable());
+
+    gateway.avars.erase(kSimEmptyWeight);
+
+    QVERIFY(!aircraft.IsReachable());
+}
+
+void TolissA340Test::resumedWithTheLoadingStartedNeverPressesTheUplinkKeysAgain()
+{
+    for (const TurnaroundPhase phase : {TurnaroundPhase::WaitingReadyToPush, TurnaroundPhase::WaitingPushbackToStart,
+                                        TurnaroundPhase::Deboarding})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        TolissA340 aircraft(&gateway, &status);
+
+        PowerFromTheExternalSource(gateway);
+        aircraft.OnTurnaroundResumed(ResumedFacts(phase, true), MemoryBag{});
+
+        for (int tick = 0; tick < 10; ++tick)
+        {
+            TickAircraft(aircraft, gateway, LoadingIn(phase));
+        }
+
+        for (const char* key : {kMcduMenuKey, kMcduAtsuKey, kMcduAocMenuKey, kMcduFlightInitKey})
+        {
+            QCOMPARE(gateway.WriteCount(key), 0);
+        }
+
+        QCOMPARE(gateway.setLVarCalls, 0);
+    }
+}
+
+void TolissA340Test::resumedWithoutTheLoadingStartedStillRunsTheUplink()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    PowerFromTheExternalSource(gateway);
+    aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::Loading, false), MemoryBag{});
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        TickAircraft(aircraft, gateway, kLoading);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 4);
+}
+
+void TolissA340Test::resumedUplinkRunsAgainOnTheNextTurnaround()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    PowerFromTheExternalSource(gateway);
+    aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::WaitingReadyToPush, true), MemoryBag{});
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway, kLoading);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    TickAircraft(aircraft, gateway);
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        TickAircraft(aircraft, gateway, kLoading);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 4);
+}
+
+void TolissA340Test::resumingNeverClosesEveryDoor()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::WaitingReadyToPush, true), MemoryBag{});
+    aircraft.HoldDoorsClosed(true);
+    aircraft.HoldPassengerDoorsClosed(true);
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    for (const char* door : kDoorModeLVars)
+    {
+        QCOMPARE(gateway.WriteCount(door), 0);
+    }
+}
+
+void TolissA340Test::releasingTheDepartureHoldOnAResumedAdapterReleasesThePassengerHold()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kStairsFront] = 3.0;
+    aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::Loading, true), MemoryBag{});
+    aircraft.HoldPassengerDoorsClosed(true);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1L), 0);
+
+    aircraft.HoldDoorsClosed(false);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeOpen);
+}
+
+void TolissA340Test::resumedDoorsFollowTheDoorSyncMemory()
+{
+    MemoryBag memory;
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        TolissA340 aircraft(&gateway, &status);
+
+        gateway.lvars[kCouatlStarted] = 1.0;
+        gateway.lvars[kStairsFront] = 3.0;
+        TickAircraft(aircraft, gateway);
+
+        QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeOpen);
+
+        memory = aircraft.TurnaroundMemory();
+    }
+
+    QCOMPARE(memory.Text("doorSync.FwdPax", {}), std::string("open"));
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::Loading, true), memory);
+    gateway.lvars[kCouatlStarted] = 1.0;
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1L), 0);
+
+    gateway.lvars[kGsxJetway] = 2.0;
+    gateway.lvars[kStairsFront] = 0.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1L), 1);
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeClosed);
+}
+
+void TolissA340Test::observingAResumedAdapterWritesNothing()
+{
+    MemoryBag memory;
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        TolissA340 aircraft(&gateway, &status);
+
+        gateway.lvars[kCouatlStarted] = 1.0;
+        gateway.lvars[kStairsFront] = 3.0;
+        TickAircraft(aircraft, gateway);
+
+        memory = aircraft.TurnaroundMemory();
+    }
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    PowerFromTheExternalSource(gateway);
+    gateway.lvars[kCouatlStarted] = 1.0;
+    aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::Loading, true), memory);
+
+    for (int tick = 0; tick < 50; ++tick)
+    {
+        gateway.MarkTick();
+        aircraft.Observe();
+    }
+
+    QCOMPARE(gateway.setLVarCalls + gateway.setAVarCalls, 0);
 }
 
 QTEST_APPLESS_MAIN(TolissA340Test)
