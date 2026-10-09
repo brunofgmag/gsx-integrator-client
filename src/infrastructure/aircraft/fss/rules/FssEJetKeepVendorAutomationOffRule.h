@@ -4,6 +4,7 @@
 #include <array>
 
 #include "../../../../domain/ports/AircraftRule.h"
+#include "../../EchoWait.h"
 
 class VariableReader;
 
@@ -20,7 +21,7 @@ private:
     [[nodiscard]] bool IsOff(const char* lVar) const;
 
     VariableReader* variables_;
-    std::array<int, 3> ticksSinceWrite_;
+    std::array<EchoWait, 3> echoWaits_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSSEJETKEEPVENDORAUTOMATIONOFFRULE_H

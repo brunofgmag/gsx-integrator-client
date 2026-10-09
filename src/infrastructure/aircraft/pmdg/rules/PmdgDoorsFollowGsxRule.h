@@ -6,13 +6,12 @@
 class GsxDoorSync;
 class PmdgDataGateway;
 class PmdgDoorReconciler;
-class VariableReader;
 
 class PmdgDoorsFollowGsxRule final : public AircraftRule
 {
 public:
-    PmdgDoorsFollowGsxRule(VariableReader& variables, const PmdgDataGateway& data, GsxDoorSync& doors,
-                           PmdgDoorReconciler& reconciler, bool cargoVariant, int mainDeckDoorSlot);
+    PmdgDoorsFollowGsxRule(const PmdgDataGateway& data, GsxDoorSync& doors, PmdgDoorReconciler& reconciler,
+                           bool cargoVariant, int mainDeckDoorSlot);
 
     [[nodiscard]] const char* Name() const override;
     [[nodiscard]] RuleVerdict Evaluate(const RuleContext& context) override;
@@ -21,7 +20,6 @@ public:
 private:
     void SyncMainDeckDoor();
 
-    VariableReader* variables_;
     const PmdgDataGateway* data_;
     GsxDoorSync* doors_;
     PmdgDoorReconciler* reconciler_;

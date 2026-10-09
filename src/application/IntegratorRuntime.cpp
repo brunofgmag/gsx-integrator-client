@@ -465,6 +465,13 @@ bool IntegratorRuntime::IsCargoDoorStuck() const
     return aircraft_ && IsLoadingCargoPhase() && aircraft_->IsMainDeckCargoDoorStuck();
 }
 
+bool IntegratorRuntime::AreOwnStairsWaitingForPressure() const
+{
+    return aircraft_
+        && ResolveTickMode() == TickMode::Driving
+        && aircraft_->AreOwnStairsWaitingForPressure();
+}
+
 bool IntegratorRuntime::IsFuelRequestStalled() const
 {
     return status_.fuelRequestStalled && GetPhase() == TurnaroundPhase::RequestFuel;
@@ -710,6 +717,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.pmdgOptionsConflict = HasPmdgOptionsConflict();
     snapshot.pmdgOptionsFixable = CanFixPmdgOptions();
     snapshot.cargoDoorStuck = IsCargoDoorStuck();
+    snapshot.ownStairsWaitingForPressure = AreOwnStairsWaitingForPressure();
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
     snapshot.fuelPlanOverCapacity = IsFuelPlanOverCapacity();
     snapshot.fuelDidNotStay = DidFuelNotStay();

@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <array>
+#include <iterator>
 #include <memory>
+#include <string>
+#include <vector>
 #include "AircraftTicks.h"
 #include "doubles/FakePmdg737DataGateway.h"
 #include "doubles/FakePmdgTabletGateway.h"
@@ -23,6 +26,7 @@ namespace
     constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
     constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
     constexpr double kJetwayDocked = 5.0;
+    constexpr int kTicksWithoutEcho = 5;
     constexpr auto kFwdEntryKey = "entry1_left";
     constexpr auto kMainCargoKey = "main_cargo";
 
@@ -108,6 +112,10 @@ private slots:
     static void ownStairsAreClearedByTakingTheEntryMethodToJetway();
     static void ownStairsAreReleasedByNameWhereNoJetwayIsOffered();
     static void vehicleStateInheritedFromBeforeACouatlRestartIsNotBelieved();
+    static void keepsTheGsxDoorAutomationOffAndWaitsForTheEcho();
+    static void writesTheGsxDoorAutomationAgainWhenGsxTurnsItBackOn();
+    static void leavesTheGsxDoorAutomationAloneBeforeClientData();
+    static void theDoorAutomationRuleRunsRightBeforeTheDoorRule();
 };
 
 void Pmdg737Test::nameAndCargoFlagFollowTheVariant()
@@ -850,6 +858,74 @@ void Pmdg737Test::airstairSaysNothingWhileTheBusIsDead()
     }
 
     QVERIFY(f.aircraft->GetDoorStatus() == DoorStatus::Unknown);
+}
+
+void Pmdg737Test::keepsTheGsxDoorAutomationOffAndWaitsForTheEcho()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+
+    for (int tick = 0; tick < kTicksWithoutEcho + 1; ++tick)
+    {
+        TickAircraft(*fixture.aircraft, fixture.gateway);
+
+        QCOMPARE(fixture.gateway.WriteCount(gsx::lvars::kAutomationDoors), 1);
+
+        fixture.gateway.lvars[gsx::lvars::kAutomationDoors] = 1.0;
+    }
+
+    TickAircraft(*fixture.aircraft, fixture.gateway);
+
+    QCOMPARE(fixture.gateway.WriteCount(gsx::lvars::kAutomationDoors), 2);
+    QCOMPARE(fixture.gateway.Written(gsx::lvars::kAutomationDoors), 0.0);
+}
+
+void Pmdg737Test::writesTheGsxDoorAutomationAgainWhenGsxTurnsItBackOn()
+{
+    Pmdg737Fixture fixture;
+
+    fixture.data->hasData = true;
+
+    TickAircraft(*fixture.aircraft, fixture.gateway);
+    TickAircraft(*fixture.aircraft, fixture.gateway);
+    TickAircraft(*fixture.aircraft, fixture.gateway);
+
+    QCOMPARE(fixture.gateway.WriteCount(gsx::lvars::kAutomationDoors), 1);
+
+    fixture.gateway.lvars[gsx::lvars::kAutomationDoors] = 1.0;
+    TickAircraft(*fixture.aircraft, fixture.gateway);
+
+    QCOMPARE(fixture.gateway.WriteCount(gsx::lvars::kAutomationDoors), 2);
+}
+
+void Pmdg737Test::leavesTheGsxDoorAutomationAloneBeforeClientData()
+{
+    Pmdg737Fixture fixture;
+
+    for (int tick = 0; tick < kTicksWithoutEcho + 2; ++tick)
+    {
+        TickAircraft(*fixture.aircraft, fixture.gateway);
+    }
+
+    QCOMPARE(fixture.gateway.WriteCount(gsx::lvars::kAutomationDoors), 0);
+}
+
+void Pmdg737Test::theDoorAutomationRuleRunsRightBeforeTheDoorRule()
+{
+    Pmdg737Fixture fixture;
+
+    std::vector<std::string> names;
+    for (AircraftRule* const rule : fixture.aircraft->Rules())
+    {
+        names.emplace_back(rule->Name());
+    }
+
+    const auto automation = std::ranges::find(names, std::string("pmdg-keep-gsx-door-automation-off"));
+
+    QVERIFY(automation != names.end());
+    QVERIFY(std::next(automation) != names.end());
+    QVERIFY(*std::next(automation) == "pmdg-doors-follow-gsx");
 }
 
 QTEST_APPLESS_MAIN(Pmdg737Test)

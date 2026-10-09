@@ -7,6 +7,7 @@
 #include <vector>
 #include "../SmartSwitch.h"
 #include "rules/PmdgDoorsFollowGsxRule.h"
+#include "rules/PmdgKeepGsxDoorAutomationOffRule.h"
 #include "rules/PmdgRetryGroundConnUntilSetRule.h"
 #include "rules/PmdgTrimPayloadRule.h"
 #include "../../gsx/GsxDoorSync.h"
@@ -107,6 +108,7 @@ private:
     PmdgPayloadWriter payload_;
     PmdgRouteImport routeImport_;
     SmartSwitch smartSwitch_;
+    PmdgKeepGsxDoorAutomationOffRule doorAutomationRule_;
     PmdgDoorsFollowGsxRule doorRule_;
     PmdgRetryGroundConnUntilSetRule groundConnectionRule_;
     PmdgTrimPayloadRule payloadRule_;

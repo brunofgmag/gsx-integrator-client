@@ -308,6 +308,8 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
 
     phase_ = phase;
     context_.data.stateTickCount = 0;
+    context_.data.ruleHoldTicks = 0;
+    context_.data.expiredRuleHolds.clear();
     context_.data.serviceInterrupted = false;
 }
 

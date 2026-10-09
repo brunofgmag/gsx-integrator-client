@@ -17,6 +17,11 @@ namespace
 
     constexpr int kMinTicksBetweenPulses = 15;
     constexpr int kMaxAttempts = 3;
+
+    const char* ReadingOf(const GroundPowerStatus status)
+    {
+        return status == GroundPowerStatus::Connected ? "connected" : "disconnected";
+    }
 }
 
 FssEJetGpuFollowsRequestRule::FssEJetGpuFollowsRequestRule(const FssEJet& aircraft)
@@ -94,6 +99,11 @@ void FssEJetGpuFollowsRequestRule::Act(const RuleContext&, VariableWriter& write
     writer.SetLVar(kToggleLVar, kTogglePulse);
 
     LOG_INFO("FSS E-Jet ground power toggle pulsed: requested %s, read %s",
-             *desired_ ? "connected" : "disconnected",
-             *status == GroundPowerStatus::Connected ? "connected" : "disconnected");
+             *desired_ ? "connected" : "disconnected", ReadingOf(*status));
+
+    if (attempts_ >= kMaxAttempts)
+    {
+        LOG_INFO("FSS E-Jet ground power toggle pulsed for the last time: the aircraft still reads %s",
+                 ReadingOf(*status));
+    }
 }

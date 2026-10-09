@@ -221,6 +221,9 @@ private slots:
     static void airstairStaysStowedUntilTheTurnaroundAsks();
     static void airstairExtendsWhenTheTurnaroundAsksWithPressure();
     static void airstairWaitsWithoutAccumulatorPressure();
+    static void theOwnStairsReportWaitingForPressureOnlyWhileThePressureStopsThem();
+    static void theOwnStairsReportWaitingForPressureWhenTheyMustStowAtDeparture();
+    static void theOwnStairsAreNotWaitingForPressureUnderAJetway();
     static void airstairIsNotArmedUnderAJetway();
     static void airstairStaysStowedWhileTheJetwayIsStillDriving();
     static void airstairIsNotArmedWhenGsxServesTheFrontDoor();
@@ -1123,6 +1126,68 @@ void AvroRjTest::airstairWaitsWithoutAccumulatorPressure()
 
     QCOMPARE(gateway.Written("EXT_Door_pax_1L"), 1.0);
     QCOMPARE(gateway.Written(kStairArmClickspot), -1.0);
+}
+
+void AvroRjTest::theOwnStairsReportWaitingForPressureOnlyWhileThePressureStopsThem()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars[kStairAccumPressure] = kStairPressureDepleted;
+
+    QVERIFY(!aircraft.AreOwnStairsWaitingForPressure());
+
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+
+    QVERIFY(aircraft.AreOwnStairsWaitingForPressure());
+
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+
+    QCOMPARE(gateway.Written(kStairArmClickspot), 1.0);
+    QVERIFY(!aircraft.AreOwnStairsWaitingForPressure());
+}
+
+void AvroRjTest::theOwnStairsReportWaitingForPressureWhenTheyMustStowAtDeparture()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kStairExtendSwitch), 1.0);
+    QVERIFY(!aircraft.AreOwnStairsWaitingForPressure());
+
+    gateway.lvars[kStairAccumPressure] = kStairPressureDepleted;
+    aircraft.HoldDoorsClosed(true);
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+
+    QVERIFY(aircraft.AreOwnStairsWaitingForPressure());
+}
+
+void AvroRjTest::theOwnStairsAreNotWaitingForPressureUnderAJetway()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    gateway.lvars[kStairAccumPressure] = kStairPressureDepleted;
+
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+
+    QVERIFY(!aircraft.AreOwnStairsWaitingForPressure());
 }
 
 void AvroRjTest::airstairIsNotArmedUnderAJetway()

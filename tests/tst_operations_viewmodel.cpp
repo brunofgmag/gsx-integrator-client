@@ -40,6 +40,7 @@ private slots:
     static void theBoardingTipNamesTheAftLoaderWaitingForItsDoor();
     static void theBoardingTipNamesTheMainDeckLoaderWaitingForItsDoor();
     static void theBoardingTipStandsDownForThePmdgCargoDoorAdvisory();
+    static void theOwnStairsPressureAdvisoryFollowsTheSnapshot();
     static void theBoardingTipStillNamesAnotherHoldWhileTheMainDeckIsStuck();
     static void theBoardingTipCountsDownTheSecondsLeftToOpenTheDoor();
     static void theBoardingTipStaysQuietWhileNoLoaderWaits();
@@ -531,6 +532,27 @@ void OperationsViewModelTest::theBoardingTipCountsDownTheSecondsLeftToOpenTheDoo
     service.Notify();
 
     QCOMPARE(viewModel.GetPhaseTip(), LoaderTipFor(QStringLiteral("forward"), 1));
+}
+
+void OperationsViewModelTest::theOwnStairsPressureAdvisoryFollowsTheSnapshot()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.AreOwnStairsWaitingForPressure());
+
+    service.snapshot.ownStairsWaitingForPressure = true;
+    service.Notify();
+
+    QVERIFY(viewModel.AreOwnStairsWaitingForPressure());
+
+    service.snapshot.ownStairsWaitingForPressure = false;
+    service.Notify();
+
+    QVERIFY(!viewModel.AreOwnStairsWaitingForPressure());
+    QCOMPARE(viewModel.GetOwnStairsPressureAdvisoryText(),
+             QStringLiteral("The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back."));
 }
 
 void OperationsViewModelTest::theBoardingTipStandsDownForThePmdgCargoDoorAdvisory()

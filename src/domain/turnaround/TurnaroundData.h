@@ -2,6 +2,8 @@
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDDATA_H
 
 #include <optional>
+#include <set>
+#include <string>
 
 #include "../model/AutomationStatus.h"
 #include "../model/CargoLoader.h"
@@ -103,6 +105,8 @@ struct TurnaroundData
     bool repositionCompleted = false;
 
     int stateTickCount = 0;
+    int ruleHoldTicks = 0;
+    std::set<std::string> expiredRuleHolds;
 
     void Reset() { *this = {}; }
 };

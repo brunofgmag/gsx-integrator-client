@@ -121,6 +121,8 @@ set(APP_SOURCES
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
         src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727KeepGsxDoorAutomationOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727KeepGsxDoorAutomationOffRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fss/FssEJet.cpp
@@ -155,10 +157,13 @@ set(APP_SOURCES
         src/infrastructure/aircraft/pmdg/Pmdg777.h
         src/infrastructure/aircraft/pmdg/rules/PmdgDoorsFollowGsxRule.cpp
         src/infrastructure/aircraft/pmdg/rules/PmdgDoorsFollowGsxRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgKeepGsxDoorAutomationOffRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgKeepGsxDoorAutomationOffRule.h
         src/infrastructure/aircraft/pmdg/rules/PmdgRetryGroundConnUntilSetRule.cpp
         src/infrastructure/aircraft/pmdg/rules/PmdgRetryGroundConnUntilSetRule.h
         src/infrastructure/aircraft/pmdg/rules/PmdgTrimPayloadRule.cpp
         src/infrastructure/aircraft/pmdg/rules/PmdgTrimPayloadRule.h
+        src/infrastructure/aircraft/EchoWait.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/tfdi/TfdiMd11.cpp

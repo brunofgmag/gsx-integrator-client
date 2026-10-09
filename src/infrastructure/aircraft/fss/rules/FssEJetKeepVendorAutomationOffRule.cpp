@@ -21,7 +21,7 @@ namespace
 
 FssEJetKeepVendorAutomationOffRule::FssEJetKeepVendorAutomationOffRule(VariableReader& variables)
     : variables_(&variables),
-      ticksSinceWrite_{kTicksToWaitForTheEcho, kTicksToWaitForTheEcho, kTicksToWaitForTheEcho}
+      echoWaits_{EchoWait{kTicksToWaitForTheEcho}, EchoWait{kTicksToWaitForTheEcho}, EchoWait{kTicksToWaitForTheEcho}}
 {
 }
 
@@ -40,25 +40,14 @@ void FssEJetKeepVendorAutomationOffRule::Act(const RuleContext&, VariableWriter&
     for (std::size_t i = 0; i < kAutomationLVars.size(); ++i)
     {
         const char* lVar = kAutomationLVars[i];
-        int& ticksSinceWrite = ticksSinceWrite_[i];
 
-        if (IsOff(lVar))
+        if (!echoWaits_[i].WriteIsDue(IsOff(lVar)))
         {
-            ticksSinceWrite = kTicksToWaitForTheEcho;
-
-            continue;
-        }
-
-        if (ticksSinceWrite < kTicksToWaitForTheEcho)
-        {
-            ++ticksSinceWrite;
-
             continue;
         }
 
         probe::Line(probe::Channel::Writes, QStringLiteral("write automation %1=0").arg(lVar));
         writer.SetLVar(lVar, kAutomationOff);
-        ticksSinceWrite = 0;
 
         LOG_INFO("FSS E-Jet vendor ground service automation turned off: %s", lVar);
     }

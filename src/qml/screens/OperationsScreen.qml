@@ -136,6 +136,12 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            visible: root.integratorVm.ownStairsWaitingForPressure
+            text: root.integratorVm.ownStairsPressureAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             visible: root.integratorVm.fuelRequestStalled
             text: root.integratorVm.fuelRequestAdvisoryText
         }

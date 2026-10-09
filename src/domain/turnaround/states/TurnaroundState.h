@@ -22,7 +22,7 @@ public:
 
     [[nodiscard]] std::optional<TurnaroundTransition> Evaluate(TurnaroundContext& ctx);
 
-    void ActOnRules(TurnaroundContext& ctx, RuleCadence cadence);
+    void ActOnRules(TurnaroundContext& ctx, RuleCadence cadence) const;
 
     void ObserveRules(TurnaroundContext& ctx, RuleCadence cadence);
 
@@ -35,9 +35,8 @@ protected:
     static void NoteServiceInterruption(TurnaroundContext& ctx, const char* serviceName, bool interrupted);
 
 private:
-    [[nodiscard]] bool AnyRuleHolds(TurnaroundContext& ctx);
+    [[nodiscard]] bool AnyRuleHolds(TurnaroundContext& ctx) const;
 
-    int holdTicks_ = 0;
     std::map<std::string, std::string> observedVerdicts_;
 };
 

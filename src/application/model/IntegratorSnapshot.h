@@ -52,6 +52,7 @@ struct IntegratorSnapshot
     bool pmdgOptionsConflict = false;
     bool pmdgOptionsFixable = false;
     bool cargoDoorStuck = false;
+    bool ownStairsWaitingForPressure = false;
     bool fuelRequestStalled = false;
     bool fuelPlanOverCapacity = false;
     bool fuelDidNotStay = false;

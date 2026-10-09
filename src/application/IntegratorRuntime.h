@@ -67,6 +67,7 @@ public:
     [[nodiscard]] bool HasPmdgOptionsConflict() const { return pmdgOptions_.conflict; }
     bool FixPmdgOptions();
     [[nodiscard]] bool IsCargoDoorStuck() const;
+    [[nodiscard]] bool AreOwnStairsWaitingForPressure() const;
     [[nodiscard]] bool IsFuelRequestStalled() const;
     [[nodiscard]] bool IsFuelPlanOverCapacity() const;
     [[nodiscard]] bool DidFuelNotStay() const;

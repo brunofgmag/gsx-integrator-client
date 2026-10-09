@@ -9,6 +9,7 @@
 #include "../SmartSwitch.h"
 #include "rules/Fss727FrontEntryServesTheGroundAccessRule.h"
 #include "rules/Fss727HoldsFollowTheirLoaderRule.h"
+#include "rules/Fss727KeepGsxDoorAutomationOffRule.h"
 #include "rules/Fss727KeepVendorGsxAutomodeOffRule.h"
 #include "rules/Fss727MainDeckMovesByTheCargoPanelRule.h"
 #include "../../gsx/GsxDoorSync.h"
@@ -108,6 +109,7 @@ private:
     double lastZfwKg_ = -1.0;
     Fss727KeepVendorGsxAutomodeOffRule automodeRule_;
     Fss727FrontEntryServesTheGroundAccessRule frontEntryRule_;
+    Fss727KeepGsxDoorAutomationOffRule doorAutomationRule_;
     Fss727HoldsFollowTheirLoaderRule holdsRule_;
     Fss727MainDeckMovesByTheCargoPanelRule mainDeckRule_;
     std::vector<AircraftRule*> rules_;

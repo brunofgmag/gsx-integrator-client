@@ -49,6 +49,8 @@ namespace
     constexpr auto kTakingOverFuelAndPayload = "Taking over fuel and payload insertion";
     constexpr auto kRetakingFuelAndPayload = "GSX automation flags reset by couatl; re-taking fuel and payload";
     constexpr auto kRj85PlannedFuelLVar = "146_SimBrief_Block_Fuel";
+    constexpr auto kRj85ForwardPassengerDoorLVar = "EXT_Door_pax_1L";
+    constexpr double kDoorOpen = 1.0;
     constexpr auto kRj85PlannedZfwLVar = "146_SimBrief_ZFW";
     constexpr auto kRj85PlannedPassengersLVar = "146_SimBrief_PaxQt";
     constexpr double kRj85PlannedFuelKg = 4200.0;
@@ -337,6 +339,7 @@ private slots:
     static void theSnapshotCountsTheJetwayWaitDownWithTheFlow();
     static void theSnapshotCarriesTheLoaderCountdownWhileTheLoaderHoldsBoarding();
     static void theSnapshotCarriesTheDeboardingWaitOnceTheGsxTakesTheRequest();
+    static void theSnapshotCarriesTheAirstairPressureWaitOnlyWhileTheAutomationDrives();
     static void theSlowTickWritesNothingWhileTheGsxIsDown();
     static void theSlowRulesAreObservedWhileTheAutomationIsOffAndTheProbeActs();
     static void theSlowTickLeavesTheTakeoversAloneWhileTheAutomationIsOff();
@@ -908,6 +911,35 @@ void RuntimeIntegratorServiceTest::theSnapshotCarriesTheLoaderCountdownWhileTheL
 
     QCOMPARE(snapshot.loaderHoldingBoarding, CargoLoader::MainDeck);
     QVERIFY(snapshot.loaderDoorWaitSeconds > 0);
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
+}
+
+void RuntimeIntegratorServiceTest::theSnapshotCarriesTheAirstairPressureWaitOnlyWhileTheAutomationDrives()
+{
+#ifndef NDEBUG
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kRj85Title, kRj85AtcModel, kRj85ProfileId));
+
+    runtime.DebugSkipPhase(static_cast<int>(TurnaroundPhase::CallServices) - static_cast<int>(runtime.GetPhase()));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::CallServices);
+
+    QVERIFY(!runtime.Snapshot().ownStairsWaitingForPressure);
+
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(PushLVar(kRj85ForwardPassengerDoorLVar, kDoorOpen));
+    QVERIFY(TickAndWait(updated));
+
+    QVERIFY(runtime.Snapshot().ownStairsWaitingForPressure);
+
+    runtime.SetAutomationEnabled(false);
+
+    QVERIFY(!runtime.Snapshot().ownStairsWaitingForPressure);
 #else
     QSKIP("DebugSkipPhase is compiled out of Release builds");
 #endif

@@ -30,6 +30,7 @@ private slots:
     static void carriesTheEffectiveFuelRateTheFuelCardShows();
     static void carriesTheDeparturePageTipTheWindowWrites();
     static void carriesTheEstimatedWeightThePaxCardTargetsWhileDeboarding();
+    static void carriesTheOwnStairsPressureAdvisoryTheScreenShows();
 };
 
 void EfbStatePublisherTest::publishesTheSnapshotWhenItChanges()
@@ -343,6 +344,33 @@ void EfbStatePublisherTest::carriesTheDroppedServiceSentenceTheWindowWrites()
         + OperationsViewModel::GetServiceInterruptedAdvisoryText().toStdString() + R"(")";
 
     QVERIFY(std::get<2>(bridge.calls.back()).find(expected) != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesTheOwnStairsPressureAdvisoryTheScreenShows()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.ownStairsWaitingForPressure = true;
+    service.Notify();
+    publisher.Publish();
+
+    const std::string expectedText = R"("ownStairsPressureAdvisoryText":")"
+        + OperationsViewModel::GetOwnStairsPressureAdvisoryText().toStdString() + R"(")";
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("ownStairsWaitingForPressure":true)") != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(expectedText) != std::string::npos);
+
+    service.snapshot.ownStairsWaitingForPressure = false;
+    service.Notify();
+    publisher.Publish();
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("ownStairsWaitingForPressure":false)") != std::string::npos);
 }
 
 void EfbStatePublisherTest::carriesTheLoaderCountdownTheWindowWrites()

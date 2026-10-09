@@ -299,6 +299,8 @@ private slots:
     static void pulsesNothingWhenTheStatusAlreadyMatchesTheRequest();
     static void neverPulsesWhileTheStateIsInTransit();
     static void stopsRequestingOnceTheStateSettlesOnTheTarget();
+    static void saysSoOnceWhenTheLastGroundPowerPulseDoesNotSettleTheState();
+    static void saysNothingWhenTheGroundPowerStateSettlesBeforeTheLastPulse();
     static void gpuRuleNeverHoldsThePhase();
     static void vendorAutomationTurnsOffTheThreeKeysOnce();
     static void vendorAutomationRewritesAKeyThatDriftsBackOn();
@@ -310,6 +312,10 @@ private slots:
     static void aPassengerDoorHeardWithinTheWaitIsNeverReaffirmed();
     static void aPassengerDoorWithNoAckIsReaffirmedTwiceAtMost();
     static void aCargoBayWithoutAckReaffirmsAfterTwoTicks();
+    static void aDoorRequestSaysSoOnceWhenItIsReaffirmedForTheLastTime();
+    static void aDoorRequestSaysNothingWhenTheAircraftConfirmsInTime();
+    static void theMainDeckIsNeverCommandedClosedWhenTheClientNeverOpenedIt();
+    static void theMainDeckReaffirmsLogThroughTheCommonDoorLine();
     static void theMainDeckRequestGoesOutOnTheFirstTickWithTheAircraftCold();
     static void theMainDeckStaysOpenWhenAircraftPowerFallsWhileTheLoaderWaits();
     static void theMainDeckRequestGoesToClosedOnceTheLoaderStartsFinishing();
@@ -1206,6 +1212,55 @@ void FssEJetTest::stopsRequestingOnceTheStateSettlesOnTheTarget()
     QCOMPARE(gateway.WriteCount("FSS_EXX_TOGGLE_CGPU"), 1);
 }
 
+void FssEJetTest::saysSoOnceWhenTheLastGroundPowerPulseDoesNotSettleTheState()
+{
+    const LogCapture log;
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kGpuState] = kGpuInactive;
+    aircraft.SetGroundPower(true);
+
+    TickAircraft(aircraft, gateway);
+    TickTimes(aircraft, gateway, kTicksUntilTheSecondPulse);
+
+    QCOMPARE(gateway.WriteCount(kToggleGpu), 2);
+    QCOMPARE(LogCapture::Count("pulsed for the last time"), 0LL);
+
+    TickTimes(aircraft, gateway, kTicksUntilTheSecondPulse);
+
+    QCOMPARE(gateway.WriteCount(kToggleGpu), 3);
+    QCOMPARE(LogCapture::Count("pulsed for the last time: the aircraft still reads disconnected"), 1LL);
+
+    TickTimes(aircraft, gateway, kFiftyTicks);
+
+    QCOMPARE(gateway.WriteCount(kToggleGpu), 3);
+    QCOMPARE(LogCapture::Count("pulsed for the last time"), 1LL);
+}
+
+void FssEJetTest::saysNothingWhenTheGroundPowerStateSettlesBeforeTheLastPulse()
+{
+    const LogCapture log;
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kGpuState] = kGpuInactive;
+    aircraft.SetGroundPower(true);
+
+    TickAircraft(aircraft, gateway);
+    TickTimes(aircraft, gateway, kTicksUntilTheSecondPulse);
+
+    QCOMPARE(gateway.WriteCount(kToggleGpu), 2);
+
+    gateway.lvars[kGpuState] = kGpuFeeding;
+    TickTimes(aircraft, gateway, kFiftyTicks);
+
+    QCOMPARE(gateway.WriteCount(kToggleGpu), 2);
+    QCOMPARE(LogCapture::Count("pulsed for the last time"), 0LL);
+}
+
 void FssEJetTest::gpuRuleNeverHoldsThePhase()
 {
     FakeVariableGateway gateway;
@@ -1448,6 +1503,88 @@ void FssEJetTest::aCargoBayWithoutAckReaffirmsAfterTwoTicks()
     gateway.lvars[kCargoFwdOpen] = 1.0;
     TickTimes(aircraft, gateway, kTwentyTicks);
     QCOMPARE(gateway.WriteCount(kCargoFwdReq), 2);
+}
+
+void FssEJetTest::aDoorRequestSaysSoOnceWhenItIsReaffirmedForTheLastTime()
+{
+    const LogCapture log;
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kFrontStairsState] = kStairsDocked;
+    TickAircraft(aircraft, gateway);
+    TickTimes(aircraft, gateway, kFourteenTicks);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 2);
+    QCOMPARE(LogCapture::Count("reaffirmed for the last time"), 0LL);
+
+    TickTimes(aircraft, gateway, kFourteenTicks);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 3);
+    QCOMPARE(LogCapture::Count("FSS E-Jet door request FSS_GNDSVC_MAINDOOR_FWD_L_REQ reaffirmed for the last time: "
+                               "the aircraft has not confirmed it open"), 1LL);
+
+    TickTimes(aircraft, gateway, kFourteenTicks * 3);
+
+    QCOMPARE(LogCapture::Count("reaffirmed for the last time"), 1LL);
+}
+
+void FssEJetTest::aDoorRequestSaysNothingWhenTheAircraftConfirmsInTime()
+{
+    const LogCapture log;
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kFrontStairsState] = kStairsDocked;
+    TickAircraft(aircraft, gateway);
+    TickTimes(aircraft, gateway, kFourteenTicks);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 2);
+
+    gateway.lvars[kL1Ack] = 11.0;
+    TickTimes(aircraft, gateway, kFourteenTicks * 4);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 2);
+    QCOMPARE(LogCapture::Count("reaffirmed for the last time"), 0LL);
+}
+
+void FssEJetTest::theMainDeckIsNeverCommandedClosedWhenTheClientNeverOpenedIt()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, true);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kMainLoaderState] = kVehicleGone;
+
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    aircraft.CloseAllDoors();
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.WriteCount(kMainDeckReq), 0);
+}
+
+void FssEJetTest::theMainDeckReaffirmsLogThroughTheCommonDoorLine()
+{
+    const LogCapture log;
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, true);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kMainLoaderState] = kLoaderWaitingForDoor;
+
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.WriteCount(kMainDeckReq), 3);
+    QCOMPARE(LogCapture::Count("FSS E-Jet door commanded via FSS_GNDSVC_CARGO_MAIN_REQ: open"), 3LL);
+    QCOMPARE(LogCapture::Count("main deck door commanded"), 0LL);
+    QCOMPARE(LogCapture::Count("FSS_GNDSVC_CARGO_MAIN_REQ reaffirmed for the last time"), 1LL);
 }
 
 void FssEJetTest::theMainDeckRequestGoesOutOnTheFirstTickWithTheAircraftCold()

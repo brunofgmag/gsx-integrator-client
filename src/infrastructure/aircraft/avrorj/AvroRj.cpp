@@ -222,6 +222,11 @@ bool AvroRj::AreAirstairsSettled() const
     return airstair_.settled;
 }
 
+bool AvroRj::AreOwnStairsWaitingForPressure() const
+{
+    return airstair_.waitingForPressure;
+}
+
 void AvroRj::OnLoadingStarted()
 {
     LOG_INFO("Loading started: the aircraft loads itself from the plan imported into its EFB");
