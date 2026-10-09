@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <array>
+#include <optional>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <QJsonArray>
@@ -84,20 +86,67 @@ namespace
         state.matchedAircraftTitle = Str(value);
     }
 
+    std::optional<std::string> WholeNumberText(const QJsonValue& number)
+    {
+        const qint64 whole = number.toInteger();
+        if (static_cast<double>(whole) != number.toDouble())
+        {
+            return std::nullopt;
+        }
+
+        return std::to_string(whole);
+    }
+
+    std::optional<std::string> SidText(const QJsonValue& sid)
+    {
+        if (sid.isDouble())
+        {
+            return WholeNumberText(sid);
+        }
+
+        if (sid.isString() && !sid.toString().isEmpty())
+        {
+            return Str(sid);
+        }
+
+        return std::nullopt;
+    }
+
+    void SetCouatlId(GsxRemoteState& state, const QJsonValue& value)
+    {
+        if (const std::optional<std::string> sid = SidText(value.toObject().value("sid")))
+        {
+            state.couatlId = *sid;
+        }
+    }
+
+    void SetAirportIcao(GsxRemoteState& state, const QJsonValue& value)
+    {
+        state.airportIcao = Str(value.toObject().value("icao"));
+    }
+
+    void SetParkingName(GsxRemoteState& state, const QJsonValue& value)
+    {
+        state.parkingName = Str(value);
+    }
+
     struct StateField
     {
         std::string_view key;
         void (*apply)(GsxRemoteState&, const QJsonValue&);
     };
 
-    constexpr std::array<StateField, 7> kStateFields = {{
+    constexpr std::array<StateField, 10> kStateFields = {{
         {"services", SetServices},
         {"menu", SetMenu},
         {"menuShown", SetMenuShown},
         {"simbrief", SetSimBrief},
         {"operators", SetOperators},
         {"gateProperties", SetApronVerdict},
-        {"aircraft", SetMatchedAircraft}
+        {"aircraft", SetMatchedAircraft},
+        {"startup", SetCouatlId},
+        {"airport", SetAirportIcao},
+        {"parking", SetParkingName}
     }};
 
     QLatin1StringView JsonKey(const std::string_view key)
@@ -115,6 +164,8 @@ void GsxRemoteStateReducer::ApplySnapshot(GsxRemoteState& state, const QJsonObje
             field.apply(state, snapshot.value(JsonKey(field.key)));
         }
     }
+
+    state.synced = true;
 }
 
 GsxPatchOutcome GsxRemoteStateReducer::ApplyPatch(GsxRemoteState& state, const std::string& path,
@@ -138,4 +189,14 @@ GsxPatchOutcome GsxRemoteStateReducer::ApplyPatch(GsxRemoteState& state, const s
     }
 
     return GsxPatchOutcome::Unknown;
+}
+
+void GsxRemoteStateReducer::ApplyConnection(GsxRemoteState& state, const bool connected)
+{
+    if (connected)
+    {
+        state = GsxRemoteState{};
+    }
+
+    state.connected = connected;
 }

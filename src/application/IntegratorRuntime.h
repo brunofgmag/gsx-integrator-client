@@ -124,6 +124,10 @@ private:
 
     [[nodiscard]] bool IsSessionPaused() const { return pauseFlags_ != 0; }
     [[nodiscard]] TickMode ResolveTickMode() const;
+    [[nodiscard]] bool IsAwaitingTheFirstSnapshot() const
+    {
+        return gsxRemoteState_.connected && !gsxRemoteState_.synced;
+    }
     [[nodiscard]] bool IsSessionReady();
     [[nodiscard]] bool IsPilotOnFoot();
     [[nodiscard]] const AutomationStatus& Status() const { return status_; }
@@ -175,6 +179,9 @@ private:
     std::string announcedHandlingOperator_;
     std::string announcedApronVerdict_;
     std::string announcedAircraftTitle_;
+    std::string announcedCouatlId_;
+    std::string announcedAirportIcao_;
+    std::string announcedParkingName_;
     int announcedSimbriefGeneration_ = 0;
     AutomationStatus status_;
     AutomationSettings settings_;

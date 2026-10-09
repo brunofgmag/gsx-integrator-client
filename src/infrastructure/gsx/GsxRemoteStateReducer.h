@@ -20,6 +20,7 @@ public:
     static void ApplySnapshot(GsxRemoteState& state, const QJsonObject& snapshot);
     static GsxPatchOutcome ApplyPatch(GsxRemoteState& state, const std::string& path,
                                       const QJsonValue& value);
+    static void ApplyConnection(GsxRemoteState& state, bool connected);
 
 private:
     GsxRemoteStateReducer() = delete;

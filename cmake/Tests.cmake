@@ -190,6 +190,7 @@ gsxi_add_qt_test(gsxi-gsx-plugin-client-tests gsx-plugin-client
 
 gsxi_add_qt_test(gsxi-remote-state-tests remote-state
         tests/tst_remote_state.cpp
+        tests/RecordedWire.h
         src/infrastructure/gsx/GsxRemoteState.h
         src/infrastructure/gsx/GsxRemoteStateReducer.cpp
         src/infrastructure/gsx/GsxRemoteStateReducer.h)
@@ -995,6 +996,7 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         tests/doubles/FakeSimConnectApi.cpp
         tests/doubles/FakeGsxRemoteApiClient.h
         tests/doubles/FakeGsxRemoteApiClient.cpp
+        tests/RecordedWire.h
         tests/tst_runtime_integrator_service.cpp
         src/application/IntegratorRuntime.cpp
         src/application/IntegratorRuntime.h
@@ -1144,6 +1146,8 @@ target_link_libraries(gsxi-runtime-integrator-service-tests PRIVATE
         gsxi-turnaround-state-test-support
         Qt6::Network)
 target_include_directories(gsxi-runtime-integrator-service-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+target_compile_definitions(gsxi-runtime-integrator-service-tests PRIVATE
+        GSX_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures\")
 
 if (NOT GSXI_TESTS_ONLY)
     qt_add_executable(gsxi-qml-tests tests/qml/main.cpp)

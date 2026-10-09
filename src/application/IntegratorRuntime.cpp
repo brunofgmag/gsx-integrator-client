@@ -53,6 +53,11 @@ namespace
         return joined;
     }
 
+    std::string DescribeKeyPart(const std::string& label, const std::string& value)
+    {
+        return value.empty() ? "no " + label : label + " " + value;
+    }
+
     int Flag(const bool value)
     {
         return value ? 1 : 0;
@@ -137,7 +142,7 @@ void IntegratorRuntime::Setup()
     connect(&gsxRemoteClient_, &GsxRemoteApiClient::ConnectionChanged,
             &gsxRemoteClient_, [this](const bool connected)
             {
-                gsxRemoteState_.connected = connected;
+                GsxRemoteStateReducer::ApplyConnection(gsxRemoteState_, connected);
             });
 
     connect(&gsxRemoteClient_, &GsxRemoteApiClient::SnapshotReceived,
@@ -158,7 +163,7 @@ void IntegratorRuntime::Setup()
                     LOG_WARN("GSX published an unknown path: %s", path.c_str());
                 }
                 AnnounceWireFacts();
-                if (path == "/menu" || path == "/menuShown")
+                if (!IsAwaitingTheFirstSnapshot() && (path == "/menu" || path == "/menuShown"))
                 {
                     gsxMenu_.OnMenuChanged();
                 }
@@ -190,6 +195,19 @@ void IntegratorRuntime::AnnounceWireFacts()
     {
         announcedAircraftTitle_ = title;
         LOG_INFO("GSX matched the aircraft title %s", title.c_str());
+    }
+
+    if (gsxRemoteState_.couatlId != announcedCouatlId_
+        || gsxRemoteState_.airportIcao != announcedAirportIcao_
+        || gsxRemoteState_.parkingName != announcedParkingName_)
+    {
+        announcedCouatlId_ = gsxRemoteState_.couatlId;
+        announcedAirportIcao_ = gsxRemoteState_.airportIcao;
+        announcedParkingName_ = gsxRemoteState_.parkingName;
+        LOG_INFO("GSX reports %s, %s, %s",
+                 DescribeKeyPart("couatl", announcedCouatlId_).c_str(),
+                 DescribeKeyPart("airport", announcedAirportIcao_).c_str(),
+                 DescribeKeyPart("parking", announcedParkingName_).c_str());
     }
 
     if (const int generation = gsxRemoteState_.simbriefGeneration;
@@ -519,6 +537,11 @@ bool IntegratorRuntime::AreDoorsHoldingPushback() const
 
 TickMode IntegratorRuntime::ResolveTickMode() const
 {
+    if (IsAwaitingTheFirstSnapshot())
+    {
+        return TickMode::Idle;
+    }
+
     return TickModeResolution::Resolve(status_.enabled, gsxService_.IsAvailable(), actsOnTheSim_());
 }
 
@@ -657,6 +680,7 @@ void IntegratorRuntime::CheckGsxProfile()
     {
         gsxProfile_.cfgs.clear();
         gsxProfile_.conflict = false;
+
         return;
     }
 
@@ -764,6 +788,7 @@ void IntegratorRuntime::CheckPmdgOptions()
     if (pmdgOptions_.ini.empty())
     {
         pmdgOptions_.conflict = false;
+
         return;
     }
 

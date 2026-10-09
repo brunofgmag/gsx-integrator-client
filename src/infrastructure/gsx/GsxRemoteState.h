@@ -22,11 +22,15 @@ struct GsxRemoteMenu
 struct GsxRemoteState
 {
     bool connected = false;
+    bool synced = false;
     std::string simbriefStatus;
     std::string simbriefError;
     int simbriefGeneration = 0;
     std::string handlingOperator;
     std::string matchedAircraftTitle;
+    std::string couatlId;
+    std::string airportIcao;
+    std::string parkingName;
     std::vector<std::string> apronVerdict;
     GsxRemoteMenu menu;
     std::vector<GsxRemoteService> services;

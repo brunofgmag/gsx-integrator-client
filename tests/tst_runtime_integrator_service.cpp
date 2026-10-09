@@ -2,7 +2,11 @@
 #include <array>
 #include <chrono>
 #include <string>
+#include <vector>
 
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonObject>
+#include <QtCore/QJsonValue>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QStringList>
 #include <QtCore/QTemporaryDir>
@@ -11,6 +15,7 @@
 
 #include "doubles/FakeGsxRemoteApiClient.h"
 #include "doubles/FakeSimConnectApi.h"
+#include "RecordedWire.h"
 #include "../src/application/IntegratorRuntime.h"
 #include "../src/domain/turnaround/PilotTouch.h"
 #include "../src/application/RuntimeIntegratorService.h"
@@ -47,6 +52,13 @@ namespace
     constexpr auto kOpeningSimConnect = "Opening SimConnect...";
     constexpr auto kMd11SlowRuleObserved = "Rule tfdi-md11-commit-efb-targets would pass";
     constexpr auto kTakingOverFuelAndPayload = "Taking over fuel and payload insertion";
+    constexpr auto kKeyLine = "GSX reports ";
+    constexpr auto kUnknownPathWarning = "WARN: GSX published an unknown path";
+    constexpr auto kCdk2FlightWire = "wire-key-20261003-094025.jsonl";
+    constexpr auto kNewbornCouatlWire = "wire-key-20261002-184537.jsonl";
+    constexpr auto kLfmnWire = "wire-key-20261002-175856.jsonl";
+    constexpr auto kCdk2FlightKeyLines = 7;
+    constexpr auto kMenuLine = "RemoteAPI menu:";
     constexpr auto kRetakingFuelAndPayload = "GSX automation flags reset by couatl; re-taking fuel and payload";
     constexpr auto kRj85PlannedFuelLVar = "146_SimBrief_Block_Fuel";
     constexpr auto kRj85ForwardPassengerDoorLVar = "EXT_Door_pax_1L";
@@ -204,6 +216,26 @@ namespace
         return runtime.GetPhase() == phase;
     }
 
+    void SkipTheReposition(IntegratorRuntime& runtime)
+    {
+        AutomationSettings settings;
+        settings.skipReposition = true;
+        runtime.ApplySettings(settings);
+    }
+
+    bool ReachTheMd11SlowRule(const IntegratorRuntime& runtime, QSignalSpy& updated)
+    {
+        return DetectTheMd11WithTheGsxUp(runtime, updated)
+            && DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, runtime, updated)
+            && PublishTheIdleGsxServices()
+            && DriveTheFlowInto(TurnaroundPhase::CallServices, runtime, updated)
+            && PushLVar(gsx::lvars::kJetway, kJetwayInPlace)
+            && DriveTheFlowInto(TurnaroundPhase::WaitingFlightPlan, runtime, updated)
+            && TickAndWait(updated)
+            && PushDatum(simvars::kSimEmptyWeight, kMd11EmptyWeightKg)
+            && TickAndWait(updated);
+    }
+
     struct RecordingObserver final : IntegratorServiceObserver
     {
         int notifications = 0;
@@ -275,6 +307,34 @@ namespace
 
         QtMessageHandler previous_;
     };
+
+    QJsonObject Hello()
+    {
+        return QJsonObject{{"type", "hello"}};
+    }
+
+    QJsonObject EmptySnapshot()
+    {
+        return QJsonObject{{"type", "snapshot"}};
+    }
+
+    QJsonObject Patch(const QString& path, const QJsonValue& value)
+    {
+        return QJsonObject{{"type", "patch"}, {"path", path}, {"value", value}};
+    }
+
+    void ReceiveWire(const std::vector<RecordedMessage>& wire)
+    {
+        for (const RecordedMessage& recorded : wire)
+        {
+            FakeGsxRemoteApi::Receive(recorded.message);
+        }
+    }
+
+    qsizetype KeyLines()
+    {
+        return LogCapture::Count(QLatin1String(kKeyLine));
+    }
 
 #ifndef NDEBUG
     bool TheFuelTakeoverStarts(QSignalSpy& updated)
@@ -348,6 +408,14 @@ private slots:
     static void theSnapshotCarriesTheFuelOnBoardTheAircraftReportsNow();
     static void theFuelWaitsUntilTheRemoteApiAnnouncesItsConnection();
     static void openingSimConnectIsAnnouncedOncePerDisconnectedPeriod();
+    static void theKeyReachesTheLogOncePerChangeAndNotPerMessage();
+    static void theKeyPathsAreNoLongerWarnedAsUnknown();
+    static void aBlipOnTheSameCouatlLogsNoNewKey();
+    static void theCouatlRestartLogsWhatTheNewbornWireSays();
+    static void theMachineDoesNotTickBetweenTheHandshakeAndTheSnapshot();
+    static void theSlowTickWaitsForTheSnapshotToo();
+    static void theMenuIsLeftAloneBetweenTheHandshakeAndTheSnapshot();
+    static void aDropKeepsTheMachineTicking();
     static void theLoggingToggleAloneLeavesTheAircraftUntouched();
     static void theRunHeaderNamesTheRunFolderAndLeavesThePilotIdOut();
 
@@ -977,23 +1045,12 @@ void RuntimeIntegratorServiceTest::theSnapshotCarriesTheDeboardingWaitOnceTheGsx
 void RuntimeIntegratorServiceTest::theSlowTickWritesNothingWhileTheGsxIsDown()
 {
     IntegratorRuntime runtime;
-
-    AutomationSettings settings;
-    settings.skipReposition = true;
-    runtime.ApplySettings(settings);
+    SkipTheReposition(runtime);
     runtime.Setup();
 
     QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
 
-    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
-    QVERIFY(DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, runtime, updated));
-    QVERIFY(PublishTheIdleGsxServices());
-    QVERIFY(DriveTheFlowInto(TurnaroundPhase::CallServices, runtime, updated));
-    QVERIFY(PushLVar(gsx::lvars::kJetway, kJetwayInPlace));
-    QVERIFY(DriveTheFlowInto(TurnaroundPhase::WaitingFlightPlan, runtime, updated));
-    QVERIFY(TickAndWait(updated));
-    QVERIFY(PushDatum(simvars::kSimEmptyWeight, kMd11EmptyWeightKg));
-    QVERIFY(TickAndWait(updated));
+    QVERIFY(ReachTheMd11SlowRule(runtime, updated));
 
     FakeSimConnectApi::writtenSimObjectData.clear();
 
@@ -1158,7 +1215,7 @@ void RuntimeIntegratorServiceTest::theFuelWaitsUntilTheRemoteApiAnnouncesItsConn
 
     QCOMPARE(runtime.Snapshot().fuelProgress, 0.0);
 
-    FakeGsxRemoteApi::AnnounceConnection(true);
+    FakeGsxRemoteApi::Receive(EmptySnapshot());
     QVERIFY(TickAndWait(updated));
 
     QCOMPARE(runtime.Snapshot().fuelProgress, 100.0);
@@ -1193,6 +1250,192 @@ void RuntimeIntegratorServiceTest::openingSimConnectIsAnnouncedOncePerDisconnect
     QVERIFY(retries.wait(kReconnectWaitMs));
     QVERIFY(!runtime.IsConnected());
     QCOMPARE(LogCapture::Count(QLatin1String(kOpeningSimConnect)), 2);
+}
+
+void RuntimeIntegratorServiceTest::theKeyReachesTheLogOncePerChangeAndNotPerMessage()
+{
+    const LogCapture log;
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    const std::vector<RecordedMessage> wire = LoadRecordedWire(QLatin1String(kCdk2FlightWire));
+
+    QVERIFY(!wire.empty());
+    QCOMPARE(KeyLines(), qsizetype{0});
+
+    ReceiveWire(wire);
+
+    QCOMPARE(KeyLines(), qsizetype{kCdk2FlightKeyLines});
+    QVERIFY(LogCapture::Contains(
+        QStringLiteral("GSX reports couatl 29495244, airport CDK2, parking Parking 2")));
+    QVERIFY(LogCapture::Contains(
+        QStringLiteral("GSX reports couatl 29495244, airport CDK2, no parking")));
+    QVERIFY(LogCapture::Contains(
+        QStringLiteral("GSX reports couatl 29495244, no airport, no parking")));
+    QVERIFY(LogCapture::Contains(
+        QStringLiteral("GSX reports couatl 29495244, airport CYEG, parking Gate 8")));
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QStringLiteral("Gate 8")));
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/menuShown"), false));
+
+    QCOMPARE(KeyLines(), qsizetype{kCdk2FlightKeyLines});
+}
+
+void RuntimeIntegratorServiceTest::theKeyPathsAreNoLongerWarnedAsUnknown()
+{
+    const LogCapture log;
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    const std::vector<RecordedMessage> newborn = LoadRecordedWire(QLatin1String(kNewbornCouatlWire));
+    const std::vector<RecordedMessage> flight = LoadRecordedWire(QLatin1String(kCdk2FlightWire));
+
+    QVERIFY(!newborn.empty());
+    QVERIFY(!flight.empty());
+
+    ReceiveWire(newborn);
+    FakeGsxRemoteApi::AnnounceConnection(false);
+    ReceiveWire(flight);
+
+    QVERIFY(!LogCapture::Contains(QLatin1String(kUnknownPathWarning)));
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/somethingNobodyHasSeen"), QJsonValue()));
+
+    QCOMPARE(LogCapture::Count(QLatin1String(kUnknownPathWarning)), qsizetype{1});
+}
+
+void RuntimeIntegratorServiceTest::aBlipOnTheSameCouatlLogsNoNewKey()
+{
+    const LogCapture log;
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    const std::vector<RecordedMessage> wire = LoadRecordedWire(QLatin1String(kLfmnWire));
+
+    QVERIFY(!wire.empty());
+
+    ReceiveWire(wire);
+
+    QCOMPARE(KeyLines(), qsizetype{1});
+
+    FakeGsxRemoteApi::AnnounceConnection(false);
+
+    QCOMPARE(KeyLines(), qsizetype{1});
+
+    ReceiveWire(wire);
+
+    QCOMPARE(KeyLines(), qsizetype{1});
+}
+
+void RuntimeIntegratorServiceTest::theCouatlRestartLogsWhatTheNewbornWireSays()
+{
+    const LogCapture log;
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    const std::vector<RecordedMessage> lfmn = LoadRecordedWire(QLatin1String(kLfmnWire));
+    const std::vector<RecordedMessage> newborn = LoadRecordedWire(QLatin1String(kNewbornCouatlWire));
+
+    QVERIFY(!lfmn.empty());
+    QVERIFY(!newborn.empty());
+
+    ReceiveWire(lfmn);
+
+    QCOMPARE(KeyLines(), qsizetype{1});
+    QVERIFY(LogCapture::Contains(
+        QStringLiteral("GSX reports couatl 2120420471, airport LFMN, parking Terminal 1 | Gate C14")));
+
+    FakeGsxRemoteApi::AnnounceConnection(false);
+    ReceiveWire(newborn);
+
+    QCOMPARE(KeyLines(), qsizetype{5});
+    QVERIFY(LogCapture::Contains(QStringLiteral("GSX reports no couatl, no airport, no parking")));
+    QVERIFY(LogCapture::Contains(QStringLiteral("GSX reports no couatl, airport LFMN, no parking")));
+    QVERIFY(LogCapture::Contains(QStringLiteral("GSX reports couatl 2123650379, airport LFMN, no parking")));
+    QVERIFY(LogCapture::Contains(
+        QStringLiteral("GSX reports couatl 2123650379, airport LFMN, parking Terminal 1 | Gate C14")));
+}
+
+void RuntimeIntegratorServiceTest::theMachineDoesNotTickBetweenTheHandshakeAndTheSnapshot()
+{
+    IntegratorRuntime runtime;
+    SkipTheReposition(runtime);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+
+    const TurnaroundPhase before = runtime.GetPhase();
+
+    FakeGsxRemoteApi::Receive(Hello());
+
+    QVERIFY(!DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, runtime, updated));
+    QCOMPARE(runtime.GetPhase(), before);
+
+    FakeGsxRemoteApi::Receive(EmptySnapshot());
+
+    QVERIFY(DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, runtime, updated));
+}
+
+void RuntimeIntegratorServiceTest::theSlowTickWaitsForTheSnapshotToo()
+{
+    IntegratorRuntime runtime;
+    SkipTheReposition(runtime);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(ReachTheMd11SlowRule(runtime, updated));
+
+    FakeSimConnectApi::writtenSimObjectData.clear();
+
+    FakeGsxRemoteApi::Receive(Hello());
+    PushFourSecondTick();
+    QVERIFY(DispatchPending());
+
+    QVERIFY(FakeSimConnectApi::writtenSimObjectData.empty());
+
+    FakeGsxRemoteApi::Receive(EmptySnapshot());
+    PushFourSecondTick();
+    QVERIFY(DispatchPending());
+
+    QVERIFY(WasWritten(kMd11EfbZfw));
+}
+
+void RuntimeIntegratorServiceTest::theMenuIsLeftAloneBetweenTheHandshakeAndTheSnapshot()
+{
+    const LogCapture log;
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    FakeGsxRemoteApi::Receive(Hello());
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/menu"),
+                                    QJsonObject{{"title", "Activate Services"},
+                                                {"entries", QJsonArray{"Call Pushback", "Cancel"}}}));
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/menuShown"), true));
+
+    QVERIFY(!LogCapture::Contains(QLatin1String(kMenuLine)));
+
+    FakeGsxRemoteApi::Receive(EmptySnapshot());
+
+    QVERIFY(LogCapture::Contains(QStringLiteral("RemoteAPI menu: 'Activate Services' -> [Call Pushback | Cancel]")));
+}
+
+void RuntimeIntegratorServiceTest::aDropKeepsTheMachineTicking()
+{
+    IntegratorRuntime runtime;
+    SkipTheReposition(runtime);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+
+    ReceiveWire(LoadRecordedWire(QLatin1String(kLfmnWire)));
+    FakeGsxRemoteApi::AnnounceConnection(false);
+
+    QVERIFY(DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, runtime, updated));
 }
 
 void RuntimeIntegratorServiceTest::theLoggingToggleAloneLeavesTheAircraftUntouched()
