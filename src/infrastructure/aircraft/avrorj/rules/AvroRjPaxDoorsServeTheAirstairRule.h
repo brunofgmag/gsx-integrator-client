@@ -22,6 +22,7 @@ private:
     [[nodiscard]] bool IsFrontDoorWanted() const;
     [[nodiscard]] const char* WhatServesTheFrontDoor() const;
     void DriveFrontDoor(VariableWriter& writer);
+    void CommandFrontDoor(VariableWriter& writer, double target);
     void KeepAftDoorClosed(VariableWriter& writer);
 
     VariableReader* variables_;

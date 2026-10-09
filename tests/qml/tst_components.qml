@@ -57,6 +57,99 @@ TestCase {
         }
     }
 
+    Component {
+        id: profilesPaneComponent
+        ProfilesPane {
+            width: 400
+        }
+    }
+
+    Component {
+        id: servicesPaneComponent
+        ServicesPane {
+            width: 400
+        }
+    }
+
+    function paneVm() {
+        return {
+            profileModel: [],
+            profileFuelRateModeIndex: 0,
+            profileFuelRateText: "",
+            profileRecommendedFuelRateText: "",
+            profileFuelBadge: "",
+            fuelRateUnitText: "",
+            selectedProfileIndex: 0,
+            detectedProfileIndex: 0,
+            profileUseGlobal: false,
+            profileFuelEditable: false,
+            profileFuelRateEditable: false,
+            weightIsLb: false,
+            profileSkipReposition: false,
+            profileCallGpu: false,
+            profilePlaceChocks: false,
+            profileCallGpuOnArrival: false,
+            profilePlaceChocksOnArrival: false,
+            profileCallCatering: false,
+            profileCallBoardingEarly: false,
+            profileCallLavatory: false,
+            profileCallWater: false,
+            profileCallCleaning: false,
+            callGpu: false,
+            placeChocks: false,
+            callGpuOnArrival: false,
+            placeChocksOnArrival: false,
+            callCatering: false,
+            callBoardingEarly: false,
+            callLavatory: false,
+            callWater: false,
+            callCleaning: false,
+            useAircraftStairs: false,
+            autoDeice: false,
+            crewBoarding: 0,
+            crewDeboarding: 0,
+            selectDetectedProfile: () => {}
+        };
+    }
+
+    function findRowByTitle(item, title) {
+        if (item.title === title && item.helpText !== undefined)
+            return item;
+
+        const kids = item.children;
+
+        for (let i = 0; i < kids.length; i++) {
+            const hit = findRowByTitle(kids[i], title);
+
+            if (hit)
+                return hit;
+        }
+
+        return null;
+    }
+
+    function test_profilesPaneChocksRowsExplainThemLikeTheServicesPane() {
+        const vm = paneVm();
+        const profiles = createTemporaryObject(profilesPaneComponent, testCase, { settingsVm: vm });
+        const services = createTemporaryObject(servicesPaneComponent, testCase, { settingsVm: vm });
+
+        verify(profiles);
+        verify(services);
+
+        const titles = ["Place chocks", "Place chocks on arrival"];
+
+        for (let i = 0; i < titles.length; i++) {
+            const profileRow = findRowByTitle(profiles, titles[i]);
+            const serviceRow = findRowByTitle(services, titles[i]);
+
+            verify(profileRow, titles[i]);
+            verify(serviceRow, titles[i]);
+            verify(serviceRow.helpText.length > 0, titles[i]);
+            verify(profileRow.helpText.length > 0, titles[i]);
+            compare(profileRow.helpText, serviceRow.helpText, titles[i]);
+        }
+    }
+
     function test_keyValueRowShowsWhatItIsGiven() {
         const row = createTemporaryObject(keyValueRowComponent, testCase, { label: "Fuel", value: "12 000 KG" });
 

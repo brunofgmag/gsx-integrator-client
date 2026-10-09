@@ -1205,52 +1205,58 @@
         <translation>Colocar calços</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="163"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="164"/>
         <source>Call GPU on arrival</source>
         <translation>Chamar GPU na chegada</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="171"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="172"/>
         <source>Place chocks on arrival</source>
         <translation>Colocar calços na chegada</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="179"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="156"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="173"/>
+        <source>Chocks are only placed on aircraft that let the client control them.</source>
+        <translation>Os calços só são colocados em aeronaves que deixam o cliente controlá-los.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="181"/>
         <source>Call catering</source>
         <translation>Chamar catering</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="180"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="182"/>
         <source>Cargo aircraft skip catering automatically, even when this is on.</source>
         <translation>Aeronaves cargueiras pulam o catering automaticamente, mesmo com esta opção ligada.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="188"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="190"/>
         <source>Call boarding early on refuel</source>
         <translation>Chamar o embarque cedo no abastecimento</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="196"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="198"/>
         <source>Call lavatory service</source>
         <translation>Chamar serviço de lavatório</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="204"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="206"/>
         <source>Call water service</source>
         <translation>Chamar serviço de água</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="212"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="214"/>
         <source>Call cleaning service</source>
         <translation>Chamar serviço de limpeza</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="222"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="224"/>
         <source>Set as global default</source>
         <translation>Definir como padrão global</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="228"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="230"/>
         <source>Apply to all profiles</source>
         <translation>Aplicar a todos os perfis</translation>
     </message>
