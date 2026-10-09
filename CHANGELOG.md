@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.45.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.44.1...v1.45.0) (2026-10-09)
+
+
+* warn when the avro rj airstair has no pressure and stop expired rule holds from re-arming ([#232](https://github.com/brunofgmag/gsx-integrator-client/issues/232)) ([87ea1f6](https://github.com/brunofgmag/gsx-integrator-client/commit/87ea1f66d98f35f8233b3cdc783b6b19977e793b))
+
+
+### Features
+
+* warn when the avro rj airstair has no pressure and stop expired rule holds from re-arming ([124baea](https://github.com/brunofgmag/gsx-integrator-client/commit/124baea46fe231b7846cef7a76bc9698f7285af4)) ([87ea1f6](https://github.com/brunofgmag/gsx-integrator-client/commit/87ea1f66d98f35f8233b3cdc783b6b19977e793b))
+
 ## [1.44.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.44.0...v1.44.1) (2026-10-09)
 
 
