@@ -153,6 +153,7 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Place chocks")
+        helpText: qsTr("Chocks are only placed on aircraft that let the client control them.")
         checked: root.settingsVm.profilePlaceChocks
         onToggled: checked => root.settingsVm.profilePlaceChocks = checked
     }
@@ -169,6 +170,7 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Place chocks on arrival")
+        helpText: qsTr("Chocks are only placed on aircraft that let the client control them.")
         checked: root.settingsVm.profilePlaceChocksOnArrival
         onToggled: checked => root.settingsVm.profilePlaceChocksOnArrival = checked
     }

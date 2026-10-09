@@ -235,6 +235,9 @@ private slots:
     static void airstairFoundExtendedIsStowedWhenAGsxStairTakesTheFrontDoor();
     static void airstairFoundExtendedIsStowedUnderAnAvailableJetway();
     static void frontDoorWaitsForThePhysicallyStowedStair();
+    static void frontDoorAlreadyReadingClosedIsNotToldToClose();
+    static void frontDoorAlreadyReadingOpenIsNotToldToOpen();
+    static void frontDoorWithoutAReadingIsCommandedBothWays();
     static void reportsTheAirstairExtendedOnlyAfterItStopsMoving();
     static void airstairIsNotCommandedWhileItIsStillMoving();
     static void groundPowerIsLeftToGsx();
@@ -1449,6 +1452,84 @@ void AvroRjTest::frontDoorWaitsForThePhysicallyStowedStair()
     gateway.lvars["EXT_Door_stairs_pos"] = 50.0;
     TickAircraft(aircraft, gateway);
 
+    QCOMPARE(gateway.Written("EXT_Door_pax_1L"), 0.0);
+}
+
+void AvroRjTest::frontDoorAlreadyReadingClosedIsNotToldToClose()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars[kStairAccumPressure] = kStairPressureFull;
+    gateway.lvars["EXT_Door_stairs_pos"] = 190.0;
+
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount("EXT_Door_pax_1L"), 1);
+
+    gateway.lvars[kStairExtendSwitch] = 0.0;
+    aircraft.HoldDoorsClosed(true);
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+
+    gateway.lvars["EXT_Door_stairs_pos"] = 50.0;
+    gateway.lvars["EXT_Door_pax_1L"] = 0.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount("EXT_Door_pax_1L"), 1);
+    QCOMPARE(gateway.Written("EXT_Door_pax_1L"), 0.0);
+
+    aircraft.HoldDoorsClosed(false);
+    TickAircraft(aircraft, gateway, kPassengerAccess);
+
+    QCOMPARE(gateway.WriteCount("EXT_Door_pax_1L"), 2);
+    QCOMPARE(gateway.Written("EXT_Door_pax_1L"), 1.0);
+}
+
+void AvroRjTest::frontDoorAlreadyReadingOpenIsNotToldToOpen()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    gateway.lvars["EXT_Door_stairs_pos"] = 50.0;
+    gateway.lvars["EXT_Door_pax_1L"] = 1.0;
+
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount("EXT_Door_pax_1L"), 0);
+
+    aircraft.HoldDoorsClosed(true);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount("EXT_Door_pax_1L"), 1);
+    QCOMPARE(gateway.Written("EXT_Door_pax_1L"), 0.0);
+}
+
+void AvroRjTest::frontDoorWithoutAReadingIsCommandedBothWays()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    gateway.lvars["EXT_Door_stairs_pos"] = 50.0;
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount("EXT_Door_pax_1L"), 1);
+    QCOMPARE(gateway.Written("EXT_Door_pax_1L"), 1.0);
+
+    gateway.lvars.erase("EXT_Door_pax_1L");
+    aircraft.HoldDoorsClosed(true);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount("EXT_Door_pax_1L"), 2);
     QCOMPARE(gateway.Written("EXT_Door_pax_1L"), 0.0);
 }
 
