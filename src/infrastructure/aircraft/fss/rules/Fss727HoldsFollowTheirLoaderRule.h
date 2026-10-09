@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727HOLDSFOLLOWTHEIRLOADERRULE_H
 
 #include <array>
+#include <cstddef>
 
 #include "../../../../domain/ports/AircraftRule.h"
 
@@ -13,11 +14,16 @@ enum class GsxDoor;
 class Fss727HoldsFollowTheirLoaderRule final : public AircraftRule
 {
 public:
+    static constexpr std::size_t kHoldCount = 2;
+
     Fss727HoldsFollowTheirLoaderRule(VariableReader& variables, const Fss727& aircraft, GsxDoorSync& doors);
 
     [[nodiscard]] const char* Name() const override;
     [[nodiscard]] RuleVerdict Evaluate(const RuleContext& context) override;
     void Act(const RuleContext& context, VariableWriter& writer) override;
+
+    [[nodiscard]] bool HasUnservedClose(std::size_t hold) const;
+    void RestoreUnservedCloses(const std::array<bool, kHoldCount>& unserved);
 
 private:
     static void MoveTheHold(VariableWriter& writer, GsxDoor door, bool open);
@@ -27,7 +33,7 @@ private:
     VariableReader* variables_;
     const Fss727* aircraft_;
     GsxDoorSync* doors_;
-    std::array<int, 2> servedRequests_{};
+    std::array<int, kHoldCount> servedRequests_{};
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727HOLDSFOLLOWTHEIRLOADERRULE_H

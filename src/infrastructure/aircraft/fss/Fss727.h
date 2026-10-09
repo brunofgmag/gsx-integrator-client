@@ -40,6 +40,11 @@ public:
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
     void OnLoadingStarted() override {}
 
+    [[nodiscard]] bool IsReachable() const override;
+    void OnTurnaroundStarted() override;
+    void OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory) override;
+    [[nodiscard]] MemoryBag TurnaroundMemory() const override;
+
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
     [[nodiscard]] double GetPlannedZfwKg() const override;
@@ -75,6 +80,7 @@ public:
     [[nodiscard]] std::optional<double> MainDeckPosition() const;
     [[nodiscard]] std::optional<bool> IsMainDeckClosed() const;
     [[nodiscard]] std::optional<bool> IsMainDeckOpen() const;
+    [[nodiscard]] bool IsMainDeckStill() const;
     [[nodiscard]] bool SupportsChocksControl() const override { return true; }
     bool SetChocks(bool placed) override;
     void ClearOwnGroundEquipment() override;
@@ -93,6 +99,8 @@ private:
     [[nodiscard]] bool AreChocksSet() const;
     [[nodiscard]] std::optional<double> DoorPointPosition(std::size_t point) const;
     [[nodiscard]] std::optional<bool> DoorOpenAt(std::size_t point) const;
+    [[nodiscard]] double CargoLineKg() const;
+    void RestoreThePendingCloses(const MemoryBag& memory);
 
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;
@@ -107,6 +115,7 @@ private:
     int holdCloseRequests_ = 0;
     double lastFuelKg_ = -1.0;
     double lastZfwKg_ = -1.0;
+    std::optional<double> resumedPlanAboveEmptyKg_;
     Fss727KeepVendorGsxAutomodeOffRule automodeRule_;
     Fss727FrontEntryServesTheGroundAccessRule frontEntryRule_;
     Fss727KeepGsxDoorAutomationOffRule doorAutomationRule_;

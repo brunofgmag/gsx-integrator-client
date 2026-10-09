@@ -34,6 +34,15 @@ public:
     [[nodiscard]] RuleVerdict Evaluate(const RuleContext& context) override;
     void Act(const RuleContext& context, VariableWriter& writer) override;
 
+    [[nodiscard]] bool HasUnservedClose() const;
+    [[nodiscard]] bool IsLoaderDepartureCloseUnserved() const;
+    void RestoreUnservedLoaderDepartureClose();
+    [[nodiscard]] bool IsDeboardingAtWork() const;
+    [[nodiscard]] bool HasSeenTheMainLoaderAtTheDeck() const;
+    void RestoreTheEdges(bool deboardingAtWork, bool mainLoaderSeenAtTheDeck);
+    void CheckThePanelMasterLeftOn();
+    void ForgetTheResume();
+
 private:
     enum class Travel : std::uint8_t
     {
@@ -47,6 +56,7 @@ private:
     void ResumeTravel(double position);
     void DropTheTravelThatNeverMoved();
     void GuardThePanelMasterCut(VariableWriter& writer);
+    void TurnOffThePanelMasterLeftOn(VariableWriter& writer);
     [[nodiscard]] bool HasComeToRest() const;
     void TurnThePanelMasterOff(VariableWriter& writer, double position);
     void ServeThePendingClose(VariableWriter& writer, bool closed);
@@ -68,6 +78,7 @@ private:
     int servedRequests_ = 0;
     int deboardingCloseRequests_ = 0;
     bool deboardingAtWork_ = false;
+    bool deboardingReadAwaited_ = false;
     int loaderDepartureCloseRequests_ = 0;
     bool loaderDepartureCloseUnserved_ = false;
     bool mainLoaderSeenAtTheDeck_ = false;
@@ -77,6 +88,7 @@ private:
     int unmovedTicks_ = 0;
     int masterCutGuardTicks_ = 0;
     bool mayResumeTravel_ = false;
+    bool panelMasterLeftOnToCheck_ = false;
     int loaderHoldTicks_ = 0;
 };
 

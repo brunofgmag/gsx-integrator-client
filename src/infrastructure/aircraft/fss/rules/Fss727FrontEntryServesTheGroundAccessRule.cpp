@@ -42,8 +42,15 @@ void Fss727FrontEntryServesTheGroundAccessRule::Act(const RuleContext&, Variable
 {
     doors_->Report();
 
+    targetRestoredOpen_ = targetRestoredOpen_ && !HaveTheInputsArrived();
+
     const double target = IsFrontEntryWanted() ? kDoorOpen : kDoorClosed;
     const int closeRequests = aircraft_->FrontEntryCloseRequests();
+
+    if (target == kDoorClosed && targetRestoredOpen_ && !aircraft_->IsHeldForDeparture())
+    {
+        return;
+    }
 
     if (target == kDoorClosed && closeRequests != servedCloseRequests_)
     {
@@ -66,11 +73,45 @@ void Fss727FrontEntryServesTheGroundAccessRule::Act(const RuleContext&, Variable
 void Fss727FrontEntryServesTheGroundAccessRule::Command(VariableWriter& writer, const double target)
 {
     lastTarget_ = target;
+    targetRestoredOpen_ = false;
 
     probe::Line(probe::Channel::Writes, QStringLiteral("write front FwdPax open=%1").arg(target == kDoorOpen ? 1 : 0));
     writer.SetAVar(kFrontEntryGoal, kPercentOver100Unit, target);
 
     LOG_INFO("FSS 727 front entry door commanded %s", target == kDoorOpen ? "open" : "closed");
+}
+
+std::optional<double> Fss727FrontEntryServesTheGroundAccessRule::CommandedTarget() const
+{
+    if (lastTarget_ < kDoorClosed)
+    {
+        return std::nullopt;
+    }
+
+    return lastTarget_;
+}
+
+bool Fss727FrontEntryServesTheGroundAccessRule::HasUnservedClose() const
+{
+    return aircraft_->FrontEntryCloseRequests() != servedCloseRequests_;
+}
+
+void Fss727FrontEntryServesTheGroundAccessRule::RestoreTarget(const double target)
+{
+    lastTarget_ = target;
+    targetRestoredOpen_ = target == kDoorOpen;
+}
+
+void Fss727FrontEntryServesTheGroundAccessRule::ForgetTheRestoredTarget()
+{
+    targetRestoredOpen_ = false;
+}
+
+bool Fss727FrontEntryServesTheGroundAccessRule::HaveTheInputsArrived() const
+{
+    return variables_->HasReceivedLVar(gsx::lvars::kCouatlStarted)
+        && variables_->HasReceivedLVar(gsx::lvars::kJetway)
+        && variables_->HasReceivedLVar(gsx::lvars::kPassengerStairsFrontState);
 }
 
 bool Fss727FrontEntryServesTheGroundAccessRule::IsFrontEntryWanted() const

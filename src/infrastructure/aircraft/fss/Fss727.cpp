@@ -73,6 +73,17 @@ namespace
     constexpr auto kSmartSwitchControl = "SERV INT";
     constexpr double kServiceInterphoneOff = 0.0;
 
+    constexpr auto kFrontEntryTargetKey = "fss727.frontEntry.target";
+    constexpr auto kFrontEntryClosePendingKey = "fss727.frontEntry.closePending";
+    constexpr std::array kHoldClosePendingKeys = {"fss727.hold.forward.closePending", "fss727.hold.aft.closePending"};
+    constexpr auto kMainDeckClosePendingKey = "fss727.mainDeck.closePending";
+    constexpr auto kMainDeckLoaderCloseKey = "fss727.mainDeck.loaderDepartureClose";
+    constexpr auto kMainDeckDeboardingAtWorkKey = "fss727.mainDeck.deboardingAtWork";
+    constexpr auto kMainDeckLoaderSeenKey = "fss727.mainDeck.loaderSeenAtTheDeck";
+    constexpr double kNoRestoredTarget = -1.0;
+
+    static_assert(kHoldClosePendingKeys.size() == Fss727HoldsFollowTheirLoaderRule::kHoldCount);
+
     constexpr auto kPercentOver100Unit = "percent over 100";
     constexpr std::size_t kMainDeckPoint = 1;
     constexpr double kDoorPointClosedAtMost = 0.05;
@@ -202,6 +213,88 @@ void Fss727::Observe()
     }
 }
 
+bool Fss727::IsReachable() const
+{
+    return variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit)
+        && variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit)
+        && PoundsPerGallon(*variableGateway_).has_value()
+        && TankCapacityGallons(*variableGateway_).has_value();
+}
+
+void Fss727::OnTurnaroundStarted()
+{
+    resumedPlanAboveEmptyKg_.reset();
+    frontEntryRule_.ForgetTheRestoredTarget();
+    mainDeckRule_.ForgetTheResume();
+}
+
+void Fss727::OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory)
+{
+    if (facts.plannedZfwKg > facts.emptyZfwKg)
+    {
+        resumedPlanAboveEmptyKg_ = facts.plannedZfwKg - facts.emptyZfwKg;
+    }
+
+    RestoreThePendingCloses(memory);
+
+    const double frontEntryTarget = memory.Number(kFrontEntryTargetKey, kNoRestoredTarget);
+    if (frontEntryTarget != kNoRestoredTarget)
+    {
+        frontEntryRule_.RestoreTarget(frontEntryTarget);
+    }
+
+    if (memory.Flag(kMainDeckLoaderCloseKey, false))
+    {
+        mainDeckRule_.RestoreUnservedLoaderDepartureClose();
+    }
+
+    mainDeckRule_.RestoreTheEdges(memory.Flag(kMainDeckDeboardingAtWorkKey, false),
+                                  memory.Flag(kMainDeckLoaderSeenKey, false));
+    mainDeckRule_.CheckThePanelMasterLeftOn();
+    doors_.RestoreMemory(memory, facts.gsxRestartedSinceSave);
+}
+
+void Fss727::RestoreThePendingCloses(const MemoryBag& memory)
+{
+    frontEntryCloseRequests_ = memory.Flag(kFrontEntryClosePendingKey, false) ? 1 : 0;
+    mainDeckCloseRequests_ = memory.Flag(kMainDeckClosePendingKey, false) ? 1 : 0;
+
+    std::array<bool, Fss727HoldsFollowTheirLoaderRule::kHoldCount> holdsUnserved{};
+    for (std::size_t hold = 0; hold < holdsUnserved.size(); ++hold)
+    {
+        holdsUnserved[hold] = memory.Flag(kHoldClosePendingKeys[hold], false);
+    }
+
+    holdCloseRequests_ = std::ranges::any_of(holdsUnserved, [](const bool unserved) { return unserved; }) ? 1 : 0;
+    holdsRule_.RestoreUnservedCloses(holdsUnserved);
+}
+
+MemoryBag Fss727::TurnaroundMemory() const
+{
+    MemoryBag memory;
+
+    const std::optional<double> frontEntryTarget = frontEntryRule_.CommandedTarget();
+    if (frontEntryTarget.has_value())
+    {
+        memory.PutNumber(kFrontEntryTargetKey, *frontEntryTarget);
+    }
+
+    memory.PutFlag(kFrontEntryClosePendingKey, frontEntryRule_.HasUnservedClose());
+
+    for (std::size_t hold = 0; hold < kHoldClosePendingKeys.size(); ++hold)
+    {
+        memory.PutFlag(kHoldClosePendingKeys[hold], holdsRule_.HasUnservedClose(hold));
+    }
+
+    memory.PutFlag(kMainDeckClosePendingKey, mainDeckRule_.HasUnservedClose());
+    memory.PutFlag(kMainDeckLoaderCloseKey, mainDeckRule_.IsLoaderDepartureCloseUnserved());
+    memory.PutFlag(kMainDeckDeboardingAtWorkKey, mainDeckRule_.IsDeboardingAtWork());
+    memory.PutFlag(kMainDeckLoaderSeenKey, mainDeckRule_.HasSeenTheMainLoaderAtTheDeck());
+    doors_.AppendMemory(memory);
+
+    return memory;
+}
+
 bool Fss727::IsFlightPlanLoaded() const
 {
     return status_->flightPlanStatus == FlightPlanStatus::Ready
@@ -297,7 +390,7 @@ void Fss727::SetCurrentZfwKg(const double zfwKg)
 
     lastZfwKg_ = zfwKg;
 
-    const double cargoLineLb = weight::KgToLb(status_->plannedPayloadKg.value_or(0.0));
+    const double cargoLineLb = weight::KgToLb(CargoLineKg());
     const double cargoLb = std::clamp(weight::KgToLb(zfwKg - GetEmptyZfwKg()), 0.0, cargoLineLb);
 
     double capacitiesLb = 0.0;
@@ -313,6 +406,21 @@ void Fss727::SetCurrentZfwKg(const double zfwKg)
         variableGateway_->SetAVar(
             PayloadStationVar(static_cast<int>(station) + kFirstCargoStation), kPoundsUnit, stationLb);
     }
+}
+
+double Fss727::CargoLineKg() const
+{
+    if (status_->plannedPayloadKg.has_value())
+    {
+        return *status_->plannedPayloadKg;
+    }
+
+    if (resumedPlanAboveEmptyKg_.has_value())
+    {
+        return std::max(0.0, *resumedPlanAboveEmptyKg_ - GetCrewOnBoardKg());
+    }
+
+    return 0.0;
 }
 
 bool Fss727::ConsumeSmartSwitch()
@@ -423,6 +531,11 @@ std::optional<bool> Fss727::IsMainDeckOpen() const
     }
 
     return *position >= kDoorPointOpenAtLeast;
+}
+
+bool Fss727::IsMainDeckStill() const
+{
+    return mainDeckRest_.IsStill();
 }
 
 bool Fss727::IsPowered() const

@@ -34,6 +34,8 @@ namespace
         Hold{.door = GsxDoor::AftCargo, .name = "aft", .goal = "INTERACTIVE POINT GOAL:3",
              .loaderLVar = gsx::lvars::kBaggageLoaderRearState}
     };
+
+    static_assert(kHolds.size() == Fss727HoldsFollowTheirLoaderRule::kHoldCount);
 }
 
 Fss727HoldsFollowTheirLoaderRule::Fss727HoldsFollowTheirLoaderRule(
@@ -93,6 +95,19 @@ void Fss727HoldsFollowTheirLoaderRule::CloseTheHoldsOnRequest(VariableWriter& wr
         served = requests;
 
         LOG_INFO("FSS 727 %s hold commanded closed: its loader has left", hold.name);
+    }
+}
+
+bool Fss727HoldsFollowTheirLoaderRule::HasUnservedClose(const std::size_t hold) const
+{
+    return servedRequests_[hold] != aircraft_->HoldCloseRequests();
+}
+
+void Fss727HoldsFollowTheirLoaderRule::RestoreUnservedCloses(const std::array<bool, kHoldCount>& unserved)
+{
+    for (std::size_t hold = 0; hold < kHoldCount; ++hold)
+    {
+        servedRequests_[hold] = unserved[hold] ? 0 : aircraft_->HoldCloseRequests();
     }
 }
 
