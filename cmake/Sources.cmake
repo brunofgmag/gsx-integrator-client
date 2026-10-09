@@ -1,5 +1,9 @@
 set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/TurnaroundData.h
+        src/domain/turnaround/TurnaroundCheckpoint.h
+        src/domain/turnaround/TurnaroundFacts.h
+        src/domain/turnaround/TurnaroundRestore.h
+        src/domain/turnaround/TurnaroundRestore.cpp
         src/domain/turnaround/TurnaroundTransition.h
         src/domain/turnaround/TurnaroundContext.h
         src/domain/turnaround/TurnaroundMath.h
@@ -92,7 +96,8 @@ set(APP_SOURCES
         src/domain/model/AutomationStatus.h
         src/domain/model/AutomationSettings.h
         src/domain/model/FlightPlan.h
-        src/domain/model/FlightPlan.h
+        src/domain/model/MemoryBag.h
+        src/domain/model/PlanConversion.h
         src/domain/turnaround/TurnaroundPhase.h
         src/domain/ports/Aircraft.h
         src/domain/ports/GsxGateway.h

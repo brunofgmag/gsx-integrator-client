@@ -6,7 +6,9 @@
 
 #include "../model/DoorStatus.h"
 #include "../model/GroundPowerStatus.h"
+#include "../model/MemoryBag.h"
 #include "../support/Weight.h"
+#include "../turnaround/TurnaroundFacts.h"
 
 class AircraftRule;
 
@@ -29,6 +31,11 @@ public:
         return none;
     }
     virtual void OnLoadingStarted() = 0;
+
+    [[nodiscard]] virtual bool IsReachable() const { return false; }
+    virtual void OnTurnaroundStarted() {}
+    virtual void OnTurnaroundResumed(const TurnaroundFacts&, const MemoryBag&) {}
+    [[nodiscard]] virtual MemoryBag TurnaroundMemory() const { return {}; }
 
     [[nodiscard]] virtual bool RequiresEfbFlightPlan() const { return false; }
     [[nodiscard]] virtual bool AppliesTheEfbFlightPlanOnItsDeparturePage() const { return false; }

@@ -1,6 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDPHASE_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDPHASE_H
 
+#include <optional>
+#include <string_view>
+
 enum class TurnaroundPhase : int
 {
     WaitingSupportedAircraft,
@@ -61,6 +64,25 @@ inline const char* TurnaroundPhaseToString(const TurnaroundPhase phase)
     case TurnaroundPhase::Count:
     default: return "Unknown";
     };
+}
+
+[[nodiscard]] inline std::optional<TurnaroundPhase> TurnaroundPhaseFromString(const std::string_view name)
+{
+    for (int index = 0; index < static_cast<int>(TurnaroundPhase::Count); ++index)
+    {
+        const auto phase = static_cast<TurnaroundPhase>(index);
+        if (name == TurnaroundPhaseToString(phase))
+        {
+            return phase;
+        }
+    }
+
+    return std::nullopt;
+}
+
+[[nodiscard]] constexpr bool IsResumablePhase(const TurnaroundPhase phase)
+{
+    return phase >= TurnaroundPhase::RepositionAircraft && phase <= TurnaroundPhase::CabinServices;
 }
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDPHASE_H

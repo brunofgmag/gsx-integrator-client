@@ -8,6 +8,7 @@
 #include "SimbriefOfpParser.h"
 #include "../../domain/model/AutomationStatus.h"
 #include "../../domain/model/AutomationSettings.h"
+#include "../../domain/model/PlanConversion.h"
 #include "../logging/LogMacros.h"
 
 SimbriefClient::SimbriefClient(AutomationStatus* status,
@@ -61,16 +62,7 @@ bool SimbriefClient::HasHttpError() const
 
 void SimbriefClient::ApplyFlightPlan(const FlightPlan& flightPlan)
 {
-    automationStatus_->plannedFuelKg = flightPlan.fuelKg;
-    automationStatus_->plannedZfwKg = flightPlan.zfwKg;
-    automationStatus_->plannedOperatingEmptyKg = flightPlan.operatingEmptyKg;
-    automationStatus_->plannedPayloadKg = flightPlan.payloadKg;
-    automationStatus_->plannedCargoKg = flightPlan.cargoKg;
-    automationStatus_->plannedPassengers = flightPlan.passengers;
-    automationStatus_->simbriefUnit = flightPlan.unit;
-    automationStatus_->plannedOrigin = flightPlan.origin;
-    automationStatus_->plannedDestination = flightPlan.destination;
-    automationStatus_->planGeneratedEpoch = flightPlan.generatedEpoch;
+    turnaround::ApplyPlan(*automationStatus_, flightPlan);
 
     const std::string payloadText = flightPlan.payloadKg.has_value()
                                         ? std::format("{:.0f}kg", *flightPlan.payloadKg)

@@ -1169,6 +1169,7 @@ endif ()
 set(GSXI_GUARD_CHECKS
         check-domain-port-uncalled
         check-turnaround-data-field-unread
+        check-turnaround-data-field-unclassified
         check-viewmodel-property-unbound
         check-infra-gateway-uncalled
         check-state-predicate-lvar-default

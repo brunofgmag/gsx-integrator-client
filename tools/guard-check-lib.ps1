@@ -85,3 +85,81 @@ function Invoke-GuardCheck
     }
     exit 1
 }
+
+function Get-StructMembers
+{
+    param([string[]]$Lines, [string]$StructName)
+
+    $memberPattern = '^\s*([A-Za-z_][\w:<>, ]*?)\s+([a-z]\w*)\s*(?:=[^;(]*)?;\s*$'
+    $members = @()
+    $depth = 0
+    $inside = $false
+    for ($i = 0; $i -lt $Lines.Length; $i++)
+    {
+        $line = $Lines[$i]
+        if (-not $inside)
+        {
+            if ($line -match "^\s*struct\s+$StructName\b")
+            {
+                $inside = $true
+                $depth += ([regex]::Matches($line, '\{')).Count - ([regex]::Matches($line, '\}')).Count
+            }
+            continue
+        }
+
+        if ($depth -eq 1)
+        {
+            $memberMatch = [regex]::Match($line, $memberPattern)
+            if ($memberMatch.Success)
+            {
+                $members += [pscustomobject]@{
+                    Type = $memberMatch.Groups[1].Value
+                    Name = $memberMatch.Groups[2].Value
+                    Line = $i + 1
+                }
+            }
+        }
+
+        $depth += ([regex]::Matches($line, '\{')).Count - ([regex]::Matches($line, '\}')).Count
+        if ($depth -le 0)
+        {
+            break
+        }
+    }
+
+    return $members
+}
+
+function Get-FunctionBody
+{
+    param([string[]]$Lines, [string]$FunctionName)
+
+    $body = @()
+    $depth = 0
+    $entered = $false
+    $inside = $false
+    foreach ($line in $Lines)
+    {
+        if (-not $inside)
+        {
+            if ($line -notmatch "\b$FunctionName\s*\(")
+            {
+                continue
+            }
+            $inside = $true
+        }
+
+        $body += $line
+        $depth += ([regex]::Matches($line, '\{')).Count - ([regex]::Matches($line, '\}')).Count
+        if ($depth -gt 0)
+        {
+            $entered = $true
+        }
+        if ($entered -and $depth -le 0)
+        {
+            break
+        }
+    }
+
+    return ($body -join "`n")
+}

@@ -5,10 +5,18 @@
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include "TurnaroundCheckpoint.h"
 #include "TurnaroundContext.h"
 #include "TurnaroundTransition.h"
 #include "states/TurnaroundState.h"
 #include "TurnaroundPhase.h"
+
+enum class ResumeOutcome
+{
+    Resumed,
+    AircraftNotReachable,
+    UnknownPhase,
+};
 
 class TurnaroundStateMachine
 {
@@ -27,6 +35,10 @@ public:
     void ObserveRules();
     void ObserveSlowRules();
     void Reset();
+    [[nodiscard]] std::optional<TurnaroundCheckpoint> TakeCheckpoint() const;
+    [[nodiscard]] ResumeOutcome ResumeFrom(const TurnaroundCheckpoint& checkpoint,
+                                           Aircraft& aircraft,
+                                           bool gsxRestartedSinceSave);
     void ConfirmLoading() { context_.data.loadingConfirmed = true; }
     void DismissFuelStayAdvisory() { context_.data.fuelStayDismissed = true; }
     void AcceptAppTouch() { appTouchPending_ = true; }
@@ -45,6 +57,7 @@ private:
     void RegisterStates();
     void Step();
     void ResolvePilotTouch();
+    void StandAt(TurnaroundPhase phase);
     void PublishStatus() const;
     void TransitionTo(TurnaroundPhase phase, TransitionOrigin origin);
     [[nodiscard]] std::optional<TurnaroundTransition> EvaluateCurrentPhase();

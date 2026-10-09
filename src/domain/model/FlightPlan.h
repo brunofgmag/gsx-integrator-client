@@ -33,6 +33,8 @@ struct FlightPlan
     double operatingEmptyKg = 0.0;
     std::optional<double> payloadKg;
     std::optional<double> cargoKg;
+
+    bool operator==(const FlightPlan&) const = default;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H
