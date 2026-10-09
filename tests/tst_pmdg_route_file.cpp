@@ -50,6 +50,7 @@ private slots:
     static void ignoresARouteThatWasAlreadyThere();
     static void seesARouteWrittenAfterTheBaseline();
     static void rearmsWhenThePlanChanges();
+    static void restartingForgetsTheImportAndTakesANewBaseline();
 };
 
 void PmdgRouteFileTest::directorySitsBesideTheOptionsFile()
@@ -152,6 +153,37 @@ void PmdgRouteFileTest::rearmsWhenThePlanChanges()
     watch.Observe(PathOf(dir), "SBFZ", "SBTE", 2000);
 
     QVERIFY(!watch.Seen());
+}
+
+void PmdgRouteFileTest::restartingForgetsTheImportAndTakesANewBaseline()
+{
+    const QTemporaryDir dir;
+    WriteFile(dir, "SBFZSBTE.rte");
+    Restamp(dir, "SBFZSBTE.rte", NowEpoch() - 60);
+
+    PmdgRouteImport watch;
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 1000);
+    Restamp(dir, "SBFZSBTE.rte", NowEpoch());
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 1000);
+
+    QVERIFY(watch.Seen());
+
+    watch.Restart();
+
+    QVERIFY(!watch.Seen());
+
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 1000);
+
+    QVERIFY(!watch.Seen());
+
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 1000);
+
+    QVERIFY(!watch.Seen());
+
+    Restamp(dir, "SBFZSBTE.rte", NowEpoch() + 60);
+    watch.Observe(PathOf(dir), "SBFZ", "SBTE", 1000);
+
+    QVERIFY(watch.Seen());
 }
 
 QTEST_APPLESS_MAIN(PmdgRouteFileTest)

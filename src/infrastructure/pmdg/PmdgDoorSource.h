@@ -21,6 +21,7 @@ public:
     [[nodiscard]] virtual DoorObservation ObserveDoor(int slot) const = 0;
     virtual void ToggleDoor(int slot) = 0;
     virtual void RefreshDoors() = 0;
+    [[nodiscard]] virtual bool AreDoorReadingsPending() const { return false; }
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGDOORSOURCE_H

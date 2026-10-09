@@ -33,10 +33,45 @@ void PmdgPayloadWriter::Reset()
     lastSentCargoLbs_ = -1;
     lastProgressiveCargoLbs_ = -1;
     rampStartZfwKg_.reset();
+    resumed_ = false;
+    resumedPlannedZfwKg_.reset();
+    resumedPlannedPassengers_.reset();
     lastRequestedZfwKg_ = 0.0;
     progressiveRampMoving_ = false;
     zfwSettledTicks_ = 0;
     zfwTrims_ = 0;
+}
+
+void PmdgPayloadWriter::Resume(const double emptyZfwKg, const double plannedZfwKg, const int plannedPassengers)
+{
+    resumed_ = true;
+
+    if (emptyZfwKg > 0.0)
+    {
+        rampStartZfwKg_ = emptyZfwKg;
+    }
+
+    if (plannedZfwKg > 0.0)
+    {
+        resumedPlannedZfwKg_ = plannedZfwKg;
+        resumedPlannedPassengers_ = plannedPassengers;
+    }
+}
+
+bool PmdgPayloadWriter::LivePlanExists() const
+{
+    return status_->plannedZfwKg > 0.0;
+}
+
+double PmdgPayloadWriter::PlannedZfwKg() const
+{
+    return LivePlanExists() ? status_->plannedZfwKg : resumedPlannedZfwKg_.value_or(status_->plannedZfwKg);
+}
+
+int PmdgPayloadWriter::PlannedPassengers() const
+{
+    return LivePlanExists() ? status_->plannedPassengers
+                            : resumedPlannedPassengers_.value_or(status_->plannedPassengers);
 }
 
 void PmdgPayloadWriter::SetFuelKg(const double fuelKg)
@@ -59,7 +94,8 @@ void PmdgPayloadWriter::SetFuelKg(const double fuelKg)
 void PmdgPayloadWriter::SetZfwKg(const double zfwKg)
 {
     const std::optional<PmdgWeightEcho> echo = tablet_.LastWeightEcho();
-    if (!tablet_.IsAvailable() || !echo.has_value())
+    const double plannedZfwKg = PlannedZfwKg();
+    if (!tablet_.IsAvailable() || !echo.has_value() || (resumed_ && plannedZfwKg <= 0.0))
     {
         return;
     }
@@ -69,7 +105,7 @@ void PmdgPayloadWriter::SetZfwKg(const double zfwKg)
         rampStartZfwKg_ = zfwKg;
     }
 
-    const double rampSpanKg = status_->plannedZfwKg - *rampStartZfwKg_;
+    const double rampSpanKg = plannedZfwKg - *rampStartZfwKg_;
     const double progress = rampSpanKg > 0.0
                                 ? std::clamp((zfwKg - *rampStartZfwKg_) / rampSpanKg, 0.0, 1.0)
                                 : 1.0;
@@ -77,7 +113,7 @@ void PmdgPayloadWriter::SetZfwKg(const double zfwKg)
 
     if (!cargoVariant_)
     {
-        const int pax = static_cast<int>(std::lround(progress * status_->plannedPassengers));
+        const int pax = static_cast<int>(std::lround(progress * PlannedPassengers()));
         if (pax != lastSentPax_)
         {
             lastSentPax_ = pax;

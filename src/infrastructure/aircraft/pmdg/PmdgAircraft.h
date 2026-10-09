@@ -48,6 +48,10 @@ public:
     void Observe() override;
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
     void OnLoadingStarted() override;
+    [[nodiscard]] bool IsReachable() const override;
+    void OnTurnaroundStarted() override;
+    void OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory) override;
+    [[nodiscard]] MemoryBag TurnaroundMemory() const override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
     void HoldPassengerDoorsClosed(bool hold) override;
@@ -87,6 +91,7 @@ public:
 protected:
     [[nodiscard]] virtual bool HasVendorFlightPlan() const { return false; }
     [[nodiscard]] bool MainDeckDoorStuck() const;
+    [[nodiscard]] bool StateQuestionSent() const { return stateQuestionSent_; }
 
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;
@@ -94,6 +99,9 @@ protected:
     std::unique_ptr<PmdgTabletGateway> tablet_;
 
 private:
+    static constexpr int kStateQueryTicks = 3;
+
+    void QueryTabletState();
     void AdvanceMovingDoors();
     [[nodiscard]] int MovingDoorLimitTicks(int slot) const;
     [[nodiscard]] std::optional<bool> DoorOpenAt(int slot) const;
@@ -102,6 +110,8 @@ private:
     int doorSlots_;
     int mainDeckDoorSlot_;
     std::vector<int> movingTicks_;
+    int ticksSinceStateQuery_ = kStateQueryTicks - 1;
+    bool stateQuestionSent_ = false;
     GsxDoorSync doors_;
     PmdgDoorReconciler doorReconciler_;
     PmdgGroundConnReconciler groundConn_;

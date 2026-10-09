@@ -209,6 +209,11 @@ bool PmdgTabletClient::EfbPlanImported() const
     return efbPlanImported_;
 }
 
+void PmdgTabletClient::SetEfbPlanImported(const bool imported)
+{
+    efbPlanImported_ = imported;
+}
+
 PmdgTabletClient::DoorSnapshot PmdgTabletClient::ParseDoorStates(const std::string& json)
 {
     const std::optional<QJsonObject> object = StateReply(json);

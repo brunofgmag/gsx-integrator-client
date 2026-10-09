@@ -8,6 +8,7 @@
 namespace
 {
     constexpr auto kRuleName = "pmdg-doors-follow-gsx";
+    constexpr auto kMainDeckDoorTakenKey = "pmdgDoorRule.mainDeckDoorTaken";
 }
 
 PmdgDoorsFollowGsxRule::PmdgDoorsFollowGsxRule(const PmdgDataGateway& data, GsxDoorSync& doors,
@@ -43,6 +44,24 @@ void PmdgDoorsFollowGsxRule::Act(const RuleContext&, VariableWriter&)
     }
 
     reconciler_->Reconcile();
+}
+
+void PmdgDoorsFollowGsxRule::ForgetMainDeckDoor()
+{
+    mainDeckDoorTaken_ = false;
+}
+
+void PmdgDoorsFollowGsxRule::AppendMemory(MemoryBag& memory) const
+{
+    if (mainDeckDoorTaken_)
+    {
+        memory.PutFlag(kMainDeckDoorTakenKey, true);
+    }
+}
+
+void PmdgDoorsFollowGsxRule::RestoreMemory(const MemoryBag& memory)
+{
+    mainDeckDoorTaken_ = cargoVariant_ && memory.Flag(kMainDeckDoorTakenKey, false);
 }
 
 void PmdgDoorsFollowGsxRule::SyncMainDeckDoor()

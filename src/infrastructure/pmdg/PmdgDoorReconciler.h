@@ -4,6 +4,7 @@
 #include <array>
 #include <vector>
 #include "PmdgDoorSource.h"
+#include "../../domain/model/MemoryBag.h"
 
 enum class DoorBaseline
 {
@@ -20,6 +21,8 @@ public:
     void SetSlotDesired(int slot, bool open);
     void Reconcile();
     [[nodiscard]] bool IsStuck(int slot) const;
+    void AppendMemory(MemoryBag& memory) const;
+    void RestoreMemory(const MemoryBag& memory);
 
 private:
     void ReconcileSlot(std::size_t slot);

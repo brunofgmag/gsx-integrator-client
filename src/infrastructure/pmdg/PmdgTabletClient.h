@@ -34,6 +34,7 @@ public:
     void RequestGroundConn(const std::string& key) override;
     void RequestGroundVehicle(const std::string& key) override;
     void RequestState() override;
+    void SetEfbPlanImported(bool imported) override;
 
     [[nodiscard]] static std::string BuildWbPayload(const std::string& field, int value);
     [[nodiscard]] static std::string BuildGroundConn(const std::string& key);

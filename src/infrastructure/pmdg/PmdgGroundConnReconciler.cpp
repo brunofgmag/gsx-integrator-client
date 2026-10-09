@@ -13,6 +13,18 @@ namespace
     constexpr auto kGroundPowerRequest = "ground_power";
     constexpr auto kPassengerEntryRequest = "pax_entree";
     constexpr auto kOwnStairsRequest = "stairs_1l";
+
+    constexpr auto kPendingChocksKey = "pmdgGround.pendingChocks";
+    constexpr auto kPendingGroundPowerKey = "pmdgGround.pendingGroundPower";
+    constexpr auto kPendingPassengerEntryKey = "pmdgGround.pendingPassengerEntry";
+
+    std::optional<bool> SavedFlag(const MemoryBag& memory, const char* key)
+    {
+        const bool readAsTrue = memory.Flag(key, true);
+        const bool readAsFalse = memory.Flag(key, false);
+
+        return readAsTrue == readAsFalse ? std::optional(readAsTrue) : std::nullopt;
+    }
 }
 
 PmdgGroundConnReconciler::PmdgGroundConnReconciler(PmdgGroundSource& source, PmdgTabletGateway& tablet)
@@ -60,11 +72,58 @@ void PmdgGroundConnReconciler::Reconcile()
     ReconcilePassengerEntry();
 }
 
+void PmdgGroundConnReconciler::AppendMemory(MemoryBag& memory) const
+{
+    if (desiredChocks_.has_value())
+    {
+        memory.PutFlag(kPendingChocksKey, *desiredChocks_);
+    }
+
+    if (desiredGroundPower_.has_value())
+    {
+        memory.PutFlag(kPendingGroundPowerKey, *desiredGroundPower_);
+    }
+
+    if (passengerEntryRequested_)
+    {
+        memory.PutFlag(kPendingPassengerEntryKey, true);
+    }
+}
+
+void PmdgGroundConnReconciler::RestoreMemory(const MemoryBag& memory)
+{
+    if (const std::optional<bool> chocks = SavedFlag(memory, kPendingChocksKey); chocks.has_value())
+    {
+        SetChocks(*chocks);
+        chocksAwaitTheReading_ = true;
+    }
+
+    if (const std::optional<bool> groundPower = SavedFlag(memory, kPendingGroundPowerKey); groundPower.has_value())
+    {
+        SetGroundPower(*groundPower);
+    }
+
+    if (memory.Flag(kPendingPassengerEntryKey, false))
+    {
+        SetPassengerEntryJetway();
+    }
+}
+
 void PmdgGroundConnReconciler::ReconcileChocks()
 {
     if (!desiredChocks_.has_value())
     {
         return;
+    }
+
+    if (chocksAwaitTheReading_)
+    {
+        if (!source_.ChocksReadingArrived())
+        {
+            return;
+        }
+
+        chocksAwaitTheReading_ = false;
     }
 
     if (source_.ChocksSet() == *desiredChocks_)

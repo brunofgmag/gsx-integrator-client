@@ -1,11 +1,25 @@
 #include "PmdgDoorReconciler.h"
 
+#include <string>
 #include "../logging/LogMacros.h"
 
 namespace
 {
     constexpr int kDoorRetryTicks = 5;
     constexpr int kDoorMaxAttempts = 2;
+
+    constexpr auto kDesiredPrefix = "pmdgDoors.desired.";
+    constexpr auto kOpenedPrefix = "pmdgDoors.opened.";
+
+    std::string EntryName(const char* prefix, const std::size_t index)
+    {
+        return std::string(prefix).append(std::to_string(index));
+    }
+
+    bool IsDesiredValue(const double value)
+    {
+        return value == 0.0 || value == 1.0;
+    }
 }
 
 PmdgDoorReconciler::PmdgDoorReconciler(PmdgDoorSource& source, const int doorSlots,
@@ -59,6 +73,11 @@ void PmdgDoorReconciler::ReconcileSlot(const std::size_t slot)
 
     const DoorObservation observation = source_.ObserveDoor(static_cast<int>(slot));
     if (observation == DoorObservation::Unavailable || observation == DoorObservation::Moving)
+    {
+        return;
+    }
+
+    if (observation == DoorObservation::Unknown && source_.AreDoorReadingsPending())
     {
         return;
     }
@@ -117,4 +136,49 @@ bool PmdgDoorReconciler::IsStuck(const int slot) const
     const auto index = static_cast<std::size_t>(slot);
 
     return desired_[index] == 1 && attempts_[index] >= kDoorMaxAttempts;
+}
+
+void PmdgDoorReconciler::AppendMemory(MemoryBag& memory) const
+{
+    for (std::size_t slot = 0; slot < desired_.size(); ++slot)
+    {
+        if (desired_[slot] >= 0)
+        {
+            memory.PutNumber(EntryName(kDesiredPrefix, slot), desired_[slot]);
+        }
+    }
+
+    for (std::size_t door = 0; door < openedSlot_.size(); ++door)
+    {
+        if (openedSlot_[door] >= 0)
+        {
+            memory.PutNumber(EntryName(kOpenedPrefix, door), openedSlot_[door]);
+        }
+    }
+}
+
+void PmdgDoorReconciler::RestoreMemory(const MemoryBag& memory)
+{
+    for (std::size_t slot = 0; slot < desired_.size(); ++slot)
+    {
+        const double saved = memory.Number(EntryName(kDesiredPrefix, slot), -1.0);
+        if (!IsDesiredValue(saved))
+        {
+            continue;
+        }
+
+        desired_[slot] = static_cast<int>(saved);
+        commanded_[slot] = desired_[slot];
+        ticksSinceCommand_[slot] = 0;
+        attempts_[slot] = 0;
+    }
+
+    for (std::size_t door = 0; door < openedSlot_.size(); ++door)
+    {
+        const double saved = memory.Number(EntryName(kOpenedPrefix, door), -1.0);
+        if (saved >= 0.0 && saved < static_cast<double>(desired_.size()))
+        {
+            openedSlot_[door] = static_cast<int>(saved);
+        }
+    }
 }

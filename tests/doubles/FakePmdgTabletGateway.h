@@ -24,6 +24,7 @@ public:
     int stateRequests = 0;
     std::optional<bool> passengerEntryJetway;
     std::optional<PmdgWeightEcho> weightEcho;
+    std::optional<PmdgWeightEcho> echoOnStateRequest;
     std::optional<bool> jetwayInhibited;
     std::optional<bool> ownStairsDeployed;
     std::vector<std::string> groundVehicleRequests;
@@ -67,7 +68,16 @@ public:
     void SendCargoTotalLbs(const int lbs) override { cargoSends.push_back(lbs); }
     void RequestGroundConn(const std::string& key) override { groundConnRequests.push_back(key); }
     void RequestGroundVehicle(const std::string& key) override { groundVehicleRequests.push_back(key); }
-    void RequestState() override { ++stateRequests; }
+    void SetEfbPlanImported(const bool imported) override { efbPlanImported = imported; }
+
+    void RequestState() override
+    {
+        ++stateRequests;
+        if (echoOnStateRequest.has_value())
+        {
+            weightEcho = echoOnStateRequest;
+        }
+    }
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_TESTS_FAKEPMDGTABLETGATEWAY_H

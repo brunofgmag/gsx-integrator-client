@@ -87,6 +87,12 @@ long long PmdgRouteFile::LatestWrite(const std::filesystem::path& directory,
     return latest;
 }
 
+void PmdgRouteImport::Restart()
+{
+    baseline_.reset();
+    seen_ = false;
+}
+
 void PmdgRouteImport::Observe(const std::optional<std::filesystem::path>& directory,
                               const std::string& origin,
                               const std::string& destination,
@@ -95,8 +101,7 @@ void PmdgRouteImport::Observe(const std::optional<std::filesystem::path>& direct
     if (planEpoch != planEpoch_)
     {
         planEpoch_ = planEpoch;
-        baseline_.reset();
-        seen_ = false;
+        Restart();
     }
 
     if (seen_ || !directory.has_value())

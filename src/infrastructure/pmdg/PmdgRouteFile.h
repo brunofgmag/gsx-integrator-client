@@ -27,6 +27,7 @@ public:
                  const std::string& origin,
                  const std::string& destination,
                  long long planEpoch);
+    void Restart();
     [[nodiscard]] bool Seen() const { return seen_; }
 
 private:
