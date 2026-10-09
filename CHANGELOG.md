@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.44.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.44.0...v1.44.1) (2026-10-09)
+
+
+* ignore the ground speed while gsx tows the aircraft ([#229](https://github.com/brunofgmag/gsx-integrator-client/issues/229)) ([42266c7](https://github.com/brunofgmag/gsx-integrator-client/commit/42266c7c28f9bb0cbac08c054a0c36710b4fabae))
+
+
+### Bug Fixes
+
+* ignore the ground speed while gsx tows the aircraft ([6cc926d](https://github.com/brunofgmag/gsx-integrator-client/commit/6cc926d45e7a5f673e55f5eedfb6299bc92f4c73)) ([42266c7](https://github.com/brunofgmag/gsx-integrator-client/commit/42266c7c28f9bb0cbac08c054a0c36710b4fabae))
+* read the avro rj front door before commanding it and show the chocks help in profiles ([#230](https://github.com/brunofgmag/gsx-integrator-client/issues/230)) ([47b8a4f](https://github.com/brunofgmag/gsx-integrator-client/commit/47b8a4f82b238ee68f6a4f7d18a6eb4447353583))
+
 ## [1.44.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.9...v1.44.0) (2026-10-04)
 
 
