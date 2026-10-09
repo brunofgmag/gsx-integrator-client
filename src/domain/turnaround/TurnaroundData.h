@@ -138,7 +138,7 @@ namespace turnaround
     }
 
     template <typename Visitor>
-    void VisitFields(Visitor&& visit)
+    constexpr void VisitFields(Visitor&& visit)
     {
         visit("plannedFuelKg", Field(&TurnaroundData::plannedFuelKg), FieldRestore::Raw);
         visit("plannedZfwKg", Field(&TurnaroundData::plannedZfwKg), FieldRestore::Raw);

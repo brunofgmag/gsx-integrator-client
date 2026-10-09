@@ -12,6 +12,7 @@
 #include <vector>
 #include "tests/doubles/FakeVariableGateway.h"
 #include "tests/turnaround/TurnaroundStateFixture.h"
+#include "tests/turnaround/TurnaroundDataFill.h"
 #include "src/domain/model/MemoryBag.h"
 #include "src/domain/model/PlanConversion.h"
 #include "src/domain/turnaround/PilotTouch.h"
@@ -743,39 +744,6 @@ namespace
     }
 
     template <typename Value>
-    void MakeNonDefault(Value& value)
-    {
-        if constexpr (std::is_same_v<Value, bool>)
-        {
-            value = true;
-        }
-        else if constexpr (std::is_same_v<Value, int>)
-        {
-            value = 7;
-        }
-        else if constexpr (std::is_same_v<Value, double>)
-        {
-            value = 7.5;
-        }
-        else if constexpr (std::is_enum_v<Value>)
-        {
-            value = static_cast<Value>(1);
-        }
-        else if constexpr (std::is_same_v<Value, std::optional<int>>)
-        {
-            value = 3;
-        }
-        else if constexpr (std::is_same_v<Value, std::set<std::string>>)
-        {
-            value.insert("a-rule");
-        }
-        else
-        {
-            static_assert(sizeof(Value) == 0, "teach MakeNonDefault the type of the new TurnaroundData field");
-        }
-    }
-
-    template <typename Value>
     std::string Render(const Value& value)
     {
         if constexpr (std::is_enum_v<Value>)
@@ -818,17 +786,6 @@ namespace
         });
 
         return fields;
-    }
-
-    TurnaroundData EveryFieldNonDefault()
-    {
-        TurnaroundData data;
-        turnaround::VisitFields([&data](const std::string_view, const auto field, const turnaround::FieldRestore)
-        {
-            MakeNonDefault(field(data));
-        });
-
-        return data;
     }
 
     TurnaroundData SavedLoadingData()

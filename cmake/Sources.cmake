@@ -84,6 +84,7 @@ set(APP_SOURCES
         src/application/model/CommandResult.h
         src/application/ports/IntegratorService.h
         src/application/ports/SettingsRepository.h
+        src/application/ports/TurnaroundCheckpointStore.h
         src/application/IntegratorRuntime.cpp
         src/application/IntegratorRuntime.h
         src/application/RuntimeIntegratorService.cpp
@@ -93,6 +94,7 @@ set(APP_SOURCES
         src/application/model/EffectiveSettings.h
         src/application/model/IntegratorSnapshot.h
         src/application/model/SmartSwitchCue.h
+        src/application/model/TurnaroundDocument.h
         src/domain/model/AutomationStatus.h
         src/domain/model/AutomationSettings.h
         src/domain/model/FlightPlan.h
@@ -243,6 +245,8 @@ set(APP_SOURCES
         src/infrastructure/simbrief/SimbriefFlightPlanSource.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp
         src/infrastructure/simbrief/SimbriefOfpParser.h
+        src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.cpp
+        src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.h
         src/infrastructure/settings/QSettingsRepository.cpp
         src/infrastructure/settings/QSettingsRepository.h
         src/infrastructure/simvars/VariableGateway.h

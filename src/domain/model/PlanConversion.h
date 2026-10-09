@@ -9,32 +9,34 @@ namespace turnaround
     [[nodiscard]] inline FlightPlan PlanOf(const AutomationStatus& status)
     {
         FlightPlan plan;
-        plan.fuelKg = status.plannedFuelKg;
-        plan.zfwKg = status.plannedZfwKg;
-        plan.passengers = status.plannedPassengers;
-        plan.unit = status.simbriefUnit;
-        plan.origin = status.plannedOrigin;
-        plan.destination = status.plannedDestination;
-        plan.generatedEpoch = status.planGeneratedEpoch;
-        plan.operatingEmptyKg = status.plannedOperatingEmptyKg;
-        plan.payloadKg = status.plannedPayloadKg;
-        plan.cargoKg = status.plannedCargoKg;
+        auto& [fuelKg, zfwKg, passengers, unit, origin, destination, generatedEpoch, operatingEmptyKg, payloadKg, cargoKg] = plan;
+        fuelKg = status.plannedFuelKg;
+        zfwKg = status.plannedZfwKg;
+        passengers = status.plannedPassengers;
+        unit = status.simbriefUnit;
+        origin = status.plannedOrigin;
+        destination = status.plannedDestination;
+        generatedEpoch = status.planGeneratedEpoch;
+        operatingEmptyKg = status.plannedOperatingEmptyKg;
+        payloadKg = status.plannedPayloadKg;
+        cargoKg = status.plannedCargoKg;
 
         return plan;
     }
 
     inline void ApplyPlan(AutomationStatus& status, const FlightPlan& plan)
     {
-        status.plannedFuelKg = plan.fuelKg;
-        status.plannedZfwKg = plan.zfwKg;
-        status.plannedOperatingEmptyKg = plan.operatingEmptyKg;
-        status.plannedPayloadKg = plan.payloadKg;
-        status.plannedCargoKg = plan.cargoKg;
-        status.plannedPassengers = plan.passengers;
-        status.simbriefUnit = plan.unit;
-        status.plannedOrigin = plan.origin;
-        status.plannedDestination = plan.destination;
-        status.planGeneratedEpoch = plan.generatedEpoch;
+        const auto& [fuelKg, zfwKg, passengers, unit, origin, destination, generatedEpoch, operatingEmptyKg, payloadKg, cargoKg] = plan;
+        status.plannedFuelKg = fuelKg;
+        status.plannedZfwKg = zfwKg;
+        status.plannedOperatingEmptyKg = operatingEmptyKg;
+        status.plannedPayloadKg = payloadKg;
+        status.plannedCargoKg = cargoKg;
+        status.plannedPassengers = passengers;
+        status.simbriefUnit = unit;
+        status.plannedOrigin = origin;
+        status.plannedDestination = destination;
+        status.planGeneratedEpoch = generatedEpoch;
     }
 }
 

@@ -110,6 +110,7 @@ configure_gsxi_test(gsxi-turnaround-rules-tests turnaround-rules)
 add_executable(gsxi-turnaround-workflow-tests
         tests/TestDoubles.h
         tests/turnaround/TurnaroundStateFixture.h
+        tests/turnaround/TurnaroundDataFill.h
         tests/doubles/FakeGsxMenuGateway.h
         tests/doubles/FakeDomainLogger.h
         tests/doubles/FakeFlightPlanSource.h
@@ -270,6 +271,16 @@ gsxi_add_qt_test(gsxi-qsettings-repository-tests qsettings-repository
         src/application/ports/SettingsRepository.h
         src/application/model/AppSettings.h
         src/application/model/AircraftProfile.h)
+
+gsxi_add_qt_test(gsxi-json-file-turnaround-checkpoint-store-tests json-file-turnaround-checkpoint-store
+        tests/tst_json_file_turnaround_checkpoint_store.cpp
+        tests/doubles/FakeTurnaroundCheckpointStore.h
+        tests/turnaround/TurnaroundDataFill.h
+        src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.cpp
+        src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.h
+        src/infrastructure/logging/LogMacros.h
+        src/application/ports/TurnaroundCheckpointStore.h
+        src/application/model/TurnaroundDocument.h)
 
 gsxi_add_qt_test(gsxi-simconnect-session-tests simconnect-session
         tests/doubles/FakeSimConnectApi.h
