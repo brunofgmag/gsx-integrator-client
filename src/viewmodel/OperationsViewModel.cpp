@@ -335,13 +335,13 @@ QString OperationsViewModel::GetAircraftName() const
 
 QString OperationsViewModel::WeightText(const double kilograms) const
 {
-    const bool lb = display_->GetWeightIsLb();
-    const double shown = lb ? weight::KgToLb(kilograms) : kilograms;
+    const bool inPounds = display_->GetWeightIsLb();
+    const double shown = inPounds ? weight::KgToLb(kilograms) : kilograms;
 
     return QLocale().toString(qRound64(shown))
         + QStringLiteral(" ")
-        + (lb ? QCoreApplication::translate("OperationsScreen", "lb")
-              : QCoreApplication::translate("OperationsScreen", "kg"));
+        + (inPounds ? QCoreApplication::translate("OperationsScreen", "lb")
+                    : QCoreApplication::translate("OperationsScreen", "kg"));
 }
 
 QString OperationsViewModel::GetPlannedFuelText() const
@@ -706,6 +706,12 @@ QString OperationsViewModel::GetCargoDoorAdvisoryText()
                                        "A GSX loader is waiting for the main deck cargo door. That door runs on hydraulics, so switch the ELEC 2 pump on in the overhead.");
 }
 
+QString OperationsViewModel::GetOwnStairsPressureAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back.");
+}
+
 QString OperationsViewModel::GetFuelRequestAdvisoryText()
 {
     return QCoreApplication::translate("OperationsScreen",
@@ -791,6 +797,11 @@ bool OperationsViewModel::HasPmdgOptionsConflict() const
 bool OperationsViewModel::IsCargoDoorStuck() const
 {
     return snapshot_.cargoDoorStuck;
+}
+
+bool OperationsViewModel::AreOwnStairsWaitingForPressure() const
+{
+    return snapshot_.ownStairsWaitingForPressure;
 }
 
 bool OperationsViewModel::IsFuelRequestStalled() const

@@ -16,6 +16,7 @@ struct AvroRjAirstairState
     bool requested = false;
     bool stowed = true;
     bool settled = false;
+    bool waitingForPressure = false;
 };
 
 struct AvroRjModuleState
@@ -55,6 +56,7 @@ public:
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
     [[nodiscard]] bool IsJetwayAvailable() const;
     [[nodiscard]] bool AreAirstairsSettled() const;
+    [[nodiscard]] bool AreOwnStairsWaitingForPressure() const override;
     [[nodiscard]] bool IsHeldForDeparture() const;
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
     [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Client; }

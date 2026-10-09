@@ -1,5 +1,6 @@
 #include <QtTest>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 #include "tests/turnaround/TurnaroundStateFixture.h"
@@ -15,19 +16,21 @@ namespace
     {
     public:
         bool holds = true;
+        const char* name = "holding-rule";
+        const char* reason = "held by the test rule";
         int evaluateCalls = 0;
         int actCalls = 0;
 
         [[nodiscard]] const char* Name() const override
         {
-            return "holding-rule";
+            return name;
         }
 
         [[nodiscard]] RuleVerdict Evaluate(const RuleContext&) override
         {
             ++evaluateCalls;
 
-            return holds ? RuleVerdict::Hold(kHoldTicks, "held by the test rule") : RuleVerdict::Pass();
+            return holds ? RuleVerdict::Hold(kHoldTicks, reason) : RuleVerdict::Pass();
         }
 
         void Act(const RuleContext&, VariableWriter&) override
@@ -171,6 +174,10 @@ private slots:
     static void eachRuleActsRightAfterItIsEvaluatedWhenThePhaseEvaluates();
     static void eachRuleActsRightAfterItIsEvaluatedOnTheActionPass();
     static void theFirstHoldingRuleSetsTheDeadlineAndTheReason();
+    static void afterTheHoldExpiresThePhaseEvaluatesOnConsecutiveTicks();
+    static void aRuleThatPassesAfterAnExpiryGetsAFreshDeadline();
+    static void aSecondRuleStillHoldsAfterTheFirstOnesHoldExpired();
+    static void theHoldStartIsLoggedOncePerHold();
 };
 
 void TurnaroundRulesTest::aHoldingRuleStopsThePhaseFromEvaluating()
@@ -400,6 +407,131 @@ void TurnaroundRulesTest::theFirstHoldingRuleSetsTheDeadlineAndTheReason()
 
     QVERIFY(state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.logger.messages.back(), std::string("Rule hold expired: the shorter hold"));
+}
+
+void TurnaroundRulesTest::afterTheHoldExpiresThePhaseEvaluatesOnConsecutiveTicks()
+{
+    TurnaroundStateFixture f;
+    HoldingRule rule;
+    CountingState state;
+
+    f.aircraft.rules = {&rule};
+
+    for (int tick = 0; tick < kHoldTicks; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(state.evaluateCalls, 3);
+}
+
+void TurnaroundRulesTest::aRuleThatPassesAfterAnExpiryGetsAFreshDeadline()
+{
+    TurnaroundStateFixture f;
+    HoldingRule rule;
+    CountingState state;
+
+    f.aircraft.rules = {&rule};
+
+    for (int tick = 0; tick < kHoldTicks; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(state.evaluateCalls, 1);
+
+    rule.holds = false;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(state.evaluateCalls, 2);
+
+    rule.holds = true;
+
+    for (int tick = 0; tick < kHoldTicks; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(state.evaluateCalls, 2);
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(state.evaluateCalls, 3);
+}
+
+void TurnaroundRulesTest::aSecondRuleStillHoldsAfterTheFirstOnesHoldExpired()
+{
+    TurnaroundStateFixture f;
+    HoldingRule first;
+    HoldingRule second;
+    CountingState state;
+
+    first.name = "first-rule";
+    second.name = "second-rule";
+    second.reason = "held by the second rule";
+    second.holds = false;
+    f.aircraft.rules = {&first, &second};
+
+    for (int tick = 0; tick < kHoldTicks; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(state.evaluateCalls, 1);
+
+    second.holds = true;
+
+    for (int tick = 0; tick < kHoldTicks; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(state.evaluateCalls, 1);
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(state.evaluateCalls, 2);
+    QCOMPARE(f.logger.messages.back(), std::string("Rule hold expired: held by the second rule"));
+}
+
+void TurnaroundRulesTest::theHoldStartIsLoggedOncePerHold()
+{
+    TurnaroundStateFixture f;
+    HoldingRule rule;
+    CountingState state;
+    const std::string holdStart = "Rule holding-rule holds: held by the test rule";
+    const auto holdStartCount = [&f, &holdStart]()
+    {
+        return std::ranges::count(f.logger.messages, holdStart);
+    };
+
+    f.aircraft.rules = {&rule};
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.logger.messages.size(), static_cast<std::size_t>(1));
+    QCOMPARE(f.logger.messages.front(), holdStart);
+
+    for (int tick = 1; tick < kHoldTicks; ++tick)
+    {
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(holdStartCount(), 1);
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(holdStartCount(), 1);
+
+    rule.holds = false;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+
+    rule.holds = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(holdStartCount(), 2);
 }
 
 QTEST_MAIN(TurnaroundRulesTest)

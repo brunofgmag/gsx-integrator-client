@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSSEJETDOORSFOLLOWGSXRULE_H
 
 #include <array>
+#include <cstddef>
 #include <optional>
 
 #include "../../../../domain/ports/AircraftRule.h"
@@ -10,13 +11,15 @@
 class VariableReader;
 class FssEJet;
 
+inline constexpr std::size_t kFssEJetDoorSlotCount = 7;
+
 struct FssEJetDoorSlot
 {
-    GsxDoor door;
-    const char* reqLVar;
-    const char* ackLVar;
-    const char* openLVar;
-    int reaffirmTicks;
+    std::optional<GsxDoor> door;
+    const char* reqLVar = nullptr;
+    const char* ackLVar = nullptr;
+    const char* openLVar = nullptr;
+    int reaffirmTicks = 0;
 };
 
 class FssEJetDoorsFollowGsxRule final : public AircraftRule
@@ -39,25 +42,19 @@ private:
     };
 
     void SetDesired(GsxDoor door, bool open);
+    void SetMainDeckDesired(bool closeAllPending);
     void ReconcileSlot(std::size_t index, VariableWriter& writer);
     [[nodiscard]] bool IsConfirmed(const FssEJetDoorSlot& slot, bool wantOpen) const;
     [[nodiscard]] bool IsOpenLVarConfirmed(const char* openLVar, bool wantOpen) const;
     static void WriteRequest(const FssEJetDoorSlot& slot, bool open, VariableWriter& writer);
-
-    void ReconcileMainDeck(bool forceClosed, VariableWriter& writer);
-    static void WriteMainDeckRequest(bool open, VariableWriter& writer);
     [[nodiscard]] bool IsMainLoaderWaitingForTheDeck() const;
 
     VariableReader* variables_;
     GsxDoorSync* doors_;
     const FssEJet* aircraft_;
     bool cargoVariant_;
-    std::array<SlotState, 6> states_{};
+    std::array<SlotState, kFssEJetDoorSlotCount> states_{};
     int servedCloseAllRequests_ = 0;
-
-    std::optional<bool> mainDeckCommanded_;
-    int mainDeckTicksSinceCommand_ = 0;
-    int mainDeckAttempts_ = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSSEJETDOORSFOLLOWGSXRULE_H

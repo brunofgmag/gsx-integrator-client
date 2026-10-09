@@ -133,6 +133,26 @@ namespace
         const char* lvar_;
     };
 
+    class HoldingRule final : public AircraftRule
+    {
+    public:
+        static constexpr int kHoldTicksAllowed = 2;
+
+        [[nodiscard]] const char* Name() const override
+        {
+            return "holding-rule";
+        }
+
+        [[nodiscard]] RuleVerdict Evaluate(const RuleContext&) override
+        {
+            return RuleVerdict::Hold(kHoldTicksAllowed, "held by the test rule");
+        }
+
+        void Act(const RuleContext&, VariableWriter&) override
+        {
+        }
+    };
+
     class SlowCountingRule final : public CountingRule
     {
     public:
@@ -468,6 +488,7 @@ private slots:
     static void waitsWithTheWarningWhenTheCouatlDropsTheRefueling();
     static void aDelayedTransitionKeepsTheFastRulesRunning();
     static void theSlowTickActsOnlyWhenTheMachineIsDriving();
+    static void aHoldThatExpiredInOnePhaseHoldsAgainInTheNextPhase();
     static void waitsForBoardingTransitionDelay();
     static void holdsBoardingWhileCargoIsPending();
     static void theLoaderCountdownRunsOutOnTheTickTheClientGivesUpOnTheDoor();
@@ -1434,6 +1455,35 @@ void TurnaroundStateMachineTest::aDelayedTransitionKeepsTheFastRulesRunning()
     workflow.FinishDelay(59, TurnaroundPhase::Loading);
 
     QCOMPARE(rule.actCalls, actsAtDelayStart + 59);
+}
+
+void TurnaroundStateMachineTest::aHoldThatExpiredInOnePhaseHoldsAgainInTheNextPhase()
+{
+    TurnaroundWorkflow workflow;
+    workflow.AttachAircraft();
+
+    HoldingRule rule;
+    workflow.f.aircraft.rules = {&rule};
+
+    for (int tick = 0; tick < HoldingRule::kHoldTicksAllowed; ++tick)
+    {
+        workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
+    }
+
+    workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
+
+    workflow.f.gsxService.repositioning = true;
+    workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
+
+    workflow.f.gsxService.repositioning = false;
+    workflow.TickTo(TurnaroundPhase::PlaceGroundEquipment);
+
+    for (int tick = 0; tick < HoldingRule::kHoldTicksAllowed; ++tick)
+    {
+        workflow.TickHolding(TurnaroundPhase::PlaceGroundEquipment);
+    }
+
+    workflow.TickTo(TurnaroundPhase::CallServices);
 }
 
 void TurnaroundStateMachineTest::theSlowTickActsOnlyWhenTheMachineIsDriving()

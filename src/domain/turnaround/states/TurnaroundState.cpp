@@ -11,6 +11,12 @@
 
 namespace
 {
+    struct TakenHold
+    {
+        std::string name;
+        RuleVerdict verdict;
+    };
+
     RuleContext BuildRuleContext(const TurnaroundState& state, const TurnaroundContext& ctx)
     {
         RuleContext context;
@@ -88,7 +94,7 @@ std::optional<TurnaroundTransition> TurnaroundState::Evaluate(TurnaroundContext&
     return EvaluatePhase(ctx);
 }
 
-void TurnaroundState::ActOnRules(TurnaroundContext& ctx, const RuleCadence cadence)
+void TurnaroundState::ActOnRules(TurnaroundContext& ctx, const RuleCadence cadence) const
 {
     EvaluateRules(*this, ctx, cadence, [&ctx](AircraftRule& rule, const RuleContext& ruleContext, const RuleVerdict&)
     {
@@ -96,16 +102,22 @@ void TurnaroundState::ActOnRules(TurnaroundContext& ctx, const RuleCadence caden
     });
 }
 
-bool TurnaroundState::AnyRuleHolds(TurnaroundContext& ctx)
+bool TurnaroundState::AnyRuleHolds(TurnaroundContext& ctx) const
 {
-    std::optional<RuleVerdict> hold;
+    std::optional<TakenHold> hold;
 
     EvaluateRules(*this, ctx, RuleCadence::Fast,
                   [&ctx, &hold](AircraftRule& rule, const RuleContext& ruleContext, const RuleVerdict& verdict)
                   {
-                      if (verdict.holds && !hold.has_value())
+                      const std::string name = rule.Name();
+
+                      if (!verdict.holds)
                       {
-                          hold = verdict;
+                          ctx.data.expiredRuleHolds.erase(name);
+                      }
+                      else if (!hold.has_value() && !ctx.data.expiredRuleHolds.contains(name))
+                      {
+                          hold = TakenHold{.name = name, .verdict = verdict};
                       }
 
                       Act(rule, ruleContext, ctx);
@@ -113,20 +125,26 @@ bool TurnaroundState::AnyRuleHolds(TurnaroundContext& ctx)
 
     if (!hold.has_value() || ctx.pilotTouched)
     {
-        holdTicks_ = 0;
+        ctx.data.ruleHoldTicks = 0;
 
         return false;
     }
 
-    ++holdTicks_;
+    ++ctx.data.ruleHoldTicks;
 
-    if (holdTicks_ > hold->holdTicksAllowed)
+    if (ctx.data.ruleHoldTicks == 1 && ctx.logger != nullptr)
     {
-        holdTicks_ = 0;
+        ctx.logger->LogInfo(std::format("Rule {} holds: {}", hold->name, hold->verdict.reason));
+    }
+
+    if (ctx.data.ruleHoldTicks > hold->verdict.holdTicksAllowed)
+    {
+        ctx.data.ruleHoldTicks = 0;
+        ctx.data.expiredRuleHolds.insert(hold->name);
 
         if (ctx.logger != nullptr)
         {
-            ctx.logger->LogInfo(std::format("Rule hold expired: {}", hold->reason));
+            ctx.logger->LogInfo(std::format("Rule hold expired: {}", hold->verdict.reason));
         }
 
         return false;

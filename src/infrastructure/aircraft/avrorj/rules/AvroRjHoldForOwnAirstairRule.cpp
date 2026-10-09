@@ -66,6 +66,8 @@ void AvroRjHoldForOwnAirstairRule::Act(const RuleContext& context, VariableWrite
         airstair_->requested = true;
     }
 
+    airstair_->waitingForPressure = false;
+
     Drive(writer);
 
     airstair_->stowed = phase_ == Phase::Stowed;
@@ -138,6 +140,8 @@ bool AvroRjHoldForOwnAirstairRule::PressureReady()
 {
     if (!HasPressure())
     {
+        airstair_->waitingForPressure = true;
+
         if (!pressureWaitLogged_)
         {
             pressureWaitLogged_ = true;

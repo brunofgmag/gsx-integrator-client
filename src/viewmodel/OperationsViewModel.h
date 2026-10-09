@@ -61,6 +61,7 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(QString pmdgOptionsAdvisoryText READ GetPmdgOptionsAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString pmdgOptionsActionLabel READ GetPmdgOptionsActionLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(QString cargoDoorAdvisoryText READ GetCargoDoorAdvisoryText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString ownStairsPressureAdvisoryText READ GetOwnStairsPressureAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString fuelRequestAdvisoryText READ GetFuelRequestAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString fuelPlanAdvisoryText READ GetFuelPlanAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString fuelStayAdvisoryText READ GetFuelStayAdvisoryText NOTIFY SnapshotChanged)
@@ -72,6 +73,7 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(QString commandErrorLabel READ GetCommandErrorLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(bool pmdgOptionsConflict READ HasPmdgOptionsConflict NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoDoorStuck READ IsCargoDoorStuck NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool ownStairsWaitingForPressure READ AreOwnStairsWaitingForPressure NOTIFY SnapshotChanged)
     Q_PROPERTY(bool fuelRequestStalled READ IsFuelRequestStalled NOTIFY SnapshotChanged)
     Q_PROPERTY(bool fuelPlanOverCapacity READ IsFuelPlanOverCapacity NOTIFY SnapshotChanged)
     Q_PROPERTY(bool fuelDidNotStay READ DidFuelNotStay NOTIFY SnapshotChanged)
@@ -162,6 +164,7 @@ public:
     [[nodiscard]] static QString GetPmdgOptionsAdvisoryText();
     [[nodiscard]] QString GetPmdgOptionsActionLabel() const;
     [[nodiscard]] static QString GetCargoDoorAdvisoryText();
+    [[nodiscard]] static QString GetOwnStairsPressureAdvisoryText();
     [[nodiscard]] static QString GetFuelRequestAdvisoryText();
     [[nodiscard]] static QString GetFuelPlanAdvisoryText();
     [[nodiscard]] QString GetFuelStayAdvisoryText() const;
@@ -175,6 +178,7 @@ public:
     [[nodiscard]] bool IsGsxProfileFixable() const;
     [[nodiscard]] bool HasPmdgOptionsConflict() const;
     [[nodiscard]] bool IsCargoDoorStuck() const;
+    [[nodiscard]] bool AreOwnStairsWaitingForPressure() const;
     [[nodiscard]] bool IsFuelRequestStalled() const;
     [[nodiscard]] bool IsFuelPlanOverCapacity() const;
     [[nodiscard]] bool DidFuelNotStay() const;

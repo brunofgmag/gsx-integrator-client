@@ -79,11 +79,11 @@ namespace
     constexpr double kDoorPointOpenAtLeast = 0.95;
 
     constexpr std::array kFreighterDoorPoints = {
-        Fss727DoorPoint{"INTERACTIVE POINT OPEN:0", doors::kPaxDoorMovingLimitTicks},
-        Fss727DoorPoint{"INTERACTIVE POINT OPEN:1", doors::kMainDeckDoorMovingLimitTicks},
-        Fss727DoorPoint{"INTERACTIVE POINT OPEN:2", doors::kCargoDoorMovingLimitTicks},
-        Fss727DoorPoint{"INTERACTIVE POINT OPEN:3", doors::kCargoDoorMovingLimitTicks},
-        Fss727DoorPoint{"INTERACTIVE POINT OPEN:4", doors::kPaxDoorMovingLimitTicks}
+        Fss727DoorPoint{.position = "INTERACTIVE POINT OPEN:0", .movingLimitTicks = doors::kPaxDoorMovingLimitTicks},
+        Fss727DoorPoint{.position = "INTERACTIVE POINT OPEN:1", .movingLimitTicks = doors::kMainDeckDoorMovingLimitTicks},
+        Fss727DoorPoint{.position = "INTERACTIVE POINT OPEN:2", .movingLimitTicks = doors::kCargoDoorMovingLimitTicks},
+        Fss727DoorPoint{.position = "INTERACTIVE POINT OPEN:3", .movingLimitTicks = doors::kCargoDoorMovingLimitTicks},
+        Fss727DoorPoint{.position = "INTERACTIVE POINT OPEN:4", .movingLimitTicks = doors::kPaxDoorMovingLimitTicks}
     };
 
     bool IsTravelling(const double position)
@@ -165,9 +165,10 @@ Fss727::Fss727(VariableGateway* variableGateway, const AutomationStatus* status,
       doors_(variableGateway),
       automodeRule_(*variableGateway),
       frontEntryRule_(*variableGateway, *this, doors_),
+      doorAutomationRule_(*variableGateway),
       holdsRule_(*variableGateway, *this, doors_),
       mainDeckRule_(*variableGateway, *this, gsxGateway, doors_),
-      rules_{&automodeRule_, &frontEntryRule_, &holdsRule_, &mainDeckRule_}
+      rules_{&automodeRule_, &frontEntryRule_, &doorAutomationRule_, &holdsRule_, &mainDeckRule_}
 {
     smartSwitch_.Subscribe();
 

@@ -37,11 +37,11 @@ PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationSta
       payload_(*tablet_, *variableGateway, status, spec.cargoVariant),
       smartSwitch_(*variableGateway, std::move(spec.smartSwitchLVars),
                    std::move(spec.smartSwitchPressed)),
-      doorRule_(*variableGateway, *data, doors_, doorReconciler_, spec.cargoVariant,
-                spec.mainDeckDoorSlot),
+      doorAutomationRule_(*variableGateway, *data),
+      doorRule_(*data, doors_, doorReconciler_, spec.cargoVariant, spec.mainDeckDoorSlot),
       groundConnectionRule_(*data, groundConn_),
       payloadRule_(*data, payload_),
-      rules_{&doorRule_, &groundConnectionRule_, &payloadRule_}
+      rules_{&doorAutomationRule_, &doorRule_, &groundConnectionRule_, &payloadRule_}
 {
 }
 

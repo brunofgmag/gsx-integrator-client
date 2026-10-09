@@ -20,7 +20,6 @@ public:
     void Act(const RuleContext& context, VariableWriter& writer) override;
 
 private:
-    void TakeTheGsxDoorAutomation(VariableWriter& writer) const;
     static void MoveTheHold(VariableWriter& writer, GsxDoor door, bool open);
     void CloseTheHoldsOnRequest(VariableWriter& writer);
     [[nodiscard]] bool HasItsLoaderLeft(const char* loaderLVar) const;

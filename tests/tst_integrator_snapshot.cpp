@@ -93,6 +93,11 @@ void IntegratorSnapshotTest::boolFieldDifferenceBreaksEquivalence()
     b.efbFlightPlanOnDeparturePage = true;
 
     QVERIFY(!AreEquivalent(a, b));
+
+    b.efbFlightPlanOnDeparturePage = false;
+    b.ownStairsWaitingForPressure = true;
+
+    QVERIFY(!AreEquivalent(a, b));
 }
 
 void IntegratorSnapshotTest::aircraftNameDifferenceBreaksEquivalence()

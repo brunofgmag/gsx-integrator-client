@@ -16,7 +16,7 @@ namespace
 
 Fss727KeepVendorGsxAutomodeOffRule::Fss727KeepVendorGsxAutomodeOffRule(VariableReader& variables)
     : variables_(&variables),
-      ticksSinceWrite_(kTicksToWaitForTheEcho)
+      echoWait_(kTicksToWaitForTheEcho)
 {
 }
 
@@ -32,23 +32,13 @@ RuleVerdict Fss727KeepVendorGsxAutomodeOffRule::Evaluate(const RuleContext&)
 
 void Fss727KeepVendorGsxAutomodeOffRule::Act(const RuleContext&, VariableWriter& writer)
 {
-    if (IsAutomodeOff())
+    if (!echoWait_.WriteIsDue(IsAutomodeOff()))
     {
-        ticksSinceWrite_ = kTicksToWaitForTheEcho;
-
-        return;
-    }
-
-    if (ticksSinceWrite_ < kTicksToWaitForTheEcho)
-    {
-        ++ticksSinceWrite_;
-
         return;
     }
 
     probe::Line(probe::Channel::Writes, QStringLiteral("write automode FSS_B727_GSX_AUTOMODE_DISABLED=1"));
     writer.SetLVar(kAutomodeDisabledLVar, kAutomodeDisabled);
-    ticksSinceWrite_ = 0;
 
     LOG_INFO("FSS 727 GSX auto mode turned off: the client drives the GSX menus");
 }

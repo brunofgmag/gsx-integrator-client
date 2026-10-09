@@ -1032,6 +1032,11 @@
         <translation>Um carregador do GSX espera pela porta de carga do convés principal. Ela é hidráulica, então ligue a bomba ELEC 2 no painel overhead.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="711"/>
+        <source>The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back.</source>
+        <translation>A escada da aeronave está sem pressão no acumulador. Ligue a bomba AC para recarregar, e o cliente move a escada assim que a pressão voltar.</translation>
+    </message>
+    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="733"/>
         <source>The engines are not running, so the smart switch will not confirm the start yet.</source>
         <translation>Os motores não estão rodando, então o smart switch ainda não confirma a partida.</translation>

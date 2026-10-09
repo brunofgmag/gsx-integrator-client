@@ -30,6 +30,7 @@ QtObject {
     readonly property bool doorsHoldingPushback: false
     readonly property bool serviceInterrupted: false
     readonly property bool cargoDoorStuck: root.longPhase
+    readonly property bool ownStairsWaitingForPressure: root.longPhase
     readonly property bool servicesStalled: root.longPhase
 
     readonly property double fuelProgress: 0.5
@@ -49,6 +50,7 @@ QtObject {
         ? "The turnaround is holding until every door is closed, the jet bridge is retracted, the ground crew is clear of the aircraft and the pilot confirms the pushback."
         : "Boarding."
     readonly property string cargoDoorAdvisoryText: "The cargo door is stuck open."
+    readonly property string ownStairsPressureAdvisoryText: "The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back."
     readonly property string servicesAdvisoryText: "A service has not answered in a while."
 
     readonly property string simLabel: "Sim"

@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <memory>
+#include <string>
+#include <vector>
 #include "AircraftTicks.h"
 #include "doubles/FakePmdg777DataGateway.h"
 #include "doubles/FakePmdgTabletGateway.h"
@@ -22,6 +25,8 @@ namespace
     constexpr auto kSimEng1Combustion = "ENG COMBUSTION:1";
     constexpr auto kSimEng2Combustion = "ENG COMBUSTION:2";
     constexpr auto kSimParkingBrake = "BRAKE PARKING POSITION";
+
+    constexpr int kTicksWithoutEcho = 5;
 
     constexpr int kDoorStateOpen = 0;
     constexpr int kDoorStateClosed = 1;
@@ -121,6 +126,9 @@ private slots:
     static void setZfwHeldUntilTheEfbAnswers();
     static void doorsFollowGsxLoaders();
     static void doorsTakeOverGsxDoorAutomation();
+    static void doorAutomationWaitsForTheEchoBeforeRewriting();
+    static void doorAutomationIsLeftAloneBeforeClientData();
+    static void doorAutomationRuleRunsRightBeforeTheDoorRule();
     static void doorsSkipTogglesWhileMoving();
     static void doorsHoldBeforeClientData();
     static void doorThatIgnoresTheCommandStopsAfterTwoRetries();
@@ -716,11 +724,67 @@ void Pmdg777Test::doorsTakeOverGsxDoorAutomation()
     TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.gateway.Written("FSDT_GSX_AUTOMATION_DOORS"), 0.0);
+    QCOMPARE(fixture.gateway.WriteCount("FSDT_GSX_AUTOMATION_DOORS"), 1);
+
+    TickAircraft(*fixture.aircraft, fixture.gateway);
+    TickAircraft(*fixture.aircraft, fixture.gateway);
+
+    QCOMPARE(fixture.gateway.WriteCount("FSDT_GSX_AUTOMATION_DOORS"), 1);
 
     fixture.gateway.lvars["FSDT_GSX_AUTOMATION_DOORS"] = 1.0;
     TickAircraft(*fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.gateway.Written("FSDT_GSX_AUTOMATION_DOORS"), 0.0);
+    QCOMPARE(fixture.gateway.WriteCount("FSDT_GSX_AUTOMATION_DOORS"), 2);
+}
+
+void Pmdg777Test::doorAutomationWaitsForTheEchoBeforeRewriting()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+
+    fixture.data->hasData = true;
+
+    for (int tick = 0; tick < kTicksWithoutEcho + 1; ++tick)
+    {
+        TickAircraft(*fixture.aircraft, fixture.gateway);
+
+        QCOMPARE(fixture.gateway.WriteCount("FSDT_GSX_AUTOMATION_DOORS"), 1);
+
+        fixture.gateway.lvars["FSDT_GSX_AUTOMATION_DOORS"] = 1.0;
+    }
+
+    TickAircraft(*fixture.aircraft, fixture.gateway);
+
+    QCOMPARE(fixture.gateway.WriteCount("FSDT_GSX_AUTOMATION_DOORS"), 2);
+}
+
+void Pmdg777Test::doorAutomationIsLeftAloneBeforeClientData()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+
+    for (int tick = 0; tick < kTicksWithoutEcho + 2; ++tick)
+    {
+        TickAircraft(*fixture.aircraft, fixture.gateway);
+    }
+
+    QCOMPARE(fixture.gateway.WriteCount("FSDT_GSX_AUTOMATION_DOORS"), 0);
+}
+
+void Pmdg777Test::doorAutomationRuleRunsRightBeforeTheDoorRule()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+
+    std::vector<std::string> names;
+    for (AircraftRule* const rule : fixture.aircraft->Rules())
+    {
+        names.emplace_back(rule->Name());
+    }
+
+    const auto automation = std::ranges::find(names, std::string("pmdg-keep-gsx-door-automation-off"));
+
+    QVERIFY(automation != names.end());
+    QVERIFY(std::next(automation) != names.end());
+    QVERIFY(*std::next(automation) == "pmdg-doors-follow-gsx");
 }
 
 void Pmdg777Test::doorsHoldBeforeClientData()

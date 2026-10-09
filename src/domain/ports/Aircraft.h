@@ -70,6 +70,7 @@ public:
     virtual void ClearOwnGroundEquipment() {}
     [[nodiscard]] virtual DoorStatus GetDoorStatus() const { return DoorStatus::Unknown; }
     [[nodiscard]] virtual bool IsMainDeckCargoDoorStuck() const { return false; }
+    [[nodiscard]] virtual bool AreOwnStairsWaitingForPressure() const { return false; }
     [[nodiscard]] virtual bool IsReadyToPush() const = 0 ;
     [[nodiscard]] virtual bool IsReadyToDeboard() const = 0;
     [[nodiscard]] virtual bool IsEngineRunning() const = 0;

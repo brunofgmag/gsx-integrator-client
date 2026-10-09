@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <iterator>
 #include <optional>
 #include <string>
+#include <vector>
 #include <QtCore/QStringList>
 #include <QtCore/QtLogging>
 #include "AircraftTicks.h"
@@ -479,6 +481,9 @@ private slots:
     static void writesTheAutomodeAndDoorAutomationKeysOnceEachAcrossFiftyTicks();
     static void rewritesTheAutomodeKeyWhenTheEfbTurnsItBackOn();
     static void waitsForTheAutomodeWriteToComeBackBeforeRetrying();
+    static void waitsForTheDoorAutomationWriteToComeBackBeforeRetrying();
+    static void writesTheDoorAutomationAgainWhenGsxTurnsItBackOn();
+    static void keepsTheGsxDoorAutomationOffRightBeforeTheHoldsRule();
 };
 
 void Fss727Test::poweredOnlyOnceTheEngineerPanelReportsAcPower()
@@ -3422,6 +3427,63 @@ void Fss727Test::waitsForTheAutomodeWriteToComeBackBeforeRetrying()
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.WriteCount(kAutomodeDisabled), 2);
+}
+
+void Fss727Test::waitsForTheDoorAutomationWriteToComeBackBeforeRetrying()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    for (int tick = 0; tick < kTicksWithoutEcho + 1; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+
+        QCOMPARE(gateway.WriteCount(kGsxDoorAutomation), 1);
+
+        gateway.lvars[kGsxDoorAutomation] = 1.0;
+    }
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kGsxDoorAutomation), 2);
+    QCOMPARE(gateway.Written(kGsxDoorAutomation), 0.0);
+}
+
+void Fss727Test::writesTheDoorAutomationAgainWhenGsxTurnsItBackOn()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    TickTimes(aircraft, gateway, kThreeTicks);
+
+    QCOMPARE(gateway.WriteCount(kGsxDoorAutomation), 1);
+
+    gateway.lvars[kGsxDoorAutomation] = 1.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kGsxDoorAutomation), 2);
+    QCOMPARE(gateway.Written(kGsxDoorAutomation), 0.0);
+}
+
+void Fss727Test::keepsTheGsxDoorAutomationOffRightBeforeTheHoldsRule()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    std::vector<std::string> names;
+    for (AircraftRule* const rule : aircraft.Rules())
+    {
+        names.emplace_back(rule->Name());
+    }
+
+    const auto automation = std::ranges::find(names, std::string("fss-727-keep-gsx-door-automation-off"));
+
+    QVERIFY(automation != names.end());
+    QVERIFY(std::next(automation) != names.end());
+    QVERIFY(*std::next(automation) == "fss-727-holds-follow-their-loader");
 }
 
 QTEST_APPLESS_MAIN(Fss727Test)

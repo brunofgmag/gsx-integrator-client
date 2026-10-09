@@ -133,6 +133,8 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("gsxProfileAdvisoryText"), view_->GetGsxProfileAdvisoryText());
     state.insert(QLatin1String("pmdgOptionsAdvisoryText"), OperationsViewModel::GetPmdgOptionsAdvisoryText());
     state.insert(QLatin1String("cargoDoorAdvisoryText"), OperationsViewModel::GetCargoDoorAdvisoryText());
+    state.insert(QLatin1String("ownStairsPressureAdvisoryText"),
+                 OperationsViewModel::GetOwnStairsPressureAdvisoryText());
     state.insert(QLatin1String("fuelRequestAdvisoryText"), OperationsViewModel::GetFuelRequestAdvisoryText());
     state.insert(QLatin1String("fuelPlanAdvisoryText"), OperationsViewModel::GetFuelPlanAdvisoryText());
     state.insert(QLatin1String("fuelStayAdvisoryText"), view_->GetFuelStayAdvisoryText());
@@ -147,6 +149,7 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("pmdgOptionsConflict"), view_->HasPmdgOptionsConflict());
     state.insert(QLatin1String("pmdgOptionsFixable"), view_->IsPmdgOptionsFixable());
     state.insert(QLatin1String("cargoDoorStuck"), view_->IsCargoDoorStuck());
+    state.insert(QLatin1String("ownStairsWaitingForPressure"), view_->AreOwnStairsWaitingForPressure());
     state.insert(QLatin1String("fuelRequestStalled"), view_->IsFuelRequestStalled());
     state.insert(QLatin1String("fuelPlanOverCapacity"), view_->IsFuelPlanOverCapacity());
     state.insert(QLatin1String("fuelDidNotStay"), view_->DidFuelNotStay());

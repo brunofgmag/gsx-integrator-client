@@ -297,6 +297,10 @@ gsxi_add_qt_test(gsxi-variable-gateway-tests variable-gateway
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_include_directories(gsxi-variable-gateway-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
+gsxi_add_qt_test(gsxi-echo-wait-tests echo-wait
+        tests/tst_echo_wait.cpp
+        src/infrastructure/aircraft/EchoWait.h)
+
 gsxi_add_qt_test(gsxi-smart-switch-tests smart-switch
         tests/doubles/FakeVariableGateway.h
         tests/tst_smart_switch.cpp
@@ -402,8 +406,11 @@ gsxi_add_qt_test(gsxi-fss-727-tests fss-727
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
         src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727KeepGsxDoorAutomationOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727KeepGsxDoorAutomationOffRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
+        src/infrastructure/aircraft/EchoWait.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/gsx/GsxDoorSync.cpp
@@ -428,6 +435,7 @@ gsxi_add_qt_test(gsxi-fss-e-jets-tests fss-e-jets
         src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.cpp
         src/infrastructure/aircraft/fss/rules/FssEJetDoorsFollowGsxRule.h
         src/infrastructure/aircraft/DoorReading.h
+        src/infrastructure/aircraft/EchoWait.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/gsx/GsxDoorSync.cpp
@@ -612,6 +620,8 @@ gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
         src/infrastructure/aircraft/pmdg/PmdgAircraft.h
         src/infrastructure/aircraft/pmdg/rules/PmdgDoorsFollowGsxRule.cpp
         src/infrastructure/aircraft/pmdg/rules/PmdgDoorsFollowGsxRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgKeepGsxDoorAutomationOffRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgKeepGsxDoorAutomationOffRule.h
         src/infrastructure/aircraft/pmdg/rules/PmdgRetryGroundConnUntilSetRule.cpp
         src/infrastructure/aircraft/pmdg/rules/PmdgRetryGroundConnUntilSetRule.h
         src/infrastructure/aircraft/pmdg/rules/PmdgTrimPayloadRule.cpp
@@ -624,6 +634,7 @@ gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
         src/infrastructure/pmdg/PmdgGroundConnReconciler.cpp
         src/infrastructure/pmdg/PmdgGroundConnReconciler.h
         src/infrastructure/pmdg/PmdgGroundSource.h
+        src/infrastructure/aircraft/EchoWait.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/commbus/CommBusBridgeClient.cpp
@@ -665,6 +676,8 @@ gsxi_add_qt_test(gsxi-pmdg-737-tests pmdg-737
         src/infrastructure/aircraft/pmdg/PmdgAircraft.h
         src/infrastructure/aircraft/pmdg/rules/PmdgDoorsFollowGsxRule.cpp
         src/infrastructure/aircraft/pmdg/rules/PmdgDoorsFollowGsxRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgKeepGsxDoorAutomationOffRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgKeepGsxDoorAutomationOffRule.h
         src/infrastructure/aircraft/pmdg/rules/PmdgRetryGroundConnUntilSetRule.cpp
         src/infrastructure/aircraft/pmdg/rules/PmdgRetryGroundConnUntilSetRule.h
         src/infrastructure/aircraft/pmdg/rules/PmdgTrimPayloadRule.cpp
@@ -677,6 +690,7 @@ gsxi_add_qt_test(gsxi-pmdg-737-tests pmdg-737
         src/infrastructure/pmdg/PmdgGroundConnReconciler.cpp
         src/infrastructure/pmdg/PmdgGroundConnReconciler.h
         src/infrastructure/pmdg/PmdgGroundSource.h
+        src/infrastructure/aircraft/EchoWait.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/commbus/CommBusBridgeClient.cpp
@@ -774,6 +788,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
         src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727KeepGsxDoorAutomationOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727KeepGsxDoorAutomationOffRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fss/FssEJet.cpp
@@ -812,6 +828,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/pmdg/PmdgAircraft.h
         src/infrastructure/aircraft/pmdg/rules/PmdgDoorsFollowGsxRule.cpp
         src/infrastructure/aircraft/pmdg/rules/PmdgDoorsFollowGsxRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgKeepGsxDoorAutomationOffRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgKeepGsxDoorAutomationOffRule.h
         src/infrastructure/aircraft/pmdg/rules/PmdgRetryGroundConnUntilSetRule.cpp
         src/infrastructure/aircraft/pmdg/rules/PmdgRetryGroundConnUntilSetRule.h
         src/infrastructure/aircraft/pmdg/rules/PmdgTrimPayloadRule.cpp
@@ -824,6 +842,7 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/pmdg/PmdgGroundConnReconciler.cpp
         src/infrastructure/pmdg/PmdgGroundConnReconciler.h
         src/infrastructure/pmdg/PmdgGroundSource.h
+        src/infrastructure/aircraft/EchoWait.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/tfdi/TfdiMd11.cpp
@@ -1000,6 +1019,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/fss/rules/Fss727FrontEntryServesTheGroundAccessRule.h
         src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727HoldsFollowTheirLoaderRule.h
+        src/infrastructure/aircraft/fss/rules/Fss727KeepGsxDoorAutomationOffRule.cpp
+        src/infrastructure/aircraft/fss/rules/Fss727KeepGsxDoorAutomationOffRule.h
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.cpp
         src/infrastructure/aircraft/fss/rules/Fss727MainDeckMovesByTheCargoPanelRule.h
         src/infrastructure/aircraft/fss/FssEJet.cpp
@@ -1034,6 +1055,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/pmdg/PmdgAircraft.h
         src/infrastructure/aircraft/pmdg/rules/PmdgDoorsFollowGsxRule.cpp
         src/infrastructure/aircraft/pmdg/rules/PmdgDoorsFollowGsxRule.h
+        src/infrastructure/aircraft/pmdg/rules/PmdgKeepGsxDoorAutomationOffRule.cpp
+        src/infrastructure/aircraft/pmdg/rules/PmdgKeepGsxDoorAutomationOffRule.h
         src/infrastructure/aircraft/pmdg/rules/PmdgRetryGroundConnUntilSetRule.cpp
         src/infrastructure/aircraft/pmdg/rules/PmdgRetryGroundConnUntilSetRule.h
         src/infrastructure/aircraft/pmdg/rules/PmdgTrimPayloadRule.cpp
@@ -1046,6 +1069,7 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/pmdg/PmdgGroundConnReconciler.cpp
         src/infrastructure/pmdg/PmdgGroundConnReconciler.h
         src/infrastructure/pmdg/PmdgGroundSource.h
+        src/infrastructure/aircraft/EchoWait.h
         src/infrastructure/aircraft/SmartSwitch.cpp
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/aircraft/tfdi/TfdiMd11.cpp
