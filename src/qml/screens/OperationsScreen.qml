@@ -186,6 +186,15 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            text: root.integratorVm.resumeDecisionAdvisoryText
+            actionText: root.integratorVm.resumeTurnaroundLabel
+            secondActionText: root.integratorVm.restartFlowLabel
+            onActionTriggered: root.integratorVm.resumeSavedTurnaround()
+            onSecondActionTriggered: root.integratorVm.restartFlow()
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             text: root.integratorVm.phaseTip
         }
 

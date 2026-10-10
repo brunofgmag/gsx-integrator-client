@@ -16,10 +16,11 @@ namespace
 
     using Touch = void (OperationsViewModel::*)();
 
-    constexpr std::array<std::pair<QLatin1String, Touch>, 4> kTouches{{
+    constexpr std::array<std::pair<QLatin1String, Touch>, 5> kTouches{{
         {QLatin1String("startFlow"), &OperationsViewModel::startFlow},
         {QLatin1String("startLoading"), &OperationsViewModel::startLoading},
         {QLatin1String("restartFlow"), &OperationsViewModel::restartFlow},
+        {QLatin1String("resumeTurnaround"), &OperationsViewModel::resumeSavedTurnaround},
         {QLatin1String("reloadSimbrief"), &OperationsViewModel::reloadSimbrief},
     }};
 
@@ -33,7 +34,7 @@ namespace
             return std::nullopt;
         }
 
-        const QJsonObject object = document.object();
+        QJsonObject object = document.object();
         if (!object.value(QLatin1String("command")).isString())
         {
             LOG_WARN("EFB app: dropping a command payload without a command name");

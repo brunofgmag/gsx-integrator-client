@@ -145,6 +145,8 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("advisoryLabel"), OperationsViewModel::GetAdvisoryLabel());
     state.insert(QLatin1String("serviceInterruptedAdvisoryText"),
                  OperationsViewModel::GetServiceInterruptedAdvisoryText());
+    state.insert(QLatin1String("resumeDecisionAdvisoryText"), view_->GetResumeDecisionAdvisoryText());
+    state.insert(QLatin1String("resumeTurnaroundLabel"), view_->GetResumeTurnaroundLabel());
     state.insert(QLatin1String("gsxProfileFixable"), view_->IsGsxProfileFixable());
     state.insert(QLatin1String("pmdgOptionsConflict"), view_->HasPmdgOptionsConflict());
     state.insert(QLatin1String("pmdgOptionsFixable"), view_->IsPmdgOptionsFixable());

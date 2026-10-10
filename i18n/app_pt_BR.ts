@@ -348,6 +348,16 @@
         <source>Skip aircraft repositioning</source>
         <translation>Pular reposicionamento da aeronave</translation>
     </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AutomationPane.qml" line="99"/>
+        <source>Skip repositioning on a new turnaround</source>
+        <translation>Pular reposicionamento em novo turnaround</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AutomationPane.qml" line="100"/>
+        <source>After deboarding at the destination, the client starts the next turnaround without repositioning the aircraft.</source>
+        <translation>Depois do desembarque no destino, o cliente começa o próximo turnaround sem reposicionar a aeronave.</translation>
+    </message>
 </context>
 <context>
     <name>ConfirmButton</name>
@@ -614,6 +624,11 @@
         <location filename="../src/application/RuntimeIntegratorService.cpp" line="54"/>
         <source>The turnaround is not waiting to start loading.</source>
         <translation>O turnaround não está aguardando para iniciar o carregamento.</translation>
+    </message>
+    <message>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="96"/>
+        <source>There is no saved turnaround waiting for an answer.</source>
+        <translation>Não há turnaround salvo esperando resposta.</translation>
     </message>
     <message>
         <location filename="../src/application/RuntimeIntegratorService.cpp" line="102"/>
@@ -926,6 +941,16 @@
         <translation>O GSX interrompeu um serviço que já tinha começado. Peça o serviço de novo no menu do GSX e o cliente retoma o turnaround.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="820"/>
+        <source>GSX restarted since this turnaround was saved. Resume it if the aircraft is still as you left it, or restart the flow to start over.</source>
+        <translation>O GSX reiniciou depois que este turnaround foi salvo. Retome se a aeronave ainda está como você deixou, ou reinicie o fluxo para começar de novo.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="826"/>
+        <source>Resume turnaround</source>
+        <translation>Retomar turnaround</translation>
+    </message>
+    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="1046"/>
         <source>Dismiss</source>
         <translation>Dispensar</translation>
@@ -1170,6 +1195,16 @@
         <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="139"/>
         <source>Skip aircraft repositioning</source>
         <translation>Pular reposicionamento da aeronave</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="147"/>
+        <source>Skip repositioning on a new turnaround</source>
+        <translation>Pular reposicionamento em novo turnaround</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="148"/>
+        <source>After deboarding at the destination, the client starts the next turnaround without repositioning the aircraft.</source>
+        <translation>Depois do desembarque no destino, o cliente começa o próximo turnaround sem reposicionar a aeronave.</translation>
     </message>
     <message>
         <source>Call GPU &amp; chocks</source>
@@ -1875,6 +1910,26 @@
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="65"/>
         <source>A GSX loader is waiting for the main deck cargo door to open. Open it within %1 s, or the client will finish boarding without this loader.</source>
         <translation>Um carregador do GSX está esperando a porta de carga do convés principal abrir. Abra a porta em até %1 s, ou o cliente termina o embarque sem esse carregador.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="81"/>
+        <source>The client is waiting for GSX to send its state.</source>
+        <translation>O cliente está esperando o GSX enviar o estado dele.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="84"/>
+        <source>The client found saved turnaround data and is waiting for the aircraft and GSX to check whether it belongs to this flight.</source>
+        <translation>O cliente achou dados salvos de um turnaround e está esperando a aeronave e o GSX para conferir se são deste voo.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="87"/>
+        <source>The client is resuming the saved turnaround and waiting for GSX and the simulator to report their state.</source>
+        <translation>O cliente está retomando o turnaround salvo e esperando o GSX e o simulador informarem o estado.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="90"/>
+        <source>The client is resuming the saved turnaround and waiting for the aircraft to respond. If it never does, restart the flow.</source>
+        <translation>O cliente está retomando o turnaround salvo e esperando a aeronave responder. Se ela não responder, reinicie o fluxo.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="82"/>

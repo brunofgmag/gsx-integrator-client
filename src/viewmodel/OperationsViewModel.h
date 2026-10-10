@@ -70,6 +70,8 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(QString servicesAdvisoryText READ GetServicesAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString openDoorAdvisoryText READ GetOpenDoorAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString serviceInterruptedAdvisoryText READ GetServiceInterruptedAdvisoryText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString resumeDecisionAdvisoryText READ GetResumeDecisionAdvisoryText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString resumeTurnaroundLabel READ GetResumeTurnaroundLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(QString commandErrorLabel READ GetCommandErrorLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(bool pmdgOptionsConflict READ HasPmdgOptionsConflict NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoDoorStuck READ IsCargoDoorStuck NOTIFY SnapshotChanged)
@@ -174,6 +176,8 @@ public:
     [[nodiscard]] QString GetOpenDoorAdvisoryText() const;
     [[nodiscard]] static QString GetAdvisoryLabel();
     [[nodiscard]] static QString GetServiceInterruptedAdvisoryText();
+    [[nodiscard]] QString GetResumeDecisionAdvisoryText() const;
+    [[nodiscard]] QString GetResumeTurnaroundLabel() const;
     [[nodiscard]] static QString GetCommandErrorLabel();
     [[nodiscard]] bool IsGsxProfileFixable() const;
     [[nodiscard]] bool HasPmdgOptionsConflict() const;
@@ -222,6 +226,7 @@ public:
     Q_INVOKABLE void startFlow();
     Q_INVOKABLE void startLoading();
     Q_INVOKABLE void restartFlow();
+    Q_INVOKABLE void resumeSavedTurnaround();
     Q_INVOKABLE void reloadSimbrief();
     Q_INVOKABLE void fixGsxProfile();
     Q_INVOKABLE void fixPmdgOptions();
@@ -240,8 +245,10 @@ signals:
 
 private:
     [[nodiscard]] bool IsAwaitingStartLoading() const;
+    [[nodiscard]] bool IsAwaitingResumeDecision() const;
     [[nodiscard]] QString WeightText(double kilograms) const;
     [[nodiscard]] QString BoardingTip() const;
+    [[nodiscard]] QString PhaseSpecificTip() const;
     void Refresh();
     void SetCommandError(const CommandResult& result);
 

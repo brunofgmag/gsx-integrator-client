@@ -146,6 +146,11 @@ gsxi_add_qt_test(gsxi-efb-command-receiver-tests efb-command-receiver
         src/viewmodel/OperationsViewModel.cpp
         src/viewmodel/OperationsViewModel.h)
 
+gsxi_add_qt_test(gsxi-translations-tests translations
+        tests/tst_translations.cpp)
+target_compile_definitions(gsxi-translations-tests PRIVATE
+        GSXI_I18N_DIR=\"${CMAKE_SOURCE_DIR}/i18n\")
+
 gsxi_add_qt_test(gsxi-settings-viewmodel-tests settings-viewmodel
         tests/TestDoubles.h
         tests/tst_settings_viewmodel.cpp

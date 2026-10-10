@@ -90,7 +90,13 @@ CommandResult RuntimeIntegratorService::ResumeSavedTurnaround()
         return OfflineFailure();
     }
 
-    if (runtime_->Snapshot().turnaroundHold != TurnaroundHold::AwaitingResumeDecision)
+    const TurnaroundHold hold = runtime_->Snapshot().turnaroundHold;
+    if (hold == TurnaroundHold::AwaitingGsxReadings || hold == TurnaroundHold::AwaitingAircraft)
+    {
+        return CommandResult::Success();
+    }
+
+    if (hold != TurnaroundHold::AwaitingResumeDecision)
     {
         return CommandResult::Failure(
             QCoreApplication::translate("Integrator", "There is no saved turnaround waiting for an answer.")
