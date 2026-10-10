@@ -15,6 +15,15 @@ namespace
 {
     constexpr int kRetryTicks = 10;
     constexpr int kDifferingFlightPlanFetchTicks = 30;
+    constexpr int kUnknownGeneration = 0;
+
+    bool HasMovedPastTheStaleGeneration(const int served, const int stale)
+    {
+        const bool reloaded = served > stale;
+        const bool couatlRestartedAndRecounted = served != kUnknownGeneration && served < stale;
+
+        return reloaded || couatlRestartedAndRecounted;
+    }
 }
 
 std::optional<TurnaroundTransition> WaitingFlightPlanState::EvaluatePhase(TurnaroundContext& ctx)
@@ -66,7 +75,7 @@ bool WaitingFlightPlanState::GsxServesTheLatestPlan(const TurnaroundContext& ctx
     const std::optional<int>& staleGeneration = ctx.data.staleSimbriefGeneration;
 
     return !staleGeneration.has_value()
-        || (ctx.gsxGateway->GetServedSimbriefGeneration() > *staleGeneration
+        || (HasMovedPastTheStaleGeneration(ctx.gsxGateway->GetServedSimbriefGeneration(), *staleGeneration)
             && ctx.gsxGateway->GetSimbriefRefusal().empty());
 }
 

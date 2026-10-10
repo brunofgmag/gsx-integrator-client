@@ -309,10 +309,13 @@ bool Fss727MainDeckMovesByTheCargoPanelRule::HasSeenTheMainLoaderAtTheDeck() con
     return mainLoaderSeenAtTheDeck_;
 }
 
-void Fss727MainDeckMovesByTheCargoPanelRule::RestoreTheEdges(const bool deboardingAtWork, const bool mainLoaderSeenAtTheDeck)
+void Fss727MainDeckMovesByTheCargoPanelRule::RestoreTheEdges(const bool deboardingAtWork,
+                                                             const bool mainLoaderSeenAtTheDeck,
+                                                             const bool gsxRestartedSinceSave)
 {
     deboardingAtWork_ = deboardingAtWork;
     deboardingReadAwaited_ = deboardingAtWork;
+    deboardingMayHaveEndedWhileAway_ = deboardingAtWork && !gsxRestartedSinceSave;
     mainLoaderSeenAtTheDeck_ = mainLoaderSeenAtTheDeck;
 }
 
@@ -359,7 +362,9 @@ void Fss727MainDeckMovesByTheCargoPanelRule::AskForTheDeckClosedOnceTheDeboardin
     deboardingReadAwaited_ = false;
 
     const GsxStateStatus deboarding = GsxStatusOf(GsxState::Deboarding);
-    const bool completedNow = deboardingAtWork_ && deboarding == GsxStateStatus::Completed;
+    const bool completedNow = deboardingAtWork_
+        && (deboarding == GsxStateStatus::Completed
+            || (deboardingMayHaveEndedWhileAway_ && deboarding == GsxStateStatus::Callable));
     const std::optional<bool> closed = aircraft_->IsMainDeckClosed();
     if (completedNow && !closed.has_value())
     {
@@ -367,6 +372,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::AskForTheDeckClosedOnceTheDeboardin
     }
 
     deboardingAtWork_ = IsWorkingTheDoors(deboarding);
+    deboardingMayHaveEndedWhileAway_ = false;
 
     if (!completedNow || closed.value_or(true))
     {

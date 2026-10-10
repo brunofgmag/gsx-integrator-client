@@ -2109,6 +2109,15 @@ void AvroRjTest::aResumedAircraftAsksForItsOwnAirstairOnlyOnceTheJetwayReadingHa
     for (int tick = 0; tick < 8; ++tick)
     {
         gateway.DeliverWhatWasAsked();
+        gateway.deliveredLVars.erase(kJetway);
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    for (int tick = 0; tick < 8; ++tick)
+    {
+        gateway.DeliverWhatWasAsked();
         TickAircraft(aircraft, gateway);
     }
 

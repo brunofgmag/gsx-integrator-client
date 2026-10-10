@@ -1471,7 +1471,7 @@ void FenixA32xTest::aResumeWithTheRefuelStillRunningNeverDisarmsTheHose()
         fixture.gateway.lvars[kThirdPartyRefuel] = 1.0;
         fixture.gateway.lvars[gsx::lvars::kRefuelingState] = state;
         fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, false, false), MemoryBag{});
-        TickTimes(fixture.aircraft, fixture.gateway, 30);
+        TickTimes(fixture.aircraft, fixture.gateway, kSecondsCallableBeforeTheRefuelCountsAsEnded + 30);
 
         QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
     }
@@ -1487,7 +1487,7 @@ void FenixA32xTest::aResumeAfterAGsxRestartKeepsTheHoseArmedWhileTheServiceIsCal
     fixture.gateway.lvars[kThirdPartyRefuel] = 1.0;
     fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCallable;
     fixture.aircraft.OnTurnaroundResumed(facts, MemoryBag{});
-    TickTimes(fixture.aircraft, fixture.gateway, 30);
+    TickTimes(fixture.aircraft, fixture.gateway, kSecondsCallableBeforeTheRefuelCountsAsEnded + 30);
 
     QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
 }

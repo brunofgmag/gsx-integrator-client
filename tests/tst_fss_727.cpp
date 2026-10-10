@@ -569,6 +569,8 @@ private slots:
     static void resumedMainLoaderStillAtTheDeckLeavesTheDeckOpen();
     static void resumedMainLoaderDepartureWaitsForTheDeckReading();
     static void resumedDeboardingAtWorkClosesTheDeckOnceItCompletes();
+    static void resumedDeboardingAtWorkWhoseServiceIsCallableAgainStillClosesTheDeck();
+    static void resumedDeboardingAtWorkWhoseServiceIsCallableAfterAGsxRestartLeavesTheDeckAlone();
     static void resumedDeboardingWaitsForItsStateReading();
     static void resumedDeboardingCompletionWaitsForTheDeckReading();
     static void memoryNamesCarryTheAircraftPrefix();
@@ -4064,6 +4066,58 @@ void Fss727Test::resumedDeboardingAtWorkClosesTheDeckOnceItCompletes()
     TickTimes(aircraft, gateway, kMainDeckRestingTicks + kTwentyTicks);
 
     QCOMPARE(gateway.WriteCount(kPanelDoorSwitch), 1);
+}
+
+void Fss727Test::resumedDeboardingAtWorkWhoseServiceIsCallableAgainStillClosesTheDeck()
+{
+    const MemoryBag memory = MemoryOfAnAdapterWithADeboardingAtWork();
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FakeGsxService gsx;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
+
+    gateway.arrivesATickAfterItIsAsked = true;
+    gsx.deboardingState = GsxStateStatus::Callable;
+    MainDeckOpen(gateway);
+    gateway.lvars[kMainLoaderState] = kLoaderIdle;
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Callable);
+    aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::Deboarding), memory);
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(PanelWrites(gateway), 0);
+
+    gateway.DeliverWhatWasAsked();
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPanelDoorSwitch), 1);
+    QCOMPARE(gateway.Written(kPanelDoorSwitch), 0.0);
+}
+
+void Fss727Test::resumedDeboardingAtWorkWhoseServiceIsCallableAfterAGsxRestartLeavesTheDeckAlone()
+{
+    const MemoryBag memory = MemoryOfAnAdapterWithADeboardingAtWork();
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FakeGsxService gsx;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
+
+    TurnaroundFacts facts = ResumedFacts(TurnaroundPhase::Deboarding);
+    facts.gsxRestartedSinceSave = true;
+
+    gateway.arrivesATickAfterItIsAsked = true;
+    gsx.deboardingState = GsxStateStatus::Callable;
+    MainDeckOpen(gateway);
+    gateway.lvars[kMainLoaderState] = kLoaderIdle;
+    gateway.lvars[kDeboardingState] = static_cast<double>(GsxStateStatus::Callable);
+    aircraft.OnTurnaroundResumed(facts, memory);
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    gateway.DeliverWhatWasAsked();
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(PanelWrites(gateway), 0);
 }
 
 void Fss727Test::resumedDeboardingWaitsForItsStateReading()

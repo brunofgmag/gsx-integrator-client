@@ -39,7 +39,7 @@ public:
     void RestoreUnservedLoaderDepartureClose();
     [[nodiscard]] bool IsDeboardingAtWork() const;
     [[nodiscard]] bool HasSeenTheMainLoaderAtTheDeck() const;
-    void RestoreTheEdges(bool deboardingAtWork, bool mainLoaderSeenAtTheDeck);
+    void RestoreTheEdges(bool deboardingAtWork, bool mainLoaderSeenAtTheDeck, bool gsxRestartedSinceSave);
     void CheckThePanelMasterLeftOn();
     void ForgetTheResume();
 
@@ -79,6 +79,7 @@ private:
     int deboardingCloseRequests_ = 0;
     bool deboardingAtWork_ = false;
     bool deboardingReadAwaited_ = false;
+    bool deboardingMayHaveEndedWhileAway_ = false;
     int loaderDepartureCloseRequests_ = 0;
     bool loaderDepartureCloseUnserved_ = false;
     bool mainLoaderSeenAtTheDeck_ = false;

@@ -249,7 +249,8 @@ void Fss727::OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& 
     }
 
     mainDeckRule_.RestoreTheEdges(memory.Flag(kMainDeckDeboardingAtWorkKey, false),
-                                  memory.Flag(kMainDeckLoaderSeenKey, false));
+                                  memory.Flag(kMainDeckLoaderSeenKey, false),
+                                  facts.gsxRestartedSinceSave);
     mainDeckRule_.CheckThePanelMasterLeftOn();
     doors_.RestoreMemory(memory, facts.gsxRestartedSinceSave);
 }
