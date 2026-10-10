@@ -18,6 +18,7 @@
 #include "application/IntegratorRuntime.h"
 #include "application/RuntimeIntegratorService.h"
 #include "infrastructure/aircraft/AircraftFactory.h"
+#include "infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.h"
 #include "infrastructure/settings/QSettingsRepository.h"
 #include "infrastructure/platform/GraphicsBackend.h"
 #include "infrastructure/probe/ProbeLog.h"
@@ -209,7 +210,12 @@ int main(int argc, char* argv[])
 
     QGuiApplication::setWindowIcon(BuildAppIcon());
 
-    IntegratorRuntime runtime;
+    JsonFileTurnaroundCheckpointStore checkpointStore(
+        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation),
+        QGuiApplication::applicationVersion());
+    IntegratorRuntimeOptions runtimeOptions;
+    runtimeOptions.checkpointStore = &checkpointStore;
+    IntegratorRuntime runtime(runtimeOptions);
     RuntimeIntegratorService integratorService(&runtime);
     SettingsViewModel settingsViewModel(&settingsRepository, &integratorService,
                                         SupportedAircraftProfiles());

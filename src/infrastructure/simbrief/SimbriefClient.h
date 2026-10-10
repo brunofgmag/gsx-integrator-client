@@ -20,6 +20,7 @@ public:
 
     void Poll();
     void Reset();
+    void Adopt(const FlightPlan& plan);
     [[nodiscard]] bool Reload();
 
 private:

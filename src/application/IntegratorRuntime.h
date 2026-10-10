@@ -11,6 +11,7 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QTimer>
+#include "TurnaroundResumption.h"
 #include "model/IntegratorSnapshot.h"
 #include "sim/SimVersion.h"
 #include "../infrastructure/commbus/CommBusBridgeClient.h"
@@ -39,6 +40,7 @@ struct IntegratorRuntimeOptions
 
     std::chrono::milliseconds reconnectInterval = kDefaultReconnectInterval;
     std::function<bool()> actsOnTheSim;
+    TurnaroundCheckpointStore* checkpointStore = nullptr;
 };
 
 class IntegratorRuntime final : public QObject
@@ -78,6 +80,7 @@ public:
     [[nodiscard]] bool AreDoorsHoldingPushback() const;
     void SetAutomationEnabled(bool enabled);
     void RestartFlow();
+    void ResumeSavedTurnaround();
 #ifndef NDEBUG
     void DebugSkipPhase(const int delta) { stateMachine_.DebugSkipPhase(delta); }
 #endif
@@ -124,6 +127,8 @@ private:
 
     [[nodiscard]] bool IsSessionPaused() const { return pauseFlags_ != 0; }
     [[nodiscard]] TickMode ResolveTickMode() const;
+    [[nodiscard]] bool IsDrivingTheGsx() const;
+    [[nodiscard]] TurnaroundHold CurrentHold() const;
     [[nodiscard]] bool IsAwaitingTheFirstSnapshot() const
     {
         return gsxRemoteState_.connected && !gsxRemoteState_.synced;
@@ -166,6 +171,12 @@ private:
     void CheckGsxProfile();
     void CheckPmdgOptions();
     void AnnounceWireFacts();
+    void OnRemoteConnectionChanged(bool connected);
+    [[nodiscard]] TurnaroundKey LiveKey();
+    [[nodiscard]] bool HaveResumeReadingsArrived();
+    void AdvanceResumption();
+    void RestoreSavedTurnaround(const TurnaroundResumption::Restoration& restoration);
+    void SaveTurnaround();
 
     static constexpr int kDispatchIntervalMs = 80;
 
@@ -196,6 +207,7 @@ private:
     QTimer dispatchTimer_;
     QTimer reconnectTimer_;
     std::function<bool()> actsOnTheSim_;
+    TurnaroundResumption resumption_;
     QtDomainLogger qtLogger_;
     ProbeObserver probe_;
 

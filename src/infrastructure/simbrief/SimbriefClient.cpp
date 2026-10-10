@@ -89,6 +89,12 @@ void SimbriefClient::Reset()
     SetStatus(FlightPlanStatus::Idle);
 }
 
+void SimbriefClient::Adopt(const FlightPlan& plan)
+{
+    Reset();
+    ApplyFlightPlan(plan);
+}
+
 void SimbriefClient::ClearResponse()
 {
     pending_ = false;

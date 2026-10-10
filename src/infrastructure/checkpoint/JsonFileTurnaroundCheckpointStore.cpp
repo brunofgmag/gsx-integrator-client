@@ -15,6 +15,7 @@
 #include <QSaveFile>
 
 #include "../logging/LogMacros.h"
+#include "StoredText.h"
 
 namespace
 {
@@ -123,7 +124,7 @@ namespace
         }
         else if constexpr (std::same_as<Value, std::string>)
         {
-            return QJsonValue(QString::fromStdString(value));
+            return QJsonValue(checkpoint::ToStoredString(value));
         }
         else if constexpr (IsOptional<Value>::value)
         {

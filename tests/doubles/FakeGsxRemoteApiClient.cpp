@@ -62,7 +62,7 @@ bool GsxRemoteApiClient::SendCommand(const QString& verb, const QJsonObject&)
 {
     FakeGsxRemoteApi::commandVerbs.push_back(verb.toStdString());
 
-    return false;
+    return !FakeGsxRemoteApi::refuseSends;
 }
 
 void GsxRemoteApiClient::OnConnected()

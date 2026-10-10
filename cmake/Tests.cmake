@@ -285,6 +285,13 @@ gsxi_add_qt_test(gsxi-json-file-turnaround-checkpoint-store-tests json-file-turn
         src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.h
         src/infrastructure/logging/LogMacros.h
         src/application/ports/TurnaroundCheckpointStore.h
+        src/application/model/TurnaroundDocument.h
+        src/infrastructure/checkpoint/StoredText.h)
+
+gsxi_add_qt_test(gsxi-turnaround-key-judgement-tests turnaround-key-judgement
+        tests/tst_turnaround_key_judgement.cpp
+        src/application/TurnaroundKeyJudgement.cpp
+        src/application/TurnaroundKeyJudgement.h
         src/application/model/TurnaroundDocument.h)
 
 gsxi_add_qt_test(gsxi-simconnect-session-tests simconnect-session
@@ -1004,6 +1011,17 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         tests/tst_runtime_integrator_service.cpp
         src/application/IntegratorRuntime.cpp
         src/application/IntegratorRuntime.h
+        src/application/TurnaroundKeyJudgement.cpp
+        src/application/TurnaroundKeyJudgement.h
+        src/application/TurnaroundResumption.cpp
+        src/application/TurnaroundResumption.h
+        src/application/model/TurnaroundHold.h
+        src/application/model/TurnaroundDocument.h
+        src/application/ports/TurnaroundCheckpointStore.h
+        src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.cpp
+        src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.h
+        src/infrastructure/checkpoint/StoredText.h
+        tests/doubles/FakeTurnaroundCheckpointStore.h
         src/infrastructure/probe/ProbeLog.h
         src/infrastructure/probe/ProbeChannels.h
         src/infrastructure/probe/ProbeObserver.cpp

@@ -14,6 +14,7 @@ struct FakeGsxRemoteApi
     static inline std::vector<std::string> commandVerbs;
     static inline GsxRemoteApiClient* liveClient = nullptr;
     static inline bool connectionUp = false;
+    static inline bool refuseSends = false;
 
     static void Reset()
     {
@@ -21,6 +22,7 @@ struct FakeGsxRemoteApi
         stopCalls = 0;
         commandVerbs.clear();
         connectionUp = false;
+        refuseSends = false;
     }
 
     static void AnnounceConnection(bool connected);

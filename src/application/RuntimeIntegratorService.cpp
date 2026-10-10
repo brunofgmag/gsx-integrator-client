@@ -83,6 +83,25 @@ CommandResult RuntimeIntegratorService::RestartFlow()
     return CommandResult::Success();
 }
 
+CommandResult RuntimeIntegratorService::ResumeSavedTurnaround()
+{
+    if (!runtime_->IsConnected())
+    {
+        return OfflineFailure();
+    }
+
+    if (runtime_->Snapshot().turnaroundHold != TurnaroundHold::AwaitingResumeDecision)
+    {
+        return CommandResult::Failure(
+            QCoreApplication::translate("Integrator", "There is no saved turnaround waiting for an answer.")
+            .toStdString());
+    }
+
+    runtime_->ResumeSavedTurnaround();
+
+    return CommandResult::Success();
+}
+
 #ifndef NDEBUG
 void RuntimeIntegratorService::DebugSkipPhase(const int delta)
 {
