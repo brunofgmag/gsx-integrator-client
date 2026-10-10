@@ -1,9 +1,11 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGDOORSOURCE_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGDOORSOURCE_H
 
+#include <cstdint>
+
 #include "../gsx/GsxDoorSync.h"
 
-enum class DoorObservation
+enum class DoorObservation : std::uint8_t
 {
     Unavailable,
     Moving,

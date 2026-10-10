@@ -123,7 +123,7 @@ void PmdgPayloadWriter::SetZfwKg(const double zfwKg)
 
     const double nonCargoLbs = echo->zfwLbs - echo->cargoLbs;
     const int cargoLbs =
-        (std::max)(static_cast<int>(std::lround(zfwKg * kLbsPerKg - nonCargoLbs)), 0);
+        (std::max)(static_cast<int>(std::lround((zfwKg * kLbsPerKg) - nonCargoLbs)), 0);
     if (cargoLbs != lastProgressiveCargoLbs_)
     {
         lastProgressiveCargoLbs_ = cargoLbs;

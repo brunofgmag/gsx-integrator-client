@@ -112,7 +112,7 @@ void TfdiMd11CommitEfbTargetsRule::ResolveTargets(const std::optional<double>& s
 {
     if (stagedFuelKg.has_value())
     {
-        fuelTarget_ = {*stagedFuelKg, true};
+        fuelTarget_ = {.value = *stagedFuelKg, .seeded = true};
     }
     else
     {
@@ -121,7 +121,7 @@ void TfdiMd11CommitEfbTargetsRule::ResolveTargets(const std::optional<double>& s
 
     if (stagedZfwKg.has_value())
     {
-        zfwTarget_ = {*stagedZfwKg, true};
+        zfwTarget_ = {.value = *stagedZfwKg, .seeded = true};
     }
     else
     {
@@ -136,7 +136,7 @@ void TfdiMd11CommitEfbTargetsRule::SeedFuelIfNeeded()
         return;
     }
 
-    fuelTarget_ = {aircraft_->GetCurrentFuelKg(), true};
+    fuelTarget_ = {.value = aircraft_->GetCurrentFuelKg(), .seeded = true};
 }
 
 void TfdiMd11CommitEfbTargetsRule::SeedZfwIfNeeded()
@@ -148,7 +148,7 @@ void TfdiMd11CommitEfbTargetsRule::SeedZfwIfNeeded()
         return;
     }
 
-    zfwTarget_ = {std::max(aircraft_->GetCurrentZfwKg(), aircraft_->GetEmptyZfwKg()), true};
+    zfwTarget_ = {.value = std::max(aircraft_->GetCurrentZfwKg(), aircraft_->GetEmptyZfwKg()), .seeded = true};
 }
 
 void TfdiMd11CommitEfbTargetsRule::CommitTargets(VariableWriter& writer) const

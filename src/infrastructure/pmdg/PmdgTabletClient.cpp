@@ -48,7 +48,7 @@ namespace
     {
         if (value.isDouble())
         {
-            return QJsonValue(std::round(value.toDouble()));
+            return {std::round(value.toDouble())};
         }
 
         if (value.isObject())
@@ -66,7 +66,7 @@ namespace
         if (value.isArray())
         {
             QJsonArray rounded;
-            for (const QJsonValue& item : value.toArray())
+            for (const QJsonValueConstRef& item : value.toArray())
             {
                 rounded.append(RoundedToUnit(item));
             }
@@ -95,7 +95,7 @@ namespace
             return std::nullopt;
         }
 
-        const QJsonObject object = document.object();
+        QJsonObject object = document.object();
         if (object.value(QStringLiteral("message_tag")).toString() != QLatin1String(kTagStateReply))
         {
             return std::nullopt;

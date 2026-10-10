@@ -60,7 +60,7 @@ namespace
     constexpr auto kRefusedMark = "the repositioned mark is malformed";
 
     constexpr int kPhaseCount = static_cast<int>(TurnaroundPhase::Count);
-    constexpr qint64 kMaxFileBytes = 1024 * 1024;
+    constexpr qint64 kMaxFileBytes = qint64{1024} * 1024;
 
     template <typename Value>
     struct IsOptional : std::false_type

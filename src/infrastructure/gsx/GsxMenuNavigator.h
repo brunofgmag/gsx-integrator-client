@@ -14,7 +14,7 @@
 #include "../../domain/model/MemoryBag.h"
 #include "../../domain/ports/GsxMenuGateway.h"
 
-enum class GsxPanelMode;
+enum class GsxPanelMode : std::uint8_t;
 struct AutomationSettings;
 class CommBusPluginClient;
 class DomainLogger;

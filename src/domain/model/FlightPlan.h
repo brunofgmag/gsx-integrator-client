@@ -1,11 +1,12 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_FLIGHTPLAN_H
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include "../support/Weight.h"
 
-enum class FlightPlanStatus : int
+enum class FlightPlanStatus : std::uint8_t
 {
     Idle = 0,
     Fetching = 1,
@@ -13,7 +14,7 @@ enum class FlightPlanStatus : int
     Error = 3,
 };
 
-enum class FlightPlanFailure : int
+enum class FlightPlanFailure : std::uint8_t
 {
     None = 0,
     NotSent = 1,

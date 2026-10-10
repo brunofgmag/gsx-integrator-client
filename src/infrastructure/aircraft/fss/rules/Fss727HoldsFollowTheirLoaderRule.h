@@ -3,13 +3,14 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 
 #include "../../../../domain/ports/AircraftRule.h"
 
 class Fss727;
 class GsxDoorSync;
 class VariableReader;
-enum class GsxDoor;
+enum class GsxDoor : std::uint8_t;
 
 class Fss727HoldsFollowTheirLoaderRule final : public AircraftRule
 {

@@ -39,9 +39,9 @@ void TfdiMd11PaxDoorsFollowStairsRule::Act(const RuleContext&, VariableWriter& w
         return;
     }
 
-    FollowStairs(writer, {gsx::lvars::kPassengerStairsFrontState, kPaxDoor1LLVar}, targets_.fwd);
-    FollowStairs(writer, {gsx::lvars::kPassengerStairsMiddleState, kPaxDoor2LLVar}, targets_.mid);
-    FollowStairs(writer, {gsx::lvars::kPassengerStairsRearState, kPaxDoor4LLVar}, targets_.aft);
+    FollowStairs(writer, {.stairsState = gsx::lvars::kPassengerStairsFrontState, .command = kPaxDoor1LLVar}, targets_.fwd);
+    FollowStairs(writer, {.stairsState = gsx::lvars::kPassengerStairsMiddleState, .command = kPaxDoor2LLVar}, targets_.mid);
+    FollowStairs(writer, {.stairsState = gsx::lvars::kPassengerStairsRearState, .command = kPaxDoor4LLVar}, targets_.aft);
 }
 
 TfdiMd11PaxDoorsFollowStairsRule::DoorTargets TfdiMd11PaxDoorsFollowStairsRule::Targets() const

@@ -18,10 +18,8 @@
 
 namespace
 {
-    constexpr int kInitialBackoffMs = 1000;
     constexpr int kMaxBackoffMs = 15000;
     constexpr int kPortLimit = 65536;
-    constexpr quint16 kFallbackPort = 8744;
     constexpr int kSupportedProtocol = 1;
 
     void WarnOnProtocolMismatch(const QJsonObject& msg)

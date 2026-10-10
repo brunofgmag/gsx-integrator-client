@@ -1,12 +1,13 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG737_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG737_H
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include "PmdgAircraft.h"
 #include "../../pmdg/Pmdg737DataGateway.h"
 
-enum class Pmdg737Variant { Pax800, Bcf800, Bdsf800, Bbj2 };
+enum class Pmdg737Variant : std::uint8_t { Pax800, Bcf800, Bdsf800, Bbj2 };
 
 class Pmdg737 final : public PmdgAircraft
 {

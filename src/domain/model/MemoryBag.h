@@ -87,11 +87,11 @@ public:
         return result.ec == std::errc{} && result.ptr == last && std::isfinite(value) ? value : fallback;
     }
 
-    [[nodiscard]] std::string Text(const std::string_view name, std::string fallback) const
+    [[nodiscard]] std::string Text(const std::string_view name, const std::string& fallback) const
     {
         const auto entry = FindEntry(name);
 
-        return entry == entries_.end() ? std::move(fallback) : entry->second;
+        return entry == entries_.end() ? fallback : entry->second;
     }
 
     [[nodiscard]] const std::vector<Entry>& Entries() const { return entries_; }

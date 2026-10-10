@@ -1,12 +1,13 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGDOORRECONCILER_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGDOORRECONCILER_H
 
+#include <cstdint>
 #include <array>
 #include <vector>
 #include "PmdgDoorSource.h"
 #include "../../domain/model/MemoryBag.h"
 
-enum class DoorBaseline
+enum class DoorBaseline : std::uint8_t
 {
     Unknown,
     Closed

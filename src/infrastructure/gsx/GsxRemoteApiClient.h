@@ -21,7 +21,7 @@ public:
 
     [[nodiscard]] virtual bool SendCommand(const QString& verb, const QJsonObject& args = {});
 
-    void SetHandshakeTimeoutForTest(const int ms) { handshakeTimeoutMs_ = ms; }
+    void SetHandshakeTimeoutForTest(const int milliseconds) { handshakeTimeoutMs_ = milliseconds; }
     void SetPortForTest(const quint16 port) { portForTest_ = port; }
 
 signals:
@@ -45,17 +45,19 @@ private:
     void HandleResult(const QJsonObject& msg);
 
     static constexpr int kHandshakeTimeoutMs = 5000;
+    static constexpr int kInitialBackoffMs = 1000;
+    static constexpr quint16 kFallbackPort = 8744;
 
     QWebSocket* socket_ = nullptr;
     QTimer* reconnectTimer_ = nullptr;
     QTimer* handshakeTimer_ = nullptr;
-    quint16 port_ = 8744;
+    quint16 port_ = kFallbackPort;
     quint16 portForTest_ = 0;
     bool handshakeDone_ = false;
     bool stopping_ = false;
     bool announceNextAttempt_ = true;
     bool warnNextDrop_ = true;
-    int backoffMs_ = 1000;
+    int backoffMs_ = kInitialBackoffMs;
     int handshakeTimeoutMs_ = kHandshakeTimeoutMs;
 };
 

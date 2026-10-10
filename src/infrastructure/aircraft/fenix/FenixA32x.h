@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FENIXA32X_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FENIXA32X_H
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
@@ -15,7 +16,7 @@
 
 class VariableGateway;
 
-enum class FenixVariant { A319, A320, A321 };
+enum class FenixVariant : std::uint8_t { A319, A320, A321 };
 
 class FenixA32x final : public Aircraft
 {

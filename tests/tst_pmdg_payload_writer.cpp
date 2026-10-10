@@ -283,7 +283,7 @@ void PmdgPayloadWriterTest::aResumedBoardingContinuesFromTheRampInsteadOfZero()
     WriterFixture fixture;
     fixture.writer->Resume(kEmptyKg, kPlannedZfwKg, kPlannedPax);
 
-    fixture.writer->SetZfwKg(kEmptyKg + (kPlannedZfwKg - kEmptyKg) / 2.0);
+    fixture.writer->SetZfwKg(kEmptyKg + ((kPlannedZfwKg - kEmptyKg) / 2.0));
 
     QCOMPARE(fixture.tablet.paxSends.size(), static_cast<std::size_t>(1));
     QCOMPARE(fixture.tablet.paxSends.front(), kPlannedPax / 2);
@@ -298,7 +298,7 @@ void PmdgPayloadWriterTest::aResumedDeboardingDrainsThePassengersToZero()
     QVERIFY(!fixture.tablet.paxSends.empty());
     QCOMPARE(fixture.tablet.paxSends.back(), kPlannedPax);
 
-    fixture.writer->SetZfwKg(kEmptyKg + (kPlannedZfwKg - kEmptyKg) / 4.0);
+    fixture.writer->SetZfwKg(kEmptyKg + ((kPlannedZfwKg - kEmptyKg) / 4.0));
     QCOMPARE(fixture.tablet.paxSends.back(), kPlannedPax / 4);
 
     fixture.writer->SetZfwKg(kEmptyKg);
@@ -312,7 +312,7 @@ void PmdgPayloadWriterTest::aResumedRampReadsThePlanFromTheFactsAndNotFromTheSta
     fixture.status.plannedPassengers = 0;
     fixture.writer->Resume(kEmptyKg, kPlannedZfwKg, kPlannedPax);
 
-    fixture.writer->SetZfwKg(kEmptyKg + (kPlannedZfwKg - kEmptyKg) / 2.0);
+    fixture.writer->SetZfwKg(kEmptyKg + ((kPlannedZfwKg - kEmptyKg) / 2.0));
 
     QCOMPARE(fixture.tablet.paxSends.size(), static_cast<std::size_t>(1));
     QCOMPARE(fixture.tablet.paxSends.front(), kPlannedPax / 2);

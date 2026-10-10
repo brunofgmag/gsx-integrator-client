@@ -25,7 +25,7 @@ namespace
 {
     constexpr auto kClientVersion = "1.44.0";
     constexpr auto kFileName = "turnaround.json";
-    constexpr qint64 kSizeCap = 1024 * 1024;
+    constexpr qint64 kSizeCap = qint64{1024} * 1024;
 
     using Edit = std::function<void(QJsonObject&)>;
 
@@ -320,7 +320,7 @@ private slots:
     void init();
     void cleanup();
 
-    void theFillHelperChangesEveryRawLeaf() const;
+    static void theFillHelperChangesEveryRawLeaf();
     void readOfAnAbsentFileIsNoneAndSilent() const;
     void everyRawLeafRoundTripsThroughARealDirectory();
     void aFullDocumentIsFarBelowTheSizeCap();
@@ -342,26 +342,26 @@ private slots:
     void anotherClientVersionReadsAsNone();
     void anotherPhaseCountReadsAsNone();
     void anUnknownPhaseNameReadsAsNone();
-    void aPhaseOutsideTheResumableRangeReadsAsNone_data() const;
+    static void aPhaseOutsideTheResumableRangeReadsAsNone_data();
     void aPhaseOutsideTheResumableRangeReadsAsNone();
-    void jsonOfAnotherShapeReadsAsNone_data() const;
+    static void jsonOfAnotherShapeReadsAsNone_data();
     void jsonOfAnotherShapeReadsAsNone();
-    void aMalformedDocumentReadsAsNone_data() const;
+    static void aMalformedDocumentReadsAsNone_data();
     void aMalformedDocumentReadsAsNone();
     void aFileLargerThanTheCapReadsAsNone();
     void aDirectoryAtThePathReadsAsNoneAndCannotBeErased();
     void nullContainersReadAsAbsent();
     void anAbsentPlanLeafReadsAtItsDefault();
-    void aDocumentTheReaderWouldRefuseIsNotWritten_data() const;
+    static void aDocumentTheReaderWouldRefuseIsNotWritten_data();
     void aDocumentTheReaderWouldRefuseIsNotWritten();
-    void anEmptyDirectoryRefusesReadWriteAndErase();
+    static void anEmptyDirectoryRefusesReadWriteAndErase();
     void eraseTouchesOnlyItsOwnFile();
     void eraseOfAnAbsentFileSucceeds();
     void writeOverAnOldFileReplacesTheWholeContent();
     void anUnknownFieldIsIgnored();
     void anAbsentFieldReadsAtItsDefault();
-    void theInMemoryDoubleServesThePortAndCountsItsCalls() const;
-    void theInMemoryDoubleCanRefuseLikeItsNeighbour() const;
+    static void theInMemoryDoubleServesThePortAndCountsItsCalls();
+    static void theInMemoryDoubleCanRefuseLikeItsNeighbour();
 
 private:
     [[nodiscard]] QString FilePath() const { return QDir(directory_).filePath(kFileName); }
@@ -388,7 +388,7 @@ void JsonFileTurnaroundCheckpointStoreTest::cleanup()
     capture_.reset();
 }
 
-void JsonFileTurnaroundCheckpointStoreTest::theFillHelperChangesEveryRawLeaf() const
+void JsonFileTurnaroundCheckpointStoreTest::theFillHelperChangesEveryRawLeaf()
 {
     QCOMPARE(RawLeavesLeftAtTheirDefault(EveryRawLeafFilled()), 0);
 }
@@ -722,7 +722,7 @@ void JsonFileTurnaroundCheckpointStoreTest::anUnknownPhaseNameReadsAsNone()
     QVERIFY(RefusedBecause(store, "checkpoint is malformed"));
 }
 
-void JsonFileTurnaroundCheckpointStoreTest::aPhaseOutsideTheResumableRangeReadsAsNone_data() const
+void JsonFileTurnaroundCheckpointStoreTest::aPhaseOutsideTheResumableRangeReadsAsNone_data()
 {
     QTest::addColumn<QString>("phaseName");
 
@@ -742,13 +742,13 @@ void JsonFileTurnaroundCheckpointStoreTest::aPhaseOutsideTheResumableRangeReadsA
     QVERIFY(RefusedBecause(store, "checkpoint is malformed"));
 }
 
-void JsonFileTurnaroundCheckpointStoreTest::jsonOfAnotherShapeReadsAsNone_data() const
+void JsonFileTurnaroundCheckpointStoreTest::jsonOfAnotherShapeReadsAsNone_data()
 {
     QTest::addColumn<QByteArray>("content");
     QTest::addColumn<QString>("reason");
 
     QTest::newRow("an array") << QByteArray("[1, 2, 3]") << QStringLiteral("not a JSON object");
-    QTest::newRow("an unrelated object") << QByteArray("{\"hello\": \"world\"}") << QStringLiteral("client version");
+    QTest::newRow("an unrelated object") << QByteArray(R"({"hello": "world"})") << QStringLiteral("client version");
     QTest::newRow("a bare number") << QByteArray("42") << QStringLiteral("not a JSON object");
     QTest::newRow("an empty file") << QByteArray() << QStringLiteral("not a JSON object");
     QTest::newRow("not json") << QByteArray("turnaround") << QStringLiteral("not a JSON object");
@@ -765,7 +765,7 @@ void JsonFileTurnaroundCheckpointStoreTest::jsonOfAnotherShapeReadsAsNone()
     QVERIFY2(RefusedBecause(store, qPrintable(reason)), qPrintable(reason));
 }
 
-void JsonFileTurnaroundCheckpointStoreTest::aMalformedDocumentReadsAsNone_data() const
+void JsonFileTurnaroundCheckpointStoreTest::aMalformedDocumentReadsAsNone_data()
 {
     QTest::addColumn<Edit>("edit");
     QTest::addColumn<QString>("reason");
@@ -932,7 +932,7 @@ void JsonFileTurnaroundCheckpointStoreTest::anAbsentPlanLeafReadsAtItsDefault()
     QVERIFY(*read->plan == expected);
 }
 
-void JsonFileTurnaroundCheckpointStoreTest::aDocumentTheReaderWouldRefuseIsNotWritten_data() const
+void JsonFileTurnaroundCheckpointStoreTest::aDocumentTheReaderWouldRefuseIsNotWritten_data()
 {
     QTest::addColumn<int>("phase");
     QTest::addColumn<int>("unit");
@@ -1072,7 +1072,7 @@ void JsonFileTurnaroundCheckpointStoreTest::anAbsentFieldReadsAtItsDefault()
     QVERIFY(*read == document);
 }
 
-void JsonFileTurnaroundCheckpointStoreTest::theInMemoryDoubleServesThePortAndCountsItsCalls() const
+void JsonFileTurnaroundCheckpointStoreTest::theInMemoryDoubleServesThePortAndCountsItsCalls()
 {
     FakeTurnaroundCheckpointStore fake;
     TurnaroundCheckpointStore& port = fake;
@@ -1090,7 +1090,7 @@ void JsonFileTurnaroundCheckpointStoreTest::theInMemoryDoubleServesThePortAndCou
     QCOMPARE(fake.eraseCalls, 1);
 }
 
-void JsonFileTurnaroundCheckpointStoreTest::theInMemoryDoubleCanRefuseLikeItsNeighbour() const
+void JsonFileTurnaroundCheckpointStoreTest::theInMemoryDoubleCanRefuseLikeItsNeighbour()
 {
     FakeTurnaroundCheckpointStore fake;
     TurnaroundCheckpointStore& port = fake;

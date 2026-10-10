@@ -1,10 +1,11 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDPHASE_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDPHASE_H
 
+#include <cstdint>
 #include <optional>
 #include <string_view>
 
-enum class TurnaroundPhase : int
+enum class TurnaroundPhase : std::uint8_t
 {
     WaitingSupportedAircraft,
     WaitingAircraftReady,

@@ -15,7 +15,7 @@ namespace
     {
         std::string lowered = text;
         std::ranges::transform(lowered, lowered.begin(),
-                               [](const unsigned char c) { return static_cast<char>(std::tolower(c)); });
+                               [](const unsigned char character) { return static_cast<char>(std::tolower(character)); });
 
         return lowered;
     }

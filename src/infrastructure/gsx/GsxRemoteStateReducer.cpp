@@ -16,19 +16,19 @@ namespace
         "/billing", "/message", "/state", "/stateText"
     };
 
-    std::string Str(const QJsonValue& v) { return v.toString().toStdString(); }
+    std::string Str(const QJsonValue& value) { return value.toString().toStdString(); }
 
     void SetServices(GsxRemoteState& state, const QJsonValue& value)
     {
         state.services.clear();
-        for (const QJsonValue& v : value.toArray())
+        for (const QJsonValueConstRef& item : value.toArray())
         {
-            const QJsonObject& o = v.toObject();
+            const QJsonObject& object = item.toObject();
 
             GsxRemoteService svc;
-            svc.id = Str(o.value("id"));
-            svc.stateRaw = o.value("stateRaw").toInt();
-            svc.canTrigger = o.value("canTrigger").toBool();
+            svc.id = Str(object.value("id"));
+            svc.stateRaw = object.value("stateRaw").toInt();
+            svc.canTrigger = object.value("canTrigger").toBool();
 
             state.services.push_back(std::move(svc));
         }
@@ -36,30 +36,30 @@ namespace
 
     void SetMenu(GsxRemoteState& state, const QJsonValue& value)
     {
-        const QJsonObject& o = value.toObject();
+        const QJsonObject& object = value.toObject();
 
-        state.menu.title = Str(o.value("title"));
+        state.menu.title = Str(object.value("title"));
 
         state.menu.entries.clear();
-        for (const QJsonValue& v : o.value("entries").toArray())
+        for (const QJsonValueConstRef& entry : object.value("entries").toArray())
         {
-            state.menu.entries.push_back(Str(v));
+            state.menu.entries.push_back(Str(entry));
         }
 
         state.menu.disabled.clear();
-        for (const QJsonValue& v : o.value("disabled").toArray())
+        for (const QJsonValueConstRef& flag : object.value("disabled").toArray())
         {
-            state.menu.disabled.push_back(v.toBool());
+            state.menu.disabled.push_back(flag.toBool());
         }
     }
 
     void SetSimBrief(GsxRemoteState& state, const QJsonValue& value)
     {
-        const QJsonObject& o = value.toObject();
+        const QJsonObject& object = value.toObject();
 
-        state.simbriefStatus = Str(o.value("status"));
-        state.simbriefError = Str(o.value("error"));
-        state.simbriefGeneration = o.value("gen").toInt();
+        state.simbriefStatus = Str(object.value("status"));
+        state.simbriefError = Str(object.value("error"));
+        state.simbriefGeneration = object.value("gen").toInt();
     }
 
     void SetOperators(GsxRemoteState& state, const QJsonValue& value)
@@ -70,9 +70,9 @@ namespace
     void SetApronVerdict(GsxRemoteState& state, const QJsonValue& value)
     {
         state.apronVerdict.clear();
-        for (const QJsonValue& v : value.toArray())
+        for (const QJsonValueConstRef& verdict : value.toArray())
         {
-            state.apronVerdict.push_back(Str(v));
+            state.apronVerdict.push_back(Str(verdict));
         }
     }
 
@@ -137,21 +137,21 @@ namespace
     };
 
     constexpr std::array<StateField, 10> kStateFields = {{
-        {"services", SetServices},
-        {"menu", SetMenu},
-        {"menuShown", SetMenuShown},
-        {"simbrief", SetSimBrief},
-        {"operators", SetOperators},
-        {"gateProperties", SetApronVerdict},
-        {"aircraft", SetMatchedAircraft},
-        {"startup", SetCouatlId},
-        {"airport", SetAirportIcao},
-        {"parking", SetParkingName}
+        {.key = "services", .apply = SetServices},
+        {.key = "menu", .apply = SetMenu},
+        {.key = "menuShown", .apply = SetMenuShown},
+        {.key = "simbrief", .apply = SetSimBrief},
+        {.key = "operators", .apply = SetOperators},
+        {.key = "gateProperties", .apply = SetApronVerdict},
+        {.key = "aircraft", .apply = SetMatchedAircraft},
+        {.key = "startup", .apply = SetCouatlId},
+        {.key = "airport", .apply = SetAirportIcao},
+        {.key = "parking", .apply = SetParkingName}
     }};
 
     QLatin1StringView JsonKey(const std::string_view key)
     {
-        return QLatin1StringView(key.data(), static_cast<qsizetype>(key.size()));
+        return {key.data(), static_cast<qsizetype>(key.size())};
     }
 }
 

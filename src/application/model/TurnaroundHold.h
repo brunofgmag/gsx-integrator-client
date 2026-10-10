@@ -1,7 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_APPLICATION_TURNAROUNDHOLD_H
 #define GSX_INTEGRATOR_CLIENT_APPLICATION_TURNAROUNDHOLD_H
 
-enum class TurnaroundHold
+#include <cstdint>
+
+enum class TurnaroundHold : std::uint8_t
 {
     None,
     AwaitingGsxSnapshot,

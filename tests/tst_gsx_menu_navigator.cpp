@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -3097,7 +3098,7 @@ namespace
 
     QJsonObject EntryFor(const GsxMenuNavigator& nav, const QString& label)
     {
-        for (const QJsonValue& value : QueueOf(nav))
+        for (const QJsonValueConstRef& value : QueueOf(nav))
         {
             if (value.toObject().value("label").toString() == label)
             {
@@ -3337,7 +3338,7 @@ void GsxMenuNavigatorTest::theToolbarTheClientOpenedIsClosedByTheRestoredNavigat
 
 namespace
 {
-    enum class Dirt : int
+    enum class Dirt : std::uint8_t
     {
         ServiceIntent,
         Reposition,
@@ -3657,7 +3658,7 @@ namespace
     QString Summary(const GsxMenuNavigator& nav)
     {
         QStringList parts;
-        for (const QJsonValue& value : QueueOf(nav))
+        for (const QJsonValueConstRef& value : QueueOf(nav))
         {
             const QJsonObject entry = value.toObject();
             parts.append(QStringLiteral("%1:%2:%3:%4")

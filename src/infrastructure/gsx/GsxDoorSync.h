@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_GSXDOORSYNC_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_GSXDOORSYNC_H
 
+#include <cstdint>
 #include <array>
 #include <functional>
 #include <map>
@@ -11,7 +12,7 @@
 
 class VariableReader;
 
-enum class GsxDoor
+enum class GsxDoor : std::uint8_t
 {
     FwdPax,
     MidPax,

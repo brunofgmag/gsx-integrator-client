@@ -360,7 +360,7 @@ void GsxInterfaceTest::aCouatlDeathNoObserveSawIsStillADrop()
 
         ObserveFor(gsx, gateway, stateLVar, 1.0, 5.0, 30);
 
-        gateway.lvarSpans[kCouatlStarted] = LVarSpan{0.0, 1.0, true};
+        gateway.lvarSpans[kCouatlStarted] = LVarSpan{.min = 0.0, .max = 1.0, .received = true};
         ObserveFor(gsx, gateway, stateLVar, 1.0, 1.0, 5);
 
         QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
@@ -377,7 +377,7 @@ void GsxInterfaceTest::gsxCountsAsDownOnlyWhenTheCouatlFlagDippedSinceTheLastObs
 
     QVERIFY(!gsx.WasGsxDownSinceLastObserve());
 
-    gateway.lvarSpans[kCouatlStarted] = LVarSpan{0.0, 1.0, true};
+    gateway.lvarSpans[kCouatlStarted] = LVarSpan{.min = 0.0, .max = 1.0, .received = true};
     gsx.Observe();
 
     QVERIFY(gsx.WasGsxDownSinceLastObserve());
@@ -1886,7 +1886,7 @@ void GsxInterfaceTest::restoringAnEmptyMemoryForgetsWhatTheServiceSawBefore()
     FakeVariableGateway gateway;
     GsxStateService gsx(&gateway);
 
-    gateway.lvarSpans[kCouatlStarted] = LVarSpan{0.0, 1.0, true};
+    gateway.lvarSpans[kCouatlStarted] = LVarSpan{.min = 0.0, .max = 1.0, .received = true};
     ObserveFor(gsx, gateway, kBoardingState, 1.0, AsLVar(GsxStateStatus::Callable), 1);
 
     QVERIFY(gsx.WasGsxDownSinceLastObserve());

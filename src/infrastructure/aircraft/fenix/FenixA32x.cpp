@@ -109,9 +109,9 @@ namespace
     };
 
     constexpr std::array kMeasuredExits = {
-        MeasuredExit{GsxDoor::FwdPax, 0},
-        MeasuredExit{GsxDoor::AftPax, 3},
-        MeasuredExit{GsxDoor::FwdCatering, 4}
+        MeasuredExit{.door = GsxDoor::FwdPax, .exit = 0},
+        MeasuredExit{.door = GsxDoor::AftPax, .exit = 3},
+        MeasuredExit{.door = GsxDoor::FwdCatering, .exit = 4}
     };
 
     std::string BuildSeatString(const std::vector<bool>& bookedSeats, const int occupiedCount)

@@ -47,26 +47,26 @@ namespace
     }
 
     constexpr std::array kFwdPaxVehicles = {
-        DoorVehicle{gsx::lvars::kJetway, kJetwayUnavailableValue, IsJetwayDocked},
-        DoorVehicle{gsx::lvars::kPassengerStairsFrontState, kNoVehicleState, gsx::states::AreStairsArriving}
+        DoorVehicle{.lVar = gsx::lvars::kJetway, .absent = kJetwayUnavailableValue, .serves = IsJetwayDocked},
+        DoorVehicle{.lVar = gsx::lvars::kPassengerStairsFrontState, .absent = kNoVehicleState, .serves = gsx::states::AreStairsArriving}
     };
     constexpr std::array kMidPaxVehicles = {
-        DoorVehicle{gsx::lvars::kPassengerStairsMiddleState, kNoVehicleState, gsx::states::AreStairsArriving}
+        DoorVehicle{.lVar = gsx::lvars::kPassengerStairsMiddleState, .absent = kNoVehicleState, .serves = gsx::states::AreStairsArriving}
     };
     constexpr std::array kAftPaxVehicles = {
-        DoorVehicle{gsx::lvars::kPassengerStairsRearState, kNoVehicleState, gsx::states::AreStairsArriving}
+        DoorVehicle{.lVar = gsx::lvars::kPassengerStairsRearState, .absent = kNoVehicleState, .serves = gsx::states::AreStairsArriving}
     };
     constexpr std::array kFwdCateringVehicles = {
-        DoorVehicle{gsx::lvars::kCateringFrontState, kNoVehicleState, gsx::states::IsCateringArriving}
+        DoorVehicle{.lVar = gsx::lvars::kCateringFrontState, .absent = kNoVehicleState, .serves = gsx::states::IsCateringArriving}
     };
     constexpr std::array kAftCateringVehicles = {
-        DoorVehicle{gsx::lvars::kCateringRearState, kNoVehicleState, gsx::states::IsCateringArriving}
+        DoorVehicle{.lVar = gsx::lvars::kCateringRearState, .absent = kNoVehicleState, .serves = gsx::states::IsCateringArriving}
     };
     constexpr std::array kFwdCargoVehicles = {
-        DoorVehicle{gsx::lvars::kBaggageLoaderFrontState, kNoVehicleState, gsx::states::IsLoaderServingTheDoor}
+        DoorVehicle{.lVar = gsx::lvars::kBaggageLoaderFrontState, .absent = kNoVehicleState, .serves = gsx::states::IsLoaderServingTheDoor}
     };
     constexpr std::array kAftCargoVehicles = {
-        DoorVehicle{gsx::lvars::kBaggageLoaderRearState, kNoVehicleState, gsx::states::IsLoaderServingTheDoor}
+        DoorVehicle{.lVar = gsx::lvars::kBaggageLoaderRearState, .absent = kNoVehicleState, .serves = gsx::states::IsLoaderServingTheDoor}
     };
 
     constexpr auto kMemoryPrefix = "doorSync.";

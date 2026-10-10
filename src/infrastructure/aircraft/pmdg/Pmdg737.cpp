@@ -56,12 +56,12 @@ namespace
     PmdgAircraftSpec SpecFor(const Pmdg737Variant variant)
     {
         return {
-            static_cast<int>(Pmdg737Door::Count),
-            static_cast<int>(Pmdg737Door::MainCargo),
-            IsCargo(variant),
-            DoorBaseline::Closed,
-            {kSmartSwitchLVar},
-            [](const double min, double) { return min < kSmartSwitchNeutral; }
+            .doorSlots = static_cast<int>(Pmdg737Door::Count),
+            .mainDeckDoorSlot = static_cast<int>(Pmdg737Door::MainCargo),
+            .cargoVariant = IsCargo(variant),
+            .doorBaseline = DoorBaseline::Closed,
+            .smartSwitchLVars = {kSmartSwitchLVar},
+            .smartSwitchPressed = [](const double min, double) { return min < kSmartSwitchNeutral; }
         };
     }
 }

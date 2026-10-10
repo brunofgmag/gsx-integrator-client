@@ -1350,7 +1350,7 @@ void Pmdg777Test::aZfwWriteIsNotLostWhenTheEchoComesOnlyAfterAQuery()
     Pmdg777Fixture fixture(Pmdg777Variant::Er200);
     LetEverythingArrive(fixture);
     fixture.tablet->weightEcho.reset();
-    fixture.tablet->echoOnStateRequest = PmdgWeightEcho{kEmptyKg * 2.20462262185, 0.0};
+    fixture.tablet->echoOnStateRequest = PmdgWeightEcho{.zfwLbs = kEmptyKg * 2.20462262185, .cargoLbs = 0.0};
     fixture.status.plannedZfwKg = kPlannedKg;
     fixture.status.plannedPassengers = kPlannedPax;
 
@@ -1372,7 +1372,7 @@ void Pmdg777Test::aResumedBoardingKeepsThePassengersAlreadyAboard()
     LetEverythingArrive(fixture);
 
     fixture.aircraft->OnTurnaroundResumed(BoardingFacts(), MemoryBag{});
-    fixture.aircraft->SetCurrentZfwKg(kEmptyKg + (kPlannedKg - kEmptyKg) / 2.0);
+    fixture.aircraft->SetCurrentZfwKg(kEmptyKg + ((kPlannedKg - kEmptyKg) / 2.0));
 
     QCOMPARE(fixture.tablet->paxSends.size(), static_cast<std::size_t>(1));
     QCOMPARE(fixture.tablet->paxSends.front(), kPlannedPax / 2);
@@ -1391,7 +1391,7 @@ void Pmdg777Test::aResumedDeboardingDrainsThePassengersToZero()
     QVERIFY(!fixture.tablet->paxSends.empty());
     QCOMPARE(fixture.tablet->paxSends.back(), kPlannedPax);
 
-    fixture.aircraft->SetCurrentZfwKg(kEmptyKg + (kPlannedKg - kEmptyKg) / 2.0);
+    fixture.aircraft->SetCurrentZfwKg(kEmptyKg + ((kPlannedKg - kEmptyKg) / 2.0));
 
     QCOMPARE(fixture.tablet->paxSends.back(), kPlannedPax / 2);
 

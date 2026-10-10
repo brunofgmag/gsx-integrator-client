@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_GSXSTATESERVICE_H
 #define GSX_INTEGRATOR_CLIENT_GSXSTATESERVICE_H
 
+#include <cstdint>
 #include <map>
 #include <optional>
 #include <string>
@@ -71,7 +72,7 @@ private:
     bool gsxDownSinceLastObserve_ = false;
     struct StateTrack
     {
-        enum class Resumption
+        enum class Resumption : std::uint8_t
         {
             None,
             OnSameGsx,

@@ -11,6 +11,28 @@
 #include "../../domain/model/PlanConversion.h"
 #include "../logging/LogMacros.h"
 
+namespace
+{
+    constexpr int kFirstSuccessStatus = 200;
+    constexpr int kFirstRedirectStatus = 300;
+    constexpr int kTransferTimeoutMs = 30000;
+
+    int ReportedStatus(const bool networkFailed, const int httpStatus)
+    {
+        if (networkFailed || httpStatus > 0)
+        {
+            return httpStatus;
+        }
+
+        return kFirstSuccessStatus;
+    }
+
+    bool IsSuccessStatus(const int status)
+    {
+        return status >= kFirstSuccessStatus && status < kFirstRedirectStatus;
+    }
+}
+
 SimbriefClient::SimbriefClient(AutomationStatus* status,
                                const AutomationSettings* settings,
                                QObject* parent)
@@ -57,7 +79,7 @@ void SimbriefClient::Poll()
 
 bool SimbriefClient::HasHttpError() const
 {
-    return lastError_ < 200 || lastError_ >= 300;
+    return !IsSuccessStatus(lastError_);
 }
 
 void SimbriefClient::ApplyFlightPlan(const FlightPlan& flightPlan)
@@ -118,7 +140,7 @@ bool SimbriefClient::FetchData()
 
     ClearResponse();
 
-    network_.setTransferTimeout(30000);
+    network_.setTransferTimeout(kTransferTimeoutMs);
 
     const QUrl url(QStringLiteral("https://www.simbrief.com/api/xml.fetcher.php?userid=%1").arg(pilotId));
     reply_ = network_.get(QNetworkRequest(url));
@@ -168,10 +190,10 @@ void SimbriefClient::OnHttpFinished()
     }
 
     const int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    lastError_ = (reply->error() == QNetworkReply::NoError) ? (httpStatus > 0 ? httpStatus : 200) : httpStatus;
+    lastError_ = ReportedStatus(reply->error() != QNetworkReply::NoError, httpStatus);
     responseBody_.clear();
 
-    if (lastError_ >= 200 && lastError_ < 300)
+    if (IsSuccessStatus(lastError_))
     {
         const QByteArray body = reply->readAll();
         responseBody_.assign(body.constData(), static_cast<std::size_t>(body.size()));

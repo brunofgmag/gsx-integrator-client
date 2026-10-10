@@ -36,9 +36,9 @@ struct GsxRemoteState
     std::vector<GsxRemoteService> services;
 };
 
-[[nodiscard]] inline const GsxRemoteService* FindService(const GsxRemoteState& s, const std::string& id)
+[[nodiscard]] inline const GsxRemoteService* FindService(const GsxRemoteState& state, const std::string& id)
 {
-    for (const auto& service : s.services)
+    for (const auto& service : state.services)
     {
         if (service.id == id)
         {

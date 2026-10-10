@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_AIRCRAFT_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_AIRCRAFT_H
 
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -12,8 +13,8 @@
 
 class AircraftRule;
 
-enum class RefuelBy { Gsx, Self, Client };
-enum class BoardBy { Self, Client };
+enum class RefuelBy : std::uint8_t { Gsx, Self, Client };
+enum class BoardBy : std::uint8_t { Self, Client };
 
 class Aircraft
 {

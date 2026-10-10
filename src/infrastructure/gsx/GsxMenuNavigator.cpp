@@ -422,7 +422,7 @@ std::vector<GsxMenuNavigator::PendingRequest> GsxMenuNavigator::PendingFromText(
     const QJsonDocument document = QJsonDocument::fromJson(QByteArray::fromStdString(text));
 
     std::vector<PendingRequest> queue;
-    for (const QJsonValue& value : document.array())
+    for (const QJsonValueConstRef& value : document.array())
     {
         auto request = PendingFromJson(value.toObject(), now);
         if (!request)
