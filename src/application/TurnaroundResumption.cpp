@@ -1,5 +1,7 @@
 #include "TurnaroundResumption.h"
 
+#include <utility>
+
 #include "../infrastructure/logging/LogMacros.h"
 
 namespace
@@ -13,6 +15,11 @@ namespace
 
         return document.checkpoint->phase;
     }
+
+    bool HasAnythingToRead(const TurnaroundDocument& document)
+    {
+        return document.checkpoint.has_value() || document.repositioned;
+    }
 }
 
 TurnaroundResumption::TurnaroundResumption(TurnaroundCheckpointStore* store)
@@ -25,7 +32,7 @@ TurnaroundHold TurnaroundResumption::Hold() const
     switch (stage_)
     {
     case Stage::Judging:
-        return pending_->checkpoint ? TurnaroundHold::JudgingSavedTurnaround : TurnaroundHold::None;
+        return TurnaroundHold::JudgingSavedTurnaround;
     case Stage::Deciding:
         return TurnaroundHold::AwaitingResumeDecision;
     case Stage::Restoring:
@@ -47,6 +54,11 @@ void TurnaroundResumption::Load()
     }
 
     pending_ = store_->Read();
+    if (pending_ && !HasAnythingToRead(*pending_))
+    {
+        pending_.reset();
+    }
+
     if (pending_)
     {
         stage_ = Stage::Judging;
@@ -56,6 +68,7 @@ void TurnaroundResumption::Load()
 void TurnaroundResumption::Forget()
 {
     pending_.reset();
+    releasedRepositioned_ = false;
     stage_ = Stage::Idle;
     couatlDiffers_ = false;
     pilotResumed_ = false;
@@ -110,26 +123,36 @@ void TurnaroundResumption::AnswerResume()
     restoringHold_ = TurnaroundHold::AwaitingGsxReadings;
 }
 
-std::optional<TurnaroundResumption::Restoration> TurnaroundResumption::Advance(const LiveFacts& live)
+TurnaroundResumption::Advancement TurnaroundResumption::Advance(const LiveFacts& live)
 {
     Judge(live.key);
 
-    if (stage_ != Stage::Restoring)
+    Advancement advancement;
+    advancement.repositioned = std::exchange(releasedRepositioned_, false);
+    if (!pending_ || stage_ != Stage::Restoring)
     {
-        return std::nullopt;
+        return advancement;
     }
 
     restoringHold_ = live.readingsArrived ? TurnaroundHold::AwaitingAircraft : TurnaroundHold::AwaitingGsxReadings;
     if (!live.readingsArrived || !live.aircraftReachable)
     {
-        return std::nullopt;
+        return advancement;
     }
 
-    return Restoration{&*pending_, couatlDiffers_};
+    advancement.restoration = Restoration{.document = &*pending_, .gsxRestartedSinceSave = couatlDiffers_};
+    advancement.repositioned = pending_->repositioned && !couatlDiffers_;
+
+    return advancement;
 }
 
 void TurnaroundResumption::Judge(const TurnaroundKey& live)
 {
+    if (!pending_)
+    {
+        return;
+    }
+
     const KeyVerdict verdict = TurnaroundKeyJudgement::Judge(pending_->key, live, PhaseOf(*pending_));
     if (verdict == KeyVerdict::NotYetJudgeable)
     {
@@ -146,7 +169,9 @@ void TurnaroundResumption::Judge(const TurnaroundKey& live)
 
     if (!pending_->checkpoint)
     {
+        const bool repositioned = verdict == KeyVerdict::Same;
         Forget();
+        releasedRepositioned_ = repositioned;
 
         return;
     }

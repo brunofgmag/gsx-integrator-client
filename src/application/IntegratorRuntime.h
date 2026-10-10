@@ -177,6 +177,7 @@ private:
     void AdvanceResumption();
     void RestoreSavedTurnaround(const TurnaroundResumption::Restoration& restoration);
     void SaveTurnaround();
+    void WatchTheStandOfTheFinishedTurnaround();
 
     static constexpr int kDispatchIntervalMs = 80;
 
@@ -193,6 +194,7 @@ private:
     std::string announcedCouatlId_;
     std::string announcedAirportIcao_;
     std::string announcedParkingName_;
+    std::string watchedParkingName_;
     int announcedSimbriefGeneration_ = 0;
     AutomationStatus status_;
     AutomationSettings settings_;

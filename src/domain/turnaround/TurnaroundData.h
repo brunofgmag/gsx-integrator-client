@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDDATA_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDDATA_H
 
+#include <cstdint>
 #include <optional>
 #include <set>
 #include <string>
@@ -105,6 +106,8 @@ struct TurnaroundData
     std::optional<int> staleSimbriefGeneration;
     bool repositionRequested = false;
     bool repositionCompleted = false;
+    bool repositionAttempted = false;
+    bool repositionedThisSession = false;
 
     int stateTickCount = 0;
     int ruleHoldTicks = 0;
@@ -117,7 +120,7 @@ struct TurnaroundData
 
 namespace turnaround
 {
-    enum class FieldRestore
+    enum class FieldRestore : std::uint8_t
     {
         Raw,
         Restart,
@@ -229,6 +232,8 @@ namespace turnaround
         visit("staleSimbriefGeneration", Field(&TurnaroundData::staleSimbriefGeneration), FieldRestore::NotSaved);
         visit("repositionRequested", Field(&TurnaroundData::repositionRequested), FieldRestore::Raw);
         visit("repositionCompleted", Field(&TurnaroundData::repositionCompleted), FieldRestore::Raw);
+        visit("repositionAttempted", Field(&TurnaroundData::repositionAttempted), FieldRestore::Raw);
+        visit("repositionedThisSession", Field(&TurnaroundData::repositionedThisSession), FieldRestore::NotSaved);
         visit("stateTickCount", Field(&TurnaroundData::stateTickCount), FieldRestore::Restart);
         visit("ruleHoldTicks", Field(&TurnaroundData::ruleHoldTicks), FieldRestore::Restart);
         visit("expiredRuleHolds", Field(&TurnaroundData::expiredRuleHolds), FieldRestore::Restart);

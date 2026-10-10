@@ -81,6 +81,13 @@ namespace
         return !key.couatlId.empty() && !key.aircraftId.empty() && !key.aircraftTitle.empty();
     }
 
+    bool IsWaitingForTheNextTurnaround(const TurnaroundPhase phase)
+    {
+        return phase == TurnaroundPhase::WaitingNewFlight
+            || phase == TurnaroundPhase::WaitingSupportedAircraft
+            || phase == TurnaroundPhase::WaitingAircraftReady;
+    }
+
     void LogRunHeader(const AutomationSettings& settings)
     {
         LOG_INFO("Logging run: folder=%s", qUtf8Printable(probe::RunLocation()));
@@ -100,10 +107,11 @@ namespace
                  static_cast<int>(settings.crewDeboarding),
                  Flag(settings.autoStartFlow),
                  Flag(settings.autoStartLoading));
-        LOG_INFO("Startup settings: skipReposition=%d callGpu=%d callGpuOnArrival=%d "
+        LOG_INFO("Startup settings: skipReposition=%d skipRepositionOnNewTurnaround=%d callGpu=%d callGpuOnArrival=%d "
                  "placeChocks=%d placeChocksOnArrival=%d callBoardingEarly=%d "
                  "callCatering=%d callLavatory=%d callWater=%d callCleaning=%d gsxPanelMode=%d",
                  Flag(settings.skipReposition),
+                 Flag(settings.skipRepositionOnNewTurnaround),
                  Flag(settings.callGpu),
                  Flag(settings.callGpuOnArrival),
                  Flag(settings.placeChocks),
@@ -295,9 +303,15 @@ void IntegratorRuntime::AdvanceResumption()
     const TurnaroundResumption::LiveFacts live{.key = LiveKey(),
                                                .readingsArrived = HaveResumeReadingsArrived(),
                                                .aircraftReachable = aircraft_ && aircraft_->IsReachable()};
-    if (const auto restoration = resumption_.Advance(live))
+    const TurnaroundResumption::Advancement advancement = resumption_.Advance(live);
+    if (advancement.repositioned)
     {
-        RestoreSavedTurnaround(*restoration);
+        stateMachine_.NoteRepositionedThisSession();
+    }
+
+    if (advancement.restoration)
+    {
+        RestoreSavedTurnaround(*advancement.restoration);
     }
 }
 
@@ -332,7 +346,7 @@ void IntegratorRuntime::RestoreSavedTurnaround(const TurnaroundResumption::Resto
 
 void IntegratorRuntime::SaveTurnaround()
 {
-    if (!IsDrivingTheGsx() || resumption_.HasPending() || GetPhase() < TurnaroundPhase::RepositionAircraft)
+    if (!IsDrivingTheGsx() || GetPhase() < TurnaroundPhase::RepositionAircraft)
     {
         return;
     }
@@ -343,6 +357,8 @@ void IntegratorRuntime::SaveTurnaround()
     {
         return;
     }
+
+    document.repositioned = stateMachine_.HasRepositionedThisSession();
 
     document.checkpoint = stateMachine_.TakeCheckpoint();
     if (document.checkpoint)
@@ -357,6 +373,36 @@ void IntegratorRuntime::SaveTurnaround()
     }
 
     resumption_.Save(document);
+}
+
+void IntegratorRuntime::WatchTheStandOfTheFinishedTurnaround()
+{
+    if (!stateMachine_.HasRepositionedThisSession() || !IsWaitingForTheNextTurnaround(GetPhase()))
+    {
+        watchedParkingName_.clear();
+
+        return;
+    }
+
+    const std::string& liveParking = gsxRemoteState_.parkingName;
+    if (!gsxRemoteState_.connected || !gsxRemoteState_.synced || liveParking.empty())
+    {
+        return;
+    }
+
+    if (watchedParkingName_.empty())
+    {
+        watchedParkingName_ = liveParking;
+
+        return;
+    }
+
+    if (watchedParkingName_ != liveParking)
+    {
+        LOG_INFO("The aircraft changed stands without flying. The next turnaround repositions it again.");
+        stateMachine_.ForgetRepositionedThisSession();
+        watchedParkingName_ = liveParking;
+    }
 }
 
 bool IntegratorRuntime::IsSimOnMenu()
@@ -578,6 +624,7 @@ void IntegratorRuntime::Update()
 
     simbriefClient_.Poll();
     resumption_.RetryPendingDiscard();
+    WatchTheStandOfTheFinishedTurnaround();
 
     const bool holding = resumption_.IsHolding();
     const TickMode mode = ResolveTickMode();
@@ -798,6 +845,7 @@ void IntegratorRuntime::ClearFlightState()
     gsxProfile_.Reset();
     pmdgOptions_.Reset();
     resumption_.Forget();
+    watchedParkingName_.clear();
 
     ResetSession();
 }

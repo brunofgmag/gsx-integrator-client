@@ -292,8 +292,11 @@ ResumeOutcome TurnaroundStateMachine::ResumeFrom(const TurnaroundCheckpoint& che
         return ResumeOutcome::AircraftNotReachable;
     }
 
+    const bool repositionedThisSession = context_.data.repositionedThisSession;
+
     context_.aircraft = &aircraft;
     context_.data = turnaround::RestoreTurnaroundData(checkpoint.data, checkpoint.phase, aircraft, gsxRestartedSinceSave);
+    context_.data.repositionedThisSession = repositionedThisSession;
     StandAt(checkpoint.phase);
 
     const TurnaroundFacts facts = turnaround::BuildTurnaroundFacts(phase_, context_.data, gsxRestartedSinceSave);
@@ -348,7 +351,10 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
 
     if (phase == TurnaroundPhase::WaitingNewFlight)
     {
+        const bool repositionedThisSession = context_.data.repositionedThisSession;
+
         context_.data.Reset();
+        context_.data.repositionedThisSession = repositionedThisSession;
 
         if (context_.menuGateway != nullptr)
         {

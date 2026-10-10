@@ -64,7 +64,7 @@ namespace
 
     void TakeTheRepositionAlreadyAskedAsSeen(TurnaroundData& data, const TurnaroundPhase phase)
     {
-        if (phase == TurnaroundPhase::RepositionAircraft && data.repositionRequested)
+        if (phase == TurnaroundPhase::RepositionAircraft && (data.repositionRequested || data.repositionAttempted))
         {
             data.repositionCompleted = true;
         }

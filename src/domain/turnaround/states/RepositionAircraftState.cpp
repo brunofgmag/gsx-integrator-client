@@ -14,6 +14,19 @@ namespace
     constexpr int kRetryTicks = 10;
     constexpr int kGiveUpTicks = 60;
 
+    bool TheOptionSkipsTheReposition(const TurnaroundContext& ctx)
+    {
+        return ctx.settings != nullptr && ctx.settings->skipReposition && !ctx.data.repositionRequested;
+    }
+
+    bool ThisSessionAlreadyRepositionedAndTheNewTurnaroundSkipsIt(const TurnaroundContext& ctx)
+    {
+        return ctx.settings != nullptr
+            && ctx.settings->skipRepositionOnNewTurnaround
+            && ctx.data.repositionedThisSession
+            && !ctx.data.repositionRequested;
+    }
+
     TurnaroundTransition SkipRepositionOverTheService(TurnaroundContext& ctx)
     {
         ctx.logger->LogInfo("A GSX service is underway: skipping the reposition because it would cancel it");
@@ -25,7 +38,7 @@ namespace
 
 std::optional<TurnaroundTransition> RepositionAircraftState::EvaluatePhase(TurnaroundContext& ctx)
 {
-    if (ctx.settings != nullptr && ctx.settings->skipReposition && !ctx.data.repositionRequested)
+    if (TheOptionSkipsTheReposition(ctx) || ThisSessionAlreadyRepositionedAndTheNewTurnaroundSkipsIt(ctx))
     {
         return TurnaroundTransition{TurnaroundPhase::PlaceGroundEquipment};
     }
@@ -59,6 +72,7 @@ std::optional<TurnaroundTransition> RepositionAircraftState::EvaluatePhase(Turna
 
         ctx.menuGateway->RepositionAircraft();
         repositionRequested = true;
+        ctx.data.repositionAttempted = true;
         return std::nullopt;
     }
 
@@ -71,6 +85,11 @@ std::optional<TurnaroundTransition> RepositionAircraftState::EvaluatePhase(Turna
 
     if (repositionCompleted)
     {
+        if (ctx.data.repositionAttempted)
+        {
+            ctx.data.repositionedThisSession = true;
+        }
+
         return TurnaroundTransition{TurnaroundPhase::PlaceGroundEquipment};
     }
 

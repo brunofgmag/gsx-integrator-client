@@ -16,21 +16,15 @@ namespace
             && *savedPhase <= TurnaroundPhase::WaitingEngineShutdown;
     }
 
-    bool IsGroundPhase(const std::optional<TurnaroundPhase>& savedPhase)
-    {
-        return savedPhase.has_value() && !HasFlownSinceTheSave(savedPhase);
-    }
-
     bool IsAnotherStand(const TurnaroundKey& saved, const TurnaroundKey& live)
     {
         return DiffersWhenBothAreKnown(saved.airportIcao, live.airportIcao)
             || DiffersWhenBothAreKnown(saved.parkingName, live.parkingName);
     }
 
-    bool IsStillWaitingForTheStand(const TurnaroundKey& saved, const TurnaroundKey& live,
-                                   const std::optional<TurnaroundPhase>& savedPhase)
+    bool IsStillWaitingForTheStand(const TurnaroundKey& saved, const TurnaroundKey& live)
     {
-        return IsGroundPhase(savedPhase) && !saved.parkingName.empty() && live.parkingName.empty();
+        return !saved.parkingName.empty() && live.parkingName.empty();
     }
 }
 
@@ -65,7 +59,7 @@ KeyVerdict TurnaroundKeyJudgement::Judge(const TurnaroundKey& saved,
             return KeyVerdict::Different;
         }
 
-        if (IsStillWaitingForTheStand(saved, live, savedPhase))
+        if (IsStillWaitingForTheStand(saved, live))
         {
             return KeyVerdict::NotYetJudgeable;
         }

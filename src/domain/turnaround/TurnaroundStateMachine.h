@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDSTATEMACHINE_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDSTATEMACHINE_H
 
+#include <cstdint>
 #include <array>
 #include <cstddef>
 #include <memory>
@@ -11,7 +12,7 @@
 #include "states/TurnaroundState.h"
 #include "TurnaroundPhase.h"
 
-enum class ResumeOutcome
+enum class ResumeOutcome : std::uint8_t
 {
     Resumed,
     AircraftNotReachable,
@@ -40,6 +41,8 @@ public:
                                            Aircraft& aircraft,
                                            bool gsxRestartedSinceSave);
     void ConfirmLoading() { context_.data.loadingConfirmed = true; }
+    void NoteRepositionedThisSession() { context_.data.repositionedThisSession = true; }
+    void ForgetRepositionedThisSession() { context_.data.repositionedThisSession = false; }
     void DismissFuelStayAdvisory() { context_.data.fuelStayDismissed = true; }
     void AcceptAppTouch() { appTouchPending_ = true; }
 #ifndef NDEBUG
@@ -50,6 +53,7 @@ public:
     [[nodiscard]] TransitionOrigin GetLastTransitionOrigin() const { return lastTransitionOrigin_; }
     [[nodiscard]] int GetDelayTicksRemaining() const { return ticksRemaining_; }
     [[nodiscard]] bool IsLoadingConfirmed() const { return context_.data.loadingConfirmed; }
+    [[nodiscard]] bool HasRepositionedThisSession() const { return context_.data.repositionedThisSession; }
 
 private:
     static constexpr std::size_t kPhaseCount = static_cast<std::size_t>(TurnaroundPhase::Count);

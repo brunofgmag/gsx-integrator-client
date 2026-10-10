@@ -37,6 +37,10 @@ private slots:
     void absentPlaceChocksKeysInheritTheSavedGpuValues() const;
     void absentProfilePlaceChocksKeysInheritTheSavedGpuValues() const;
     void storedPlaceChocksKeysWinOverTheGpuValues() const;
+    void aStoreThatNeverHadTheNewTurnaroundKeysReadsThemAsOn() const;
+    void aStoreThatSkipsRepositioningStillReadsTheNewTurnaroundOptionAsOn() const;
+    void theNewTurnaroundOptionIsWrittenAndReread();
+    void theNewTurnaroundOptionLivesUnderTheAutomationConceptAndInsideTheProfile();
 
 private:
     QTemporaryDir tempDir_;
@@ -74,6 +78,7 @@ void QSettingsRepositoryTest::emptyStoreYieldsLoadDefaults() const
     QCOMPARE(loaded.autoStartFlow, false);
     QCOMPARE(loaded.autoStartLoading, true);
     QCOMPARE(loaded.skipReposition, false);
+    QCOMPARE(loaded.skipRepositionOnNewTurnaround, true);
     QCOMPARE(loaded.callGpu, false);
     QCOMPARE(loaded.callGpuOnArrival, false);
     QCOMPARE(loaded.placeChocks, false);
@@ -533,6 +538,79 @@ void QSettingsRepositoryTest::storedPlaceChocksKeysWinOverTheGpuValues() const
     QVERIFY(loaded.placeChocksOnArrival);
     QVERIFY(!profile.placeChocks);
     QVERIFY(profile.placeChocksOnArrival);
+}
+
+void QSettingsRepositoryTest::aStoreThatNeverHadTheNewTurnaroundKeysReadsThemAsOn() const
+{
+    QSettings settings;
+    settings.setValue("profiles/a340/useGlobal", false);
+    settings.setValue("profiles/a340/skipReposition", false);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QVERIFY(loaded.skipRepositionOnNewTurnaround);
+    QVERIFY(loaded.profiles.at("a340").skipRepositionOnNewTurnaround);
+}
+
+void QSettingsRepositoryTest::aStoreThatSkipsRepositioningStillReadsTheNewTurnaroundOptionAsOn() const
+{
+    QSettings settings;
+    settings.setValue("automation/skipReposition", true);
+    settings.sync();
+
+    const AppSettings loaded = repository_.Load();
+
+    QVERIFY(loaded.skipReposition);
+    QVERIFY(loaded.skipRepositionOnNewTurnaround);
+}
+
+void QSettingsRepositoryTest::theNewTurnaroundOptionIsWrittenAndReread()
+{
+    AppSettings values;
+    values.skipRepositionOnNewTurnaround = false;
+
+    AircraftProfile profile;
+    profile.useGlobal = false;
+    profile.skipRepositionOnNewTurnaround = false;
+    values.profiles.emplace("a340", profile);
+
+    QVERIFY(repository_.Save(values));
+
+    const AppSettings loaded = repository_.Load();
+
+    QVERIFY(!loaded.skipRepositionOnNewTurnaround);
+    QVERIFY(!loaded.profiles.at("a340").skipRepositionOnNewTurnaround);
+
+    values.skipRepositionOnNewTurnaround = true;
+    values.profiles.at("a340").skipRepositionOnNewTurnaround = true;
+
+    QVERIFY(repository_.Save(values));
+
+    const AppSettings reloaded = repository_.Load();
+
+    QVERIFY(reloaded.skipRepositionOnNewTurnaround);
+    QVERIFY(reloaded.profiles.at("a340").skipRepositionOnNewTurnaround);
+}
+
+void QSettingsRepositoryTest::theNewTurnaroundOptionLivesUnderTheAutomationConceptAndInsideTheProfile()
+{
+    AppSettings values;
+    values.skipRepositionOnNewTurnaround = false;
+
+    AircraftProfile profile;
+    profile.useGlobal = false;
+    profile.skipRepositionOnNewTurnaround = false;
+    values.profiles.emplace("a340", profile);
+
+    QVERIFY(repository_.Save(values));
+
+    const QSettings reread;
+
+    QVERIFY(reread.contains(QStringLiteral("automation/skipRepositionOnNewTurnaround")));
+    QVERIFY(reread.contains(QStringLiteral("profiles/a340/skipRepositionOnNewTurnaround")));
+    QVERIFY(!reread.value(QStringLiteral("automation/skipRepositionOnNewTurnaround")).toBool());
+    QVERIFY(!reread.value(QStringLiteral("profiles/a340/skipRepositionOnNewTurnaround")).toBool());
 }
 
 QTEST_GUILESS_MAIN(QSettingsRepositoryTest)

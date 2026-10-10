@@ -55,6 +55,7 @@ namespace
     constexpr double kJetwayInPlace = 5.0;
     constexpr double kNoJetwayAtTheStand = 2.0;
     constexpr int kFlowTickBudget = 12;
+    constexpr auto kMenuToggleVerb = "menu.toggle";
     constexpr int kLoaderNoticeTickBudget = 120;
     constexpr int kReconnectWaitMs = 1000;
     constexpr std::chrono::milliseconds kFastReconnectInterval{50};
@@ -207,10 +208,16 @@ namespace
         return TickAndWait(updated);
     }
 
-    bool DriveTheFlowInto(const TurnaroundPhase phase, const IntegratorRuntime& runtime, QSignalSpy& updated)
+    bool DriveTheFlowInto(const TurnaroundPhase phase, const IntegratorRuntime& runtime, QSignalSpy& updated,
+                          const bool withTheServicesIdle = false)
     {
         for (int tick = 0; tick < kFlowTickBudget && runtime.GetPhase() != phase; ++tick)
         {
+            if (withTheServicesIdle)
+            {
+                (void)PublishTheIdleGsxServices();
+            }
+
             for (const char* engine : {simvars::kSimEng1Combustion, simvars::kSimEng2Combustion,
                                        simvars::kSimEng3Combustion})
             {
@@ -224,6 +231,40 @@ namespace
         }
 
         return runtime.GetPhase() == phase;
+    }
+
+    bool TheMenuWasToggled()
+    {
+        return std::ranges::find(FakeGsxRemoteApi::commandVerbs, std::string(kMenuToggleVerb))
+            != FakeGsxRemoteApi::commandVerbs.end();
+    }
+
+    bool TheRepositionIsAsked(const IntegratorRuntime& runtime, QSignalSpy& updated)
+    {
+        FakeGsxRemoteApi::commandVerbs.clear();
+        if (!DriveTheFlowInto(TurnaroundPhase::RepositionAircraft, runtime, updated, true))
+        {
+            return false;
+        }
+
+        for (int tick = 0; tick < kFlowTickBudget && !TheMenuWasToggled(); ++tick)
+        {
+            (void)PublishTheIdleGsxServices();
+            if (!TickAndWait(updated))
+            {
+                return false;
+            }
+        }
+
+        return TheMenuWasToggled() && runtime.GetPhase() == TurnaroundPhase::RepositionAircraft;
+    }
+
+    bool TheRepositionIsSpared(const IntegratorRuntime& runtime, QSignalSpy& updated)
+    {
+        FakeGsxRemoteApi::commandVerbs.clear();
+
+        return DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, runtime, updated, true)
+            && !TheMenuWasToggled();
     }
 
     void SkipTheReposition(IntegratorRuntime& runtime)
@@ -397,16 +438,16 @@ namespace
     constexpr auto kCallable = static_cast<double>(GsxStateStatus::Callable);
 
     constexpr std::array<ResumeReading, 10> kResumeReadings = {{
-        {gsx::lvars::kCouatlStarted, true, 1.0},
-        {gsx::lvars::kRefuelingState, true, kCallable},
-        {gsx::lvars::kBoardingState, true, kCallable},
-        {gsx::lvars::kPushbackVehicleState, true, kCallable},
-        {gsx::lvars::kDeboardingState, true, kCallable},
-        {gsx::lvars::kDeiceState, true, kCallable},
-        {gsx::lvars::kPushbackStatus, true, 0.0},
-        {kSimOnGroundDatum, false, kOnTheGround},
-        {simvars::kSimEmptyWeight, false, kMd11EmptyWeightKg},
-        {simvars::kSimFuelTotalKg, false, kMd11FuelOnBoardKg},
+        {.datum = gsx::lvars::kCouatlStarted, .isLVar = true, .value = 1.0},
+        {.datum = gsx::lvars::kRefuelingState, .isLVar = true, .value = kCallable},
+        {.datum = gsx::lvars::kBoardingState, .isLVar = true, .value = kCallable},
+        {.datum = gsx::lvars::kPushbackVehicleState, .isLVar = true, .value = kCallable},
+        {.datum = gsx::lvars::kDeboardingState, .isLVar = true, .value = kCallable},
+        {.datum = gsx::lvars::kDeiceState, .isLVar = true, .value = kCallable},
+        {.datum = gsx::lvars::kPushbackStatus, .isLVar = true, .value = 0.0},
+        {.datum = kSimOnGroundDatum, .isLVar = false, .value = kOnTheGround},
+        {.datum = simvars::kSimEmptyWeight, .isLVar = false, .value = kMd11EmptyWeightKg},
+        {.datum = simvars::kSimFuelTotalKg, .isLVar = false, .value = kMd11FuelOnBoardKg},
     }};
 
     void PushTheReadingsThatWereAsked(const std::string& withheld)
@@ -436,7 +477,11 @@ namespace
 
     TurnaroundKey Md11Key(const char* couatl = kSavedCouatl, const char* parking = kSavedStand)
     {
-        return TurnaroundKey{couatl, kMd11ProfileId, kMd11Title, kSavedAirport, parking};
+        return TurnaroundKey{.couatlId = couatl,
+                         .aircraftId = kMd11ProfileId,
+                         .aircraftTitle = kMd11Title,
+                         .airportIcao = kSavedAirport,
+                         .parkingName = parking};
     }
 
     TurnaroundDocument SavedAt(const TurnaroundPhase phase)
@@ -549,6 +594,20 @@ namespace
         return TickAndWait(updated);
     }
 
+    bool TheFinishedTurnaroundWaitsForTheNextOne(const IntegratorRuntime& runtime, QSignalSpy& updated)
+    {
+        for (int tick = 0; tick < kCabinExitTickBudget && runtime.GetPhase() != TurnaroundPhase::WaitingNewFlight;
+             ++tick)
+        {
+            if (!TickAndWait(updated))
+            {
+                return false;
+            }
+        }
+
+        return runtime.GetPhase() == TurnaroundPhase::WaitingNewFlight && TickAndWait(updated);
+    }
+
     bool TheSavedTurnaroundResumes(IntegratorRuntime& runtime, QSignalSpy& updated)
     {
         for (int round = 0; round < kReadingRounds * 2; ++round)
@@ -659,7 +718,10 @@ private slots:
     static void aDifferentCouatlHoldsTheMachineAndAsksThePilot();
     static void answeringRestartErasesTheFileAndStartsTheFlow();
     static void answeringResumeRestoresTheSavedPhase();
-    static void theResumeAnswerIsRefusedWhenNothingAsksForIt();
+    static void theResumeAnswerIsRefusedWhileTheSavedTurnaroundIsStillBeingJudged();
+    static void theResumeAnswerIsRefusedWhenThereIsNoSavedFile();
+    static void aRepeatedResumeWhileTheRestorationRunsSucceedsAndChangesNothing();
+    static void theRestartIsAcceptedWhileTheSavedTurnaroundHoldsWithTheAutomationOff();
     static void theResumeAnswerIsRefusedWhileOffline();
     static void aResumedServiceThatReadsAvailableCountsAsDoneOnTheSameCouatlAndInterruptedAfterARestart();
     static void aSavedTurnaroundOfTheSameKeyResumesWithoutRepeatingAnything();
@@ -673,8 +735,10 @@ private slots:
     static void withAPortAndNoFileTheFlowStillWaitsForTheButton();
     static void aResumedTurnaroundRunsWhateverTheAutoStartOptionSays();
     static void aSavedPhaseTheMachineDoesNotKnowErasesTheFileAndStartsTheFlow();
-    static void aKeyOnlyFileNeitherHoldsNorAsks();
-    static void aKeyOnlyFileOfAnotherAircraftIsErased();
+    static void aKeyOnlyFileWithoutTheMarkIsIgnored();
+    static void aKeyOnlyFileThatCarriesTheMarkHoldsTheMachineUntilItsKeyIsJudged();
+    static void aKeyOnlyFileWithoutTheMarkOfAnotherAircraftIsNotErased();
+    static void aKeyOnlyFileWithTheMarkOfAnotherAircraftIsErased();
     static void theGsxMenuOfASnapshotIsLeftAloneWhileTheSavedTurnaroundHolds();
     static void theGsxMenuOfAPatchIsLeftAloneWhileTheSavedTurnaroundHolds();
     static void theSlowRulesAreOnlyObservedWhileTheSavedTurnaroundHolds();
@@ -706,11 +770,25 @@ private slots:
     static void aCouatlThatRestartsAfterTheResumeAnswerDoesNotAskAgain();
     static void theQuestionSurvivesTheHandshakeThatComesBeforeTheSnapshot();
     static void theSimbriefReloadIsNotOfferedWhileTheSavedTurnaroundHolds();
-    static void aKeyOnlyFileIsReadBeforeTheFlowOverwritesIt();
     static void theGsxMenuAnswerIsSavedRightAfterTheNavigatorSends();
     static void aSavedTurnaroundWithoutAParkingResumesOnceTheLiveOneIsKnown();
     static void restartingWhileTheSavedTurnaroundIsBeingJudgedErasesItAndNeverRestoresIt();
     static void endingTheSessionWhileTheQuestionIsOpenKeepsTheFileAndAsksAgain();
+    static void theMarkOfAKeyOnlyFileOfTheSameKeyReachesTheMachine();
+    static void aKeyOnlyFileWithoutTheMarkLeavesTheRepositionToTheTurnaround();
+    static void theMarkDiesWhenOnlyTheCouatlDiffersFromAKeyOnlyFile();
+    static void theMarkDoesNotSpareTheRepositionWhenTheNewTurnaroundOptionIsOff();
+    static void theRestartButtonKillsTheMark();
+    static void theMarkOfAResumedTurnaroundIsWrittenBackWithEveryDocument();
+    static void theMarkDiesWhenThePilotResumesOnAnotherCouatl();
+    static void aKeyOnlyFileWithTheMarkOfAnotherStandIsErasedAndTheRepositionIsAsked();
+    static void aKeyOnlyFileWaitsForTheStandAndIsErasedWhenItArrivesDifferent();
+    static void aKeyOnlyFileWaitsForTheStandAndSparesTheRepositionWhenItArrivesTheSame();
+    static void aStandChangedWithoutFlyingKillsTheMarkOfTheFinishedTurnaround();
+    static void theSameStandKeepsTheMarkOfTheFinishedTurnaround();
+    static void aStandThatGoesEmptyAndComesBackKeepsTheMarkOfTheFinishedTurnaround();
+    static void theGuardedStandIsForgottenOnceTheNextTurnaroundBegins();
+    static void enteringWaitingNewFlightWritesTheKeyAndTheMarkAndARelaunchKeepsIt();
 
 private:
     QTemporaryDir probeDirectory_;
@@ -1966,7 +2044,7 @@ void RuntimeIntegratorServiceTest::answeringResumeRestoresTheSavedPhase()
     QCOMPARE(store.eraseCalls, 0);
 }
 
-void RuntimeIntegratorServiceTest::theResumeAnswerIsRefusedWhenNothingAsksForIt()
+void RuntimeIntegratorServiceTest::theResumeAnswerIsRefusedWhileTheSavedTurnaroundIsStillBeingJudged()
 {
     FakeTurnaroundCheckpointStore store;
     store.stored = SavedAt(TurnaroundPhase::WaitingReadyToPush);
@@ -1976,18 +2054,86 @@ void RuntimeIntegratorServiceTest::theResumeAnswerIsRefusedWhenNothingAsksForIt(
 
     QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
 
-    QVERIFY(TheKeyIsJudged(runtime, updated));
-    QCOMPARE(service.GetSnapshot().turnaroundHold, TurnaroundHold::AwaitingGsxReadings);
+    QVERIFY(DetectTheMd11WithoutTheGsx(runtime, updated));
+    QCOMPARE(service.GetSnapshot().turnaroundHold, TurnaroundHold::JudgingSavedTurnaround);
 
     const CommandResult refused = service.ResumeSavedTurnaround();
 
     QVERIFY(!refused.succeeded);
     QVERIFY(!refused.message.empty());
+    QCOMPARE(service.GetSnapshot().turnaroundHold, TurnaroundHold::JudgingSavedTurnaround);
+}
+
+void RuntimeIntegratorServiceTest::theResumeAnswerIsRefusedWhenThereIsNoSavedFile()
+{
+    FakeTurnaroundCheckpointStore store;
+    IntegratorRuntime runtime(WithTheStore(store));
+    RuntimeIntegratorService service(&runtime);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated));
+    QCOMPARE(service.GetSnapshot().turnaroundHold, TurnaroundHold::None);
+
+    const CommandResult refused = service.ResumeSavedTurnaround();
+
+    QVERIFY(!refused.succeeded);
+    QVERIFY(!refused.message.empty());
+}
+
+void RuntimeIntegratorServiceTest::aRepeatedResumeWhileTheRestorationRunsSucceedsAndChangesNothing()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::WaitingReadyToPush);
+    IntegratorRuntime runtime(WithTheStore(store));
+    RuntimeIntegratorService service(&runtime);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated, kRestartedCouatl));
+    QCOMPARE(service.GetSnapshot().turnaroundHold, TurnaroundHold::AwaitingResumeDecision);
+
+    QVERIFY(service.ResumeSavedTurnaround().succeeded);
     QCOMPARE(service.GetSnapshot().turnaroundHold, TurnaroundHold::AwaitingGsxReadings);
 
-    runtime.ResumeSavedTurnaround();
+    const CommandResult again = service.ResumeSavedTurnaround();
 
-    QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::AwaitingGsxReadings);
+    QVERIFY(again.succeeded);
+    QVERIFY(again.message.empty());
+    QCOMPARE(service.GetSnapshot().turnaroundHold, TurnaroundHold::AwaitingGsxReadings);
+
+    QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::WaitingReadyToPush);
+
+    const CommandResult afterwards = service.ResumeSavedTurnaround();
+
+    QVERIFY(!afterwards.succeeded);
+}
+
+void RuntimeIntegratorServiceTest::theRestartIsAcceptedWhileTheSavedTurnaroundHoldsWithTheAutomationOff()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::WaitingReadyToPush);
+    IntegratorRuntime runtime(WithTheStore(store));
+    RuntimeIntegratorService service(&runtime);
+    AppSettings appSettings;
+    appSettings.autoStartFlow = false;
+    service.ApplySettings(appSettings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated, kRestartedCouatl));
+    QCOMPARE(service.GetSnapshot().turnaroundHold, TurnaroundHold::AwaitingResumeDecision);
+    QVERIFY(!service.GetSnapshot().automationEnabled);
+
+    QVERIFY(service.RestartFlow().succeeded);
+
+    QCOMPARE(store.eraseCalls, 1);
+    QVERIFY(!store.stored.has_value());
+    QCOMPARE(service.GetSnapshot().turnaroundHold, TurnaroundHold::None);
 }
 
 void RuntimeIntegratorServiceTest::theResumeAnswerIsRefusedWhileOffline()
@@ -2332,29 +2478,53 @@ void RuntimeIntegratorServiceTest::aSavedPhaseTheMachineDoesNotKnowErasesTheFile
     QVERIFY(!LogCapture::Contains(QLatin1String(kResumedLine)));
 }
 
-void RuntimeIntegratorServiceTest::aKeyOnlyFileNeitherHoldsNorAsks()
+void RuntimeIntegratorServiceTest::aKeyOnlyFileWithoutTheMarkIsIgnored()
 {
     FakeTurnaroundCheckpointStore store;
     store.stored = SavedWithTheKeyOnly();
+    const std::optional<TurnaroundDocument> original = store.stored;
     IntegratorRuntime runtime(WithTheStore(store));
     StartTheFlowWithoutTheReposition(runtime);
     runtime.Setup();
 
     QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
 
-    QVERIFY(TheKeyIsJudged(runtime, updated, kRestartedCouatl));
+    QVERIFY(DetectTheMd11WithoutTheGsx(runtime, updated));
+    QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::None);
+
+    FakeGsxRemoteApi::Receive(GsxWire(kRestartedCouatl, kSavedStand));
+    QVERIFY(TickAndWait(updated));
+
     QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::None);
     QCOMPARE(store.eraseCalls, 0);
+    QVERIFY(store.stored == original);
 
     QVERIFY(PushLVar(gsx::lvars::kCouatlStarted, 1.0));
     QVERIFY(DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, runtime, updated));
 }
 
-void RuntimeIntegratorServiceTest::aKeyOnlyFileOfAnotherAircraftIsErased()
+void RuntimeIntegratorServiceTest::aKeyOnlyFileWithoutTheMarkOfAnotherAircraftIsNotErased()
 {
     FakeTurnaroundCheckpointStore store;
     store.stored = SavedWithTheKeyOnly();
     store.stored->key.aircraftId = kRj85ProfileId;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated));
+
+    QCOMPARE(store.eraseCalls, 0);
+    QVERIFY(store.stored.has_value());
+}
+
+void RuntimeIntegratorServiceTest::aKeyOnlyFileWithTheMarkOfAnotherAircraftIsErased()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedWithTheKeyOnly();
+    store.stored->key.aircraftId = kRj85ProfileId;
+    store.stored->repositioned = true;
     IntegratorRuntime runtime(WithTheStore(store));
     runtime.Setup();
 
@@ -2620,6 +2790,7 @@ void RuntimeIntegratorServiceTest::enteringWaitingNewFlightWritesOnlyTheKey()
     QVERIFY(!store.stored->plan.has_value());
     QVERIFY(store.stored->memoryByOwner.empty());
     QVERIFY(store.stored->key == Md11Key());
+    QVERIFY(!store.stored->repositioned);
 }
 
 void RuntimeIntegratorServiceTest::aFailedWriteLeavesTheLastWrittenBehindAndIsTriedAgain()
@@ -3189,37 +3360,6 @@ void RuntimeIntegratorServiceTest::theSimbriefReloadIsNotOfferedWhileTheSavedTur
     QVERIFY(runtime.Snapshot().canReloadSimbrief);
 }
 
-void RuntimeIntegratorServiceTest::aKeyOnlyFileIsReadBeforeTheFlowOverwritesIt()
-{
-    FakeTurnaroundCheckpointStore store;
-    store.stored = SavedWithTheKeyOnly();
-    store.stored->repositioned = true;
-    const std::optional<TurnaroundDocument> original = store.stored;
-    IntegratorRuntime runtime(WithTheStore(store));
-    StartTheFlowWithoutTheReposition(runtime);
-    runtime.Setup();
-
-    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
-
-    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
-    QVERIFY(DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, runtime, updated));
-
-    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
-
-    QCOMPARE(store.writeCalls, 0);
-    QVERIFY(store.stored == original);
-
-    QVERIFY(TickAndWait(updated));
-
-    QCOMPARE(store.writeCalls, 0);
-    QVERIFY(store.stored == original);
-
-    QVERIFY(TickAndWait(updated));
-
-    QVERIFY(store.writeCalls > 0);
-    QVERIFY(store.stored->checkpoint.has_value());
-}
-
 void RuntimeIntegratorServiceTest::theGsxMenuAnswerIsSavedRightAfterTheNavigatorSends()
 {
     FakeTurnaroundCheckpointStore store;
@@ -3329,6 +3469,396 @@ void RuntimeIntegratorServiceTest::endingTheSessionWhileTheQuestionIsOpenKeepsTh
 
     QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::AwaitingResumeDecision);
     QCOMPARE(store.eraseCalls, 0);
+}
+
+void RuntimeIntegratorServiceTest::aKeyOnlyFileThatCarriesTheMarkHoldsTheMachineUntilItsKeyIsJudged()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedWithTheKeyOnly();
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    StartTheFlowWithoutTheReposition(runtime);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::JudgingSavedTurnaround);
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::WaitingSupportedAircraft);
+
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::None);
+    QVERIFY(DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, runtime, updated));
+}
+
+void RuntimeIntegratorServiceTest::theMarkOfAKeyOnlyFileOfTheSameKeyReachesTheMachine()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedWithTheKeyOnly();
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(TheRepositionIsSpared(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(store.stored->checkpoint.has_value());
+    QVERIFY(store.stored->repositioned);
+}
+
+void RuntimeIntegratorServiceTest::aKeyOnlyFileWithoutTheMarkLeavesTheRepositionToTheTurnaround()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedWithTheKeyOnly();
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(TheRepositionIsAsked(runtime, updated));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::RepositionAircraft);
+}
+
+void RuntimeIntegratorServiceTest::theMarkDiesWhenOnlyTheCouatlDiffersFromAKeyOnlyFile()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedWithTheKeyOnly();
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    FakeGsxRemoteApi::Receive(GsxWire(kRestartedCouatl, kSavedStand));
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(TheRepositionIsAsked(runtime, updated));
+    QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::None);
+}
+
+void RuntimeIntegratorServiceTest::theMarkDoesNotSpareTheRepositionWhenTheNewTurnaroundOptionIsOff()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedWithTheKeyOnly();
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    AutomationSettings settings;
+    settings.skipRepositionOnNewTurnaround = false;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(TheRepositionIsAsked(runtime, updated));
+}
+
+void RuntimeIntegratorServiceTest::theRestartButtonKillsTheMark()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedWithTheKeyOnly();
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, runtime, updated));
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(store.stored->repositioned);
+
+    runtime.RestartFlow();
+
+    QVERIFY(!store.stored.has_value());
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(TheRepositionIsAsked(runtime, updated));
+    QVERIFY(store.stored.has_value());
+    QVERIFY(!store.stored->repositioned);
+}
+
+void RuntimeIntegratorServiceTest::theMarkOfAResumedTurnaroundIsWrittenBackWithEveryDocument()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::WaitingReadyToPush);
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated));
+    QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::WaitingReadyToPush);
+    QVERIFY(store.writeCalls > 0);
+    QVERIFY(store.stored->checkpoint.has_value());
+    QVERIFY(store.stored->repositioned);
+}
+
+void RuntimeIntegratorServiceTest::theMarkDiesWhenThePilotResumesOnAnotherCouatl()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::WaitingReadyToPush);
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated, kRestartedCouatl));
+    QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::AwaitingResumeDecision);
+
+    runtime.ResumeSavedTurnaround();
+
+    QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::WaitingReadyToPush);
+    QVERIFY(store.stored->checkpoint.has_value());
+    QVERIFY(!store.stored->repositioned);
+}
+
+void RuntimeIntegratorServiceTest::enteringWaitingNewFlightWritesTheKeyAndTheMarkAndARelaunchKeepsIt()
+{
+    FakeTurnaroundCheckpointStore store;
+
+    {
+        store.stored = SavedAt(TurnaroundPhase::CabinServices);
+        store.stored->repositioned = true;
+        IntegratorRuntime runtime(WithTheStore(store));
+        runtime.Setup();
+
+        QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+        QVERIFY(TheKeyIsJudged(runtime, updated));
+        QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+
+        for (int tick = 0; tick < kCabinExitTickBudget && runtime.GetPhase() != TurnaroundPhase::WaitingNewFlight;
+             ++tick)
+        {
+            QVERIFY(TickAndWait(updated));
+        }
+
+        QCOMPARE(runtime.GetPhase(), TurnaroundPhase::WaitingNewFlight);
+        QVERIFY(TickAndWait(updated));
+
+        QVERIFY(!store.stored->checkpoint.has_value());
+        QVERIFY(store.stored->key == Md11Key());
+        QVERIFY(store.stored->repositioned);
+    }
+
+    FakeSimConnectApi::Reset();
+    FakeGsxRemoteApi::Reset();
+
+    IntegratorRuntime relaunched(WithTheStore(store));
+    relaunched.Setup();
+
+    QSignalSpy updated(&relaunched, &IntegratorRuntime::Updated);
+
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(relaunched, updated));
+    QVERIFY(DriveTheFlowInto(TurnaroundPhase::PlaceGroundEquipment, relaunched, updated));
+}
+
+void RuntimeIntegratorServiceTest::aKeyOnlyFileWithTheMarkOfAnotherStandIsErasedAndTheRepositionIsAsked()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedWithTheKeyOnly();
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kOtherStand));
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(store.eraseCalls, 1);
+    QVERIFY(!store.stored.has_value());
+    QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::None);
+    QVERIFY(TheRepositionIsAsked(runtime, updated));
+}
+
+void RuntimeIntegratorServiceTest::aKeyOnlyFileWaitsForTheStandAndIsErasedWhenItArrivesDifferent()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedWithTheKeyOnly();
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QJsonObject snapshot = GsxWire(kSavedCouatl, kSavedStand);
+    snapshot.remove("parking");
+    FakeGsxRemoteApi::Receive(snapshot);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::JudgingSavedTurnaround);
+    QCOMPARE(store.eraseCalls, 0);
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(kOtherStand)));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::None);
+    QCOMPARE(store.eraseCalls, 1);
+    QVERIFY(!store.stored.has_value());
+    QVERIFY(TheRepositionIsAsked(runtime, updated));
+}
+
+void RuntimeIntegratorServiceTest::aKeyOnlyFileWaitsForTheStandAndSparesTheRepositionWhenItArrivesTheSame()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedWithTheKeyOnly();
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QJsonObject snapshot = GsxWire(kSavedCouatl, kSavedStand);
+    snapshot.remove("parking");
+    FakeGsxRemoteApi::Receive(snapshot);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::JudgingSavedTurnaround);
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(kSavedStand)));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.Snapshot().turnaroundHold, TurnaroundHold::None);
+    QCOMPARE(store.eraseCalls, 0);
+    QVERIFY(TheRepositionIsSpared(runtime, updated));
+}
+
+void RuntimeIntegratorServiceTest::aStandChangedWithoutFlyingKillsTheMarkOfTheFinishedTurnaround()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::CabinServices);
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated));
+    QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+    QVERIFY(TheFinishedTurnaroundWaitsForTheNextOne(runtime, updated));
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(kOtherStand)));
+    QVERIFY(TickAndWait(updated));
+
+    runtime.AcceptPilotTouch();
+
+    QVERIFY(TheRepositionIsAsked(runtime, updated));
+}
+
+void RuntimeIntegratorServiceTest::theSameStandKeepsTheMarkOfTheFinishedTurnaround()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::CabinServices);
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated));
+    QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+    QVERIFY(TheFinishedTurnaroundWaitsForTheNextOne(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+
+    runtime.AcceptPilotTouch();
+
+    QVERIFY(TheRepositionIsSpared(runtime, updated));
+}
+
+void RuntimeIntegratorServiceTest::aStandThatGoesEmptyAndComesBackKeepsTheMarkOfTheFinishedTurnaround()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::CabinServices);
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated));
+    QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+    QVERIFY(TheFinishedTurnaroundWaitsForTheNextOne(runtime, updated));
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(QString())));
+    QVERIFY(TickAndWait(updated));
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(kSavedStand)));
+    QVERIFY(TickAndWait(updated));
+
+    runtime.AcceptPilotTouch();
+
+    QVERIFY(TheRepositionIsSpared(runtime, updated));
+}
+
+void RuntimeIntegratorServiceTest::theGuardedStandIsForgottenOnceTheNextTurnaroundBegins()
+{
+#ifndef NDEBUG
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::CabinServices);
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated));
+    QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+    QVERIFY(TheFinishedTurnaroundWaitsForTheNextOne(runtime, updated));
+
+    const int newTurnaround = static_cast<int>(TurnaroundPhase::PlaceGroundEquipment);
+    const int finished = static_cast<int>(TurnaroundPhase::WaitingNewFlight);
+
+    runtime.DebugSkipPhase(newTurnaround - finished);
+    QVERIFY(TickAndWait(updated));
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(kOtherStand)));
+    QVERIFY(TickAndWait(updated));
+
+    runtime.DebugSkipPhase(finished - newTurnaround);
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(TickAndWait(updated));
+
+    runtime.AcceptPilotTouch();
+
+    QVERIFY(TheRepositionIsSpared(runtime, updated));
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
 }
 
 QTEST_GUILESS_MAIN(RuntimeIntegratorServiceTest)

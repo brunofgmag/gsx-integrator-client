@@ -21,12 +21,20 @@ namespace
 
     TurnaroundKey SavedKey()
     {
-        return TurnaroundKey{kSavedCouatl, kAircraftId, kTitle, kAirport, kParking};
+        return TurnaroundKey{.couatlId = kSavedCouatl,
+                         .aircraftId = kAircraftId,
+                         .aircraftTitle = kTitle,
+                         .airportIcao = kAirport,
+                         .parkingName = kParking};
     }
 
     TurnaroundKey LiveKey()
     {
-        return TurnaroundKey{kSavedCouatl, kAircraftId, kTitle, kAirport, kParking};
+        return TurnaroundKey{.couatlId = kSavedCouatl,
+                         .aircraftId = kAircraftId,
+                         .aircraftTitle = kTitle,
+                         .airportIcao = kAirport,
+                         .parkingName = kParking};
     }
 
     constexpr std::optional<TurnaroundPhase> kLoading = TurnaroundPhase::Loading;
@@ -51,7 +59,7 @@ private slots:
     static void anotherAircraftIsJudgedBeforeTheCouatlArrives();
     static void aSavedParkingWithTheLiveOneEmptyOnTheGroundWaits();
     static void aSavedParkingWithTheLiveOneEmptyWaitsInEveryGroundPhase();
-    static void aSavedParkingWithTheLiveOneEmptyDoesNotWaitWithoutAPhase();
+    static void aSavedParkingWithTheLiveOneEmptyWaitsEvenWithoutAPhase();
     static void aSavedParkingWithTheLiveOneEmptyDoesNotWaitInFlight();
     static void anEmptySavedParkingNeitherFailsNorWaits();
     static void anEmptyLiveAirportDoesNotFailTheKey();
@@ -63,7 +71,7 @@ private slots:
     static void aFlownFileStillAsksWhenTheCouatlDiffers();
     static void aFlownFileStillFailsOnAnotherAircraft();
     static void aKeyOnlyFileFailsOnAnotherStandWhenBothAreKnown();
-    static void aKeyOnlyFileNeverWaitsForTheStand();
+    static void aKeyOnlyFileWaitsForTheStandToo();
 };
 
 void TurnaroundKeyJudgementTest::identicalKeysAreTheSame()
@@ -182,12 +190,12 @@ void TurnaroundKeyJudgementTest::aSavedParkingWithTheLiveOneEmptyWaitsInEveryGro
     }
 }
 
-void TurnaroundKeyJudgementTest::aSavedParkingWithTheLiveOneEmptyDoesNotWaitWithoutAPhase()
+void TurnaroundKeyJudgementTest::aSavedParkingWithTheLiveOneEmptyWaitsEvenWithoutAPhase()
 {
     TurnaroundKey live = LiveKey();
     live.parkingName.clear();
 
-    QCOMPARE(TurnaroundKeyJudgement::Judge(SavedKey(), live, std::nullopt), KeyVerdict::Same);
+    QCOMPARE(TurnaroundKeyJudgement::Judge(SavedKey(), live, std::nullopt), KeyVerdict::NotYetJudgeable);
 }
 
 void TurnaroundKeyJudgementTest::aSavedParkingWithTheLiveOneEmptyDoesNotWaitInFlight()
@@ -295,13 +303,13 @@ void TurnaroundKeyJudgementTest::aKeyOnlyFileFailsOnAnotherStandWhenBothAreKnown
     QCOMPARE(TurnaroundKeyJudgement::Judge(SavedKey(), live, std::nullopt), KeyVerdict::Different);
 }
 
-void TurnaroundKeyJudgementTest::aKeyOnlyFileNeverWaitsForTheStand()
+void TurnaroundKeyJudgementTest::aKeyOnlyFileWaitsForTheStandToo()
 {
     TurnaroundKey live = LiveKey();
     live.parkingName.clear();
     live.airportIcao.clear();
 
-    QCOMPARE(TurnaroundKeyJudgement::Judge(SavedKey(), live, std::nullopt), KeyVerdict::Same);
+    QCOMPARE(TurnaroundKeyJudgement::Judge(SavedKey(), live, std::nullopt), KeyVerdict::NotYetJudgeable);
 }
 
 QTEST_APPLESS_MAIN(TurnaroundKeyJudgementTest)

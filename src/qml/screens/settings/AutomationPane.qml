@@ -93,6 +93,15 @@ ColumnLayout {
         onToggled: checked => root.settingsVm.skipReposition = checked
     }
 
+    SwitchRow {
+        Layout.fillWidth: true
+        enabled: !root.settingsVm.skipRepositionOnNewTurnaroundLocked
+        title: qsTr("Skip repositioning on a new turnaround")
+        helpText: qsTr("After deboarding at the destination, the client starts the next turnaround without repositioning the aircraft.")
+        checked: root.settingsVm.skipRepositionOnNewTurnaroundLocked || root.settingsVm.skipRepositionOnNewTurnaround
+        onToggled: checked => root.settingsVm.skipRepositionOnNewTurnaround = checked
+    }
+
     Item {
         Layout.fillHeight: true
     }

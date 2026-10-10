@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_APPLICATION_TURNAROUNDRESUMPTION_H
 #define GSX_INTEGRATOR_CLIENT_APPLICATION_TURNAROUNDRESUMPTION_H
 
+#include <cstdint>
 #include <optional>
 
 #include "TurnaroundKeyJudgement.h"
@@ -24,6 +25,12 @@ public:
         bool gsxRestartedSinceSave = false;
     };
 
+    struct Advancement
+    {
+        std::optional<Restoration> restoration;
+        bool repositioned = false;
+    };
+
     explicit TurnaroundResumption(TurnaroundCheckpointStore* store = nullptr);
 
     [[nodiscard]] TurnaroundHold Hold() const;
@@ -35,12 +42,12 @@ public:
     void Discard();
     void RetryPendingDiscard();
     void AnswerResume();
-    [[nodiscard]] std::optional<Restoration> Advance(const LiveFacts& live);
+    [[nodiscard]] Advancement Advance(const LiveFacts& live);
     void Settle();
     void Save(const TurnaroundDocument& document);
 
 private:
-    enum class Stage
+    enum class Stage : std::uint8_t
     {
         Idle,
         Judging,
@@ -60,6 +67,7 @@ private:
     Stage stage_ = Stage::Idle;
     TurnaroundHold restoringHold_ = TurnaroundHold::AwaitingGsxReadings;
     bool couatlDiffers_ = false;
+    bool releasedRepositioned_ = false;
     bool pilotResumed_ = false;
     bool discardPending_ = false;
     bool discardFailureLogged_ = false;

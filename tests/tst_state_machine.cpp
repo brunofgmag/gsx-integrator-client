@@ -239,8 +239,10 @@ namespace
             if (const auto checkpoint = machine.TakeCheckpoint(); checkpoint.has_value())
             {
                 checkpoints.push_back(*checkpoint);
-                worlds.push_back({f.menuGateway.requestLog.size(), f.aircraft.callLog.size(),
-                                  f.aircraft.doorsHeldClosed, f.aircraft.passengerDoorsHeldClosed});
+                worlds.push_back({.requestsSoFar = f.menuGateway.requestLog.size(),
+                                  .aircraftCallsSoFar = f.aircraft.callLog.size(),
+                                  .departureLatchHeld = f.aircraft.doorsHeldClosed,
+                                  .passengerLatchHeld = f.aircraft.passengerDoorsHeldClosed});
             }
         }
 
@@ -558,7 +560,7 @@ namespace
     };
 
     constexpr Stand kStairsStand{};
-    constexpr Stand kJetwayClientStand{RefuelBy::Client, BoardBy::Client, true, true};
+    constexpr Stand kJetwayClientStand{.refuelBy = RefuelBy::Client, .boardBy = BoardBy::Client, .jetway = true, .pushbackViaInterruptMenu = true};
 
     void EquipTheStand(TurnaroundWorkflow& workflow, const Stand& stand)
     {
@@ -914,7 +916,7 @@ namespace
     {
         const std::vector<RequestKind>& log = walked.f.menuGateway.requestLog;
 
-        return std::vector<RequestKind>(log.begin() + static_cast<std::ptrdiff_t>(world.requestsSoFar), log.end());
+        return {log.begin() + static_cast<std::ptrdiff_t>(world.requestsSoFar), log.end()};
     }
 
     void TickAfterTheResume(TurnaroundWorkflow& resumed, const TurnaroundPhase phase)
@@ -955,8 +957,8 @@ namespace
                                                    GroundEffectsFrom(resumed.f.aircraft.callLog, 0)),
                      std::format("{}: the resume repeated a ground effect on the aircraft", label).c_str());
 
-            QVERIFY2(std::ranges::all_of(resumed.f.aircraft.fuelWrites, [](const double kg) { return kg > 0.0; }), label.c_str());
-            QVERIFY2(std::ranges::all_of(resumed.f.aircraft.zfwWrites, [](const double kg) { return kg > 0.0; }), label.c_str());
+            QVERIFY2(std::ranges::all_of(resumed.f.aircraft.fuelWrites, [](const double kilograms) { return kilograms > 0.0; }), label.c_str());
+            QVERIFY2(std::ranges::all_of(resumed.f.aircraft.zfwWrites, [](const double kilograms) { return kilograms > 0.0; }), label.c_str());
             fuelWritesAfterResumes += resumed.f.aircraft.fuelWrites.size();
             zfwWritesAfterResumes += resumed.f.aircraft.zfwWrites.size();
             resumedPhases.insert(checkpoint.phase);
@@ -981,9 +983,12 @@ namespace
 
     TransitionSideEffects SideEffectsOf(const TurnaroundWorkflow& workflow)
     {
-        return {workflow.f.menuGateway.pushbackStartedCalls, workflow.f.menuGateway.turnaroundTurnedCalls,
-                workflow.f.menuGateway.closePushbackPanelCalls, workflow.f.gsxService.turnaroundTurnedCalls,
-                workflow.f.aircraft.onTurnaroundStartedCalls, LoggedCount(workflow, "Transitioning")};
+        return {.pushbackStarted = workflow.f.menuGateway.pushbackStartedCalls,
+                .menuTurnaroundTurned = workflow.f.menuGateway.turnaroundTurnedCalls,
+                .pushbackPanelClosed = workflow.f.menuGateway.closePushbackPanelCalls,
+                .gsxTurnaroundTurned = workflow.f.gsxService.turnaroundTurnedCalls,
+                .turnaroundStarted = workflow.f.aircraft.onTurnaroundStartedCalls,
+                .transitionsLogged = LoggedCount(workflow, "Transitioning")};
     }
 
     void VerifyNoResumeFiresATransitionSideEffect(TurnaroundWorkflow& workflow)
@@ -1023,6 +1028,15 @@ private slots:
     static void aCompleteNowThatLeavesTheCargoFlagUpStillEndsTheBoarding();
     static void theCouatlDyingDuringTheBoardingHoldsTheFlowWithTheWarning();
     static void completesReachableWorkflowAndReturnsToStart();
+    static void theNextTurnaroundOfTheSessionSkipsTheRepositionWhenTheNewTurnaroundOptionIsOn();
+    static void theNextTurnaroundOfTheSessionRepositionsAgainWhenTheNewTurnaroundOptionIsOff();
+    static void theRepositionMarkSurvivesTheEndOfTheTurnaround();
+    static void aResetForgetsTheRepositionMark();
+    static void aResumeKeepsTheRepositionMarkTheRuntimeDelivered();
+    static void aResumeMidRepositionMarksTheSession();
+    static void aResumeAfterTheRetryClearedTheRequestStillTakesTheRepositionAsAsked();
+    static void aSavedPointWithoutTheAttemptFieldStillTakesTheRequestAsAsked();
+    static void theRepositionMarkIsNotPartOfTheCheckpoint();
     static void theTurnaroundTurnNotifiesTheMenuGateway();
     static void theTurnaroundTurnForgetsTheGsxCompletions();
     static void theSecondTurnaroundAsksForBoardingAgain();
@@ -1471,6 +1485,7 @@ void TurnaroundStateMachineTest::theTurnaroundTurnForgetsTheGsxCompletions()
 void TurnaroundStateMachineTest::theSecondTurnaroundAsksForBoardingAgain()
 {
     TurnaroundWorkflow workflow;
+    workflow.f.settings.skipRepositionOnNewTurnaround = false;
 
     ReachBoarding(workflow);
     workflow.CompleteBoarding();
@@ -1720,6 +1735,150 @@ void TurnaroundStateMachineTest::completesReachableWorkflowAndReturnsToStart()
     QCOMPARE(workflow.f.menuGateway.boardingCalls, 1);
     QCOMPARE(workflow.f.menuGateway.pushbackCalls, 1);
     QCOMPARE(workflow.f.menuGateway.deboardingCalls, 1);
+}
+
+void TurnaroundStateMachineTest::theNextTurnaroundOfTheSessionSkipsTheRepositionWhenTheNewTurnaroundOptionIsOn()
+{
+    TurnaroundWorkflow workflow;
+    workflow.f.settings.skipRepositionOnNewTurnaround = true;
+
+    WalkTheWholeTurnaround(workflow);
+    workflow.StartNewFlightCycle();
+
+    QCOMPARE(workflow.f.menuGateway.repositionCalls, 1);
+
+    for (int tick = 0; tick < 12; ++tick)
+    {
+        workflow.Tick();
+    }
+
+    QVERIFY(workflow.machine.GetPhase() > TurnaroundPhase::RepositionAircraft);
+    QCOMPARE(workflow.f.menuGateway.repositionCalls, 1);
+}
+
+void TurnaroundStateMachineTest::theNextTurnaroundOfTheSessionRepositionsAgainWhenTheNewTurnaroundOptionIsOff()
+{
+    TurnaroundWorkflow workflow;
+    workflow.f.settings.skipRepositionOnNewTurnaround = false;
+
+    WalkTheWholeTurnaround(workflow);
+    workflow.StartNewFlightCycle();
+
+    for (int tick = 0; tick < 12; ++tick)
+    {
+        workflow.Tick();
+    }
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::RepositionAircraft);
+    QCOMPARE(workflow.f.menuGateway.repositionCalls, 2);
+}
+
+void TurnaroundStateMachineTest::theRepositionMarkSurvivesTheEndOfTheTurnaround()
+{
+    TurnaroundWorkflow workflow;
+
+    QVERIFY(!workflow.machine.HasRepositionedThisSession());
+
+    WalkTheWholeTurnaround(workflow);
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::WaitingNewFlight);
+    QVERIFY(workflow.machine.HasRepositionedThisSession());
+}
+
+void TurnaroundStateMachineTest::aResetForgetsTheRepositionMark()
+{
+    TurnaroundWorkflow workflow;
+    workflow.f.settings.skipRepositionOnNewTurnaround = true;
+
+    WalkTheWholeTurnaround(workflow);
+
+    QVERIFY(workflow.machine.HasRepositionedThisSession());
+
+    workflow.machine.Reset();
+
+    QVERIFY(!workflow.machine.HasRepositionedThisSession());
+
+    workflow.AttachAircraft();
+    workflow.Tick();
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::RepositionAircraft);
+    QCOMPARE(workflow.f.menuGateway.repositionCalls, 2);
+}
+
+void TurnaroundStateMachineTest::aResumeKeepsTheRepositionMarkTheRuntimeDelivered()
+{
+    TurnaroundWorkflow workflow;
+    workflow.machine.NoteRepositionedThisSession();
+
+    QCOMPARE(Resume(workflow, CheckpointAt(TurnaroundPhase::PlaceGroundEquipment)), ResumeOutcome::Resumed);
+
+    QVERIFY(workflow.machine.HasRepositionedThisSession());
+}
+
+void TurnaroundStateMachineTest::aResumeMidRepositionMarksTheSession()
+{
+    TurnaroundWorkflow workflow;
+    workflow.f.settings.skipRepositionOnNewTurnaround = false;
+    TurnaroundCheckpoint checkpoint = CheckpointAt(TurnaroundPhase::RepositionAircraft);
+    checkpoint.data.repositionRequested = true;
+    checkpoint.data.repositionAttempted = true;
+
+    QCOMPARE(Resume(workflow, checkpoint), ResumeOutcome::Resumed);
+    QVERIFY(!workflow.machine.HasRepositionedThisSession());
+
+    workflow.machine.Tick();
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::PlaceGroundEquipment);
+    QVERIFY(workflow.machine.HasRepositionedThisSession());
+    QCOMPARE(workflow.f.menuGateway.repositionCalls, 0);
+}
+
+void TurnaroundStateMachineTest::aResumeAfterTheRetryClearedTheRequestStillTakesTheRepositionAsAsked()
+{
+    TurnaroundWorkflow workflow;
+    workflow.f.settings.skipRepositionOnNewTurnaround = false;
+    TurnaroundCheckpoint checkpoint = CheckpointAt(TurnaroundPhase::RepositionAircraft);
+    checkpoint.data.repositionRequested = false;
+    checkpoint.data.repositionAttempted = true;
+    checkpoint.data.repositionCompleted = false;
+
+    QCOMPARE(Resume(workflow, checkpoint), ResumeOutcome::Resumed);
+
+    workflow.machine.Tick();
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::PlaceGroundEquipment);
+    QVERIFY(workflow.machine.HasRepositionedThisSession());
+    QCOMPARE(workflow.f.menuGateway.repositionCalls, 0);
+}
+
+void TurnaroundStateMachineTest::aSavedPointWithoutTheAttemptFieldStillTakesTheRequestAsAsked()
+{
+    TurnaroundWorkflow workflow;
+    workflow.f.settings.skipRepositionOnNewTurnaround = false;
+    TurnaroundCheckpoint checkpoint = CheckpointAt(TurnaroundPhase::RepositionAircraft);
+    checkpoint.data.repositionRequested = true;
+    checkpoint.data.repositionAttempted = false;
+    checkpoint.data.repositionCompleted = false;
+
+    QCOMPARE(Resume(workflow, checkpoint), ResumeOutcome::Resumed);
+
+    workflow.machine.Tick();
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::PlaceGroundEquipment);
+    QCOMPARE(workflow.f.menuGateway.repositionCalls, 0);
+}
+
+void TurnaroundStateMachineTest::theRepositionMarkIsNotPartOfTheCheckpoint()
+{
+    TurnaroundWorkflow workflow;
+    workflow.machine.NoteRepositionedThisSession();
+
+    QCOMPARE(Resume(workflow, CheckpointAt(TurnaroundPhase::PlaceGroundEquipment)), ResumeOutcome::Resumed);
+
+    const std::optional<TurnaroundCheckpoint> checkpoint = workflow.machine.TakeCheckpoint();
+
+    QVERIFY(checkpoint.has_value());
+    QVERIFY(!checkpoint->data.repositionedThisSession);
 }
 
 void TurnaroundStateMachineTest::debugSkipPhaseClampsToEnumRange()
@@ -2216,7 +2375,7 @@ void TurnaroundStateMachineTest::theVisitorNamesEveryLeafOnceWithAClass()
     }
 
     const TurnaroundData filled = EveryFieldNonDefault();
-    const CabinServiceProgress everyStepDone{true, true, true};
+    const CabinServiceProgress everyStepDone{.asked = true, .requested = true, .activeSeen = true};
 
     QVERIFY(filled.lavatory == everyStepDone);
     QVERIFY(filled.water == everyStepDone);

@@ -28,6 +28,7 @@ inline AutomationSettings ResolveAutomationSettings(const AppSettings& settings,
     result.autoStartFlow = settings.autoStartFlow;
     result.autoStartLoading = settings.autoStartLoading;
     result.skipReposition = settings.skipReposition;
+    result.skipRepositionOnNewTurnaround = settings.skipReposition || settings.skipRepositionOnNewTurnaround;
     result.callGpu = settings.callGpu;
     result.callGpuOnArrival = settings.callGpuOnArrival;
     result.placeChocks = settings.placeChocks;
@@ -52,6 +53,7 @@ inline AutomationSettings ResolveAutomationSettings(const AppSettings& settings,
                                                 aircraftRecommendedFuelRateKgs);
     }
     result.skipReposition = profile.skipReposition;
+    result.skipRepositionOnNewTurnaround = profile.skipReposition || profile.skipRepositionOnNewTurnaround;
     result.callGpu = profile.callGpu;
     result.callGpuOnArrival = profile.callGpuOnArrival;
     result.placeChocks = profile.placeChocks;
