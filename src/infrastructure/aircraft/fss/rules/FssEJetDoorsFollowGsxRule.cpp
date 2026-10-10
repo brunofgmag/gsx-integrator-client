@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <string>
 #include <QtCore/QString>
 
 #include "../FssEJet.h"
@@ -21,6 +22,8 @@ namespace
     constexpr int kCargoDoorReaffirmTicks = 2;
     constexpr int kMaxReaffirms = 2;
     constexpr int kAckPhaseDivisor = 10;
+
+    constexpr auto kMainDeckDesiredMemory = "fssEJet.mainDeckDesired";
 
     constexpr auto kMainDeckReqLVar = "FSS_GNDSVC_CARGO_MAIN_REQ";
     constexpr auto kMainDeckOpenLVar = "FSS_EXX_DOOR_CARGO_MAIN_OPEN";
@@ -111,15 +114,92 @@ void FssEJetDoorsFollowGsxRule::SetDesired(const GsxDoor door, const bool open)
     states_[index].desired = open;
 }
 
+void FssEJetDoorsFollowGsxRule::AppendMemory(MemoryBag& memory) const
+{
+    const std::optional<bool>& desired = states_[kMainDeckIndex].desired;
+    if (desired.has_value())
+    {
+        memory.PutFlag(kMainDeckDesiredMemory, *desired);
+    }
+}
+
+void FssEJetDoorsFollowGsxRule::RestoreMemory(const MemoryBag& memory)
+{
+    if (!cargoVariant_ || memory.Text(kMainDeckDesiredMemory, {}).empty())
+    {
+        return;
+    }
+
+    SlotState& state = states_[kMainDeckIndex];
+    state.desired = memory.Flag(kMainDeckDesiredMemory, false);
+    state.commanded = state.desired;
+    state.attempts = kMaxReaffirms;
+    mainDeckRestoredOpen_ = *state.desired;
+}
+
+void FssEJetDoorsFollowGsxRule::ReclaimAnOpenMainDeck()
+{
+    reclaimsTheMainDeck_ = cargoVariant_;
+}
+
 void FssEJetDoorsFollowGsxRule::SetMainDeckDesired(const bool closeAllPending)
 {
-    const bool wantOpen = !closeAllPending && IsMainLoaderWaitingForTheDeck();
-    std::optional<bool>& desired = states_[kMainDeckIndex].desired;
-
-    if (wantOpen || desired.has_value())
+    if (!closeAllPending && HoldsTheRestoredMainDeckOpen())
     {
-        desired = wantOpen;
+        return;
     }
+
+    const bool wantOpen = !closeAllPending && IsMainLoaderWaitingForTheDeck();
+    const bool claimsTheOpenDeck = ClaimsTheOpenMainDeck(closeAllPending);
+    SlotState& state = states_[kMainDeckIndex];
+
+    if (wantOpen || claimsTheOpenDeck || state.desired.has_value())
+    {
+        state.desired = wantOpen;
+    }
+
+    if (claimsTheOpenDeck && !wantOpen)
+    {
+        state.commanded.reset();
+    }
+}
+
+bool FssEJetDoorsFollowGsxRule::HoldsTheRestoredMainDeckOpen()
+{
+    if (!mainDeckRestoredOpen_)
+    {
+        return false;
+    }
+
+    if (!variables_->HasReceivedLVar(gsx::lvars::kBaggageLoaderMainState))
+    {
+        return true;
+    }
+
+    mainDeckRestoredOpen_ = false;
+
+    return false;
+}
+
+bool FssEJetDoorsFollowGsxRule::ClaimsTheOpenMainDeck(const bool closeAllPending)
+{
+    closesTheMainDeck_ = closesTheMainDeck_ || closeAllPending;
+
+    if ((!closesTheMainDeck_ && !reclaimsTheMainDeck_) || !HasTheReadingsTheClaimNeeds())
+    {
+        return false;
+    }
+
+    closesTheMainDeck_ = false;
+    reclaimsTheMainDeck_ = false;
+
+    return variables_->GetLVar(kMainDeckOpenLVar, 0.0) > 0.0;
+}
+
+bool FssEJetDoorsFollowGsxRule::HasTheReadingsTheClaimNeeds() const
+{
+    return variables_->HasReceivedLVar(kMainDeckOpenLVar)
+        && (closesTheMainDeck_ || variables_->HasReceivedLVar(gsx::lvars::kBaggageLoaderMainState));
 }
 
 void FssEJetDoorsFollowGsxRule::ReconcileSlot(const std::size_t index, VariableWriter& writer)

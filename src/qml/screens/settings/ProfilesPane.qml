@@ -143,6 +143,15 @@ ColumnLayout {
 
     SwitchRow {
         Layout.fillWidth: true
+        enabled: !root.ghost && !root.settingsVm.profileSkipRepositionOnNewTurnaroundLocked
+        title: qsTr("Skip repositioning on a new turnaround")
+        helpText: qsTr("After deboarding at the destination, the client starts the next turnaround without repositioning the aircraft.")
+        checked: root.settingsVm.profileSkipRepositionOnNewTurnaroundLocked || root.settingsVm.profileSkipRepositionOnNewTurnaround
+        onToggled: checked => root.settingsVm.profileSkipRepositionOnNewTurnaround = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Call GPU")
         checked: root.settingsVm.profileCallGpu

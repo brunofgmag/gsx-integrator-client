@@ -1,10 +1,15 @@
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <QByteArray>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonObject>
 #include <QString>
+#include <QStringList>
 #include <QtTest/QTest>
 
 #include "../src/domain/model/AutomationSettings.h"
@@ -28,11 +33,29 @@ namespace
     {
     public:
         std::vector<Sent> sent;
+        std::vector<Sent> refused;
+        bool refusing = false;
 
         bool SendCommand(const QString& verb, const QJsonObject& args = {}) override
         {
+            if (refusing)
+            {
+                refused.push_back({.verb = verb, .args = args});
+
+                return false;
+            }
+
             sent.push_back({.verb = verb, .args = args});
+
             return true;
+        }
+
+        [[nodiscard]] int Refused(const QString& verb) const
+        {
+            return static_cast<int>(std::ranges::count_if(refused, [&verb](const Sent& request)
+            {
+                return request.verb == verb;
+            }));
         }
 
         void EmitRejection(const QString& code)
@@ -215,6 +238,51 @@ private slots:
     static void theGpuToggleStillFiresWhileTheServiceRuns();
     static void aServiceThatTogglesIsNeverSentTwice();
     static void theStairsAreNeverAskedForASecondTime();
+    static void aServiceThatTogglesAndWasSentIsNotSentAgainAfterTheRestore_data();
+    static void aServiceThatTogglesAndWasSentIsNotSentAgainAfterTheRestore();
+    static void aRestoredGpuRequestStillFiresWhileTheServiceRuns();
+    static void aDepartureClearanceNeverSentGoesOutAfterTheRestore();
+    static void restoringSendsNothingAndOpensNoToolbar();
+    static void aStampInTheFutureIsClampedSoTheRequestRetriesOnSchedule();
+    static void aRestoredRequestIsHandledWithAnIntent();
+    static void theMemoryTakenRestoredAndTakenAgainIsEqual();
+    static void theToolbarTheClientOpenedIsClosedByTheRestoredNavigator();
+    static void anEmptyBagRestoresToTheStateOfReset_data();
+    static void anEmptyBagRestoresToTheStateOfReset();
+    static void malformedQueueTextRestoresAnEmptyQueue_data();
+    static void malformedQueueTextRestoresAnEmptyQueue();
+    static void aCorruptQueueIsHardenedOnRestore_data();
+    static void aCorruptQueueIsHardenedOnRestore();
+    static void thePersistedQueueNamesWhatEachFieldMeans();
+    static void thePanelLatchesSurviveTheRestore();
+    static void aWaitForThePanelDoesNotSurviveTheRestore();
+    static void theLabelOfARestoredRequestIsKept();
+    static void anUnknownNameInTheBagIsIgnored();
+    static void aRestoredRequestNeverSentRestartsItsGiveUpClock();
+    static void aRefusedSendOfAServiceThatTogglesIsNotAnAttempt();
+    static void aRefusedSendOfARetriedServiceIsNotAnAttempt();
+    static void aRefusedSendOfARequestWithoutAServiceIsNotTakenAsSent_data();
+    static void aRefusedSendOfARequestWithoutAServiceIsNotTakenAsSent();
+    static void aRefusedPickDoesNotSpendTheDeIceAnswer();
+    static void aRefusedPickIsNotReportedAsDone();
+    static void aRefusedResyncDoesNotLeaveTheMenuUnsettled();
+    static void aRefusedResyncIsNotCounted();
+    static void aRefusedSendEndsThePass();
+    static void aRefusedPickDoesNotFallThroughToAnotherAnswer_data();
+    static void aRefusedPickDoesNotFallThroughToAnotherAnswer();
+    static void aRefusedPickIsNotLoggedAsAMenuNobodyMatched_data();
+    static void aRefusedPickIsNotLoggedAsAMenuNobodyMatched();
+    static void aRefusedConfirmEnginesDoesNotKeepItsIntentAlive();
+    static void aRequestNeverSentIsDroppedAfterTheGiveUpWindow_data();
+    static void aRequestNeverSentIsDroppedAfterTheGiveUpWindow();
+    static void aRequestDeliveredLateStillOpensTheServiceIntent();
+    static void aRefusedCloseKeepsTheMenuTracking();
+    static void aRefusedCloseOfAStuckMenuIsNotRecordedAsDone();
+    static void aRefusedCloseOfAStaleMenuDoesNotSpendTheSettleWindow();
+    static void aRefusedToggleDoesNotSpendTheSettleWindow();
+    static void aRefusedDisableGsxMenuKeepsTheIntent();
+    static void theToolbarIsNotOpenedBeforeTheBridgeReportsItsState();
+    static void theToolbarIsNotClosedBeforeTheBridgeReportsItsState();
 };
 
 void GsxMenuNavigatorTest::serviceTriggersUseCanonicalVerbs()
@@ -2997,6 +3065,1201 @@ void GsxMenuNavigatorTest::theStairsAreNeverAskedForASecondTime()
 
     QCOMPARE(client.Count("service.trigger"), 1);
     QVERIFY(Logged(logger, "stopped waiting"));
+}
+
+namespace
+{
+    constexpr auto kDeIceQuestionTitle = "Ice warning: do you request the de-icing treatment?";
+    constexpr auto kBlockedSpotTitle =
+        "The rear cargo loader is waiting for the spot where the stairs at L Entry FWD are parked. Remove the stairs?";
+
+    struct NavigatorRig
+    {
+        FakeRemoteClient client;
+        GsxRemoteState state;
+        AutomationSettings settings;
+        FakeDomainLogger logger;
+        GsxMenuNavigator nav{&client, &state, &settings, &logger};
+        long long now = 5000;
+
+        NavigatorRig()
+        {
+            settings.autoDeice = true;
+            nav.SetClockForTest([this] { return now; });
+        }
+    };
+
+    QJsonArray QueueOf(const GsxMenuNavigator& nav)
+    {
+        const std::string text = nav.TakeMemory().Text("pendingRequests", "[]");
+
+        return QJsonDocument::fromJson(QByteArray::fromStdString(text)).array();
+    }
+
+    QJsonObject EntryFor(const GsxMenuNavigator& nav, const QString& label)
+    {
+        for (const QJsonValueConstRef& value : QueueOf(nav))
+        {
+            if (value.toObject().value("label").toString() == label)
+            {
+                return value.toObject();
+            }
+        }
+
+        return {};
+    }
+
+    int TriggersFor(const FakeRemoteClient& client, const QString& serviceId)
+    {
+        return static_cast<int>(std::ranges::count_if(client.sent, [&serviceId](const Sent& request)
+        {
+            return request.verb == "service.trigger" && request.args.value("service").toString() == serviceId;
+        }));
+    }
+
+    void RequestToggling(GsxMenuNavigator& nav, const QString& serviceId)
+    {
+        if (serviceId == "GPU")
+        {
+            nav.ToggleGpu();
+
+            return;
+        }
+
+        if (serviceId == "OperateStairs")
+        {
+            nav.CallStairs();
+
+            return;
+        }
+
+        nav.CallJetway();
+    }
+
+    void DirtyTheMemory(NavigatorRig& rig)
+    {
+        OfferService(rig.state, "Boarding");
+        rig.nav.RequestBoarding();
+        rig.nav.RequestCatering();
+        rig.nav.RequestDepartureClearance();
+
+        ShowMenu(rig.state, kDeIceQuestionTitle, {"Yes", "No [GSX choice]"});
+        rig.nav.OnMenuChanged();
+
+        ShowMenu(rig.state, kBlockedSpotTitle, {"Yes, remove the stairs", "No, keep the stairs"});
+        rig.nav.OnMenuChanged();
+    }
+}
+
+void GsxMenuNavigatorTest::aServiceThatTogglesAndWasSentIsNotSentAgainAfterTheRestore_data()
+{
+    QTest::addColumn<QString>("serviceId");
+
+    QTest::newRow("gpu") << QStringLiteral("GPU");
+    QTest::newRow("stairs") << QStringLiteral("OperateStairs");
+    QTest::newRow("jetways") << QStringLiteral("OperateJetways");
+}
+
+void GsxMenuNavigatorTest::aServiceThatTogglesAndWasSentIsNotSentAgainAfterTheRestore()
+{
+    QFETCH(QString, serviceId);
+
+    NavigatorRig previous;
+    OfferService(previous.state, serviceId.toStdString());
+    RequestToggling(previous.nav, serviceId);
+    previous.nav.RequestCatering();
+
+    QCOMPARE(TriggersFor(previous.client, serviceId), 1);
+    QCOMPARE(TriggersFor(previous.client, QStringLiteral("Catering")), 0);
+
+    NavigatorRig resumed;
+    resumed.now = 30000;
+    OfferService(resumed.state, serviceId.toStdString());
+    OfferService(resumed.state, "Catering");
+    resumed.nav.RestoreMemory(previous.nav.TakeMemory());
+    resumed.nav.OnMenuChanged();
+
+    QCOMPARE(TriggersFor(resumed.client, QStringLiteral("Catering")), 1);
+    QCOMPARE(TriggersFor(resumed.client, serviceId), 0);
+}
+
+void GsxMenuNavigatorTest::aRestoredGpuRequestStillFiresWhileTheServiceRuns()
+{
+    NavigatorRig previous;
+    previous.now = 0;
+    previous.nav.ToggleGpu();
+
+    QVERIFY(previous.client.sent.empty());
+
+    NavigatorRig resumed;
+    MarkServiceTaken(resumed.state, "GPU");
+    resumed.nav.RestoreMemory(previous.nav.TakeMemory());
+    resumed.nav.OnMenuChanged();
+
+    QCOMPARE(TriggersFor(resumed.client, QStringLiteral("GPU")), 1);
+}
+
+void GsxMenuNavigatorTest::aDepartureClearanceNeverSentGoesOutAfterTheRestore()
+{
+    NavigatorRig previous;
+    previous.now = 0;
+    previous.nav.RequestDepartureClearance();
+
+    QVERIFY(previous.client.sent.empty());
+
+    NavigatorRig resumed;
+    OfferService(resumed.state, "Departure");
+    resumed.nav.RestoreMemory(previous.nav.TakeMemory());
+    resumed.nav.OnMenuChanged();
+
+    QCOMPARE(TriggersFor(resumed.client, QStringLiteral("Departure")), 1);
+
+    resumed.now += 30000;
+    resumed.nav.OnMenuChanged();
+
+    QCOMPARE(TriggersFor(resumed.client, QStringLiteral("Departure")), 1);
+    QVERIFY(!Logged(resumed.logger, "never taken by GSX"));
+}
+
+void GsxMenuNavigatorTest::restoringSendsNothingAndOpensNoToolbar()
+{
+    NavigatorRig previous;
+    previous.now = 0;
+    previous.nav.RequestCatering();
+    previous.nav.RequestDepartureClearance();
+
+    PanelRig rig(GsxPanelMode::AllRequests);
+    rig.PanelIs("closed");
+    rig.client.refusing = true;
+    GsxMenuNavigator resumed(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+    resumed.SetClockForTest([] { return 9000LL; });
+    resumed.RestoreMemory(previous.nav.TakeMemory());
+
+    QVERIFY(rig.client.refused.empty());
+    QCOMPARE(rig.PanelCommands(), 0);
+}
+
+void GsxMenuNavigatorTest::aStampInTheFutureIsClampedSoTheRequestRetriesOnSchedule()
+{
+    NavigatorRig previous;
+    previous.now = 50000;
+    OfferService(previous.state, "Boarding");
+    previous.nav.RequestBoarding();
+
+    QCOMPARE(TriggersFor(previous.client, QStringLiteral("Boarding")), 1);
+
+    NavigatorRig resumed;
+    resumed.now = 10000;
+    OfferService(resumed.state, "Boarding");
+    resumed.nav.RestoreMemory(previous.nav.TakeMemory());
+    resumed.nav.OnMenuChanged();
+
+    QVERIFY(resumed.client.sent.empty());
+
+    resumed.now = 29999;
+    resumed.nav.OnMenuChanged();
+
+    QVERIFY(resumed.client.sent.empty());
+
+    resumed.now = 30000;
+    resumed.nav.OnMenuChanged();
+
+    QCOMPARE(TriggersFor(resumed.client, QStringLiteral("Boarding")), 1);
+}
+
+void GsxMenuNavigatorTest::aRestoredRequestIsHandledWithAnIntent()
+{
+    NavigatorRig previous;
+    OfferService(previous.state, "Departure");
+    previous.nav.RequestPushback();
+
+    QCOMPARE(TriggersFor(previous.client, QStringLiteral("Departure")), 1);
+
+    NavigatorRig resumed;
+    resumed.now = 6000;
+    resumed.nav.RestoreMemory(previous.nav.TakeMemory());
+    ShowMenu(resumed.state, "Attach Pushback Tug?", {"Yes", "No"});
+    resumed.nav.OnMenuChanged();
+
+    const Sent* pick = resumed.client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+    QCOMPARE(pick->args.value("index").toInt(), 1);
+
+    NavigatorRig bare;
+    bare.now = 6000;
+    bare.nav.RestoreMemory(MemoryBag{});
+    ShowMenu(bare.state, "Attach Pushback Tug?", {"Yes", "No"});
+    bare.nav.OnMenuChanged();
+
+    QCOMPARE(bare.client.Count("menu.pick"), 0);
+}
+
+void GsxMenuNavigatorTest::theMemoryTakenRestoredAndTakenAgainIsEqual()
+{
+    NavigatorRig previous;
+    DirtyTheMemory(previous);
+
+    const MemoryBag taken = previous.nav.TakeMemory();
+
+    NavigatorRig resumed;
+    resumed.nav.RestoreMemory(taken);
+
+    QVERIFY(resumed.nav.TakeMemory() == taken);
+    QVERIFY(resumed.nav.WereStairsKeptInPlace());
+
+    ShowMenu(resumed.state, kDeIceQuestionTitle, {"Yes", "No [GSX choice]"});
+    resumed.nav.OnMenuChanged();
+
+    const Sent* pick = resumed.client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+    QCOMPARE(pick->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::theToolbarTheClientOpenedIsClosedByTheRestoredNavigator()
+{
+    PanelRig before(GsxPanelMode::OnPushback);
+    before.PanelIs("closed");
+    GsxMenuNavigator previous(&before.client, &before.state, &before.settings, &before.logger, &before.plugin);
+    previous.OpenPushbackPanel();
+
+    QCOMPARE(before.PanelCommands(), 1);
+
+    PanelRig after(GsxPanelMode::OnPushback);
+    after.PanelIs("open");
+    GsxMenuNavigator resumed(&after.client, &after.state, &after.settings, &after.logger, &after.plugin);
+    resumed.RestoreMemory(previous.TakeMemory());
+    resumed.OnPushbackStarted();
+
+    QCOMPARE(after.PanelCommands(), 1);
+    QCOMPARE(after.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandClose));
+}
+
+namespace
+{
+    enum class Dirt : std::uint8_t
+    {
+        ServiceIntent,
+        Reposition,
+        PendingResync,
+        RefuelCompletion,
+        RememberedPick
+    };
+
+    constexpr auto kChoiceTitle = "Pick an option";
+    constexpr auto kTugTitle = "Attach Pushback Tug?";
+    constexpr auto kPositionTitle = "Select Position at ZZZZ/Test Airport";
+    constexpr auto kServiceTitle = "Ground services";
+
+    void ShowTheChoiceMenu(NavigatorRig& rig)
+    {
+        ShowMenu(rig.state, kChoiceTitle, {"Option A", "Option B [GSX choice]"});
+    }
+
+    void Dirty(NavigatorRig& rig, const Dirt dirt)
+    {
+        switch (dirt)
+        {
+        case Dirt::ServiceIntent:
+            rig.nav.RequestDepartureClearance();
+            break;
+        case Dirt::Reposition:
+            rig.nav.RepositionAircraft();
+            break;
+        case Dirt::PendingResync:
+            ShowMenu(rig.state, "Stalled menu", {"Option"});
+            rig.nav.OnMenuChanged();
+            rig.now += 2000;
+            rig.nav.OnMenuChanged();
+            break;
+        case Dirt::RefuelCompletion:
+            rig.nav.CompleteRefuel();
+            break;
+        case Dirt::RememberedPick:
+            ShowTheChoiceMenu(rig);
+            rig.nav.OnMenuChanged();
+            break;
+        }
+    }
+
+    QStringList Observe(NavigatorRig& rig)
+    {
+        QStringList seen;
+        std::size_t recorded = rig.client.sent.size();
+
+        const auto step = [&](const QString& name)
+        {
+            rig.now += 100;
+            rig.nav.OnMenuChanged();
+
+            for (; recorded < rig.client.sent.size(); ++recorded)
+            {
+                const Sent& request = rig.client.sent[recorded];
+                seen.append(QStringLiteral("%1:%2:%3").arg(name, request.verb).arg(request.args.value("index").toInt(-1)));
+            }
+
+            rig.state.menu.shown = false;
+            rig.state.menu.title.clear();
+            rig.state.menu.entries.clear();
+            rig.nav.OnMenuChanged();
+            recorded = rig.client.sent.size();
+        };
+
+        rig.now += 2000;
+        seen.append(rig.nav.IsMenuSettled() ? QStringLiteral("settled") : QStringLiteral("unsettled"));
+
+        ShowTheChoiceMenu(rig);
+        step(QStringLiteral("choice"));
+
+        ShowMenu(rig.state, kTugTitle, {"Yes", "No"});
+        step(QStringLiteral("tug"));
+
+        ShowMenu(rig.state, kPositionTitle, {"Reposition here [Gate 1]", "Cancel"});
+        step(QStringLiteral("position"));
+
+        ShowMenu(rig.state, kServiceTitle, {"Refueling: 50%", "Back"});
+        step(QStringLiteral("refuel"));
+
+        return seen;
+    }
+}
+
+void GsxMenuNavigatorTest::anEmptyBagRestoresToTheStateOfReset_data()
+{
+    QTest::addColumn<int>("dirt");
+
+    QTest::newRow("a service intent") << static_cast<int>(Dirt::ServiceIntent);
+    QTest::newRow("a reposition under way") << static_cast<int>(Dirt::Reposition);
+    QTest::newRow("a pending resync") << static_cast<int>(Dirt::PendingResync);
+    QTest::newRow("a refuel completion") << static_cast<int>(Dirt::RefuelCompletion);
+    QTest::newRow("a remembered pick") << static_cast<int>(Dirt::RememberedPick);
+}
+
+void GsxMenuNavigatorTest::anEmptyBagRestoresToTheStateOfReset()
+{
+    QFETCH(int, dirt);
+
+    NavigatorRig fresh;
+    const QStringList expected = Observe(fresh);
+
+    NavigatorRig dirtied;
+    Dirty(dirtied, static_cast<Dirt>(dirt));
+
+    QVERIFY(Observe(dirtied) != expected);
+
+    NavigatorRig restored;
+    Dirty(restored, static_cast<Dirt>(dirt));
+    restored.nav.RestoreMemory(MemoryBag{});
+
+    QCOMPARE(Observe(restored), expected);
+    QVERIFY(restored.nav.TakeMemory() == fresh.nav.TakeMemory());
+    QVERIFY(!restored.nav.WereStairsKeptInPlace());
+}
+
+void GsxMenuNavigatorTest::malformedQueueTextRestoresAnEmptyQueue_data()
+{
+    QTest::addColumn<QString>("text");
+
+    QTest::newRow("not json") << QStringLiteral("{not json");
+    QTest::newRow("an object") << QStringLiteral("{\"verb\":\"service.trigger\"}");
+    QTest::newRow("a scalar") << QStringLiteral("42");
+    QTest::newRow("empty text") << QString();
+    QTest::newRow("elements without a verb") << QStringLiteral("[1,\"x\",{},{\"label\":\"a\"}]");
+}
+
+void GsxMenuNavigatorTest::malformedQueueTextRestoresAnEmptyQueue()
+{
+    QFETCH(QString, text);
+
+    MemoryBag memory;
+    memory.PutText("pendingRequests", text.toStdString());
+
+    NavigatorRig resumed;
+    NavigatorRig fresh;
+    resumed.nav.RestoreMemory(memory);
+
+    QVERIFY(resumed.nav.TakeMemory() == fresh.nav.TakeMemory());
+
+    OfferService(resumed.state, "Catering");
+    resumed.nav.OnMenuChanged();
+
+    QVERIFY(resumed.client.sent.empty());
+}
+
+void GsxMenuNavigatorTest::aRefusedSendOfAServiceThatTogglesIsNotAnAttempt()
+{
+    NavigatorRig rig;
+    rig.client.refusing = true;
+    OfferService(rig.state, "GPU");
+
+    rig.nav.ToggleGpu();
+
+    QCOMPARE(rig.client.Refused("service.trigger"), 1);
+
+    rig.now += 30000;
+    rig.nav.OnMenuChanged();
+    rig.now += 40000;
+    rig.nav.OnMenuChanged();
+
+    QVERIFY(!Logged(rig.logger, "stopped waiting"));
+
+    rig.client.refusing = false;
+    rig.now += 1500;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("GPU")), 1);
+}
+
+void GsxMenuNavigatorTest::aRefusedSendOfARetriedServiceIsNotAnAttempt()
+{
+    NavigatorRig rig;
+    rig.client.refusing = true;
+    OfferService(rig.state, "Catering");
+
+    rig.nav.RequestCatering();
+
+    for (int i = 0; i < 4; ++i)
+    {
+        rig.now += 20000;
+        rig.nav.OnMenuChanged();
+    }
+
+    const QJsonObject entry = EntryFor(rig.nav, QStringLiteral("Catering"));
+
+    QVERIFY(!Logged(rig.logger, "never taken by GSX"));
+    QCOMPARE(entry.value("attempts").toInt(-1), 0);
+    QCOMPARE(entry.value("lastSentMs").toInteger(-1), 0LL);
+    QCOMPARE(rig.client.Refused("service.trigger"), 5);
+
+    rig.client.refusing = false;
+    rig.now += 1500;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("Catering")), 1);
+}
+
+void GsxMenuNavigatorTest::aRefusedSendOfARequestWithoutAServiceIsNotTakenAsSent_data()
+{
+    QTest::addColumn<QString>("verb");
+
+    QTest::newRow("departure clearance") << QStringLiteral("service.trigger");
+    QTest::newRow("simbrief reload") << QStringLiteral("command.run");
+}
+
+void GsxMenuNavigatorTest::aRefusedSendOfARequestWithoutAServiceIsNotTakenAsSent()
+{
+    QFETCH(QString, verb);
+
+    NavigatorRig rig;
+    rig.client.refusing = true;
+
+    if (verb == "service.trigger")
+    {
+        rig.nav.RequestDepartureClearance();
+    }
+    else
+    {
+        rig.nav.RequestSimbriefLoad();
+    }
+
+    QCOMPARE(rig.client.Refused(verb), 1);
+
+    rig.now += 1500;
+    rig.nav.OnMenuChanged();
+
+    rig.client.refusing = false;
+    rig.now += 1500;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count(verb), 1);
+}
+
+void GsxMenuNavigatorTest::aRefusedPickDoesNotSpendTheDeIceAnswer()
+{
+    NavigatorRig rig;
+    rig.client.refusing = true;
+
+    ShowMenu(rig.state, kDeIceQuestionTitle, {"Yes", "No [GSX choice]"});
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Refused("menu.pick"), 1);
+    QCOMPARE(rig.client.refused.front().args.value("index").toInt(-1), 0);
+    QVERIFY(!rig.nav.TakeMemory().Flag("deIceYesSpent", true));
+
+    rig.client.refusing = false;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(YesPicks(rig.client), 1);
+    QVERIFY(rig.nav.TakeMemory().Flag("deIceYesSpent", false));
+}
+
+void GsxMenuNavigatorTest::aRefusedPickIsNotReportedAsDone()
+{
+    NavigatorRig rig;
+    rig.client.refusing = true;
+
+    ShowMenu(rig.state, "Confirm good engine start", {"Confirm good engine start", "Cancel"});
+
+    QVERIFY(!rig.nav.ConfirmGoodEngines());
+    QCOMPARE(rig.client.Refused("menu.pick"), 1);
+
+    rig.client.refusing = false;
+    rig.now += 1500;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 0);
+
+    QVERIFY(rig.nav.ConfirmGoodEngines());
+    QCOMPARE(rig.client.Count("menu.pick"), 1);
+    QCOMPARE(rig.client.Last("menu.pick")->args.value("index").toInt(-1), 0);
+}
+
+void GsxMenuNavigatorTest::aRefusedResyncDoesNotLeaveTheMenuUnsettled()
+{
+    NavigatorRig rig;
+    rig.now = 0;
+    rig.client.refusing = true;
+
+    rig.nav.RequestRefueling();
+
+    ShowMenu(rig.state, "Select refueling level", {"Request Refueling"});
+    rig.nav.OnMenuChanged();
+
+    rig.now = 2000;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Refused("state.get"), 1);
+
+    rig.now = 4000;
+
+    QVERIFY(rig.nav.IsMenuSettled());
+}
+
+namespace
+{
+    constexpr auto kServiceTrigger = "service.trigger";
+
+    QString Element(const QString& verb, const QString& label, const int attempts, const qint64 lastSentMs,
+                    const qint64 armedMs)
+    {
+        const QJsonObject element{{"verb", verb},
+                                  {"args", QJsonObject{{"service", label}}},
+                                  {"label", label},
+                                  {"confirmId", label},
+                                  {"lastSentMs", lastSentMs},
+                                  {"attempts", attempts},
+                                  {"firesWhileUnderway", false},
+                                  {"armedMs", armedMs}};
+
+        return QString::fromUtf8(QJsonDocument(element).toJson(QJsonDocument::Compact));
+    }
+
+    QString Summary(const GsxMenuNavigator& nav)
+    {
+        QStringList parts;
+        for (const QJsonValueConstRef& value : QueueOf(nav))
+        {
+            const QJsonObject entry = value.toObject();
+            parts.append(QStringLiteral("%1:%2:%3:%4")
+                         .arg(entry.value("label").toString())
+                         .arg(entry.value("attempts").toInt(-1))
+                         .arg(entry.value("lastSentMs").toInteger(-1))
+                         .arg(entry.value("armedMs").toInteger(-1)));
+        }
+
+        return parts.join(QLatin1Char('|'));
+    }
+
+    MemoryBag BagWithQueue(const QString& text)
+    {
+        MemoryBag memory;
+        memory.PutText("pendingRequests", text.toStdString());
+
+        return memory;
+    }
+
+    int MessagesWith(const FakeDomainLogger& logger, const std::string& needle)
+    {
+        return static_cast<int>(std::ranges::count_if(logger.messages, [&needle](const std::string& message)
+        {
+            return message.find(needle) != std::string::npos;
+        }));
+    }
+}
+
+void GsxMenuNavigatorTest::aCorruptQueueIsHardenedOnRestore_data()
+{
+    QTest::addColumn<QString>("text");
+    QTest::addColumn<QString>("expected");
+
+    const QString trigger = QString::fromLatin1(kServiceTrigger);
+
+    QTest::newRow("a negative attempt count")
+        << QStringLiteral("[%1]").arg(Element(trigger, "Catering", -5, 100, 100))
+        << QStringLiteral("Catering:0:100:5000");
+    QTest::newRow("an attempt count above the cap")
+        << QStringLiteral("[%1]").arg(Element(trigger, "Catering", 99, 100, 100))
+        << QStringLiteral("Catering:3:100:100");
+    QTest::newRow("negative stamps")
+        << QStringLiteral("[%1]").arg(Element(trigger, "Catering", 1, -50, -50))
+        << QStringLiteral("Catering:1:0:0");
+    QTest::newRow("stamps in the future")
+        << QStringLiteral("[%1]").arg(Element(trigger, "Catering", 1, 9000000, 9000000))
+        << QStringLiteral("Catering:1:5000:5000");
+    QTest::newRow("the same verb and label twice")
+        << QStringLiteral("[%1,%2]").arg(Element(trigger, "Catering", 1, 100, 100),
+                                         Element(trigger, "Catering", 2, 200, 200))
+        << QStringLiteral("Catering:1:100:100");
+    QTest::newRow("verbs the navigator never arms")
+        << QStringLiteral("[%1,%2]").arg(Element("menu.pick", "a", 0, 0, 0), Element("menu.close", "b", 0, 0, 0))
+        << QString();
+    QTest::newRow("the simbrief command")
+        << QStringLiteral("[%1]").arg(Element("command.run", "RELOAD_SIMBRIEF", 1, 100, 100))
+        << QStringLiteral("RELOAD_SIMBRIEF:1:100:100");
+    QTest::newRow("a valid element among malformed ones")
+        << QStringLiteral("[1,\"x\",{},{\"label\":\"a\"},%1,{\"verb\":\"menu.pick\",\"label\":\"p\"},%2,null]")
+           .arg(Element(trigger, "Catering", 1, 100, 100), Element(trigger, "Departure", 0, 0, 0))
+        << QStringLiteral("Catering:1:100:100|Departure:0:0:5000");
+}
+
+void GsxMenuNavigatorTest::aCorruptQueueIsHardenedOnRestore()
+{
+    QFETCH(QString, text);
+    QFETCH(QString, expected);
+
+    NavigatorRig resumed;
+    resumed.nav.RestoreMemory(BagWithQueue(text));
+
+    QCOMPARE(Summary(resumed.nav), expected);
+}
+
+void GsxMenuNavigatorTest::thePersistedQueueNamesWhatEachFieldMeans()
+{
+    NavigatorRig rig;
+    OfferService(rig.state, "GPU");
+    OfferService(rig.state, "OperateStairs");
+
+    rig.nav.ToggleGpu();
+    rig.nav.CallStairs();
+
+    const QJsonObject gpu = EntryFor(rig.nav, QStringLiteral("GPU"));
+    const QJsonObject stairs = EntryFor(rig.nav, QStringLiteral("OperateStairs"));
+
+    QStringList keys = gpu.keys();
+    keys.sort();
+
+    QCOMPARE(keys, (QStringList{"args", "armedMs", "attempts", "confirmId", "firesWhileUnderway", "label",
+                                "lastSentMs", "verb"}));
+    QCOMPARE(gpu.value("attempts").toInt(-1), 1);
+    QCOMPARE(stairs.value("attempts").toInt(-1), 0);
+    QVERIFY(gpu.value("firesWhileUnderway").toBool(false));
+    QVERIFY(stairs.contains("firesWhileUnderway"));
+    QVERIFY(!stairs.value("firesWhileUnderway").toBool(true));
+    QCOMPARE(gpu.value("armedMs").toInteger(-1), 5000LL);
+}
+
+void GsxMenuNavigatorTest::thePanelLatchesSurviveTheRestore()
+{
+    PanelRig before(GsxPanelMode::OnPushback);
+    before.PanelIs("closed");
+    GsxMenuNavigator previous(&before.client, &before.state, &before.settings, &before.logger, &before.plugin);
+    previous.OpenPushbackPanel();
+    before.PanelIs("open");
+    previous.ClosePushbackPanel();
+
+    const MemoryBag taken = previous.TakeMemory();
+
+    QVERIFY(taken.Flag("panelOpenSpent", false));
+    QVERIFY(taken.Flag("panelCloseSpent", false));
+    QVERIFY(taken.Flag("panelOpenedByUs", false));
+
+    PanelRig after(GsxPanelMode::OnPushback);
+    after.PanelIs("closed");
+    GsxMenuNavigator resumed(&after.client, &after.state, &after.settings, &after.logger, &after.plugin);
+    resumed.RestoreMemory(taken);
+
+    QVERIFY(resumed.TakeMemory().Flag("panelOpenedByUs", false));
+
+    resumed.OpenPushbackPanel();
+
+    QCOMPARE(after.PanelCommands(), 0);
+
+    after.PanelIs("open");
+    resumed.ClosePushbackPanel();
+
+    QCOMPARE(after.PanelCommands(), 0);
+}
+
+void GsxMenuNavigatorTest::aWaitForThePanelDoesNotSurviveTheRestore()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    rig.PanelIs("closed");
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    long long now = 5000;
+    nav.SetClockForTest([&now] { return now; });
+
+    nav.OpenPushbackPanel();
+    nav.RestoreMemory(BagWithQueue(QStringLiteral("[%1]").arg(
+        Element(QString::fromLatin1(kServiceTrigger), "Catering", 0, 0, 0))));
+    OfferService(rig.state, "Catering");
+    nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count(kServiceTrigger), 1);
+}
+
+void GsxMenuNavigatorTest::theLabelOfARestoredRequestIsKept()
+{
+    NavigatorRig previous;
+    OfferService(previous.state, "Boarding");
+    previous.nav.RequestBoarding();
+
+    QCOMPARE(TriggersFor(previous.client, QStringLiteral("Boarding")), 1);
+
+    NavigatorRig resumed;
+    resumed.now = 6000;
+    resumed.nav.RestoreMemory(previous.nav.TakeMemory());
+    ShowMenu(resumed.state, kBlockedSpotTitle, {"Yes, remove the stairs", "No, keep the stairs"});
+    resumed.nav.OnMenuChanged();
+
+    const Sent* pick = resumed.client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+    QCOMPARE(pick->args.value("index").toInt(-1), 1);
+    QVERIFY(resumed.nav.WereStairsKeptInPlace());
+}
+
+void GsxMenuNavigatorTest::anUnknownNameInTheBagIsIgnored()
+{
+    NavigatorRig previous;
+    DirtyTheMemory(previous);
+
+    const MemoryBag taken = previous.nav.TakeMemory();
+
+    MemoryBag noisy = taken;
+    noisy.PutText("someFutureEntry", "x");
+    noisy.PutFlag("anotherFutureEntry", true);
+
+    NavigatorRig resumed;
+    resumed.nav.RestoreMemory(noisy);
+
+    QVERIFY(resumed.nav.TakeMemory() == taken);
+}
+
+void GsxMenuNavigatorTest::aRestoredRequestNeverSentRestartsItsGiveUpClock()
+{
+    NavigatorRig previous;
+    previous.now = 0;
+    previous.nav.RequestDepartureClearance();
+
+    NavigatorRig resumed;
+    resumed.now = 1000000;
+    OfferService(resumed.state, "Departure");
+    resumed.nav.RestoreMemory(previous.nav.TakeMemory());
+
+    QCOMPARE(EntryFor(resumed.nav, QStringLiteral("Departure")).value("armedMs").toInteger(-1), 1000000LL);
+
+    resumed.nav.OnMenuChanged();
+
+    QCOMPARE(TriggersFor(resumed.client, QStringLiteral("Departure")), 1);
+    QVERIFY(!Logged(resumed.logger, "never left the client"));
+}
+
+void GsxMenuNavigatorTest::aRefusedResyncIsNotCounted()
+{
+    NavigatorRig rig;
+    rig.now = 0;
+    rig.client.refusing = true;
+
+    ShowMenu(rig.state, "Stalled menu", {"Option"});
+    rig.nav.OnMenuChanged();
+
+    for (int pass = 0; pass < 4; ++pass)
+    {
+        rig.now += 2000;
+        rig.nav.OnMenuChanged();
+    }
+
+    QVERIFY(!Logged(rig.logger, "requesting snapshot resync"));
+    QCOMPARE(rig.client.Refused("state.get"), 4);
+
+    rig.client.refusing = false;
+    rig.now += 2000;
+    rig.nav.OnMenuChanged();
+
+    QVERIFY(Logged(rig.logger, "snapshot resync 1/3"));
+}
+
+void GsxMenuNavigatorTest::aRefusedSendEndsThePass()
+{
+    NavigatorRig rig;
+    rig.client.refusing = true;
+    ShowMenu(rig.state, "Some menu", {"Option"});
+
+    rig.nav.RequestCatering();
+
+    QCOMPARE(static_cast<int>(rig.client.refused.size()), 1);
+    QCOMPARE(rig.client.Refused("menu.close"), 1);
+
+    for (int pass = 0; pass < 5; ++pass)
+    {
+        rig.now += 1500;
+        rig.nav.OnMenuChanged();
+    }
+
+    QCOMPARE(static_cast<int>(rig.client.refused.size()), 6);
+    QCOMPARE(EntryFor(rig.nav, QStringLiteral("Catering")).value("attempts").toInt(-1), 0);
+}
+
+void GsxMenuNavigatorTest::aRefusedPickDoesNotFallThroughToAnotherAnswer_data()
+{
+    QTest::addColumn<QString>("title");
+    QTest::addColumn<QStringList>("entries");
+    QTest::addColumn<bool>("ownStairs");
+    QTest::addColumn<int>("attempted");
+
+    QTest::newRow("the de-ice yes does not become the gsx choice")
+        << QString::fromLatin1(kDeIceQuestionTitle) << QStringList{"Yes", "No [GSX choice]"} << false << 0;
+    QTest::newRow("the jetway does not become the own airstairs")
+        << QStringLiteral("Do you want to use your own airstairs?") << QStringList{"No", "Use jetway", "Yes"}
+        << true << 1;
+}
+
+void GsxMenuNavigatorTest::aRefusedPickDoesNotFallThroughToAnotherAnswer()
+{
+    QFETCH(QString, title);
+    QFETCH(QStringList, entries);
+    QFETCH(bool, ownStairs);
+    QFETCH(int, attempted);
+
+    NavigatorRig rig;
+    rig.settings.useAircraftStairs = ownStairs;
+    rig.client.refusing = true;
+
+    std::vector<std::string> shown;
+    for (const QString& entry : entries)
+    {
+        shown.push_back(entry.toStdString());
+    }
+
+    ShowMenu(rig.state, title.toStdString(), shown);
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(static_cast<int>(rig.client.refused.size()), 1);
+    QCOMPARE(rig.client.refused.front().args.value("index").toInt(-1), attempted);
+
+    rig.now += 1500;
+    rig.nav.OnMenuChanged();
+
+    const bool onlyTheFirstAnswer = std::ranges::all_of(rig.client.refused, [attempted](const Sent& request)
+    {
+        return request.verb != "menu.pick" || request.args.value("index").toInt(-1) == attempted;
+    });
+
+    QCOMPARE(static_cast<int>(rig.client.refused.size()), 2);
+    QVERIFY(onlyTheFirstAnswer);
+
+    rig.client.refusing = false;
+    rig.now += 1500;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 1);
+    QCOMPARE(rig.client.Last("menu.pick")->args.value("index").toInt(-1), attempted);
+}
+
+void GsxMenuNavigatorTest::aRefusedPickIsNotLoggedAsAMenuNobodyMatched_data()
+{
+    QTest::addColumn<bool>("repositioning");
+    QTest::addColumn<QString>("title");
+    QTest::addColumn<QStringList>("entries");
+
+    QTest::newRow("the crew question")
+        << false << QStringLiteral("Do you want to board crew?") << QStringList{"No", "Crew", "Pilots", "Both"};
+    QTest::newRow("the reposition root")
+        << true << QStringLiteral("Ground services") << QStringList{"Reposition Aircraft", "Back"};
+}
+
+void GsxMenuNavigatorTest::aRefusedPickIsNotLoggedAsAMenuNobodyMatched()
+{
+    QFETCH(bool, repositioning);
+    QFETCH(QString, title);
+    QFETCH(QStringList, entries);
+
+    NavigatorRig rig;
+
+    if (repositioning)
+    {
+        rig.nav.RepositionAircraft();
+    }
+    else
+    {
+        rig.nav.RequestCatering();
+    }
+
+    rig.client.refusing = true;
+
+    std::vector<std::string> shown;
+    for (const QString& entry : entries)
+    {
+        shown.push_back(entry.toStdString());
+    }
+
+    ShowMenu(rig.state, title.toStdString(), shown);
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Refused("menu.pick"), 1);
+    QVERIFY(!Logged(rig.logger, "unmatched by intent"));
+}
+
+void GsxMenuNavigatorTest::aRefusedConfirmEnginesDoesNotKeepItsIntentAlive()
+{
+    NavigatorRig rig;
+
+    QVERIFY(!rig.nav.ConfirmGoodEngines());
+
+    rig.client.refusing = true;
+    ShowMenu(rig.state, "Confirm good engine start", {"Confirm good engine start", "Cancel"});
+
+    for (int pass = 0; pass < 65; ++pass)
+    {
+        rig.now += 1000;
+        rig.nav.OnMenuChanged();
+    }
+
+    QCOMPARE(MessagesWith(rig.logger, "confirm-engines intent expired"), 1);
+
+    rig.client.refusing = false;
+    ShowMenu(rig.state, kTugTitle, {"Yes", "No"});
+    rig.now += 1000;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 0);
+}
+
+void GsxMenuNavigatorTest::aRequestNeverSentIsDroppedAfterTheGiveUpWindow_data()
+{
+    QTest::addColumn<QString>("serviceId");
+
+    QTest::newRow("gpu") << QStringLiteral("GPU");
+    QTest::newRow("stairs") << QStringLiteral("OperateStairs");
+    QTest::newRow("catering") << QStringLiteral("Catering");
+}
+
+void GsxMenuNavigatorTest::aRequestNeverSentIsDroppedAfterTheGiveUpWindow()
+{
+    QFETCH(QString, serviceId);
+
+    NavigatorRig rig;
+    rig.client.refusing = true;
+    OfferService(rig.state, serviceId.toStdString());
+
+    if (serviceId == "Catering")
+    {
+        rig.nav.RequestCatering();
+    }
+    else
+    {
+        RequestToggling(rig.nav, serviceId);
+    }
+
+    rig.now = 5000 + 89999;
+    rig.nav.OnMenuChanged();
+
+    QVERIFY(!Logged(rig.logger, "never left the client"));
+    QCOMPARE(static_cast<int>(QueueOf(rig.nav).size()), 1);
+
+    rig.now = 5000 + 90000;
+    rig.nav.OnMenuChanged();
+
+    QVERIFY(Logged(rig.logger, "never left the client"));
+    QCOMPARE(static_cast<int>(QueueOf(rig.nav).size()), 0);
+
+    rig.client.refusing = false;
+    rig.now += 1500;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(TriggersFor(rig.client, serviceId), 0);
+}
+
+void GsxMenuNavigatorTest::aRequestDeliveredLateStillOpensTheServiceIntent()
+{
+    NavigatorRig rig;
+    rig.client.refusing = true;
+    OfferService(rig.state, "Departure");
+
+    rig.nav.RequestPushback();
+
+    QCOMPARE(rig.client.Refused(kServiceTrigger), 1);
+
+    rig.client.refusing = false;
+    rig.now = 5000 + 70000;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("Departure")), 1);
+
+    ShowMenu(rig.state, kTugTitle, {"Yes", "No"});
+    rig.nav.OnMenuChanged();
+
+    const Sent* pick = rig.client.Last("menu.pick");
+
+    QVERIFY(pick != nullptr);
+    QCOMPARE(pick->args.value("index").toInt(-1), 1);
+}
+
+void GsxMenuNavigatorTest::aRefusedCloseKeepsTheMenuTracking()
+{
+    NavigatorRig rig;
+    rig.client.refusing = true;
+    ShowMenu(rig.state, "Some menu", {"Option"});
+
+    rig.nav.RequestCatering();
+
+    for (int pass = 0; pass < 4; ++pass)
+    {
+        rig.now += 1500;
+        rig.nav.OnMenuChanged();
+    }
+
+    QCOMPARE(MessagesWith(rig.logger, "RemoteAPI menu:"), 1);
+}
+
+void GsxMenuNavigatorTest::aRefusedCloseOfAStuckMenuIsNotRecordedAsDone()
+{
+    NavigatorRig rig;
+    OfferService(rig.state, "Boarding");
+
+    rig.nav.RequestBoarding();
+    MarkServiceTaken(rig.state, "Boarding");
+    rig.nav.OnMenuChanged();
+
+    ShowMenu(rig.state, "Service in progress", {"Complete now", "Abort service", "Back"});
+    rig.nav.OnMenuChanged();
+
+    for (int resync = 0; resync < 3; ++resync)
+    {
+        rig.now += 2000;
+        rig.nav.OnMenuChanged();
+    }
+
+    rig.client.refusing = true;
+    rig.now += 2000;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Refused("menu.close"), 1);
+    QVERIFY(!Logged(rig.logger, "the resyncs could not move"));
+
+    rig.client.refusing = false;
+    rig.now += 2000;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.close"), 1);
+    QVERIFY(Logged(rig.logger, "the resyncs could not move"));
+}
+
+void GsxMenuNavigatorTest::aRefusedCloseOfAStaleMenuDoesNotSpendTheSettleWindow()
+{
+    NavigatorRig rig;
+    rig.now = 0;
+
+    rig.nav.RepositionAircraft();
+    ShowMenu(rig.state, kPositionTitle, {"Reposition here [Gate 1]", "Cancel"});
+    rig.nav.OnMenuChanged();
+
+    rig.state.menu.shown = false;
+    rig.nav.OnMenuChanged();
+
+    rig.now = 5000;
+    ShowMenu(rig.state, kPositionTitle, {"Reposition here [Gate 1]", "Cancel"});
+    rig.nav.OnMenuChanged();
+
+    rig.client.refusing = true;
+    rig.now = 7000;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Refused("menu.close"), 1);
+    QVERIFY(rig.nav.IsMenuSettled());
+    QVERIFY(!Logged(rig.logger, "closing stale menu"));
+
+    rig.client.refusing = false;
+    rig.now = 8600;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.close"), 1);
+    QVERIFY(Logged(rig.logger, "closing stale menu"));
+}
+
+void GsxMenuNavigatorTest::aRefusedToggleDoesNotSpendTheSettleWindow()
+{
+    NavigatorRig rig;
+    rig.client.refusing = true;
+
+    rig.nav.RepositionAircraft();
+
+    QCOMPARE(rig.client.Refused("menu.toggle"), 1);
+    QVERIFY(rig.nav.IsMenuSettled());
+}
+
+void GsxMenuNavigatorTest::aRefusedDisableGsxMenuKeepsTheIntent()
+{
+    const auto tugPicks = [](const bool refuseTheClose)
+    {
+        NavigatorRig rig;
+        OfferService(rig.state, "Departure");
+        rig.nav.RequestPushback();
+
+        rig.client.refusing = refuseTheClose;
+        rig.nav.DisableGsxMenu();
+        rig.client.refusing = false;
+
+        ShowMenu(rig.state, kTugTitle, {"Yes", "No"});
+        rig.now += 100;
+        rig.nav.OnMenuChanged();
+
+        return rig.client.Count("menu.pick");
+    };
+
+    QCOMPARE(tugPicks(false), 0);
+    QCOMPARE(tugPicks(true), 1);
+}
+
+void GsxMenuNavigatorTest::theToolbarIsNotOpenedBeforeTheBridgeReportsItsState()
+{
+    PanelRig rig(GsxPanelMode::OnPushback);
+    GsxMenuNavigator nav(&rig.client, &rig.state, &rig.settings, &rig.logger, &rig.plugin);
+
+    nav.OpenPushbackPanel();
+
+    QCOMPARE(rig.PanelCommands(), 0);
+    QVERIFY(!nav.TakeMemory().Flag("panelOpenSpent", true));
+    QVERIFY(!nav.TakeMemory().Flag("panelOpenedByUs", true));
+
+    rig.PanelIs("closed");
+    nav.OpenPushbackPanel();
+
+    QCOMPARE(rig.PanelCommands(), 1);
+    QCOMPARE(rig.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandOpen));
+}
+
+void GsxMenuNavigatorTest::theToolbarIsNotClosedBeforeTheBridgeReportsItsState()
+{
+    PanelRig before(GsxPanelMode::OnPushback);
+    before.PanelIs("closed");
+    GsxMenuNavigator previous(&before.client, &before.state, &before.settings, &before.logger, &before.plugin);
+    previous.OpenPushbackPanel();
+
+    PanelRig after(GsxPanelMode::OnPushback);
+    GsxMenuNavigator resumed(&after.client, &after.state, &after.settings, &after.logger, &after.plugin);
+    resumed.RestoreMemory(previous.TakeMemory());
+    resumed.OnPushbackStarted();
+
+    QCOMPARE(after.PanelCommands(), 0);
+
+    after.PanelIs("open");
+    resumed.OnPushbackStarted();
+
+    QCOMPARE(after.PanelCommands(), 1);
+    QCOMPARE(after.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandClose));
 }
 
 QTEST_GUILESS_MAIN(GsxMenuNavigatorTest)

@@ -11,9 +11,10 @@
 #include <QObject>
 #include <QString>
 #include "GsxRemoteState.h"
+#include "../../domain/model/MemoryBag.h"
 #include "../../domain/ports/GsxMenuGateway.h"
 
-enum class GsxPanelMode;
+enum class GsxPanelMode : std::uint8_t;
 struct AutomationSettings;
 class CommBusPluginClient;
 class DomainLogger;
@@ -66,6 +67,9 @@ public:
 
     void Reset();
 
+    [[nodiscard]] MemoryBag TakeMemory() const;
+    void RestoreMemory(const MemoryBag& memory);
+
     void SetClockForTest(std::function<long long()> clock) { nowMs_ = std::move(clock); }
 
 private:
@@ -82,21 +86,57 @@ private:
         std::string label;
         std::string confirmId;
         long long lastSentMs = 0;
+        long long armedMs = 0;
         int attempts = 0;
-        bool toggles = false;
+        bool firesWhileUnderway = false;
+
+        [[nodiscard]] bool WasSent() const { return attempts > 0; }
+        [[nodiscard]] bool UndoneByASecondSend() const;
+        [[nodiscard]] bool Matches(const QString& otherVerb, const std::string& otherLabel) const
+        {
+            return verb == otherVerb && label == otherLabel;
+        }
+        [[nodiscard]] bool RetryWindowElapsed(const long long now) const
+        {
+            return now - lastSentMs >= kTriggerRetryMs;
+        }
+        [[nodiscard]] bool GiveUpWindowElapsed(const long long now) const
+        {
+            return now - lastSentMs >= kToggleGiveUpMs;
+        }
+        [[nodiscard]] bool LeftUnsentForTooLong(const long long now) const
+        {
+            return !WasSent() && now - armedMs >= kToggleGiveUpMs;
+        }
+        [[nodiscard]] bool IsDueToSend(const long long now) const
+        {
+            return !WasSent() || (!UndoneByASecondSend() && RetryWindowElapsed(now));
+        }
     };
 
-    void TriggerService(const char* serviceId, bool toggles = false);
+    enum class DropReason : std::uint8_t { None, Taken, AlreadyUnderway, ToggleGaveUp, NeverTaken, NeverLeft };
+
+    class PassScope;
+
+    [[nodiscard]] static QJsonObject PendingToJson(const PendingRequest& request);
+    [[nodiscard]] static std::optional<PendingRequest> PendingFromJson(const QJsonObject& object, long long now);
+    [[nodiscard]] std::string PendingToText() const;
+    [[nodiscard]] static std::vector<PendingRequest> PendingFromText(const std::string& text, long long now);
+
+    [[nodiscard]] bool Send(const QString& verb, const QJsonObject& args = {}) const;
+    void TriggerService(const char* serviceId, bool firesWhileUnderway = false);
     void SyncGsxToolbar() const;
     [[nodiscard]] GsxPanelMode PanelMode() const;
     void CloseThePanelWeOpened(const char* logLine);
     void RearmPanelLatches();
     [[nodiscard]] bool IsWaitingForThePanel();
     void ArmRequest(QString verb, QJsonObject args, std::string label, std::string confirmId,
-                    bool toggles = false);
+                    bool firesWhileUnderway = false);
     [[nodiscard]] bool IsAlreadyUnderway(const PendingRequest& request) const;
     [[nodiscard]] bool IsServiceUnderway(const std::string& serviceId) const;
     [[nodiscard]] bool PassengersAreFlowing() const;
+    [[nodiscard]] DropReason DropReasonFor(const PendingRequest& request, long long now) const;
+    void LogDrop(const PendingRequest& request, DropReason reason) const;
     void PumpRequests();
     void SendRequest(PendingRequest& request);
     [[nodiscard]] bool WasTaken(const PendingRequest& request) const;
@@ -158,6 +198,8 @@ private:
     std::string discardedSig_;
     std::string leftOpenSig_;
     mutable long long lastActionMs_ = 0;
+    mutable int passDepth_ = 0;
+    mutable bool sendRefused_ = false;
     bool panelOpenSpent_ = false;
     bool panelCloseSpent_ = false;
     bool panelOpenedByUs_ = false;

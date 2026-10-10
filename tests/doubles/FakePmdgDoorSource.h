@@ -12,6 +12,7 @@ public:
     std::map<int, DoorObservation> observations;
     std::vector<int> toggled;
     int refreshCalls = 0;
+    bool readingsPending = false;
 
     [[nodiscard]] int DoorSlotFor(const GsxDoor door) const override
     {
@@ -29,6 +30,7 @@ public:
 
     void ToggleDoor(const int slot) override { toggled.push_back(slot); }
     void RefreshDoors() override { ++refreshCalls; }
+    [[nodiscard]] bool AreDoorReadingsPending() const override { return readingsPending; }
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_TESTS_FAKEPMDGDOORSOURCE_H

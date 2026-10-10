@@ -1,5 +1,9 @@
 set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/TurnaroundData.h
+        src/domain/turnaround/TurnaroundCheckpoint.h
+        src/domain/turnaround/TurnaroundFacts.h
+        src/domain/turnaround/TurnaroundRestore.h
+        src/domain/turnaround/TurnaroundRestore.cpp
         src/domain/turnaround/TurnaroundTransition.h
         src/domain/turnaround/TurnaroundContext.h
         src/domain/turnaround/TurnaroundMath.h
@@ -80,19 +84,27 @@ set(APP_SOURCES
         src/application/model/CommandResult.h
         src/application/ports/IntegratorService.h
         src/application/ports/SettingsRepository.h
+        src/application/ports/TurnaroundCheckpointStore.h
         src/application/IntegratorRuntime.cpp
         src/application/IntegratorRuntime.h
         src/application/RuntimeIntegratorService.cpp
         src/application/RuntimeIntegratorService.h
+        src/application/TurnaroundKeyJudgement.cpp
+        src/application/TurnaroundKeyJudgement.h
+        src/application/TurnaroundResumption.cpp
+        src/application/TurnaroundResumption.h
         src/application/model/AppSettings.h
         src/application/model/AircraftProfile.h
         src/application/model/EffectiveSettings.h
         src/application/model/IntegratorSnapshot.h
         src/application/model/SmartSwitchCue.h
+        src/application/model/TurnaroundDocument.h
+        src/application/model/TurnaroundHold.h
         src/domain/model/AutomationStatus.h
         src/domain/model/AutomationSettings.h
         src/domain/model/FlightPlan.h
-        src/domain/model/FlightPlan.h
+        src/domain/model/MemoryBag.h
+        src/domain/model/PlanConversion.h
         src/domain/turnaround/TurnaroundPhase.h
         src/domain/ports/Aircraft.h
         src/domain/ports/GsxGateway.h
@@ -238,6 +250,9 @@ set(APP_SOURCES
         src/infrastructure/simbrief/SimbriefFlightPlanSource.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp
         src/infrastructure/simbrief/SimbriefOfpParser.h
+        src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.cpp
+        src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.h
+        src/infrastructure/checkpoint/StoredText.h
         src/infrastructure/settings/QSettingsRepository.cpp
         src/infrastructure/settings/QSettingsRepository.h
         src/infrastructure/simvars/VariableGateway.h

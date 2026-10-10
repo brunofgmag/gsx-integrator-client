@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <optional>
 
+#include "../../../../domain/model/MemoryBag.h"
 #include "../../../../domain/ports/AircraftRule.h"
 #include "../../../gsx/GsxDoorSync.h"
 
@@ -32,6 +33,10 @@ public:
     [[nodiscard]] RuleVerdict Evaluate(const RuleContext& context) override;
     void Act(const RuleContext& context, VariableWriter& writer) override;
 
+    void AppendMemory(MemoryBag& memory) const;
+    void RestoreMemory(const MemoryBag& memory);
+    void ReclaimAnOpenMainDeck();
+
 private:
     struct SlotState
     {
@@ -48,6 +53,9 @@ private:
     [[nodiscard]] bool IsOpenLVarConfirmed(const char* openLVar, bool wantOpen) const;
     static void WriteRequest(const FssEJetDoorSlot& slot, bool open, VariableWriter& writer);
     [[nodiscard]] bool IsMainLoaderWaitingForTheDeck() const;
+    [[nodiscard]] bool ClaimsTheOpenMainDeck(bool closeAllPending);
+    [[nodiscard]] bool HasTheReadingsTheClaimNeeds() const;
+    [[nodiscard]] bool HoldsTheRestoredMainDeckOpen();
 
     VariableReader* variables_;
     GsxDoorSync* doors_;
@@ -55,6 +63,9 @@ private:
     bool cargoVariant_;
     std::array<SlotState, kFssEJetDoorSlotCount> states_{};
     int servedCloseAllRequests_ = 0;
+    bool mainDeckRestoredOpen_ = false;
+    bool reclaimsTheMainDeck_ = false;
+    bool closesTheMainDeck_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSSEJETDOORSFOLLOWGSXRULE_H

@@ -26,6 +26,8 @@ public:
 
     void ObserveRules(TurnaroundContext& ctx, RuleCadence cadence);
 
+    void ForgetObservedVerdicts() { observedVerdicts_.clear(); }
+
 protected:
     [[nodiscard]] virtual std::optional<TurnaroundTransition> EvaluatePhase(TurnaroundContext& ctx) = 0;
 

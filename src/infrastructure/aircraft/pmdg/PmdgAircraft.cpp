@@ -18,6 +18,8 @@ namespace
 
     constexpr double kEngineRunningDefault = 1.0;
     constexpr double kEngineCombustionDefault = 0.0;
+
+    constexpr auto kPlanImportedKey = "pmdg.efbPlanImported";
 }
 
 PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationStatus* status,
@@ -56,6 +58,7 @@ void PmdgAircraft::Observe()
     data_->SetInFlight(variableGateway_->GetAVar(kSimOnGround, kBoolUnit, 1.0) <= 0.0);
     data_->Poll();
     tablet_->Poll();
+    QueryTabletState();
     RefreshDoors();
     AdvanceMovingDoors();
 
@@ -76,9 +79,63 @@ const std::vector<AircraftRule*>& PmdgAircraft::Rules() const
     return rules_;
 }
 
+void PmdgAircraft::QueryTabletState()
+{
+    if (!tablet_->IsAvailable() || ++ticksSinceStateQuery_ < kStateQueryTicks)
+    {
+        return;
+    }
+
+    ticksSinceStateQuery_ = 0;
+    stateQuestionSent_ = true;
+    tablet_->RequestState();
+}
+
 void PmdgAircraft::OnLoadingStarted()
 {
     payload_.Reset();
+    tablet_->SetEfbPlanImported(false);
+    routeImport_.Restart();
+}
+
+bool PmdgAircraft::IsReachable() const
+{
+    return data_->HasData()
+        && tablet_->IsAvailable()
+        && tablet_->LastWeightEcho().has_value()
+        && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit)
+        && variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit);
+}
+
+void PmdgAircraft::OnTurnaroundStarted()
+{
+    doorRule_.ForgetMainDeckDoor();
+}
+
+void PmdgAircraft::OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory)
+{
+    doors_.RestoreMemory(memory, facts.gsxRestartedSinceSave);
+    doorReconciler_.RestoreMemory(memory);
+    doorRule_.RestoreMemory(memory);
+    groundConn_.RestoreMemory(memory);
+    tablet_->SetEfbPlanImported(memory.Flag(kPlanImportedKey, false));
+    payload_.Resume(facts.emptyZfwKg, facts.plannedZfwKg, facts.plannedPassengers);
+}
+
+MemoryBag PmdgAircraft::TurnaroundMemory() const
+{
+    MemoryBag memory;
+    doors_.AppendMemory(memory);
+    doorReconciler_.AppendMemory(memory);
+    doorRule_.AppendMemory(memory);
+    groundConn_.AppendMemory(memory);
+
+    if (tablet_->EfbPlanImported() || routeImport_.Seen())
+    {
+        memory.PutFlag(kPlanImportedKey, true);
+    }
+
+    return memory;
 }
 
 void PmdgAircraft::CloseAllDoors()

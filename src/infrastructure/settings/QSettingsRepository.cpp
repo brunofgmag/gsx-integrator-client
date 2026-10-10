@@ -17,6 +17,7 @@ namespace
     constexpr auto kKeyAutoStartFlow = "automation/autoStartFlow";
     constexpr auto kKeyAutoStartLoading = "automation/autoStartLoading";
     constexpr auto kKeySkipReposition = "automation/skipReposition";
+    constexpr auto kKeySkipRepositionOnNewTurnaround = "automation/skipRepositionOnNewTurnaround";
     constexpr auto kKeyCallGpu = "services/callGpu";
     constexpr auto kKeyCallGpuOnArrival = "services/callGpuOnArrival";
     constexpr auto kKeyPlaceChocks = "services/placeChocks";
@@ -43,6 +44,7 @@ namespace
     constexpr auto kKeyProfileFuelRateKgs = "fuelRateKgs";
     constexpr auto kKeyProfileFuelRateMode = "fuelRateMode";
     constexpr auto kKeyProfileSkipReposition = "skipReposition";
+    constexpr auto kKeyProfileSkipRepositionOnNewTurnaround = "skipRepositionOnNewTurnaround";
     constexpr auto kKeyProfileCallGpu = "callGpu";
     constexpr auto kKeyProfileCallGpuOnArrival = "callGpuOnArrival";
     constexpr auto kKeyProfilePlaceChocks = "placeChocks";
@@ -128,6 +130,7 @@ namespace
         profile.fuelRateKgs = settings.value(kKeyProfileFuelRateKgs,
                                              AutomationSettings::kDefaultFuelRateKgs).toDouble();
         profile.skipReposition = settings.value(kKeyProfileSkipReposition, false).toBool();
+        profile.skipRepositionOnNewTurnaround = settings.value(kKeyProfileSkipRepositionOnNewTurnaround, true).toBool();
         profile.callGpu = settings.value(kKeyProfileCallGpu, false).toBool();
         profile.callGpuOnArrival = settings.value(kKeyProfileCallGpuOnArrival, false).toBool();
         profile.placeChocks = settings.value(kKeyProfilePlaceChocks, profile.callGpu).toBool();
@@ -148,6 +151,7 @@ namespace
         settings.setValue(kKeyProfileFuelRateMode, static_cast<int>(profile.fuelRateMode));
         settings.setValue(kKeyProfileFuelRateKgs, profile.fuelRateKgs);
         settings.setValue(kKeyProfileSkipReposition, profile.skipReposition);
+        settings.setValue(kKeyProfileSkipRepositionOnNewTurnaround, profile.skipRepositionOnNewTurnaround);
         settings.setValue(kKeyProfileCallGpu, profile.callGpu);
         settings.setValue(kKeyProfileCallGpuOnArrival, profile.callGpuOnArrival);
         settings.setValue(kKeyProfilePlaceChocks, profile.placeChocks);
@@ -176,6 +180,7 @@ AppSettings QSettingsRepository::Load() const
     result.autoStartFlow = settings.value(kKeyAutoStartFlow, false).toBool();
     result.autoStartLoading = settings.value(kKeyAutoStartLoading, true).toBool();
     result.skipReposition = settings.value(kKeySkipReposition, false).toBool();
+    result.skipRepositionOnNewTurnaround = settings.value(kKeySkipRepositionOnNewTurnaround, true).toBool();
     result.callGpu = settings.value(kKeyCallGpu, false).toBool();
     result.callGpuOnArrival = settings.value(kKeyCallGpuOnArrival, false).toBool();
     result.placeChocks = settings.value(kKeyPlaceChocks, result.callGpu).toBool();
@@ -227,6 +232,7 @@ bool QSettingsRepository::Save(const AppSettings& values)
     settings.setValue(kKeyAutoStartFlow, values.autoStartFlow);
     settings.setValue(kKeyAutoStartLoading, values.autoStartLoading);
     settings.setValue(kKeySkipReposition, values.skipReposition);
+    settings.setValue(kKeySkipRepositionOnNewTurnaround, values.skipRepositionOnNewTurnaround);
     settings.setValue(kKeyCallGpu, values.callGpu);
     settings.setValue(kKeyCallGpuOnArrival, values.callGpuOnArrival);
     settings.setValue(kKeyPlaceChocks, values.placeChocks);

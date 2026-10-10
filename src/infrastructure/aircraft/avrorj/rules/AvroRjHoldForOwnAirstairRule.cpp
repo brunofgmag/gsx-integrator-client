@@ -61,7 +61,7 @@ RuleVerdict AvroRjHoldForOwnAirstairRule::Evaluate(const RuleContext& context)
 
 void AvroRjHoldForOwnAirstairRule::Act(const RuleContext& context, VariableWriter& writer)
 {
-    if (context.needs.passengerAccess && !aircraft_->IsJetwayAvailable())
+    if (context.needs.passengerAccess && aircraft_->IsOwnAirstairTheWayIn())
     {
         airstair_->requested = true;
     }

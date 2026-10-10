@@ -26,6 +26,8 @@ private slots:
     static void aStampedTouchReachesTheServiceWithThePhaseTheScreenDrew();
     static void aTouchWithoutAPhaseStampIsDropped();
     static void aRefusedStampedTouchCarriesTheReasonToTheScreen();
+    static void theResumeTouchReachesTheResumeAnswerAndNotTheRestart();
+    static void aResumeTouchOutsideTheDecisionCarriesTheRefusalToTheScreen();
 };
 
 void EfbCommandReceiverTest::subscribesToTheCommandChannelOnSetup()
@@ -186,6 +188,46 @@ void EfbCommandReceiverTest::aRefusedStampedTouchCarriesTheReasonToTheScreen()
 
     QCOMPARE(viewModel.GetCommandError(),
              QStringLiteral("The turnaround moved on before your touch arrived."));
+}
+
+void EfbCommandReceiverTest::theResumeTouchReachesTheResumeAnswerAndNotTheRestart()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbCommandReceiver receiver(&bridge, &viewModel);
+    receiver.Setup();
+
+    bridge.Deliver(EfbCommBus::kCommandChannel, Command("resumeTurnaround"));
+
+    QCOMPARE(service.resumeSavedTurnaroundCalls, 1);
+    QCOMPARE(service.restartFlowCalls, 0);
+    QVERIFY(viewModel.GetCommandError().isEmpty());
+}
+
+void EfbCommandReceiverTest::aResumeTouchOutsideTheDecisionCarriesTheRefusalToTheScreen()
+{
+    FakeIntegratorService service;
+    service.resumeSavedTurnaroundResult =
+        CommandResult::Failure("There is no saved turnaround waiting for an answer.");
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbCommandReceiver receiver(&bridge, &viewModel);
+    receiver.Setup();
+
+    bridge.Deliver(EfbCommBus::kCommandChannel, Command("resumeTurnaround"));
+
+    QCOMPARE(viewModel.GetCommandError(),
+             QStringLiteral("There is no saved turnaround waiting for an answer."));
+
+    OperationsViewModel windowViewModel(&service, &display);
+    windowViewModel.resumeSavedTurnaround();
+
+    QCOMPARE(viewModel.GetCommandError(), windowViewModel.GetCommandError());
 }
 
 QTEST_APPLESS_MAIN(EfbCommandReceiverTest)

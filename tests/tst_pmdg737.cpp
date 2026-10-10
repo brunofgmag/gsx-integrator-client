@@ -1,7 +1,11 @@
+#include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
 #include <algorithm>
 #include <array>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
 #include <iterator>
 #include <memory>
 #include <string>
@@ -13,6 +17,7 @@
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/infrastructure/aircraft/pmdg/Pmdg737.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
+#include "../src/infrastructure/pmdg/PmdgRouteFile.h"
 
 namespace
 {
@@ -116,6 +121,24 @@ private slots:
     static void writesTheGsxDoorAutomationAgainWhenGsxTurnsItBackOn();
     static void leavesTheGsxDoorAutomationAloneBeforeClientData();
     static void theDoorAutomationRuleRunsRightBeforeTheDoorRule();
+    static void reachableOnlyOnceEverythingHasArrived();
+    static void anOpenDoorIsNotToggledWhileTheTabletHasNotAnswered();
+    static void aTabletThatAnswersLateStillSavesTheOpenDoor();
+    static void aSilentTabletDoesNotHoldTheDoorBeyondTheBudget();
+    static void theEndOfTheWaitIsLoggedOnce();
+    static void withoutTheBridgeNothingIsAskedAndTheWaitEndsAtTheCeiling();
+    static void aBridgeThatComesUpLateGetsTheWholeAnswerBudget();
+    static void aTabletThatAnswersRightAfterTheBridgeComesUpIsNotWaitedFor();
+    static void aTabletThatAnswersIsNotWaitedForAndAnswersAreNotLogged();
+    static void aTabletSilentOnOneDoorDoesNotHoldIt();
+    static void theMainCargoDoorWaitsForTheTabletToo();
+    static void resumingNeitherClosesDoorsNorMakesTheHoldsCloseThem();
+    static void observingAResumedAircraftOnlyAsksTheTabletForItsState();
+    static void thePlanImportSeenCrossesTheRestart();
+    static void aPlanImportedThroughTheRouteFileIsForgottenWhenTheNextFlightStartsLoading();
+    static void aPlanImportedBeforeTheTurnaroundStartedSurvivesItsStart();
+    static void aRestoredPlaceRequestWaitsForTheLiveChocksReading();
+    static void aRestoredRemoveRequestWaitsForTheLiveChocksReading();
 };
 
 void Pmdg737Test::nameAndCargoFlagFollowTheVariant()
@@ -768,7 +791,7 @@ void Pmdg737Test::vehicleStateInheritedFromBeforeACouatlRestartIsNotBelieved()
     fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
 
     fixture.aircraft->CloseAllDoors();
-    Tick(fixture, 2);
+    Tick(fixture, 6);
 
     const auto entryToggles = [&fixture] {
         return static_cast<int>(std::ranges::count(fixture.data->toggledDoors, Pmdg737Door::FwdEntry));
@@ -926,6 +949,492 @@ void Pmdg737Test::theDoorAutomationRuleRunsRightBeforeTheDoorRule()
     QVERIFY(automation != names.end());
     QVERIFY(std::next(automation) != names.end());
     QVERIFY(*std::next(automation) == "pmdg-doors-follow-gsx");
+}
+
+namespace
+{
+    constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
+    constexpr auto kSimFuelWeight = "FUEL TOTAL QUANTITY WEIGHT";
+    constexpr auto kNoReadingMessage = "no door reading";
+    constexpr auto kNoBridgeMessage = "bridge never came up";
+    constexpr int kAnswerBudgetTicks = 6;
+    constexpr int kBridgeCeilingTicks = 4;
+    constexpr double kEmptyKg = 41000.0;
+
+    void LetEverythingArrive(Pmdg737Fixture& fixture)
+    {
+        fixture.data->hasData = true;
+        fixture.gateway.avars[kSimEmptyWeight] = kEmptyKg;
+        fixture.gateway.avars[kSimFuelWeight] = 500.0;
+        fixture.SeeEfbWeights(kEmptyKg);
+    }
+
+    TurnaroundFacts ResumedFacts()
+    {
+        TurnaroundFacts facts;
+        facts.phase = TurnaroundPhase::Loading;
+        facts.loadingStarted = true;
+        facts.emptyZfwKg = kEmptyKg;
+        facts.plannedZfwKg = kEmptyKg + 15000.0;
+        facts.plannedPassengers = 150;
+
+        return facts;
+    }
+
+    std::vector<QString>& CapturedMessages()
+    {
+        static std::vector<QString> messages;
+
+        return messages;
+    }
+
+    void CaptureMessage(QtMsgType, const QMessageLogContext&, const QString& message)
+    {
+        CapturedMessages().push_back(message);
+    }
+
+    class MessageCapture
+    {
+    public:
+        MessageCapture()
+        {
+            CapturedMessages().clear();
+            previous_ = qInstallMessageHandler(&CaptureMessage);
+        }
+
+        ~MessageCapture()
+        {
+            qInstallMessageHandler(previous_);
+        }
+
+        MessageCapture(const MessageCapture&) = delete;
+        MessageCapture& operator=(const MessageCapture&) = delete;
+
+        [[nodiscard]] static int Count(const char* fragment)
+        {
+            return static_cast<int>(std::ranges::count_if(CapturedMessages(), [fragment](const QString& message)
+            {
+                return message.contains(QLatin1String(fragment));
+            }));
+        }
+
+    private:
+        QtMessageHandler previous_ = nullptr;
+    };
+}
+
+void Pmdg737Test::reachableOnlyOnceEverythingHasArrived()
+{
+    Pmdg737Fixture fixture;
+
+    QVERIFY(!fixture.aircraft->IsReachable());
+
+    LetEverythingArrive(fixture);
+
+    QVERIFY(fixture.aircraft->IsReachable());
+
+    fixture.data->hasData = false;
+    QVERIFY(!fixture.aircraft->IsReachable());
+    fixture.data->hasData = true;
+
+    fixture.tablet->available = false;
+    QVERIFY(!fixture.aircraft->IsReachable());
+    fixture.tablet->available = true;
+
+    fixture.tablet->weightEcho.reset();
+    QVERIFY(!fixture.aircraft->IsReachable());
+    fixture.SeeEfbWeights(kEmptyKg);
+
+    fixture.gateway.avars.erase(kSimEmptyWeight);
+    QVERIFY(!fixture.aircraft->IsReachable());
+    fixture.gateway.avars[kSimEmptyWeight] = kEmptyKg;
+
+    fixture.gateway.avars.erase(kSimFuelWeight);
+    QVERIFY(!fixture.aircraft->IsReachable());
+    fixture.gateway.avars[kSimFuelWeight] = 500.0;
+
+    QVERIFY(fixture.aircraft->IsReachable());
+}
+
+void Pmdg737Test::anOpenDoorIsNotToggledWhileTheTabletHasNotAnswered()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+
+    Tick(fixture, 2);
+
+    QCOMPARE(EntryToggles(fixture), 0);
+
+    fixture.tablet->doorOpen[kFwdEntryKey] = true;
+    Tick(fixture, 40);
+
+    QCOMPARE(EntryToggles(fixture), 0);
+}
+
+void Pmdg737Test::aTabletThatAnswersLateStillSavesTheOpenDoor()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+
+    Tick(fixture, kAnswerBudgetTicks - 1);
+
+    QCOMPARE(fixture.tablet->stateRequests, 2);
+    QCOMPARE(EntryToggles(fixture), 0);
+
+    fixture.tablet->doorOpen[kFwdEntryKey] = true;
+    Tick(fixture, 40);
+
+    QCOMPARE(EntryToggles(fixture), 0);
+}
+
+void Pmdg737Test::aSilentTabletDoesNotHoldTheDoorBeyondTheBudget()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+
+    Tick(fixture, kAnswerBudgetTicks - 1);
+
+    QCOMPARE(EntryToggles(fixture), 0);
+
+    Tick(fixture, 1);
+
+    QCOMPARE(EntryToggles(fixture), 1);
+
+    Tick(fixture, 40);
+
+    QCOMPARE(EntryToggles(fixture), 1);
+}
+
+void Pmdg737Test::theEndOfTheWaitIsLoggedOnce()
+{
+    const MessageCapture capture;
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+
+    Tick(fixture, kAnswerBudgetTicks - 1);
+
+    QCOMPARE(MessageCapture::Count(kNoReadingMessage), 0);
+
+    Tick(fixture, 40);
+
+    QCOMPARE(MessageCapture::Count(kNoReadingMessage), 1);
+}
+
+void Pmdg737Test::withoutTheBridgeNothingIsAskedAndTheWaitEndsAtTheCeiling()
+{
+    const MessageCapture capture;
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->available = false;
+
+    Tick(fixture, kBridgeCeilingTicks - 1);
+
+    QCOMPARE(fixture.tablet->stateRequests, 0);
+    QCOMPARE(EntryToggles(fixture), 0);
+    QCOMPARE(MessageCapture::Count(kNoBridgeMessage), 0);
+
+    Tick(fixture, 1);
+
+    QCOMPARE(EntryToggles(fixture), 1);
+
+    Tick(fixture, 40);
+
+    QCOMPARE(EntryToggles(fixture), 1);
+    QCOMPARE(MessageCapture::Count(kNoBridgeMessage), 1);
+    QCOMPARE(MessageCapture::Count(kNoReadingMessage), 0);
+}
+
+void Pmdg737Test::aBridgeThatComesUpLateGetsTheWholeAnswerBudget()
+{
+    const MessageCapture capture;
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->available = false;
+
+    Tick(fixture, kBridgeCeilingTicks / 2);
+
+    QCOMPARE(EntryToggles(fixture), 0);
+
+    fixture.tablet->available = true;
+    Tick(fixture, kAnswerBudgetTicks - 1);
+
+    QCOMPARE(fixture.tablet->stateRequests, 2);
+    QCOMPARE(EntryToggles(fixture), 0);
+
+    Tick(fixture, 1);
+
+    QCOMPARE(EntryToggles(fixture), 1);
+    QCOMPARE(MessageCapture::Count(kNoBridgeMessage), 0);
+}
+
+void Pmdg737Test::aTabletThatAnswersRightAfterTheBridgeComesUpIsNotWaitedFor()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->available = false;
+
+    Tick(fixture, kBridgeCeilingTicks - 1);
+
+    QCOMPARE(EntryToggles(fixture), 0);
+
+    fixture.tablet->available = true;
+    fixture.tablet->doorOpen[kFwdEntryKey] = false;
+    Tick(fixture, 1);
+
+    QCOMPARE(EntryToggles(fixture), 1);
+}
+
+void Pmdg737Test::aTabletThatAnswersIsNotWaitedForAndAnswersAreNotLogged()
+{
+    const MessageCapture capture;
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->doorOpen[kFwdEntryKey] = false;
+
+    Tick(fixture, 40);
+
+    QCOMPARE(EntryToggles(fixture), 3);
+    QCOMPARE(MessageCapture::Count(kNoReadingMessage), 0);
+}
+
+void Pmdg737Test::aTabletSilentOnOneDoorDoesNotHoldIt()
+{
+    Pmdg737Fixture fixture;
+    DockJetway(fixture);
+    fixture.tablet->doorOpen["fwd_cargo"] = false;
+
+    Tick(fixture, 1);
+
+    QCOMPARE(EntryToggles(fixture), 1);
+}
+
+void Pmdg737Test::theMainCargoDoorWaitsForTheTabletToo()
+{
+    Pmdg737Fixture fixture(Pmdg737Variant::Bcf800);
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kBaggageLoaderMainState] = gsx::states::kLoaderLoading;
+
+    Tick(fixture, 2);
+
+    QVERIFY(fixture.data->toggledDoors.empty());
+
+    fixture.tablet->doorOpen[kMainCargoKey] = true;
+    Tick(fixture, 40);
+
+    QVERIFY(fixture.data->toggledDoors.empty());
+}
+
+void Pmdg737Test::resumingNeitherClosesDoorsNorMakesTheHoldsCloseThem()
+{
+    Pmdg737Fixture fixture;
+    LetEverythingArrive(fixture);
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    for (const char* key : kEfbDoorKeys)
+    {
+        fixture.tablet->doorOpen[key] = true;
+    }
+
+    fixture.aircraft->OnTurnaroundResumed(ResumedFacts(), MemoryBag{});
+    fixture.aircraft->HoldDoorsClosed(true);
+    fixture.aircraft->HoldPassengerDoorsClosed(true);
+    Tick(fixture, 30);
+
+    QVERIFY(fixture.data->toggledDoors.empty());
+}
+
+void Pmdg737Test::observingAResumedAircraftOnlyAsksTheTabletForItsState()
+{
+    Pmdg737Fixture fixture;
+    LetEverythingArrive(fixture);
+    DockJetway(fixture);
+    fixture.aircraft->OnTurnaroundResumed(ResumedFacts(), MemoryBag{});
+    const int lvarWrites = fixture.gateway.setLVarCalls;
+    const int avarWrites = fixture.gateway.setAVarCalls;
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        fixture.gateway.MarkTick();
+        fixture.aircraft->Observe();
+    }
+
+    QVERIFY(fixture.data->toggledDoors.empty());
+    QCOMPARE(fixture.gateway.setLVarCalls, lvarWrites);
+    QCOMPARE(fixture.gateway.setAVarCalls, avarWrites);
+    QVERIFY(fixture.tablet->groundConnRequests.empty());
+    QVERIFY(fixture.tablet->groundVehicleRequests.empty());
+    QVERIFY(fixture.tablet->fuelSends.empty());
+    QVERIFY(fixture.tablet->paxSends.empty());
+    QVERIFY(fixture.tablet->cargoSends.empty());
+    QCOMPARE(fixture.tablet->stateRequests, 10);
+}
+
+void Pmdg737Test::thePlanImportSeenCrossesTheRestart()
+{
+    Pmdg737Fixture dead;
+    dead.tablet->efbPlanImported = true;
+    const MemoryBag memory = dead.aircraft->TurnaroundMemory();
+
+    Pmdg737Fixture born;
+    born.status.flightPlanStatus = FlightPlanStatus::Ready;
+
+    QVERIFY(!born.aircraft->IsFlightPlanLoaded());
+
+    born.aircraft->OnTurnaroundResumed(ResumedFacts(), memory);
+
+    QVERIFY(born.aircraft->IsFlightPlanLoaded());
+}
+
+namespace
+{
+    constexpr long long kSecondsBeforeNow = 100;
+
+    long long NowEpoch()
+    {
+        return std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+    }
+
+    class RouteDirectory
+    {
+    public:
+        explicit RouteDirectory(const char* aircraftName)
+            : previousAppData_(qgetenv("APPDATA"))
+        {
+            qputenv("APPDATA", appData_.path().toUtf8());
+            directory_ = *PmdgRouteFile::DirectoryFor(aircraftName);
+            std::filesystem::create_directories(directory_);
+        }
+
+        ~RouteDirectory()
+        {
+            qputenv("APPDATA", previousAppData_);
+        }
+
+        RouteDirectory(const RouteDirectory&) = delete;
+        RouteDirectory& operator=(const RouteDirectory&) = delete;
+
+        void Import(const long long secondsAgo) const
+        {
+            const std::filesystem::path file = directory_ / "SBFZSBTE.rte";
+            std::ofstream(file) << "Generated by SimBrief\n";
+            const auto stamp = std::chrono::system_clock::time_point(std::chrono::seconds(NowEpoch() - secondsAgo));
+            std::filesystem::last_write_time(file, std::chrono::clock_cast<std::chrono::file_clock>(stamp));
+        }
+
+    private:
+        QTemporaryDir appData_;
+        QByteArray previousAppData_;
+        std::filesystem::path directory_;
+    };
+
+    void ExpectAPlan(Pmdg737Fixture& fixture)
+    {
+        fixture.status.flightPlanStatus = FlightPlanStatus::Ready;
+        fixture.status.plannedOrigin = "SBFZ";
+        fixture.status.plannedDestination = "SBTE";
+        fixture.status.planGeneratedEpoch = 1000;
+    }
+
+    MemoryBag MemoryWithChocksPending(const bool placed)
+    {
+        Pmdg737Fixture dead;
+        dead.aircraft->SetChocks(placed);
+
+        return dead.aircraft->TurnaroundMemory();
+    }
+
+    void ResumeBeforeTheReadingsArrive(Pmdg737Fixture& born, const MemoryBag& memory)
+    {
+        LetEverythingArrive(born);
+        born.gateway.arrivesATickAfterItIsAsked = true;
+        born.aircraft->OnTurnaroundResumed(ResumedFacts(), memory);
+    }
+}
+
+void Pmdg737Test::aPlanImportedThroughTheRouteFileIsForgottenWhenTheNextFlightStartsLoading()
+{
+    const RouteDirectory routes(Pmdg737::kNamePax800);
+    Pmdg737Fixture fixture;
+    ExpectAPlan(fixture);
+
+    routes.Import(kSecondsBeforeNow);
+    fixture.aircraft->Observe();
+
+    QVERIFY(!fixture.aircraft->IsFlightPlanLoaded());
+
+    routes.Import(kSecondsBeforeNow / 2);
+    fixture.aircraft->Observe();
+
+    QVERIFY(fixture.aircraft->IsFlightPlanLoaded());
+
+    fixture.aircraft->OnLoadingStarted();
+
+    QVERIFY(!fixture.aircraft->IsFlightPlanLoaded());
+
+    fixture.aircraft->Observe();
+    fixture.aircraft->OnTurnaroundStarted();
+    fixture.aircraft->Observe();
+
+    QVERIFY(!fixture.aircraft->IsFlightPlanLoaded());
+
+    routes.Import(kSecondsBeforeNow / 10);
+    fixture.aircraft->Observe();
+
+    QVERIFY(fixture.aircraft->IsFlightPlanLoaded());
+}
+
+void Pmdg737Test::aPlanImportedBeforeTheTurnaroundStartedSurvivesItsStart()
+{
+    const RouteDirectory routes(Pmdg737::kNamePax800);
+    Pmdg737Fixture fixture;
+    ExpectAPlan(fixture);
+
+    routes.Import(kSecondsBeforeNow);
+    fixture.aircraft->Observe();
+    routes.Import(kSecondsBeforeNow / 2);
+    fixture.aircraft->Observe();
+
+    QVERIFY(fixture.aircraft->IsFlightPlanLoaded());
+
+    fixture.aircraft->OnTurnaroundStarted();
+    fixture.aircraft->Observe();
+
+    QVERIFY(fixture.aircraft->IsFlightPlanLoaded());
+}
+
+void Pmdg737Test::aRestoredPlaceRequestWaitsForTheLiveChocksReading()
+{
+    const MemoryBag memory = MemoryWithChocksPending(true);
+    Pmdg737Fixture born;
+    ResumeBeforeTheReadingsArrive(born, memory);
+    born.gateway.lvars[kChocksLVar] = 1.0;
+
+    Tick(born, 15);
+
+    QVERIFY(born.tablet->groundConnRequests.empty());
+
+    born.gateway.DeliverWhatWasAsked();
+    Tick(born, 15);
+
+    QVERIFY(born.tablet->groundConnRequests.empty());
+}
+
+void Pmdg737Test::aRestoredRemoveRequestWaitsForTheLiveChocksReading()
+{
+    const MemoryBag memory = MemoryWithChocksPending(false);
+    Pmdg737Fixture born;
+    ResumeBeforeTheReadingsArrive(born, memory);
+    born.gateway.lvars[kChocksLVar] = 1.0;
+
+    Tick(born, 15);
+
+    QVERIFY(born.tablet->groundConnRequests.empty());
+
+    born.gateway.DeliverWhatWasAsked();
+    Tick(born, 1);
+
+    QCOMPARE(born.tablet->groundConnRequests, std::vector<std::string>{"wheel_chocks"});
 }
 
 QTEST_APPLESS_MAIN(Pmdg737Test)

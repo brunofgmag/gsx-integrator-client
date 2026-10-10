@@ -6,6 +6,8 @@
 #include "../simvars/VariableGateway.h"
 
 #include <algorithm>
+#include <span>
+#include <string>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
@@ -29,6 +31,47 @@ namespace
         gsx::lvars::kBaggageLoaderRearState,
         gsx::lvars::kBaggageLoaderMainState
     };
+
+    constexpr double kNoVehicleState = 0.0;
+
+    struct DoorVehicle
+    {
+        const char* lVar;
+        double absent;
+        bool (*serves)(double state);
+    };
+
+    bool IsJetwayDocked(const double state)
+    {
+        return state == kJetwayDockedValue;
+    }
+
+    constexpr std::array kFwdPaxVehicles = {
+        DoorVehicle{.lVar = gsx::lvars::kJetway, .absent = kJetwayUnavailableValue, .serves = IsJetwayDocked},
+        DoorVehicle{.lVar = gsx::lvars::kPassengerStairsFrontState, .absent = kNoVehicleState, .serves = gsx::states::AreStairsArriving}
+    };
+    constexpr std::array kMidPaxVehicles = {
+        DoorVehicle{.lVar = gsx::lvars::kPassengerStairsMiddleState, .absent = kNoVehicleState, .serves = gsx::states::AreStairsArriving}
+    };
+    constexpr std::array kAftPaxVehicles = {
+        DoorVehicle{.lVar = gsx::lvars::kPassengerStairsRearState, .absent = kNoVehicleState, .serves = gsx::states::AreStairsArriving}
+    };
+    constexpr std::array kFwdCateringVehicles = {
+        DoorVehicle{.lVar = gsx::lvars::kCateringFrontState, .absent = kNoVehicleState, .serves = gsx::states::IsCateringArriving}
+    };
+    constexpr std::array kAftCateringVehicles = {
+        DoorVehicle{.lVar = gsx::lvars::kCateringRearState, .absent = kNoVehicleState, .serves = gsx::states::IsCateringArriving}
+    };
+    constexpr std::array kFwdCargoVehicles = {
+        DoorVehicle{.lVar = gsx::lvars::kBaggageLoaderFrontState, .absent = kNoVehicleState, .serves = gsx::states::IsLoaderServingTheDoor}
+    };
+    constexpr std::array kAftCargoVehicles = {
+        DoorVehicle{.lVar = gsx::lvars::kBaggageLoaderRearState, .absent = kNoVehicleState, .serves = gsx::states::IsLoaderServingTheDoor}
+    };
+
+    constexpr auto kMemoryPrefix = "doorSync.";
+    constexpr auto kOpenText = "open";
+    constexpr auto kClosedText = "closed";
 
     constexpr std::array kAllDoors = {
         GsxDoor::FwdPax, GsxDoor::MidPax, GsxDoor::AftPax,
@@ -64,6 +107,40 @@ namespace
         default: return "AftCargo";
         }
     }
+
+    std::span<const DoorVehicle> DrivingVehicles(const GsxDoor door)
+    {
+        switch (door)
+        {
+        case GsxDoor::FwdPax: return kFwdPaxVehicles;
+        case GsxDoor::MidPax: return kMidPaxVehicles;
+        case GsxDoor::AftPax: return kAftPaxVehicles;
+        case GsxDoor::FwdCatering: return kFwdCateringVehicles;
+        case GsxDoor::AftCatering: return kAftCateringVehicles;
+        case GsxDoor::FwdCargo: return kFwdCargoVehicles;
+        default: return kAftCargoVehicles;
+        }
+    }
+
+    std::string MemoryEntryName(const GsxDoor door)
+    {
+        return std::string(kMemoryPrefix).append(DoorName(door));
+    }
+
+    const char* TargetText(const double target)
+    {
+        return target == kDoorOpen ? kOpenText : kClosedText;
+    }
+
+    double TargetFromText(const std::string& text)
+    {
+        if (text == kOpenText)
+        {
+            return kDoorOpen;
+        }
+
+        return text == kClosedText ? kDoorClosed : kDoorUnknown;
+    }
 }
 
 GsxDoorSync::GsxDoorSync(VariableReader* variableGateway) : variableGateway_(variableGateway)
@@ -92,23 +169,21 @@ void GsxDoorSync::Sync(const DoorWriter& write)
 
     for (const GsxDoor door : kAllDoors)
     {
-        double& lastTarget = lastTargets_[static_cast<std::size_t>(door)];
+        const auto index = static_cast<std::size_t>(door);
+        const double lastTarget = lastTargets_[index];
+        inheritedTargets_[index] = inheritedTargets_[index] && !HaveVehiclesArrived(door);
+
         const bool wantsOpen = IsDesiredOpen(door);
         const bool pending = wantsOpen ? lastTarget != kDoorOpen : lastTarget == kDoorOpen;
-        if (!pending)
+        const bool waitingForItsVehicles = !wantsOpen && inheritedTargets_[index] && !IsHeldClosed(door);
+        if (!pending || waitingForItsVehicles)
         {
             continue;
         }
 
         if (IsMoving(door))
         {
-            bool& holdLogged = holdLogged_[static_cast<std::size_t>(door)];
-            if (!holdLogged)
-            {
-                holdLogged = true;
-                probe::Line(probe::Channel::Writes,
-                            QStringLiteral("hold  sync  %1 moving").arg(QLatin1String(DoorName(door))));
-            }
+            LogHoldOnce(door);
 
             continue;
         }
@@ -116,9 +191,30 @@ void GsxDoorSync::Sync(const DoorWriter& write)
         probe::Line(probe::Channel::Writes,
                     QStringLiteral("write sync  %1 open=%2").arg(QLatin1String(DoorName(door))).arg(wantsOpen ? 1 : 0));
         write(door, wantsOpen);
-        lastTarget = wantsOpen ? kDoorOpen : kDoorClosed;
-        holdLogged_[static_cast<std::size_t>(door)] = false;
+        RecordOwnWrite(door, wantsOpen);
     }
+}
+
+void GsxDoorSync::LogHoldOnce(const GsxDoor door)
+{
+    bool& holdLogged = holdLogged_[static_cast<std::size_t>(door)];
+    if (holdLogged)
+    {
+        return;
+    }
+
+    holdLogged = true;
+    probe::Line(probe::Channel::Writes,
+                QStringLiteral("hold  sync  %1 moving").arg(QLatin1String(DoorName(door))));
+}
+
+void GsxDoorSync::RecordOwnWrite(const GsxDoor door, const bool open)
+{
+    const auto index = static_cast<std::size_t>(door);
+
+    lastTargets_[index] = open ? kDoorOpen : kDoorClosed;
+    holdLogged_[index] = false;
+    inheritedTargets_[index] = false;
 }
 
 void GsxDoorSync::Observe()
@@ -137,15 +233,67 @@ void GsxDoorSync::Observe()
     if (couatlRestarting_)
     {
         couatlRestarting_ = false;
-        inheritedVehicles_.clear();
-        for (const char* lVar : kVehicleLVars)
-        {
-            inheritedVehicles_.emplace(lVar, variableGateway_->GetLVar(lVar, 0.0));
-        }
+        DistrustEveryVehicle();
         probe::Line(probe::Channel::Client, QStringLiteral("gsx couatl restarted, vehicle states distrusted"));
     }
 
+    InheritArrivedVehicles();
     couatlSeenStarted_ = true;
+}
+
+void GsxDoorSync::AppendMemory(MemoryBag& memory) const
+{
+    for (const GsxDoor door : kAllDoors)
+    {
+        const double target = lastTargets_[static_cast<std::size_t>(door)];
+        if (target != kDoorUnknown)
+        {
+            memory.PutText(MemoryEntryName(door), TargetText(target));
+        }
+    }
+}
+
+void GsxDoorSync::RestoreMemory(const MemoryBag& memory, const bool gsxRestartedSinceSave)
+{
+    for (const GsxDoor door : kAllDoors)
+    {
+        const auto index = static_cast<std::size_t>(door);
+
+        lastTargets_[index] = TargetFromText(memory.Text(MemoryEntryName(door), {}));
+        inheritedTargets_[index] = lastTargets_[index] == kDoorOpen;
+    }
+
+    if (gsxRestartedSinceSave)
+    {
+        DistrustEveryVehicle();
+
+        return;
+    }
+
+    inheritedVehicles_.clear();
+    awaitingInheritance_.clear();
+}
+
+void GsxDoorSync::DistrustEveryVehicle()
+{
+    inheritedVehicles_.clear();
+    awaitingInheritance_ = std::set<std::string>(kVehicleLVars.begin(), kVehicleLVars.end());
+    InheritArrivedVehicles();
+}
+
+void GsxDoorSync::InheritArrivedVehicles() const
+{
+    std::erase_if(awaitingInheritance_, [this](const std::string& lVar)
+    {
+        if (!variableGateway_->HasReceivedLVar(lVar))
+        {
+            return false;
+        }
+
+        inheritedVehicles_.emplace(lVar, variableGateway_->GetLVar(lVar, 0.0));
+
+        return true;
+    });
 }
 
 void GsxDoorSync::SampleExits()
@@ -173,6 +321,8 @@ void GsxDoorSync::SampleExits()
 
 double GsxDoorSync::VehicleState(const char* lVar, const double absent) const
 {
+    InheritArrivedVehicles();
+
     const double value = variableGateway_->GetLVar(lVar, absent);
 
     const auto inherited = inheritedVehicles_.find(lVar);
@@ -261,8 +411,7 @@ void GsxDoorSync::CloseAll(const DoorWriter& write)
         probe::Line(probe::Channel::Writes,
                     QStringLiteral("write close %1 open=0").arg(QLatin1String(DoorName(door))));
         write(door, false);
-        lastTargets_[static_cast<std::size_t>(door)] = kDoorClosed;
-        holdLogged_[static_cast<std::size_t>(door)] = false;
+        RecordOwnWrite(door, false);
     }
 }
 
@@ -280,39 +429,28 @@ void GsxDoorSync::HoldPassengerDoorsClosed(const bool hold)
     passengerDoorsHeld_ = hold;
 }
 
+bool GsxDoorSync::IsHeldClosed(const GsxDoor door) const
+{
+    return (heldForDeparture_ && IsHeldForDeparture(door)) || (passengerDoorsHeld_ && IsPassengerDoor(door));
+}
+
+bool GsxDoorSync::HaveVehiclesArrived(const GsxDoor door) const
+{
+    return std::ranges::all_of(DrivingVehicles(door), [this](const DoorVehicle& vehicle)
+    {
+        return variableGateway_->HasReceivedLVar(vehicle.lVar);
+    });
+}
+
 bool GsxDoorSync::IsDesiredOpen(const GsxDoor door) const
 {
-    if (heldForDeparture_ && IsHeldForDeparture(door))
+    if (IsHeldClosed(door))
     {
         return false;
     }
 
-    if (passengerDoorsHeld_ && IsPassengerDoor(door))
+    return std::ranges::any_of(DrivingVehicles(door), [this](const DoorVehicle& vehicle)
     {
-        return false;
-    }
-
-    const auto vehicleState = [this](const char* lVar)
-    {
-        return VehicleState(lVar, 0.0);
-    };
-
-    switch (door)
-    {
-    case GsxDoor::FwdPax:
-        return VehicleState(gsx::lvars::kJetway, kJetwayUnavailableValue) == kJetwayDockedValue
-            || gsx::states::AreStairsArriving(vehicleState(gsx::lvars::kPassengerStairsFrontState));
-    case GsxDoor::MidPax:
-        return gsx::states::AreStairsArriving(vehicleState(gsx::lvars::kPassengerStairsMiddleState));
-    case GsxDoor::AftPax:
-        return gsx::states::AreStairsArriving(vehicleState(gsx::lvars::kPassengerStairsRearState));
-    case GsxDoor::FwdCatering:
-        return gsx::states::IsCateringArriving(vehicleState(gsx::lvars::kCateringFrontState));
-    case GsxDoor::AftCatering:
-        return gsx::states::IsCateringArriving(vehicleState(gsx::lvars::kCateringRearState));
-    case GsxDoor::FwdCargo:
-        return gsx::states::IsLoaderServingTheDoor(vehicleState(gsx::lvars::kBaggageLoaderFrontState));
-    default:
-        return gsx::states::IsLoaderServingTheDoor(vehicleState(gsx::lvars::kBaggageLoaderRearState));
-    }
+        return vehicle.serves(VehicleState(vehicle.lVar, vehicle.absent));
+    });
 }

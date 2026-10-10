@@ -32,6 +32,7 @@ public:
     virtual void RequestGroundConn(const std::string& key) = 0;
     virtual void RequestGroundVehicle(const std::string& key) = 0;
     virtual void RequestState() = 0;
+    virtual void SetEfbPlanImported(bool imported) = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGTABLETGATEWAY_H

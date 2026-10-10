@@ -16,6 +16,8 @@ using namespace gsx::lvars;
 namespace
 {
     constexpr auto kNoPushbackVerdict = "no pushback";
+    constexpr auto kSimOnGround = "SIM ON GROUND";
+    constexpr auto kBoolUnit = "Bool";
     constexpr auto kGroundVelocity = "GROUND VELOCITY";
     constexpr auto kKnotsUnit = "Knots";
     constexpr auto kOperateStairsService = "OperateStairs";
@@ -23,6 +25,8 @@ namespace
     constexpr double kAccessStillEvaluated = 0.0;
     constexpr double kAccessNotOffered = 2.0;
     constexpr double kAccessInPlace = 5.0;
+
+    constexpr double kAutomationFlagNotYetRead = 1.0;
 
     constexpr double kPushbackUnderway = 5.0;
     constexpr double kPushbackWaitingForEngines = 8.0;
@@ -45,6 +49,92 @@ namespace
         kPassengerStairsMiddleState,
         kPassengerStairsRearState,
     };
+
+    constexpr std::array kResumeReadings = {
+        kCouatlStarted,
+        kRefuelingState,
+        kBoardingState,
+        kPushbackVehicleState,
+        kDeboardingState,
+        kDeiceState,
+        kPushbackStatus,
+    };
+
+    constexpr auto kServicePrefix = "gsx.service.";
+    constexpr auto kPrefixSeparator = ".";
+    constexpr auto kBoardedPassengersPrefix = "gsx.boardedPassengers.";
+    constexpr auto kDeboardedPassengersPrefix = "gsx.deboardedPassengers.";
+    constexpr auto kBoardingCargoPrefix = "gsx.boardingCargo.";
+    constexpr auto kDeboardingCargoPrefix = "gsx.deboardingCargo.";
+    constexpr auto kFuelAndPayloadTakenOverEntry = "gsx.fuelAndPayloadTakenOver";
+    constexpr auto kGpuConnectedSeenClearEntry = "gsx.gpuConnectedSeenClear";
+
+    constexpr auto kCompletedField = "completed";
+    constexpr auto kStatusField = "status";
+    constexpr auto kCouatlDiedField = "couatlDiedDuringRun";
+    constexpr auto kLastField = "last";
+    constexpr auto kTotalField = "total";
+    constexpr auto kCountingField = "counting";
+    constexpr auto kMovedField = "moved";
+    constexpr auto kGrownField = "grown";
+
+    constexpr double kLargestSavedCount = 1000000.0;
+    constexpr double kLargestSavedPercent = 100.0;
+
+    std::string EntryName(const std::string_view prefix, const std::string_view field)
+    {
+        return std::string(prefix).append(field);
+    }
+
+    constexpr auto kUnknownServiceName = "unknown";
+
+    const char* ServiceName(const GsxState gsxState)
+    {
+        switch (gsxState)
+        {
+        case GsxState::Refueling: return "refueling";
+        case GsxState::Boarding: return "boarding";
+        case GsxState::Pushback: return "pushback";
+        case GsxState::Deboarding: return "deboarding";
+        case GsxState::Deice: return "deice";
+        }
+
+        return kUnknownServiceName;
+    }
+
+    std::string ServicePrefix(const GsxState gsxState)
+    {
+        return EntryName(kServicePrefix, ServiceName(gsxState)).append(kPrefixSeparator);
+    }
+
+    GsxStateStatus StatusFromNumber(const double number)
+    {
+        const bool known = number >= static_cast<double>(GsxStateStatus::Unavailable)
+            && number <= static_cast<double>(GsxStateStatus::Completing);
+
+        return known ? static_cast<GsxStateStatus>(static_cast<int>(number)) : GsxStateStatus::Unavailable;
+    }
+
+    int CountFromNumber(const double number)
+    {
+        return static_cast<int>(std::clamp(number, 0.0, kLargestSavedCount));
+    }
+
+    double PercentFromNumber(const double number)
+    {
+        return std::clamp(number, 0.0, kLargestSavedPercent);
+    }
+
+    bool IsRequestedOrUnderway(const GsxStateStatus status)
+    {
+        return status == GsxStateStatus::Requested || status == GsxStateStatus::Active
+            || status == GsxStateStatus::Completing;
+    }
+
+    bool IsIdle(const GsxStateStatus status)
+    {
+        return status == GsxStateStatus::Callable || status == GsxStateStatus::Bypassed;
+    }
 
     bool EqualsFold(const std::string& lhs, const std::string_view rhs)
     {
@@ -115,6 +205,94 @@ void GsxStateService::Reset()
     }
 }
 
+MemoryBag GsxStateService::TakeMemory() const
+{
+    MemoryBag memory;
+
+    for (const auto& [gsxState, track] : states_)
+    {
+        track.Save(memory, ServicePrefix(gsxState));
+    }
+
+    boarding_.Save(memory, kBoardedPassengersPrefix);
+    deboarding_.Save(memory, kDeboardedPassengersPrefix);
+    boardingCargo_.Save(memory, kBoardingCargoPrefix);
+    deboardingCargo_.Save(memory, kDeboardingCargoPrefix);
+    memory.PutFlag(kFuelAndPayloadTakenOverEntry, fuelAndPayloadTakenOver_);
+    memory.PutFlag(kGpuConnectedSeenClearEntry, gpuConnectedSeenClear_);
+
+    return memory;
+}
+
+void GsxStateService::RestoreMemory(const MemoryBag& memory, const bool gsxRestartedSinceSave)
+{
+    Reset();
+
+    for (auto& [gsxState, track] : states_)
+    {
+        track.Load(memory, ServicePrefix(gsxState));
+        track.resumption = gsxRestartedSinceSave ? StateTrack::Resumption::AfterGsxRestart
+                                                 : StateTrack::Resumption::OnSameGsx;
+    }
+
+    boarding_.Load(memory, kBoardedPassengersPrefix);
+    deboarding_.Load(memory, kDeboardedPassengersPrefix);
+    boardingCargo_.Load(memory, kBoardingCargoPrefix);
+    deboardingCargo_.Load(memory, kDeboardingCargoPrefix);
+    fuelAndPayloadTakenOver_ = memory.Flag(kFuelAndPayloadTakenOverEntry, false);
+    gpuConnectedSeenClear_ = memory.Flag(kGpuConnectedSeenClearEntry, false);
+}
+
+bool GsxStateService::HaveResumeReadingsArrived() const
+{
+    const auto missing = std::ranges::count_if(kResumeReadings, [this](const char* lVar)
+    {
+        return !varManager_->HasReceivedLVar(lVar);
+    });
+
+    return missing == 0;
+}
+
+void GsxStateService::StateTrack::Save(MemoryBag& memory, const std::string& prefix) const
+{
+    memory.PutFlag(EntryName(prefix, kCompletedField), completed);
+    memory.PutNumber(EntryName(prefix, kStatusField), static_cast<double>(status));
+    memory.PutFlag(EntryName(prefix, kCouatlDiedField), couatlDiedDuringRun);
+}
+
+void GsxStateService::StateTrack::Load(const MemoryBag& memory, const std::string& prefix)
+{
+    completed = memory.Flag(EntryName(prefix, kCompletedField), false);
+    status = StatusFromNumber(memory.Number(EntryName(prefix, kStatusField), 0.0));
+    couatlDiedDuringRun = memory.Flag(EntryName(prefix, kCouatlDiedField), false);
+}
+
+bool GsxStateService::StateTrack::HadStarted() const
+{
+    return status == GsxStateStatus::Active || status == GsxStateStatus::Completing
+        || (resumption != Resumption::None && status == GsxStateStatus::Requested);
+}
+
+bool GsxStateService::StateTrack::WasInterruptedByGsxRestart() const
+{
+    return resumption == Resumption::AfterGsxRestart && IsRequestedOrUnderway(status);
+}
+
+bool GsxStateService::StateTrack::ReturnedToIdle(const GsxStateStatus reading, const bool endsWithoutCompleted) const
+{
+    if (!IsIdle(reading))
+    {
+        return false;
+    }
+
+    if (endsWithoutCompleted)
+    {
+        return resumption == Resumption::None && status == GsxStateStatus::Active;
+    }
+
+    return HadStarted() && !couatlDiedDuringRun;
+}
+
 void GsxStateService::OnTurnaroundTurned()
 {
     boarding_ = {};
@@ -137,10 +315,9 @@ bool GsxStateService::IsAvailable() const
 void GsxStateService::Observe()
 {
     const LVarSpan couatlStarted = varManager_->ConsumeLVarSpan(kCouatlStarted);
-    gsxDownSinceLastObserve_ = !couatlStarted.received || couatlStarted.min < 1.0;
+    gsxDownSinceLastObserve_ = couatlStarted.received && couatlStarted.min < 1.0;
 
-    for (const GsxState gsxState : {GsxState::Refueling, GsxState::Boarding, GsxState::Pushback,
-                                    GsxState::Deboarding, GsxState::Deice})
+    for (const GsxState gsxState : states_ | std::views::keys)
     {
         ObserveState(gsxState);
     }
@@ -218,10 +395,7 @@ std::optional<bool> GsxStateService::HasServiceUnderway() const
 
     return std::ranges::any_of(kServicesThatCancelOnReposition, [this](const GsxState gsxState)
     {
-        const GsxStateStatus status = GetStateStatus(gsxState);
-
-        return status == GsxStateStatus::Requested || status == GsxStateStatus::Active
-            || status == GsxStateStatus::Completing;
+        return IsRequestedOrUnderway(GetStateStatus(gsxState));
     });
 }
 
@@ -232,18 +406,25 @@ int GsxStateService::GetPlannedPassengers() const
 
 int GsxStateService::GetBoardedPassengers()
 {
-    const bool active = varManager_->GetLVar(kBoardingState) == static_cast<double>(GsxStateStatus::Active);
-
-    return boarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersBoardingTotal)), active,
-                            FoundServiceUnderway(GsxState::Boarding));
+    return ReadPassengers(boarding_, GsxState::Boarding, kNumPassengersBoardingTotal);
 }
 
 int GsxStateService::GetDeboardedPassengers()
 {
-    const bool active = varManager_->GetLVar(kDeboardingState) == static_cast<double>(GsxStateStatus::Active);
+    return ReadPassengers(deboarding_, GsxState::Deboarding, kNumPassengersDeboardingTotal);
+}
 
-    return deboarding_.Update(static_cast<int>(varManager_->GetLVar(kNumPassengersDeboardingTotal)), active,
-                              FoundServiceUnderway(GsxState::Deboarding));
+int GsxStateService::ReadPassengers(PassengerCounter& counter, const GsxState gsxState, const char* counterLVar)
+{
+    if (!varManager_->HasReceivedLVar(counterLVar))
+    {
+        return counter.Reported();
+    }
+
+    const bool active = GetStateStatus(gsxState) == GsxStateStatus::Active;
+
+    return counter.Update(static_cast<int>(varManager_->GetLVar(counterLVar)), active,
+                          FoundServiceUnderway(gsxState));
 }
 
 bool GsxStateService::FoundServiceUnderway(const GsxState gsxState) const
@@ -303,12 +484,45 @@ int GsxStateService::PassengerCounter::Update(const int current, const bool acti
     return total + current;
 }
 
+int GsxStateService::PassengerCounter::Reported() const
+{
+    return moved ? total + last : 0;
+}
+
+void GsxStateService::PassengerCounter::Save(MemoryBag& memory, const std::string& prefix) const
+{
+    memory.PutNumber(EntryName(prefix, kLastField), last);
+    memory.PutNumber(EntryName(prefix, kTotalField), total);
+    memory.PutFlag(EntryName(prefix, kCountingField), counting);
+    memory.PutFlag(EntryName(prefix, kMovedField), moved);
+    memory.PutFlag(EntryName(prefix, kGrownField), grown);
+}
+
+void GsxStateService::PassengerCounter::Load(const MemoryBag& memory, const std::string& prefix)
+{
+    last = CountFromNumber(memory.Number(EntryName(prefix, kLastField), 0.0));
+    total = CountFromNumber(memory.Number(EntryName(prefix, kTotalField), 0.0));
+    counting = memory.Flag(EntryName(prefix, kCountingField), false);
+    moved = memory.Flag(EntryName(prefix, kMovedField), false);
+    grown = memory.Flag(EntryName(prefix, kGrownField), false);
+}
+
 double GsxStateService::GetBoardingCargoPercent()
 {
-    const bool active = varManager_->GetLVar(kBoardingState) == static_cast<double>(GsxStateStatus::Active);
+    return ReadCargoPercent(boardingCargo_, GsxState::Boarding, kBoardingCargoPercent);
+}
 
-    return boardingCargo_.Update(varManager_->GetLVar(kBoardingCargoPercent), active,
-                                 FoundServiceUnderway(GsxState::Boarding));
+double GsxStateService::ReadCargoPercent(CargoPercentReading& reading, const GsxState gsxState,
+                                         const char* percentLVar)
+{
+    if (!varManager_->HasReceivedLVar(percentLVar))
+    {
+        return reading.Reported();
+    }
+
+    const bool active = GetStateStatus(gsxState) == GsxStateStatus::Active;
+
+    return reading.Update(varManager_->GetLVar(percentLVar), active, FoundServiceUnderway(gsxState));
 }
 
 double GsxStateService::CargoPercentReading::Update(const double current, const bool active,
@@ -323,20 +537,36 @@ double GsxStateService::CargoPercentReading::Update(const double current, const 
 
         counting = true;
         first = current;
+        last = current;
+        moved = foundUnderway;
 
-        if (foundUnderway)
-        {
-            moved = true;
-
-            return current;
-        }
-
-        return 0.0;
+        return Reported();
     }
 
+    last = current;
     moved = moved || current != first;
 
-    return moved ? current : 0.0;
+    return Reported();
+}
+
+double GsxStateService::CargoPercentReading::Reported() const
+{
+    return moved ? last : 0.0;
+}
+
+void GsxStateService::CargoPercentReading::Save(MemoryBag& memory, const std::string& prefix) const
+{
+    memory.PutNumber(EntryName(prefix, kLastField), last);
+    memory.PutFlag(EntryName(prefix, kCountingField), counting);
+    memory.PutFlag(EntryName(prefix, kMovedField), moved);
+}
+
+void GsxStateService::CargoPercentReading::Load(const MemoryBag& memory, const std::string& prefix)
+{
+    last = PercentFromNumber(memory.Number(EntryName(prefix, kLastField), 0.0));
+    first = last;
+    counting = memory.Flag(EntryName(prefix, kCountingField), false);
+    moved = memory.Flag(EntryName(prefix, kMovedField), false);
 }
 
 bool GsxStateService::IsLoadingCargo() const
@@ -369,10 +599,7 @@ bool GsxStateService::IsALoaderAtAHold() const
 
 double GsxStateService::GetDeboardingCargoPercent()
 {
-    const bool active = varManager_->GetLVar(kDeboardingState) == static_cast<double>(GsxStateStatus::Active);
-
-    return deboardingCargo_.Update(varManager_->GetLVar(kDeboardingCargoPercent), active,
-                                   FoundServiceUnderway(GsxState::Deboarding));
+    return ReadCargoPercent(deboardingCargo_, GsxState::Deboarding, kDeboardingCargoPercent);
 }
 
 bool GsxStateService::AreStairsInPlace() const
@@ -492,7 +719,7 @@ bool GsxStateService::IsServiceVehicleActive() const
 
 bool GsxStateService::IsAircraftOnGround() const
 {
-    return varManager_->GetAVar("SIM ON GROUND", "Bool", 1.0) == 1.0;
+    return varManager_->GetAVar(kSimOnGround, kBoolUnit, 1.0) == 1.0;
 }
 
 double GsxStateService::GetGroundSpeedKnots() const
@@ -516,15 +743,26 @@ void GsxStateService::ReassertTakeovers() const
         return;
     }
 
-    if (varManager_->GetLVar(kAutomationFuel, 1.0) != 0.0
-        || varManager_->GetLVar(kAutomationPayload, 1.0) != 0.0)
+    const bool mayBeRaised = varManager_->GetLVar(kAutomationFuel, kAutomationFlagNotYetRead) != 0.0
+        || varManager_->GetLVar(kAutomationPayload, kAutomationFlagNotYetRead) != 0.0;
+    if (!mayBeRaised)
+    {
+        return;
+    }
+
+    if (IsAutomationFlagRaised(kAutomationFuel) || IsAutomationFlagRaised(kAutomationPayload))
     {
         LOG_INFO("GSX automation flags reset by couatl; re-taking fuel and payload");
-        varManager_->SetLVar(kAutomationFuel, 0.0);
-        varManager_->SetLVar(kAutomationPayload, 0.0);
     }
+
+    varManager_->SetLVar(kAutomationFuel, 0.0);
+    varManager_->SetLVar(kAutomationPayload, 0.0);
 }
 
+bool GsxStateService::IsAutomationFlagRaised(const char* lVar) const
+{
+    return varManager_->HasReceivedLVar(lVar) && varManager_->GetLVar(lVar) != 0.0;
+}
 
 bool GsxStateService::IsSimbriefLoaded() const
 {
@@ -559,38 +797,40 @@ bool GsxStateService::IsGoodEngineStartConfirmationEnabled() const
 void GsxStateService::ObserveState(const GsxState gsxState)
 {
     const char* stateLVar = StateLVarName(gsxState);
-    if (stateLVar == nullptr)
+    if (stateLVar == nullptr || !varManager_->HasReceivedLVar(stateLVar))
     {
         return;
     }
 
-    const auto stateStatus = static_cast<GsxStateStatus>(varManager_->GetLVar(stateLVar));
+    const auto reading = static_cast<GsxStateStatus>(varManager_->GetLVar(stateLVar));
     StateTrack& track = states_.at(gsxState);
+    const bool endsWithoutCompleted = EndsWithoutCompleted(gsxState);
+    const bool isActive = reading == GsxStateStatus::Active;
 
-    if (!track.firstReadingSeen && varManager_->HasReceivedLVar(stateLVar))
+    if (!track.firstReadingSeen)
     {
         track.firstReadingSeen = true;
-        track.foundUnderway = stateStatus == GsxStateStatus::Active;
+        track.foundUnderway = isActive;
     }
 
-    track.foundUnderway = track.foundUnderway && stateStatus == GsxStateStatus::Active;
+    track.foundUnderway = track.foundUnderway && isActive;
+
+    if (!endsWithoutCompleted && track.WasInterruptedByGsxRestart())
+    {
+        track.couatlDiedDuringRun = true;
+    }
 
     if (gsxDownSinceLastObserve_)
     {
         track.couatlDiedDuringRun = true;
     }
-    else if (stateStatus == GsxStateStatus::Active && track.status != GsxStateStatus::Active)
+    else if (isActive && track.status != GsxStateStatus::Active)
     {
         track.couatlDiedDuringRun = false;
     }
 
-    const bool leftActiveWithoutCompleting =
-        (stateStatus == GsxStateStatus::Callable || stateStatus == GsxStateStatus::Bypassed)
-        && track.status == GsxStateStatus::Active;
-
-    const bool returnedToIdle = leftActiveWithoutCompleting
-        && (EndsWithoutCompleted(gsxState) || !track.couatlDiedDuringRun);
-
-    track.completed = track.completed || stateStatus == GsxStateStatus::Completed || returnedToIdle;
-    track.status = stateStatus;
+    track.completed = track.completed || reading == GsxStateStatus::Completed
+        || track.ReturnedToIdle(reading, endsWithoutCompleted);
+    track.status = reading;
+    track.resumption = StateTrack::Resumption::None;
 }

@@ -8,7 +8,30 @@
 #include "SimbriefOfpParser.h"
 #include "../../domain/model/AutomationStatus.h"
 #include "../../domain/model/AutomationSettings.h"
+#include "../../domain/model/PlanConversion.h"
 #include "../logging/LogMacros.h"
+
+namespace
+{
+    constexpr int kFirstSuccessStatus = 200;
+    constexpr int kFirstRedirectStatus = 300;
+    constexpr int kTransferTimeoutMs = 30000;
+
+    int ReportedStatus(const bool networkFailed, const int httpStatus)
+    {
+        if (networkFailed || httpStatus > 0)
+        {
+            return httpStatus;
+        }
+
+        return kFirstSuccessStatus;
+    }
+
+    bool IsSuccessStatus(const int status)
+    {
+        return status >= kFirstSuccessStatus && status < kFirstRedirectStatus;
+    }
+}
 
 SimbriefClient::SimbriefClient(AutomationStatus* status,
                                const AutomationSettings* settings,
@@ -56,21 +79,12 @@ void SimbriefClient::Poll()
 
 bool SimbriefClient::HasHttpError() const
 {
-    return lastError_ < 200 || lastError_ >= 300;
+    return !IsSuccessStatus(lastError_);
 }
 
 void SimbriefClient::ApplyFlightPlan(const FlightPlan& flightPlan)
 {
-    automationStatus_->plannedFuelKg = flightPlan.fuelKg;
-    automationStatus_->plannedZfwKg = flightPlan.zfwKg;
-    automationStatus_->plannedOperatingEmptyKg = flightPlan.operatingEmptyKg;
-    automationStatus_->plannedPayloadKg = flightPlan.payloadKg;
-    automationStatus_->plannedCargoKg = flightPlan.cargoKg;
-    automationStatus_->plannedPassengers = flightPlan.passengers;
-    automationStatus_->simbriefUnit = flightPlan.unit;
-    automationStatus_->plannedOrigin = flightPlan.origin;
-    automationStatus_->plannedDestination = flightPlan.destination;
-    automationStatus_->planGeneratedEpoch = flightPlan.generatedEpoch;
+    turnaround::ApplyPlan(*automationStatus_, flightPlan);
 
     const std::string payloadText = flightPlan.payloadKg.has_value()
                                         ? std::format("{:.0f}kg", *flightPlan.payloadKg)
@@ -97,6 +111,12 @@ void SimbriefClient::Reset()
     SetStatus(FlightPlanStatus::Idle);
 }
 
+void SimbriefClient::Adopt(const FlightPlan& plan)
+{
+    Reset();
+    ApplyFlightPlan(plan);
+}
+
 void SimbriefClient::ClearResponse()
 {
     pending_ = false;
@@ -120,7 +140,7 @@ bool SimbriefClient::FetchData()
 
     ClearResponse();
 
-    network_.setTransferTimeout(30000);
+    network_.setTransferTimeout(kTransferTimeoutMs);
 
     const QUrl url(QStringLiteral("https://www.simbrief.com/api/xml.fetcher.php?userid=%1").arg(pilotId));
     reply_ = network_.get(QNetworkRequest(url));
@@ -170,10 +190,10 @@ void SimbriefClient::OnHttpFinished()
     }
 
     const int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    lastError_ = (reply->error() == QNetworkReply::NoError) ? (httpStatus > 0 ? httpStatus : 200) : httpStatus;
+    lastError_ = ReportedStatus(reply->error() != QNetworkReply::NoError, httpStatus);
     responseBody_.clear();
 
-    if (lastError_ >= 200 && lastError_ < 300)
+    if (IsSuccessStatus(lastError_))
     {
         const QByteArray body = reply->readAll();
         responseBody_.assign(body.constData(), static_cast<std::size_t>(body.size()));

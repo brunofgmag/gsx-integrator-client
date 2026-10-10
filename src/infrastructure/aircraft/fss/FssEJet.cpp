@@ -113,10 +113,10 @@ namespace
         double holdAftKg = 0.0;
     };
 
-    std::optional<StationTargetsKg> FullStationTargetsKg(const AutomationStatus& status, const bool cargoVariant)
+    std::optional<StationTargetsKg> FullStationTargetsKg(const double payloadLineKg,
+                                                         const std::optional<double> plannedCargoKg,
+                                                         const bool cargoVariant)
     {
-        const double payloadLineKg = status.plannedPayloadKg.value_or(0.0);
-
         if (cargoVariant)
         {
             return StationTargetsKg{
@@ -127,12 +127,12 @@ namespace
             };
         }
 
-        if (!status.plannedCargoKg.has_value())
+        if (!plannedCargoKg.has_value())
         {
             return std::nullopt;
         }
 
-        const double cargoKg = *status.plannedCargoKg;
+        const double cargoKg = *plannedCargoKg;
         const double passengerWeightKg = std::max(payloadLineKg - cargoKg, 0.0);
         const double zoneAKg = std::min(passengerWeightKg, kZoneACapKg);
 
@@ -142,6 +142,13 @@ namespace
             .holdFwdKg = cargoKg * kHoldFwdShareOfBaggage,
             .holdAftKg = cargoKg * kHoldAftShareOfBaggage
         };
+    }
+
+    std::optional<double> PayloadOfTheFactsKg(const TurnaroundFacts& facts)
+    {
+        const double payloadKg = facts.plannedZfwKg - facts.emptyZfwKg;
+
+        return facts.emptyZfwKg > 0.0 && payloadKg > 0.0 ? std::optional<double>{payloadKg} : std::nullopt;
     }
 
     std::string PayloadStationVar(const int station)
@@ -367,10 +374,11 @@ void FssEJet::OnLoadingStarted()
 
     passengersReported_ = true;
 
-    variableGateway_->SetLVar(gsx::lvars::kNumPassengers, static_cast<double>(GetPlannedPassengers()));
-    variableGateway_->SetLVar(gsx::lvars::kMaxPassengers, maxPassengers_);
+    TellGsxThePassengers();
 
-    const std::optional<StationTargetsKg> targets = FullStationTargetsKg(*status_, cargoVariant_);
+    const std::optional<PayloadPlan> plan = CurrentPayloadPlan();
+    const std::optional<StationTargetsKg> targets =
+        plan.has_value() ? FullStationTargetsKg(plan->payloadKg, plan->cargoKg, cargoVariant_) : std::nullopt;
     if (!targets.has_value())
     {
         LOG_INFO("Loading started: %d passengers planned of %.0f max; no cargo line in the plan, "
@@ -386,6 +394,53 @@ void FssEJet::OnLoadingStarted()
 
     LOG_INFO("Loading started: %d passengers planned of %.0f max; plan weights mirrored to PLANE_SETUP_WEIGHT_*",
              GetPlannedPassengers(), maxPassengers_);
+}
+
+void FssEJet::TellGsxThePassengers()
+{
+    variableGateway_->SetLVar(gsx::lvars::kNumPassengers, static_cast<double>(GetPlannedPassengers()));
+    variableGateway_->SetLVar(gsx::lvars::kMaxPassengers, maxPassengers_);
+}
+
+bool FssEJet::IsReachable() const
+{
+    return variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit)
+        && variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit);
+}
+
+void FssEJet::OnTurnaroundStarted()
+{
+    passengersReported_ = false;
+    resumed_ = false;
+    resumedPayloadKg_.reset();
+    resumedPassengers_ = 0;
+    departureHoldResumed_ = false;
+}
+
+void FssEJet::OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory)
+{
+    resumed_ = true;
+    resumedPayloadKg_ = PayloadOfTheFactsKg(facts);
+    resumedPassengers_ = facts.plannedPassengers;
+    departureHoldResumed_ = facts.departureDoorsHeld;
+
+    doors_.RestoreMemory(memory, facts.gsxRestartedSinceSave);
+    doorsRule_.RestoreMemory(memory);
+    doorsRule_.ReclaimAnOpenMainDeck();
+
+    if (facts.loadingStarted && facts.gsxRestartedSinceSave)
+    {
+        TellGsxThePassengers();
+    }
+}
+
+MemoryBag FssEJet::TurnaroundMemory() const
+{
+    MemoryBag memory;
+    doors_.AppendMemory(memory);
+    doorsRule_.AppendMemory(memory);
+
+    return memory;
 }
 
 bool FssEJet::IsFlightPlanLoaded() const
@@ -458,12 +513,39 @@ double FssEJet::GetPlannedFuelKg() const
 
 double FssEJet::GetPlannedZfwKg() const
 {
-    return GetEmptyZfwKg() + status_->plannedPayloadKg.value_or(0.0);
+    const std::optional<PayloadPlan> plan = CurrentPayloadPlan();
+
+    return GetEmptyZfwKg() + (plan.has_value() ? plan->payloadKg : 0.0);
 }
 
 int FssEJet::GetPlannedPassengers() const
 {
-    return status_->plannedPassengers;
+    const std::optional<PayloadPlan> plan = CurrentPayloadPlan();
+
+    return plan.has_value() ? plan->passengers : status_->plannedPassengers;
+}
+
+std::optional<FssEJet::PayloadPlan> FssEJet::CurrentPayloadPlan() const
+{
+    if (status_->plannedPayloadKg.has_value())
+    {
+        return PayloadPlan{.payloadKg = *status_->plannedPayloadKg,
+                           .cargoKg = status_->plannedCargoKg,
+                           .passengers = status_->plannedPassengers};
+    }
+
+    if (!resumed_)
+    {
+        return PayloadPlan{.payloadKg = 0.0, .cargoKg = status_->plannedCargoKg,
+                           .passengers = status_->plannedPassengers};
+    }
+
+    if (!resumedPayloadKg_.has_value())
+    {
+        return std::nullopt;
+    }
+
+    return PayloadPlan{.payloadKg = *resumedPayloadKg_, .cargoKg = std::nullopt, .passengers = resumedPassengers_};
 }
 
 double FssEJet::GetEmptyZfwKg() const
@@ -524,13 +606,19 @@ void FssEJet::SetCurrentZfwKg(const double zfwKg)
         return;
     }
 
-    const std::optional<StationTargetsKg> targets = FullStationTargetsKg(*status_, cargoVariant_);
+    const std::optional<PayloadPlan> plan = CurrentPayloadPlan();
+    if (!plan.has_value())
+    {
+        return;
+    }
+
+    const std::optional<StationTargetsKg> targets = FullStationTargetsKg(plan->payloadKg, plan->cargoKg, cargoVariant_);
     if (!targets.has_value())
     {
         return;
     }
 
-    const double payloadLineKg = status_->plannedPayloadKg.value_or(0.0);
+    const double payloadLineKg = plan->payloadKg;
     const double onBoardKg = std::clamp(zfwKg - GetEmptyZfwKg(), 0.0, payloadLineKg);
     const double progress = payloadLineKg > 0.0 ? onBoardKg / payloadLineKg : 0.0;
     const std::array<StationWriteKg, 4> writes = StationWritesKg(*targets, progress);
@@ -648,10 +736,12 @@ void FssEJet::HoldDoorsClosed(const bool hold)
 {
     doors_.HoldClosedForDeparture(hold);
 
-    if (hold)
+    if (hold && !departureHoldResumed_)
     {
         ++closeAllRequests_;
     }
+
+    departureHoldResumed_ = false;
 }
 
 void FssEJet::HoldPassengerDoorsClosed(const bool hold)

@@ -1,11 +1,13 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGDOORRECONCILER_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGDOORRECONCILER_H
 
+#include <cstdint>
 #include <array>
 #include <vector>
 #include "PmdgDoorSource.h"
+#include "../../domain/model/MemoryBag.h"
 
-enum class DoorBaseline
+enum class DoorBaseline : std::uint8_t
 {
     Unknown,
     Closed
@@ -20,6 +22,8 @@ public:
     void SetSlotDesired(int slot, bool open);
     void Reconcile();
     [[nodiscard]] bool IsStuck(int slot) const;
+    void AppendMemory(MemoryBag& memory) const;
+    void RestoreMemory(const MemoryBag& memory);
 
 private:
     void ReconcileSlot(std::size_t slot);

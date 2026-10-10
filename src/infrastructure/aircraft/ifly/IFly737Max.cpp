@@ -32,6 +32,8 @@ namespace
     constexpr int kEngineCount = 2;
     constexpr double kEngineRunningDefault = 1.0;
 
+    constexpr auto kCloseRequestedMemory = "ifly.closeRequested";
+
     constexpr auto kParkingBrakeLVar = "VC_Parking_Brake_SW_VAL";
     constexpr auto kChocksLVar = "iFly_NLG_Chock_Display_VAL";
 
@@ -86,11 +88,53 @@ void IFly737Max::CloseAllDoors()
 void IFly737Max::HoldDoorsClosed(const bool hold)
 {
     heldForDeparture_ = hold;
+    if (!hold)
+    {
+        passengerDoorsHeld_ = false;
+    }
+}
+
+void IFly737Max::HoldPassengerDoorsClosed(const bool hold)
+{
+    passengerDoorsHeld_ = hold;
 }
 
 bool IFly737Max::IsHeldForDeparture() const
 {
     return heldForDeparture_;
+}
+
+bool IFly737Max::ArePassengerDoorsHeld() const
+{
+    return passengerDoorsHeld_;
+}
+
+bool IFly737Max::IsReachable() const
+{
+    return variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit)
+        && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit);
+}
+
+void IFly737Max::OnTurnaroundStarted()
+{
+    closeRequested_ = false;
+    doorRule_.ForgetCloseRequest();
+}
+
+void IFly737Max::OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory)
+{
+    closeRequested_ = memory.Flag(kCloseRequestedMemory, false);
+    doors_.RestoreMemory(memory, facts.gsxRestartedSinceSave);
+    doorRule_.ReleaseTogglesLeftHigh();
+}
+
+MemoryBag IFly737Max::TurnaroundMemory() const
+{
+    MemoryBag memory;
+    memory.PutFlag(kCloseRequestedMemory, closeRequested_);
+    doors_.AppendMemory(memory);
+
+    return memory;
 }
 
 bool IFly737Max::WasCloseRequested() const

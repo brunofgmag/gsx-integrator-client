@@ -5,13 +5,16 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'guard-check-lib.ps1')
 
+$relative = 'src/domain/turnaround/TurnaroundData.h'
+
 $detect = {
     param([string]$root)
 
-    $header = Join-Path $root 'src/domain/turnaround/TurnaroundData.h'
+    $header = Join-Path $root $relative
     if (-not (Test-Path -LiteralPath $header))
     {
-        return @()
+        return @(New-Finding -File $relative -Line 0 -Symbol 'TurnaroundData.h' `
+            -Message "$relative is missing, so there are no fields to check for readers")
     }
 
     $referenceCorpus = ''
@@ -25,23 +28,27 @@ $detect = {
         $referenceCorpus += [System.IO.File]::ReadAllText($file.FullName) + "`n"
     }
 
-    $relative = 'src/domain/turnaround/TurnaroundData.h'
     $lines = [System.IO.File]::ReadAllLines($header)
     $findings = @()
-    for ($i = 0; $i -lt $lines.Length; $i++)
+    foreach ($structName in @('TurnaroundData', 'CabinServiceProgress'))
     {
-        $fieldMatch = [regex]::Match($lines[$i], '^\s*[A-Za-z_][\w:<>]*\s+([a-z]\w*)\s*=\s*[^;(]*;\s*$')
-        if (-not $fieldMatch.Success)
+        $members = @(Get-StructMembers -Lines $lines -StructName $structName)
+        if ($members.Count -eq 0)
         {
+            $findings += New-Finding -File $relative -Line 0 -Symbol $structName `
+                -Message "$structName yields no members; the header changed shape or the guard no longer reads it"
             continue
         }
-        $field = $fieldMatch.Groups[1].Value
-        if ([regex]::IsMatch($referenceCorpus, "\b$field\b"))
+
+        foreach ($member in $members)
         {
-            continue
+            if ([regex]::IsMatch($referenceCorpus, "\b$($member.Name)\b"))
+            {
+                continue
+            }
+            $findings += New-Finding -File $relative -Line $member.Line -Symbol "$structName::$($member.Name)" `
+                -Message "$structName::$($member.Name) - field referenced only inside its own header (dead working state)"
         }
-        $findings += New-Finding -File $relative -Line ($i + 1) -Symbol "TurnaroundData::$field" `
-            -Message "TurnaroundData::$field - field referenced only inside its own header (dead working state)"
     }
 
     return $findings
@@ -53,16 +60,23 @@ $plant = {
     $turnaroundDir = Join-Path $dir 'src/domain/turnaround'
     New-Item -ItemType Directory -Path $turnaroundDir -Force | Out-Null
     Set-Content -LiteralPath (Join-Path $turnaroundDir 'TurnaroundData.h') -Encoding UTF8 -Value @(
+        'struct CabinServiceProgress'
+        '{'
+        '    bool plantedNestedUnreadField = false;'
+        '};'
         'struct TurnaroundData'
         '{'
         '    int plantedUnreadField = 0;'
         '};'
     )
-    return 'TurnaroundData::plantedUnreadField'
+    return @(
+        'TurnaroundData::plantedUnreadField'
+        'CabinServiceProgress::plantedNestedUnreadField'
+    )
 }
 
 $allowlist = @()
 
 Invoke-GuardCheck -Name 'check-turnaround-data-field-unread' `
-    -Description 'no TurnaroundData field is left referenced only in its own header' `
+    -Description 'no TurnaroundData or CabinServiceProgress field is left referenced only in its own header' `
     -Detect $detect -PlantFixture $plant -Root $Root -Allowlist $allowlist

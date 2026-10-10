@@ -19,9 +19,8 @@ namespace
     constexpr int kModuleDeadTicks = 5;
 }
 
-AvroRjWatchModuleFuelMirrorRule::AvroRjWatchModuleFuelMirrorRule(VariableReader& variables,
-                                                                 AvroRjModuleState& module)
-    : variables_(&variables), module_(&module)
+AvroRjWatchModuleFuelMirrorRule::AvroRjWatchModuleFuelMirrorRule(VariableReader& variables)
+    : variables_(&variables)
 {
 }
 
@@ -42,7 +41,6 @@ RuleVerdict AvroRjWatchModuleFuelMirrorRule::Evaluate(const RuleContext&)
     const bool diverged = std::abs(mirrorKg - simFuelKg) > kMirrorDivergenceKg;
 
     divergentTicks_ = fuelMoving && diverged ? divergentTicks_ + 1 : 0;
-    module_->mirroringFuel = divergentTicks_ < kModuleDeadTicks;
 
     if (!diverged)
     {
@@ -51,7 +49,7 @@ RuleVerdict AvroRjWatchModuleFuelMirrorRule::Evaluate(const RuleContext&)
         return RuleVerdict::Pass();
     }
 
-    if (!module_->mirroringFuel && !deadLogged_)
+    if (divergentTicks_ >= kModuleDeadTicks && !deadLogged_)
     {
         deadLogged_ = true;
         LOG_INFO("The aircraft module stopped mirroring the simulator's fuel; its variables may be frozen");

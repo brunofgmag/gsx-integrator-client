@@ -28,6 +28,11 @@ public:
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
     void OnLoadingStarted() override;
 
+    [[nodiscard]] bool IsReachable() const override;
+    void OnTurnaroundStarted() override;
+    void OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory) override;
+    [[nodiscard]] MemoryBag TurnaroundMemory() const override;
+
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] bool FlightPlanDiffersFromTheOfp() const override;
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
@@ -76,12 +81,21 @@ public:
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
 private:
+    struct PayloadPlan
+    {
+        double payloadKg = 0.0;
+        std::optional<double> cargoKg;
+        int passengers = 0;
+    };
+
     [[nodiscard]] bool IsBeaconOn() const;
     [[nodiscard]] bool AreChocksSet() const;
     [[nodiscard]] bool GsxIsFillingTheTanks() const;
     [[nodiscard]] bool HasTheOfpFuelPlanOnTheEfb() const;
     [[nodiscard]] std::optional<bool> CompareTheEfbFuelPlanWithTheOfp() const;
     void KeepClearingCallRamp();
+    [[nodiscard]] std::optional<PayloadPlan> CurrentPayloadPlan() const;
+    void TellGsxThePassengers();
 
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;
@@ -99,6 +113,10 @@ private:
     std::vector<AircraftRule*> rules_;
     double lastZfwKg_ = -1.0;
     bool passengersReported_ = false;
+    bool resumed_ = false;
+    std::optional<double> resumedPayloadKg_;
+    int resumedPassengers_ = 0;
+    bool departureHoldResumed_ = false;
     int callRampClearingTicksLeft_ = 0;
     mutable std::optional<bool> efbFuelPlanMatched_;
 };

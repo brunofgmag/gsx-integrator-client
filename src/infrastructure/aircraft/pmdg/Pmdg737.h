@@ -1,12 +1,13 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG737_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG737_H
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include "PmdgAircraft.h"
 #include "../../pmdg/Pmdg737DataGateway.h"
 
-enum class Pmdg737Variant { Pax800, Bcf800, Bdsf800, Bbj2 };
+enum class Pmdg737Variant : std::uint8_t { Pax800, Bcf800, Bdsf800, Bbj2 };
 
 class Pmdg737 final : public PmdgAircraft
 {
@@ -29,15 +30,22 @@ private:
     [[nodiscard]] DoorObservation ObserveDoor(int slot) const override;
     void ToggleDoor(int slot) override;
     void RefreshDoors() override;
+    [[nodiscard]] bool AreDoorReadingsPending() const override;
+    [[nodiscard]] bool TabletReportsAnyDoor() const;
+    void WaitForTheAnswer();
+    void WaitForTheBridge();
     [[nodiscard]] DoorObservation ObserveAirstair() const;
 
     [[nodiscard]] bool HasAircraftPower() const override;
     [[nodiscard]] bool GroundPowerPresent() const override;
     [[nodiscard]] bool ChocksSet() const override;
+    [[nodiscard]] bool ChocksReadingArrived() const override;
 
     Pmdg737Variant variant_;
     std::unique_ptr<Pmdg737DataGateway> ownedData_;
-    int ticksSinceStateQuery_ = 0;
+    bool doorReadingsSeen_ = false;
+    int ticksSinceFirstQuestion_ = 0;
+    int ticksWithoutQuestion_ = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG737_H

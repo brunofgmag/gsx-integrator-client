@@ -1,6 +1,8 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11COMMITEFBTARGETSRULE_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11COMMITEFBTARGETSRULE_H
 
+#include <optional>
+
 #include "../../../../domain/ports/AircraftRule.h"
 
 class TfdiMd11;
@@ -16,6 +18,8 @@ public:
     [[nodiscard]] RuleVerdict Evaluate(const RuleContext& context) override;
     void Act(const RuleContext& context, VariableWriter& writer) override;
 
+    void ForgetTargets();
+
 private:
     struct EfbTarget
     {
@@ -23,6 +27,8 @@ private:
         bool seeded = false;
     };
 
+    void ForgetTheDepartureFuelOnArrival(bool arriving);
+    void ResolveTargets(const std::optional<double>& stagedFuelKg, const std::optional<double>& stagedZfwKg);
     void SeedFuelIfNeeded();
     void SeedZfwIfNeeded();
     void CommitTargets(VariableWriter& writer) const;
@@ -33,6 +39,7 @@ private:
     EfbTarget zfwTarget_;
     double committedFuelKg_ = 0.0;
     double committedZfwKg_ = 0.0;
+    bool arriving_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11COMMITEFBTARGETSRULE_H

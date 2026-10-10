@@ -1,14 +1,16 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_AUTOMATIONSETTINGS_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_AUTOMATIONSETTINGS_H
 
-enum class GsxPanelMode
+#include <cstdint>
+
+enum class GsxPanelMode : std::uint8_t
 {
     Never = 0,
     OnPushback = 1,
     AllRequests = 2
 };
 
-enum class CrewChoice
+enum class CrewChoice : std::uint8_t
 {
     Nobody = 0,
     Crew = 1,
@@ -30,6 +32,7 @@ struct AutomationSettings
     bool autoStartFlow = true;
     bool autoStartLoading = true;
     bool skipReposition = false;
+    bool skipRepositionOnNewTurnaround = true;
     bool callGpu = false;
     bool callGpuOnArrival = false;
     bool placeChocks = false;

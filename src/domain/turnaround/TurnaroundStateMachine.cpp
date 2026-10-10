@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <format>
 #include <utility>
+#include "TurnaroundRestore.h"
 #include "states/WaitingFlightPlanState.h"
 #include "states/RequestFuelState.h"
 #include "states/LoadingState.h"
@@ -43,6 +44,19 @@ namespace
         }
 
         return fromSwitch ? "SmartSwitch" : "EFB app";
+    }
+
+    void RearmTheDoorLatches(Aircraft& aircraft, const TurnaroundFacts& facts)
+    {
+        if (facts.departureDoorsHeld)
+        {
+            aircraft.HoldDoorsClosed(true);
+        }
+
+        if (facts.passengerDoorsHeld)
+        {
+            aircraft.HoldPassengerDoorsClosed(true);
+        }
     }
 
 #ifndef NDEBUG
@@ -141,6 +155,7 @@ void TurnaroundStateMachine::Step()
     if (!transition)
     {
         context_.data.stateTickCount++;
+
         return;
     }
 
@@ -149,6 +164,7 @@ void TurnaroundStateMachine::Step()
         pendingPhase_ = transition->next;
         pendingOrigin_ = transition->origin;
         ticksRemaining_ = transition->delayTicks;
+
         return;
     }
 
@@ -216,17 +232,79 @@ void TurnaroundStateMachine::AttachFlightPlanSource(FlightPlanSource* flightPlan
     context_.flightPlanSource = flightPlanSource;
 }
 
-void TurnaroundStateMachine::Reset()
+void TurnaroundStateMachine::StandAt(const TurnaroundPhase phase)
 {
-    context_.aircraft = nullptr;
     context_.pilotTouched = false;
     appTouchPending_ = false;
-    context_.data.Reset();
-    phase_ = TurnaroundPhase::WaitingSupportedAircraft;
-    pendingPhase_ = TurnaroundPhase::WaitingSupportedAircraft;
+    phase_ = phase;
+    pendingPhase_ = phase;
     pendingOrigin_ = TransitionOrigin::Reading;
     lastTransitionOrigin_ = TransitionOrigin::Reading;
     ticksRemaining_ = 0;
+}
+
+void TurnaroundStateMachine::Reset()
+{
+    context_.aircraft = nullptr;
+    context_.data.Reset();
+
+    for (const auto& state : states_)
+    {
+        if (state != nullptr)
+        {
+            state->ForgetObservedVerdicts();
+        }
+    }
+
+    StandAt(TurnaroundPhase::WaitingSupportedAircraft);
+}
+
+std::optional<TurnaroundCheckpoint> TurnaroundStateMachine::TakeCheckpoint() const
+{
+    if (!IsResumablePhase(phase_))
+    {
+        return std::nullopt;
+    }
+
+    TurnaroundCheckpoint checkpoint;
+    checkpoint.phase = phase_;
+    checkpoint.data = turnaround::SavedFields(context_.data);
+
+    if (context_.aircraft != nullptr)
+    {
+        checkpoint.aircraftMemory = context_.aircraft->TurnaroundMemory();
+    }
+
+    return checkpoint;
+}
+
+ResumeOutcome TurnaroundStateMachine::ResumeFrom(const TurnaroundCheckpoint& checkpoint,
+                                                 Aircraft& aircraft,
+                                                 const bool gsxRestartedSinceSave)
+{
+    if (!IsResumablePhase(checkpoint.phase))
+    {
+        return ResumeOutcome::UnknownPhase;
+    }
+
+    if (!aircraft.IsReachable())
+    {
+        return ResumeOutcome::AircraftNotReachable;
+    }
+
+    const bool repositionedThisSession = context_.data.repositionedThisSession;
+
+    context_.aircraft = &aircraft;
+    context_.data = turnaround::RestoreTurnaroundData(checkpoint.data, checkpoint.phase, aircraft, gsxRestartedSinceSave);
+    context_.data.repositionedThisSession = repositionedThisSession;
+    StandAt(checkpoint.phase);
+
+    const TurnaroundFacts facts = turnaround::BuildTurnaroundFacts(phase_, context_.data, gsxRestartedSinceSave);
+    aircraft.OnTurnaroundResumed(facts, checkpoint.aircraftMemory);
+    RearmTheDoorLatches(aircraft, facts);
+    PublishStatus();
+
+    return ResumeOutcome::Resumed;
 }
 
 #ifndef NDEBUG
@@ -273,7 +351,10 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
 
     if (phase == TurnaroundPhase::WaitingNewFlight)
     {
+        const bool repositionedThisSession = context_.data.repositionedThisSession;
+
         context_.data.Reset();
+        context_.data.repositionedThisSession = repositionedThisSession;
 
         if (context_.menuGateway != nullptr)
         {
@@ -304,6 +385,13 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
         && context_.status != nullptr)
     {
         context_.status->enabled = false;
+    }
+
+    if (phase == TurnaroundPhase::WaitingAircraftReady
+        && phase_ == TurnaroundPhase::WaitingSupportedAircraft
+        && context_.aircraft != nullptr)
+    {
+        context_.aircraft->OnTurnaroundStarted();
     }
 
     phase_ = phase;

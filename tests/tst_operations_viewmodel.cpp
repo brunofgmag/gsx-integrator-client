@@ -1,3 +1,6 @@
+#include <array>
+#include <utility>
+
 #include <QtCore/QLocale>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
@@ -5,6 +8,21 @@
 #include "TestDoubles.h"
 #include "../src/domain/turnaround/PilotTouch.h"
 #include "../src/viewmodel/OperationsViewModel.h"
+
+namespace
+{
+    void HoldTheInitialPhaseWith(IntegratorSnapshot& snapshot, const TurnaroundHold hold)
+    {
+        snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+        snapshot.turnaroundHold = hold;
+        snapshot.connected = true;
+        snapshot.automationEnabled = true;
+        snapshot.sessionActive = true;
+        snapshot.sessionReady = true;
+        snapshot.aircraftSupported = true;
+        snapshot.gsxAvailable = true;
+    }
+}
 
 class OperationsViewModelTest final : public QObject
 {
@@ -62,6 +80,15 @@ private slots:
     static void theInitialTipPromisesTheAutomaticStartWhileTheFlightLoads();
     static void theInitialTipNamesTheAutomationThatIsOffWhenItDoesNotStartWithTheFlight();
     static void theInitialTipNamesTheAutomationThePilotTurnedOffDuringTheFlight();
+    static void theInitialTipNamesWhyTheTurnaroundIsHeld();
+    static void theHoldReasonComesBeforeTheWaitTheTipAlreadyNamed();
+    static void theGsxSnapshotWaitOpensTheTipOfEveryPhase();
+    static void theOtherHoldReasonsStayOutOfTheLaterPhases();
+    static void theInitialTipLeavesTheResumeDecisionToItsAdvisory();
+    static void theResumeDecisionAdvisoryAsksTheQuestionAndLabelsBothAnswers();
+    static void theResumeDecisionTextsStandDownOutsideTheDecision();
+    static void resumeSavedTurnaroundDelegatesToService();
+    static void resumeSavedTurnaroundReportsRejectedCommands();
     static void exposesGsxProfileConflictFromSnapshot();
     static void fixGsxProfileDelegatesToService();
     static void fixGsxProfileReportsRejectedCommands();
@@ -102,6 +129,7 @@ private slots:
     static void buttonLabelsNameTheirAction();
     static void theStartFlowButtonStandsDownWhenTheTurnaroundStartsItself();
     static void theRestartButtonWaitsForARunningTurnaround();
+    static void theRestartButtonStaysLitWhileTheSavedTurnaroundHolds();
     static void theLoadingChipKnowsWhenAServiceIsActuallyRunning();
     static void theTurnaroundChipKnowsItIsArmedBeforeItRuns();
     static void thePilotTouchLabelNamesWhatTheTouchDoesInThisPhase();
@@ -933,6 +961,180 @@ void OperationsViewModelTest::theInitialTipNamesTheAutomationThePilotTurnedOffDu
              QStringLiteral("The automation is off, so the client is not driving this turnaround."));
 }
 
+void OperationsViewModelTest::theInitialTipNamesWhyTheTurnaroundIsHeld()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    const std::array<std::pair<TurnaroundHold, QString>, 4> reasons = {{
+        {TurnaroundHold::AwaitingGsxSnapshot, QStringLiteral("The client is waiting for GSX to send its state.")},
+        {TurnaroundHold::JudgingSavedTurnaround,
+         QStringLiteral("The client found saved turnaround data and is waiting for the aircraft and GSX to check whether it belongs to this flight.")},
+        {TurnaroundHold::AwaitingGsxReadings,
+         QStringLiteral("The client is resuming the saved turnaround and waiting for GSX and the simulator to report their state.")},
+        {TurnaroundHold::AwaitingAircraft,
+         QStringLiteral("The client is resuming the saved turnaround and waiting for the aircraft to respond. If it never does, restart the flow.")},
+    }};
+
+    for (const auto& [hold, reason] : reasons)
+    {
+        HoldTheInitialPhaseWith(service.snapshot, hold);
+        service.Notify();
+
+        QCOMPARE(viewModel.GetPhaseTip(), reason);
+    }
+}
+
+void OperationsViewModelTest::theHoldReasonComesBeforeTheWaitTheTipAlreadyNamed()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    HoldTheInitialPhaseWith(service.snapshot, TurnaroundHold::AwaitingGsxSnapshot);
+    service.snapshot.automationEnabled = false;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("The client is waiting for GSX to send its state. "
+                            "The automation is off, so the client is not driving this turnaround."));
+}
+
+void OperationsViewModelTest::theGsxSnapshotWaitOpensTheTipOfEveryPhase()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    const QString reason = QStringLiteral("The client is waiting for GSX to send its state.");
+
+    HoldTheInitialPhaseWith(service.snapshot, TurnaroundHold::None);
+    service.snapshot.phase = TurnaroundPhase::WaitingReadyToPush;
+    service.Notify();
+
+    const QString plainTip = viewModel.GetPhaseTip();
+
+    QVERIFY(!plainTip.isEmpty());
+
+    service.snapshot.turnaroundHold = TurnaroundHold::AwaitingGsxSnapshot;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(), reason + QLatin1Char(' ') + plainTip);
+
+    service.snapshot.phase = TurnaroundPhase::OnFlight;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(), reason);
+}
+
+void OperationsViewModelTest::theOtherHoldReasonsStayOutOfTheLaterPhases()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    HoldTheInitialPhaseWith(service.snapshot, TurnaroundHold::None);
+    service.snapshot.phase = TurnaroundPhase::WaitingReadyToPush;
+    service.Notify();
+
+    const QString plainTip = viewModel.GetPhaseTip();
+
+    for (const TurnaroundHold hold : {TurnaroundHold::JudgingSavedTurnaround, TurnaroundHold::AwaitingGsxReadings,
+                                      TurnaroundHold::AwaitingAircraft})
+    {
+        service.snapshot.turnaroundHold = hold;
+        service.Notify();
+
+        QCOMPARE(viewModel.GetPhaseTip(), plainTip);
+    }
+}
+
+void OperationsViewModelTest::theInitialTipLeavesTheResumeDecisionToItsAdvisory()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    HoldTheInitialPhaseWith(service.snapshot, TurnaroundHold::AwaitingResumeDecision);
+    service.Notify();
+
+    QVERIFY(viewModel.GetPhaseTip().isEmpty());
+    QVERIFY(!viewModel.GetResumeDecisionAdvisoryText().isEmpty());
+}
+
+void OperationsViewModelTest::theResumeDecisionAdvisoryAsksTheQuestionAndLabelsBothAnswers()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    HoldTheInitialPhaseWith(service.snapshot, TurnaroundHold::AwaitingResumeDecision);
+    service.Notify();
+
+    QCOMPARE(viewModel.GetResumeDecisionAdvisoryText(),
+             QStringLiteral("GSX restarted since this turnaround was saved. "
+                            "Resume it if the aircraft is still as you left it, or restart the flow to start over."));
+    QCOMPARE(viewModel.GetResumeTurnaroundLabel(), QStringLiteral("Resume turnaround"));
+    QCOMPARE(viewModel.GetRestartFlowLabel(), QStringLiteral("Restart Flow"));
+}
+
+void OperationsViewModelTest::theResumeDecisionTextsStandDownOutsideTheDecision()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    HoldTheInitialPhaseWith(service.snapshot, TurnaroundHold::AwaitingResumeDecision);
+    service.Notify();
+
+    QVERIFY(!viewModel.GetResumeDecisionAdvisoryText().isEmpty());
+    QVERIFY(!viewModel.GetResumeTurnaroundLabel().isEmpty());
+
+    const std::array others = {
+        TurnaroundHold::None,
+        TurnaroundHold::AwaitingGsxSnapshot,
+        TurnaroundHold::JudgingSavedTurnaround,
+        TurnaroundHold::AwaitingGsxReadings,
+        TurnaroundHold::AwaitingAircraft,
+    };
+
+    for (const TurnaroundHold hold : others)
+    {
+        service.snapshot.turnaroundHold = hold;
+        service.Notify();
+
+        QVERIFY(viewModel.GetResumeDecisionAdvisoryText().isEmpty());
+        QVERIFY(viewModel.GetResumeTurnaroundLabel().isEmpty());
+    }
+}
+
+void OperationsViewModelTest::resumeSavedTurnaroundDelegatesToService()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    viewModel.resumeSavedTurnaround();
+
+    QCOMPARE(service.resumeSavedTurnaroundCalls, 1);
+    QCOMPARE(service.restartFlowCalls, 0);
+    QCOMPARE(viewModel.GetCommandError(), QString());
+}
+
+void OperationsViewModelTest::resumeSavedTurnaroundReportsRejectedCommands()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    OperationsViewModel viewModel(&service, &display);
+
+    service.resumeSavedTurnaroundResult = CommandResult::Failure("There is no saved turnaround waiting for an answer.");
+
+    viewModel.resumeSavedTurnaround();
+
+    QCOMPARE(service.resumeSavedTurnaroundCalls, 1);
+    QCOMPARE(viewModel.GetCommandError(), QStringLiteral("There is no saved turnaround waiting for an answer."));
+}
+
 void OperationsViewModelTest::exposesGsxProfileConflictFromSnapshot()
 {
     FakeIntegratorService service;
@@ -1698,6 +1900,39 @@ void OperationsViewModelTest::theRestartButtonWaitsForARunningTurnaround()
     viewModel.SetEnabled(true);
 
     QVERIFY(viewModel.CanRestartFlow());
+}
+
+void OperationsViewModelTest::theRestartButtonStaysLitWhileTheSavedTurnaroundHolds()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.connected = true;
+    service.snapshot.automationEnabled = false;
+
+    for (const TurnaroundHold hold : {TurnaroundHold::JudgingSavedTurnaround, TurnaroundHold::AwaitingResumeDecision,
+                                      TurnaroundHold::AwaitingGsxReadings, TurnaroundHold::AwaitingAircraft})
+    {
+        service.snapshot.turnaroundHold = hold;
+        service.Notify();
+
+        QVERIFY(viewModel.CanRestartFlow());
+    }
+
+    for (const TurnaroundHold hold : {TurnaroundHold::None, TurnaroundHold::AwaitingGsxSnapshot})
+    {
+        service.snapshot.turnaroundHold = hold;
+        service.Notify();
+
+        QVERIFY(!viewModel.CanRestartFlow());
+    }
+
+    service.snapshot.turnaroundHold = TurnaroundHold::AwaitingAircraft;
+    service.snapshot.connected = false;
+    service.Notify();
+
+    QVERIFY(!viewModel.CanRestartFlow());
 }
 
 void OperationsViewModelTest::theLoadingChipKnowsWhenAServiceIsActuallyRunning()

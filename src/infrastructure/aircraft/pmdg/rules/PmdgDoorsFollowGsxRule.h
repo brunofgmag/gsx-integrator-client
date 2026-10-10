@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGDOORSFOLLOWGSXRULE_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGDOORSFOLLOWGSXRULE_H
 
+#include "../../../../domain/model/MemoryBag.h"
 #include "../../../../domain/ports/AircraftRule.h"
 
 class GsxDoorSync;
@@ -16,6 +17,10 @@ public:
     [[nodiscard]] const char* Name() const override;
     [[nodiscard]] RuleVerdict Evaluate(const RuleContext& context) override;
     void Act(const RuleContext& context, VariableWriter& writer) override;
+
+    void ForgetMainDeckDoor();
+    void AppendMemory(MemoryBag& memory) const;
+    void RestoreMemory(const MemoryBag& memory);
 
 private:
     void SyncMainDeckDoor();

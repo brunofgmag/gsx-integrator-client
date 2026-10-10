@@ -120,6 +120,8 @@ void Fss727MainDeckMovesByTheCargoPanelRule::Act(const RuleContext&, VariableWri
 
     if (!*closed || !IsTheMainLoaderWaitingForTheDeck())
     {
+        TurnOffThePanelMasterLeftOn(writer);
+
         return;
     }
 
@@ -137,6 +139,7 @@ void Fss727MainDeckMovesByTheCargoPanelRule::StartTravel(VariableWriter& writer,
     writer.SetLVar(kMasterPowerLVar, kSwitchOn);
     writer.SetLVar(kCargoDoorSwitchLVar, opening ? kSwitchOn : kSwitchOff);
     travel_ = travel;
+    panelMasterLeftOnToCheck_ = false;
     masterCutGuardTicks_ = 0;
     mayResumeTravel_ = true;
     unmovedTicks_ = 0;
@@ -280,13 +283,98 @@ void Fss727MainDeckMovesByTheCargoPanelRule::TurnThePanelMasterOff(VariableWrite
     LOG_INFO("FSS 727 main deck door at rest at %.1f%%: the cargo panel master goes off", position * kPercentPerFraction);
 }
 
+bool Fss727MainDeckMovesByTheCargoPanelRule::HasUnservedClose() const
+{
+    return CloseRequests() != servedRequests_;
+}
+
+bool Fss727MainDeckMovesByTheCargoPanelRule::IsLoaderDepartureCloseUnserved() const
+{
+    return loaderDepartureCloseUnserved_;
+}
+
+void Fss727MainDeckMovesByTheCargoPanelRule::RestoreUnservedLoaderDepartureClose()
+{
+    ++loaderDepartureCloseRequests_;
+    loaderDepartureCloseUnserved_ = true;
+}
+
+bool Fss727MainDeckMovesByTheCargoPanelRule::IsDeboardingAtWork() const
+{
+    return deboardingAtWork_;
+}
+
+bool Fss727MainDeckMovesByTheCargoPanelRule::HasSeenTheMainLoaderAtTheDeck() const
+{
+    return mainLoaderSeenAtTheDeck_;
+}
+
+void Fss727MainDeckMovesByTheCargoPanelRule::RestoreTheEdges(const bool deboardingAtWork,
+                                                             const bool mainLoaderSeenAtTheDeck,
+                                                             const bool gsxRestartedSinceSave)
+{
+    deboardingAtWork_ = deboardingAtWork;
+    deboardingReadAwaited_ = deboardingAtWork;
+    deboardingMayHaveEndedWhileAway_ = deboardingAtWork && !gsxRestartedSinceSave;
+    mainLoaderSeenAtTheDeck_ = mainLoaderSeenAtTheDeck;
+}
+
+void Fss727MainDeckMovesByTheCargoPanelRule::CheckThePanelMasterLeftOn()
+{
+    panelMasterLeftOnToCheck_ = true;
+}
+
+void Fss727MainDeckMovesByTheCargoPanelRule::ForgetTheResume()
+{
+    panelMasterLeftOnToCheck_ = false;
+}
+
+void Fss727MainDeckMovesByTheCargoPanelRule::TurnOffThePanelMasterLeftOn(VariableWriter& writer)
+{
+    if (!panelMasterLeftOnToCheck_ || !variables_->HasReceivedLVar(kMasterPowerLVar))
+    {
+        return;
+    }
+
+    const std::optional<double> position = aircraft_->MainDeckPosition();
+    if (!position.has_value() || !aircraft_->IsMainDeckStill())
+    {
+        return;
+    }
+
+    panelMasterLeftOnToCheck_ = false;
+
+    if (variables_->GetLVar(kMasterPowerLVar, kSwitchOff) <= kSwitchOff || !IsAtAnEnd(*position))
+    {
+        return;
+    }
+
+    TurnThePanelMasterOff(writer, *position);
+}
+
 void Fss727MainDeckMovesByTheCargoPanelRule::AskForTheDeckClosedOnceTheDeboardingCompletes()
 {
-    const GsxStateStatus deboarding = GsxStatusOf(GsxState::Deboarding);
-    const bool completedNow = deboardingAtWork_ && deboarding == GsxStateStatus::Completed;
-    deboardingAtWork_ = IsWorkingTheDoors(deboarding);
+    if (deboardingReadAwaited_ && !variables_->HasReceivedLVar(gsx::lvars::kDeboardingState))
+    {
+        return;
+    }
 
-    if (!completedNow || aircraft_->IsMainDeckClosed().value_or(true))
+    deboardingReadAwaited_ = false;
+
+    const GsxStateStatus deboarding = GsxStatusOf(GsxState::Deboarding);
+    const bool completedNow = deboardingAtWork_
+        && (deboarding == GsxStateStatus::Completed
+            || (deboardingMayHaveEndedWhileAway_ && deboarding == GsxStateStatus::Callable));
+    const std::optional<bool> closed = aircraft_->IsMainDeckClosed();
+    if (completedNow && !closed.has_value())
+    {
+        return;
+    }
+
+    deboardingAtWork_ = IsWorkingTheDoors(deboarding);
+    deboardingMayHaveEndedWhileAway_ = false;
+
+    if (!completedNow || closed.value_or(true))
     {
         return;
     }
@@ -311,9 +399,15 @@ void Fss727MainDeckMovesByTheCargoPanelRule::AskForTheDeckClosedOnceTheMainLoade
         return;
     }
 
+    const std::optional<bool> closed = aircraft_->IsMainDeckClosed();
+    if (!closed.has_value())
+    {
+        return;
+    }
+
     mainLoaderSeenAtTheDeck_ = false;
 
-    if (aircraft_->IsMainDeckClosed().value_or(true))
+    if (*closed)
     {
         return;
     }

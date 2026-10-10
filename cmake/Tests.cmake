@@ -110,6 +110,7 @@ configure_gsxi_test(gsxi-turnaround-rules-tests turnaround-rules)
 add_executable(gsxi-turnaround-workflow-tests
         tests/TestDoubles.h
         tests/turnaround/TurnaroundStateFixture.h
+        tests/turnaround/TurnaroundDataFill.h
         tests/doubles/FakeGsxMenuGateway.h
         tests/doubles/FakeDomainLogger.h
         tests/doubles/FakeFlightPlanSource.h
@@ -144,6 +145,11 @@ gsxi_add_qt_test(gsxi-efb-command-receiver-tests efb-command-receiver
         src/infrastructure/commbus/CommBusBridgeGateway.h
         src/viewmodel/OperationsViewModel.cpp
         src/viewmodel/OperationsViewModel.h)
+
+gsxi_add_qt_test(gsxi-translations-tests translations
+        tests/tst_translations.cpp)
+target_compile_definitions(gsxi-translations-tests PRIVATE
+        GSXI_I18N_DIR=\"${CMAKE_SOURCE_DIR}/i18n\")
 
 gsxi_add_qt_test(gsxi-settings-viewmodel-tests settings-viewmodel
         tests/TestDoubles.h
@@ -189,6 +195,7 @@ gsxi_add_qt_test(gsxi-gsx-plugin-client-tests gsx-plugin-client
 
 gsxi_add_qt_test(gsxi-remote-state-tests remote-state
         tests/tst_remote_state.cpp
+        tests/RecordedWire.h
         src/infrastructure/gsx/GsxRemoteState.h
         src/infrastructure/gsx/GsxRemoteStateReducer.cpp
         src/infrastructure/gsx/GsxRemoteStateReducer.h)
@@ -211,15 +218,18 @@ gsxi_add_qt_test(gsxi-gsx-menu-navigator-tests gsx-menu-navigator
         src/infrastructure/simvars/VariableGateway.h
         src/domain/ports/GsxMenuGateway.h
         src/domain/ports/DomainLogger.h
-        src/domain/model/AutomationSettings.h)
+        src/domain/model/AutomationSettings.h
+        src/domain/model/MemoryBag.h)
 target_link_libraries(gsxi-gsx-menu-navigator-tests PRIVATE Qt6::WebSockets)
 
 gsxi_add_qt_test(gsxi-gsx-door-sync-tests gsx-door-sync
+        tests/doubles/FakeVariableGateway.h
         tests/tst_gsx_door_sync.cpp
         src/infrastructure/gsx/GsxDoorSync.cpp
         src/infrastructure/gsx/GsxDoorSync.h
         src/infrastructure/gsx/GsxLVars.h
-        src/infrastructure/simvars/VariableGateway.h)
+        src/infrastructure/simvars/VariableGateway.h
+        src/domain/model/MemoryBag.h)
 
 gsxi_add_qt_test(gsxi-gsx-interface-tests gsx-interface
         tests/TestDoubles.h
@@ -230,7 +240,8 @@ gsxi_add_qt_test(gsxi-gsx-interface-tests gsx-interface
         src/infrastructure/commbus/CommBusBridgeGateway.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
-        src/infrastructure/simvars/VariableGateway.h)
+        src/infrastructure/simvars/VariableGateway.h
+        src/domain/model/MemoryBag.h)
 
 gsxi_add_qt_test(gsxi-gsx-remote-api-client-tests gsx-remote-api-client
         tests/tst_gsx_remote_api_client.cpp
@@ -270,6 +281,23 @@ gsxi_add_qt_test(gsxi-qsettings-repository-tests qsettings-repository
         src/application/ports/SettingsRepository.h
         src/application/model/AppSettings.h
         src/application/model/AircraftProfile.h)
+
+gsxi_add_qt_test(gsxi-json-file-turnaround-checkpoint-store-tests json-file-turnaround-checkpoint-store
+        tests/tst_json_file_turnaround_checkpoint_store.cpp
+        tests/doubles/FakeTurnaroundCheckpointStore.h
+        tests/turnaround/TurnaroundDataFill.h
+        src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.cpp
+        src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.h
+        src/infrastructure/logging/LogMacros.h
+        src/application/ports/TurnaroundCheckpointStore.h
+        src/application/model/TurnaroundDocument.h
+        src/infrastructure/checkpoint/StoredText.h)
+
+gsxi_add_qt_test(gsxi-turnaround-key-judgement-tests turnaround-key-judgement
+        tests/tst_turnaround_key_judgement.cpp
+        src/application/TurnaroundKeyJudgement.cpp
+        src/application/TurnaroundKeyJudgement.h
+        src/application/model/TurnaroundDocument.h)
 
 gsxi_add_qt_test(gsxi-simconnect-session-tests simconnect-session
         tests/doubles/FakeSimConnectApi.h
@@ -984,9 +1012,21 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         tests/doubles/FakeSimConnectApi.cpp
         tests/doubles/FakeGsxRemoteApiClient.h
         tests/doubles/FakeGsxRemoteApiClient.cpp
+        tests/RecordedWire.h
         tests/tst_runtime_integrator_service.cpp
         src/application/IntegratorRuntime.cpp
         src/application/IntegratorRuntime.h
+        src/application/TurnaroundKeyJudgement.cpp
+        src/application/TurnaroundKeyJudgement.h
+        src/application/TurnaroundResumption.cpp
+        src/application/TurnaroundResumption.h
+        src/application/model/TurnaroundHold.h
+        src/application/model/TurnaroundDocument.h
+        src/application/ports/TurnaroundCheckpointStore.h
+        src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.cpp
+        src/infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.h
+        src/infrastructure/checkpoint/StoredText.h
+        tests/doubles/FakeTurnaroundCheckpointStore.h
         src/infrastructure/probe/ProbeLog.h
         src/infrastructure/probe/ProbeChannels.h
         src/infrastructure/probe/ProbeObserver.cpp
@@ -1133,6 +1173,8 @@ target_link_libraries(gsxi-runtime-integrator-service-tests PRIVATE
         gsxi-turnaround-state-test-support
         Qt6::Network)
 target_include_directories(gsxi-runtime-integrator-service-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
+target_compile_definitions(gsxi-runtime-integrator-service-tests PRIVATE
+        GSX_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures\")
 
 if (NOT GSXI_TESTS_ONLY)
     qt_add_executable(gsxi-qml-tests tests/qml/main.cpp)
@@ -1169,6 +1211,7 @@ endif ()
 set(GSXI_GUARD_CHECKS
         check-domain-port-uncalled
         check-turnaround-data-field-unread
+        check-turnaround-data-field-unclassified
         check-viewmodel-property-unbound
         check-infra-gateway-uncalled
         check-state-predicate-lvar-default

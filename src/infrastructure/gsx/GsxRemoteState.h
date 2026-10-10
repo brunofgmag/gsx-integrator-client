@@ -22,19 +22,23 @@ struct GsxRemoteMenu
 struct GsxRemoteState
 {
     bool connected = false;
+    bool synced = false;
     std::string simbriefStatus;
     std::string simbriefError;
     int simbriefGeneration = 0;
     std::string handlingOperator;
     std::string matchedAircraftTitle;
+    std::string couatlId;
+    std::string airportIcao;
+    std::string parkingName;
     std::vector<std::string> apronVerdict;
     GsxRemoteMenu menu;
     std::vector<GsxRemoteService> services;
 };
 
-[[nodiscard]] inline const GsxRemoteService* FindService(const GsxRemoteState& s, const std::string& id)
+[[nodiscard]] inline const GsxRemoteService* FindService(const GsxRemoteState& state, const std::string& id)
 {
-    for (const auto& service : s.services)
+    for (const auto& service : state.services)
     {
         if (service.id == id)
         {

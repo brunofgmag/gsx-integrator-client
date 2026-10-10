@@ -12,6 +12,7 @@ public:
     CommandResult automationResult = CommandResult::Success();
     CommandResult startLoadingResult = CommandResult::Success();
     CommandResult restartFlowResult = CommandResult::Success();
+    CommandResult resumeSavedTurnaroundResult = CommandResult::Success();
     CommandResult fixGsxProfileResult = CommandResult::Success();
     CommandResult fixPmdgOptionsResult = CommandResult::Success();
     CommandResult pilotTouchResult = CommandResult::Success();
@@ -19,6 +20,7 @@ public:
     int automationCalls = 0;
     int startLoadingCalls = 0;
     int restartFlowCalls = 0;
+    int resumeSavedTurnaroundCalls = 0;
     int reloadCalls = 0;
     int applySettingsCalls = 0;
     int fixGsxProfileCalls = 0;
@@ -64,6 +66,17 @@ public:
         }
 
         return restartFlowResult;
+    }
+
+    [[nodiscard]] CommandResult ResumeSavedTurnaround() override
+    {
+        ++resumeSavedTurnaroundCalls;
+        if (resumeSavedTurnaroundResult.succeeded)
+        {
+            Notify();
+        }
+
+        return resumeSavedTurnaroundResult;
     }
 
     [[nodiscard]] CommandResult ReloadSimbrief() override

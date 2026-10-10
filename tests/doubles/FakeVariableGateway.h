@@ -29,20 +29,37 @@ public:
     std::vector<std::string> fastRefreshNames;
     std::unordered_map<std::string, double> tickValues;
     std::unordered_set<std::string> changedThisTick;
+    std::unordered_set<std::string> requestedLVars;
+    std::unordered_set<std::string> requestedAVars;
+    bool arrivesATickAfterItIsAsked = false;
+    std::unordered_set<std::string> deliveredLVars;
+    std::unordered_set<std::string> deliveredAVars;
+
+    void DeliverWhatWasAsked()
+    {
+        deliveredLVars.insert(requestedLVars.begin(), requestedLVars.end());
+        deliveredAVars.insert(requestedAVars.begin(), requestedAVars.end());
+    }
 
     void SetFastRefresh(const std::string& name) override
     {
+        requestedLVars.insert(name);
         fastRefreshNames.push_back(name);
     }
 
     double GetLVar(const std::string& name, const double defaultValue = 0.0) override
     {
+        const bool served = IsLVarServed(name);
+        requestedLVars.insert(name);
+
         const auto it = lvars.find(name);
-        return it != lvars.end() ? it->second : defaultValue;
+        return served && it != lvars.end() ? it->second : defaultValue;
     }
 
     LVarSpan ConsumeLVarSpan(const std::string& name) override
     {
+        requestedLVars.insert(name);
+
         if (const auto it = lvarSpans.find(name); it != lvarSpans.end())
         {
             const LVarSpan span = it->second;
@@ -56,7 +73,10 @@ public:
 
     bool HasReceivedLVar(const std::string& name) override
     {
-        return lvars.contains(name);
+        const bool served = IsLVarServed(name);
+        requestedLVars.insert(name);
+
+        return served && lvars.contains(name);
     }
 
     void MarkTick() override
@@ -77,11 +97,14 @@ public:
 
     bool HasLVarChangedThisTick(const std::string& name) override
     {
+        requestedLVars.insert(name);
+
         return changedThisTick.contains(name);
     }
 
     void SetLVar(const std::string& name, const double value) override
     {
+        requestedLVars.insert(name);
         ++setLVarCalls;
         ++lvarWrites[name];
         lvars[name] = value;
@@ -89,22 +112,29 @@ public:
 
     double GetAVar(const std::string& name, const std::string& unit, const double defaultValue = 0.0) override
     {
+        const bool served = IsAVarServed(name);
+        requestedAVars.insert(name);
+
         if (!ServesTheSameSlot(name, unit))
         {
             return defaultValue;
         }
 
         const auto it = avars.find(name);
-        return it != avars.end() ? it->second : defaultValue;
+        return served && it != avars.end() ? it->second : defaultValue;
     }
 
     bool HasReceivedAVar(const std::string& name, const std::string& unit) override
     {
-        return ServesTheSameSlot(name, unit) && avars.contains(name);
+        const bool served = IsAVarServed(name);
+        requestedAVars.insert(name);
+
+        return ServesTheSameSlot(name, unit) && served && avars.contains(name);
     }
 
     void SetAVar(const std::string& name, const std::string& unit, const double value) override
     {
+        requestedAVars.insert(name);
         ++setAVarCalls;
         ++avarWrites[name];
         avarWriteUnits[name] = unit;
@@ -158,6 +188,16 @@ public:
     }
 
 private:
+    [[nodiscard]] bool IsLVarServed(const std::string& name) const
+    {
+        return !arrivesATickAfterItIsAsked || deliveredLVars.contains(name);
+    }
+
+    [[nodiscard]] bool IsAVarServed(const std::string& name) const
+    {
+        return !arrivesATickAfterItIsAsked || deliveredAVars.contains(name);
+    }
+
     bool ServesTheSameSlot(const std::string& name, const std::string& unit)
     {
         const auto it = avarAccessUnits.find(name);

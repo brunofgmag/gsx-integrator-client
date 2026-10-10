@@ -23,7 +23,6 @@ namespace
         context.phase = state.Phase();
         context.needs = state.Needs();
         context.needs.loading = ctx.data.loadingStartNotified;
-        context.phaseTickCount = ctx.data.stateTickCount;
 
         return context;
     }

@@ -73,7 +73,30 @@ namespace
         return {};
     }
 
-    QString WaitingSupportedAircraftTip(const IntegratorSnapshot& snapshot)
+    QString TurnaroundHoldReason(const TurnaroundHold hold)
+    {
+        switch (hold)
+        {
+        case TurnaroundHold::AwaitingGsxSnapshot:
+            return QCoreApplication::translate("Turnaround", "The client is waiting for GSX to send its state.");
+        case TurnaroundHold::JudgingSavedTurnaround:
+            return QCoreApplication::translate("Turnaround",
+                                               "The client found saved turnaround data and is waiting for the aircraft and GSX to check whether it belongs to this flight.");
+        case TurnaroundHold::AwaitingGsxReadings:
+            return QCoreApplication::translate("Turnaround",
+                                               "The client is resuming the saved turnaround and waiting for GSX and the simulator to report their state.");
+        case TurnaroundHold::AwaitingAircraft:
+            return QCoreApplication::translate("Turnaround",
+                                               "The client is resuming the saved turnaround and waiting for the aircraft to respond. If it never does, restart the flow.");
+        case TurnaroundHold::None:
+        case TurnaroundHold::AwaitingResumeDecision:
+            break;
+        }
+
+        return {};
+    }
+
+    QString StandingWaitTip(const IntegratorSnapshot& snapshot)
     {
         const bool automationWaitsForTheFlight = snapshot.automationStartsWithFlight && !snapshot.sessionActive;
 
@@ -114,6 +137,43 @@ namespace
         }
 
         return {};
+    }
+
+    QString JoinTips(const QString& first, const QString& second)
+    {
+        if (first.isEmpty())
+        {
+            return second;
+        }
+
+        if (second.isEmpty())
+        {
+            return first;
+        }
+
+        return first + QLatin1Char(' ') + second;
+    }
+
+    QString WaitingSupportedAircraftTip(const IntegratorSnapshot& snapshot)
+    {
+        return JoinTips(TurnaroundHoldReason(snapshot.turnaroundHold), StandingWaitTip(snapshot));
+    }
+
+    bool IsHoldingASavedTurnaround(const TurnaroundHold hold)
+    {
+        switch (hold)
+        {
+        case TurnaroundHold::JudgingSavedTurnaround:
+        case TurnaroundHold::AwaitingResumeDecision:
+        case TurnaroundHold::AwaitingGsxReadings:
+        case TurnaroundHold::AwaitingAircraft:
+            return true;
+        case TurnaroundHold::None:
+        case TurnaroundHold::AwaitingGsxSnapshot:
+            break;
+        }
+
+        return false;
     }
 
     QString SmartSwitchAction(const SmartSwitchCue& cue)
@@ -496,7 +556,7 @@ QString OperationsViewModel::GetHoldCountdownText() const
         .arg(remaining);
 }
 
-QString OperationsViewModel::GetPhaseTip() const
+QString OperationsViewModel::PhaseSpecificTip() const
 {
     if (IsAwaitingStartLoading())
     {
@@ -504,6 +564,18 @@ QString OperationsViewModel::GetPhaseTip() const
     }
 
     return snapshot_.phase == TurnaroundPhase::Loading ? BoardingTip() : PhaseTip(snapshot_);
+}
+
+QString OperationsViewModel::GetPhaseTip() const
+{
+    QString phaseTip = PhaseSpecificTip();
+    const bool initialPhaseSaysItAlready = snapshot_.phase == TurnaroundPhase::WaitingSupportedAircraft;
+    if (snapshot_.turnaroundHold != TurnaroundHold::AwaitingGsxSnapshot || initialPhaseSaysItAlready)
+    {
+        return phaseTip;
+    }
+
+    return JoinTips(TurnaroundHoldReason(snapshot_.turnaroundHold), phaseTip);
 }
 
 QString OperationsViewModel::BoardingTip() const
@@ -774,6 +846,24 @@ QString OperationsViewModel::GetServiceInterruptedAdvisoryText()
                                        "GSX stopped a service it had already started. Request it again from the GSX menu and the client will resume the turnaround.");
 }
 
+QString OperationsViewModel::GetResumeDecisionAdvisoryText() const
+{
+    if (!IsAwaitingResumeDecision())
+    {
+        return {};
+    }
+
+    return QCoreApplication::translate("OperationsScreen",
+                                       "GSX restarted since this turnaround was saved. Resume it if the aircraft is still as you left it, or restart the flow to start over.");
+}
+
+QString OperationsViewModel::GetResumeTurnaroundLabel() const
+{
+    return IsAwaitingResumeDecision()
+               ? QCoreApplication::translate("OperationsScreen", "Resume turnaround")
+               : QString();
+}
+
 QString OperationsViewModel::GetCommandErrorLabel()
 {
     return QCoreApplication::translate("OperationsScreen", "Error");
@@ -979,7 +1069,8 @@ bool OperationsViewModel::CanStartFlow() const
 
 bool OperationsViewModel::CanRestartFlow() const
 {
-    return snapshot_.connected && snapshot_.automationEnabled;
+    return snapshot_.connected
+        && (snapshot_.automationEnabled || IsHoldingASavedTurnaround(snapshot_.turnaroundHold));
 }
 
 bool OperationsViewModel::CanStartLoading() const
@@ -1035,6 +1126,12 @@ void OperationsViewModel::restartFlow()
     Refresh();
 }
 
+void OperationsViewModel::resumeSavedTurnaround()
+{
+    SetCommandError(service_->ResumeSavedTurnaround());
+    Refresh();
+}
+
 void OperationsViewModel::reloadSimbrief()
 {
     SetCommandError(service_->ReloadSimbrief());
@@ -1080,6 +1177,11 @@ void OperationsViewModel::debugSkipPhase(const int delta)
 #else
     Q_UNUSED(delta)
 #endif
+}
+
+bool OperationsViewModel::IsAwaitingResumeDecision() const
+{
+    return snapshot_.turnaroundHold == TurnaroundHold::AwaitingResumeDecision;
 }
 
 void OperationsViewModel::OnIntegratorStateChanged()

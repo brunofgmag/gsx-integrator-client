@@ -40,6 +40,16 @@ private slots:
     static void persistsAutoStartLoadingImmediately();
     static void skipRepositionDefaultsToDisabled();
     static void persistsSkipRepositionImmediately();
+    static void skipRepositionOnNewTurnaroundDefaultsToEnabledAndUnlocked();
+    static void persistsSkipRepositionOnNewTurnaroundImmediately();
+    static void skippingTheRepositionLocksTheNewTurnaroundOptionAndKeepsItsStoredValue();
+    static void aLockedNewTurnaroundOptionIgnoresWrites();
+    static void theProfileNewTurnaroundOptionLocksWithTheProfileSkipReposition();
+    static void aProfileUsingTheGlobalsLocksWithTheGlobalSkipReposition();
+    static void aProfileWithItsOwnSkipOffStaysUnlockedWhileTheGlobalSkipIsOn();
+    static void changingTheNewTurnaroundOptionRefreshesTheProfileDraft();
+    static void theProfileNewTurnaroundValueSurvivesLockingAndSavesRaw();
+    static void disablingUseGlobalCopiesTheNewTurnaroundOption();
     static void groundServicesDefaultToDisabled();
     static void groundServicesPersistImmediately();
     static void placeChocksPersistIndependentlyOfTheGpu();
@@ -228,6 +238,218 @@ void SettingsViewModelTest::persistsSkipRepositionImmediately()
     viewModel.SetSkipReposition(true);
 
     QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::skipRepositionOnNewTurnaroundDefaultsToEnabledAndUnlocked()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    const SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(viewModel.GetSkipRepositionOnNewTurnaround());
+    QVERIFY(!viewModel.IsSkipRepositionOnNewTurnaroundLocked());
+    QVERIFY(service.appliedSettings.skipRepositionOnNewTurnaround);
+}
+
+void SettingsViewModelTest::persistsSkipRepositionOnNewTurnaroundImmediately()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+
+    viewModel.SetSkipRepositionOnNewTurnaround(false);
+
+    QVERIFY(!viewModel.GetSkipRepositionOnNewTurnaround());
+    QCOMPARE(repository.saveCalls, 1);
+    QVERIFY(!repository.stored.skipRepositionOnNewTurnaround);
+    QVERIFY(!service.appliedSettings.skipRepositionOnNewTurnaround);
+
+    const int savesBefore = repository.saveCalls;
+    viewModel.SetSkipRepositionOnNewTurnaround(false);
+
+    QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::skippingTheRepositionLocksTheNewTurnaroundOptionAndKeepsItsStoredValue()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+    viewModel.SetSkipRepositionOnNewTurnaround(false);
+
+    const QSignalSpy lockSpy(&viewModel, &SettingsViewModel::SkipRepositionChanged);
+    const QSignalSpy draftSpy(&viewModel, &SettingsViewModel::ProfileDraftChanged);
+
+    viewModel.SetSkipReposition(true);
+
+    QCOMPARE(lockSpy.count(), 1);
+    QCOMPARE(draftSpy.count(), 1);
+    QVERIFY(viewModel.IsSkipRepositionOnNewTurnaroundLocked());
+    QVERIFY(!viewModel.GetSkipRepositionOnNewTurnaround());
+    QVERIFY(!repository.stored.skipRepositionOnNewTurnaround);
+
+    viewModel.SetSkipReposition(false);
+
+    QCOMPARE(lockSpy.count(), 2);
+    QCOMPARE(draftSpy.count(), 2);
+    QVERIFY(!viewModel.IsSkipRepositionOnNewTurnaroundLocked());
+    QVERIFY(!viewModel.GetSkipRepositionOnNewTurnaround());
+    QVERIFY(!repository.stored.skipRepositionOnNewTurnaround);
+}
+
+void SettingsViewModelTest::aLockedNewTurnaroundOptionIgnoresWrites()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    repository.stored.skipReposition = true;
+    repository.stored.skipRepositionOnNewTurnaround = false;
+    SettingsViewModel viewModel(&repository, &service);
+
+    QVERIFY(viewModel.IsSkipRepositionOnNewTurnaroundLocked());
+
+    const int savesBefore = repository.saveCalls;
+    viewModel.SetSkipRepositionOnNewTurnaround(true);
+
+    QVERIFY(!viewModel.GetSkipRepositionOnNewTurnaround());
+    QCOMPARE(repository.saveCalls, savesBefore);
+}
+
+void SettingsViewModelTest::theProfileNewTurnaroundOptionLocksWithTheProfileSkipReposition()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+
+    viewModel.SetSelectedProfileIndex(2);
+    viewModel.SetProfileUseGlobal(false);
+    const QSignalSpy draftSpy(&viewModel, &SettingsViewModel::ProfileDraftChanged);
+
+    QVERIFY(!viewModel.IsProfileSkipRepositionOnNewTurnaroundLocked());
+
+    viewModel.SetProfileSkipReposition(true);
+
+    QCOMPARE(draftSpy.count(), 1);
+    QVERIFY(viewModel.IsProfileSkipRepositionOnNewTurnaroundLocked());
+
+    viewModel.SetProfileSkipRepositionOnNewTurnaround(false);
+
+    QCOMPARE(draftSpy.count(), 1);
+    QVERIFY(viewModel.GetProfileSkipRepositionOnNewTurnaround());
+
+    viewModel.SetProfileSkipReposition(false);
+
+    QCOMPARE(draftSpy.count(), 2);
+    QVERIFY(!viewModel.IsProfileSkipRepositionOnNewTurnaroundLocked());
+}
+
+void SettingsViewModelTest::aProfileUsingTheGlobalsLocksWithTheGlobalSkipReposition()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    repository.stored.skipReposition = true;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+
+    viewModel.SetSelectedProfileIndex(2);
+
+    QVERIFY(viewModel.GetProfileUseGlobal());
+    QVERIFY(viewModel.IsProfileSkipRepositionOnNewTurnaroundLocked());
+
+    const QSignalSpy lockSpy(&viewModel, &SettingsViewModel::SkipRepositionChanged);
+    const QSignalSpy draftSpy(&viewModel, &SettingsViewModel::ProfileDraftChanged);
+
+    viewModel.SetSkipReposition(false);
+
+    QCOMPARE(lockSpy.count(), 1);
+    QCOMPARE(draftSpy.count(), 1);
+    QVERIFY(!viewModel.IsProfileSkipRepositionOnNewTurnaroundLocked());
+}
+
+void SettingsViewModelTest::aProfileWithItsOwnSkipOffStaysUnlockedWhileTheGlobalSkipIsOn()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    repository.stored.skipReposition = true;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+
+    viewModel.SetSelectedProfileIndex(2);
+    viewModel.SetProfileUseGlobal(false);
+    viewModel.SetProfileSkipReposition(false);
+
+    QVERIFY(viewModel.GetSkipReposition());
+    QVERIFY(!viewModel.GetProfileSkipReposition());
+    QVERIFY(!viewModel.IsProfileSkipRepositionOnNewTurnaroundLocked());
+
+    viewModel.SetProfileSkipRepositionOnNewTurnaround(false);
+
+    QVERIFY(!viewModel.GetProfileSkipRepositionOnNewTurnaround());
+
+    viewModel.SetProfileSkipRepositionOnNewTurnaround(true);
+
+    QVERIFY(viewModel.GetProfileSkipRepositionOnNewTurnaround());
+}
+
+void SettingsViewModelTest::changingTheNewTurnaroundOptionRefreshesTheProfileDraft()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service);
+    const QSignalSpy changedSpy(&viewModel, &SettingsViewModel::SkipRepositionOnNewTurnaroundChanged);
+    const QSignalSpy draftSpy(&viewModel, &SettingsViewModel::ProfileDraftChanged);
+
+    viewModel.SetSkipRepositionOnNewTurnaround(false);
+
+    QCOMPARE(changedSpy.count(), 1);
+    QCOMPARE(draftSpy.count(), 1);
+
+    viewModel.SetSkipRepositionOnNewTurnaround(false);
+
+    QCOMPARE(changedSpy.count(), 1);
+    QCOMPARE(draftSpy.count(), 1);
+}
+
+void SettingsViewModelTest::theProfileNewTurnaroundValueSurvivesLockingAndSavesRaw()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+
+    viewModel.SetSelectedProfileIndex(2);
+    viewModel.SetProfileUseGlobal(false);
+    viewModel.SetProfileSkipRepositionOnNewTurnaround(false);
+    viewModel.SetProfileSkipReposition(true);
+
+    QVERIFY(viewModel.IsProfileSkipRepositionOnNewTurnaroundLocked());
+
+    viewModel.SetProfileSkipRepositionOnNewTurnaround(true);
+
+    QVERIFY(!viewModel.GetProfileSkipRepositionOnNewTurnaround());
+    QVERIFY(viewModel.save());
+
+    const AircraftProfile& locked = repository.stored.profiles.at("fictional-client");
+    QVERIFY(locked.skipReposition);
+    QVERIFY(!locked.skipRepositionOnNewTurnaround);
+
+    viewModel.SetProfileSkipReposition(false);
+
+    QVERIFY(!viewModel.GetProfileSkipRepositionOnNewTurnaround());
+}
+
+void SettingsViewModelTest::disablingUseGlobalCopiesTheNewTurnaroundOption()
+{
+    FakeSettingsRepository repository;
+    FakeIntegratorService service;
+    repository.stored.skipRepositionOnNewTurnaround = false;
+    SettingsViewModel viewModel(&repository, &service, TestProfileInfos());
+
+    viewModel.SetSelectedProfileIndex(2);
+
+    QVERIFY(!viewModel.GetProfileSkipRepositionOnNewTurnaround());
+
+    viewModel.SetProfileUseGlobal(false);
+
+    QVERIFY(!viewModel.GetProfileSkipRepositionOnNewTurnaround());
+    QVERIFY(viewModel.save());
+    QVERIFY(!repository.stored.profiles.at("fictional-client").skipRepositionOnNewTurnaround);
 }
 
 void SettingsViewModelTest::groundServicesDefaultToDisabled()

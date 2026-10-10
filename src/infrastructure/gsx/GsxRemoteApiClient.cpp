@@ -18,10 +18,8 @@
 
 namespace
 {
-    constexpr int kInitialBackoffMs = 1000;
     constexpr int kMaxBackoffMs = 15000;
     constexpr int kPortLimit = 65536;
-    constexpr quint16 kFallbackPort = 8744;
     constexpr int kSupportedProtocol = 1;
 
     void WarnOnProtocolMismatch(const QJsonObject& msg)
@@ -82,7 +80,6 @@ void GsxRemoteApiClient::OnReconnect()
 
 void GsxRemoteApiClient::OnConnected()
 {
-    connected_ = true;
     ForgetHandshake();
     handshakeTimer_->start(handshakeTimeoutMs_);
 
@@ -92,7 +89,6 @@ void GsxRemoteApiClient::OnConnected()
 
 void GsxRemoteApiClient::OnDisconnected()
 {
-    connected_ = false;
     ForgetHandshake();
     handshakeTimer_->stop();
 
@@ -115,8 +111,6 @@ void GsxRemoteApiClient::OnHandshakeTimeout()
 {
     LOG_WARN("GSX RemoteAPI: no answer within %d ms after connecting; dropping the deaf socket.",
              handshakeTimeoutMs_);
-
-    connected_ = false;
 
     socket_->abort();
 
@@ -149,9 +143,13 @@ void GsxRemoteApiClient::SendSubscribe() const
 
 bool GsxRemoteApiClient::SendCommand(const QString& verb, const QJsonObject& args)
 {
-    if (!connected_)
+    if (!handshakeDone_)
     {
-        LOG_WARN("GSX RemoteAPI: command '%s' dropped (offline)", verb.toUtf8().constData());
+        if (std::exchange(warnNextDrop_, false))
+        {
+            LOG_WARN("GSX RemoteAPI: command '%s' dropped (offline)", verb.toUtf8().constData());
+        }
+
         return false;
     }
 
@@ -165,9 +163,7 @@ bool GsxRemoteApiClient::SendCommand(const QString& verb, const QJsonObject& arg
     const QString text = QString::fromUtf8(QJsonDocument(cmd).toJson(QJsonDocument::Compact));
     probe::WireSent(text);
 
-    const auto numBytes = socket_->sendTextMessage(text);
-
-    return numBytes != -1;
+    return socket_->sendTextMessage(text) > 0;
 }
 
 void GsxRemoteApiClient::OnTextMessage(const QString& text)
@@ -180,6 +176,7 @@ void GsxRemoteApiClient::OnTextMessage(const QString& text)
         handshakeTimer_->stop();
         backoffMs_ = kInitialBackoffMs;
         announceNextAttempt_ = true;
+        warnNextDrop_ = true;
 
         emit ConnectionChanged(true);
     }

@@ -27,6 +27,11 @@ public:
     void Observe() override;
     void OnLoadingStarted() override {}
 
+    [[nodiscard]] bool IsReachable() const override;
+    void OnTurnaroundStarted() override;
+    void OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory) override;
+    [[nodiscard]] MemoryBag TurnaroundMemory() const override;
+
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
     [[nodiscard]] double GetPlannedZfwKg() const override;
@@ -46,6 +51,9 @@ public:
     [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Self; }
 
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
+    void HoldDoorsClosed(bool hold) override;
+    void HoldPassengerDoorsClosed(bool hold) override;
+    [[nodiscard]] bool ArePassengerDoorsHeld() const;
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
@@ -73,6 +81,8 @@ private:
     std::vector<AircraftRule*> rules_;
     std::optional<double> stagedFuelKg_;
     std::optional<double> stagedZfwKg_;
+    bool heldForDeparture_ = false;
+    bool passengerDoorsHeld_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TFDIMD11_H

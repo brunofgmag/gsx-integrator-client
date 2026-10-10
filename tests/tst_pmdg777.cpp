@@ -144,6 +144,22 @@ private slots:
     static void aftPaxDoorOpensFiveLeftOnlyOn300();
     static void groundPowerConnectFlow();
     static void groundPowerDisconnectFlow();
+    static void reachableOnlyOnceEverythingHasArrived();
+    static void theTabletIsAskedForItsStateWhileTheAircraftRuns();
+    static void aZfwWriteIsNotLostWhenTheEchoComesOnlyAfterAQuery();
+    static void aResumedBoardingKeepsThePassengersAlreadyAboard();
+    static void aResumedDeboardingDrainsThePassengersToZero();
+    static void aResumedAircraftWritesNoWeightWithoutAPlan();
+    static void resumingNeitherClosesDoorsNorMakesTheHoldsCloseThem();
+    static void releasingTheDepartureHoldReleasesThePassengerDoors();
+    static void observingAResumedAircraftOnlyAsksTheTabletForItsState();
+    static void theDoorMemoryCrossesTheRestart();
+    static void theMainDeckDoorTakenCrossesTheRestart();
+    static void aNewTurnaroundForgetsTheMainDeckDoor();
+    static void pendingGroundRequestsCrossTheRestartAndMeetTheLiveReading();
+    static void thePlanImportSeenCrossesTheRestart();
+    static void loadingStartForgetsThePlanImport();
+    static void aPlanImportedBeforeTheTurnaroundStartedSurvivesItsStart();
 };
 
 void Pmdg777Test::groundPowerUnknownUntilData()
@@ -1235,6 +1251,364 @@ void Pmdg777Test::evaluatingThePayloadRuleWritesNothing()
     }
 
     QCOMPARE(fixture.tablet->cargoSends.size(), sendsAfterSetter + 1);
+}
+
+namespace
+{
+    constexpr auto kSimEmptyWeight = "EMPTY WEIGHT";
+    constexpr auto kSimFuelWeight = "FUEL TOTAL QUANTITY WEIGHT";
+    constexpr auto kCouatlStarted = "FSDT_GSX_COUATL_STARTED";
+    constexpr auto kJetwayLVar = "FSDT_GSX_JETWAY";
+    constexpr auto kFrontStairsLVar = "FSDT_GSX_VEHICLE_PASSENGERSTAIRSFRONT_STATE";
+    constexpr auto kMainLoaderLVar = "FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE";
+    constexpr double kJetwayDocked = 5.0;
+    constexpr double kJetwayAway = 2.0;
+    constexpr double kLoaderInPosition = 8.0;
+    constexpr double kEmptyKg = 140000.0;
+    constexpr double kPlannedKg = 200000.0;
+    constexpr int kPlannedPax = 300;
+    constexpr int kMainDeckSlot = 12;
+
+    void LetEverythingArrive(Pmdg777Fixture& fixture)
+    {
+        fixture.data->hasData = true;
+        fixture.gateway.avars[kSimEmptyWeight] = kEmptyKg;
+        fixture.gateway.avars[kSimFuelWeight] = 1000.0;
+        fixture.SeeEfbWeights(kEmptyKg);
+    }
+
+    TurnaroundFacts BoardingFacts()
+    {
+        TurnaroundFacts facts;
+        facts.phase = TurnaroundPhase::Loading;
+        facts.loadingStarted = true;
+        facts.emptyZfwKg = kEmptyKg;
+        facts.plannedZfwKg = kPlannedKg;
+        facts.plannedPassengers = kPlannedPax;
+
+        return facts;
+    }
+
+    void Tick(Pmdg777Fixture& fixture, const int times)
+    {
+        for (int tick = 0; tick < times; ++tick)
+        {
+            TickAircraft(*fixture.aircraft, fixture.gateway);
+        }
+    }
+
+    int Toggles(const Pmdg777Fixture& fixture, const int slot)
+    {
+        return static_cast<int>(std::ranges::count(fixture.data->toggledDoors, slot));
+    }
+}
+
+void Pmdg777Test::reachableOnlyOnceEverythingHasArrived()
+{
+    Pmdg777Fixture fixture;
+
+    QVERIFY(!fixture.aircraft->IsReachable());
+
+    LetEverythingArrive(fixture);
+
+    QVERIFY(fixture.aircraft->IsReachable());
+
+    fixture.data->hasData = false;
+    QVERIFY(!fixture.aircraft->IsReachable());
+    fixture.data->hasData = true;
+
+    fixture.tablet->available = false;
+    QVERIFY(!fixture.aircraft->IsReachable());
+    fixture.tablet->available = true;
+
+    fixture.tablet->weightEcho.reset();
+    QVERIFY(!fixture.aircraft->IsReachable());
+    fixture.SeeEfbWeights(kEmptyKg);
+
+    fixture.gateway.avars.erase(kSimEmptyWeight);
+    QVERIFY(!fixture.aircraft->IsReachable());
+    fixture.gateway.avars[kSimEmptyWeight] = kEmptyKg;
+
+    fixture.gateway.avars.erase(kSimFuelWeight);
+    QVERIFY(!fixture.aircraft->IsReachable());
+    fixture.gateway.avars[kSimFuelWeight] = 1000.0;
+
+    QVERIFY(fixture.aircraft->IsReachable());
+}
+
+void Pmdg777Test::theTabletIsAskedForItsStateWhileTheAircraftRuns()
+{
+    Pmdg777Fixture fixture;
+
+    Tick(fixture, 9);
+
+    QCOMPARE(fixture.tablet->stateRequests, 3);
+}
+
+void Pmdg777Test::aZfwWriteIsNotLostWhenTheEchoComesOnlyAfterAQuery()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Er200);
+    LetEverythingArrive(fixture);
+    fixture.tablet->weightEcho.reset();
+    fixture.tablet->echoOnStateRequest = PmdgWeightEcho{.zfwLbs = kEmptyKg * 2.20462262185, .cargoLbs = 0.0};
+    fixture.status.plannedZfwKg = kPlannedKg;
+    fixture.status.plannedPassengers = kPlannedPax;
+
+    QVERIFY(!fixture.aircraft->IsReachable());
+
+    Tick(fixture, 3);
+
+    QVERIFY(fixture.aircraft->IsReachable());
+
+    fixture.aircraft->SetCurrentZfwKg(kEmptyKg);
+
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(1));
+    QCOMPARE(fixture.tablet->paxSends.size(), static_cast<std::size_t>(1));
+}
+
+void Pmdg777Test::aResumedBoardingKeepsThePassengersAlreadyAboard()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Er200);
+    LetEverythingArrive(fixture);
+
+    fixture.aircraft->OnTurnaroundResumed(BoardingFacts(), MemoryBag{});
+    fixture.aircraft->SetCurrentZfwKg(kEmptyKg + ((kPlannedKg - kEmptyKg) / 2.0));
+
+    QCOMPARE(fixture.tablet->paxSends.size(), static_cast<std::size_t>(1));
+    QCOMPARE(fixture.tablet->paxSends.front(), kPlannedPax / 2);
+    QCOMPARE(fixture.tablet->cargoSends.size(), static_cast<std::size_t>(1));
+    QVERIFY(fixture.tablet->cargoSends.front() > 0);
+}
+
+void Pmdg777Test::aResumedDeboardingDrainsThePassengersToZero()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Er200);
+    LetEverythingArrive(fixture);
+
+    fixture.aircraft->OnTurnaroundResumed(BoardingFacts(), MemoryBag{});
+    fixture.aircraft->SetCurrentZfwKg(kPlannedKg);
+
+    QVERIFY(!fixture.tablet->paxSends.empty());
+    QCOMPARE(fixture.tablet->paxSends.back(), kPlannedPax);
+
+    fixture.aircraft->SetCurrentZfwKg(kEmptyKg + ((kPlannedKg - kEmptyKg) / 2.0));
+
+    QCOMPARE(fixture.tablet->paxSends.back(), kPlannedPax / 2);
+
+    fixture.aircraft->SetCurrentZfwKg(kEmptyKg);
+
+    QCOMPARE(fixture.tablet->paxSends.back(), 0);
+}
+
+void Pmdg777Test::aResumedAircraftWritesNoWeightWithoutAPlan()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Er200);
+    LetEverythingArrive(fixture);
+    TurnaroundFacts facts = BoardingFacts();
+    facts.plannedZfwKg = 0.0;
+    facts.plannedPassengers = 0;
+
+    fixture.aircraft->OnTurnaroundResumed(facts, MemoryBag{});
+    fixture.aircraft->SetCurrentZfwKg(kEmptyKg + 30000.0);
+
+    QVERIFY(fixture.tablet->paxSends.empty());
+    QVERIFY(fixture.tablet->cargoSends.empty());
+}
+
+void Pmdg777Test::resumingNeitherClosesDoorsNorMakesTheHoldsCloseThem()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Er300);
+    LetEverythingArrive(fixture);
+    fixture.gateway.lvars[kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[kJetwayLVar] = kJetwayAway;
+    fixture.gateway.lvars[kFrontStairsLVar] = 0.0;
+    for (const int slot : {0, 2, 3, 8, 10, 11})
+    {
+        fixture.data->doorStates[static_cast<std::size_t>(slot)] = 0;
+    }
+
+    fixture.aircraft->OnTurnaroundResumed(BoardingFacts(), MemoryBag{});
+    fixture.aircraft->HoldDoorsClosed(true);
+    fixture.aircraft->HoldPassengerDoorsClosed(true);
+    Tick(fixture, 30);
+
+    QVERIFY(fixture.data->toggledDoors.empty());
+}
+
+void Pmdg777Test::releasingTheDepartureHoldReleasesThePassengerDoors()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Er300);
+    LetEverythingArrive(fixture);
+    fixture.gateway.lvars[kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[kJetwayLVar] = kJetwayDocked;
+    fixture.gateway.lvars[kFrontStairsLVar] = 0.0;
+
+    fixture.aircraft->HoldPassengerDoorsClosed(true);
+    fixture.aircraft->HoldDoorsClosed(true);
+    Tick(fixture, 5);
+
+    QVERIFY(fixture.data->toggledDoors.empty());
+
+    fixture.aircraft->HoldDoorsClosed(false);
+    Tick(fixture, 5);
+
+    QCOMPARE(Toggles(fixture, 2), 1);
+}
+
+void Pmdg777Test::observingAResumedAircraftOnlyAsksTheTabletForItsState()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Er300);
+    LetEverythingArrive(fixture);
+    fixture.gateway.lvars[kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[kJetwayLVar] = kJetwayDocked;
+    fixture.gateway.lvars[kFrontStairsLVar] = 0.0;
+    fixture.aircraft->OnTurnaroundResumed(BoardingFacts(), MemoryBag{});
+    const int lvarWrites = fixture.gateway.setLVarCalls;
+    const int avarWrites = fixture.gateway.setAVarCalls;
+
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        fixture.gateway.MarkTick();
+        fixture.aircraft->Observe();
+    }
+
+    QVERIFY(fixture.data->toggledDoors.empty());
+    QCOMPARE(fixture.gateway.setLVarCalls, lvarWrites);
+    QCOMPARE(fixture.gateway.setAVarCalls, avarWrites);
+    QVERIFY(fixture.tablet->groundConnRequests.empty());
+    QVERIFY(fixture.tablet->groundVehicleRequests.empty());
+    QVERIFY(fixture.tablet->fuelSends.empty());
+    QVERIFY(fixture.tablet->paxSends.empty());
+    QVERIFY(fixture.tablet->cargoSends.empty());
+    QCOMPARE(fixture.tablet->stateRequests, 10);
+}
+
+void Pmdg777Test::theDoorMemoryCrossesTheRestart()
+{
+    Pmdg777Fixture dead(Pmdg777Variant::Er300);
+    dead.data->hasData = true;
+    dead.gateway.lvars[kCouatlStarted] = 1.0;
+    dead.gateway.lvars[kJetwayLVar] = kJetwayDocked;
+    Tick(dead, 1);
+
+    QCOMPARE(dead.data->toggledDoors, std::vector{2});
+
+    const MemoryBag memory = dead.aircraft->TurnaroundMemory();
+
+    Pmdg777Fixture born(Pmdg777Variant::Er300);
+    LetEverythingArrive(born);
+    born.data->doorStates[2] = 0;
+    born.gateway.lvars[kCouatlStarted] = 1.0;
+    born.gateway.lvars[kJetwayLVar] = kJetwayAway;
+    born.gateway.lvars[kFrontStairsLVar] = 0.0;
+    born.aircraft->OnTurnaroundResumed(BoardingFacts(), memory);
+    Tick(born, 1);
+
+    QCOMPARE(born.data->toggledDoors, std::vector{2});
+}
+
+void Pmdg777Test::theMainDeckDoorTakenCrossesTheRestart()
+{
+    Pmdg777Fixture dead(Pmdg777Variant::Freighter);
+    dead.data->hasData = true;
+    dead.gateway.lvars[kCouatlStarted] = 1.0;
+    dead.gateway.lvars[kMainLoaderLVar] = kLoaderInPosition;
+    Tick(dead, 1);
+
+    QCOMPARE(Toggles(dead, kMainDeckSlot), 1);
+
+    const MemoryBag memory = dead.aircraft->TurnaroundMemory();
+
+    Pmdg777Fixture born(Pmdg777Variant::Freighter);
+    LetEverythingArrive(born);
+    born.data->doorStates[kMainDeckSlot] = 0;
+    born.gateway.lvars[kCouatlStarted] = 1.0;
+    born.gateway.lvars[kMainLoaderLVar] = 0.0;
+    born.aircraft->OnTurnaroundResumed(BoardingFacts(), memory);
+    Tick(born, 1);
+
+    QCOMPARE(Toggles(born, kMainDeckSlot), 1);
+}
+
+void Pmdg777Test::aNewTurnaroundForgetsTheMainDeckDoor()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+    fixture.data->hasData = true;
+    fixture.gateway.lvars[kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[kMainLoaderLVar] = kLoaderInPosition;
+    Tick(fixture, 1);
+    fixture.data->doorStates[kMainDeckSlot] = 0;
+    fixture.data->toggledDoors.clear();
+
+    fixture.gateway.lvars[kMainLoaderLVar] = 0.0;
+    fixture.aircraft->OnTurnaroundStarted();
+    Tick(fixture, 10);
+
+    QCOMPARE(Toggles(fixture, kMainDeckSlot), 0);
+}
+
+void Pmdg777Test::pendingGroundRequestsCrossTheRestartAndMeetTheLiveReading()
+{
+    Pmdg777Fixture dead(Pmdg777Variant::Freighter);
+    dead.aircraft->SetChocks(true);
+    dead.aircraft->SetGroundPower(true);
+    const MemoryBag memory = dead.aircraft->TurnaroundMemory();
+
+    Pmdg777Fixture satisfied(Pmdg777Variant::Freighter);
+    LetEverythingArrive(satisfied);
+    satisfied.data->wheelChocksSet = true;
+    satisfied.data->extPowerAvailable = true;
+    satisfied.aircraft->OnTurnaroundResumed(BoardingFacts(), memory);
+    Tick(satisfied, 30);
+
+    QVERIFY(satisfied.tablet->groundConnRequests.empty());
+
+    Pmdg777Fixture disagreeing(Pmdg777Variant::Freighter);
+    LetEverythingArrive(disagreeing);
+    disagreeing.aircraft->OnTurnaroundResumed(BoardingFacts(), memory);
+    Tick(disagreeing, 1);
+
+    QCOMPARE(disagreeing.tablet->groundConnRequests.size(), static_cast<std::size_t>(2));
+}
+
+void Pmdg777Test::thePlanImportSeenCrossesTheRestart()
+{
+    Pmdg777Fixture dead;
+    dead.tablet->efbPlanImported = true;
+    const MemoryBag memory = dead.aircraft->TurnaroundMemory();
+
+    Pmdg777Fixture born;
+    born.status.flightPlanStatus = FlightPlanStatus::Ready;
+
+    QVERIFY(!born.aircraft->IsFlightPlanLoaded());
+
+    born.aircraft->OnTurnaroundResumed(BoardingFacts(), memory);
+
+    QVERIFY(born.aircraft->IsFlightPlanLoaded());
+}
+
+void Pmdg777Test::loadingStartForgetsThePlanImport()
+{
+    Pmdg777Fixture fixture;
+    fixture.status.flightPlanStatus = FlightPlanStatus::Ready;
+    fixture.tablet->efbPlanImported = true;
+
+    QVERIFY(fixture.aircraft->IsFlightPlanLoaded());
+
+    fixture.aircraft->OnLoadingStarted();
+
+    QVERIFY(!fixture.aircraft->IsFlightPlanLoaded());
+}
+
+void Pmdg777Test::aPlanImportedBeforeTheTurnaroundStartedSurvivesItsStart()
+{
+    Pmdg777Fixture fixture;
+    fixture.status.flightPlanStatus = FlightPlanStatus::Ready;
+    fixture.tablet->efbPlanImported = true;
+
+    fixture.aircraft->OnTurnaroundStarted();
+
+    QVERIFY(fixture.aircraft->IsFlightPlanLoaded());
 }
 
 QTEST_APPLESS_MAIN(Pmdg777Test)
