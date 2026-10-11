@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.46.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.46.0...v1.46.1) (2026-10-11)
+
+
+* show the resume advisory buttons and restart the turnaround when the stand changes under way ([#236](https://github.com/brunofgmag/gsx-integrator-client/issues/236)) ([f79947c](https://github.com/brunofgmag/gsx-integrator-client/commit/f79947cfa63d41d39bf374fc33becf8a23a2b6f3))
+
+
+### Bug Fixes
+
+* show the resume advisory buttons and restart the turnaround when the stand changes under way ([719310a](https://github.com/brunofgmag/gsx-integrator-client/commit/719310aaaecd6e9d93229f8df18368e191bb9bd1)) ([f79947c](https://github.com/brunofgmag/gsx-integrator-client/commit/f79947cfa63d41d39bf374fc33becf8a23a2b6f3))
+
 ## [1.46.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.45.0...v1.46.0) (2026-10-10)
 
 
