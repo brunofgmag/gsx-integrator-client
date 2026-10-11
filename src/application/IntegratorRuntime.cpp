@@ -88,6 +88,11 @@ namespace
             || phase == TurnaroundPhase::WaitingAircraftReady;
     }
 
+    bool IsAtTheStandBeforeThePushback(const TurnaroundPhase phase)
+    {
+        return phase >= TurnaroundPhase::RepositionAircraft && phase < TurnaroundPhase::RequestPushback;
+    }
+
     void LogRunHeader(const AutomationSettings& settings)
     {
         LOG_INFO("Logging run: folder=%s", qUtf8Printable(probe::RunLocation()));
@@ -375,9 +380,12 @@ void IntegratorRuntime::SaveTurnaround()
     resumption_.Save(document);
 }
 
-void IntegratorRuntime::WatchTheStandOfTheFinishedTurnaround()
+void IntegratorRuntime::WatchTheStand()
 {
-    if (!stateMachine_.HasRepositionedThisSession() || !IsWaitingForTheNextTurnaround(GetPhase()))
+    const TurnaroundPhase phase = GetPhase();
+    const bool underWay = IsDrivingTheGsx() && IsAtTheStandBeforeThePushback(phase);
+    const bool finished = stateMachine_.HasRepositionedThisSession() && IsWaitingForTheNextTurnaround(phase);
+    if (!underWay && !finished)
     {
         watchedParkingName_.clear();
 
@@ -397,12 +405,23 @@ void IntegratorRuntime::WatchTheStandOfTheFinishedTurnaround()
         return;
     }
 
-    if (watchedParkingName_ != liveParking)
+    if (watchedParkingName_ == liveParking)
     {
-        LOG_INFO("The aircraft changed stands without flying. The next turnaround repositions it again.");
-        stateMachine_.ForgetRepositionedThisSession();
-        watchedParkingName_ = liveParking;
+        return;
     }
+
+    watchedParkingName_ = liveParking;
+
+    if (underWay)
+    {
+        LOG_INFO("The aircraft changed stands in the middle of the turnaround. Starting a new turnaround at the new stand.");
+        RestartFlow();
+
+        return;
+    }
+
+    LOG_INFO("The aircraft changed stands without flying. The next turnaround repositions it again.");
+    stateMachine_.ForgetRepositionedThisSession();
 }
 
 bool IntegratorRuntime::IsSimOnMenu()
@@ -624,7 +643,7 @@ void IntegratorRuntime::Update()
 
     simbriefClient_.Poll();
     resumption_.RetryPendingDiscard();
-    WatchTheStandOfTheFinishedTurnaround();
+    WatchTheStand();
 
     const bool holding = resumption_.IsHolding();
     const TickMode mode = ResolveTickMode();

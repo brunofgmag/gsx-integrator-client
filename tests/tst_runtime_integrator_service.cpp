@@ -787,7 +787,9 @@ private slots:
     static void aStandChangedWithoutFlyingKillsTheMarkOfTheFinishedTurnaround();
     static void theSameStandKeepsTheMarkOfTheFinishedTurnaround();
     static void aStandThatGoesEmptyAndComesBackKeepsTheMarkOfTheFinishedTurnaround();
-    static void theGuardedStandIsForgottenOnceTheNextTurnaroundBegins();
+    static void aStandChangedWithTheTurnaroundUnderWayErasesItAndRepositionsAtTheNewStand();
+    static void aStandThatGoesEmptyAndComesBackKeepsTheTurnaroundUnderWay();
+    static void aStandChangedAfterThePushbackWasAskedKeepsTheTurnaround();
     static void enteringWaitingNewFlightWritesTheKeyAndTheMarkAndARelaunchKeepsIt();
 
 private:
@@ -3825,11 +3827,10 @@ void RuntimeIntegratorServiceTest::aStandThatGoesEmptyAndComesBackKeepsTheMarkOf
     QVERIFY(TheRepositionIsSpared(runtime, updated));
 }
 
-void RuntimeIntegratorServiceTest::theGuardedStandIsForgottenOnceTheNextTurnaroundBegins()
+void RuntimeIntegratorServiceTest::aStandChangedWithTheTurnaroundUnderWayErasesItAndRepositionsAtTheNewStand()
 {
-#ifndef NDEBUG
     FakeTurnaroundCheckpointStore store;
-    store.stored = SavedAt(TurnaroundPhase::CabinServices);
+    store.stored = SavedAt(TurnaroundPhase::WaitingReadyToPush);
     store.stored->repositioned = true;
     IntegratorRuntime runtime(WithTheStore(store));
     runtime.Setup();
@@ -3838,27 +3839,66 @@ void RuntimeIntegratorServiceTest::theGuardedStandIsForgottenOnceTheNextTurnarou
 
     QVERIFY(TheKeyIsJudged(runtime, updated));
     QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
-    QVERIFY(TheFinishedTurnaroundWaitsForTheNextOne(runtime, updated));
-
-    const int newTurnaround = static_cast<int>(TurnaroundPhase::PlaceGroundEquipment);
-    const int finished = static_cast<int>(TurnaroundPhase::WaitingNewFlight);
-
-    runtime.DebugSkipPhase(newTurnaround - finished);
     QVERIFY(TickAndWait(updated));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::WaitingReadyToPush);
+
+    const int erasesBefore = store.eraseCalls;
 
     FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(kOtherStand)));
     QVERIFY(TickAndWait(updated));
 
-    runtime.DebugSkipPhase(finished - newTurnaround);
+    QCOMPARE(store.eraseCalls, erasesBefore + 1);
+    QVERIFY(runtime.GetPhase() < TurnaroundPhase::WaitingReadyToPush);
+    QVERIFY(TheRepositionIsAsked(runtime, updated));
+}
+
+void RuntimeIntegratorServiceTest::aStandThatGoesEmptyAndComesBackKeepsTheTurnaroundUnderWay()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::WaitingReadyToPush);
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated));
+    QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+
+    const int erasesBefore = store.eraseCalls;
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(QString())));
+    QVERIFY(TickAndWait(updated));
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(kSavedStand)));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(store.eraseCalls, erasesBefore);
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::WaitingReadyToPush);
+}
+
+void RuntimeIntegratorServiceTest::aStandChangedAfterThePushbackWasAskedKeepsTheTurnaround()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::WaitingDeparture);
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated));
+    QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+
+    const int erasesBefore = store.eraseCalls;
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(kOtherStand)));
     QVERIFY(TickAndWait(updated));
     QVERIFY(TickAndWait(updated));
 
-    runtime.AcceptPilotTouch();
-
-    QVERIFY(TheRepositionIsSpared(runtime, updated));
-#else
-    QSKIP("DebugSkipPhase is compiled out of Release builds");
-#endif
+    QCOMPARE(store.eraseCalls, erasesBefore);
+    QVERIFY(runtime.GetPhase() >= TurnaroundPhase::RequestPushback);
 }
 
 QTEST_GUILESS_MAIN(RuntimeIntegratorServiceTest)
