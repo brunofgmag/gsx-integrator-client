@@ -29,6 +29,8 @@ private slots:
     static void movesOnToTheDepartureOnceTheAircraftIsAirborne();
     static void holdsWhileTheEnginesRunWithTheAircraftStill();
     static void holdsWhileTheAircraftMovesWithTheEnginesOff();
+    static void holdsWhileTheTugMovesTheAircraftWithTheEnginesRunning();
+    static void sendsTheConfirmationWhileTheTugHoldsTheAircraftAtSpeed();
 };
 
 namespace
@@ -358,6 +360,34 @@ void WaitingEnginesStateTest::holdsWhileTheAircraftMovesWithTheEnginesOff()
 
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.ctx.data.engineConfirmationBlock, EngineConfirmationBlock::EnginesStopped);
+}
+
+void WaitingEnginesStateTest::holdsWhileTheTugMovesTheAircraftWithTheEnginesRunning()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    ArmCouatlRestartScenario(f);
+    f.gsxService.pushbackStarted = true;
+    f.gsxService.pushbackFinished = false;
+    f.aircraft.engineRunning = true;
+    f.gsxService.groundSpeedKnots = 20.4;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.engineConfirmationBlock, EngineConfirmationBlock::GsxNotAsking);
+}
+
+void WaitingEnginesStateTest::sendsTheConfirmationWhileTheTugHoldsTheAircraftAtSpeed()
+{
+    TurnaroundStateFixture f;
+    WaitingEnginesState state;
+
+    ArmConfirmationScenario(f);
+    f.gsxService.pushbackStarted = true;
+    f.gsxService.groundSpeedKnots = 20.4;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.confirmGoodEnginesCalls, 1);
 }
 
 QTEST_APPLESS_MAIN(WaitingEnginesStateTest)

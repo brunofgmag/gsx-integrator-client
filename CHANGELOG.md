@@ -1,5 +1,60 @@
 # Changelog
 
+## [1.46.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.46.0...v1.46.1) (2026-10-11)
+
+
+* show the resume advisory buttons and restart the turnaround when the stand changes under way ([#236](https://github.com/brunofgmag/gsx-integrator-client/issues/236)) ([f79947c](https://github.com/brunofgmag/gsx-integrator-client/commit/f79947cfa63d41d39bf374fc33becf8a23a2b6f3))
+
+
+### Bug Fixes
+
+* show the resume advisory buttons and restart the turnaround when the stand changes under way ([719310a](https://github.com/brunofgmag/gsx-integrator-client/commit/719310aaaecd6e9d93229f8df18368e191bb9bd1)) ([f79947c](https://github.com/brunofgmag/gsx-integrator-client/commit/f79947cfa63d41d39bf374fc33becf8a23a2b6f3))
+
+## [1.46.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.45.0...v1.46.0) (2026-10-10)
+
+
+* resume the turnaround from saved state after a client relaunch ([#234](https://github.com/brunofgmag/gsx-integrator-client/issues/234)) ([f8c7fe6](https://github.com/brunofgmag/gsx-integrator-client/commit/f8c7fe68291bdc461af1baaedc7156723bb6c2ff))
+
+
+### Features
+
+* add the turnaround resume point to the domain ([ad17cb1](https://github.com/brunofgmag/gsx-integrator-client/commit/ad17cb10490fd44a36f8864de6a1ab0bf568a075)) ([f8c7fe6](https://github.com/brunofgmag/gsx-integrator-client/commit/f8c7fe68291bdc461af1baaedc7156723bb6c2ff))
+* let the fenix, toliss, ifly, avro rj and md-11 resume a turnaround from saved state ([5ccf9c0](https://github.com/brunofgmag/gsx-integrator-client/commit/5ccf9c0c8abc4294a232391e2fc99ad2b2f20fc7)) ([f8c7fe6](https://github.com/brunofgmag/gsx-integrator-client/commit/f8c7fe68291bdc461af1baaedc7156723bb6c2ff))
+* let the fss 727 and e-jets resume a turnaround from saved state ([11265cf](https://github.com/brunofgmag/gsx-integrator-client/commit/11265cf6310917dea58c7f238600ee53d7567bb7)) ([f8c7fe6](https://github.com/brunofgmag/gsx-integrator-client/commit/f8c7fe68291bdc461af1baaedc7156723bb6c2ff))
+* let the gsx state service, menu navigator and door sync hand over their memory ([32fb826](https://github.com/brunofgmag/gsx-integrator-client/commit/32fb82663fa9bc397be1e3c315d682e5fa44963a)) ([f8c7fe6](https://github.com/brunofgmag/gsx-integrator-client/commit/f8c7fe68291bdc461af1baaedc7156723bb6c2ff))
+* let the pmdg 777 and 737 resume a turnaround from saved state ([503bd94](https://github.com/brunofgmag/gsx-integrator-client/commit/503bd94d8a3d0cb8fa3bf70cd04f921eccf874dd)) ([f8c7fe6](https://github.com/brunofgmag/gsx-integrator-client/commit/f8c7fe68291bdc461af1baaedc7156723bb6c2ff))
+* read the couatl id, airport and parking from the gsx remote api ([14cecf7](https://github.com/brunofgmag/gsx-integrator-client/commit/14cecf789e3570251a6e0c45b6b9d0dc6f03d427)) ([f8c7fe6](https://github.com/brunofgmag/gsx-integrator-client/commit/f8c7fe68291bdc461af1baaedc7156723bb6c2ff))
+* resume the saved turnaround when the flow starts and save it as it moves ([5ee75c7](https://github.com/brunofgmag/gsx-integrator-client/commit/5ee75c73682cf1776d686cfe348f67392157e9b2)) ([f8c7fe6](https://github.com/brunofgmag/gsx-integrator-client/commit/f8c7fe68291bdc461af1baaedc7156723bb6c2ff))
+* save the turnaround resume document to a json file ([aea5e0b](https://github.com/brunofgmag/gsx-integrator-client/commit/aea5e0b63155455ba1f957d952a30f4beba2f83f)) ([f8c7fe6](https://github.com/brunofgmag/gsx-integrator-client/commit/f8c7fe68291bdc461af1baaedc7156723bb6c2ff))
+* show why the client holds and ask whether to resume the saved turnaround ([5e002cb](https://github.com/brunofgmag/gsx-integrator-client/commit/5e002cbe5b9e345b3043d6e5083bc6da30d95d95)) ([f8c7fe6](https://github.com/brunofgmag/gsx-integrator-client/commit/f8c7fe68291bdc461af1baaedc7156723bb6c2ff))
+* skip the reposition on a new turnaround of the same gsx session ([bcb2f1e](https://github.com/brunofgmag/gsx-integrator-client/commit/bcb2f1e70bbc7724bc82f68e30962f79d23712c3)) ([f8c7fe6](https://github.com/brunofgmag/gsx-integrator-client/commit/f8c7fe68291bdc461af1baaedc7156723bb6c2ff))
+
+
+### Bug Fixes
+
+* close the 727 deck when deboarding ended while the client was away and accept a recounted simbrief generation ([a7d0a34](https://github.com/brunofgmag/gsx-integrator-client/commit/a7d0a34fd2c175b640a0c72224acac7f1cd4facd)) ([f8c7fe6](https://github.com/brunofgmag/gsx-integrator-client/commit/f8c7fe68291bdc461af1baaedc7156723bb6c2ff))
+
+## [1.45.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.44.1...v1.45.0) (2026-10-09)
+
+
+* warn when the avro rj airstair has no pressure and stop expired rule holds from re-arming ([#232](https://github.com/brunofgmag/gsx-integrator-client/issues/232)) ([87ea1f6](https://github.com/brunofgmag/gsx-integrator-client/commit/87ea1f66d98f35f8233b3cdc783b6b19977e793b))
+
+
+### Features
+
+* warn when the avro rj airstair has no pressure and stop expired rule holds from re-arming ([124baea](https://github.com/brunofgmag/gsx-integrator-client/commit/124baea46fe231b7846cef7a76bc9698f7285af4)) ([87ea1f6](https://github.com/brunofgmag/gsx-integrator-client/commit/87ea1f66d98f35f8233b3cdc783b6b19977e793b))
+
+## [1.44.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.44.0...v1.44.1) (2026-10-09)
+
+
+* ignore the ground speed while gsx tows the aircraft ([#229](https://github.com/brunofgmag/gsx-integrator-client/issues/229)) ([42266c7](https://github.com/brunofgmag/gsx-integrator-client/commit/42266c7c28f9bb0cbac08c054a0c36710b4fabae))
+
+
+### Bug Fixes
+
+* ignore the ground speed while gsx tows the aircraft ([6cc926d](https://github.com/brunofgmag/gsx-integrator-client/commit/6cc926d45e7a5f673e55f5eedfb6299bc92f4c73)) ([42266c7](https://github.com/brunofgmag/gsx-integrator-client/commit/42266c7c28f9bb0cbac08c054a0c36710b4fabae))
+* read the avro rj front door before commanding it and show the chocks help in profiles ([#230](https://github.com/brunofgmag/gsx-integrator-client/issues/230)) ([47b8a4f](https://github.com/brunofgmag/gsx-integrator-client/commit/47b8a4f82b238ee68f6a4f7d18a6eb4447353583))
+
 ## [1.44.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.43.9...v1.44.0) (2026-10-04)
 
 

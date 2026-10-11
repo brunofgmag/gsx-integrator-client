@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727KEEPVENDORGSXAUTOMODEOFFRULE_H
 
 #include "../../../../domain/ports/AircraftRule.h"
+#include "../../EchoWait.h"
 
 class VariableReader;
 
@@ -18,7 +19,7 @@ private:
     [[nodiscard]] bool IsAutomodeOff() const;
 
     VariableReader* variables_;
-    int ticksSinceWrite_;
+    EchoWait echoWait_;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FSS727KEEPVENDORGSXAUTOMODEOFFRULE_H

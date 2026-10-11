@@ -14,6 +14,9 @@
 #include "../infrastructure/gsx/GsxAircraftProfile.h"
 #include "../infrastructure/pmdg/PmdgOptions.h"
 #include "../infrastructure/gsx/GsxRemoteStateReducer.h"
+#include "../infrastructure/checkpoint/StoredText.h"
+#include "../domain/model/PlanConversion.h"
+#include "../infrastructure/simvars/SimVars.h"
 
 namespace
 {
@@ -25,6 +28,9 @@ namespace
     constexpr auto kPilotIdUnset = "unset";
     constexpr double kMenuCameraState = 12.0;
     constexpr int kAircraftTitleSize = 256;
+    constexpr auto kSimOnGround = "SIM ON GROUND";
+    constexpr auto kGsxServiceMemoryOwner = "gsxService";
+    constexpr auto kGsxMenuMemoryOwner = "gsxMenu";
 #ifdef NDEBUG
     constexpr auto kBuildConfiguration = "release";
 #else
@@ -53,9 +59,38 @@ namespace
         return joined;
     }
 
+    std::string DescribeKeyPart(const std::string& label, const std::string& value)
+    {
+        return value.empty() ? "no " + label : label + " " + value;
+    }
+
     int Flag(const bool value)
     {
         return value ? 1 : 0;
+    }
+
+    MemoryBag MemoryOwnedBy(const TurnaroundDocument& document, const std::string& owner)
+    {
+        const auto entry = document.memoryByOwner.find(owner);
+
+        return entry != document.memoryByOwner.end() ? entry->second : MemoryBag{};
+    }
+
+    bool IsIdentified(const TurnaroundKey& key)
+    {
+        return !key.couatlId.empty() && !key.aircraftId.empty() && !key.aircraftTitle.empty();
+    }
+
+    bool IsWaitingForTheNextTurnaround(const TurnaroundPhase phase)
+    {
+        return phase == TurnaroundPhase::WaitingNewFlight
+            || phase == TurnaroundPhase::WaitingSupportedAircraft
+            || phase == TurnaroundPhase::WaitingAircraftReady;
+    }
+
+    bool IsAtTheStandBeforeThePushback(const TurnaroundPhase phase)
+    {
+        return phase >= TurnaroundPhase::RepositionAircraft && phase < TurnaroundPhase::RequestPushback;
     }
 
     void LogRunHeader(const AutomationSettings& settings)
@@ -77,10 +112,11 @@ namespace
                  static_cast<int>(settings.crewDeboarding),
                  Flag(settings.autoStartFlow),
                  Flag(settings.autoStartLoading));
-        LOG_INFO("Startup settings: skipReposition=%d callGpu=%d callGpuOnArrival=%d "
+        LOG_INFO("Startup settings: skipReposition=%d skipRepositionOnNewTurnaround=%d callGpu=%d callGpuOnArrival=%d "
                  "placeChocks=%d placeChocksOnArrival=%d callBoardingEarly=%d "
                  "callCatering=%d callLavatory=%d callWater=%d callCleaning=%d gsxPanelMode=%d",
                  Flag(settings.skipReposition),
+                 Flag(settings.skipRepositionOnNewTurnaround),
                  Flag(settings.callGpu),
                  Flag(settings.callGpuOnArrival),
                  Flag(settings.placeChocks),
@@ -102,7 +138,8 @@ IntegratorRuntime::IntegratorRuntime(IntegratorRuntimeOptions options, QObject* 
       stateMachine_(&status_, &settings_, &gsxService_, &gsxMenu_, &qtLogger_, &varGateway_),
       simbriefClient_(&status_, &settings_, this),
       flightPlanSource_(&simbriefClient_),
-      actsOnTheSim_(std::move(options.actsOnTheSim))
+      actsOnTheSim_(std::move(options.actsOnTheSim)),
+      resumption_(options.checkpointStore)
 {
     if (!actsOnTheSim_)
     {
@@ -137,7 +174,7 @@ void IntegratorRuntime::Setup()
     connect(&gsxRemoteClient_, &GsxRemoteApiClient::ConnectionChanged,
             &gsxRemoteClient_, [this](const bool connected)
             {
-                gsxRemoteState_.connected = connected;
+                OnRemoteConnectionChanged(connected);
             });
 
     connect(&gsxRemoteClient_, &GsxRemoteApiClient::SnapshotReceived,
@@ -145,7 +182,11 @@ void IntegratorRuntime::Setup()
             {
                 GsxRemoteStateReducer::ApplySnapshot(gsxRemoteState_, snapshot);
                 AnnounceWireFacts();
-                gsxMenu_.OnSnapshot();
+                if (IsDrivingTheGsx())
+                {
+                    gsxMenu_.OnSnapshot();
+                    SaveTurnaround();
+                }
             });
 
     connect(&gsxRemoteClient_, &GsxRemoteApiClient::PatchReceived,
@@ -158,9 +199,10 @@ void IntegratorRuntime::Setup()
                     LOG_WARN("GSX published an unknown path: %s", path.c_str());
                 }
                 AnnounceWireFacts();
-                if (path == "/menu" || path == "/menuShown")
+                if ((path == "/menu" || path == "/menuShown") && IsDrivingTheGsx())
                 {
                     gsxMenu_.OnMenuChanged();
+                    SaveTurnaround();
                 }
             });
 
@@ -192,12 +234,194 @@ void IntegratorRuntime::AnnounceWireFacts()
         LOG_INFO("GSX matched the aircraft title %s", title.c_str());
     }
 
+    if (gsxRemoteState_.couatlId != announcedCouatlId_
+        || gsxRemoteState_.airportIcao != announcedAirportIcao_
+        || gsxRemoteState_.parkingName != announcedParkingName_)
+    {
+        announcedCouatlId_ = gsxRemoteState_.couatlId;
+        announcedAirportIcao_ = gsxRemoteState_.airportIcao;
+        announcedParkingName_ = gsxRemoteState_.parkingName;
+        LOG_INFO("GSX reports %s, %s, %s",
+                 DescribeKeyPart("couatl", announcedCouatlId_).c_str(),
+                 DescribeKeyPart("airport", announcedAirportIcao_).c_str(),
+                 DescribeKeyPart("parking", announcedParkingName_).c_str());
+    }
+
     if (const int generation = gsxRemoteState_.simbriefGeneration;
         generation != announcedSimbriefGeneration_)
     {
         announcedSimbriefGeneration_ = generation;
         LOG_INFO("GSX served SimBrief generation %d", generation);
     }
+}
+
+void IntegratorRuntime::OnRemoteConnectionChanged(const bool connected)
+{
+    GsxRemoteStateReducer::ApplyConnection(gsxRemoteState_, connected);
+
+    if (connected)
+    {
+        announcedSimbriefGeneration_ = 0;
+        LOG_INFO("GSX Remote API handshake received. Waiting for its first snapshot.");
+    }
+}
+
+TurnaroundKey IntegratorRuntime::LiveKey()
+{
+    TurnaroundKey key;
+
+    std::array<char, kAircraftTitleSize> title{};
+    varGateway_.FetchAircraftName(title.data(), kAircraftTitleSize);
+    key.aircraftTitle = checkpoint::StoredText(title.data());
+
+    if (aircraft_ && aircraftDescriptor_ != nullptr)
+    {
+        key.aircraftId = aircraftDescriptor_->id;
+    }
+
+    if (gsxRemoteState_.connected && gsxRemoteState_.synced)
+    {
+        key.couatlId = gsxRemoteState_.couatlId;
+        key.airportIcao = gsxRemoteState_.airportIcao;
+        key.parkingName = gsxRemoteState_.parkingName;
+    }
+
+    return key;
+}
+
+bool IntegratorRuntime::HaveResumeReadingsArrived()
+{
+    const bool gsxReadings = gsxService_.HaveResumeReadingsArrived();
+    const bool onGround = varGateway_.HasReceivedAVar(kSimOnGround, simvars::kBoolUnit);
+    const bool serviceList = gsxRemoteState_.connected && gsxRemoteState_.synced && !gsxRemoteState_.services.empty();
+
+    return gsxReadings && onGround && serviceList;
+}
+
+void IntegratorRuntime::AdvanceResumption()
+{
+    if (!resumption_.HasPending())
+    {
+        return;
+    }
+
+    const TurnaroundResumption::LiveFacts live{.key = LiveKey(),
+                                               .readingsArrived = HaveResumeReadingsArrived(),
+                                               .aircraftReachable = aircraft_ && aircraft_->IsReachable()};
+    const TurnaroundResumption::Advancement advancement = resumption_.Advance(live);
+    if (advancement.repositioned)
+    {
+        stateMachine_.NoteRepositionedThisSession();
+    }
+
+    if (advancement.restoration)
+    {
+        RestoreSavedTurnaround(*advancement.restoration);
+    }
+}
+
+void IntegratorRuntime::RestoreSavedTurnaround(const TurnaroundResumption::Restoration& restoration)
+{
+    const TurnaroundDocument& document = *restoration.document;
+    const bool gsxRestarted = restoration.gsxRestartedSinceSave;
+
+    if (document.plan)
+    {
+        simbriefClient_.Adopt(*document.plan);
+    }
+
+    gsxService_.RestoreMemory(MemoryOwnedBy(document, kGsxServiceMemoryOwner), gsxRestarted);
+    gsxMenu_.RestoreMemory(MemoryOwnedBy(document, kGsxMenuMemoryOwner));
+
+    switch (stateMachine_.ResumeFrom(*document.checkpoint, *aircraft_, gsxRestarted))
+    {
+    case ResumeOutcome::Resumed:
+        LOG_INFO("Resumed the saved turnaround at %s.", TurnaroundPhaseToString(GetPhase()));
+        resumption_.Settle();
+        SetAutomationEnabled(true);
+        break;
+    case ResumeOutcome::AircraftNotReachable:
+        break;
+    case ResumeOutcome::UnknownPhase:
+        LOG_WARN("The saved turnaround has a phase this client does not know. Starting the flow from the beginning.");
+        RestartFlow();
+        break;
+    }
+}
+
+void IntegratorRuntime::SaveTurnaround()
+{
+    if (!IsDrivingTheGsx() || GetPhase() < TurnaroundPhase::RepositionAircraft)
+    {
+        return;
+    }
+
+    TurnaroundDocument document;
+    document.key = LiveKey();
+    if (!IsIdentified(document.key))
+    {
+        return;
+    }
+
+    document.repositioned = stateMachine_.HasRepositionedThisSession();
+
+    document.checkpoint = stateMachine_.TakeCheckpoint();
+    if (document.checkpoint)
+    {
+        if (status_.flightPlanStatus == FlightPlanStatus::Ready)
+        {
+            document.plan = turnaround::PlanOf(status_);
+        }
+
+        document.memoryByOwner[kGsxServiceMemoryOwner] = gsxService_.TakeMemory();
+        document.memoryByOwner[kGsxMenuMemoryOwner] = gsxMenu_.TakeMemory();
+    }
+
+    resumption_.Save(document);
+}
+
+void IntegratorRuntime::WatchTheStand()
+{
+    const TurnaroundPhase phase = GetPhase();
+    const bool underWay = IsDrivingTheGsx() && IsAtTheStandBeforeThePushback(phase);
+    const bool finished = stateMachine_.HasRepositionedThisSession() && IsWaitingForTheNextTurnaround(phase);
+    if (!underWay && !finished)
+    {
+        watchedParkingName_.clear();
+
+        return;
+    }
+
+    const std::string& liveParking = gsxRemoteState_.parkingName;
+    if (!gsxRemoteState_.connected || !gsxRemoteState_.synced || liveParking.empty())
+    {
+        return;
+    }
+
+    if (watchedParkingName_.empty())
+    {
+        watchedParkingName_ = liveParking;
+
+        return;
+    }
+
+    if (watchedParkingName_ == liveParking)
+    {
+        return;
+    }
+
+    watchedParkingName_ = liveParking;
+
+    if (underWay)
+    {
+        LOG_INFO("The aircraft changed stands in the middle of the turnaround. Starting a new turnaround at the new stand.");
+        RestartFlow();
+
+        return;
+    }
+
+    LOG_INFO("The aircraft changed stands without flying. The next turnaround repositions it again.");
+    stateMachine_.ForgetRepositionedThisSession();
 }
 
 bool IntegratorRuntime::IsSimOnMenu()
@@ -303,7 +527,10 @@ void IntegratorRuntime::HandleDisconnected()
     varGateway_.Detach();
     simConnect_.Close();
 
-    OnSessionEnd();
+    if (isSessionActive_)
+    {
+        OnSessionEnd();
+    }
 
     reconnectTimer_.start();
 
@@ -415,9 +642,13 @@ void IntegratorRuntime::Update()
     }
 
     simbriefClient_.Poll();
+    resumption_.RetryPendingDiscard();
+    WatchTheStand();
 
+    const bool holding = resumption_.IsHolding();
     const TickMode mode = ResolveTickMode();
-    if (mode == TickMode::Idle)
+    const bool driving = mode == TickMode::Driving && !holding;
+    if (mode == TickMode::Idle && !holding)
     {
         return;
     }
@@ -426,6 +657,8 @@ void IntegratorRuntime::Update()
 
     if (!aircraft_)
     {
+        AdvanceResumption();
+
         return;
     }
 
@@ -433,18 +666,26 @@ void IntegratorRuntime::Update()
 
     probe::SetPhase(TurnaroundPhaseToString(GetPhase()));
 
-    if (mode == TickMode::Driving)
+    stateMachine_.AttachAircraft(aircraft_.get());
+
+    if (driving)
     {
-        stateMachine_.AttachAircraft(aircraft_.get());
         gsxMenu_.OnMenuChanged();
         aircraft_->Observe();
         stateMachine_.Tick();
+        SaveTurnaround();
     }
     else
     {
-        stateMachine_.AttachAircraft(aircraft_.get());
         aircraft_->Observe();
         stateMachine_.ObserveRules();
+    }
+
+    AdvanceResumption();
+
+    if (!aircraft_)
+    {
+        return;
     }
 
     probe_.Observe(*aircraft_, varGateway_, GetAircraftProfileId());
@@ -463,6 +704,13 @@ bool IntegratorRuntime::IsLoadingCargoPhase() const
 bool IntegratorRuntime::IsCargoDoorStuck() const
 {
     return aircraft_ && IsLoadingCargoPhase() && aircraft_->IsMainDeckCargoDoorStuck();
+}
+
+bool IntegratorRuntime::AreOwnStairsWaitingForPressure() const
+{
+    return aircraft_
+        && ResolveTickMode() == TickMode::Driving
+        && aircraft_->AreOwnStairsWaitingForPressure();
 }
 
 bool IntegratorRuntime::IsFuelRequestStalled() const
@@ -510,8 +758,29 @@ bool IntegratorRuntime::AreDoorsHoldingPushback() const
         && aircraft_->GetDoorStatus() == DoorStatus::AnyOpen;
 }
 
+bool IntegratorRuntime::IsDrivingTheGsx() const
+{
+    return ResolveTickMode() == TickMode::Driving && !resumption_.IsHolding();
+}
+
+TurnaroundHold IntegratorRuntime::CurrentHold() const
+{
+    const TurnaroundHold resumptionHold = resumption_.Hold();
+    if (resumptionHold == TurnaroundHold::AwaitingResumeDecision)
+    {
+        return resumptionHold;
+    }
+
+    return IsAwaitingTheFirstSnapshot() ? TurnaroundHold::AwaitingGsxSnapshot : resumptionHold;
+}
+
 TickMode IntegratorRuntime::ResolveTickMode() const
 {
+    if (IsAwaitingTheFirstSnapshot())
+    {
+        return TickMode::Idle;
+    }
+
     return TickModeResolution::Resolve(status_.enabled, gsxService_.IsAvailable(), actsOnTheSim_());
 }
 
@@ -522,15 +791,17 @@ void IntegratorRuntime::UpdateSlow()
         return;
     }
 
+    const bool holding = resumption_.IsHolding();
     const TickMode mode = ResolveTickMode();
-    if (mode == TickMode::Idle)
+    const bool driving = mode == TickMode::Driving && !holding;
+    if (mode == TickMode::Idle && !holding)
     {
         return;
     }
 
     stateMachine_.AttachAircraft(aircraft_.get());
 
-    if (mode == TickMode::Driving)
+    if (driving)
     {
         stateMachine_.TickSlowRules();
     }
@@ -589,8 +860,11 @@ void IntegratorRuntime::ClearFlightState()
     probe::SetAircraft(QString());
 
     aircraft_.reset();
+    aircraftDescriptor_ = nullptr;
     gsxProfile_.Reset();
     pmdgOptions_.Reset();
+    resumption_.Forget();
+    watchedParkingName_.clear();
 
     ResetSession();
 }
@@ -601,7 +875,12 @@ void IntegratorRuntime::OnFlightStart()
 
     isSessionActive_ = true;
 
-    RestartFlow();
+    ClearFlightState();
+    resumption_.Load();
+
+    MaybeAutoStart();
+
+    emit Updated();
 }
 
 void IntegratorRuntime::OnSessionEnd()
@@ -650,6 +929,7 @@ void IntegratorRuntime::CheckGsxProfile()
     {
         gsxProfile_.cfgs.clear();
         gsxProfile_.conflict = false;
+
         return;
     }
 
@@ -694,6 +974,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.canReloadSimbrief = snapshot.connected
         && snapshot.sessionActive
         && settings_.simbriefPilotId > 0
+        && !resumption_.IsHolding()
         && GetPhase() <= TurnaroundPhase::WaitingFlightPlan;
     snapshot.aircraftName = GetAircraftName().toStdString();
     snapshot.aircraftProfileId = GetAircraftProfileId();
@@ -710,6 +991,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.pmdgOptionsConflict = HasPmdgOptionsConflict();
     snapshot.pmdgOptionsFixable = CanFixPmdgOptions();
     snapshot.cargoDoorStuck = IsCargoDoorStuck();
+    snapshot.ownStairsWaitingForPressure = AreOwnStairsWaitingForPressure();
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
     snapshot.fuelPlanOverCapacity = IsFuelPlanOverCapacity();
     snapshot.fuelDidNotStay = DidFuelNotStay();
@@ -726,6 +1008,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.servicesWaitSeconds = status_.servicesWaitSeconds;
     snapshot.doorsHoldingPushback = AreDoorsHoldingPushback();
     snapshot.phase = GetPhase();
+    snapshot.turnaroundHold = CurrentHold();
     snapshot.flightPlanStatus = status_.flightPlanStatus;
     snapshot.flightPlanFailure = status_.flightPlanFailure;
     snapshot.flightPlanHttpStatus = status_.flightPlanHttpStatus;
@@ -756,6 +1039,7 @@ void IntegratorRuntime::CheckPmdgOptions()
     if (pmdgOptions_.ini.empty())
     {
         pmdgOptions_.conflict = false;
+
         return;
     }
 
@@ -937,6 +1221,20 @@ void IntegratorRuntime::AcceptPilotTouch()
     emit Updated();
 }
 
+void IntegratorRuntime::ResumeSavedTurnaround()
+{
+    if (resumption_.Hold() != TurnaroundHold::AwaitingResumeDecision)
+    {
+        return;
+    }
+
+    LOG_INFO("Resuming the saved turnaround.");
+
+    resumption_.AnswerResume();
+
+    emit Updated();
+}
+
 void IntegratorRuntime::MaybeAutoStart()
 {
     if (!settings_.autoStartFlow || !IsConnected() || status_.enabled)
@@ -953,6 +1251,7 @@ void IntegratorRuntime::RestartFlow()
 {
     LOG_INFO("Restarting turnaround flow.");
 
+    resumption_.Discard();
     ClearFlightState();
 
     MaybeAutoStart();
@@ -971,7 +1270,7 @@ void IntegratorRuntime::ApplySettings(const AutomationSettings& settings)
 
 bool IntegratorRuntime::ReloadSimbrief()
 {
-    if (!IsConnected() || !isSessionActive_ || settings_.simbriefPilotId <= 0)
+    if (!IsConnected() || !isSessionActive_ || settings_.simbriefPilotId <= 0 || resumption_.IsHolding())
     {
         return false;
     }
@@ -980,6 +1279,7 @@ bool IntegratorRuntime::ReloadSimbrief()
     if (started)
     {
         gsxMenu_.RequestSimbriefLoad();
+        SaveTurnaround();
     }
 
     emit Updated();

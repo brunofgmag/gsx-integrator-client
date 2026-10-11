@@ -21,6 +21,9 @@ public:
     [[nodiscard]] RuleVerdict Evaluate(const RuleContext& context) override;
     void Act(const RuleContext& context, VariableWriter& writer) override;
 
+    void ForgetCloseRequest();
+    void ReleaseTogglesLeftHigh();
+
 private:
     enum class CargoCycle : std::uint8_t { None, Deboarding, Boarding };
 
@@ -41,12 +44,14 @@ private:
         int settleTicks = 0;
         int wantsOpenTicks = 0;
         bool pulseHigh = false;
+        bool releasePending = false;
     };
 
     static constexpr std::size_t kDoorCount = 6;
     using DoorList = std::array<Door*, kDoorCount>;
 
     void FollowAircraftCommands();
+    void ReleaseStuckToggles(VariableWriter& writer);
     static void ResetTracking(Door& door);
     void ArmCloser(CargoCycle cycle);
     void DisarmCloser();
@@ -64,6 +69,7 @@ private:
     [[nodiscard]] bool HasPendingCargoDoorWork() const;
     [[nodiscard]] bool IsBaggageLoaderPresent(const char* loaderLVar) const;
     [[nodiscard]] bool IsLoaderAtDoorNow(const Door& door) const;
+    [[nodiscard]] bool IsHeldClosed(const Door& door) const;
     [[nodiscard]] bool IsClosingForDeparture(const Door& door) const;
     [[nodiscard]] bool IsDoorReleased(const Door& door) const;
     [[nodiscard]] bool IsDoorCloseable(const Door& door) const;
@@ -83,7 +89,8 @@ private:
     bool deboardingCompleteSeen_ = false;
     bool boardingWasRunning_ = false;
     bool deboardingWasRunning_ = false;
-    bool heldSeen_ = false;
+    bool departureHeldSeen_ = false;
+    bool passengerHeldSeen_ = false;
     bool closeRequestSeen_ = false;
     bool closeRequested_ = false;
 };

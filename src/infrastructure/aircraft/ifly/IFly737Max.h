@@ -27,6 +27,11 @@ public:
     void Observe() override;
     void OnLoadingStarted() override {}
 
+    [[nodiscard]] bool IsReachable() const override;
+    void OnTurnaroundStarted() override;
+    void OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory) override;
+    [[nodiscard]] MemoryBag TurnaroundMemory() const override;
+
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
     [[nodiscard]] double GetPlannedZfwKg() const override;
@@ -48,7 +53,9 @@ public:
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
+    void HoldPassengerDoorsClosed(bool hold) override;
     [[nodiscard]] bool IsHeldForDeparture() const;
+    [[nodiscard]] bool ArePassengerDoorsHeld() const;
     [[nodiscard]] bool WasCloseRequested() const;
     [[nodiscard]] bool IsReadyToPush() const override;
     [[nodiscard]] bool IsReadyToDeboard() const override;
@@ -70,6 +77,7 @@ private:
     std::vector<AircraftRule*> rules_;
     double lastZfwKg_ = -1.0;
     bool heldForDeparture_ = false;
+    bool passengerDoorsHeld_ = false;
     bool closeRequested_ = false;
 };
 

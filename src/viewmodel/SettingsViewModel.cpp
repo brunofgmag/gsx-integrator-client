@@ -82,6 +82,7 @@ namespace
     void CopyServiceFields(Dst& dst, const Src& src)
     {
         dst.skipReposition = src.skipReposition;
+        dst.skipRepositionOnNewTurnaround = src.skipRepositionOnNewTurnaround;
         dst.callGpu = src.callGpu;
         dst.callGpuOnArrival = src.callGpuOnArrival;
         dst.placeChocks = src.placeChocks;
@@ -310,6 +311,30 @@ void SettingsViewModel::SetSkipReposition(const bool enabled)
     {
         emit ProfileDraftChanged();
     }
+}
+
+bool SettingsViewModel::GetSkipRepositionOnNewTurnaround() const
+{
+    return settings_.skipRepositionOnNewTurnaround;
+}
+
+void SettingsViewModel::SetSkipRepositionOnNewTurnaround(const bool enabled)
+{
+    if (IsSkipRepositionOnNewTurnaroundLocked())
+    {
+        return;
+    }
+
+    if (SetPersisted(settings_.skipRepositionOnNewTurnaround, enabled,
+                     &SettingsViewModel::SkipRepositionOnNewTurnaroundChanged))
+    {
+        emit ProfileDraftChanged();
+    }
+}
+
+bool SettingsViewModel::IsSkipRepositionOnNewTurnaroundLocked() const
+{
+    return settings_.skipReposition;
 }
 
 bool SettingsViewModel::GetCallGpu() const
@@ -881,6 +906,7 @@ void SettingsViewModel::setProfileAsGlobalDefault()
     draft.useGlobal = true;
 
     emit SkipRepositionChanged();
+    emit SkipRepositionOnNewTurnaroundChanged();
     emit CallGpuChanged();
     emit CallGpuOnArrivalChanged();
     emit PlaceChocksChanged();
@@ -1033,6 +1059,27 @@ bool SettingsViewModel::GetProfileSkipReposition() const
 void SettingsViewModel::SetProfileSkipReposition(const bool enabled)
 {
     SetProfileToggle(&ProfileDraft::skipReposition, enabled);
+}
+
+bool SettingsViewModel::GetProfileSkipRepositionOnNewTurnaround() const
+{
+    return SelectedDraft().useGlobal ? settings_.skipRepositionOnNewTurnaround
+                                     : SelectedDraft().skipRepositionOnNewTurnaround;
+}
+
+void SettingsViewModel::SetProfileSkipRepositionOnNewTurnaround(const bool enabled)
+{
+    if (IsProfileSkipRepositionOnNewTurnaroundLocked())
+    {
+        return;
+    }
+
+    SetProfileToggle(&ProfileDraft::skipRepositionOnNewTurnaround, enabled);
+}
+
+bool SettingsViewModel::IsProfileSkipRepositionOnNewTurnaroundLocked() const
+{
+    return GetProfileSkipReposition();
 }
 
 bool SettingsViewModel::GetProfileCallGpu() const

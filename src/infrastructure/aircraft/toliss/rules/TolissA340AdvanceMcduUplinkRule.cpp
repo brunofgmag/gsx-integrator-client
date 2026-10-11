@@ -1,6 +1,7 @@
 #include "TolissA340AdvanceMcduUplinkRule.h"
 
 #include <array>
+#include <utility>
 
 #include "../TolissA340.h"
 #include "../../../logging/LogMacros.h"
@@ -31,6 +32,12 @@ RuleVerdict TolissA340AdvanceMcduUplinkRule::Evaluate(const RuleContext&)
     return RuleVerdict::Pass();
 }
 
+void TolissA340AdvanceMcduUplinkRule::ResumeWithTheUplinkDone()
+{
+    loadingSeen_ = true;
+    step_ = static_cast<int>(kMcduUplinkKeys.size());
+}
+
 void TolissA340AdvanceMcduUplinkRule::Act(const RuleContext& context, VariableWriter& writer)
 {
     if (!context.needs.loading)
@@ -49,7 +56,7 @@ void TolissA340AdvanceMcduUplinkRule::Act(const RuleContext& context, VariableWr
         LOG_INFO("SimBrief uplink armed: waiting for the MCDU to be available");
     }
 
-    if (!aircraft_->IsPowered() || step_ < 0 || step_ >= static_cast<int>(kMcduUplinkKeys.size()))
+    if (!aircraft_->IsPowered() || step_ < 0 || std::cmp_greater_equal(step_, kMcduUplinkKeys.size()))
     {
         return;
     }

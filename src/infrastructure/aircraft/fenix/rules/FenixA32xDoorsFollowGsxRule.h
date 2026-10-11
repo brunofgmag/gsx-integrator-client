@@ -1,12 +1,14 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FENIXA32XDOORSFOLLOWGSXRULE_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FENIXA32XDOORSFOLLOWGSXRULE_H
 
+#include <cstdint>
+
 #include "../../../../domain/ports/AircraftRule.h"
 
 class FenixA32x;
 class FenixEfbGateway;
 class GsxDoorSync;
-enum class FenixVariant;
+enum class FenixVariant : std::uint8_t;
 
 class FenixA32xDoorsFollowGsxRule final : public AircraftRule
 {

@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGGROUNDCONNRECONCILER_H
 
 #include <optional>
+#include "../../domain/model/MemoryBag.h"
 
 class PmdgGroundSource;
 class PmdgTabletGateway;
@@ -15,6 +16,8 @@ public:
     void SetGroundPower(bool on);
     void SetPassengerEntryJetway();
     void Reconcile();
+    void AppendMemory(MemoryBag& memory) const;
+    void RestoreMemory(const MemoryBag& memory);
 
 private:
     void ReconcileChocks();
@@ -25,6 +28,7 @@ private:
     PmdgGroundSource& source_;
     PmdgTabletGateway& tablet_;
     std::optional<bool> desiredChocks_;
+    bool chocksAwaitTheReading_ = false;
     std::optional<bool> desiredGroundPower_;
     bool passengerEntryRequested_ = false;
     int chocksAttempts_ = 0;

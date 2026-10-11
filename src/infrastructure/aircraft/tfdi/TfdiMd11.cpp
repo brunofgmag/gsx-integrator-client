@@ -3,7 +3,10 @@
 #include "../../simvars/SimVars.h"
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <array>
 #include "../AircraftRegistry.h"
@@ -43,6 +46,26 @@ namespace
     constexpr std::array kDoorStateLVars =
         {"MD11_EXT_DOOR_PAX_1L", "MD11_EXT_DOOR_PAX_2L", "MD11_EXT_DOOR_PAX_4L",
          "MD11_EXT_DOOR_CARGO_1R", "MD11_EXT_DOOR_CARGO_2R", "MD11_EXT_DOOR_CARGO_MAIN"};
+
+    constexpr auto kFwdPaxDoorMemory = "tfdi.paxDoorFwd";
+    constexpr auto kMidPaxDoorMemory = "tfdi.paxDoorMid";
+    constexpr auto kAftPaxDoorMemory = "tfdi.paxDoorAft";
+    constexpr auto kStagedZfwMemory = "tfdi.stagedZfw";
+
+    void PutNumberIfPresent(MemoryBag& memory, const char* name, const std::optional<double>& value)
+    {
+        if (value.has_value())
+        {
+            memory.PutNumber(name, *value);
+        }
+    }
+
+    std::optional<double> RestoredNumber(const MemoryBag& memory, const char* name)
+    {
+        const double value = memory.Number(name, std::numeric_limits<double>::quiet_NaN());
+
+        return std::isnan(value) ? std::nullopt : std::optional<double>(value);
+    }
 }
 
 TfdiMd11::TfdiMd11(VariableGateway* variableGateway, const AutomationStatus* status, const bool cargo)
@@ -52,7 +75,7 @@ TfdiMd11::TfdiMd11(VariableGateway* variableGateway, const AutomationStatus* sta
                    kSmartSwitchNeutral),
       doors_(variableGateway),
       cargoDoorRule_(*variableGateway, doors_, cargo),
-      paxDoorRule_(*variableGateway),
+      paxDoorRule_(*variableGateway, *this),
       efbTargetRule_(*variableGateway, *this),
       rules_{&cargoDoorRule_, &paxDoorRule_, &efbTargetRule_}
 {
@@ -74,6 +97,68 @@ const std::vector<AircraftRule*>& TfdiMd11::Rules() const
 void TfdiMd11::Observe()
 {
     doors_.Observe();
+}
+
+bool TfdiMd11::IsReachable() const
+{
+    return variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit)
+        && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit);
+}
+
+void TfdiMd11::OnTurnaroundStarted()
+{
+    stagedFuelKg_.reset();
+    stagedZfwKg_.reset();
+    efbTargetRule_.ForgetTargets();
+}
+
+void TfdiMd11::OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory)
+{
+    doors_.RestoreMemory(memory, facts.gsxRestartedSinceSave);
+    paxDoorRule_.RestoreTargets({
+        .fwd = RestoredNumber(memory, kFwdPaxDoorMemory),
+        .mid = RestoredNumber(memory, kMidPaxDoorMemory),
+        .aft = RestoredNumber(memory, kAftPaxDoorMemory)
+    });
+    stagedZfwKg_ = RestoredNumber(memory, kStagedZfwMemory);
+
+    if (facts.loadingStarted && !facts.refuelFinished)
+    {
+        SetCurrentFuelKg(facts.plannedFuelKg);
+    }
+}
+
+MemoryBag TfdiMd11::TurnaroundMemory() const
+{
+    MemoryBag memory;
+    doors_.AppendMemory(memory);
+
+    const TfdiMd11PaxDoorsFollowStairsRule::DoorTargets targets = paxDoorRule_.Targets();
+    PutNumberIfPresent(memory, kFwdPaxDoorMemory, targets.fwd);
+    PutNumberIfPresent(memory, kMidPaxDoorMemory, targets.mid);
+    PutNumberIfPresent(memory, kAftPaxDoorMemory, targets.aft);
+    PutNumberIfPresent(memory, kStagedZfwMemory, stagedZfwKg_);
+
+    return memory;
+}
+
+void TfdiMd11::HoldDoorsClosed(const bool hold)
+{
+    heldForDeparture_ = hold;
+    if (!hold)
+    {
+        passengerDoorsHeld_ = false;
+    }
+}
+
+void TfdiMd11::HoldPassengerDoorsClosed(const bool hold)
+{
+    passengerDoorsHeld_ = hold;
+}
+
+bool TfdiMd11::ArePassengerDoorsHeld() const
+{
+    return heldForDeparture_ || passengerDoorsHeld_;
 }
 
 bool TfdiMd11::IsFlightPlanLoaded() const

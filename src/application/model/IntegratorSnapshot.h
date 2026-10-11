@@ -4,6 +4,7 @@
 #include <cmath>
 #include <string>
 #include "SmartSwitchCue.h"
+#include "TurnaroundHold.h"
 #include "../../domain/model/AutomationStatus.h"
 #include "../../domain/model/CargoLoader.h"
 #include "../../domain/model/FlightPlan.h"
@@ -52,6 +53,7 @@ struct IntegratorSnapshot
     bool pmdgOptionsConflict = false;
     bool pmdgOptionsFixable = false;
     bool cargoDoorStuck = false;
+    bool ownStairsWaitingForPressure = false;
     bool fuelRequestStalled = false;
     bool fuelPlanOverCapacity = false;
     bool fuelDidNotStay = false;
@@ -77,6 +79,7 @@ struct IntegratorSnapshot
     std::string aircraftProfileId;
     SmartSwitchCue smartSwitch;
     TurnaroundPhase phase = TurnaroundPhase::WaitingFlightPlan;
+    TurnaroundHold turnaroundHold = TurnaroundHold::None;
     FlightPlanStatus flightPlanStatus = FlightPlanStatus::Idle;
     FlightPlanFailure flightPlanFailure = FlightPlanFailure::None;
     int flightPlanHttpStatus = 0;

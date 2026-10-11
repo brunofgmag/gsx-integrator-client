@@ -61,10 +61,12 @@ RuleVerdict AvroRjHoldForOwnAirstairRule::Evaluate(const RuleContext& context)
 
 void AvroRjHoldForOwnAirstairRule::Act(const RuleContext& context, VariableWriter& writer)
 {
-    if (context.needs.passengerAccess && !aircraft_->IsJetwayAvailable())
+    if (context.needs.passengerAccess && aircraft_->IsOwnAirstairTheWayIn())
     {
         airstair_->requested = true;
     }
+
+    airstair_->waitingForPressure = false;
 
     Drive(writer);
 
@@ -138,6 +140,8 @@ bool AvroRjHoldForOwnAirstairRule::PressureReady()
 {
     if (!HasPressure())
     {
+        airstair_->waitingForPressure = true;
+
         if (!pressureWaitLogged_)
         {
             pressureWaitLogged_ = true;

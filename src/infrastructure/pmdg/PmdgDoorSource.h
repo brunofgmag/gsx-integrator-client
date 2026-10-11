@@ -1,9 +1,11 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGDOORSOURCE_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGDOORSOURCE_H
 
+#include <cstdint>
+
 #include "../gsx/GsxDoorSync.h"
 
-enum class DoorObservation
+enum class DoorObservation : std::uint8_t
 {
     Unavailable,
     Moving,
@@ -21,6 +23,7 @@ public:
     [[nodiscard]] virtual DoorObservation ObserveDoor(int slot) const = 0;
     virtual void ToggleDoor(int slot) = 0;
     virtual void RefreshDoors() = 0;
+    [[nodiscard]] virtual bool AreDoorReadingsPending() const { return false; }
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGDOORSOURCE_H

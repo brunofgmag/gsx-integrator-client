@@ -18,6 +18,17 @@ private slots:
     static void holdsWithoutRequestingWhileTheAnswerIsUnknown();
     static void givesUpWithoutRequestingWhenTheAnswerNeverArrives();
     static void aServiceStartingBeforeTheRetryStopsTheSecondRequest();
+    static void marksTheSessionWhenTheRepositionCompletes();
+    static void marksTheSessionWhenTheGiveUpCeilingEndsARequestedReposition();
+    static void doesNotMarkTheSessionWhenTheOptionSkipsTheReposition();
+    static void doesNotMarkTheSessionWhenAServiceUnderwaySkipsTheReposition();
+    static void doesNotMarkTheSessionWhenNothingWasEverRequested();
+    static void skipsWithoutRequestingOnANewTurnaroundOfTheSameSession();
+    static void requestsAgainOnANewTurnaroundWhenTheNewTurnaroundOptionIsOff();
+    static void requestsOnTheFirstTurnaroundWhenTheNewTurnaroundOptionIsOn();
+    static void theMarkDoesNotCutShortARepositionAlreadyRequested();
+    static void theMarkDoesNotCutShortTheRetriesOfThisTurnaround();
+    static void aRepositionAlreadyDoneInThisTurnaroundIsNeverRepeated();
 };
 
 void RepositionAircraftStateTest::holdsWithoutRequestingUntilGsxAvailable()
@@ -217,6 +228,179 @@ void RepositionAircraftStateTest::completesRepositionWhenSkipEnabledMidRun()
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::PlaceGroundEquipment);
     QCOMPARE(f.menuGateway.repositionCalls, 1);
+}
+
+void RepositionAircraftStateTest::marksTheSessionWhenTheRepositionCompletes()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.gsxService.repositioning = true;
+
+    QVERIFY(!f.ctx.data.repositionedThisSession);
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.ctx.data.repositionedThisSession);
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QVERIFY(f.ctx.data.repositionedThisSession);
+}
+
+void RepositionAircraftStateTest::marksTheSessionWhenTheGiveUpCeilingEndsARequestedReposition()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.gsxService.repositioning = false;
+
+    std::optional<TurnaroundTransition> transition;
+    for (int tick = 0; tick < 61 && !transition; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        transition = state.Evaluate(f.ctx);
+    }
+
+    QVERIFY(transition.has_value());
+    QVERIFY(f.ctx.data.repositionCompleted);
+    QVERIFY(f.ctx.data.repositionedThisSession);
+}
+
+void RepositionAircraftStateTest::doesNotMarkTheSessionWhenTheOptionSkipsTheReposition()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.settings.skipReposition = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QVERIFY(!f.ctx.data.repositionedThisSession);
+}
+
+void RepositionAircraftStateTest::doesNotMarkTheSessionWhenAServiceUnderwaySkipsTheReposition()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.gsxService.serviceUnderway = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QVERIFY(!f.ctx.data.repositionedThisSession);
+}
+
+void RepositionAircraftStateTest::doesNotMarkTheSessionWhenNothingWasEverRequested()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.gsxService.serviceUnderway = std::nullopt;
+
+    std::optional<TurnaroundTransition> transition;
+    for (int tick = 0; tick < 70 && !transition; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        transition = state.Evaluate(f.ctx);
+    }
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(f.menuGateway.repositionCalls, 0);
+    QVERIFY(!f.ctx.data.repositionedThisSession);
+}
+
+void RepositionAircraftStateTest::skipsWithoutRequestingOnANewTurnaroundOfTheSameSession()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.settings.skipRepositionOnNewTurnaround = true;
+    f.ctx.data.repositionedThisSession = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::PlaceGroundEquipment);
+    QCOMPARE(f.menuGateway.repositionCalls, 0);
+    QVERIFY(!f.ctx.data.repositionRequested);
+}
+
+void RepositionAircraftStateTest::requestsAgainOnANewTurnaroundWhenTheNewTurnaroundOptionIsOff()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.settings.skipRepositionOnNewTurnaround = false;
+    f.ctx.data.repositionedThisSession = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.repositionCalls, 1);
+    QVERIFY(f.ctx.data.repositionRequested);
+}
+
+void RepositionAircraftStateTest::requestsOnTheFirstTurnaroundWhenTheNewTurnaroundOptionIsOn()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.settings.skipRepositionOnNewTurnaround = true;
+
+    QVERIFY(!f.ctx.data.repositionedThisSession);
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.repositionCalls, 1);
+}
+
+void RepositionAircraftStateTest::theMarkDoesNotCutShortARepositionAlreadyRequested()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.settings.skipRepositionOnNewTurnaround = true;
+    f.ctx.data.repositionedThisSession = true;
+    f.ctx.data.repositionRequested = true;
+    f.gsxService.repositioning = false;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.ctx.data.repositionCompleted);
+    QCOMPARE(f.menuGateway.repositionCalls, 0);
+}
+
+void RepositionAircraftStateTest::theMarkDoesNotCutShortTheRetriesOfThisTurnaround()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.settings.skipRepositionOnNewTurnaround = true;
+    f.gsxService.repositioning = false;
+
+    for (int tick = 0; tick < 45; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.menuGateway.repositionCalls, 5);
+}
+
+void RepositionAircraftStateTest::aRepositionAlreadyDoneInThisTurnaroundIsNeverRepeated()
+{
+    TurnaroundStateFixture f;
+    RepositionAircraftState state;
+
+    f.settings.skipRepositionOnNewTurnaround = false;
+    f.ctx.data.repositionRequested = true;
+    f.ctx.data.repositionCompleted = true;
+    f.ctx.data.repositionAttempted = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::PlaceGroundEquipment);
+    QCOMPARE(f.menuGateway.repositionCalls, 0);
 }
 
 QTEST_APPLESS_MAIN(RepositionAircraftStateTest)

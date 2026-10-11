@@ -1,6 +1,8 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_AVRORJPAXDOORSSERVETHEAIRSTAIRRULE_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_AVRORJPAXDOORSSERVETHEAIRSTAIRRULE_H
 
+#include <optional>
+
 #include "../../../../domain/ports/AircraftRule.h"
 
 class AvroRj;
@@ -18,17 +20,23 @@ public:
     [[nodiscard]] RuleVerdict Evaluate(const RuleContext& context) override;
     void Act(const RuleContext& context, VariableWriter& writer) override;
 
+    [[nodiscard]] std::optional<double> FrontDoorTarget() const;
+    void RestoreFrontDoorTarget(const std::optional<double>& target);
+
 private:
     [[nodiscard]] bool IsFrontDoorWanted() const;
+    [[nodiscard]] bool AwaitsTheVehiclesOfARestoredTarget();
     [[nodiscard]] const char* WhatServesTheFrontDoor() const;
     void DriveFrontDoor(VariableWriter& writer);
+    void CommandFrontDoor(VariableWriter& writer, double target);
     void KeepAftDoorClosed(VariableWriter& writer);
 
     VariableReader* variables_;
     const AvroRj* aircraft_;
     GsxDoorSync* doors_;
     const AvroRjAirstairState* airstair_;
-    double lastFrontDoorTarget_ = -1.0;
+    std::optional<double> lastFrontDoorTarget_;
+    bool restoredOpenTargetAwaitsVehicles_ = false;
     bool aftDoorCloseWritten_ = false;
 };
 

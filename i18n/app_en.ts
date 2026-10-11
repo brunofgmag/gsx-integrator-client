@@ -348,6 +348,16 @@
         <source>Skip aircraft repositioning</source>
         <translation>Skip aircraft repositioning</translation>
     </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AutomationPane.qml" line="99"/>
+        <source>Skip repositioning on a new turnaround</source>
+        <translation>Skip repositioning on a new turnaround</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/AutomationPane.qml" line="100"/>
+        <source>After deboarding at the destination, the client starts the next turnaround without repositioning the aircraft.</source>
+        <translation>After deboarding at the destination, the client starts the next turnaround without repositioning the aircraft.</translation>
+    </message>
 </context>
 <context>
     <name>ConfirmButton</name>
@@ -614,6 +624,11 @@
         <location filename="../src/application/RuntimeIntegratorService.cpp" line="54"/>
         <source>The turnaround is not waiting to start loading.</source>
         <translation>The turnaround is not waiting to start loading.</translation>
+    </message>
+    <message>
+        <location filename="../src/application/RuntimeIntegratorService.cpp" line="96"/>
+        <source>There is no saved turnaround waiting for an answer.</source>
+        <translation>There is no saved turnaround waiting for an answer.</translation>
     </message>
     <message>
         <location filename="../src/application/RuntimeIntegratorService.cpp" line="102"/>
@@ -926,6 +941,16 @@
         <translation>GSX stopped a service it had already started. Request it again from the GSX menu and the client will resume the turnaround.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="820"/>
+        <source>GSX restarted since this turnaround was saved. Resume it if the aircraft is still as you left it, or restart the flow to start over.</source>
+        <translation>GSX restarted since this turnaround was saved. Resume it if the aircraft is still as you left it, or restart the flow to start over.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="826"/>
+        <source>Resume turnaround</source>
+        <translation>Resume turnaround</translation>
+    </message>
+    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="1046"/>
         <source>Dismiss</source>
         <translation>Dismiss</translation>
@@ -1030,6 +1055,11 @@
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="705"/>
         <source>A GSX loader is waiting for the main deck cargo door. That door runs on hydraulics, so switch the ELEC 2 pump on in the overhead.</source>
         <translation>A GSX loader is waiting for the main deck cargo door. That door runs on hydraulics, so switch the ELEC 2 pump on in the overhead.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="711"/>
+        <source>The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back.</source>
+        <translation>The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="733"/>
@@ -1167,6 +1197,16 @@
         <translation>Skip aircraft repositioning</translation>
     </message>
     <message>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="147"/>
+        <source>Skip repositioning on a new turnaround</source>
+        <translation>Skip repositioning on a new turnaround</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="148"/>
+        <source>After deboarding at the destination, the client starts the next turnaround without repositioning the aircraft.</source>
+        <translation>After deboarding at the destination, the client starts the next turnaround without repositioning the aircraft.</translation>
+    </message>
+    <message>
         <source>Call GPU &amp; chocks</source>
         <translation type="vanished">Call GPU &amp; chocks</translation>
     </message>
@@ -1205,52 +1245,58 @@
         <translation>Place chocks</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="163"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="164"/>
         <source>Call GPU on arrival</source>
         <translation>Call GPU on arrival</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="171"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="172"/>
         <source>Place chocks on arrival</source>
         <translation>Place chocks on arrival</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="179"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="156"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="173"/>
+        <source>Chocks are only placed on aircraft that let the client control them.</source>
+        <translation>Chocks are only placed on aircraft that let the client control them.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="181"/>
         <source>Call catering</source>
         <translation>Call catering</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="180"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="182"/>
         <source>Cargo aircraft skip catering automatically, even when this is on.</source>
         <translation>Cargo aircraft skip catering automatically, even when this is on.</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="188"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="190"/>
         <source>Call boarding early on refuel</source>
         <translation>Call boarding early on refuel</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="196"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="198"/>
         <source>Call lavatory service</source>
         <translation>Call lavatory service</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="204"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="206"/>
         <source>Call water service</source>
         <translation>Call water service</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="212"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="214"/>
         <source>Call cleaning service</source>
         <translation>Call cleaning service</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="222"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="224"/>
         <source>Set as global default</source>
         <translation>Set as global default</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="228"/>
+        <location filename="../src/qml/screens/settings/ProfilesPane.qml" line="230"/>
         <source>Apply to all profiles</source>
         <translation>Apply to all profiles</translation>
     </message>
@@ -1864,6 +1910,26 @@
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="65"/>
         <source>A GSX loader is waiting for the main deck cargo door to open. Open it within %1 s, or the client will finish boarding without this loader.</source>
         <translation>A GSX loader is waiting for the main deck cargo door to open. Open it within %1 s, or the client will finish boarding without this loader.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="81"/>
+        <source>The client is waiting for GSX to send its state.</source>
+        <translation>The client is waiting for GSX to send its state.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="84"/>
+        <source>The client found saved turnaround data and is waiting for the aircraft and GSX to check whether it belongs to this flight.</source>
+        <translation>The client found saved turnaround data and is waiting for the aircraft and GSX to check whether it belongs to this flight.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="87"/>
+        <source>The client is resuming the saved turnaround and waiting for GSX and the simulator to report their state.</source>
+        <translation>The client is resuming the saved turnaround and waiting for GSX and the simulator to report their state.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="90"/>
+        <source>The client is resuming the saved turnaround and waiting for the aircraft to respond. If it never does, restart the flow.</source>
+        <translation>The client is resuming the saved turnaround and waiting for the aircraft to respond. If it never does, restart the flow.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="82"/>

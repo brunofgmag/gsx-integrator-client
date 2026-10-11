@@ -8,6 +8,8 @@
 class PmdgRouteFile
 {
 public:
+    PmdgRouteFile() = delete;
+
     static std::optional<std::filesystem::path> DirectoryFor(const std::string& aircraftName);
     static bool NamesPlan(const std::filesystem::path& file,
                           const std::string& origin,
@@ -15,9 +17,6 @@ public:
     static long long LatestWrite(const std::filesystem::path& directory,
                                  const std::string& origin,
                                  const std::string& destination);
-
-private:
-    PmdgRouteFile() = delete;
 };
 
 class PmdgRouteImport
@@ -27,6 +26,7 @@ public:
                  const std::string& origin,
                  const std::string& destination,
                  long long planEpoch);
+    void Restart();
     [[nodiscard]] bool Seen() const { return seen_; }
 
 private:

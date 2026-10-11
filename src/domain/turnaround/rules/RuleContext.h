@@ -8,7 +8,6 @@ struct RuleContext
 {
     TurnaroundPhase phase = TurnaroundPhase::WaitingSupportedAircraft;
     PhaseNeeds needs;
-    int phaseTickCount = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_DOMAIN_RULECONTEXT_H

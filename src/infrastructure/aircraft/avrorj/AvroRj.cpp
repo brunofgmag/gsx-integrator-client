@@ -5,7 +5,9 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include "../AircraftRegistry.h"
@@ -87,6 +89,15 @@ namespace
 
     constexpr double kJetwayUnavailable = 2.0;
 
+    constexpr auto kFrontDoorTargetMemory = "avrorj.frontDoorTarget";
+
+    std::optional<double> RestoredNumber(const MemoryBag& memory, const char* name)
+    {
+        const double value = memory.Number(name, std::numeric_limits<double>::quiet_NaN());
+
+        return std::isnan(value) ? std::nullopt : std::optional<double>(value);
+    }
+
     constexpr int kEngineCount = 4;
 
     bool IsTankFitted(VariableGateway& variables, const FuelTank& tank)
@@ -163,7 +174,7 @@ AvroRj::AvroRj(VariableGateway* variableGateway, const bool cargoVariant)
       doorRule_(*variableGateway, *this, doors_, airstair_),
       holdsRule_(*variableGateway, *this, doors_),
       airstairRule_(*variableGateway, *this, doors_, airstair_),
-      livenessRule_(*variableGateway, module_),
+      livenessRule_(*variableGateway),
       rules_{&doorRule_, &holdsRule_, &airstairRule_, &livenessRule_}
 {
     smartSwitch_.Subscribe();
@@ -179,17 +190,23 @@ bool AvroRj::IsCargoVariant() const
 void AvroRj::Observe()
 {
     doors_.Observe();
+    ResolveTheResumedAirstairRequest();
+}
+
+void AvroRj::ResolveTheResumedAirstairRequest()
+{
+    if (!airstairRequestAwaitsTheJetway_ || !variableGateway_->HasReceivedLVar(gsx::lvars::kJetway))
+    {
+        return;
+    }
+
+    airstair_.requested = !IsJetwayAvailable();
+    airstairRequestAwaitsTheJetway_ = false;
 }
 
 void AvroRj::HoldDoorsClosed(const bool hold)
 {
     heldForDeparture_ = hold;
-    doors_.HoldClosedForDeparture(hold);
-}
-
-void AvroRj::HoldPassengerDoorsClosed(const bool hold)
-{
-    doors_.HoldPassengerDoorsClosed(hold);
 }
 
 bool AvroRj::IsHeldForDeparture() const
@@ -197,9 +214,40 @@ bool AvroRj::IsHeldForDeparture() const
     return heldForDeparture_;
 }
 
-bool AvroRj::IsModuleMirroringFuel() const
+bool AvroRj::IsReachable() const
 {
-    return module_.mirroringFuel;
+    return variableGateway_->HasReceivedAVar(kSimFuelTotalKg, kKgUnit)
+        && variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit)
+        && KgPerGallon() > 0.0
+        && GroupCapacityGallons(*variableGateway_, kMainTanks) > 0.0;
+}
+
+void AvroRj::OnTurnaroundStarted()
+{
+    airstair_.requested = false;
+    airstairRequestAwaitsTheJetway_ = false;
+}
+
+void AvroRj::OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory)
+{
+    airstair_.requested = false;
+    airstairRequestAwaitsTheJetway_ = facts.phase >= TurnaroundPhase::CallServices;
+    doors_.RestoreMemory(memory, facts.gsxRestartedSinceSave);
+    doorRule_.RestoreFrontDoorTarget(RestoredNumber(memory, kFrontDoorTargetMemory));
+}
+
+MemoryBag AvroRj::TurnaroundMemory() const
+{
+    MemoryBag memory;
+    doors_.AppendMemory(memory);
+
+    const std::optional<double> frontDoorTarget = doorRule_.FrontDoorTarget();
+    if (frontDoorTarget.has_value())
+    {
+        memory.PutNumber(kFrontDoorTargetMemory, *frontDoorTarget);
+    }
+
+    return memory;
 }
 
 bool AvroRj::SupportsStairsOrJetways() const
@@ -212,6 +260,11 @@ bool AvroRj::IsJetwayAvailable() const
     return doors_.VehicleState(gsx::lvars::kJetway, kJetwayUnavailable) != kJetwayUnavailable;
 }
 
+bool AvroRj::IsOwnAirstairTheWayIn() const
+{
+    return variableGateway_->HasReceivedLVar(gsx::lvars::kJetway) && !IsJetwayAvailable();
+}
+
 const std::vector<AircraftRule*>& AvroRj::Rules() const
 {
     return rules_;
@@ -220,6 +273,11 @@ const std::vector<AircraftRule*>& AvroRj::Rules() const
 bool AvroRj::AreAirstairsSettled() const
 {
     return airstair_.settled;
+}
+
+bool AvroRj::AreOwnStairsWaitingForPressure() const
+{
+    return airstair_.waitingForPressure;
 }
 
 void AvroRj::OnLoadingStarted()

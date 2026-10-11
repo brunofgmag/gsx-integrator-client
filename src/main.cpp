@@ -1,6 +1,8 @@
 #include <windows.h>
+#include <cstdint>
 #include <cstring>
 #include <memory>
+#include <span>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QLocale>
@@ -18,6 +20,7 @@
 #include "application/IntegratorRuntime.h"
 #include "application/RuntimeIntegratorService.h"
 #include "infrastructure/aircraft/AircraftFactory.h"
+#include "infrastructure/checkpoint/JsonFileTurnaroundCheckpointStore.h"
 #include "infrastructure/settings/QSettingsRepository.h"
 #include "infrastructure/platform/GraphicsBackend.h"
 #include "infrastructure/probe/ProbeLog.h"
@@ -76,10 +79,10 @@ namespace
     SimulatorAddonPaths BundledAddonPaths()
     {
         return {
-            QCoreApplication::applicationDirPath() + QStringLiteral("/commbus/gsx-integrator-commbus"),
-            qEnvironmentVariable("GSXI_COMMBUS_COMMUNITY_DIR"),
-            QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
-            QDir::toNativeSeparators(QCoreApplication::applicationFilePath())
+            .bundleDir = QCoreApplication::applicationDirPath() + QStringLiteral("/commbus/gsx-integrator-commbus"),
+            .communityOverrideDir = qEnvironmentVariable("GSXI_COMMBUS_COMMUNITY_DIR"),
+            .homeDir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
+            .exePath = QDir::toNativeSeparators(QCoreApplication::applicationFilePath())
         };
     }
 
@@ -104,11 +107,16 @@ namespace
         defaultMessageHandler(type, context, message);
     }
 
-    bool HasTrayArg(const int argc, char* argv[])
+    bool HasTrayArg(const std::span<char*> arguments)
     {
-        for (int i = 1; i < argc; ++i)
+        if (arguments.empty())
         {
-            if (std::strcmp(argv[i], "--tray") == 0)
+            return false;
+        }
+
+        for (const char* argument : arguments.subspan(1))
+        {
+            if (std::strcmp(argument, "--tray") == 0)
             {
                 return true;
             }
@@ -151,7 +159,7 @@ namespace
         }
     }
 
-    enum class StartupWindow { Foreground, Minimized, Hidden };
+    enum class StartupWindow : std::uint8_t { Foreground, Minimized, Hidden };
 
     StartupWindow ResolveStartupWindow(const bool trayArg, const AppSettings& settings)
     {
@@ -180,7 +188,7 @@ namespace
 
 int main(int argc, char* argv[])
 {
-    const bool trayArg = HasTrayArg(argc, argv);
+    const bool trayArg = HasTrayArg(std::span<char*>(argv, static_cast<std::size_t>(argc)));
 
     if (SecondaryInstance())
     {
@@ -209,7 +217,12 @@ int main(int argc, char* argv[])
 
     QGuiApplication::setWindowIcon(BuildAppIcon());
 
-    IntegratorRuntime runtime;
+    JsonFileTurnaroundCheckpointStore checkpointStore(
+        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation),
+        QGuiApplication::applicationVersion());
+    IntegratorRuntimeOptions runtimeOptions;
+    runtimeOptions.checkpointStore = &checkpointStore;
+    IntegratorRuntime runtime(runtimeOptions);
     RuntimeIntegratorService integratorService(&runtime);
     SettingsViewModel settingsViewModel(&settingsRepository, &integratorService,
                                         SupportedAircraftProfiles());

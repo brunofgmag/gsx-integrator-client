@@ -70,6 +70,35 @@ namespace
     {
         return payloadKg / (kMtowKg - emptyZfwKg) * 100.0;
     }
+
+    TurnaroundFacts ResumedAt(const TurnaroundPhase phase)
+    {
+        TurnaroundFacts facts;
+        facts.phase = phase;
+
+        return facts;
+    }
+
+    void GiveEveryStairsAReading(FakeVariableGateway& gateway, const double state)
+    {
+        gateway.lvars[kStairsFront] = state;
+        gateway.lvars[kStairsMiddle] = state;
+        gateway.lvars[kStairsRear] = state;
+    }
+
+    MemoryBag MemoryOfThreeOpenPassengerDoors()
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        TfdiMd11 dead(&gateway, &status, false);
+
+        gateway.lvars[kCouatlStarted] = 1.0;
+        GiveEveryStairsAReading(gateway, 3.0);
+
+        TickAircraft(dead, gateway);
+
+        return dead.TurnaroundMemory();
+    }
 }
 
 class TfdiMd11Test final : public QObject
@@ -125,6 +154,25 @@ private slots:
     static void doorStatusUnknownUntilDoorDataArrives();
     static void doorStatusAllClosedWhenEveryStateReadsClosed();
     static void reportsLoadMethods();
+    static void isReachableOnceTheFuelAndTheEmptyWeightHaveArrived();
+    static void theStagedFuelIsForgottenWhenTheNextTurnaroundStarts();
+    static void theStagedZfwIsForgottenWhenTheNextTurnaroundStarts();
+    static void aResumeBeforeTheRefuelFinishedStagesThePlannedFuelAgain();
+    static void aResumeAfterTheRefuelFinishedStagesNoFuel();
+    static void aResumeBeforeTheLoadingStartedStagesNoFuel();
+    static void aResumeMidBoardingCommitsNothingUntilTheWeightsHaveArrived();
+    static void aResumeCarriesTheStagedZfwOverInTheMemory();
+    static void theDeboardingCommitsTheLiveFuelAndNotTheDepartureFuel();
+    static void restoredOpenPassengerDoorsAreNotClosedBeforeTheStairsReadingsArrive();
+    static void restoredOpenPassengerDoorsCloseOnceTheStairsReadingsArriveAndTheStairsAreGone();
+    static void aGsxRestartedSinceTheSaveDistrustsTheLoaderStatesAtTheResume();
+    static void thePassengerHoldClosesTheOpenPassengerDoorsWhileTheStairsAreStillAtThem();
+    static void thePassengerHoldLeavesTheCargoDoorsToTheirLoaders();
+    static void releasingTheDepartureHoldAlsoReleasesThePassengerHold();
+    static void theDepartureHoldClosesOnlyThePassengerDoorsThisProcessOpened();
+    static void aRestoredOpenPassengerDoorIsClosedByTheDepartureHold();
+    static void holdingTheDoorsClosedOnARelaunchedAircraftWritesNoDoor();
+    static void resumingNeverCommandsAPassengerDoor();
 };
 
 void TfdiMd11Test::reportsCargoVariant()
@@ -521,6 +569,7 @@ void TfdiMd11Test::commitSetsReadReadyMask()
     gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
     gateway.lvars[kEfbReadReady] = 2.0;
     aircraft.SetCurrentFuelKg(15000.0);
+    aircraft.SetCurrentZfwKg(150000.0);
     SlowTickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kEfbReadReady), 3.0);
@@ -552,7 +601,12 @@ void TfdiMd11Test::doesNotSeedFuelTargetBeforeSimDataArrives()
     aircraft.SetCurrentZfwKg(160000.0);
     SlowTickAircraft(aircraft, gateway);
 
-    QCOMPARE(gateway.Written(kEfbFuel), 0.0);
+    QCOMPARE(gateway.setLVarCalls, 0);
+
+    gateway.avars[kSimFuelTotalKg] = 18500.0;
+    SlowTickAircraft(aircraft, gateway);
+
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbFuel), weight::KgToLb(18500.0)));
 }
 
 void TfdiMd11Test::aircraftPowerFollowsElectricalState()
@@ -1103,6 +1157,439 @@ void TfdiMd11Test::evaluatingTheEfbTargetRuleWritesNoVariable()
     rule->Act(context, writer);
 
     QVERIFY(qFuzzyCompare(writer.Written(kEfbFuel), weight::KgToLb(20000.0)));
+}
+
+void TfdiMd11Test::isReachableOnceTheFuelAndTheEmptyWeightHaveArrived()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    QVERIFY(!aircraft.IsReachable());
+
+    gateway.avars[kSimFuelTotalKg] = 18000.0;
+
+    QVERIFY(!aircraft.IsReachable());
+
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+
+    QVERIFY(aircraft.IsReachable());
+}
+
+void TfdiMd11Test::theStagedFuelIsForgottenWhenTheNextTurnaroundStarts()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+    aircraft.SetCurrentFuelKg(20000.0);
+    aircraft.SetCurrentZfwKg(160000.0);
+    SlowTickAircraft(aircraft, gateway);
+
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbFuel), weight::KgToLb(20000.0)));
+
+    aircraft.OnTurnaroundStarted();
+
+    QVERIFY(!aircraft.StagedFuelKg().has_value());
+
+    gateway.avars[kSimFuelTotalKg] = 8000.0;
+    aircraft.SetCurrentZfwKg(kEmptyOperatingZfwKg);
+    SlowTickAircraft(aircraft, gateway);
+
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbFuel), weight::KgToLb(8000.0)));
+}
+
+void TfdiMd11Test::theStagedZfwIsForgottenWhenTheNextTurnaroundStarts()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+    aircraft.SetCurrentFuelKg(20000.0);
+    aircraft.SetCurrentZfwKg(160000.0);
+    SlowTickAircraft(aircraft, gateway);
+
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbZfw), weight::KgToLb(160000.0)));
+
+    aircraft.OnTurnaroundStarted();
+
+    QVERIFY(!aircraft.StagedZfwKg().has_value());
+
+    gateway.avars[kSimFuelTotalKg] = 20000.0;
+    gateway.avars[kSimTotalWeight] = 160000.0;
+    aircraft.SetCurrentFuelKg(15000.0);
+    SlowTickAircraft(aircraft, gateway);
+
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbZfw), weight::KgToLb(140000.0)));
+}
+
+void TfdiMd11Test::aResumeBeforeTheRefuelFinishedStagesThePlannedFuelAgain()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    TurnaroundFacts facts = ResumedAt(TurnaroundPhase::Loading);
+    facts.loadingStarted = true;
+    facts.plannedFuelKg = 30000.0;
+
+    aircraft.OnTurnaroundResumed(facts, MemoryBag{});
+
+    QVERIFY(aircraft.StagedFuelKg().has_value());
+    QCOMPARE(*aircraft.StagedFuelKg(), 30000.0);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+    gateway.avars[kSimFuelTotalKg] = 5000.0;
+    gateway.avars[kSimTotalWeight] = kEmptyOperatingZfwKg + 5000.0;
+    SlowTickAircraft(aircraft, gateway);
+
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbFuel), weight::KgToLb(30000.0)));
+}
+
+void TfdiMd11Test::aResumeAfterTheRefuelFinishedStagesNoFuel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    TurnaroundFacts facts = ResumedAt(TurnaroundPhase::Loading);
+    facts.loadingStarted = true;
+    facts.refuelFinished = true;
+    facts.plannedFuelKg = 30000.0;
+
+    aircraft.OnTurnaroundResumed(facts, MemoryBag{});
+
+    QVERIFY(!aircraft.StagedFuelKg().has_value());
+}
+
+void TfdiMd11Test::aResumeBeforeTheLoadingStartedStagesNoFuel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    TurnaroundFacts facts = ResumedAt(TurnaroundPhase::WaitingPowerOn);
+    facts.plannedFuelKg = 30000.0;
+
+    aircraft.OnTurnaroundResumed(facts, MemoryBag{});
+
+    QVERIFY(!aircraft.StagedFuelKg().has_value());
+}
+
+void TfdiMd11Test::aResumeMidBoardingCommitsNothingUntilTheWeightsHaveArrived()
+{
+    FakeVariableGateway gateway;
+    gateway.arrivesATickAfterItIsAsked = true;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+    gateway.avars[kSimFuelTotalKg] = 5000.0;
+    gateway.avars[kSimTotalWeight] = kEmptyOperatingZfwKg + 20000.0 + 5000.0;
+
+    TurnaroundFacts facts = ResumedAt(TurnaroundPhase::Loading);
+    facts.loadingStarted = true;
+    facts.plannedFuelKg = 30000.0;
+    aircraft.OnTurnaroundResumed(facts, MemoryBag{});
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        SlowTickAircraft(aircraft, gateway);
+        gateway.DeliverWhatWasAsked();
+
+        QCOMPARE(gateway.setLVarCalls, 0);
+    }
+
+    SlowTickAircraft(aircraft, gateway);
+
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbPayload), weight::KgToLb(20000.0)));
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbFuel), weight::KgToLb(30000.0)));
+}
+
+void TfdiMd11Test::aResumeCarriesTheStagedZfwOverInTheMemory()
+{
+    FakeVariableGateway deadGateway;
+    AutomationStatus status;
+    TfdiMd11 dead(&deadGateway, &status, false);
+    dead.SetCurrentZfwKg(160000.0);
+
+    FakeVariableGateway gateway;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+
+    TurnaroundFacts facts = ResumedAt(TurnaroundPhase::Loading);
+    facts.loadingStarted = true;
+    facts.plannedFuelKg = 30000.0;
+    aircraft.OnTurnaroundResumed(facts, dead.TurnaroundMemory());
+
+    SlowTickAircraft(aircraft, gateway);
+
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbZfw), weight::KgToLb(160000.0)));
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbFuel), weight::KgToLb(30000.0)));
+}
+
+void TfdiMd11Test::theDeboardingCommitsTheLiveFuelAndNotTheDepartureFuel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.avars[kSimEmptyWeight] = kEmptyOperatingZfwKg;
+    aircraft.SetCurrentFuelKg(20000.0);
+    aircraft.SetCurrentZfwKg(160000.0);
+    SlowTickAircraft(aircraft, gateway, RuleContext{.phase = TurnaroundPhase::Loading});
+
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbFuel), weight::KgToLb(20000.0)));
+
+    gateway.avars[kSimFuelTotalKg] = 8000.0;
+    gateway.avars[kSimTotalWeight] = 8000.0 + 160000.0;
+    aircraft.SetCurrentZfwKg(kEmptyOperatingZfwKg);
+    SlowTickAircraft(aircraft, gateway, RuleContext{.phase = TurnaroundPhase::Deboarding});
+
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbFuel), weight::KgToLb(8000.0)));
+    QVERIFY(qFuzzyCompare(gateway.Written(kEfbZfw), weight::KgToLb(kEmptyOperatingZfwKg)));
+}
+
+void TfdiMd11Test::restoredOpenPassengerDoorsAreNotClosedBeforeTheStairsReadingsArrive()
+{
+    const MemoryBag memory = MemoryOfThreeOpenPassengerDoors();
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+
+    aircraft.OnTurnaroundResumed(ResumedAt(TurnaroundPhase::Loading), memory);
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 0);
+    QCOMPARE(gateway.WriteCount(kPaxDoor2L), 0);
+    QCOMPARE(gateway.WriteCount(kPaxDoor4L), 0);
+}
+
+void TfdiMd11Test::restoredOpenPassengerDoorsCloseOnceTheStairsReadingsArriveAndTheStairsAreGone()
+{
+    const MemoryBag memory = MemoryOfThreeOpenPassengerDoors();
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+
+    aircraft.OnTurnaroundResumed(ResumedAt(TurnaroundPhase::Loading), memory);
+
+    TickAircraft(aircraft, gateway);
+
+    GiveEveryStairsAReading(gateway, 0.0);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoor1L), 0.0);
+    QCOMPARE(gateway.Written(kPaxDoor2L), 0.0);
+    QCOMPARE(gateway.Written(kPaxDoor4L), 0.0);
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 1);
+}
+
+void TfdiMd11Test::aGsxRestartedSinceTheSaveDistrustsTheLoaderStatesAtTheResume()
+{
+    const auto cargoDoorAfterResuming = [](const bool gsxRestartedSinceSave)
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        TfdiMd11 aircraft(&gateway, &status, false);
+
+        gateway.lvars[kCouatlStarted] = 1.0;
+        gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderInPosition;
+
+        TurnaroundFacts facts = ResumedAt(TurnaroundPhase::Loading);
+        facts.gsxRestartedSinceSave = gsxRestartedSinceSave;
+        aircraft.OnTurnaroundResumed(facts, MemoryBag{});
+
+        TickAircraft(aircraft, gateway);
+
+        return gateway.Written(kCargoDoor1R);
+    };
+
+    QCOMPARE(cargoDoorAfterResuming(false), 100.0);
+    QCOMPARE(cargoDoorAfterResuming(true), 0.0);
+}
+
+void TfdiMd11Test::thePassengerHoldClosesTheOpenPassengerDoorsWhileTheStairsAreStillAtThem()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kStairsFront] = 3.0;
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
+
+    aircraft.HoldPassengerDoorsClosed(true);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoor1L), 0.0);
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 2);
+    QCOMPARE(gateway.Written(kPaxDoor1L), 0.0);
+}
+
+void TfdiMd11Test::thePassengerHoldLeavesTheCargoDoorsToTheirLoaders()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kStairsFront] = 3.0;
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderInPosition;
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
+
+    aircraft.HoldPassengerDoorsClosed(true);
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.Written(kPaxDoor1L), 0.0);
+    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 1);
+}
+
+void TfdiMd11Test::releasingTheDepartureHoldAlsoReleasesThePassengerHold()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kStairsFront] = 3.0;
+
+    aircraft.HoldPassengerDoorsClosed(true);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 0);
+
+    aircraft.HoldDoorsClosed(false);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
+}
+
+void TfdiMd11Test::theDepartureHoldClosesOnlyThePassengerDoorsThisProcessOpened()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kStairsFront] = 3.0;
+    gateway.lvars[kStairsMiddle] = 0.0;
+    gateway.lvars[kPaxDoor2LState] = 100.0;
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
+
+    aircraft.HoldDoorsClosed(true);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoor1L), 0.0);
+    QCOMPARE(gateway.WriteCount(kPaxDoor2L), 0);
+    QCOMPARE(gateway.WriteCount(kPaxDoor4L), 0);
+}
+
+void TfdiMd11Test::aRestoredOpenPassengerDoorIsClosedByTheDepartureHold()
+{
+    const MemoryBag memory = MemoryOfThreeOpenPassengerDoors();
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryStairsAReading(gateway, 3.0);
+
+    aircraft.OnTurnaroundResumed(ResumedAt(TurnaroundPhase::WaitingReadyToPush), memory);
+    aircraft.HoldDoorsClosed(true);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoor1L), 0.0);
+    QCOMPARE(gateway.Written(kPaxDoor2L), 0.0);
+    QCOMPARE(gateway.Written(kPaxDoor4L), 0.0);
+}
+
+void TfdiMd11Test::holdingTheDoorsClosedOnARelaunchedAircraftWritesNoDoor()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryStairsAReading(gateway, 0.0);
+
+    for (const char* doorState : kDoorStateLVars)
+    {
+        gateway.lvars[doorState] = 0.0;
+    }
+
+    TurnaroundFacts facts = ResumedAt(TurnaroundPhase::WaitingReadyToPush);
+    facts.departureDoorsHeld = true;
+    facts.passengerDoorsHeld = true;
+    aircraft.OnTurnaroundResumed(facts, MemoryBag{});
+    aircraft.HoldDoorsClosed(true);
+    aircraft.HoldPassengerDoorsClosed(true);
+
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 0);
+}
+
+void TfdiMd11Test::resumingNeverCommandsAPassengerDoor()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryStairsAReading(gateway, 0.0);
+    gateway.lvars[kPaxDoor1LState] = 100.0;
+
+    TurnaroundFacts facts = ResumedAt(TurnaroundPhase::Loading);
+    facts.loadingStarted = true;
+    facts.gsxRestartedSinceSave = true;
+    aircraft.OnTurnaroundResumed(facts, MemoryBag{});
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 0);
+    QCOMPARE(gateway.WriteCount(kPaxDoor2L), 0);
+    QCOMPARE(gateway.WriteCount(kPaxDoor4L), 0);
 }
 
 QTEST_APPLESS_MAIN(TfdiMd11Test)

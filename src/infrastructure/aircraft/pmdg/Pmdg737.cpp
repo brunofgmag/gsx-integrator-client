@@ -23,7 +23,8 @@ namespace
     constexpr auto kSmartSwitchControl = "R/T-I/C";
     constexpr auto kSmartSwitchSide = "R/T";
 
-    constexpr int kStateQueryTicks = 3;
+    constexpr int kDoorReadingBudgetTicks = 6;
+    constexpr int kBridgeCeilingTicks = 4;
 
     constexpr auto kTitlePax800 = "737-800 PAX";
     constexpr auto kTitleBcf800 = "737-800BCF";
@@ -55,12 +56,12 @@ namespace
     PmdgAircraftSpec SpecFor(const Pmdg737Variant variant)
     {
         return {
-            static_cast<int>(Pmdg737Door::Count),
-            static_cast<int>(Pmdg737Door::MainCargo),
-            IsCargo(variant),
-            DoorBaseline::Closed,
-            {kSmartSwitchLVar},
-            [](const double min, double) { return min < kSmartSwitchNeutral; }
+            .doorSlots = static_cast<int>(Pmdg737Door::Count),
+            .mainDeckDoorSlot = static_cast<int>(Pmdg737Door::MainCargo),
+            .cargoVariant = IsCargo(variant),
+            .doorBaseline = DoorBaseline::Closed,
+            .smartSwitchLVars = {kSmartSwitchLVar},
+            .smartSwitchPressed = [](const double min, double) { return min < kSmartSwitchNeutral; }
         };
     }
 }
@@ -161,13 +162,67 @@ void Pmdg737::ToggleDoor(const int slot)
     ownedData_->ToggleDoor(static_cast<Pmdg737Door>(slot));
 }
 
+bool Pmdg737::TabletReportsAnyDoor() const
+{
+    for (int slot = 0; slot < static_cast<int>(Pmdg737Door::Count); ++slot)
+    {
+        const char* key = EfbDoorKey(static_cast<Pmdg737Door>(slot));
+        if (key != nullptr && (tablet_->DoorMoving(key) || tablet_->DoorOpen(key).has_value()))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void Pmdg737::RefreshDoors()
 {
-    if (++ticksSinceStateQuery_ >= kStateQueryTicks)
+    if (!AreDoorReadingsPending())
     {
-        ticksSinceStateQuery_ = 0;
-        tablet_->RequestState();
+        return;
     }
+
+    if (TabletReportsAnyDoor())
+    {
+        doorReadingsSeen_ = true;
+
+        return;
+    }
+
+    if (StateQuestionSent())
+    {
+        WaitForTheAnswer();
+
+        return;
+    }
+
+    WaitForTheBridge();
+}
+
+void Pmdg737::WaitForTheAnswer()
+{
+    if (++ticksSinceFirstQuestion_ == kDoorReadingBudgetTicks)
+    {
+        LOG_INFO("PMDG tablet gave no door reading in %d ticks after the first question; doors follow the closed baseline from now on.",
+                 kDoorReadingBudgetTicks);
+    }
+}
+
+void Pmdg737::WaitForTheBridge()
+{
+    if (++ticksWithoutQuestion_ == kBridgeCeilingTicks)
+    {
+        LOG_INFO("PMDG tablet bridge never came up in %d ticks; doors follow the closed baseline from now on.",
+                 kBridgeCeilingTicks);
+    }
+}
+
+bool Pmdg737::AreDoorReadingsPending() const
+{
+    return !doorReadingsSeen_
+        && ticksSinceFirstQuestion_ < kDoorReadingBudgetTicks
+        && ticksWithoutQuestion_ < kBridgeCeilingTicks;
 }
 
 bool Pmdg737::HasAircraftPower() const
@@ -183,6 +238,11 @@ bool Pmdg737::GroundPowerPresent() const
 bool Pmdg737::ChocksSet() const
 {
     return variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
+}
+
+bool Pmdg737::ChocksReadingArrived() const
+{
+    return variableGateway_->HasReceivedLVar(kChocksLVar);
 }
 
 namespace

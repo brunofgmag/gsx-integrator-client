@@ -9,6 +9,7 @@ public:
     [[nodiscard]] virtual bool HasAircraftPower() const = 0;
     [[nodiscard]] virtual bool GroundPowerPresent() const = 0;
     [[nodiscard]] virtual bool ChocksSet() const = 0;
+    [[nodiscard]] virtual bool ChocksReadingArrived() const { return true; }
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGGROUNDSOURCE_H

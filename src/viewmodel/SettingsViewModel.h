@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_SETTINGSVIEWMODEL_H
 #define GSX_INTEGRATOR_CLIENT_SETTINGSVIEWMODEL_H
 
+#include <cstdint>
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QVariantList>
@@ -37,6 +38,10 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(bool autoStartFlow READ GetAutoStartFlow WRITE SetAutoStartFlow NOTIFY AutoStartFlowChanged)
     Q_PROPERTY(bool autoStartLoading READ GetAutoStartLoading WRITE SetAutoStartLoading NOTIFY AutoStartLoadingChanged)
     Q_PROPERTY(bool skipReposition READ GetSkipReposition WRITE SetSkipReposition NOTIFY SkipRepositionChanged)
+    Q_PROPERTY(bool skipRepositionOnNewTurnaround READ GetSkipRepositionOnNewTurnaround
+        WRITE SetSkipRepositionOnNewTurnaround NOTIFY SkipRepositionOnNewTurnaroundChanged)
+    Q_PROPERTY(bool skipRepositionOnNewTurnaroundLocked READ IsSkipRepositionOnNewTurnaroundLocked
+        NOTIFY SkipRepositionChanged)
     Q_PROPERTY(bool callGpu READ GetCallGpu WRITE SetCallGpu NOTIFY CallGpuChanged)
     Q_PROPERTY(bool callGpuOnArrival READ GetCallGpuOnArrival WRITE SetCallGpuOnArrival NOTIFY CallGpuOnArrivalChanged)
     Q_PROPERTY(bool placeChocks READ GetPlaceChocks WRITE SetPlaceChocks NOTIFY PlaceChocksChanged)
@@ -85,6 +90,10 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
         NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileSkipReposition READ GetProfileSkipReposition
         WRITE SetProfileSkipReposition NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profileSkipRepositionOnNewTurnaround READ GetProfileSkipRepositionOnNewTurnaround
+        WRITE SetProfileSkipRepositionOnNewTurnaround NOTIFY ProfileDraftChanged)
+    Q_PROPERTY(bool profileSkipRepositionOnNewTurnaroundLocked READ IsProfileSkipRepositionOnNewTurnaroundLocked
+        NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileCallGpu READ GetProfileCallGpu
         WRITE SetProfileCallGpu NOTIFY ProfileDraftChanged)
     Q_PROPERTY(bool profileCallGpuOnArrival READ GetProfileCallGpuOnArrival
@@ -105,15 +114,15 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
         WRITE SetProfileCallCleaning NOTIFY ProfileDraftChanged)
 
 public:
-    enum ThemeMode { Light = 0, Dark = 1, System = 2 };
+    enum ThemeMode : std::uint8_t { Light = 0, Dark = 1, System = 2 };
 
     Q_ENUM(ThemeMode)
 
-    enum UpdateMode { Auto = 0, Notify = 1, Manual = 2 };
+    enum UpdateMode : std::uint8_t { Auto = 0, Notify = 1, Manual = 2 };
 
     Q_ENUM(UpdateMode)
 
-    enum WeightUnitMode { AutoUnit = 0, Kilograms = 1, Pounds = 2 };
+    enum WeightUnitMode : std::uint8_t { AutoUnit = 0, Kilograms = 1, Pounds = 2 };
 
     Q_ENUM(WeightUnitMode)
 
@@ -160,6 +169,10 @@ public:
 
     [[nodiscard]] bool GetSkipReposition() const;
     void SetSkipReposition(bool enabled);
+
+    [[nodiscard]] bool GetSkipRepositionOnNewTurnaround() const;
+    void SetSkipRepositionOnNewTurnaround(bool enabled);
+    [[nodiscard]] bool IsSkipRepositionOnNewTurnaroundLocked() const;
 
     [[nodiscard]] bool GetCallGpu() const;
     void SetCallGpu(bool enabled);
@@ -269,6 +282,10 @@ public:
     [[nodiscard]] bool GetProfileSkipReposition() const;
     void SetProfileSkipReposition(bool enabled);
 
+    [[nodiscard]] bool GetProfileSkipRepositionOnNewTurnaround() const;
+    void SetProfileSkipRepositionOnNewTurnaround(bool enabled);
+    [[nodiscard]] bool IsProfileSkipRepositionOnNewTurnaroundLocked() const;
+
     [[nodiscard]] bool GetProfileCallGpu() const;
     void SetProfileCallGpu(bool enabled);
 
@@ -309,6 +326,7 @@ signals:
     void AutoStartFlowChanged();
     void AutoStartLoadingChanged();
     void SkipRepositionChanged();
+    void SkipRepositionOnNewTurnaroundChanged();
     void CallGpuChanged();
     void CallGpuOnArrivalChanged();
     void PlaceChocksChanged();
@@ -356,6 +374,7 @@ private:
         FuelRateMode fuelRateMode = FuelRateMode::Recommended;
         QString fuelRateText;
         bool skipReposition = false;
+        bool skipRepositionOnNewTurnaround = true;
         bool callGpu = false;
         bool callGpuOnArrival = false;
         bool placeChocks = false;

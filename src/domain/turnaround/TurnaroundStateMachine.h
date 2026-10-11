@@ -1,14 +1,23 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDSTATEMACHINE_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_TURNAROUNDSTATEMACHINE_H
 
+#include <cstdint>
 #include <array>
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include "TurnaroundCheckpoint.h"
 #include "TurnaroundContext.h"
 #include "TurnaroundTransition.h"
 #include "states/TurnaroundState.h"
 #include "TurnaroundPhase.h"
+
+enum class ResumeOutcome : std::uint8_t
+{
+    Resumed,
+    AircraftNotReachable,
+    UnknownPhase,
+};
 
 class TurnaroundStateMachine
 {
@@ -27,7 +36,13 @@ public:
     void ObserveRules();
     void ObserveSlowRules();
     void Reset();
+    [[nodiscard]] std::optional<TurnaroundCheckpoint> TakeCheckpoint() const;
+    [[nodiscard]] ResumeOutcome ResumeFrom(const TurnaroundCheckpoint& checkpoint,
+                                           Aircraft& aircraft,
+                                           bool gsxRestartedSinceSave);
     void ConfirmLoading() { context_.data.loadingConfirmed = true; }
+    void NoteRepositionedThisSession() { context_.data.repositionedThisSession = true; }
+    void ForgetRepositionedThisSession() { context_.data.repositionedThisSession = false; }
     void DismissFuelStayAdvisory() { context_.data.fuelStayDismissed = true; }
     void AcceptAppTouch() { appTouchPending_ = true; }
 #ifndef NDEBUG
@@ -38,6 +53,7 @@ public:
     [[nodiscard]] TransitionOrigin GetLastTransitionOrigin() const { return lastTransitionOrigin_; }
     [[nodiscard]] int GetDelayTicksRemaining() const { return ticksRemaining_; }
     [[nodiscard]] bool IsLoadingConfirmed() const { return context_.data.loadingConfirmed; }
+    [[nodiscard]] bool HasRepositionedThisSession() const { return context_.data.repositionedThisSession; }
 
 private:
     static constexpr std::size_t kPhaseCount = static_cast<std::size_t>(TurnaroundPhase::Count);
@@ -45,6 +61,7 @@ private:
     void RegisterStates();
     void Step();
     void ResolvePilotTouch();
+    void StandAt(TurnaroundPhase phase);
     void PublishStatus() const;
     void TransitionTo(TurnaroundPhase phase, TransitionOrigin origin);
     [[nodiscard]] std::optional<TurnaroundTransition> EvaluateCurrentPhase();

@@ -1,6 +1,8 @@
 #include <QtTest/QTest>
 
 #include <array>
+#include <utility>
+#include <vector>
 
 #include "TestDoubles.h"
 #include "../src/infrastructure/gsx/GsxStateService.h"
@@ -35,6 +37,123 @@ namespace
         {
             gsx.Observe();
         }
+    }
+
+    double AsLVar(const GsxStateStatus status)
+    {
+        return static_cast<double>(status);
+    }
+
+    constexpr std::array kResumeReadings = {
+        kCouatlStarted,
+        kRefuelingState,
+        kBoardingState,
+        kPushbackVehicleState,
+        kDeboardingState,
+        kDeiceState,
+        kPushbackStatus,
+    };
+
+    struct CounterReading
+    {
+        const char* stateLVar;
+        const char* counterLVar;
+        double (*read)(GsxStateService& gsx);
+    };
+
+    double ReadBoardedPassengers(GsxStateService& gsx)
+    {
+        return gsx.GetBoardedPassengers();
+    }
+
+    double ReadDeboardedPassengers(GsxStateService& gsx)
+    {
+        return gsx.GetDeboardedPassengers();
+    }
+
+    double ReadBoardingCargo(GsxStateService& gsx)
+    {
+        return gsx.GetBoardingCargoPercent();
+    }
+
+    double ReadDeboardingCargo(GsxStateService& gsx)
+    {
+        return gsx.GetDeboardingCargoPercent();
+    }
+
+    constexpr std::array kCounterReadings = {
+        CounterReading{.stateLVar = kBoardingState, .counterLVar = kNumPassengersBoardingTotal,
+                       .read = ReadBoardedPassengers},
+        CounterReading{.stateLVar = kDeboardingState, .counterLVar = kNumPassengersDeboardingTotal,
+                       .read = ReadDeboardedPassengers},
+        CounterReading{.stateLVar = kBoardingState, .counterLVar = kBoardingCargoPercent,
+                       .read = ReadBoardingCargo},
+        CounterReading{.stateLVar = kDeboardingState, .counterLVar = kDeboardingCargoPercent,
+                       .read = ReadDeboardingCargo},
+    };
+
+    MemoryBag MemoryOfAServiceLeftAt(const char* stateLVar, const GsxStateStatus status)
+    {
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(status), 3);
+
+        return gsx.TakeMemory();
+    }
+
+    int BoardedWithTheTotalAt(GsxStateService& gsx, FakeVariableGateway& gateway, const double total)
+    {
+        gateway.lvars[kNumPassengersBoardingTotal] = total;
+
+        return gsx.GetBoardedPassengers();
+    }
+
+    MemoryBag MemoryOfARemoteStandBoardingAt92()
+    {
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        gateway.lvars[kBoardingState] = AsLVar(GsxStateStatus::Active);
+        for (const double total : {0.0, 40.0, 0.0, 40.0, 0.0})
+        {
+            static_cast<void>(BoardedWithTheTotalAt(gsx, gateway, total));
+        }
+
+        static_cast<void>(BoardedWithTheTotalAt(gsx, gateway, 12.0));
+
+        return gsx.TakeMemory();
+    }
+
+    MemoryBag MemoryOfEverythingTheServiceKeeps()
+    {
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        gateway.lvars[kCouatlStarted] = 1.0;
+        gateway.lvars[kGpuConnected] = 0.0;
+        gateway.lvars[kRefuelingState] = AsLVar(GsxStateStatus::Active);
+        gateway.lvars[kBoardingState] = AsLVar(GsxStateStatus::Active);
+        gateway.lvars[kDeboardingState] = AsLVar(GsxStateStatus::Active);
+        gateway.lvars[kBoardingCargoPercent] = 0.0;
+        gateway.lvars[kDeboardingCargoPercent] = 0.0;
+        gateway.lvars[kNumPassengersDeboardingTotal] = 0.0;
+        gsx.Observe();
+        gsx.TakeOverFuelAndPayload();
+        static_cast<void>(BoardedWithTheTotalAt(gsx, gateway, 0.0));
+        static_cast<void>(BoardedWithTheTotalAt(gsx, gateway, 40.0));
+        static_cast<void>(BoardedWithTheTotalAt(gsx, gateway, 0.0));
+        static_cast<void>(BoardedWithTheTotalAt(gsx, gateway, 9.0));
+        gateway.lvars[kBoardingCargoPercent] = 35.0;
+        static_cast<void>(gsx.GetBoardingCargoPercent());
+        static_cast<void>(gsx.GetDeboardedPassengers());
+        gateway.lvars[kNumPassengersDeboardingTotal] = 18.0;
+        static_cast<void>(gsx.GetDeboardedPassengers());
+        gateway.lvars[kDeboardingCargoPercent] = 20.0;
+        static_cast<void>(gsx.GetDeboardingCargoPercent());
+        gsx.Observe();
+
+        return gsx.TakeMemory();
     }
 }
 
@@ -110,6 +229,38 @@ private slots:
     static void serviceInProgressFalseWhenAbsentOrNoRemote();
     static void pushbackIsOfferedUnlessTheApronVerdictSaysOtherwise();
     static void remoteApiCountsAsConnectedOnlyWhileTheLinkIsUp();
+    static void aRestoredBoardingKeepsTheBusesTheLastProcessCounted();
+    static void aRestoredBoardingKeepsItsCountWhileTheCounterHasNotArrived();
+    static void aClosedServiceKeepsItsCountersAcrossTheMemory();
+    static void aCounterThatHasNotArrivedReportsNothingAndTakesNoBaseline();
+    static void aRestoredStatusSurvivesObservationsBeforeTheStateLVarArrives();
+    static void aCouatlFlagThatHasNotArrivedIsNotACouatlDeath();
+    static void aServiceFoundAvailableAfterTheMemoryIsRecordedAsCompleted();
+    static void aServiceRestoredAfterACouatlRestartIsInterruptedNotCompleted();
+    static void aPushbackAndADeiceRestoredUnderwayAreNeverRecordedCompletedByWhatTheyFindIdle();
+    static void aPushbackSavedWhileTheTugApproachesAndReadMidPushIsNotRecordedCompleted();
+    static void aRestoredPushbackAndDeiceSeenActiveAgainFollowTheLiveRule();
+    static void aRestartIsNotWrittenIntoTheMemoryBeforeAReadingConfirmsIt();
+    static void aRestartDoesNotMarkAPushbackOrADeiceAsHavingLostItsCouatl();
+    static void restoringAnEmptyMemoryForgetsWhatTheServiceSawBefore();
+    static void aRestoredCargoPercentIsClampedLikeTheCounts();
+    static void aServiceRestoredAsRequestedAndFoundAvailableCountsAsCompleted();
+    static void theRestoredMarkClearsAtTheFirstReadingSoTheCompletionCountsOnce();
+    static void aLiveServiceGoingFromRequestedToAvailableIsNotCompleted();
+    static void aCompletedServiceStaysCompletedAcrossTheMemory();
+    static void aCouatlDeathTheLastProcessSawSurvivesTheMemory();
+    static void aRestoredCargoReadingStillIgnoresTheStalePercent();
+    static void aServiceThatGoesThroughCompletingStraightToIdleIsRecordedAsCompleted();
+    static void restoringBeforeOrAfterTheFirstReadingGivesTheSameVerdict();
+    static void theMemoryRestoresToTheMemoryItWasTakenFrom();
+    static void theMemoryIgnoresUnknownNames();
+    static void anEmptyMemoryRestoresTheStateOfAReset();
+    static void theGpuClearSightingSurvivesTheMemory();
+    static void theTakeoverOfFuelAndPayloadSurvivesTheMemory();
+    static void reassertingBeforeTheAutomationFlagsArriveStillTakesFuelAndPayloadBack();
+    static void theResumeReadingsHaveArrivedOnlyWhenEveryOneHas();
+    static void theResumeReadingsHaveNotArrivedWhenAnyOneIsMissingAlone();
+    static void askingIfTheResumeReadingsArrivedRequestsEveryOne();
 };
 
 void GsxInterfaceTest::availabilityFollowsCouatlFlag()
@@ -209,7 +360,7 @@ void GsxInterfaceTest::aCouatlDeathNoObserveSawIsStillADrop()
 
         ObserveFor(gsx, gateway, stateLVar, 1.0, 5.0, 30);
 
-        gateway.lvarSpans[kCouatlStarted] = LVarSpan{0.0, 1.0, true};
+        gateway.lvarSpans[kCouatlStarted] = LVarSpan{.min = 0.0, .max = 1.0, .received = true};
         ObserveFor(gsx, gateway, stateLVar, 1.0, 1.0, 5);
 
         QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
@@ -226,7 +377,7 @@ void GsxInterfaceTest::gsxCountsAsDownOnlyWhenTheCouatlFlagDippedSinceTheLastObs
 
     QVERIFY(!gsx.WasGsxDownSinceLastObserve());
 
-    gateway.lvarSpans[kCouatlStarted] = LVarSpan{0.0, 1.0, true};
+    gateway.lvarSpans[kCouatlStarted] = LVarSpan{.min = 0.0, .max = 1.0, .received = true};
     gsx.Observe();
 
     QVERIFY(gsx.WasGsxDownSinceLastObserve());
@@ -1432,6 +1583,669 @@ void GsxInterfaceTest::remoteApiCountsAsConnectedOnlyWhileTheLinkIsUp()
     const GsxStateService noRemote(&gateway);
 
     QVERIFY(!noRemote.IsRemoteApiConnected());
+}
+
+void GsxInterfaceTest::aRestoredBoardingKeepsTheBusesTheLastProcessCounted()
+{
+    const MemoryBag memory = MemoryOfARemoteStandBoardingAt92();
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = AsLVar(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersBoardingTotal] = 12.0;
+    gsx.RestoreMemory(memory, false);
+    gsx.Observe();
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 92);
+
+    FakeVariableGateway forgetfulGateway;
+    GsxStateService forgetful(&forgetfulGateway);
+
+    forgetfulGateway.lvars[kCouatlStarted] = 1.0;
+    forgetfulGateway.lvars[kBoardingState] = AsLVar(GsxStateStatus::Active);
+    forgetfulGateway.lvars[kNumPassengersBoardingTotal] = 12.0;
+    forgetful.Observe();
+
+    QCOMPARE(forgetful.GetBoardedPassengers(), 12);
+}
+
+void GsxInterfaceTest::aRestoredBoardingKeepsItsCountWhileTheCounterHasNotArrived()
+{
+    const MemoryBag memory = MemoryOfARemoteStandBoardingAt92();
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = AsLVar(GsxStateStatus::Active);
+    gsx.RestoreMemory(memory, false);
+    gsx.Observe();
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 92);
+    QCOMPARE(gsx.GetBoardedPassengers(), 92);
+
+    gateway.lvars[kNumPassengersBoardingTotal] = 12.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 92);
+
+    gateway.lvars[kNumPassengersBoardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 92);
+
+    gateway.lvars[kNumPassengersBoardingTotal] = 15.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 107);
+}
+
+void GsxInterfaceTest::aClosedServiceKeepsItsCountersAcrossTheMemory()
+{
+    FakeVariableGateway previousGateway;
+    GsxStateService previous(&previousGateway);
+
+    previousGateway.lvars[kBoardingState] = AsLVar(GsxStateStatus::Active);
+    previousGateway.lvars[kDeboardingState] = AsLVar(GsxStateStatus::Active);
+    previousGateway.lvars[kBoardingCargoPercent] = 0.0;
+    previousGateway.lvars[kDeboardingCargoPercent] = 0.0;
+    previousGateway.lvars[kNumPassengersBoardingTotal] = 0.0;
+    previousGateway.lvars[kNumPassengersDeboardingTotal] = 0.0;
+    static_cast<void>(previous.GetBoardedPassengers());
+    static_cast<void>(previous.GetDeboardedPassengers());
+    static_cast<void>(previous.GetBoardingCargoPercent());
+    static_cast<void>(previous.GetDeboardingCargoPercent());
+
+    previousGateway.lvars[kNumPassengersBoardingTotal] = 130.0;
+    previousGateway.lvars[kNumPassengersDeboardingTotal] = 80.0;
+    previousGateway.lvars[kBoardingCargoPercent] = 60.0;
+    previousGateway.lvars[kDeboardingCargoPercent] = 45.0;
+
+    QCOMPARE(previous.GetBoardedPassengers(), 130);
+    QCOMPARE(previous.GetDeboardedPassengers(), 80);
+    QCOMPARE(previous.GetBoardingCargoPercent(), 60.0);
+    QCOMPARE(previous.GetDeboardingCargoPercent(), 45.0);
+
+    const MemoryBag memory = previous.TakeMemory();
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kBoardingState] = AsLVar(GsxStateStatus::Callable);
+    gateway.lvars[kDeboardingState] = AsLVar(GsxStateStatus::Callable);
+    gsx.RestoreMemory(memory, false);
+    gsx.Observe();
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 130);
+    QCOMPARE(gsx.GetDeboardedPassengers(), 80);
+    QCOMPARE(gsx.GetBoardingCargoPercent(), 60.0);
+    QCOMPARE(gsx.GetDeboardingCargoPercent(), 45.0);
+
+    gateway.lvars[kNumPassengersBoardingTotal] = 0.0;
+    gateway.lvars[kNumPassengersDeboardingTotal] = 0.0;
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 130);
+    QCOMPARE(gsx.GetDeboardedPassengers(), 80);
+
+    for (const double percent : {60.0, 25.0, 0.0})
+    {
+        previousGateway.lvars[kBoardingCargoPercent] = percent;
+        previousGateway.lvars[kDeboardingCargoPercent] = percent;
+        gateway.lvars[kBoardingCargoPercent] = percent;
+        gateway.lvars[kDeboardingCargoPercent] = percent;
+
+        QCOMPARE(gsx.GetBoardingCargoPercent(), previous.GetBoardingCargoPercent());
+        QCOMPARE(gsx.GetDeboardingCargoPercent(), previous.GetDeboardingCargoPercent());
+    }
+}
+
+void GsxInterfaceTest::aCounterThatHasNotArrivedReportsNothingAndTakesNoBaseline()
+{
+    for (const auto& [stateLVar, counterLVar, read] : kCounterReadings)
+    {
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        gateway.lvars[stateLVar] = AsLVar(GsxStateStatus::Active);
+
+        QVERIFY2(read(gsx) == 0.0, counterLVar);
+        QVERIFY2(read(gsx) == 0.0, counterLVar);
+
+        gateway.lvars[counterLVar] = 92.0;
+
+        QVERIFY2(read(gsx) == 0.0, counterLVar);
+
+        gateway.lvars[counterLVar] = 100.0;
+
+        QVERIFY2(read(gsx) == 100.0, counterLVar);
+    }
+}
+
+void GsxInterfaceTest::aRestoredStatusSurvivesObservationsBeforeTheStateLVarArrives()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        const MemoryBag memory = MemoryOfAServiceLeftAt(stateLVar, GsxStateStatus::Active);
+
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        gsx.RestoreMemory(memory, false);
+        gsx.Observe();
+        gsx.Observe();
+
+        QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
+
+        ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(GsxStateStatus::Callable), 3);
+
+        QVERIFY2(gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::aCouatlFlagThatHasNotArrivedIsNotACouatlDeath()
+{
+    const MemoryBag memory = MemoryOfAServiceLeftAt(kRefuelingState, GsxStateStatus::Active);
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gsx.RestoreMemory(memory, false);
+    gateway.lvars[kRefuelingState] = AsLVar(GsxStateStatus::Callable);
+    gsx.Observe();
+
+    QVERIFY(!gsx.WasGsxDownSinceLastObserve());
+    QVERIFY(gsx.WasStateCompleted(GsxState::Refueling));
+}
+
+void GsxInterfaceTest::aServiceFoundAvailableAfterTheMemoryIsRecordedAsCompleted()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        const MemoryBag memory = MemoryOfAServiceLeftAt(stateLVar, GsxStateStatus::Active);
+
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        gsx.RestoreMemory(memory, false);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(GsxStateStatus::Callable), 3);
+
+        QVERIFY2(gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::aServiceRestoredAfterACouatlRestartIsInterruptedNotCompleted()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        for (const auto status : {GsxStateStatus::Requested, GsxStateStatus::Active, GsxStateStatus::Completing})
+        {
+            const MemoryBag memory = MemoryOfAServiceLeftAt(stateLVar, status);
+
+            FakeVariableGateway gateway;
+            GsxStateService gsx(&gateway);
+
+            gsx.RestoreMemory(memory, true);
+            ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(GsxStateStatus::Callable), 3);
+
+            QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
+        }
+    }
+}
+
+void GsxInterfaceTest::aPushbackAndADeiceRestoredUnderwayAreNeverRecordedCompletedByWhatTheyFindIdle()
+{
+    for (const auto& [stateLVar, service] : {std::pair{kPushbackVehicleState, GsxState::Pushback},
+                                             std::pair{kDeiceState, GsxState::Deice}})
+    {
+        for (const bool restarted : {false, true})
+        {
+            for (const auto saved : {GsxStateStatus::Requested, GsxStateStatus::Active, GsxStateStatus::Completing})
+            {
+                for (const auto found : {GsxStateStatus::Callable, GsxStateStatus::Bypassed})
+                {
+                    const MemoryBag memory = MemoryOfAServiceLeftAt(stateLVar, saved);
+
+                    FakeVariableGateway gateway;
+                    GsxStateService gsx(&gateway);
+
+                    gsx.RestoreMemory(memory, restarted);
+                    ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(found), 3);
+
+                    QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
+                }
+            }
+        }
+    }
+}
+
+void GsxInterfaceTest::aPushbackSavedWhileTheTugApproachesAndReadMidPushIsNotRecordedCompleted()
+{
+    const MemoryBag memory = MemoryOfAServiceLeftAt(kPushbackVehicleState, GsxStateStatus::Active);
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gsx.RestoreMemory(memory, false);
+    ObserveFor(gsx, gateway, kPushbackVehicleState, 1.0, AsLVar(GsxStateStatus::Bypassed), 3);
+
+    QVERIFY(!gsx.WasStateCompleted(GsxState::Pushback));
+}
+
+void GsxInterfaceTest::aRestoredPushbackAndDeiceSeenActiveAgainFollowTheLiveRule()
+{
+    for (const auto& [stateLVar, service] : {std::pair{kPushbackVehicleState, GsxState::Pushback},
+                                             std::pair{kDeiceState, GsxState::Deice}})
+    {
+        const MemoryBag memory = MemoryOfAServiceLeftAt(stateLVar, GsxStateStatus::Active);
+
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        gsx.RestoreMemory(memory, true);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(GsxStateStatus::Active), 3);
+
+        QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
+
+        ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(GsxStateStatus::Callable), 3);
+
+        QVERIFY2(gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::aRestartIsNotWrittenIntoTheMemoryBeforeAReadingConfirmsIt()
+{
+    const MemoryBag memory = MemoryOfAServiceLeftAt(kBoardingState, GsxStateStatus::Active);
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gsx.RestoreMemory(memory, true);
+
+    QVERIFY(gsx.TakeMemory() == memory);
+}
+
+void GsxInterfaceTest::aRestartDoesNotMarkAPushbackOrADeiceAsHavingLostItsCouatl()
+{
+    for (const auto& [stateLVar, entry] : {std::pair{kPushbackVehicleState, "gsx.service.pushback.couatlDiedDuringRun"},
+                                           std::pair{kDeiceState, "gsx.service.deice.couatlDiedDuringRun"}})
+    {
+        const MemoryBag memory = MemoryOfAServiceLeftAt(stateLVar, GsxStateStatus::Active);
+
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        gsx.RestoreMemory(memory, true);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(GsxStateStatus::Active), 3);
+
+        QVERIFY2(!gsx.TakeMemory().Flag(entry, true), entry);
+    }
+}
+
+void GsxInterfaceTest::restoringAnEmptyMemoryForgetsWhatTheServiceSawBefore()
+{
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvarSpans[kCouatlStarted] = LVarSpan{.min = 0.0, .max = 1.0, .received = true};
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, AsLVar(GsxStateStatus::Callable), 1);
+
+    QVERIFY(gsx.WasGsxDownSinceLastObserve());
+
+    gsx.RestoreMemory(MemoryBag{}, false);
+
+    QVERIFY(!gsx.WasGsxDownSinceLastObserve());
+
+    gateway.lvars[kBoardingState] = AsLVar(GsxStateStatus::Active);
+    gateway.lvars[kNumPassengersBoardingTotal] = 40.0;
+    gsx.Observe();
+
+    QCOMPARE(gsx.GetBoardedPassengers(), 40);
+}
+
+void GsxInterfaceTest::aRestoredCargoPercentIsClampedLikeTheCounts()
+{
+    const std::vector<MemoryBag::Entry> kept = MemoryOfEverythingTheServiceKeeps().Entries();
+
+    for (const auto& [saved, expected] : {std::pair{"250", 100.0}, std::pair{"-5", 0.0}})
+    {
+        std::vector<MemoryBag::Entry> entries = kept;
+        for (MemoryBag::Entry& entry : entries)
+        {
+            if (entry.first == "gsx.boardingCargo.last")
+            {
+                entry.second = saved;
+            }
+        }
+
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        gsx.RestoreMemory(MemoryBag(entries), false);
+
+        QCOMPARE(gsx.GetBoardingCargoPercent(), expected);
+    }
+}
+
+void GsxInterfaceTest::aServiceRestoredAsRequestedAndFoundAvailableCountsAsCompleted()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        const MemoryBag memory = MemoryOfAServiceLeftAt(stateLVar, GsxStateStatus::Requested);
+
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        gsx.RestoreMemory(memory, false);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(GsxStateStatus::Callable), 3);
+
+        QVERIFY2(gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::theRestoredMarkClearsAtTheFirstReadingSoTheCompletionCountsOnce()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        const MemoryBag memory = MemoryOfAServiceLeftAt(stateLVar, GsxStateStatus::Requested);
+
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        gsx.RestoreMemory(memory, false);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(GsxStateStatus::Callable), 3);
+        gsx.OnTurnaroundTurned();
+        ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(GsxStateStatus::Requested), 3);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(GsxStateStatus::Callable), 3);
+
+        QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::aLiveServiceGoingFromRequestedToAvailableIsNotCompleted()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(GsxStateStatus::Requested), 3);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, AsLVar(GsxStateStatus::Callable), 3);
+
+        QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::aCompletedServiceStaysCompletedAcrossTheMemory()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        const MemoryBag memory = MemoryOfAServiceLeftAt(stateLVar, GsxStateStatus::Completed);
+
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        QVERIFY2(!gsx.WasStateCompleted(service), stateLVar);
+
+        gsx.RestoreMemory(memory, false);
+
+        QVERIFY2(gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::aCouatlDeathTheLastProcessSawSurvivesTheMemory()
+{
+    FakeVariableGateway previousGateway;
+    GsxStateService previous(&previousGateway);
+
+    ObserveFor(previous, previousGateway, kBoardingState, 1.0, 5.0, 10);
+    ObserveFor(previous, previousGateway, kBoardingState, 0.0, 5.0, 12);
+    ObserveFor(previous, previousGateway, kBoardingState, 1.0, 5.0, 3);
+
+    const MemoryBag memory = previous.TakeMemory();
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gsx.RestoreMemory(memory, false);
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, AsLVar(GsxStateStatus::Callable), 3);
+
+    QVERIFY(!gsx.WasStateCompleted(GsxState::Boarding));
+}
+
+void GsxInterfaceTest::aRestoredCargoReadingStillIgnoresTheStalePercent()
+{
+    FakeVariableGateway previousGateway;
+    GsxStateService previous(&previousGateway);
+
+    previousGateway.lvars[kBoardingState] = AsLVar(GsxStateStatus::Active);
+    previousGateway.lvars[kBoardingCargoPercent] = 92.0;
+
+    QCOMPARE(previous.GetBoardingCargoPercent(), 0.0);
+
+    const MemoryBag memory = previous.TakeMemory();
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kBoardingState] = AsLVar(GsxStateStatus::Active);
+    gateway.lvars[kBoardingCargoPercent] = 92.0;
+    gsx.RestoreMemory(memory, false);
+
+    QCOMPARE(gsx.GetBoardingCargoPercent(), 0.0);
+
+    gateway.lvars[kBoardingCargoPercent] = 95.0;
+
+    QCOMPARE(gsx.GetBoardingCargoPercent(), 95.0);
+}
+
+void GsxInterfaceTest::aServiceThatGoesThroughCompletingStraightToIdleIsRecordedAsCompleted()
+{
+    for (const auto& [stateLVar, service] : kServicesThatEndThroughCompleted)
+    {
+        FakeVariableGateway gateway;
+        GsxStateService gsx(&gateway);
+
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 5.0, 30);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 7.0, 2);
+        ObserveFor(gsx, gateway, stateLVar, 1.0, 1.0, 5);
+
+        QVERIFY2(gsx.WasStateCompleted(service), stateLVar);
+    }
+}
+
+void GsxInterfaceTest::restoringBeforeOrAfterTheFirstReadingGivesTheSameVerdict()
+{
+    const MemoryBag memory = MemoryOfAServiceLeftAt(kBoardingState, GsxStateStatus::Requested);
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, AsLVar(GsxStateStatus::Callable), 3);
+
+    QVERIFY(!gsx.WasStateCompleted(GsxState::Boarding));
+
+    gsx.RestoreMemory(memory, false);
+    ObserveFor(gsx, gateway, kBoardingState, 1.0, AsLVar(GsxStateStatus::Callable), 3);
+
+    QVERIFY(gsx.WasStateCompleted(GsxState::Boarding));
+}
+
+void GsxInterfaceTest::theMemoryRestoresToTheMemoryItWasTakenFrom()
+{
+    const MemoryBag memory = MemoryOfEverythingTheServiceKeeps();
+
+    FakeVariableGateway fresh;
+    const GsxStateService untouched(&fresh);
+
+    QVERIFY(memory != untouched.TakeMemory());
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gsx.RestoreMemory(memory, false);
+
+    QVERIFY(gsx.TakeMemory() == memory);
+}
+
+void GsxInterfaceTest::theMemoryIgnoresUnknownNames()
+{
+    const MemoryBag memory = MemoryOfEverythingTheServiceKeeps();
+
+    std::vector<MemoryBag::Entry> entries = memory.Entries();
+    entries.emplace_back("doorSync.FwdPax", "open");
+    entries.emplace_back("gsx.somethingNobodyKnows", "1");
+    entries.emplace_back("", "");
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gsx.RestoreMemory(MemoryBag(entries), false);
+
+    QVERIFY(gsx.TakeMemory() == memory);
+}
+
+void GsxInterfaceTest::anEmptyMemoryRestoresTheStateOfAReset()
+{
+    FakeVariableGateway untouchedGateway;
+    const GsxStateService untouched(&untouchedGateway);
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gsx.RestoreMemory(MemoryOfEverythingTheServiceKeeps(), false);
+
+    QVERIFY(gsx.TakeMemory() != untouched.TakeMemory());
+
+    gsx.RestoreMemory(MemoryBag{}, false);
+
+    QVERIFY(gsx.TakeMemory() == untouched.TakeMemory());
+}
+
+void GsxInterfaceTest::theGpuClearSightingSurvivesTheMemory()
+{
+    FakeVariableGateway previousGateway;
+    GsxStateService previous(&previousGateway);
+
+    previousGateway.lvars[kGpuConnected] = 0.0;
+    previous.Observe();
+
+    const MemoryBag memory = previous.TakeMemory();
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kGpuState] = AsLVar(GsxStateStatus::Callable);
+    gateway.lvars[kGpuConnected] = 1.0;
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Disconnected);
+
+    gsx.RestoreMemory(memory, false);
+
+    QCOMPARE(gsx.GetGpuStatus(), GroundPowerStatus::Connected);
+}
+
+void GsxInterfaceTest::theTakeoverOfFuelAndPayloadSurvivesTheMemory()
+{
+    FakeVariableGateway previousGateway;
+    GsxStateService previous(&previousGateway);
+
+    previous.TakeOverFuelAndPayload();
+
+    const MemoryBag memory = previous.TakeMemory();
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gateway.lvars[kAutomationFuel] = 1.0;
+    gateway.lvars[kAutomationPayload] = 1.0;
+    gsx.ReassertTakeovers();
+
+    QCOMPARE(gateway.Written(kAutomationFuel), 1.0);
+
+    gsx.RestoreMemory(memory, false);
+    gsx.ReassertTakeovers();
+
+    QCOMPARE(gateway.Written(kAutomationFuel), 0.0);
+    QCOMPARE(gateway.Written(kAutomationPayload), 0.0);
+}
+
+void GsxInterfaceTest::reassertingBeforeTheAutomationFlagsArriveStillTakesFuelAndPayloadBack()
+{
+    FakeVariableGateway previousGateway;
+    GsxStateService previous(&previousGateway);
+
+    previous.TakeOverFuelAndPayload();
+
+    FakeVariableGateway gateway;
+    GsxStateService gsx(&gateway);
+
+    gsx.RestoreMemory(previous.TakeMemory(), false);
+    gsx.ReassertTakeovers();
+
+    QCOMPARE(gateway.WriteCount(kAutomationFuel), 1);
+    QCOMPARE(gateway.WriteCount(kAutomationPayload), 1);
+    QCOMPARE(gateway.Written(kAutomationFuel), 0.0);
+    QCOMPARE(gateway.Written(kAutomationPayload), 0.0);
+
+    gsx.ReassertTakeovers();
+
+    QCOMPARE(gateway.WriteCount(kAutomationFuel), 1);
+    QCOMPARE(gateway.WriteCount(kAutomationPayload), 1);
+
+    gateway.lvars[kAutomationFuel] = 1.0;
+    gateway.lvars[kAutomationPayload] = 1.0;
+    gsx.ReassertTakeovers();
+
+    QCOMPARE(gateway.WriteCount(kAutomationFuel), 2);
+    QCOMPARE(gateway.Written(kAutomationFuel), 0.0);
+    QCOMPARE(gateway.Written(kAutomationPayload), 0.0);
+}
+
+void GsxInterfaceTest::theResumeReadingsHaveArrivedOnlyWhenEveryOneHas()
+{
+    FakeVariableGateway gateway;
+    const GsxStateService gsx(&gateway);
+
+    for (const char* reading : kResumeReadings)
+    {
+        QVERIFY2(!gsx.HaveResumeReadingsArrived(), reading);
+
+        gateway.lvars[reading] = 1.0;
+    }
+
+    QVERIFY(gsx.HaveResumeReadingsArrived());
+}
+
+void GsxInterfaceTest::theResumeReadingsHaveNotArrivedWhenAnyOneIsMissingAlone()
+{
+    for (const char* missing : kResumeReadings)
+    {
+        FakeVariableGateway gateway;
+        const GsxStateService gsx(&gateway);
+
+        for (const char* reading : kResumeReadings)
+        {
+            if (reading != missing)
+            {
+                gateway.lvars[reading] = 1.0;
+            }
+        }
+
+        QVERIFY2(!gsx.HaveResumeReadingsArrived(), missing);
+    }
+}
+
+void GsxInterfaceTest::askingIfTheResumeReadingsArrivedRequestsEveryOne()
+{
+    FakeVariableGateway gateway;
+    const GsxStateService gsx(&gateway);
+
+    QVERIFY(!gsx.HaveResumeReadingsArrived());
+
+    for (const char* reading : kResumeReadings)
+    {
+        QVERIFY2(gateway.requestedLVars.contains(reading), reading);
+    }
 }
 
 QTEST_APPLESS_MAIN(GsxInterfaceTest)

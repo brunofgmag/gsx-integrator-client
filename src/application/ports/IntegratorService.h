@@ -22,6 +22,7 @@ public:
     [[nodiscard]] virtual CommandResult SetAutomationEnabled(bool enabled) = 0;
     [[nodiscard]] virtual CommandResult StartLoading() = 0;
     [[nodiscard]] virtual CommandResult RestartFlow() = 0;
+    [[nodiscard]] virtual CommandResult ResumeSavedTurnaround() = 0;
     [[nodiscard]] virtual CommandResult ReloadSimbrief() = 0;
     [[nodiscard]] virtual CommandResult FixGsxProfile() = 0;
     [[nodiscard]] virtual CommandResult FixPmdgOptions() = 0;

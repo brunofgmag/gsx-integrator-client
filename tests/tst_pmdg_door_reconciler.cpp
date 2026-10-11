@@ -30,6 +30,16 @@ private slots:
     static void closedBaselineDoesNotCommandAnUnreadDoorShut();
     static void closingUsesTheSlotThatWasOpened();
     static void stuckOnlyWhenTheDoorIsWantedOpenAndRefuses();
+    static void anUnreadDoorWaitsWhileTheReadingsArePending();
+    static void aDoorReadOpenAfterTheWaitIsNeverToggled();
+    static void aDoorReadClosedAfterTheWaitIsOpenedOnce();
+    static void anUnreadDoorIsCommandedOnceTheWaitEnds();
+    static void pendingReadingsDoNotHoldADoorThatIsRead();
+    static void anIdleReconcilerHasNothingToRemember();
+    static void theDesiredTargetsComeBackWithoutTogglingAnUnreadDoor();
+    static void aRestoredTargetStillRetriesADoorReadAgainstIt();
+    static void aRestoredOpenedSlotIsTheOneThatCloses();
+    static void garbageInTheMemoryIsIgnored();
 };
 
 void PmdgDoorReconcilerTest::doorWithoutSlotIsIgnored()
@@ -220,6 +230,205 @@ void PmdgDoorReconcilerTest::stuckOnlyWhenTheDoorIsWantedOpenAndRefuses()
 
     QVERIFY(reconciler.IsStuck(5));
     QVERIFY(!reconciler.IsStuck(4));
+}
+
+void PmdgDoorReconcilerTest::anUnreadDoorWaitsWhileTheReadingsArePending()
+{
+    FakePmdgDoorSource source;
+    source.doorSlots[GsxDoor::FwdPax] = 3;
+    source.observations[3] = DoorObservation::Unknown;
+    source.readingsPending = true;
+    PmdgDoorReconciler reconciler(source, kSlots, DoorBaseline::Closed);
+
+    reconciler.SetDesired(GsxDoor::FwdPax, true);
+    for (int tick = 0; tick < 40; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QVERIFY(source.toggled.empty());
+}
+
+void PmdgDoorReconcilerTest::aDoorReadOpenAfterTheWaitIsNeverToggled()
+{
+    FakePmdgDoorSource source;
+    source.doorSlots[GsxDoor::FwdPax] = 3;
+    source.observations[3] = DoorObservation::Unknown;
+    source.readingsPending = true;
+    PmdgDoorReconciler reconciler(source, kSlots, DoorBaseline::Closed);
+
+    reconciler.SetDesired(GsxDoor::FwdPax, true);
+    for (int tick = 0; tick < 2; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    source.observations[3] = DoorObservation::Open;
+    source.readingsPending = false;
+    for (int tick = 0; tick < 40; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QVERIFY(source.toggled.empty());
+}
+
+void PmdgDoorReconcilerTest::aDoorReadClosedAfterTheWaitIsOpenedOnce()
+{
+    FakePmdgDoorSource source;
+    source.doorSlots[GsxDoor::FwdPax] = 3;
+    source.observations[3] = DoorObservation::Unknown;
+    source.readingsPending = true;
+    PmdgDoorReconciler reconciler(source, kSlots, DoorBaseline::Closed);
+
+    reconciler.SetDesired(GsxDoor::FwdPax, true);
+    reconciler.Reconcile();
+
+    source.observations[3] = DoorObservation::Closed;
+    source.readingsPending = false;
+    reconciler.Reconcile();
+
+    QCOMPARE(ToggleCount(source, 3), 1);
+}
+
+void PmdgDoorReconcilerTest::anUnreadDoorIsCommandedOnceTheWaitEnds()
+{
+    FakePmdgDoorSource source;
+    source.doorSlots[GsxDoor::FwdPax] = 3;
+    source.observations[3] = DoorObservation::Unknown;
+    source.readingsPending = true;
+    PmdgDoorReconciler reconciler(source, kSlots, DoorBaseline::Closed);
+
+    reconciler.SetDesired(GsxDoor::FwdPax, true);
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QVERIFY(source.toggled.empty());
+
+    source.readingsPending = false;
+    for (int tick = 0; tick < 40; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QCOMPARE(ToggleCount(source, 3), 1);
+}
+
+void PmdgDoorReconcilerTest::pendingReadingsDoNotHoldADoorThatIsRead()
+{
+    FakePmdgDoorSource source;
+    source.doorSlots[GsxDoor::FwdPax] = 3;
+    source.observations[3] = DoorObservation::Closed;
+    source.readingsPending = true;
+    PmdgDoorReconciler reconciler(source, kSlots, DoorBaseline::Closed);
+
+    reconciler.SetDesired(GsxDoor::FwdPax, true);
+    reconciler.Reconcile();
+
+    QCOMPARE(ToggleCount(source, 3), 1);
+}
+
+void PmdgDoorReconcilerTest::anIdleReconcilerHasNothingToRemember()
+{
+    FakePmdgDoorSource source;
+    PmdgDoorReconciler reconciler(source, kSlots, DoorBaseline::Closed);
+    MemoryBag memory;
+
+    reconciler.AppendMemory(memory);
+
+    QVERIFY(memory.Entries().empty());
+}
+
+void PmdgDoorReconcilerTest::theDesiredTargetsComeBackWithoutTogglingAnUnreadDoor()
+{
+    FakePmdgDoorSource dead;
+    dead.doorSlots[GsxDoor::FwdPax] = 3;
+    dead.observations[3] = DoorObservation::Closed;
+    PmdgDoorReconciler deadReconciler(dead, kSlots, DoorBaseline::Closed);
+    deadReconciler.SetDesired(GsxDoor::FwdPax, true);
+    deadReconciler.Reconcile();
+    MemoryBag memory;
+    deadReconciler.AppendMemory(memory);
+
+    FakePmdgDoorSource born;
+    born.doorSlots[GsxDoor::FwdPax] = 3;
+    born.observations[3] = DoorObservation::Unknown;
+    PmdgDoorReconciler reconciler(born, kSlots, DoorBaseline::Closed);
+    reconciler.RestoreMemory(memory);
+    for (int tick = 0; tick < 40; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QVERIFY(born.toggled.empty());
+}
+
+void PmdgDoorReconcilerTest::aRestoredTargetStillRetriesADoorReadAgainstIt()
+{
+    FakePmdgDoorSource dead;
+    dead.doorSlots[GsxDoor::FwdPax] = 3;
+    dead.observations[3] = DoorObservation::Closed;
+    PmdgDoorReconciler deadReconciler(dead, kSlots, DoorBaseline::Closed);
+    deadReconciler.SetDesired(GsxDoor::FwdPax, true);
+    deadReconciler.Reconcile();
+    MemoryBag memory;
+    deadReconciler.AppendMemory(memory);
+
+    FakePmdgDoorSource born;
+    born.doorSlots[GsxDoor::FwdPax] = 3;
+    born.observations[3] = DoorObservation::Closed;
+    PmdgDoorReconciler reconciler(born, kSlots, DoorBaseline::Closed);
+    reconciler.RestoreMemory(memory);
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QCOMPARE(ToggleCount(born, 3), 1);
+}
+
+void PmdgDoorReconcilerTest::aRestoredOpenedSlotIsTheOneThatCloses()
+{
+    FakePmdgDoorSource dead;
+    dead.doorSlots[GsxDoor::FwdPax] = 0;
+    dead.observations[0] = DoorObservation::Closed;
+    PmdgDoorReconciler deadReconciler(dead, kSlots, DoorBaseline::Unknown);
+    deadReconciler.SetDesired(GsxDoor::FwdPax, true);
+    deadReconciler.Reconcile();
+    MemoryBag memory;
+    deadReconciler.AppendMemory(memory);
+
+    FakePmdgDoorSource born;
+    born.doorSlots[GsxDoor::FwdPax] = 2;
+    born.observations[0] = DoorObservation::Open;
+    born.observations[2] = DoorObservation::Closed;
+    PmdgDoorReconciler reconciler(born, kSlots, DoorBaseline::Unknown);
+    reconciler.RestoreMemory(memory);
+    reconciler.SetDesired(GsxDoor::FwdPax, false);
+    reconciler.Reconcile();
+
+    QCOMPARE(ToggleCount(born, 0), 1);
+    QCOMPARE(ToggleCount(born, 2), 0);
+}
+
+void PmdgDoorReconcilerTest::garbageInTheMemoryIsIgnored()
+{
+    FakePmdgDoorSource source;
+    source.doorSlots[GsxDoor::FwdPax] = 3;
+    source.observations[3] = DoorObservation::Open;
+    PmdgDoorReconciler reconciler(source, kSlots, DoorBaseline::Unknown);
+    MemoryBag memory;
+    memory.PutNumber("pmdgDoors.desired.3", 7.0);
+
+    reconciler.RestoreMemory(memory);
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QVERIFY(source.toggled.empty());
 }
 
 QTEST_APPLESS_MAIN(PmdgDoorReconcilerTest)

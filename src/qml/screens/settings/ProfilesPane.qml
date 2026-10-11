@@ -143,6 +143,15 @@ ColumnLayout {
 
     SwitchRow {
         Layout.fillWidth: true
+        enabled: !root.ghost && !root.settingsVm.profileSkipRepositionOnNewTurnaroundLocked
+        title: qsTr("Skip repositioning on a new turnaround")
+        helpText: qsTr("After deboarding at the destination, the client starts the next turnaround without repositioning the aircraft.")
+        checked: root.settingsVm.profileSkipRepositionOnNewTurnaroundLocked || root.settingsVm.profileSkipRepositionOnNewTurnaround
+        onToggled: checked => root.settingsVm.profileSkipRepositionOnNewTurnaround = checked
+    }
+
+    SwitchRow {
+        Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Call GPU")
         checked: root.settingsVm.profileCallGpu
@@ -153,6 +162,7 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Place chocks")
+        helpText: qsTr("Chocks are only placed on aircraft that let the client control them.")
         checked: root.settingsVm.profilePlaceChocks
         onToggled: checked => root.settingsVm.profilePlaceChocks = checked
     }
@@ -169,6 +179,7 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: !root.ghost
         title: qsTr("Place chocks on arrival")
+        helpText: qsTr("Chocks are only placed on aircraft that let the client control them.")
         checked: root.settingsVm.profilePlaceChocksOnArrival
         onToggled: checked => root.settingsVm.profilePlaceChocksOnArrival = checked
     }

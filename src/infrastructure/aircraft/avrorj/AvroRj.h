@@ -16,11 +16,7 @@ struct AvroRjAirstairState
     bool requested = false;
     bool stowed = true;
     bool settled = false;
-};
-
-struct AvroRjModuleState
-{
-    bool mirroringFuel = true;
+    bool waitingForPressure = false;
 };
 
 class AvroRj final : public Aircraft
@@ -37,6 +33,11 @@ public:
     void Observe() override;
     void OnLoadingStarted() override;
 
+    [[nodiscard]] bool IsReachable() const override;
+    void OnTurnaroundStarted() override;
+    void OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag& memory) override;
+    [[nodiscard]] MemoryBag TurnaroundMemory() const override;
+
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
@@ -48,13 +49,14 @@ public:
     void SetCurrentFuelKg(double fuelKg) override;
     [[nodiscard]] double GetCurrentZfwKg() const override;
     [[nodiscard]] double GetFuelCapacityKg() const override;
-    [[nodiscard]] bool IsModuleMirroringFuel() const;
 
     [[nodiscard]] bool SupportsStairsOrJetways() const override;
     [[nodiscard]] bool CarriesItsOwnStairs() const override { return true; }
     [[nodiscard]] const std::vector<AircraftRule*>& Rules() const override;
     [[nodiscard]] bool IsJetwayAvailable() const;
+    [[nodiscard]] bool IsOwnAirstairTheWayIn() const;
     [[nodiscard]] bool AreAirstairsSettled() const;
+    [[nodiscard]] bool AreOwnStairsWaitingForPressure() const override;
     [[nodiscard]] bool IsHeldForDeparture() const;
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
     [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Client; }
@@ -66,7 +68,6 @@ public:
     bool SetChocks(bool placed) override;
 
     void HoldDoorsClosed(bool hold) override;
-    void HoldPassengerDoorsClosed(bool hold) override;
 
     [[nodiscard]] bool IsPowered() const override;
     [[nodiscard]] DoorStatus GetDoorStatus() const override;
@@ -77,6 +78,7 @@ public:
     [[nodiscard]] bool IsParkingBrakeSet() const override;
 
 private:
+    void ResolveTheResumedAirstairRequest();
     [[nodiscard]] bool IsBeaconOn() const;
     [[nodiscard]] bool AreChocksSet() const;
     [[nodiscard]] double KgPerGallon() const;
@@ -86,8 +88,8 @@ private:
     SmartSwitch smartSwitch_;
     GsxDoorSync doors_;
     AvroRjAirstairState airstair_;
-    AvroRjModuleState module_;
     bool heldForDeparture_ = false;
+    bool airstairRequestAwaitsTheJetway_ = false;
     double lastFuelKg_ = -1.0;
     AvroRjPaxDoorsServeTheAirstairRule doorRule_;
     AvroRjHoldsFollowTheirLoaderRule holdsRule_;

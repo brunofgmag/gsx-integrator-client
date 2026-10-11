@@ -35,6 +35,12 @@ private slots:
     static void resolvesTheFuelRateByTheModes();
     static void aGlobalModeStoredOnTheGlobalRateReadsAsRecommended();
     static void earlyBoardingFollowsTheGlobalUnlessTheProfileIsCustom();
+    static void skippingTheNewTurnaroundRepositionIsOnByDefault();
+    static void skippingTheRepositionImpliesSkippingItOnTheNewTurnaround();
+    static void theNewTurnaroundOptionFollowsTheGlobalWhenTheProfileUsesGlobal();
+    static void aCustomProfileSkippingTheRepositionImpliesSkippingItOnTheNewTurnaround();
+    static void aCustomProfileThatRepositionsAnswersForItselfNotForTheGlobal();
+    static void aCustomProfileSkippingOnTheNewTurnaroundSkipsItWhileTheGlobalDoesNot();
 };
 
 void AutomationSettingsTest::earlyBoardingFollowsTheGlobalUnlessTheProfileIsCustom()
@@ -113,6 +119,85 @@ void AutomationSettingsTest::resolvesGlobalsWhenProfileMissing()
     QVERIFY(!resolved.callGpuOnArrival);
     QVERIFY(!resolved.placeChocks);
     QVERIFY(resolved.placeChocksOnArrival);
+}
+
+void AutomationSettingsTest::skippingTheNewTurnaroundRepositionIsOnByDefault()
+{
+    const AppSettings settings;
+
+    QVERIFY(settings.skipRepositionOnNewTurnaround);
+    QVERIFY(AircraftProfile{}.skipRepositionOnNewTurnaround);
+    QVERIFY(AutomationSettings{}.skipRepositionOnNewTurnaround);
+    QVERIFY(ResolveAutomationSettings(settings, kProfileId, false, kRecommendedKgs).skipRepositionOnNewTurnaround);
+}
+
+void AutomationSettingsTest::skippingTheRepositionImpliesSkippingItOnTheNewTurnaround()
+{
+    AppSettings settings;
+    settings.skipRepositionOnNewTurnaround = false;
+
+    QVERIFY(!ResolveAutomationSettings(settings, kProfileId, false, kRecommendedKgs).skipRepositionOnNewTurnaround);
+
+    settings.skipReposition = true;
+
+    QVERIFY(ResolveAutomationSettings(settings, kProfileId, false, kRecommendedKgs).skipRepositionOnNewTurnaround);
+}
+
+void AutomationSettingsTest::theNewTurnaroundOptionFollowsTheGlobalWhenTheProfileUsesGlobal()
+{
+    AppSettings settings;
+    settings.skipRepositionOnNewTurnaround = false;
+    AircraftProfile profile;
+    profile.useGlobal = true;
+    profile.skipRepositionOnNewTurnaround = true;
+    settings.profiles.emplace(kProfileId, profile);
+
+    QVERIFY(!ResolveAutomationSettings(settings, kProfileId, false, kRecommendedKgs).skipRepositionOnNewTurnaround);
+}
+
+void AutomationSettingsTest::aCustomProfileSkippingTheRepositionImpliesSkippingItOnTheNewTurnaround()
+{
+    AppSettings settings;
+    AircraftProfile profile;
+    profile.useGlobal = false;
+    profile.skipReposition = true;
+    profile.skipRepositionOnNewTurnaround = false;
+    settings.profiles.emplace(kProfileId, profile);
+
+    QVERIFY(ResolveAutomationSettings(settings, kProfileId, false, kRecommendedKgs).skipRepositionOnNewTurnaround);
+}
+
+void AutomationSettingsTest::aCustomProfileThatRepositionsAnswersForItselfNotForTheGlobal()
+{
+    AppSettings settings;
+    settings.skipReposition = true;
+    AircraftProfile profile;
+    profile.useGlobal = false;
+    profile.skipReposition = false;
+    profile.skipRepositionOnNewTurnaround = false;
+    settings.profiles.emplace(kProfileId, profile);
+
+    const AutomationSettings resolved = ResolveAutomationSettings(settings, kProfileId, false, kRecommendedKgs);
+
+    QVERIFY(!resolved.skipReposition);
+    QVERIFY(!resolved.skipRepositionOnNewTurnaround);
+}
+
+void AutomationSettingsTest::aCustomProfileSkippingOnTheNewTurnaroundSkipsItWhileTheGlobalDoesNot()
+{
+    AppSettings settings;
+    settings.skipReposition = false;
+    settings.skipRepositionOnNewTurnaround = false;
+    AircraftProfile profile;
+    profile.useGlobal = false;
+    profile.skipReposition = false;
+    profile.skipRepositionOnNewTurnaround = true;
+    settings.profiles.emplace(kProfileId, profile);
+
+    const AutomationSettings resolved = ResolveAutomationSettings(settings, kProfileId, false, kRecommendedKgs);
+
+    QVERIFY(!resolved.skipReposition);
+    QVERIFY(resolved.skipRepositionOnNewTurnaround);
 }
 
 void AutomationSettingsTest::resolvesGlobalsWhenProfileUsesGlobal()

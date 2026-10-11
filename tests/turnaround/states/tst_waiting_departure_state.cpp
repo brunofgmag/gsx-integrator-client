@@ -16,6 +16,8 @@ private slots:
     static void staysWhenGsxDoesNotAsk();
     static void staysOnTheGroundOnceTheAircraftLeftTheStand();
     static void leavesForTheFlightWhenAirborneEvenIfGsxStillAsks();
+    static void returnsToTheEngineWaitWhileTheTugStillHoldsTheAircraftAtSpeed();
+    static void staysOnceTheAircraftTaxisAfterAFinishedPushback();
 };
 
 namespace
@@ -125,6 +127,38 @@ void WaitingDepartureStateTest::leavesForTheFlightWhenAirborneEvenIfGsxStillAsks
 
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::OnFlight);
+    QVERIFY(!f.ctx.data.engineWaitResumed);
+}
+
+void WaitingDepartureStateTest::returnsToTheEngineWaitWhileTheTugStillHoldsTheAircraftAtSpeed()
+{
+    TurnaroundStateFixture f;
+    WaitingDepartureState state;
+
+    ArmStillAsking(f);
+    f.gsxService.pushbackStarted = true;
+    f.aircraft.engineRunning = true;
+    f.gsxService.groundSpeedKnots = 20.4;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingForEngines);
+    QVERIFY(f.ctx.data.engineWaitResumed);
+}
+
+void WaitingDepartureStateTest::staysOnceTheAircraftTaxisAfterAFinishedPushback()
+{
+    TurnaroundStateFixture f;
+    WaitingDepartureState state;
+
+    ArmStillAsking(f);
+    f.gsxService.pushbackStarted = true;
+    f.gsxService.pushbackFinished = true;
+    f.aircraft.engineRunning = true;
+    f.gsxService.groundSpeedKnots = 12.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
     QVERIFY(!f.ctx.data.engineWaitResumed);
 }
 

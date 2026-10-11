@@ -1,9 +1,21 @@
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
 #include <QtTest/QTest>
 
 #include "TestDoubles.h"
 #include "doubles/FakeCommBusBridgeGateway.h"
 #include "../src/infrastructure/efb/EfbStatePublisher.h"
 #include "../src/viewmodel/OperationsViewModel.h"
+
+namespace
+{
+    QJsonObject LastPublishedState(const FakeCommBusBridgeGateway& bridge)
+    {
+        const std::string& payload = std::get<2>(bridge.calls.back());
+
+        return QJsonDocument::fromJson(QByteArray::fromStdString(payload)).object();
+    }
+}
 
 class EfbStatePublisherTest final : public QObject
 {
@@ -30,6 +42,10 @@ private slots:
     static void carriesTheEffectiveFuelRateTheFuelCardShows();
     static void carriesTheDeparturePageTipTheWindowWrites();
     static void carriesTheEstimatedWeightThePaxCardTargetsWhileDeboarding();
+    static void carriesTheOwnStairsPressureAdvisoryTheScreenShows();
+    static void carriesTheResumeDecisionTheScreenAsks();
+    static void carriesTheHoldReasonTheScreenShowsAsThePhaseTip();
+    static void carriesTheSnapshotWaitOnALaterPhaseToo();
 };
 
 void EfbStatePublisherTest::publishesTheSnapshotWhenItChanges()
@@ -343,6 +359,115 @@ void EfbStatePublisherTest::carriesTheDroppedServiceSentenceTheWindowWrites()
         + OperationsViewModel::GetServiceInterruptedAdvisoryText().toStdString() + R"(")";
 
     QVERIFY(std::get<2>(bridge.calls.back()).find(expected) != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesTheOwnStairsPressureAdvisoryTheScreenShows()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.ownStairsWaitingForPressure = true;
+    service.Notify();
+    publisher.Publish();
+
+    const std::string expectedText = R"("ownStairsPressureAdvisoryText":")"
+        + OperationsViewModel::GetOwnStairsPressureAdvisoryText().toStdString() + R"(")";
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("ownStairsWaitingForPressure":true)") != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(expectedText) != std::string::npos);
+
+    service.snapshot.ownStairsWaitingForPressure = false;
+    service.Notify();
+    publisher.Publish();
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("ownStairsWaitingForPressure":false)") != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesTheResumeDecisionTheScreenAsks()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.turnaroundHold = TurnaroundHold::AwaitingResumeDecision;
+    service.Notify();
+    publisher.Publish();
+
+    const QJsonObject asking = LastPublishedState(bridge);
+
+    QVERIFY(!viewModel.GetResumeDecisionAdvisoryText().isEmpty());
+    QCOMPARE(asking.value(QLatin1String("resumeDecisionAdvisoryText")).toString(),
+             viewModel.GetResumeDecisionAdvisoryText());
+    QCOMPARE(asking.value(QLatin1String("resumeTurnaroundLabel")).toString(), viewModel.GetResumeTurnaroundLabel());
+    QCOMPARE(asking.value(QLatin1String("restartFlowLabel")).toString(),
+             OperationsViewModel::GetRestartFlowLabel());
+
+    service.snapshot.turnaroundHold = TurnaroundHold::None;
+    service.Notify();
+    publisher.Publish();
+
+    const QJsonObject answered = LastPublishedState(bridge);
+
+    QVERIFY(answered.contains(QLatin1String("resumeDecisionAdvisoryText")));
+    QVERIFY(answered.value(QLatin1String("resumeDecisionAdvisoryText")).toString().isEmpty());
+    QVERIFY(answered.contains(QLatin1String("resumeTurnaroundLabel")));
+    QVERIFY(answered.value(QLatin1String("resumeTurnaroundLabel")).toString().isEmpty());
+}
+
+void EfbStatePublisherTest::carriesTheHoldReasonTheScreenShowsAsThePhaseTip()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.phase = TurnaroundPhase::WaitingSupportedAircraft;
+    service.snapshot.turnaroundHold = TurnaroundHold::AwaitingAircraft;
+    service.snapshot.automationEnabled = true;
+    service.snapshot.sessionActive = true;
+    service.snapshot.sessionReady = true;
+    service.snapshot.aircraftSupported = true;
+    service.snapshot.gsxAvailable = true;
+    service.Notify();
+    publisher.Publish();
+
+    QVERIFY(viewModel.GetPhaseTip().contains(QStringLiteral("waiting for the aircraft to respond")));
+    QCOMPARE(LastPublishedState(bridge).value(QLatin1String("phaseTip")).toString(), viewModel.GetPhaseTip());
+}
+
+void EfbStatePublisherTest::carriesTheSnapshotWaitOnALaterPhaseToo()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.phase = TurnaroundPhase::WaitingReadyToPush;
+    service.snapshot.turnaroundHold = TurnaroundHold::AwaitingGsxSnapshot;
+    service.snapshot.automationEnabled = true;
+    service.Notify();
+    publisher.Publish();
+
+    const QString published = LastPublishedState(bridge).value(QLatin1String("phaseTip")).toString();
+
+    QVERIFY(published.startsWith(QStringLiteral("The client is waiting for GSX to send its state.")));
+    QCOMPARE(published, viewModel.GetPhaseTip());
 }
 
 void EfbStatePublisherTest::carriesTheLoaderCountdownTheWindowWrites()

@@ -1,6 +1,7 @@
 #include <QtTest/QTest>
 
 #include <map>
+#include <vector>
 #include "doubles/FakeVariableGateway.h"
 #include "../src/infrastructure/gsx/GsxDoorSync.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
@@ -12,6 +13,7 @@ namespace
     constexpr double kCouatlUp = 1.0;
     constexpr double kCouatlDown = 0.0;
     constexpr double kJetwayDocked = 5.0;
+    constexpr double kNoJetway = 2.0;
     constexpr double kStairsParked = 1.0;
     constexpr double kStairsFinalPosition = gsx::states::kStairsFinalPosition;
 
@@ -83,6 +85,27 @@ private slots:
     static void keepsThePassengerDoorsShutWhenStairsArriveWhileTheyAreHeld();
     static void releasesThePassengerHoldWhenTheDepartureHoldIsReleased();
     static void stillClosesTheCargoDoorsForDepartureAfterThePassengerHold();
+    static void closesADoorTheLastProcessOpenedOnceItsVehicleIsGone();
+    static void leavesADoorAloneWhenTheLastProcessSavedNothingAboutIt();
+    static void waitsForTheVehicleStateBeforeClosingARestoredDoor();
+    static void aRestoredForwardPassengerDoorWaitsForTheJetwayAndTheFrontStairs();
+    static void aHeldCloseDoesNotWaitForTheVehicleState();
+    static void aRestoredProcessDistrustsTheVehicleStateAGsxRestartLeftBehind();
+    static void aRestoredProcessDistrustsAVehicleStateThatArrivesAfterTheRestore();
+    static void aRestoredProcessTrustsTheVehicleStateWhenGsxDidNotRestart();
+    static void theDoorTargetsSurviveTheMemory();
+    static void theMemoryOmitsTheDoorsWithAnUnknownTarget();
+    static void theMemoryIgnoresNamesThatAreNotTheDoorSyncs();
+    static void theMemoryIgnoresAValueThatIsNeitherOpenNorClosed();
+    static void anEmptyMemoryLeavesEveryTargetUnknown();
+    static void aRestoredForwardPassengerDoorWaitsForTheJetwayWhenOnlyTheFrontStairsArrived();
+    static void aDoorThisProcessOpenedClosesWithoutWaitingForTheOtherVehicle();
+    static void aRestoredDoorClosedByCloseAllAndReopenedByTheJetwayClosesAgain();
+    static void aRestoredDoorIsClosedWhenItsVehicleLeavesAfterTheyArrived();
+    static void distrustsAVehicleStateThatHadNotArrivedAtALiveRestart();
+    static void aSecondLiveRestartDistrustsTheStateGsxLeftBehindThen();
+    static void restoringWithoutAGsxRestartForgetsTheStatesAnEarlierRestoreDistrusted();
+    static void restoringWithoutAGsxRestartForgetsTheStatesAnEarlierRestoreWasWaitingFor();
 };
 
 void GsxDoorSyncTest::followsVehicleStateWhileCouatlKeepsRunning()
@@ -481,6 +504,544 @@ void GsxDoorSyncTest::stillClosesTheCargoDoorsForDepartureAfterThePassengerHold(
 
     QVERIFY(recorder.Closed(GsxDoor::FwdCargo));
     QVERIFY(recorder.Closed(GsxDoor::AftCargo));
+}
+
+void GsxDoorSyncTest::closesADoorTheLastProcessOpenedOnceItsVehicleIsGone()
+{
+    MemoryBag memory;
+    {
+        FakeVariableGateway previousGateway;
+        previousGateway.lvars[kCouatlStarted] = kCouatlUp;
+        previousGateway.lvars[kBaggageLoaderFrontState] = gsx::states::kLoaderWaitingForDoor;
+
+        GsxDoorSync previous(&previousGateway);
+        Recorder previousRecorder;
+
+        Tick(previous, previousGateway, previousRecorder);
+        QVERIFY(previousRecorder.Opened(GsxDoor::FwdCargo));
+
+        previous.AppendMemory(memory);
+    }
+
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kBaggageLoaderFrontState] = 0.0;
+
+    GsxDoorSync restored(&gateway);
+    Recorder recorder;
+
+    restored.RestoreMemory(memory, false);
+    Tick(restored, gateway, recorder);
+    Tick(restored, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::FwdCargo));
+    QCOMPARE(recorder.writes, 1);
+}
+
+void GsxDoorSyncTest::leavesADoorAloneWhenTheLastProcessSavedNothingAboutIt()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kBaggageLoaderFrontState] = 0.0;
+
+    GsxDoorSync newborn(&gateway);
+    Recorder recorder;
+
+    Tick(newborn, gateway, recorder);
+    Tick(newborn, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 0);
+}
+
+void GsxDoorSyncTest::waitsForTheVehicleStateBeforeClosingARestoredDoor()
+{
+    MemoryBag memory;
+    memory.PutText("doorSync.FwdCargo", "open");
+
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+
+    GsxDoorSync restored(&gateway);
+    Recorder recorder;
+
+    restored.RestoreMemory(memory, false);
+    Tick(restored, gateway, recorder);
+    Tick(restored, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 0);
+
+    gateway.lvars[kBaggageLoaderFrontState] = 0.0;
+    Tick(restored, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::FwdCargo));
+    QCOMPARE(recorder.writes, 1);
+}
+
+void GsxDoorSyncTest::aRestoredForwardPassengerDoorWaitsForTheJetwayAndTheFrontStairs()
+{
+    MemoryBag memory;
+    memory.PutText("doorSync.FwdPax", "open");
+
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kJetway] = kNoJetway;
+
+    GsxDoorSync restored(&gateway);
+    Recorder recorder;
+
+    restored.RestoreMemory(memory, false);
+    Tick(restored, gateway, recorder);
+    Tick(restored, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 0);
+
+    gateway.lvars[kPassengerStairsFrontState] = 0.0;
+    Tick(restored, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::FwdPax));
+    QCOMPARE(recorder.writes, 1);
+}
+
+void GsxDoorSyncTest::aHeldCloseDoesNotWaitForTheVehicleState()
+{
+    MemoryBag memory;
+    memory.PutText("doorSync.AftPax", "open");
+
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+
+    GsxDoorSync restored(&gateway);
+    Recorder recorder;
+
+    restored.RestoreMemory(memory, false);
+    restored.HoldPassengerDoorsClosed(true);
+    Tick(restored, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::AftPax));
+}
+
+void GsxDoorSyncTest::aRestoredProcessDistrustsTheVehicleStateAGsxRestartLeftBehind()
+{
+    MemoryBag memory;
+    memory.PutText("doorSync.AftPax", "open");
+
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kPassengerStairsRearState] = gsx::states::kStairsFinalPosition;
+
+    GsxDoorSync restored(&gateway);
+    Recorder recorder;
+
+    restored.RestoreMemory(memory, true);
+    Tick(restored, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::AftPax));
+    QCOMPARE(restored.VehicleState(kPassengerStairsRearState, 0.0), 0.0);
+
+    gateway.lvars[kPassengerStairsRearState] = kStairsParked;
+    Tick(restored, gateway, recorder);
+
+    gateway.lvars[kPassengerStairsRearState] = gsx::states::kStairsFinalPosition;
+    Tick(restored, gateway, recorder);
+
+    QVERIFY(recorder.Opened(GsxDoor::AftPax));
+}
+
+void GsxDoorSyncTest::aRestoredProcessDistrustsAVehicleStateThatArrivesAfterTheRestore()
+{
+    MemoryBag memory;
+    memory.PutText("doorSync.AftPax", "open");
+
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+
+    GsxDoorSync restored(&gateway);
+    Recorder recorder;
+
+    restored.RestoreMemory(memory, true);
+    Tick(restored, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 0);
+
+    gateway.lvars[kPassengerStairsRearState] = gsx::states::kStairsFinalPosition;
+    Tick(restored, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::AftPax));
+    QCOMPARE(recorder.writes, 1);
+}
+
+void GsxDoorSyncTest::aRestoredProcessTrustsTheVehicleStateWhenGsxDidNotRestart()
+{
+    MemoryBag memory;
+    memory.PutText("doorSync.AftPax", "open");
+
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kPassengerStairsRearState] = gsx::states::kStairsFinalPosition;
+
+    GsxDoorSync restored(&gateway);
+    Recorder recorder;
+
+    restored.RestoreMemory(memory, false);
+    Tick(restored, gateway, recorder);
+    Tick(restored, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 0);
+    QCOMPARE(restored.VehicleState(kPassengerStairsRearState, 0.0), kStairsFinalPosition);
+}
+
+void GsxDoorSyncTest::theDoorTargetsSurviveTheMemory()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kPassengerStairsRearState] = gsx::states::kStairsFinalPosition;
+    gateway.lvars[kBaggageLoaderFrontState] = gsx::states::kLoaderWaitingForDoor;
+
+    GsxDoorSync previous(&gateway);
+    Recorder recorder;
+
+    Tick(previous, gateway, recorder);
+    previous.HoldPassengerDoorsClosed(true);
+    Tick(previous, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::AftPax));
+    QVERIFY(recorder.Opened(GsxDoor::FwdCargo));
+
+    MemoryBag memory;
+    previous.AppendMemory(memory);
+
+    GsxDoorSync restored(&gateway);
+    restored.RestoreMemory(memory, false);
+
+    MemoryBag again;
+    restored.AppendMemory(again);
+
+    QVERIFY(again == memory);
+}
+
+void GsxDoorSyncTest::theMemoryOmitsTheDoorsWithAnUnknownTarget()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kBaggageLoaderFrontState] = gsx::states::kLoaderWaitingForDoor;
+
+    GsxDoorSync sync(&gateway);
+    Recorder recorder;
+
+    MemoryBag untouched;
+    sync.AppendMemory(untouched);
+
+    QVERIFY(untouched.Entries().empty());
+
+    Tick(sync, gateway, recorder);
+
+    MemoryBag memory;
+    sync.AppendMemory(memory);
+
+    QCOMPARE(memory.Entries().size(), std::size_t{1});
+}
+
+void GsxDoorSyncTest::theMemoryIgnoresNamesThatAreNotTheDoorSyncs()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kBaggageLoaderFrontState] = gsx::states::kLoaderWaitingForDoor;
+
+    GsxDoorSync previous(&gateway);
+    Recorder recorder;
+
+    Tick(previous, gateway, recorder);
+
+    MemoryBag own;
+    previous.AppendMemory(own);
+
+    std::vector<MemoryBag::Entry> entries = own.Entries();
+    entries.emplace_back("gsx.service.boarding.completed", "1");
+    entries.emplace_back("FwdCargo", "open");
+    entries.emplace_back("closeRequested", "1");
+
+    GsxDoorSync restored(&gateway);
+    restored.RestoreMemory(MemoryBag(entries), false);
+
+    MemoryBag again;
+    restored.AppendMemory(again);
+
+    QVERIFY(again == own);
+
+    const std::vector<MemoryBag::Entry> foreign = {
+        {"gsx.service.boarding.completed", "1"},
+        {"FwdCargo", "open"},
+    };
+
+    GsxDoorSync foreignOnly(&gateway);
+    foreignOnly.RestoreMemory(MemoryBag(foreign), false);
+
+    MemoryBag nothing;
+    foreignOnly.AppendMemory(nothing);
+
+    QVERIFY(nothing.Entries().empty());
+}
+
+void GsxDoorSyncTest::theMemoryIgnoresAValueThatIsNeitherOpenNorClosed()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kBaggageLoaderFrontState] = gsx::states::kLoaderWaitingForDoor;
+
+    GsxDoorSync previous(&gateway);
+    Recorder recorder;
+
+    Tick(previous, gateway, recorder);
+
+    MemoryBag own;
+    previous.AppendMemory(own);
+
+    std::vector<MemoryBag::Entry> entries = own.Entries();
+    for (MemoryBag::Entry& entry : entries)
+    {
+        entry.second = "ajar";
+    }
+
+    GsxDoorSync restored(&gateway);
+    restored.RestoreMemory(MemoryBag(entries), false);
+
+    MemoryBag again;
+    restored.AppendMemory(again);
+
+    QVERIFY(again.Entries().empty());
+}
+
+void GsxDoorSyncTest::anEmptyMemoryLeavesEveryTargetUnknown()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kBaggageLoaderFrontState] = gsx::states::kLoaderWaitingForDoor;
+
+    GsxDoorSync sync(&gateway);
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+
+    MemoryBag before;
+    sync.AppendMemory(before);
+
+    QVERIFY(!before.Entries().empty());
+
+    sync.RestoreMemory(MemoryBag{}, false);
+
+    MemoryBag after;
+    sync.AppendMemory(after);
+
+    QVERIFY(after.Entries().empty());
+
+    gateway.lvars[kBaggageLoaderFrontState] = 0.0;
+    Tick(sync, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 1);
+}
+
+void GsxDoorSyncTest::aRestoredForwardPassengerDoorWaitsForTheJetwayWhenOnlyTheFrontStairsArrived()
+{
+    MemoryBag memory;
+    memory.PutText("doorSync.FwdPax", "open");
+
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kPassengerStairsFrontState] = 0.0;
+
+    GsxDoorSync restored(&gateway);
+    Recorder recorder;
+
+    restored.RestoreMemory(memory, false);
+    Tick(restored, gateway, recorder);
+    Tick(restored, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 0);
+
+    gateway.lvars[kJetway] = kNoJetway;
+    Tick(restored, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::FwdPax));
+    QCOMPARE(recorder.writes, 1);
+}
+
+void GsxDoorSyncTest::aDoorThisProcessOpenedClosesWithoutWaitingForTheOtherVehicle()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kJetway] = kJetwayDocked;
+
+    GsxDoorSync sync(&gateway);
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(recorder.Opened(GsxDoor::FwdPax));
+
+    gateway.lvars[kJetway] = kNoJetway;
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::FwdPax));
+}
+
+void GsxDoorSyncTest::aRestoredDoorClosedByCloseAllAndReopenedByTheJetwayClosesAgain()
+{
+    MemoryBag memory;
+    memory.PutText("doorSync.FwdPax", "open");
+
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+
+    GsxDoorSync restored(&gateway);
+    Recorder recorder;
+
+    restored.RestoreMemory(memory, false);
+    Tick(restored, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 0);
+
+    restored.CloseAll(recorder.Writer());
+
+    QVERIFY(recorder.Closed(GsxDoor::FwdPax));
+
+    gateway.lvars[kJetway] = kJetwayDocked;
+    Tick(restored, gateway, recorder);
+
+    QVERIFY(recorder.Opened(GsxDoor::FwdPax));
+
+    gateway.lvars[kJetway] = kNoJetway;
+    Tick(restored, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::FwdPax));
+}
+
+void GsxDoorSyncTest::aRestoredDoorIsClosedWhenItsVehicleLeavesAfterTheyArrived()
+{
+    MemoryBag memory;
+    memory.PutText("doorSync.AftPax", "open");
+
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kPassengerStairsRearState] = kStairsFinalPosition;
+
+    GsxDoorSync restored(&gateway);
+    Recorder recorder;
+
+    restored.RestoreMemory(memory, false);
+    Tick(restored, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 0);
+
+    gateway.lvars[kPassengerStairsRearState] = 0.0;
+    Tick(restored, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::AftPax));
+    QCOMPARE(recorder.writes, 1);
+}
+
+void GsxDoorSyncTest::distrustsAVehicleStateThatHadNotArrivedAtALiveRestart()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+
+    GsxDoorSync sync(&gateway);
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+    gateway.lvars[kCouatlStarted] = kCouatlDown;
+    Tick(sync, gateway, recorder);
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    Tick(sync, gateway, recorder);
+
+    gateway.lvars[kPassengerStairsRearState] = kStairsFinalPosition;
+    Tick(sync, gateway, recorder);
+    Tick(sync, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 0);
+    QCOMPARE(sync.VehicleState(kPassengerStairsRearState, 0.0), 0.0);
+
+    gateway.lvars[kPassengerStairsRearState] = kStairsParked;
+    Tick(sync, gateway, recorder);
+
+    gateway.lvars[kPassengerStairsRearState] = kStairsFinalPosition;
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(recorder.Opened(GsxDoor::AftPax));
+}
+
+void GsxDoorSyncTest::aSecondLiveRestartDistrustsTheStateGsxLeftBehindThen()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kPassengerStairsRearState] = kStairsFinalPosition;
+
+    GsxDoorSync sync(&gateway);
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(recorder.Opened(GsxDoor::AftPax));
+
+    gateway.lvars[kCouatlStarted] = kCouatlDown;
+    Tick(sync, gateway, recorder);
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(recorder.Closed(GsxDoor::AftPax));
+    QCOMPARE(recorder.writes, 2);
+
+    gateway.lvars[kCouatlStarted] = kCouatlDown;
+    gateway.lvars[kPassengerStairsRearState] = gsx::states::kStairsWaitingForDoor;
+    Tick(sync, gateway, recorder);
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    Tick(sync, gateway, recorder);
+    Tick(sync, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 2);
+    QVERIFY(recorder.Closed(GsxDoor::AftPax));
+}
+
+void GsxDoorSyncTest::restoringWithoutAGsxRestartForgetsTheStatesAnEarlierRestoreDistrusted()
+{
+    MemoryBag memory;
+    memory.PutText("doorSync.AftPax", "open");
+
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kPassengerStairsRearState] = kStairsFinalPosition;
+
+    GsxDoorSync restored(&gateway);
+    Recorder recorder;
+
+    restored.RestoreMemory(memory, true);
+    restored.RestoreMemory(memory, false);
+    Tick(restored, gateway, recorder);
+    Tick(restored, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 0);
+    QCOMPARE(restored.VehicleState(kPassengerStairsRearState, 0.0), kStairsFinalPosition);
+}
+
+void GsxDoorSyncTest::restoringWithoutAGsxRestartForgetsTheStatesAnEarlierRestoreWasWaitingFor()
+{
+    MemoryBag memory;
+    memory.PutText("doorSync.AftPax", "open");
+
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+
+    GsxDoorSync restored(&gateway);
+    Recorder recorder;
+
+    restored.RestoreMemory(memory, true);
+    restored.RestoreMemory(memory, false);
+
+    gateway.lvars[kPassengerStairsRearState] = kStairsFinalPosition;
+    Tick(restored, gateway, recorder);
+    Tick(restored, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 0);
+    QCOMPARE(restored.VehicleState(kPassengerStairsRearState, 0.0), kStairsFinalPosition);
 }
 
 QTEST_APPLESS_MAIN(GsxDoorSyncTest)

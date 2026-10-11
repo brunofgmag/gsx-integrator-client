@@ -5,8 +5,10 @@ Item {
 
     property string text: ""
     property string actionText: ""
+    property string secondActionText: ""
 
     signal actionTriggered()
+    signal secondActionTriggered()
 
     visible: root.text.length > 0
     implicitHeight: strip.implicitHeight
@@ -51,7 +53,7 @@ Item {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - badge.implicitWidth - 24
-                       - (actionButton.visible ? actionButton.width + 10 : 0)
+                       - (actions.visible ? actions.width + 10 : 0)
                 text: root.text
                 color: Theme.tipFg
                 font.pixelSize: 11
@@ -59,13 +61,30 @@ Item {
                 wrapMode: Text.WordWrap
             }
 
-            ActionButton {
-                id: actionButton
+            Column {
+                id: actions
                 anchors.verticalCenter: parent.verticalCenter
-                visible: root.actionText.length > 0
-                small: true
-                text: root.actionText
-                onClicked: root.actionTriggered()
+                visible: root.actionText.length > 0 || root.secondActionText.length > 0
+                spacing: 6
+
+                ActionButton {
+                    id: actionButton
+                    anchors.right: parent.right
+                    visible: root.actionText.length > 0
+                    small: true
+                    text: root.actionText
+                    onClicked: root.actionTriggered()
+                }
+
+                ActionButton {
+                    id: secondActionButton
+                    anchors.right: parent.right
+                    visible: root.secondActionText.length > 0
+                    small: true
+                    secondary: true
+                    text: root.secondActionText
+                    onClicked: root.secondActionTriggered()
+                }
             }
         }
     }

@@ -34,6 +34,8 @@ private slots:
     static void sendsGroundConnWhenAvailable();
     static void subscribesPlaneToTabletWithJsFlag();
     static void latchesEfbPlanImportOnFetchSuccess();
+    static void theEfbPlanImportCanBeForgottenAndLatchesAgain();
+    static void theEfbPlanImportCanBeRestored();
     static void probeSignatureIgnoresDriftBelowTheUnit();
     static void readsDoorStatesFromStateReply();
     static void doorInMotionHasNoState();
@@ -146,6 +148,34 @@ void PmdgTabletClientTest::latchesEfbPlanImportOnFetchSuccess()
 
     bridge.Deliver("PlaneToTablet",
                    R"({"message_tag":"simbrief_fetch_result","data":{"result":200},"tablet_side":"CA"})");
+    QVERIFY(client.EfbPlanImported());
+}
+
+void PmdgTabletClientTest::theEfbPlanImportCanBeForgottenAndLatchesAgain()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+    client.Poll();
+    const std::string fetched =
+        R"({"message_tag":"simbrief_fetch_result","data":{"result":200},"tablet_side":"CA"})";
+
+    bridge.Deliver("PlaneToTablet", fetched);
+    QVERIFY(client.EfbPlanImported());
+
+    client.SetEfbPlanImported(false);
+    QVERIFY(!client.EfbPlanImported());
+
+    bridge.Deliver("PlaneToTablet", fetched);
+    QVERIFY(client.EfbPlanImported());
+}
+
+void PmdgTabletClientTest::theEfbPlanImportCanBeRestored()
+{
+    FakeCommBusBridgeGateway bridge;
+    PmdgTabletClient client(&bridge);
+
+    client.SetEfbPlanImported(true);
+
     QVERIFY(client.EfbPlanImported());
 }
 

@@ -6,6 +6,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <QtCore/QStringList>
+#include <QtCore/QtLogging>
 #include "AircraftTicks.h"
 #include "doubles/FakeVariableWriter.h"
 #include "TestDoubles.h"
@@ -67,8 +69,11 @@ namespace
     constexpr int kPlannedPassengers = 150;
     constexpr int kSeatCapacity = 180;
     constexpr double kPlannedCargoKg = 20000.0 - kPlannedPassengers * 84.0;
+    constexpr double kGsxStateCallable = 1.0;
+    constexpr double kGsxStateRequested = 4.0;
     constexpr double kGsxStateActive = 5.0;
     constexpr double kGsxStateCompleted = 6.0;
+    constexpr int kSecondsCallableBeforeTheRefuelCountsAsEnded = 60;
 
     struct FenixFixture
     {
@@ -103,6 +108,58 @@ namespace
             efb.numbers[kFuelTargetDataref] = kPlannedFuelKg;
         }
     };
+
+    class LogCapture
+    {
+    public:
+        LogCapture() : previous_(qInstallMessageHandler(Collect)) { Lines().clear(); }
+        ~LogCapture() { qInstallMessageHandler(previous_); }
+
+        [[nodiscard]] static long long Total() { return Lines().size(); }
+
+    private:
+        static QStringList& Lines()
+        {
+            static QStringList lines;
+
+            return lines;
+        }
+
+        static void Collect(QtMsgType, const QMessageLogContext&, const QString& message)
+        {
+            Lines().append(message);
+        }
+
+        QtMessageHandler previous_;
+    };
+
+    TurnaroundFacts ResumedFacts(const bool loadingStarted, const bool refuelFinished, const bool boardingFinished)
+    {
+        TurnaroundFacts facts;
+        facts.phase = TurnaroundPhase::Loading;
+        facts.loadingStarted = loadingStarted;
+        facts.refuelFinished = refuelFinished;
+        facts.boardingFinished = boardingFinished;
+
+        return facts;
+    }
+
+    void TickTimes(Aircraft& aircraft, FakeVariableGateway& gateway, const int ticks)
+    {
+        for (int tick = 0; tick < ticks; ++tick)
+        {
+            TickAircraft(aircraft, gateway, kLoading);
+        }
+    }
+
+    void TickTimesDelivering(Aircraft& aircraft, FakeVariableGateway& gateway, const int ticks)
+    {
+        for (int tick = 0; tick < ticks; ++tick)
+        {
+            gateway.DeliverWhatWasAsked();
+            TickAircraft(aircraft, gateway, kLoading);
+        }
+    }
 
     int CountOccupiedSeats(const std::string& seatString)
     {
@@ -198,6 +255,24 @@ private slots:
     static void heldInPlaceAcceptsChocksWithoutTheLever();
     static void readyToPushFollowsPowerBeaconAndEngines();
     static void readyToDeboardFollowsSafetyState();
+    static void isReachableOnceTheEfbIsUpAndTheEmptyWeightAndTheFuelReadingHaveArrived();
+    static void aResumeAfterTheRefuelDoesNotArmThirdPartyRefuelingAgain();
+    static void aResumeBeforeTheRefuelFinishedLeavesTheArmedHoseToBeDisarmedAtTheEnd();
+    static void aResumeAfterTheRefuelDisarmsAHoseTheDeadProcessLeftArmedOnceItsReadingArrives();
+    static void aResumeAfterTheRefuelLeavesAHoseThatReadsDisarmedAlone();
+    static void aResumeWhoseRefuelEndedWhileTheClientWasClosedDisarmsTheHose();
+    static void aResumeWhoseLoadingStartedButWhoseRefuelWasNotRegisteredYetKeepsTheHoseUntilTheRefuelEnds();
+    static void aResumeWhoseRefuelServiceStopsReadingCallableBeforeTheWaitIsOverStartsTheWaitAgain();
+    static void aResumeWithTheRefuelStillRunningNeverDisarmsTheHose();
+    static void aResumeAfterAGsxRestartKeepsTheHoseArmedWhileTheServiceIsCallable();
+    static void aResumeBeforeTheLoadingStartedArmsThirdPartyRefuelingAsUsual();
+    static void aResumeBeforeTheBoardingClosedKeepsTheFinalLoadsheetPending();
+    static void aResumeAfterTheBoardingClosedDoesNotRequestTheFinalLoadsheetAgain();
+    static void chocksAreRefusedWhileTheEfbIsUnavailableAndSayWhyOncePerDrop();
+    static void aResumedAircraftClosesTheDoorWhoseVehicleLeftWhileTheClientWasGone();
+    static void resumingNeverClosesEverythingByItself();
+    static void releasingTheDeparturesAlsoReleasesThePassengerDoors();
+    static void resumingAndObservingWriteNothing();
 };
 
 void FenixA32xTest::reportsNamePerVariant()
@@ -1229,6 +1304,339 @@ void FenixA32xTest::holdsTheAftPaxDoorWhileItsExitIsStillMoving()
     TickAircraft(fixture.aircraft, fixture.gateway);
 
     QCOMPARE(fixture.efb.WrittenBool(kAftPaxDoor), 0);
+}
+
+void FenixA32xTest::isReachableOnceTheEfbIsUpAndTheEmptyWeightAndTheFuelReadingHaveArrived()
+{
+    FenixFixture fixture;
+
+    QVERIFY(!fixture.aircraft.IsReachable());
+
+    fixture.gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
+
+    QVERIFY(!fixture.aircraft.IsReachable());
+
+    fixture.gateway.avars[kSimFuelTotalKg] = 5000.0;
+
+    QVERIFY(fixture.aircraft.IsReachable());
+
+    fixture.efb.available = false;
+
+    QVERIFY(!fixture.aircraft.IsReachable());
+}
+
+void FenixA32xTest::aResumeAfterTheRefuelDoesNotArmThirdPartyRefuelingAgain()
+{
+    FenixFixture fixture;
+
+    fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, true, false), MemoryBag{});
+    TickTimes(fixture.aircraft, fixture.gateway, 5);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCompleted;
+    TickTimes(fixture.aircraft, fixture.gateway, 5);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+}
+
+void FenixA32xTest::aResumeBeforeTheRefuelFinishedLeavesTheArmedHoseToBeDisarmedAtTheEnd()
+{
+    FenixFixture fixture;
+
+    fixture.gateway.lvars[kThirdPartyRefuel] = 1.0;
+    fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, false, false), MemoryBag{});
+    TickTimes(fixture.aircraft, fixture.gateway, 5);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCompleted;
+    TickAircraft(fixture.aircraft, fixture.gateway, kLoading);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 1);
+    QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 0.0);
+}
+
+void FenixA32xTest::aResumeAfterTheRefuelDisarmsAHoseTheDeadProcessLeftArmedOnceItsReadingArrives()
+{
+    FenixFixture fixture;
+
+    fixture.gateway.arrivesATickAfterItIsAsked = true;
+    fixture.gateway.lvars[kThirdPartyRefuel] = 1.0;
+    fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, true, false), MemoryBag{});
+    TickTimes(fixture.aircraft, fixture.gateway, 3);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+
+    fixture.gateway.DeliverWhatWasAsked();
+    TickTimes(fixture.aircraft, fixture.gateway, 5);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 1);
+    QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 0.0);
+}
+
+void FenixA32xTest::aResumeAfterTheRefuelLeavesAHoseThatReadsDisarmedAlone()
+{
+    FenixFixture fixture;
+
+    fixture.gateway.lvars[kThirdPartyRefuel] = 0.0;
+    fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, true, false), MemoryBag{});
+    TickTimes(fixture.aircraft, fixture.gateway, 10);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+}
+
+void FenixA32xTest::aResumeWhoseRefuelEndedWhileTheClientWasClosedDisarmsTheHose()
+{
+    FenixFixture fixture;
+
+    fixture.gateway.arrivesATickAfterItIsAsked = true;
+    fixture.gateway.deliveredLVars.insert(kThirdPartyRefuel);
+    fixture.gateway.lvars[kThirdPartyRefuel] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCallable;
+    fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, false, false), MemoryBag{});
+    TickTimes(fixture.aircraft, fixture.gateway, 3);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+
+    TickTimesDelivering(fixture.aircraft, fixture.gateway, kSecondsCallableBeforeTheRefuelCountsAsEnded - 1);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+
+    TickTimesDelivering(fixture.aircraft, fixture.gateway, 1);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 1);
+    QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 0.0);
+}
+
+void FenixA32xTest::aResumeWhoseLoadingStartedButWhoseRefuelWasNotRegisteredYetKeepsTheHoseUntilTheRefuelEnds()
+{
+    FenixFixture fixture;
+
+    fixture.gateway.lvars[kThirdPartyRefuel] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCallable;
+    fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, false, false), MemoryBag{});
+    TickTimes(fixture.aircraft, fixture.gateway, 20);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateRequested;
+    TickTimes(fixture.aircraft, fixture.gateway, 5);
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateActive;
+    TickTimes(fixture.aircraft, fixture.gateway, 120);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCompleted;
+    TickTimes(fixture.aircraft, fixture.gateway, 5);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 1);
+    QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 0.0);
+}
+
+void FenixA32xTest::aResumeWhoseRefuelServiceStopsReadingCallableBeforeTheWaitIsOverStartsTheWaitAgain()
+{
+    FenixFixture fixture;
+
+    const int almostTheWait = kSecondsCallableBeforeTheRefuelCountsAsEnded - 20;
+
+    fixture.gateway.lvars[kThirdPartyRefuel] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCallable;
+    fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, false, false), MemoryBag{});
+    TickTimes(fixture.aircraft, fixture.gateway, almostTheWait);
+
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateRequested;
+    TickTimes(fixture.aircraft, fixture.gateway, 1);
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCallable;
+    TickTimes(fixture.aircraft, fixture.gateway, almostTheWait);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+
+    TickTimes(fixture.aircraft, fixture.gateway, kSecondsCallableBeforeTheRefuelCountsAsEnded - almostTheWait - 1);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+
+    TickTimes(fixture.aircraft, fixture.gateway, 1);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 1);
+    QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 0.0);
+}
+
+void FenixA32xTest::aResumeWithTheRefuelStillRunningNeverDisarmsTheHose()
+{
+    for (const double state : {kGsxStateRequested, kGsxStateActive})
+    {
+        FenixFixture fixture;
+
+        fixture.gateway.lvars[kThirdPartyRefuel] = 1.0;
+        fixture.gateway.lvars[gsx::lvars::kRefuelingState] = state;
+        fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, false, false), MemoryBag{});
+        TickTimes(fixture.aircraft, fixture.gateway, kSecondsCallableBeforeTheRefuelCountsAsEnded + 30);
+
+        QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+    }
+}
+
+void FenixA32xTest::aResumeAfterAGsxRestartKeepsTheHoseArmedWhileTheServiceIsCallable()
+{
+    FenixFixture fixture;
+
+    TurnaroundFacts facts = ResumedFacts(true, false, false);
+    facts.gsxRestartedSinceSave = true;
+
+    fixture.gateway.lvars[kThirdPartyRefuel] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kRefuelingState] = kGsxStateCallable;
+    fixture.aircraft.OnTurnaroundResumed(facts, MemoryBag{});
+    TickTimes(fixture.aircraft, fixture.gateway, kSecondsCallableBeforeTheRefuelCountsAsEnded + 30);
+
+    QCOMPARE(fixture.gateway.WriteCount(kThirdPartyRefuel), 0);
+}
+
+void FenixA32xTest::aResumeBeforeTheLoadingStartedArmsThirdPartyRefuelingAsUsual()
+{
+    FenixFixture fixture;
+
+    fixture.aircraft.OnTurnaroundResumed(ResumedFacts(false, false, false), MemoryBag{});
+    TickAircraft(fixture.aircraft, fixture.gateway, kLoading);
+
+    QCOMPARE(fixture.gateway.Written(kThirdPartyRefuel), 1.0);
+}
+
+void FenixA32xTest::aResumeBeforeTheBoardingClosedKeepsTheFinalLoadsheetPending()
+{
+    FenixFixture fixture;
+
+    fixture.SeedPlannedLoad();
+    fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, true, false), MemoryBag{});
+
+    fixture.aircraft.SetCurrentZfwKg(kPlannedZfwKg);
+
+    QCOMPARE(fixture.efb.loadsheetRequests.size(), static_cast<std::size_t>(1));
+    QCOMPARE(QString::fromStdString(fixture.efb.loadsheetRequests.back()), QString("Final"));
+}
+
+void FenixA32xTest::aResumeAfterTheBoardingClosedDoesNotRequestTheFinalLoadsheetAgain()
+{
+    FenixFixture fixture;
+
+    fixture.SeedPlannedLoad();
+    fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, true, true), MemoryBag{});
+
+    fixture.aircraft.SetCurrentZfwKg(kPlannedZfwKg);
+
+    QVERIFY(fixture.efb.loadsheetRequests.empty());
+}
+
+void FenixA32xTest::chocksAreRefusedWhileTheEfbIsUnavailableAndSayWhyOncePerDrop()
+{
+    FenixFixture fixture;
+    const LogCapture log;
+
+    fixture.efb.available = false;
+
+    for (int tick = 0; tick < 60; ++tick)
+    {
+        QVERIFY(!fixture.aircraft.SetChocks(true));
+        QVERIFY(!fixture.aircraft.SetChocks(false));
+    }
+
+    QCOMPARE(fixture.efb.setBoolCalls, 0);
+    QCOMPARE(LogCapture::Total(), 1LL);
+
+    fixture.efb.available = true;
+
+    QVERIFY(fixture.aircraft.SetChocks(true));
+    QCOMPARE(fixture.efb.WrittenBool(kChocksDataref), 1);
+    QCOMPARE(LogCapture::Total(), 1LL);
+
+    fixture.efb.available = false;
+
+    QVERIFY(!fixture.aircraft.SetChocks(true));
+    QVERIFY(!fixture.aircraft.SetChocks(true));
+    QCOMPARE(LogCapture::Total(), 2LL);
+}
+
+void FenixA32xTest::aResumedAircraftClosesTheDoorWhoseVehicleLeftWhileTheClientWasGone()
+{
+    FenixFixture before;
+
+    before.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    before.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = 3.0;
+    TickAircraft(before.aircraft, before.gateway);
+
+    QCOMPARE(before.efb.WrittenBool(kFwdPaxDoor), 1);
+
+    const MemoryBag memory = before.aircraft.TurnaroundMemory();
+
+    FenixFixture after;
+
+    after.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    after.gateway.lvars[gsx::lvars::kJetway] = 2.0;
+    after.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = 1.0;
+    after.aircraft.OnTurnaroundResumed(ResumedFacts(true, true, false), memory);
+    TickTimes(after.aircraft, after.gateway, 3);
+
+    QCOMPARE(after.efb.WrittenBool(kFwdPaxDoor), 0);
+}
+
+void FenixA32xTest::resumingNeverClosesEverythingByItself()
+{
+    FenixFixture fixture;
+
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kJetway] = 5.0;
+    TurnaroundFacts facts = ResumedFacts(true, true, true);
+    facts.departureDoorsHeld = true;
+    facts.passengerDoorsHeld = true;
+
+    fixture.aircraft.OnTurnaroundResumed(facts, MemoryBag{});
+    fixture.aircraft.HoldDoorsClosed(true);
+    fixture.aircraft.HoldPassengerDoorsClosed(true);
+    TickTimes(fixture.aircraft, fixture.gateway, 20);
+
+    for (const char* door : {kFwdPaxDoor, kMidPaxDoor, kAftPaxDoor, kFwdCateringDoor, kAftCateringDoor,
+                             kFwdCargoDoor, kAftCargoDoor})
+    {
+        QCOMPARE(fixture.efb.WrittenBool(door), -1);
+    }
+}
+
+void FenixA32xTest::releasingTheDeparturesAlsoReleasesThePassengerDoors()
+{
+    FenixFixture fixture;
+
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kJetway] = 5.0;
+
+    fixture.aircraft.HoldPassengerDoorsClosed(true);
+    TickAircraft(fixture.aircraft, fixture.gateway);
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), -1);
+
+    fixture.aircraft.HoldDoorsClosed(false);
+    TickAircraft(fixture.aircraft, fixture.gateway);
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 1);
+}
+
+void FenixA32xTest::resumingAndObservingWriteNothing()
+{
+    FenixFixture fixture;
+
+    fixture.SeedPlannedLoad();
+    fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, true, false), MemoryBag{});
+
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        fixture.gateway.MarkTick();
+        fixture.aircraft.Observe();
+    }
+
+    QCOMPARE(fixture.efb.setBoolCalls, 0);
+    QCOMPARE(fixture.efb.setFloatCalls, 0);
+    QCOMPARE(fixture.efb.setStringCalls, 0);
+    QCOMPARE(fixture.gateway.setLVarCalls, 0);
+    QCOMPARE(fixture.gateway.setAVarCalls, 0);
 }
 
 QTEST_APPLESS_MAIN(FenixA32xTest)

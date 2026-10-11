@@ -20,6 +20,7 @@ struct AppSettings
     bool autoStartFlow = true;
     bool autoStartLoading = true;
     bool skipReposition = false;
+    bool skipRepositionOnNewTurnaround = true;
     bool callGpu = false;
     bool callGpuOnArrival = false;
     bool placeChocks = false;

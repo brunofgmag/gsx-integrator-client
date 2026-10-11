@@ -1,11 +1,12 @@
 #ifndef GSX_INTEGRATOR_CLIENT_AIRCRAFTPROFILE_H
 #define GSX_INTEGRATOR_CLIENT_AIRCRAFTPROFILE_H
 
+#include <cstdint>
 #include <string>
 #include "../../domain/model/AutomationSettings.h"
 #include "../../domain/ports/Aircraft.h"
 
-enum class FuelRateMode
+enum class FuelRateMode : std::uint8_t
 {
     Recommended = 0,
     Manual = 1,
@@ -18,6 +19,7 @@ struct AircraftProfile
     FuelRateMode fuelRateMode = FuelRateMode::Recommended;
     double fuelRateKgs = AutomationSettings::kDefaultFuelRateKgs;
     bool skipReposition = false;
+    bool skipRepositionOnNewTurnaround = true;
     bool callGpu = false;
     bool callGpuOnArrival = false;
     bool placeChocks = false;

@@ -38,6 +38,8 @@ private slots:
     static void reloadsGsxWhenTheDifferingPlanFetchBringsANewOfp();
     static void retriesTheReloadOnTheTenthTickWhileGsxServesTheOldGeneration();
     static void waitsPastANewerGenerationGsxRefused();
+    static void releasesWhenTheCouatlRestartedAndServesALowerGeneration();
+    static void holdsWhileTheServedGenerationIsStillUnknown();
 };
 
 namespace
@@ -106,12 +108,13 @@ namespace
     constexpr double kPreviousFlightFuelKg = 5210.0;
     constexpr double kNewFlightFuelKg = 8381.0;
 
-    void FetchTheNewOfpWhileGsxServesThePreviousFlight(TurnaroundStateFixture& f, WaitingFlightPlanState& state)
+    void FetchTheNewOfpWhileGsxServesThePreviousFlight(TurnaroundStateFixture& f, WaitingFlightPlanState& state,
+                                                       const int servedGeneration = 1)
     {
         f.status.flightPlanStatus = FlightPlanStatus::Ready;
         f.aircraft.plannedFuelKg = kPreviousFlightFuelKg;
         f.gsxService.simbriefLoaded = true;
-        f.gsxService.simbriefGeneration = 1;
+        f.gsxService.simbriefGeneration = servedGeneration;
         f.aircraft.flightPlanDiffersFromTheOfp = true;
 
         TickOnce(f, state);
@@ -768,6 +771,53 @@ void WaitingFlightPlanStateTest::waitsPastANewerGenerationGsxRefused()
 
     f.gsxService.simbriefGeneration = 3;
     f.gsxService.simbriefError.clear();
+
+    ++f.ctx.data.stateTickCount;
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.plannedFuelKg, kNewFlightFuelKg);
+}
+
+void WaitingFlightPlanStateTest::releasesWhenTheCouatlRestartedAndServesALowerGeneration()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    FetchTheNewOfpWhileGsxServesThePreviousFlight(f, state, 3);
+
+    TickOnce(f, state);
+    QCOMPARE(f.menuGateway.simbriefLoadCalls, 1);
+    QVERIFY(Logged(f, "it must serve a generation newer than 3"));
+
+    f.gsxService.simbriefGeneration = 3;
+
+    TickOnce(f, state);
+    QCOMPARE(f.ctx.data.plannedFuelKg, 0.0);
+
+    f.gsxService.simbriefGeneration = 1;
+
+    ++f.ctx.data.stateTickCount;
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingPowerOn);
+    QCOMPARE(f.ctx.data.plannedFuelKg, kNewFlightFuelKg);
+}
+
+void WaitingFlightPlanStateTest::holdsWhileTheServedGenerationIsStillUnknown()
+{
+    TurnaroundStateFixture f;
+    WaitingFlightPlanState state;
+
+    FetchTheNewOfpWhileGsxServesThePreviousFlight(f, state, 3);
+
+    TickOnce(f, state);
+
+    f.gsxService.simbriefGeneration = 0;
+
+    TickOnce(f, state);
+    QCOMPARE(f.ctx.data.plannedFuelKg, 0.0);
+
+    f.gsxService.simbriefGeneration = 4;
 
     ++f.ctx.data.stateTickCount;
     QVERIFY(state.Evaluate(f.ctx).has_value());
