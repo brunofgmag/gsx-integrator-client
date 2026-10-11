@@ -435,6 +435,33 @@ TestCase {
         compare(advisory.heardSecondActions, 0);
     }
 
+    function test_advisoryBornEmptyShowsItsButtonsOnceItHasText() {
+        const advisory = createTemporaryObject(advisoryComponent, testCase, { width: 380 });
+
+        verify(advisory);
+        verify(!advisory.visible);
+
+        advisory.text = "GSX restarted since this turnaround was saved.";
+        advisory.actionText = "Resume";
+        advisory.secondActionText = "Restart";
+
+        const first = findButtonByText(advisory, "Resume");
+        const second = findButtonByText(advisory, "Restart");
+
+        verify(first);
+        verify(second);
+        verify(first.visible);
+        verify(second.visible);
+
+        waitForRendering(advisory);
+
+        mouseClick(first);
+        mouseClick(second);
+
+        compare(advisory.heardActions, 1);
+        compare(advisory.heardSecondActions, 1);
+    }
+
     function test_operationsScreenAsksTheResumeDecisionWithTwoButtons() {
         const calls = { resume: 0, restart: 0 };
         const vm = operationsVm(calls, {

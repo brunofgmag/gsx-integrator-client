@@ -64,7 +64,7 @@ Item {
             Column {
                 id: actions
                 anchors.verticalCenter: parent.verticalCenter
-                visible: actionButton.visible || secondActionButton.visible
+                visible: root.actionText.length > 0 || root.secondActionText.length > 0
                 spacing: 6
 
                 ActionButton {

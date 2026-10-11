@@ -177,7 +177,7 @@ private:
     void AdvanceResumption();
     void RestoreSavedTurnaround(const TurnaroundResumption::Restoration& restoration);
     void SaveTurnaround();
-    void WatchTheStandOfTheFinishedTurnaround();
+    void WatchTheStand();
 
     static constexpr int kDispatchIntervalMs = 80;
 
