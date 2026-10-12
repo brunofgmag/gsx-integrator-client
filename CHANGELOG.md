@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.47.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.46.1...v1.47.0) (2026-10-12)
+
+
+* write the client log in release builds ([#239](https://github.com/brunofgmag/gsx-integrator-client/issues/239)) ([54d424d](https://github.com/brunofgmag/gsx-integrator-client/commit/54d424d2c99cc8a72a300e0142e78bd5f5656579))
+
+
+### Features
+
+* write the client log in release builds ([bd1755b](https://github.com/brunofgmag/gsx-integrator-client/commit/bd1755b8f89acd8169e95422da6809e10256c661)) ([54d424d](https://github.com/brunofgmag/gsx-integrator-client/commit/54d424d2c99cc8a72a300e0142e78bd5f5656579))
+
 ## [1.46.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.46.0...v1.46.1) (2026-10-11)
 
 
