@@ -2,6 +2,7 @@
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG737_H
 
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include "PmdgAircraft.h"
@@ -18,7 +19,8 @@ public:
     static constexpr auto kNameBbj2 = "PMDG 737 BBJ2";
 
     Pmdg737(VariableGateway* variableGateway, const AutomationStatus* status, Pmdg737Variant variant,
-            std::unique_ptr<Pmdg737DataGateway> data, std::unique_ptr<PmdgTabletGateway> tablet);
+            std::unique_ptr<Pmdg737DataGateway> data, std::unique_ptr<PmdgTabletGateway> tablet,
+            std::optional<std::filesystem::path> routeDirectory = std::nullopt);
 
     [[nodiscard]] const char* GetName() const override;
     [[nodiscard]] bool IsMainDeckCargoDoorStuck() const override;

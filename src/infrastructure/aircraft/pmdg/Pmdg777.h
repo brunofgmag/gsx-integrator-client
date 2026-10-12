@@ -1,7 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777_H
 
+#include <filesystem>
 #include <memory>
+#include <optional>
 #include "PmdgAircraft.h"
 #include "../../pmdg/Pmdg777DataGateway.h"
 
@@ -16,7 +18,8 @@ public:
     static constexpr auto kNameFreighter = "PMDG 777F";
 
     Pmdg777(VariableGateway* variableGateway, const AutomationStatus* status, Pmdg777Variant variant,
-            std::unique_ptr<Pmdg777DataGateway> data, std::unique_ptr<PmdgTabletGateway> tablet);
+            std::unique_ptr<Pmdg777DataGateway> data, std::unique_ptr<PmdgTabletGateway> tablet,
+            std::optional<std::filesystem::path> routeDirectory = std::nullopt);
 
     [[nodiscard]] const char* GetName() const override;
 

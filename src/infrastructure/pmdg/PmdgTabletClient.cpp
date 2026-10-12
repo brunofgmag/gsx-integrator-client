@@ -32,7 +32,8 @@ namespace
     constexpr auto kPassengerEntryField = "passenger_entry";
     constexpr auto kWeightBalanceState = "weight_balance";
     constexpr auto kZfwField = "zfw";
-    constexpr std::array kCargoFields = {"cargo_lbs_fwd", "cargo_lbs_aft", "cargo_lbs_main"};
+    constexpr std::array kCargoFields = {"cargo_lbs_fwd", "cargo_lbs_aft", "cargo_lbs_main", "cargo_lbs_bulk"};
+    constexpr std::array kPassengerFields = {"pax_count_econ", "pax_count_biz", "pax_count_first"};
     constexpr auto kPassengerEntryJetway = "JETWAY";
     constexpr auto kJetwayField = "jetway";
     constexpr auto kJetwayInhibited = "INHIBITED";
@@ -315,6 +316,11 @@ std::optional<PmdgWeightEcho> PmdgTabletClient::ParseWeightEcho(const std::strin
     for (const char* field : kCargoFields)
     {
         echo.cargoLbs += weights.value(QLatin1String(field)).toDouble();
+    }
+
+    for (const char* field : kPassengerFields)
+    {
+        echo.passengers += static_cast<int>(std::lround(weights.value(QLatin1String(field)).toDouble()));
     }
 
     return echo;

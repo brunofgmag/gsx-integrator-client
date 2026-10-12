@@ -71,6 +71,7 @@ void IFlyPlanImport::Observe(const std::optional<std::filesystem::path>& directo
     {
         planEpoch_ = planEpoch;
         seen_ = false;
+        newerThanTheOfp_ = false;
     }
 
     if (seen_)
@@ -83,6 +84,8 @@ void IFlyPlanImport::Observe(const std::optional<std::filesystem::path>& directo
     blind_ = fileEpoch == 0;
     if (blind_)
     {
+        newerThanTheOfp_ = false;
+
         if (!warned_)
         {
             warned_ = true;
@@ -93,4 +96,5 @@ void IFlyPlanImport::Observe(const std::optional<std::filesystem::path>& directo
     }
 
     seen_ = planEpoch != 0 && fileEpoch == planEpoch;
+    newerThanTheOfp_ = planEpoch != 0 && fileEpoch > planEpoch;
 }

@@ -70,6 +70,9 @@ private slots:
     static void blindUntilTheFirstLook();
     static void unresolvedFolderReleasesTheFlowAndSaysSoOnce();
     static void unreadableFileAlsoReleasesTheFlow();
+    static void aPlanNewerThanTheOfpIsNotSeenAndIsReportedAsNewer();
+    static void aPlanOlderThanTheOfpIsNotNewer();
+    static void blindOrWithoutAnOfpEpochNothingIsNewer();
 };
 
 void IFlyPlanFileTest::directorySitsUnderTheIflyWorkFolder()
@@ -229,6 +232,58 @@ void IFlyPlanFileTest::unreadableFileAlsoReleasesTheFlow()
 
     QVERIFY(watch.Blind());
     QVERIFY(!watch.Seen());
+}
+
+void IFlyPlanFileTest::aPlanNewerThanTheOfpIsNotSeenAndIsReportedAsNewer()
+{
+    const QTemporaryDir dir;
+    WritePlan(PathOf(dir), OfpWithEpoch(kPlanEpoch + 3600));
+
+    IFlyPlanImport watch;
+    watch.Observe(PathOf(dir), kPlanEpoch);
+
+    QVERIFY(!watch.Seen());
+    QVERIFY(!watch.Blind());
+    QVERIFY(watch.NewerThanTheOfp());
+
+    watch.Observe(PathOf(dir), kPlanEpoch + 3600);
+
+    QVERIFY(watch.Seen());
+    QVERIFY(!watch.NewerThanTheOfp());
+}
+
+void IFlyPlanFileTest::aPlanOlderThanTheOfpIsNotNewer()
+{
+    const QTemporaryDir dir;
+    WritePlan(PathOf(dir), OfpWithEpoch(kPlanEpoch - 3600));
+
+    IFlyPlanImport watch;
+    watch.Observe(PathOf(dir), kPlanEpoch);
+
+    QVERIFY(!watch.Seen());
+    QVERIFY(!watch.NewerThanTheOfp());
+}
+
+void IFlyPlanFileTest::blindOrWithoutAnOfpEpochNothingIsNewer()
+{
+    const QTemporaryDir dir;
+    WritePlan(PathOf(dir), OfpWithEpoch(kPlanEpoch + 3600));
+
+    IFlyPlanImport withoutOfpEpoch;
+    withoutOfpEpoch.Observe(PathOf(dir), 0);
+
+    QVERIFY(!withoutOfpEpoch.NewerThanTheOfp());
+
+    IFlyPlanImport watch;
+    watch.Observe(PathOf(dir), kPlanEpoch);
+
+    QVERIFY(watch.NewerThanTheOfp());
+
+    std::filesystem::remove(PathOf(dir) / kPlanFile);
+    watch.Observe(PathOf(dir), kPlanEpoch);
+
+    QVERIFY(watch.Blind());
+    QVERIFY(!watch.NewerThanTheOfp());
 }
 
 QTEST_APPLESS_MAIN(IFlyPlanFileTest)
