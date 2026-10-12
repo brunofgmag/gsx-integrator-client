@@ -4,6 +4,7 @@
 #include <optional>
 
 class PmdgTabletGateway;
+struct PmdgWeightEcho;
 class VariableReader;
 struct AutomationStatus;
 
@@ -23,6 +24,15 @@ private:
     [[nodiscard]] bool LivePlanExists() const;
     [[nodiscard]] double PlannedZfwKg() const;
     [[nodiscard]] int PlannedPassengers() const;
+    void LearnPassengerWeight(const PmdgWeightEcho& echo);
+    [[nodiscard]] std::optional<double> NonCargoLbsOnceSentPassengersBoard(const PmdgWeightEcho& echo) const;
+    void SendCargoFor(double zfwKg, double nonCargoLbs);
+
+    struct PassengerSample
+    {
+        int passengers = 0;
+        double nonCargoLbs = 0.0;
+    };
 
     PmdgTabletGateway& tablet_;
     VariableReader& variables_;
@@ -36,6 +46,8 @@ private:
     std::optional<double> rampStartZfwKg_;
     std::optional<double> resumedPlannedZfwKg_;
     std::optional<int> resumedPlannedPassengers_;
+    std::optional<PassengerSample> rememberedEcho_;
+    std::optional<double> perPassengerLbs_;
     double lastRequestedZfwKg_ = 0.0;
     bool progressiveRampMoving_ = false;
     int zfwSettledTicks_ = 0;

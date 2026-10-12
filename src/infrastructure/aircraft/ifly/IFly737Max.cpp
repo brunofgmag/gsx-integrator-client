@@ -153,6 +153,11 @@ bool IFly737Max::IsFlightPlanLoaded() const
         && (planImport_.Seen() || planImport_.Blind());
 }
 
+bool IFly737Max::FlightPlanDiffersFromTheOfp() const
+{
+    return planImport_.NewerThanTheOfp();
+}
+
 double IFly737Max::GetPlannedFuelKg() const
 {
     return status_->plannedFuelKg;

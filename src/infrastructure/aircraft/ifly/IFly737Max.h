@@ -33,6 +33,7 @@ public:
     [[nodiscard]] MemoryBag TurnaroundMemory() const override;
 
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
+    [[nodiscard]] bool FlightPlanDiffersFromTheOfp() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
     [[nodiscard]] double GetPlannedZfwKg() const override;
     [[nodiscard]] int GetPlannedPassengers() const override;

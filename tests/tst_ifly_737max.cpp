@@ -98,6 +98,7 @@ private slots:
     static void evaluatingTheDoorRuleWritesNoVariable();
     static void evaluatingThePlanImportRuleWritesNoVariable();
     static void planRuleReadsTheFileAndWaitsForTheMatchingEpoch();
+    static void aPlanNewerThanTheOfpMakesTheAircraftDifferFromIt();
     static void readsCurrentFuelFromSim();
     static void currentZfwSubtractsFuelFromTotalWeight();
     static void currentZfwDoesNotDropBelowEmptyWeight();
@@ -1585,6 +1586,37 @@ void IFly737MaxTest::planRuleReadsTheFileAndWaitsForTheMatchingEpoch()
     static_cast<void>(rule->Evaluate(context));
 
     QVERIFY(aircraft.IsFlightPlanLoaded());
+}
+
+void IFly737MaxTest::aPlanNewerThanTheOfpMakesTheAircraftDifferFromIt()
+{
+    const QTemporaryDir appData;
+    const std::filesystem::path root(appData.path().toStdWString());
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    status.flightPlanStatus = FlightPlanStatus::Ready;
+    status.planGeneratedEpoch = kOfpEpoch;
+
+    IFly737Max aircraft(&gateway, &status, root);
+
+    AircraftRule* const rule = FindRule(aircraft, "ifly-737max-watch-plan-file");
+
+    QVERIFY(rule != nullptr);
+
+    const RuleContext context{};
+
+    WriteIFlyPlan(root, kOfpEpoch + 3600);
+    static_cast<void>(rule->Evaluate(context));
+
+    QVERIFY(!aircraft.IsFlightPlanLoaded());
+    QVERIFY(aircraft.FlightPlanDiffersFromTheOfp());
+
+    status.planGeneratedEpoch = kOfpEpoch + 3600;
+    static_cast<void>(rule->Evaluate(context));
+
+    QVERIFY(aircraft.IsFlightPlanLoaded());
+    QVERIFY(!aircraft.FlightPlanDiffersFromTheOfp());
 }
 
 void IFly737MaxTest::isReachableOnceTheFuelAndTheEmptyWeightHaveArrived()

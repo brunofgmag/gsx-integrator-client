@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGAIRCRAFT_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGAIRCRAFT_H
 
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -39,7 +40,8 @@ class PmdgAircraft : public Aircraft, protected PmdgDoorSource, protected PmdgGr
 public:
     PmdgAircraft(VariableGateway* variableGateway, const AutomationStatus* status,
                  PmdgDataGateway* data, std::unique_ptr<PmdgTabletGateway> tablet,
-                 PmdgAircraftSpec spec);
+                 PmdgAircraftSpec spec,
+                 std::optional<std::filesystem::path> routeDirectory = std::nullopt);
 
     [[nodiscard]] virtual const char* GetName() const = 0;
 
@@ -60,6 +62,7 @@ public:
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return true; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
+    [[nodiscard]] bool FlightPlanDiffersFromTheOfp() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
     [[nodiscard]] double GetPlannedZfwKg() const override;
     [[nodiscard]] int GetPlannedPassengers() const override;
@@ -102,6 +105,7 @@ private:
     static constexpr int kStateQueryTicks = 3;
 
     void QueryTabletState();
+    [[nodiscard]] std::optional<std::filesystem::path> RouteDirectory() const;
     void AdvanceMovingDoors();
     [[nodiscard]] int MovingDoorLimitTicks(int slot) const;
     [[nodiscard]] std::optional<bool> DoorOpenAt(int slot) const;
@@ -116,6 +120,7 @@ private:
     PmdgDoorReconciler doorReconciler_;
     PmdgGroundConnReconciler groundConn_;
     PmdgPayloadWriter payload_;
+    std::optional<std::filesystem::path> routeDirectory_;
     PmdgRouteImport routeImport_;
     SmartSwitch smartSwitch_;
     PmdgKeepGsxDoorAutomationOffRule doorAutomationRule_;
