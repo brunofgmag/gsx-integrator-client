@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.47.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.47.0...v1.47.1) (2026-10-12)
+
+
+* stop the pmdg cargo pulse and refetch the ofp when the aircraft holds a newer plan ([#242](https://github.com/brunofgmag/gsx-integrator-client/issues/242)) ([a1aba4b](https://github.com/brunofgmag/gsx-integrator-client/commit/a1aba4b1394662da1f10a6afd85133064034ad13))
+
+
+### Bug Fixes
+
+* stop the pmdg cargo pulse and refetch the ofp when the aircraft holds a newer plan ([f611de1](https://github.com/brunofgmag/gsx-integrator-client/commit/f611de1710000e1026e845380a104008a98af3ef)) ([a1aba4b](https://github.com/brunofgmag/gsx-integrator-client/commit/a1aba4b1394662da1f10a6afd85133064034ad13))
+
 ## [1.47.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.46.1...v1.47.0) (2026-10-12)
 
 
