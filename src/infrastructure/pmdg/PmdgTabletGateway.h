@@ -8,6 +8,7 @@ struct PmdgWeightEcho
 {
     double zfwLbs = 0.0;
     double cargoLbs = 0.0;
+    int passengers = 0;
 };
 
 class PmdgTabletGateway

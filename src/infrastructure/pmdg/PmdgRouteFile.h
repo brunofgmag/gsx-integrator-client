@@ -14,9 +14,11 @@ public:
     static bool NamesPlan(const std::filesystem::path& file,
                           const std::string& origin,
                           const std::string& destination);
-    static long long LatestWrite(const std::filesystem::path& directory,
-                                 const std::string& origin,
-                                 const std::string& destination);
+    static std::optional<long long> ParseGeneratedAt(const std::string& line);
+    static std::optional<long long> GeneratedAt(const std::filesystem::path& file);
+    static long long LatestWrite(const std::filesystem::path& directory);
+    static std::optional<std::filesystem::path> NewestWrittenAfter(const std::filesystem::path& directory,
+                                                                   long long baseline);
 };
 
 class PmdgRouteImport
@@ -28,11 +30,17 @@ public:
                  long long planEpoch);
     void Restart();
     [[nodiscard]] bool Seen() const { return seen_; }
+    [[nodiscard]] bool NewerThanTheOfp() const { return newerThanTheOfp_; }
 
 private:
+    void Judge(const std::filesystem::path& route,
+               const std::string& origin,
+               const std::string& destination,
+               long long planEpoch);
+
     std::optional<long long> baseline_;
-    long long planEpoch_ = 0;
     bool seen_ = false;
+    bool newerThanTheOfp_ = false;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDGROUTEFILE_H

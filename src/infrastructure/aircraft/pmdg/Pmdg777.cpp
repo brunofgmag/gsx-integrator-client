@@ -57,8 +57,10 @@ Pmdg777::Pmdg777(VariableGateway* variableGateway,
                  const AutomationStatus* status,
                  const Pmdg777Variant variant,
                  std::unique_ptr<Pmdg777DataGateway> data,
-                 std::unique_ptr<PmdgTabletGateway> tablet)
-    : PmdgAircraft(variableGateway, status, data.get(), std::move(tablet), SpecFor(variant)),
+                 std::unique_ptr<PmdgTabletGateway> tablet,
+                 std::optional<std::filesystem::path> routeDirectory)
+    : PmdgAircraft(variableGateway, status, data.get(), std::move(tablet), SpecFor(variant),
+                   std::move(routeDirectory)),
       variant_(variant),
       ownedData_(std::move(data))
 {

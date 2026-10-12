@@ -36,6 +36,8 @@ void PmdgPayloadWriter::Reset()
     resumed_ = false;
     resumedPlannedZfwKg_.reset();
     resumedPlannedPassengers_.reset();
+    rememberedEcho_.reset();
+    perPassengerLbs_.reset();
     lastRequestedZfwKg_ = 0.0;
     progressiveRampMoving_ = false;
     zfwSettledTicks_ = 0;
@@ -72,6 +74,59 @@ int PmdgPayloadWriter::PlannedPassengers() const
 {
     return LivePlanExists() ? status_->plannedPassengers
                             : resumedPlannedPassengers_.value_or(status_->plannedPassengers);
+}
+
+void PmdgPayloadWriter::LearnPassengerWeight(const PmdgWeightEcho& echo)
+{
+    const double nonCargoLbs = echo.zfwLbs - echo.cargoLbs;
+    if (!rememberedEcho_.has_value())
+    {
+        rememberedEcho_ = PassengerSample{echo.passengers, nonCargoLbs};
+
+        return;
+    }
+
+    if (echo.passengers == rememberedEcho_->passengers)
+    {
+        return;
+    }
+
+    const double lbsPerPassenger =
+        (nonCargoLbs - rememberedEcho_->nonCargoLbs) / (echo.passengers - rememberedEcho_->passengers);
+    if (lbsPerPassenger > 0.0)
+    {
+        perPassengerLbs_ = lbsPerPassenger;
+    }
+
+    rememberedEcho_ = PassengerSample{echo.passengers, nonCargoLbs};
+}
+
+std::optional<double> PmdgPayloadWriter::NonCargoLbsOnceSentPassengersBoard(const PmdgWeightEcho& echo) const
+{
+    const double nonCargoLbs = echo.zfwLbs - echo.cargoLbs;
+    if (cargoVariant_)
+    {
+        return nonCargoLbs;
+    }
+
+    if (!perPassengerLbs_.has_value())
+    {
+        return echo.passengers == lastSentPax_ ? std::optional(nonCargoLbs) : std::nullopt;
+    }
+
+    return nonCargoLbs + (lastSentPax_ - echo.passengers) * *perPassengerLbs_;
+}
+
+void PmdgPayloadWriter::SendCargoFor(const double zfwKg, const double nonCargoLbs)
+{
+    const int cargoLbs =
+        (std::max)(static_cast<int>(std::lround((zfwKg * kLbsPerKg) - nonCargoLbs)), 0);
+    if (cargoLbs != lastProgressiveCargoLbs_)
+    {
+        lastProgressiveCargoLbs_ = cargoLbs;
+        lastSentCargoLbs_ = cargoLbs;
+        tablet_.SendCargoTotalLbs(cargoLbs);
+    }
 }
 
 void PmdgPayloadWriter::SetFuelKg(const double fuelKg)
@@ -113,6 +168,8 @@ void PmdgPayloadWriter::SetZfwKg(const double zfwKg)
 
     if (!cargoVariant_)
     {
+        LearnPassengerWeight(*echo);
+
         const int pax = static_cast<int>(std::lround(progress * PlannedPassengers()));
         if (pax != lastSentPax_)
         {
@@ -121,14 +178,9 @@ void PmdgPayloadWriter::SetZfwKg(const double zfwKg)
         }
     }
 
-    const double nonCargoLbs = echo->zfwLbs - echo->cargoLbs;
-    const int cargoLbs =
-        (std::max)(static_cast<int>(std::lround((zfwKg * kLbsPerKg) - nonCargoLbs)), 0);
-    if (cargoLbs != lastProgressiveCargoLbs_)
+    if (const std::optional<double> nonCargoLbs = NonCargoLbsOnceSentPassengersBoard(*echo); nonCargoLbs.has_value())
     {
-        lastProgressiveCargoLbs_ = cargoLbs;
-        lastSentCargoLbs_ = cargoLbs;
-        tablet_.SendCargoTotalLbs(cargoLbs);
+        SendCargoFor(zfwKg, *nonCargoLbs);
     }
 
     if (lastRequestedZfwKg_ != zfwKg)

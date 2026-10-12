@@ -24,7 +24,8 @@ namespace
 
 PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationStatus* status,
                            PmdgDataGateway* data, std::unique_ptr<PmdgTabletGateway> tablet,
-                           PmdgAircraftSpec spec)
+                           PmdgAircraftSpec spec,
+                           std::optional<std::filesystem::path> routeDirectory)
     : variableGateway_(variableGateway),
       status_(status),
       data_(data),
@@ -37,6 +38,7 @@ PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationSta
       doorReconciler_(*this, spec.doorSlots, spec.doorBaseline),
       groundConn_(*this, *tablet_),
       payload_(*tablet_, *variableGateway, status, spec.cargoVariant),
+      routeDirectory_(std::move(routeDirectory)),
       smartSwitch_(*variableGateway, std::move(spec.smartSwitchLVars),
                    std::move(spec.smartSwitchPressed)),
       doorAutomationRule_(*variableGateway, *data),
@@ -64,7 +66,7 @@ void PmdgAircraft::Observe()
 
     if (status_->flightPlanStatus == FlightPlanStatus::Ready)
     {
-        routeImport_.Observe(PmdgRouteFile::DirectoryFor(GetName()), status_->plannedOrigin,
+        routeImport_.Observe(RouteDirectory(), status_->plannedOrigin,
                              status_->plannedDestination, status_->planGeneratedEpoch);
     }
 
@@ -77,6 +79,11 @@ void PmdgAircraft::Observe()
 const std::vector<AircraftRule*>& PmdgAircraft::Rules() const
 {
     return rules_;
+}
+
+std::optional<std::filesystem::path> PmdgAircraft::RouteDirectory() const
+{
+    return routeDirectory_.has_value() ? routeDirectory_ : PmdgRouteFile::DirectoryFor(GetName());
 }
 
 void PmdgAircraft::QueryTabletState()
@@ -176,6 +183,11 @@ bool PmdgAircraft::IsFlightPlanLoaded() const
 {
     return status_->flightPlanStatus == FlightPlanStatus::Ready
         && (tablet_->EfbPlanImported() || routeImport_.Seen() || HasVendorFlightPlan());
+}
+
+bool PmdgAircraft::FlightPlanDiffersFromTheOfp() const
+{
+    return routeImport_.NewerThanTheOfp();
 }
 
 double PmdgAircraft::GetPlannedFuelKg() const

@@ -41,6 +41,9 @@ private slots:
     static void doorInMotionHasNoState();
     static void readsThePassengerEntryMethodFromStateReply();
     static void readsTheWeightEchoFromStateReply();
+    static void theWeightEchoCountsEconomyAndBusinessPassengers();
+    static void theWeightEchoOfThe777CountsTheBulkHoldAndFirstClass();
+    static void aWeightEchoWithoutPassengerFieldsCountsZero();
     static void buildsGroundVehicleEnvelope();
     static void readsTheJetwayAndOwnStairsFromStateReply();
     static void groundPowerInTransitIsReportedAsMoving();
@@ -269,6 +272,36 @@ void PmdgTabletClientTest::readsTheWeightEchoFromStateReply()
     QVERIFY(echo.has_value());
     QCOMPARE(echo->zfwLbs, 131679.75);
     QCOMPARE(echo->cargoLbs, 5188.88 + 4155.87 + 34960.0);
+}
+
+void PmdgTabletClientTest::theWeightEchoCountsEconomyAndBusinessPassengers()
+{
+    const std::optional<PmdgWeightEcho> echo = PmdgTabletClient::ParseWeightEcho(
+        R"({"message_tag":"state_reply","weight_balance":{"cargo_lbs_aft":5040.83,"cargo_lbs_fwd":4036.16,)"
+        R"("pax_count_biz":12.0,"pax_count_econ":166.0,"pax_max_biz":0,"pax_max_econ":189,"zfw":133792.0}})");
+
+    QVERIFY(echo.has_value());
+    QCOMPARE(echo->passengers, 178);
+}
+
+void PmdgTabletClientTest::theWeightEchoOfThe777CountsTheBulkHoldAndFirstClass()
+{
+    const std::optional<PmdgWeightEcho> echo = PmdgTabletClient::ParseWeightEcho(
+        R"({"message_tag":"state_reply","weight_balance":{"cargo_lbs_aft":35250,"cargo_lbs_bulk":5966,)"
+        R"("cargo_lbs_fwd":42244,"pax_count_biz":42,"pax_count_econ":234,"pax_count_first":18,"zfw":440000.0}})");
+
+    QVERIFY(echo.has_value());
+    QCOMPARE(echo->cargoLbs, 35250.0 + 5966.0 + 42244.0);
+    QCOMPARE(echo->passengers, 294);
+}
+
+void PmdgTabletClientTest::aWeightEchoWithoutPassengerFieldsCountsZero()
+{
+    const std::optional<PmdgWeightEcho> echo = PmdgTabletClient::ParseWeightEcho(
+        R"({"message_tag":"state_reply","weight_balance":{"cargo_lbs_main":34960,"zfw":131679.75}})");
+
+    QVERIFY(echo.has_value());
+    QCOMPARE(echo->passengers, 0);
 }
 
 void PmdgTabletClientTest::buildsGroundVehicleEnvelope()

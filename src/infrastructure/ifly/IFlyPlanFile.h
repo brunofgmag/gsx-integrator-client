@@ -22,11 +22,13 @@ public:
 
     [[nodiscard]] bool Seen() const { return seen_; }
     [[nodiscard]] bool Blind() const { return blind_; }
+    [[nodiscard]] bool NewerThanTheOfp() const { return newerThanTheOfp_; }
 
 private:
     long long planEpoch_ = 0;
     bool seen_ = false;
     bool blind_ = true;
+    bool newerThanTheOfp_ = false;
     bool warned_ = false;
 };
 
