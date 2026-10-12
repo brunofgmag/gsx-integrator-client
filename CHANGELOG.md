@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.47.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.47.1...v1.47.2) (2026-10-12)
+
+
+* stop rewriting the pmdg cargo by one pound when the efb rounds its holds ([#246](https://github.com/brunofgmag/gsx-integrator-client/issues/246)) ([4dc379c](https://github.com/brunofgmag/gsx-integrator-client/commit/4dc379c6f70541d0ca5358f6b6a4be8bd3bce970))
+
+
+### Bug Fixes
+
+* stop rewriting the pmdg cargo by one pound when the efb rounds its holds ([2246ef5](https://github.com/brunofgmag/gsx-integrator-client/commit/2246ef54249509f988baba75915951d4ac6e3d8a)) ([4dc379c](https://github.com/brunofgmag/gsx-integrator-client/commit/4dc379c6f70541d0ca5358f6b6a4be8bd3bce970))
+
 ## [1.47.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.47.0...v1.47.1) (2026-10-12)
 
 
