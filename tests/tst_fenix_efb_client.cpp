@@ -232,7 +232,6 @@ void FenixEfbClientTest::readsCoerceNumbersAndBools()
 
 void FenixEfbClientTest::aSentWriteLandsInTheWritesLog()
 {
-#ifndef NDEBUG
     FakeFenixEfb efb;
     QVERIFY(efb.Listen());
     FenixEfbClient client;
@@ -256,14 +255,10 @@ void FenixEfbClientTest::aSentWriteLandsInTheWritesLog()
                  QStringLiteral("graphql aircraft.passengers.seatOccupation.string=\"true,false\" n=1")
              }));
     QTRY_COMPARE(efb.Requests(), 6);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void FenixEfbClientTest::aWriteWhileTheEfbIsUnreachableIsNotLogged()
 {
-#ifndef NDEBUG
     const qsizetype before = ProbeLines(kWritesLog).size();
     FenixEfbClient client;
 
@@ -271,9 +266,6 @@ void FenixEfbClientTest::aWriteWhileTheEfbIsUnreachableIsNotLogged()
 
     QVERIFY(!client.IsAvailable());
     QCOMPARE(ProbeLines(kWritesLog).size(), before);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 QTEST_GUILESS_MAIN(FenixEfbClientTest)

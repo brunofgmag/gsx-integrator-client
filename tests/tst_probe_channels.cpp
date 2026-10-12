@@ -133,13 +133,9 @@ void ProbeChannelsTest::initTestCase()
 
 void ProbeChannelsTest::init()
 {
-#ifndef NDEBUG
     probe::SetEnabled(true);
     probe::ResetForTest();
     probe::ResetChangeMemoForTest();
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::cleanup()
@@ -240,7 +236,6 @@ void ProbeChannelsTest::aRunSawTheSimulatorWhenItHoldsTheGateLogOrAWireLog()
 
 void ProbeChannelsTest::eachChannelGetsItsOwnFile()
 {
-#ifndef NDEBUG
     probe::Append(probe::Channel::Client, QStringLiteral("c"));
     probe::Append(probe::Channel::GsxLVars, QStringLiteral("g"));
     probe::Append(probe::Channel::Writes, QStringLiteral("w"));
@@ -250,14 +245,10 @@ void ProbeChannelsTest::eachChannelGetsItsOwnFile()
     QVERIFY(QFile::exists(run + QStringLiteral("/client.log")));
     QVERIFY(QFile::exists(run + QStringLiteral("/gsx-lvars.log")));
     QVERIFY(QFile::exists(run + QStringLiteral("/writes.log")));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::everyChannelButTheWireAlsoLandsInTheSessionUnion()
 {
-#ifndef NDEBUG
     const QString wirePath = FreshWireLog();
     const QString unionPath = FreshUnionLog();
 
@@ -271,14 +262,10 @@ void ProbeChannelsTest::everyChannelButTheWireAlsoLandsInTheSessionUnion()
     QVERIFY(content.contains(QStringLiteral("second-line")));
     QVERIFY(!content.contains(QStringLiteral("wire-line")));
     QVERIFY(ReadAll(wirePath).contains(QStringLiteral("wire-line")));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::everyLineCarriesTheTimestampAndThePhase()
 {
-#ifndef NDEBUG
     probe::Append(probe::Channel::SimAVars, QStringLiteral("silent"));
 
     const QString path = probe::RunLocation() + QStringLiteral("/sim-avars.log");
@@ -295,14 +282,10 @@ void ProbeChannelsTest::everyLineCarriesTheTimestampAndThePhase()
                 "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3} \\[Boarding\\] hello$"))
                 .match(LastLine(path))
                 .hasMatch());
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::theAircraftChannelsFollowTheAircraftId()
 {
-#ifndef NDEBUG
     probe::SetAircraft(QStringLiteral("pmdg-737"));
     probe::Append(probe::Channel::AircraftLVars, QStringLiteral("x"));
 
@@ -314,28 +297,20 @@ void ProbeChannelsTest::theAircraftChannelsFollowTheAircraftId()
     probe::Append(probe::Channel::AircraftLVars, QStringLiteral("y"));
 
     QVERIFY(QFile::exists(run + QStringLiteral("/aircraft/unknown-lvars.log")));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::aRunFolderIsCreatedPerLaunch()
 {
-#ifndef NDEBUG
     const QString run = probe::RunLocation();
 
     QVERIFY(run.startsWith(qEnvironmentVariable("GSXI_PROBE_DIR")));
     QVERIFY(QRegularExpression(QStringLiteral("^\\d{8}-\\d{6}-\\d{3}-\\d+$"))
                 .match(run.section(QLatin1Char('/'), -1))
                 .hasMatch());
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::aCappedFileWritesOneCapLineAndThenGoesSilent()
 {
-#ifndef NDEBUG
     probe::detail::SetBudgetForTest({.channelBytes = 200});
     const QString clientPath = FreshClientLog();
     const QString cap = probe::detail::CapMessage(200);
@@ -356,14 +331,10 @@ void ProbeChannelsTest::aCappedFileWritesOneCapLineAndThenGoesSilent()
 
     QCOMPARE(QFileInfo(clientPath).size(), clientSize);
     QCOMPARE(ReadAll(clientPath).count(cap), 1);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::aCappedChannelLeavesTheOtherFilesWriting()
 {
-#ifndef NDEBUG
     probe::detail::SetBudgetForTest({.channelBytes = 200});
     const QString clientPath = FreshClientLog();
     const QString lvarsPath = FreshChannelLog(QStringLiteral("gsx-lvars.log"));
@@ -381,14 +352,10 @@ void ProbeChannelsTest::aCappedChannelLeavesTheOtherFilesWriting()
     QVERIFY(ReadAll(lvarsPath).contains(QStringLiteral("lvars-after-cap")));
     QVERIFY(ReadAll(unionPath).contains(QStringLiteral("lvars-after-cap")));
     QVERIFY(ReadAll(unionPath).contains(QStringLiteral("client-after-cap")));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::theUnionNamesTheFileThatCapped()
 {
-#ifndef NDEBUG
     probe::detail::SetBudgetForTest({.channelBytes = 200});
     FreshClientLog();
     const QString unionPath = FreshUnionLog();
@@ -406,14 +373,10 @@ void ProbeChannelsTest::theUnionNamesTheFileThatCapped()
     probe::Append(probe::Channel::Client, Line(100));
 
     QCOMPARE(ReadAll(unionPath).count(note), 1);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::theUnionNamesACappedWireFile()
 {
-#ifndef NDEBUG
     probe::detail::SetBudgetForTest({.wireBytes = 200});
     const QString wirePath = FreshWireLog();
     const QString unionPath = FreshUnionLog();
@@ -426,14 +389,10 @@ void ProbeChannelsTest::theUnionNamesACappedWireFile()
                  probe::detail::CapNote(probe::detail::ChannelFileName(probe::Channel::Wire), 200)),
              1);
     QVERIFY(!ReadAll(unionPath).contains(Line(100)));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::theUnionCapsOnItsOwnBudget()
 {
-#ifndef NDEBUG
     probe::detail::SetBudgetForTest({.unionBytes = 200, .channelBytes = 400});
     const QString clientPath = FreshClientLog();
     const QString unionPath = FreshUnionLog();
@@ -455,9 +414,6 @@ void ProbeChannelsTest::theUnionCapsOnItsOwnBudget()
 
     QCOMPARE(ReadAll(clientPath).count(probe::detail::CapMessage(400)), 1);
     QCOMPARE(QFileInfo(unionPath).size(), unionSize);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::appendIsSilentWhenTheGateIsOff()
@@ -475,7 +431,6 @@ void ProbeChannelsTest::appendIsSilentWhenTheGateIsOff()
 
 void ProbeChannelsTest::aFirstChangeWritesImmediately()
 {
-#ifndef NDEBUG
     const QString path = FreshClientLog();
 
     probe::Change(probe::Channel::Client, "k", QStringLiteral("a"));
@@ -484,14 +439,10 @@ void ProbeChannelsTest::aFirstChangeWritesImmediately()
 
     QCOMPARE(lines.size(), 1);
     QVERIFY(lines.last().endsWith(QStringLiteral(" a")));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::anUnchangedSignatureNeverWritesAgain()
 {
-#ifndef NDEBUG
     const QString path = FreshClientLog();
 
     probe::Change(probe::Channel::Client, "k", QStringLiteral("a"));
@@ -503,14 +454,10 @@ void ProbeChannelsTest::anUnchangedSignatureNeverWritesAgain()
     probe::Change(probe::Channel::Client, "k", QStringLiteral("a"));
 
     QCOMPARE(Lines(path).size(), 1);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::aChangedSignatureWritesOnTheNextTickWhenTheFloorBlocksIt()
 {
-#ifndef NDEBUG
     const QString path = FreshClientLog();
 
     probe::Change(probe::Channel::Client, "k", QStringLiteral("a"));
@@ -525,14 +472,10 @@ void ProbeChannelsTest::aChangedSignatureWritesOnTheNextTickWhenTheFloorBlocksIt
 
     QCOMPARE(lines.size(), 2);
     QVERIFY(lines.last().endsWith(QStringLiteral(" b")));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::theSignatureDecidesAndTheTextIsWhatLands()
 {
-#ifndef NDEBUG
     const QString path = FreshClientLog();
 
     probe::Change(probe::Channel::Client, "k", QStringLiteral("1"), QStringLiteral("value=1.04"));
@@ -550,14 +493,10 @@ void ProbeChannelsTest::theSignatureDecidesAndTheTextIsWhatLands()
 
     QCOMPARE(lines.size(), 2);
     QVERIFY(lines.last().endsWith(QStringLiteral("value=1.6")));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::aRemoteApiMessageLandsInTheMenuChannel()
 {
-#ifndef NDEBUG
     const QString menuPath = FreshChannelLog(QStringLiteral("gsx-menu.log"));
     const QString clientPath = FreshChannelLog(QStringLiteral("client.log"));
 
@@ -566,14 +505,10 @@ void ProbeChannelsTest::aRemoteApiMessageLandsInTheMenuChannel()
     QVERIFY(QFile::exists(menuPath));
     QVERIFY(ReadAll(menuPath).contains(QStringLiteral("RemoteAPI menu.open sent")));
     QVERIFY(!ReadAll(clientPath).contains(QStringLiteral("RemoteAPI menu.open sent")));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeChannelsTest::anyOtherMessageLandsInTheClientChannel()
 {
-#ifndef NDEBUG
     const QString menuPath = FreshChannelLog(QStringLiteral("gsx-menu.log"));
     const QString clientPath = FreshChannelLog(QStringLiteral("client.log"));
 
@@ -581,9 +516,6 @@ void ProbeChannelsTest::anyOtherMessageLandsInTheClientChannel()
 
     QVERIFY(ReadAll(clientPath).contains(QStringLiteral("something else")));
     QVERIFY(!QFile::exists(menuPath) || !ReadAll(menuPath).contains(QStringLiteral("something else")));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 QTEST_GUILESS_MAIN(ProbeChannelsTest)

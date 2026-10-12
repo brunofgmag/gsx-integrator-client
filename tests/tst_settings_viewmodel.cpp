@@ -632,11 +632,6 @@ void SettingsViewModelTest::loggingEnabledPersistsWhenToggled()
     SettingsViewModel viewModel(&repository, &service);
 
     QVERIFY(!viewModel.GetLoggingEnabled());
-#ifndef NDEBUG
-    QVERIFY(SettingsViewModel::AreDebugToolsAvailable());
-#else
-    QVERIFY(!SettingsViewModel::AreDebugToolsAvailable());
-#endif
 
     viewModel.SetLoggingEnabled(true);
 

@@ -67,7 +67,6 @@ class SettingsViewModel final : public QObject, public IntegratorServiceObserver
     Q_PROPERTY(bool trayTipShown READ GetTrayTipShown WRITE SetTrayTipShown NOTIFY TrayTipShownChanged)
     Q_PROPERTY(bool loggingEnabled READ GetLoggingEnabled WRITE SetLoggingEnabled NOTIFY LoggingEnabledChanged)
     Q_PROPERTY(bool loggingActive READ GetLoggingActive NOTIFY LoggingActiveChanged)
-    Q_PROPERTY(bool debugToolsAvailable READ AreDebugToolsAvailable CONSTANT)
     Q_PROPERTY(QString logLocation READ GetLogLocation NOTIFY LogLocationChanged)
     Q_PROPERTY(bool canSave READ CanSave NOTIFY ValidationChanged)
     Q_PROPERTY(QString validationMessage READ GetValidationMessage NOTIFY ValidationChanged)
@@ -244,7 +243,6 @@ public:
     void SetLoggingEnabled(bool enabled);
     [[nodiscard]] bool GetLoggingActive() const;
     void SetLoggingActive(bool active);
-    [[nodiscard]] static bool AreDebugToolsAvailable();
     [[nodiscard]] QString GetLogLocation() const;
     void SetLogLocation(const QString& location);
 

@@ -690,15 +690,6 @@ void SettingsViewModel::SetLoggingActive(const bool active)
     emit LoggingActiveChanged();
 }
 
-bool SettingsViewModel::AreDebugToolsAvailable()
-{
-#ifndef NDEBUG
-    return true;
-#else
-    return false;
-#endif
-}
-
 QString SettingsViewModel::GetLogLocation() const
 {
     return logLocation_;
