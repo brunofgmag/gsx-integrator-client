@@ -93,6 +93,7 @@ private slots:
     static void cargoIsProjectedForThePassengersJustSentOnceTheirWeightIsLearned();
     static void nothingIsLearnedFromTwoEchoesWithTheSamePassengerCount();
     static void cargoWaitsForTheEchoWhenThePassengerWeightIsNotLearnedYet();
+    static void cargoIsNotResentWhenTheEchoRoundsItsHolds();
     static void resetForgetsTheLearnedPassengerWeight();
     static void trimStaysQuietWhileTheProgressiveRampIsMoving();
     static void trimResumesWhenTheProgressiveRampReachesThePlan();
@@ -259,6 +260,23 @@ void PmdgPayloadWriterTest::cargoWaitsForTheEchoWhenThePassengerWeightIsNotLearn
     fixture.writer->SetZfwKg(RampZfwKg(50));
 
     QCOMPARE(fixture.tablet.cargoSends, std::vector<int>{ExpectedCargoLbs(RampZfwKg(50), kEfbNoPayloadLbs + (50 * 190.0))});
+}
+
+void PmdgPayloadWriterTest::cargoIsNotResentWhenTheEchoRoundsItsHolds()
+{
+    WriterFixture fixture(true);
+    const double targetZfwKg = RampZfwKg(50);
+
+    for (int tick = 0; tick < 6; ++tick)
+    {
+        fixture.writer->SetZfwKg(targetZfwKg);
+
+        const int heldLbs = fixture.tablet.cargoSends.back();
+        const int echoedHoldsLbs = heldLbs - 2 + (heldLbs % 2);
+        fixture.tablet.weightEcho = PmdgWeightEcho{kEfbNoPayloadLbs + heldLbs, static_cast<double>(echoedHoldsLbs)};
+    }
+
+    QCOMPARE(fixture.tablet.cargoSends, std::vector<int>{ExpectedCargoLbs(targetZfwKg)});
 }
 
 void PmdgPayloadWriterTest::resetForgetsTheLearnedPassengerWeight()
