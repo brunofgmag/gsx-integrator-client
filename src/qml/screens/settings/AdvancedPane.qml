@@ -50,7 +50,6 @@ ColumnLayout {
 
     SwitchRow {
         Layout.fillWidth: true
-        visible: root.settingsVm.debugToolsAvailable
         title: qsTr("Client logging")
         caption: qsTr("Write diagnostic logs to disk")
         helpText: qsTr("Logs are saved in: %1").arg(root.settingsVm.logLocation)
@@ -60,7 +59,7 @@ ColumnLayout {
 
     Advisory {
         Layout.fillWidth: true
-        visible: root.settingsVm.debugToolsAvailable && root.loggingRestartPending
+        visible: root.loggingRestartPending
         text: !root.loggingRestartPending
               ? ""
               : root.settingsVm.loggingEnabled

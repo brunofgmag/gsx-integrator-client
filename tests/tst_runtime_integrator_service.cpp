@@ -306,13 +306,11 @@ namespace
         return options;
     }
 
-#ifndef NDEBUG
     void TurnTheProbeOff()
     {
         probe::SetEnabled(false);
         probe::ResetForTest();
     }
-#endif
 
     class LogCapture
     {
@@ -1818,7 +1816,6 @@ void RuntimeIntegratorServiceTest::aDropKeepsTheMachineTicking()
 
 void RuntimeIntegratorServiceTest::theLoggingToggleAloneLeavesTheAircraftUntouched()
 {
-#ifndef NDEBUG
     probe::SetEnabled(true);
     const auto probeOff = qScopeGuard(TurnTheProbeOff);
 
@@ -1836,14 +1833,10 @@ void RuntimeIntegratorServiceTest::theLoggingToggleAloneLeavesTheAircraftUntouch
 
     QVERIFY(!runtime.Snapshot().automationEnabled);
     QCOMPARE(runtime.GetAircraftProfileId(), std::string{});
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void RuntimeIntegratorServiceTest::theRunHeaderNamesTheRunFolderAndLeavesThePilotIdOut()
 {
-#ifndef NDEBUG
     probe::SetEnabled(true);
     const auto probeOff = qScopeGuard(TurnTheProbeOff);
 
@@ -1859,13 +1852,21 @@ void RuntimeIntegratorServiceTest::theRunHeaderNamesTheRunFolderAndLeavesThePilo
     runtime.Setup();
 
     QVERIFY(LogCapture::Contains(QStringLiteral("Logging run: folder=") + probe::RunLocation()));
+#ifdef NDEBUG
+    QVERIFY(LogCapture::Contains(QStringLiteral("build=release")));
+#else
     QVERIFY(LogCapture::Contains(QStringLiteral("build=debug")));
+#endif
     QVERIFY(LogCapture::Contains(QStringLiteral("simbriefPilotId=set")));
     QVERIFY(LogCapture::Contains(QStringLiteral("callCatering=1")));
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(runtime.ReloadSimbrief());
+
+    QVERIFY(LogCapture::Contains(QStringLiteral("Fetching Simbrief OFP")));
     QVERIFY(!LogCapture::Contains(QString::number(kPersonalPilotId)));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void RuntimeIntegratorServiceTest::aSavedTurnaroundHoldsTheMachineWhileTheRemoteApiNeverConnects()
@@ -2453,10 +2454,8 @@ void RuntimeIntegratorServiceTest::aResumedTurnaroundRunsWhateverTheAutoStartOpt
 
 void RuntimeIntegratorServiceTest::aSavedPhaseTheMachineDoesNotKnowErasesTheFileAndStartsTheFlow()
 {
-#ifndef NDEBUG
     probe::SetEnabled(true);
     const auto probeOff = qScopeGuard(TurnTheProbeOff);
-#endif
 
     const LogCapture log;
     FakeTurnaroundCheckpointStore store;

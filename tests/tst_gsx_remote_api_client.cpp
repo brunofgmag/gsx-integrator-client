@@ -181,9 +181,7 @@ void GsxRemoteApiClientTest::cleanup()
 {
     qInstallMessageHandler(Chained());
     probe::SetEnabled(false);
-#ifndef NDEBUG
     probe::ResetForTest();
-#endif
 }
 
 void GsxRemoteApiClientTest::snapshotMessageEmitsSnapshotReceived()
@@ -480,7 +478,6 @@ void GsxRemoteApiClientTest::aConnectionGsxNeverAnsweredKeepsTheRetriesQuiet()
 
 void GsxRemoteApiClientTest::everySentMessageLandsInTheWireLog()
 {
-#ifndef NDEBUG
     probe::ResetForTest();
     probe::SetEnabled(true);
     GsxServer gsx;
@@ -505,9 +502,6 @@ void GsxRemoteApiClientTest::everySentMessageLandsInTheWireLog()
         QStringLiteral("{\"type\":\"sent\",\"message\":{\"channels\":[\"state\",\"prompts\",\"toasts\"],\"type\":\"subscribe\"}}")));
     QVERIFY(lines.at(1).endsWith(
         QStringLiteral("{\"type\":\"sent\",\"message\":{\"args\":{\"index\":2},\"type\":\"command\",\"verb\":\"menu.open\"}}")));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 QTEST_GUILESS_MAIN(GsxRemoteApiClientTest)

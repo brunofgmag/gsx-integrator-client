@@ -396,7 +396,6 @@ void VariableGatewayTest::forgettingTheTextSlotsRebuildsTheStringDefinitionInste
 
 void VariableGatewayTest::everyWriteToTheSimLandsInTheWritesLog()
 {
-#ifndef NDEBUG
     FakeSimConnectApi::Reset();
     const qsizetype before = ProbeLines(kWritesLog).size();
     SimConnectVariableGateway gateway;
@@ -410,14 +409,10 @@ void VariableGatewayTest::everyWriteToTheSimLandsInTheWritesLog()
                  QStringLiteral("set L:FSS_B727_GPU_AVAIL=1 unit=Number n=1"),
                  QStringLiteral("set PAYLOAD STATION WEIGHT:1=1234.5 unit=pounds n=1")
              }));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void VariableGatewayTest::aRepeatedWriteIsCountedAndLoggedOnceUntilTheValueChanges()
 {
-#ifndef NDEBUG
     FakeSimConnectApi::Reset();
     const qsizetype before = ProbeLines(kWritesLog).size();
     SimConnectVariableGateway gateway;
@@ -434,14 +429,10 @@ void VariableGatewayTest::aRepeatedWriteIsCountedAndLoggedOnceUntilTheValueChang
                  QStringLiteral("set L:FSS_B727_GPU_AVAIL=1 unit=Number n=1"),
                  QStringLiteral("set L:FSS_B727_GPU_AVAIL=0 unit=Number n=4")
              }));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void VariableGatewayTest::aWriteThatNeverLeftIsNotLogged()
 {
-#ifndef NDEBUG
     FakeSimConnectApi::Reset();
     const qsizetype before = ProbeLines(kWritesLog).size();
     SimConnectVariableGateway gateway;
@@ -450,9 +441,6 @@ void VariableGatewayTest::aWriteThatNeverLeftIsNotLogged()
 
     QVERIFY(FakeSimConnectApi::writtenSimObjectData.empty());
     QCOMPARE(ProbeLines(kWritesLog).size(), before);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 QTEST_APPLESS_MAIN(VariableGatewayTest)

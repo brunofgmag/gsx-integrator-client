@@ -88,7 +88,7 @@ private slots:
     static void setEnabledFalseTurnsItOff();
     static void actingOnTheSimIsOffWithoutTheEnvironmentVariable();
     static void theToggleNeverTurnsOnTheActingHalf();
-    static void releaseKeepsEverythingOff();
+    static void releaseKeepsTheActingHalfOff();
     static void twoIdenticalServicePatchesAreStoredOnce();
     static void patchesThatDifferOnlyInTheTimestampAreStoredOnce();
     static void aDifferingPatchIsStoredAfterTheElidedReference();
@@ -116,7 +116,11 @@ private:
 
 void ProbeLogTest::initTestCase()
 {
+#ifdef NDEBUG
+    qputenv("GSXI_PROBE", "1");
+#else
     qunsetenv("GSXI_PROBE");
+#endif
 
     QVERIFY(directory_.isValid());
     qputenv("GSXI_PROBE_DIR", directory_.path().toUtf8());
@@ -124,20 +128,14 @@ void ProbeLogTest::initTestCase()
 
 void ProbeLogTest::init()
 {
-#ifndef NDEBUG
     probe::SetEnabled(true);
     probe::ResetForTest();
     probe::ResetWireMemoForTest();
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::cleanupTestCase()
 {
-#ifndef NDEBUG
     probe::ResetForTest();
-#endif
 }
 
 void ProbeLogTest::setEnabledTurnsTheGateOn()
@@ -167,12 +165,15 @@ void ProbeLogTest::theToggleNeverTurnsOnTheActingHalf()
     QVERIFY(!probe::ActsOnTheSim());
 }
 
-void ProbeLogTest::releaseKeepsEverythingOff()
+void ProbeLogTest::releaseKeepsTheActingHalfOff()
 {
 #ifdef NDEBUG
+    QVERIFY(qEnvironmentVariableIsSet("GSXI_PROBE"));
+    QVERIFY(!probe::ActsOnTheSim());
+
     probe::SetEnabled(true);
 
-    QVERIFY(!probe::IsOn());
+    QVERIFY(probe::IsOn());
 #else
     QSKIP("only meaningful in release");
 #endif
@@ -180,7 +181,6 @@ void ProbeLogTest::releaseKeepsEverythingOff()
 
 void ProbeLogTest::twoIdenticalServicePatchesAreStoredOnce()
 {
-#ifndef NDEBUG
     const QString path = FreshWireLog();
     const QString patch = Patch(QStringLiteral("/services"), 100, QStringLiteral("1"));
 
@@ -191,14 +191,10 @@ void ProbeLogTest::twoIdenticalServicePatchesAreStoredOnce()
 
     QCOMPARE(lines.size(), 1);
     QCOMPARE(PayloadOf(lines.first()), patch);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::patchesThatDifferOnlyInTheTimestampAreStoredOnce()
 {
-#ifndef NDEBUG
     const QString path = FreshWireLog();
     const QString first = Patch(QStringLiteral("/statusHtml"), 100, QStringLiteral("\"<b>Boarding</b>\""));
     const QString second = Patch(QStringLiteral("/statusHtml"), 101, QStringLiteral("\"<b>Boarding</b>\""));
@@ -210,14 +206,10 @@ void ProbeLogTest::patchesThatDifferOnlyInTheTimestampAreStoredOnce()
 
     QCOMPARE(lines.size(), 1);
     QCOMPARE(PayloadOf(lines.first()), first);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::aDifferingPatchIsStoredAfterTheElidedReference()
 {
-#ifndef NDEBUG
     const QString path = FreshWireLog();
     const QString first = Patch(QStringLiteral("/services"), 100, QStringLiteral("1"));
     const QString second = Patch(QStringLiteral("/services"), 101, QStringLiteral("2"));
@@ -237,14 +229,10 @@ void ProbeLogTest::aDifferingPatchIsStoredAfterTheElidedReference()
     QCOMPARE(PayloadOf(lines.at(2)),
              QStringLiteral("{\"type\":\"elided\",\"path\":\"/services\",\"count\":2}"));
     QCOMPARE(PayloadOf(lines.at(3)), third);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::typesOtherThanPatchAreNeverFiltered()
 {
-#ifndef NDEBUG
     const QString path = FreshWireLog();
 
     probe::Wire(QStringLiteral("{\"v\":1,\"type\":\"hello\",\"ts\":100,\"protocol\":1}"));
@@ -267,14 +255,10 @@ void ProbeLogTest::typesOtherThanPatchAreNeverFiltered()
     probe::Wire(QStringLiteral("not json"));
 
     QCOMPARE(Lines(path).size(), 18);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::identicalPayloadsOnDifferentPathsAreIndependent()
 {
-#ifndef NDEBUG
     const QString path = FreshWireLog();
     const QString services = Patch(QStringLiteral("/services"), 100, QStringLiteral("1"));
     const QString handlerData = Patch(QStringLiteral("/handlerData"), 100, QStringLiteral("1"));
@@ -299,14 +283,10 @@ void ProbeLogTest::identicalPayloadsOnDifferentPathsAreIndependent()
     QCOMPARE(PayloadOf(lines.at(4)),
              QStringLiteral("{\"type\":\"elided\",\"path\":\"/handlerData\",\"count\":1}"));
     QCOMPARE(PayloadOf(lines.at(5)), handlerDataAgain);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::equalityIsDecidedOnTheElidedValue()
 {
-#ifndef NDEBUG
     const QString path = FreshWireLog();
     const QString first = Patch(QStringLiteral("/services"), 100,
                                 QStringLiteral("{\"note\":\"%1\"}").arg(QString(300, QLatin1Char('a'))));
@@ -321,14 +301,10 @@ void ProbeLogTest::equalityIsDecidedOnTheElidedValue()
     QCOMPARE(lines.size(), 1);
     QCOMPARE(PayloadOf(lines.first()),
              Patch(QStringLiteral("/services"), 100, QStringLiteral("{\"note\":\"<elided 300 bytes>\"}")));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::aRepeatedPathIsRecordedAsADiffOfTheLastRecordedValue()
 {
-#ifndef NDEBUG
     const QString path = FreshWireLog();
     const QString first = Patch(QStringLiteral("/services"), 100, QLatin1String(kServicesBefore));
 
@@ -347,14 +323,10 @@ void ProbeLogTest::aRepeatedPathIsRecordedAsADiffOfTheLastRecordedValue()
     QCOMPARE(PayloadOf(lines.at(2)),
              QStringLiteral("{\"type\":\"patch-diff\",\"ts\":102,\"path\":\"/services\",\"ops\":["
                  "{\"op\":\"replace\",\"path\":\"/0/state\",\"value\":\"requested\"}]}"));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::aDiffNoShorterThanThePatchIsWrittenInFull()
 {
-#ifndef NDEBUG
     const QString path = FreshWireLog();
     const QString second = Patch(QStringLiteral("/menuShown"), 101, QStringLiteral("false"));
 
@@ -365,14 +337,10 @@ void ProbeLogTest::aDiffNoShorterThanThePatchIsWrittenInFull()
 
     QCOMPARE(lines.size(), 2);
     QCOMPARE(PayloadOf(lines.at(1)), second);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::aSnapshotWritesTheNextPatchOfEveryPathInFull()
 {
-#ifndef NDEBUG
     const QString path = FreshWireLog();
     const QString afterSnapshot = Patch(QStringLiteral("/services"), 103, QLatin1String(kServicesBothRequested));
 
@@ -387,14 +355,10 @@ void ProbeLogTest::aSnapshotWritesTheNextPatchOfEveryPathInFull()
     QVERIFY(PayloadOf(lines.at(1)).startsWith(QStringLiteral("{\"type\":\"patch-diff\"")));
     QCOMPARE(PayloadOf(lines.at(2)), Snapshot(102));
     QCOMPARE(PayloadOf(lines.at(3)), afterSnapshot);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::aSnapshotWritesThePendingElidedCountsFirst()
 {
-#ifndef NDEBUG
     const QString path = FreshWireLog();
     const QString first = Patch(QStringLiteral("/services"), 100, QStringLiteral("1"));
     const QString afterSnapshot = Patch(QStringLiteral("/services"), 104, QStringLiteral("1"));
@@ -413,9 +377,6 @@ void ProbeLogTest::aSnapshotWritesThePendingElidedCountsFirst()
              QStringLiteral("{\"type\":\"elided\",\"path\":\"/services\",\"count\":2}"));
     QCOMPARE(PayloadOf(lines.at(2)), Snapshot(103));
     QCOMPARE(PayloadOf(lines.at(3)), afterSnapshot);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::theJsonPatchEscapesKeysInThePointer()
@@ -460,7 +421,6 @@ void ProbeLogTest::theJsonPatchOfEqualValuesIsEmpty()
 
 void ProbeLogTest::aSentMessageIsRecordedWholeEveryTime()
 {
-#ifndef NDEBUG
     const QString path = FreshWireLog();
     const QString subscribe = QStringLiteral("{\"channels\":[\"state\",\"prompts\",\"toasts\"],\"type\":\"subscribe\"}");
 
@@ -473,14 +433,10 @@ void ProbeLogTest::aSentMessageIsRecordedWholeEveryTime()
     QCOMPARE(lines.size(), 2);
     QCOMPARE(PayloadOf(lines.at(0)), expected);
     QCOMPARE(PayloadOf(lines.at(1)), expected);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::aSentTextThatIsNotAnObjectIsRecordedRaw()
 {
-#ifndef NDEBUG
     const QString path = FreshWireLog();
 
     probe::WireSent(QStringLiteral("menu \"open\""));
@@ -489,14 +445,10 @@ void ProbeLogTest::aSentTextThatIsNotAnObjectIsRecordedRaw()
 
     QCOMPARE(lines.size(), 1);
     QCOMPARE(PayloadOf(lines.first()), QStringLiteral("{\"type\":\"sent\",\"raw\":\"menu \\\"open\\\"\"}"));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::aTransitionLandsInTheTurnaroundLog()
 {
-#ifndef NDEBUG
     const QString turnaround = FreshLog(probe::Channel::Turnaround);
     const QString client = FreshLog(probe::Channel::Client);
     const QString message =
@@ -509,14 +461,10 @@ void ProbeLogTest::aTransitionLandsInTheTurnaroundLog()
     QCOMPARE(lines.size(), 1);
     QCOMPARE(PayloadOf(lines.first()), QStringLiteral("qt   ") + message);
     QVERIFY(Lines(client).isEmpty());
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeLogTest::anyOtherMessageStaysInTheClientLog()
 {
-#ifndef NDEBUG
     const QString turnaround = FreshLog(probe::Channel::Turnaround);
     const QString client = FreshLog(probe::Channel::Client);
     const QString message = QStringLiteral("[GSX Integrator] Aircraft detected: FSS E195");
@@ -528,9 +476,6 @@ void ProbeLogTest::anyOtherMessageStaysInTheClientLog()
     QCOMPARE(lines.size(), 1);
     QCOMPARE(PayloadOf(lines.first()), QStringLiteral("qt   ") + message);
     QVERIFY(Lines(turnaround).isEmpty());
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 QTEST_GUILESS_MAIN(ProbeLogTest)

@@ -155,7 +155,7 @@ bool SimbriefClient::FetchData()
 
     connect(reply_, &QNetworkReply::finished, this, &SimbriefClient::OnHttpFinished);
 
-    LOG_INFO("Fetching Simbrief OFP for pilot id %d", pilotId);
+    LOG_INFO("Fetching Simbrief OFP");
     SetStatus(FlightPlanStatus::Fetching);
 
     return true;

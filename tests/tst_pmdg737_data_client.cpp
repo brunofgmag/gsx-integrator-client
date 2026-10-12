@@ -71,7 +71,6 @@ void Pmdg737DataClientTest::initTestCase()
 
 void Pmdg737DataClientTest::aDoorToggleIsLoggedUnderItsDoorName()
 {
-#ifndef NDEBUG
     Pmdg737DataClient client;
     client.Poll();
     const qsizetype before = ProbeLines(QStringLiteral("writes.log")).size();
@@ -86,9 +85,6 @@ void Pmdg737DataClientTest::aDoorToggleIsLoggedUnderItsDoorName()
                  QStringLiteral("event DOOR_FWD_CARGO (#83645) param=536870912 n=1"),
                  QStringLiteral("event DOOR_AIRSTAIR (#83649) param=536870912 n=1")
              }));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void Pmdg737DataClientTest::init()

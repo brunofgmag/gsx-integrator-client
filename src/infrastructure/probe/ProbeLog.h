@@ -361,7 +361,6 @@ namespace probe
         Change(channel, key, text, text);
     }
 
-#ifndef NDEBUG
     inline void ResetChangeMemoForTest()
     {
         QMutexLocker locker(&detail::ChangeMutex());
@@ -375,7 +374,6 @@ namespace probe
 
         detail::WireMemos().clear();
     }
-#endif
 
     inline void Wire(const QString& text)
     {
