@@ -11,6 +11,7 @@ using namespace simvars;
 namespace
 {
     constexpr double kLbsPerKg = 2.20462262185;
+    constexpr int kEfbHoldRoundingLbs = 3;
 
     constexpr int kZfwSettleTicks = 5;
     constexpr int kZfwTrimMaxAttempts = 5;
@@ -121,7 +122,7 @@ void PmdgPayloadWriter::SendCargoFor(const double zfwKg, const double nonCargoLb
 {
     const int cargoLbs =
         (std::max)(static_cast<int>(std::lround((zfwKg * kLbsPerKg) - nonCargoLbs)), 0);
-    if (cargoLbs != lastProgressiveCargoLbs_)
+    if (lastProgressiveCargoLbs_ < 0 || std::abs(cargoLbs - lastProgressiveCargoLbs_) >= kEfbHoldRoundingLbs)
     {
         lastProgressiveCargoLbs_ = cargoLbs;
         lastSentCargoLbs_ = cargoLbs;
