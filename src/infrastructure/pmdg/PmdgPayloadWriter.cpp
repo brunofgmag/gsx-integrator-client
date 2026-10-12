@@ -11,6 +11,9 @@ using namespace simvars;
 namespace
 {
     constexpr double kLbsPerKg = 2.20462262185;
+    constexpr int kEfbHoldRoundingLbs = 3;
+    constexpr double kEfbRecountSlackLbs = 50.0;
+    constexpr double kMinPassengerLbs = 100.0;
 
     constexpr int kZfwSettleTicks = 5;
     constexpr int kZfwTrimMaxAttempts = 5;
@@ -37,6 +40,7 @@ void PmdgPayloadWriter::Reset()
     resumedPlannedZfwKg_.reset();
     resumedPlannedPassengers_.reset();
     rememberedEcho_.reset();
+    recount_.reset();
     perPassengerLbs_.reset();
     lastRequestedZfwKg_ = 0.0;
     progressiveRampMoving_ = false;
@@ -76,9 +80,43 @@ int PmdgPayloadWriter::PlannedPassengers() const
                             : resumedPlannedPassengers_.value_or(status_->plannedPassengers);
 }
 
+void PmdgPayloadWriter::TrackEfbRecount(const PmdgWeightEcho& echo)
+{
+    const double nonCargoLbs = echo.zfwLbs - echo.cargoLbs;
+    if (recount_.has_value())
+    {
+        if (echo.passengers != recount_->echoedPassengers
+            || std::abs(nonCargoLbs - recount_->nonCargoLbs) > kEfbRecountSlackLbs)
+        {
+            recount_.reset();
+        }
+
+        return;
+    }
+
+    if (perPassengerLbs_.has_value() && rememberedEcho_.has_value()
+        && rememberedEcho_->passengers == lastSentPax_ && echo.passengers != lastSentPax_
+        && std::abs(nonCargoLbs - rememberedEcho_->nonCargoLbs) <= kEfbRecountSlackLbs)
+    {
+        recount_ = EfbRecount{echo.passengers, nonCargoLbs, lastSentPax_};
+    }
+}
+
+int PmdgPayloadWriter::PassengersHeldBy(const PmdgWeightEcho& echo) const
+{
+    return recount_.has_value() ? recount_->heldPassengers : echo.passengers;
+}
+
 void PmdgPayloadWriter::LearnPassengerWeight(const PmdgWeightEcho& echo)
 {
     const double nonCargoLbs = echo.zfwLbs - echo.cargoLbs;
+    if (recount_.has_value())
+    {
+        rememberedEcho_ = PassengerSample{recount_->heldPassengers, nonCargoLbs};
+
+        return;
+    }
+
     if (!rememberedEcho_.has_value())
     {
         rememberedEcho_ = PassengerSample{echo.passengers, nonCargoLbs};
@@ -93,7 +131,7 @@ void PmdgPayloadWriter::LearnPassengerWeight(const PmdgWeightEcho& echo)
 
     const double lbsPerPassenger =
         (nonCargoLbs - rememberedEcho_->nonCargoLbs) / (echo.passengers - rememberedEcho_->passengers);
-    if (lbsPerPassenger > 0.0)
+    if (lbsPerPassenger >= kMinPassengerLbs)
     {
         perPassengerLbs_ = lbsPerPassenger;
     }
@@ -114,14 +152,14 @@ std::optional<double> PmdgPayloadWriter::NonCargoLbsOnceSentPassengersBoard(cons
         return echo.passengers == lastSentPax_ ? std::optional(nonCargoLbs) : std::nullopt;
     }
 
-    return nonCargoLbs + (lastSentPax_ - echo.passengers) * *perPassengerLbs_;
+    return nonCargoLbs + (lastSentPax_ - PassengersHeldBy(echo)) * *perPassengerLbs_;
 }
 
 void PmdgPayloadWriter::SendCargoFor(const double zfwKg, const double nonCargoLbs)
 {
     const int cargoLbs =
         (std::max)(static_cast<int>(std::lround((zfwKg * kLbsPerKg) - nonCargoLbs)), 0);
-    if (cargoLbs != lastProgressiveCargoLbs_)
+    if (lastProgressiveCargoLbs_ < 0 || std::abs(cargoLbs - lastProgressiveCargoLbs_) >= kEfbHoldRoundingLbs)
     {
         lastProgressiveCargoLbs_ = cargoLbs;
         lastSentCargoLbs_ = cargoLbs;
@@ -168,6 +206,7 @@ void PmdgPayloadWriter::SetZfwKg(const double zfwKg)
 
     if (!cargoVariant_)
     {
+        TrackEfbRecount(*echo);
         LearnPassengerWeight(*echo);
 
         const int pax = static_cast<int>(std::lround(progress * PlannedPassengers()));

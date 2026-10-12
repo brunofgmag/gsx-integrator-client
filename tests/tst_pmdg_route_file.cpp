@@ -109,14 +109,15 @@ void PmdgRouteFileTest::rejectsAnotherPairAndAnotherExtension()
 void PmdgRouteFileTest::reportsTheNewestWriteOfAnyRoute()
 {
     const QTemporaryDir dir;
+    const long long now = NowEpoch();
     WriteFile(dir, "SBFZSBTE.rte");
-    Restamp(dir, "SBFZSBTE.rte", NowEpoch() - 600);
+    Restamp(dir, "SBFZSBTE.rte", now - 600);
     WriteFile(dir, "EGSSLOWS.RTE");
-    Restamp(dir, "EGSSLOWS.RTE", NowEpoch() - 60);
+    Restamp(dir, "EGSSLOWS.RTE", now - 60);
     WriteFile(dir, "EGSSLOWS.wx");
-    Restamp(dir, "EGSSLOWS.wx", NowEpoch());
+    Restamp(dir, "EGSSLOWS.wx", now);
 
-    QCOMPARE(PmdgRouteFile::LatestWrite(PathOf(dir)), NowEpoch() - 60);
+    QCOMPARE(PmdgRouteFile::LatestWrite(PathOf(dir)), now - 60);
 }
 
 void PmdgRouteFileTest::missingDirectoryHasNoWrite()
