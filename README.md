@@ -169,3 +169,5 @@ If nothing happens after loading in, check that the aircraft is on the list abov
 ## Problems and feedback
 
 Open an issue on GitHub with the aircraft, what you expected and what happened. Reports from real flights are the most useful thing you can send while the project is in testing.
+
+A log of the flight makes a report much easier to act on. Turn on Settings > Advanced > Client logging and restart GSX Integrator; logging starts on the next launch. Every launch writes to its own folder, and the ? next to that switch says where. The client keeps the five most recent flights and deletes older ones, so copy the folder of the flight that went wrong before you fly much more, zip it and attach it to the issue. It records what the client read from the simulator and from GSX, and what it sent to them.

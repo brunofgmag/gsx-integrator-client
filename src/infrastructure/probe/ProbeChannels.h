@@ -60,20 +60,12 @@ namespace probe
 
     inline bool IsOn()
     {
-#ifdef NDEBUG
-        return false;
-#else
         return detail::Gate();
-#endif
     }
 
     inline void SetEnabled(const bool enabled)
     {
-#ifdef NDEBUG
-        Q_UNUSED(enabled)
-#else
         detail::Gate() = enabled;
-#endif
     }
 
     inline bool ActsOnTheSim()
@@ -347,12 +339,10 @@ namespace probe
             return true;
         }
 
-#ifndef NDEBUG
         inline void SetBudgetForTest(const Budgets& budgets)
         {
             FileBudgets() = budgets;
         }
-#endif
     }
 
     inline void SetPhase(const char* phase)
@@ -404,7 +394,6 @@ namespace probe
         return detail::RunDirectory();
     }
 
-#ifndef NDEBUG
     inline void ResetForTest()
     {
         QMutexLocker locker(&detail::Mutex());
@@ -414,7 +403,6 @@ namespace probe
         detail::Aircraft().clear();
         detail::FileBudgets() = {};
     }
-#endif
 }
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PROBECHANNELS_H

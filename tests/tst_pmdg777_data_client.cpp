@@ -80,7 +80,6 @@ void Pmdg777DataClientTest::initTestCase()
 
 void Pmdg777DataClientTest::aDoorToggleIsLoggedUnderItsDoorName()
 {
-#ifndef NDEBUG
     Pmdg777DataClient client;
     client.SetClockForTest([] { return 0LL; });
     client.Poll();
@@ -94,14 +93,10 @@ void Pmdg777DataClientTest::aDoorToggleIsLoggedUnderItsDoorName()
                  QStringLiteral("event DOOR_ENTRY_1L (#83643) param=536870912 n=1"),
                  QStringLiteral("event DOOR_CARGO_MAIN (#83655) param=536870912 n=1")
              }));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void Pmdg777DataClientTest::theKickIsLoggedUnderTheLightTest()
 {
-#ifndef NDEBUG
     Pmdg777DataClient client;
     long long now = 0;
     client.SetClockForTest([&now] { return now; });
@@ -116,9 +111,6 @@ void Pmdg777DataClientTest::theKickIsLoggedUnderTheLightTest()
     QCOMPARE(lines.size(), 2);
     QVERIFY2(lines.at(0).startsWith(QStringLiteral("event LIGHT_TEST (#69750) param=16384")), qPrintable(lines.at(0)));
     QVERIFY2(lines.at(1).startsWith(QStringLiteral("event LIGHT_TEST (#69750) param=8192")), qPrintable(lines.at(1)));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void Pmdg777DataClientTest::init()

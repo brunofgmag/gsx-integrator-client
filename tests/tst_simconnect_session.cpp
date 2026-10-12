@@ -300,7 +300,6 @@ void SimConnectSessionTest::closeClearsCallbacks()
 
 void SimConnectSessionTest::aTransmittedEventLandsInTheWritesLog()
 {
-#ifndef NDEBUG
     const qsizetype before = ProbeLines(kWritesLog).size();
     SimConnectSession session;
     QVERIFY(session.Open("test"));
@@ -309,14 +308,10 @@ void SimConnectSessionTest::aTransmittedEventLandsInTheWritesLog()
 
     QCOMPARE(ProbeLines(kWritesLog).mid(before),
              QStringList{QStringLiteral("event #69632 param=536870912 n=1")});
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void SimConnectSessionTest::aLabelledEventNamesTheControlBesideTheSimConnectName()
 {
-#ifndef NDEBUG
     const qsizetype before = ProbeLines(kWritesLog).size();
     SimConnectSession session;
     QVERIFY(session.Open("test"));
@@ -325,14 +320,10 @@ void SimConnectSessionTest::aLabelledEventNamesTheControlBesideTheSimConnectName
 
     QCOMPARE(ProbeLines(kWritesLog).mid(before),
              QStringList{QStringLiteral("event DOOR_FWD_CARGO (#83645) param=536870912 n=1")});
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void SimConnectSessionTest::theEventCountFollowsTheSimConnectNameNotTheLabel()
 {
-#ifndef NDEBUG
     const qsizetype before = ProbeLines(kWritesLog).size();
     SimConnectSession session;
     QVERIFY(session.Open("test"));
@@ -347,14 +338,10 @@ void SimConnectSessionTest::theEventCountFollowsTheSimConnectNameNotTheLabel()
                  QStringLiteral("event #83645 param=536870912 n=2"),
                  QStringLiteral("event PROBE_TOGGLE (#83645) param=536870912 n=3")
              }));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void SimConnectSessionTest::aToggleSentTwiceAMomentApartIsLoggedTwice()
 {
-#ifndef NDEBUG
     const qsizetype before = ProbeLines(kWritesLog).size();
     SimConnectSession session;
     QVERIFY(session.Open("test"));
@@ -369,14 +356,10 @@ void SimConnectSessionTest::aToggleSentTwiceAMomentApartIsLoggedTwice()
                  QStringLiteral("event #83645 param=536870912 n=1"),
                  QStringLiteral("event #83645 param=536870912 n=2")
              }));
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void SimConnectSessionTest::anEventThatNeverLeftIsNotLogged()
 {
-#ifndef NDEBUG
     const qsizetype before = ProbeLines(kWritesLog).size();
     SimConnectSession session;
 
@@ -389,9 +372,6 @@ void SimConnectSessionTest::anEventThatNeverLeftIsNotLogged()
 
     QCOMPARE(FakeSimConnectApi::transmittedEvents, 0);
     QCOMPARE(ProbeLines(kWritesLog).size(), before);
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 QTEST_GUILESS_MAIN(SimConnectSessionTest)

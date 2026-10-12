@@ -109,12 +109,8 @@ void ProbeObserverTest::initTestCase()
 
 void ProbeObserverTest::init()
 {
-#ifndef NDEBUG
     probe::ResetChangeMemoForTest();
     FakeSimConnectApi::Reset();
-#else
-    QSKIP("probe recording is compiled out of Release builds");
-#endif
 }
 
 void ProbeObserverTest::theSimVariablesThePredicatesReadLandInTheSimLog()
