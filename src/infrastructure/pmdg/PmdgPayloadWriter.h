@@ -24,7 +24,9 @@ private:
     [[nodiscard]] bool LivePlanExists() const;
     [[nodiscard]] double PlannedZfwKg() const;
     [[nodiscard]] int PlannedPassengers() const;
+    void TrackEfbRecount(const PmdgWeightEcho& echo);
     void LearnPassengerWeight(const PmdgWeightEcho& echo);
+    [[nodiscard]] int PassengersHeldBy(const PmdgWeightEcho& echo) const;
     [[nodiscard]] std::optional<double> NonCargoLbsOnceSentPassengersBoard(const PmdgWeightEcho& echo) const;
     void SendCargoFor(double zfwKg, double nonCargoLbs);
 
@@ -32,6 +34,13 @@ private:
     {
         int passengers = 0;
         double nonCargoLbs = 0.0;
+    };
+
+    struct EfbRecount
+    {
+        int echoedPassengers = 0;
+        double nonCargoLbs = 0.0;
+        int heldPassengers = 0;
     };
 
     PmdgTabletGateway& tablet_;
@@ -47,6 +56,7 @@ private:
     std::optional<double> resumedPlannedZfwKg_;
     std::optional<int> resumedPlannedPassengers_;
     std::optional<PassengerSample> rememberedEcho_;
+    std::optional<EfbRecount> recount_;
     std::optional<double> perPassengerLbs_;
     double lastRequestedZfwKg_ = 0.0;
     bool progressiveRampMoving_ = false;

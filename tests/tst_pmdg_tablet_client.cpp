@@ -36,6 +36,7 @@ private slots:
     static void latchesEfbPlanImportOnFetchSuccess();
     static void theEfbPlanImportCanBeForgottenAndLatchesAgain();
     static void theEfbPlanImportCanBeRestored();
+    static void probeSignatureIgnoresWhatDriftsOnItsOwnInFlight();
     static void probeSignatureIgnoresDriftBelowTheUnit();
     static void readsDoorStatesFromStateReply();
     static void doorInMotionHasNoState();
@@ -182,11 +183,27 @@ void PmdgTabletClientTest::theEfbPlanImportCanBeRestored()
     QVERIFY(client.EfbPlanImported());
 }
 
+void PmdgTabletClientTest::probeSignatureIgnoresWhatDriftsOnItsOwnInFlight()
+{
+    const auto reply = [](const char* fuel, const char* gw, const char* brakes, const char* zfw)
+    {
+        return std::string(R"({"message_tag":"state_reply","ground_maint":{"brake_temps_c":[)") + brakes
+            + R"(]},"weight_balance":{"fuel_total_lbs":)" + fuel + R"(,"gw":)" + gw + R"(,"zfw":)" + zfw + "}}";
+    };
+
+    const std::string first = PmdgTabletClient::ProbeSignature(reply("33687.9", "387045.3", "29.88", "353353"));
+
+    QCOMPARE(PmdgTabletClient::ProbeSignature(reply("33664.6", "387022.2", "27.12", "353353")), first);
+    QVERIFY(PmdgTabletClient::ProbeSignature(reply("32400.0", "387045.3", "29.88", "353353")) != first);
+    QVERIFY(PmdgTabletClient::ProbeSignature(reply("33687.9", "385400.0", "29.88", "353353")) != first);
+    QVERIFY(PmdgTabletClient::ProbeSignature(reply("33687.9", "387045.3", "29.88", "353354")) != first);
+}
+
 void PmdgTabletClientTest::probeSignatureIgnoresDriftBelowTheUnit()
 {
     const auto reply = [](const char* fuel, const char* door)
     {
-        return std::string(R"({"message_tag":"state_reply","weight_balance":{"fuel_total_lbs":)") + fuel
+        return std::string(R"({"message_tag":"state_reply","weight_balance":{"zfw":)") + fuel
             + R"(,"gwcg":[22.4,)" + fuel + R"(]},"doors":{"individual_doors":{"entry2_left":")" + door
             + R"("}}})";
     };

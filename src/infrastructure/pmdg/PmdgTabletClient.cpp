@@ -78,6 +78,34 @@ namespace
         return value;
     }
 
+    constexpr auto kMaintenanceSection = "ground_maint";
+    constexpr auto kWeightSection = "weight_balance";
+    constexpr std::array kWeightsThatDriftInFlight = {"fuel_total_lbs", "gw"};
+    constexpr double kDriftingWeightStepLbs = 1000.0;
+
+    QJsonObject WithoutWhatDriftsOnItsOwn(QJsonObject reply)
+    {
+        reply.remove(QLatin1String(kMaintenanceSection));
+
+        const auto weights = reply.find(QLatin1String(kWeightSection));
+        if (weights == reply.end() || !weights->isObject())
+        {
+            return reply;
+        }
+
+        QJsonObject coarse = weights->toObject();
+        for (const char* key : kWeightsThatDriftInFlight)
+        {
+            if (const auto weight = coarse.find(QLatin1String(key)); weight != coarse.end() && weight->isDouble())
+            {
+                *weight = std::round(weight->toDouble() / kDriftingWeightStepLbs) * kDriftingWeightStepLbs;
+            }
+        }
+        *weights = coarse;
+
+        return reply;
+    }
+
     std::string BuildEnvelope(const char* tag, const QJsonObject& data)
     {
         QJsonObject envelope;
@@ -405,7 +433,7 @@ std::string PmdgTabletClient::ProbeSignature(const std::string& json)
         return json;
     }
 
-    return QJsonDocument(RoundedToUnit(document.object()).toObject())
+    return QJsonDocument(RoundedToUnit(WithoutWhatDriftsOnItsOwn(document.object())).toObject())
         .toJson(QJsonDocument::Compact).toStdString();
 }
 
