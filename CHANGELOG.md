@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.47.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.47.3...v1.47.4) (2026-10-13)
+
+
+* dismiss the requested gpu, answer the pushback interrupt question and fix three a340 faults ([#251](https://github.com/brunofgmag/gsx-integrator-client/issues/251)) ([e78e28e](https://github.com/brunofgmag/gsx-integrator-client/commit/e78e28e848532b7d8f743e1a3bce9e4003f8e668))
+
+
+### Bug Fixes
+
+* answer the interrupt question gsx asks after the pushback is completed ([a8536ad](https://github.com/brunofgmag/gsx-integrator-client/commit/a8536ad2be52001af3a564ddfd8b330436c75bf4)) ([e78e28e](https://github.com/brunofgmag/gsx-integrator-client/commit/e78e28e848532b7d8f743e1a3bce9e4003f8e668))
+* dismiss the gpu the turnaround requested after its options were turned off ([9c340ab](https://github.com/brunofgmag/gsx-integrator-client/commit/9c340ab3ffabc8dacde5610a5e9641b4f614051b)) ([e78e28e](https://github.com/brunofgmag/gsx-integrator-client/commit/e78e28e848532b7d8f743e1a3bce9e4003f8e668))
+* **toliss-a340:** drop the missing gsx profile advisory now that the aircraft ships its own ([7692ac6](https://github.com/brunofgmag/gsx-integrator-client/commit/7692ac659ae3698d919e14e38b9374851f78d208)) ([e78e28e](https://github.com/brunofgmag/gsx-integrator-client/commit/e78e28e848532b7d8f743e1a3bce9e4003f8e668))
+* **toliss-a340:** stop warning that fuel did not stay when the aircraft fills its own tanks ([0162c97](https://github.com/brunofgmag/gsx-integrator-client/commit/0162c9761cb8d2e73eb7a289695eec58ef00a059)) ([e78e28e](https://github.com/brunofgmag/gsx-integrator-client/commit/e78e28e848532b7d8f743e1a3bce9e4003f8e668))
+* **toliss-a340:** wait for the atsu page before pressing the next mcdu uplink key ([e10cb8d](https://github.com/brunofgmag/gsx-integrator-client/commit/e10cb8de175fcb1ee829892397f9ad33d5663e1f)) ([e78e28e](https://github.com/brunofgmag/gsx-integrator-client/commit/e78e28e848532b7d8f743e1a3bce9e4003f8e668))
+
 ## [1.47.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.47.2...v1.47.3) (2026-10-12)
 
 
