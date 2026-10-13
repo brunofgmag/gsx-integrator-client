@@ -130,7 +130,7 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("simbriefError"), view_->HasSimbriefError());
 
     state.insert(QLatin1String("gsxProfileConflict"), view_->HasGsxProfileConflict());
-    state.insert(QLatin1String("gsxProfileAdvisoryText"), view_->GetGsxProfileAdvisoryText());
+    state.insert(QLatin1String("gsxProfileAdvisoryText"), OperationsViewModel::GetGsxProfileAdvisoryText());
     state.insert(QLatin1String("pmdgOptionsAdvisoryText"), OperationsViewModel::GetPmdgOptionsAdvisoryText());
     state.insert(QLatin1String("cargoDoorAdvisoryText"), OperationsViewModel::GetCargoDoorAdvisoryText());
     state.insert(QLatin1String("ownStairsPressureAdvisoryText"),

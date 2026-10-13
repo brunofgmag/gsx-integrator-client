@@ -6,6 +6,7 @@
 #include <string_view>
 #include <vector>
 
+#include <QtCore/QByteArray>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QJsonArray>
@@ -44,6 +45,10 @@ namespace
     constexpr auto kMd11AtcModel = "MD11";
     constexpr auto kMd11ProfileId = "tfdi-md11";
     constexpr auto kRj85Title = "Just Flight RJ85";
+    constexpr auto kA340Title = "Aerosoft A346 Pro";
+    constexpr auto kA340AtcModel = "A346";
+    constexpr auto kA340ProfileId = "toliss-a340";
+    constexpr auto kA340ProfileFolder = "airbus-a346-pro";
     constexpr auto kUnsupportedTitle = "Cessna Skyhawk G1000 Asobo";
     constexpr auto kUnsupportedAtcModel = "C172";
     constexpr auto kRj85AtcModel = "RJ85";
@@ -147,6 +152,35 @@ namespace
     bool DispatchPending()
     {
         return QTest::qWaitFor([] { return FakeSimConnectApi::pendingMessages.empty(); }, 2000);
+    }
+
+    class ScopedAppData
+    {
+    public:
+        explicit ScopedAppData(const QString& path)
+            : previous_(qgetenv("APPDATA"))
+        {
+            qputenv("APPDATA", path.toUtf8());
+        }
+
+        ScopedAppData(const ScopedAppData&) = delete;
+        ScopedAppData& operator=(const ScopedAppData&) = delete;
+
+        ~ScopedAppData()
+        {
+            qputenv("APPDATA", previous_);
+        }
+
+    private:
+        QByteArray previous_;
+    };
+
+    bool WriteGsxCfg(const QString& appData, const QByteArray& content)
+    {
+        const QDir folder(QDir(appData).filePath(QStringLiteral("Virtuali/Airplanes/%1/common/config").arg(kA340ProfileFolder)));
+        QFile cfg(folder.filePath(QStringLiteral("gsx.cfg")));
+
+        return folder.mkpath(QStringLiteral(".")) && cfg.open(QIODevice::WriteOnly) && cfg.write(content) == content.size();
     }
 
     bool WasWritten(const std::string& datumName)
@@ -672,6 +706,8 @@ private slots:
     static void observersAreDedupedAndNotified();
     static void automationToggleEmitsOncePerChange();
     static void runtimeGettersOnEmptyRuntime();
+    static void anA340WithNoGsxProfileOnDiskRaisesNoProfileConflict();
+    static void anA340ProfileThatKeepsRefuelingOnRaisesAFixableConflict();
     static void setupConnectsThroughFakeSimConnect();
     static void setupStartsTheRemoteApiClientWithoutOpeningASocket();
     static void connectedCommandsFollowGuardOrder();
@@ -1030,6 +1066,45 @@ void RuntimeIntegratorServiceTest::runtimeGettersOnEmptyRuntime()
     QVERIFY(!runtime.HasPmdgOptionsConflict());
     QVERIFY(!runtime.FixPmdgOptions());
     QVERIFY(!runtime.ReloadSimbrief());
+}
+
+void RuntimeIntegratorServiceTest::anA340WithNoGsxProfileOnDiskRaisesNoProfileConflict()
+{
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    const ScopedAppData scopedAppData(appData.path());
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kA340Title, kA340AtcModel, kA340ProfileId));
+
+    const IntegratorSnapshot snapshot = runtime.Snapshot();
+
+    QVERIFY(!runtime.HasGsxProfileConflict());
+    QVERIFY(!snapshot.gsxProfileConflict);
+    QVERIFY(!snapshot.gsxProfileFixable);
+}
+
+void RuntimeIntegratorServiceTest::anA340ProfileThatKeepsRefuelingOnRaisesAFixableConflict()
+{
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    QVERIFY(WriteGsxCfg(appData.path(), "[aircraft]\nrefueling = 1\n"));
+    const ScopedAppData scopedAppData(appData.path());
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kA340Title, kA340AtcModel, kA340ProfileId));
+
+    const IntegratorSnapshot snapshot = runtime.Snapshot();
+
+    QVERIFY(runtime.HasGsxProfileConflict());
+    QVERIFY(snapshot.gsxProfileConflict);
+    QVERIFY(snapshot.gsxProfileFixable);
 }
 
 void RuntimeIntegratorServiceTest::setupConnectsThroughFakeSimConnect()

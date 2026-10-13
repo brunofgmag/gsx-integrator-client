@@ -116,7 +116,7 @@ private slots:
     static void announcesADisplaySettingChangeWithoutTheSnapshot();
     static void phaseCounterTextCountsFromOne();
     static void turnaroundStateCardLabelsNameTheirText();
-    static void gsxProfileAdvisoryChoosesTheParagraphTheFlagAsks();
+    static void gsxProfileAdvisoryIsTheRefuelingParagraphAndOnlyTheLabelFollowsTheFixableFlag();
     static void pmdgOptionsAdvisoryOffersTheFixOnlyWhenItIsFixable();
     static void standingAdvisoryTextsNameTheirCondition();
     static void progressTextsRoundToAWholePercent();
@@ -1668,7 +1668,7 @@ void OperationsViewModelTest::turnaroundStateCardLabelsNameTheirText()
     QCOMPARE(viewModel.GetTurnaroundStateLabel(), QStringLiteral("Turnaround state"));
 }
 
-void OperationsViewModelTest::gsxProfileAdvisoryChoosesTheParagraphTheFlagAsks()
+void OperationsViewModelTest::gsxProfileAdvisoryIsTheRefuelingParagraphAndOnlyTheLabelFollowsTheFixableFlag()
 {
     FakeIntegratorService service;
     FakeOperationsDisplaySettings display;
@@ -1677,13 +1677,15 @@ void OperationsViewModelTest::gsxProfileAdvisoryChoosesTheParagraphTheFlagAsks()
     service.snapshot.gsxProfileConflict = true;
     service.Notify();
 
-    QVERIFY(viewModel.GetGsxProfileAdvisoryText().contains(QStringLiteral("No GSX profile")));
+    QVERIFY(OperationsViewModel::GetGsxProfileAdvisoryText().contains(QStringLiteral("does not set")));
+    QVERIFY(!OperationsViewModel::GetGsxProfileAdvisoryText().contains(QStringLiteral("No GSX profile")));
     QCOMPARE(viewModel.GetGsxProfileActionLabel(), QString());
 
     service.snapshot.gsxProfileFixable = true;
     service.Notify();
 
-    QVERIFY(viewModel.GetGsxProfileAdvisoryText().contains(QStringLiteral("does not set")));
+    QVERIFY(OperationsViewModel::GetGsxProfileAdvisoryText().contains(QStringLiteral("does not set")));
+    QVERIFY(!OperationsViewModel::GetGsxProfileAdvisoryText().contains(QStringLiteral("No GSX profile")));
     QCOMPARE(viewModel.GetGsxProfileActionLabel(), QStringLiteral("Fix profile"));
 }
 

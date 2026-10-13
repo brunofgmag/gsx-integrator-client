@@ -915,7 +915,6 @@ void IntegratorRuntime::ResolveAircraft()
         probe::SetAircraft(QString::fromUtf8(aircraftDescriptor_->id));
         status_.aircraftSupported = true;
         gsxProfile_.roots = GsxAircraftProfile::ProfileRootsFor(aircraftDescriptor_->name);
-        gsxProfile_.flagsMissing = GsxAircraftProfile::FlagsMissingProfile(aircraftDescriptor_->name);
         pmdgOptions_.ini = PmdgOptions::PathFor(aircraftDescriptor_->name).value_or(std::filesystem::path{});
         CheckGsxProfile();
         CheckPmdgOptions();
@@ -937,7 +936,7 @@ void IntegratorRuntime::CheckGsxProfile()
 
     const bool wasConflicting = gsxProfile_.conflict;
 
-    bool conflict = gsxProfile_.cfgs.empty() && gsxProfile_.flagsMissing;
+    bool conflict = false;
     for (const auto& cfg : gsxProfile_.cfgs)
     {
         if (NeedsRefuelingFix(cfg))
