@@ -52,6 +52,7 @@ public:
     int clearOwnGroundEquipmentCalls = 0;
     RefuelBy refuelMethod = RefuelBy::Self;
     bool supportsFuelTopUp = false;
+    bool takesItsFuelFromTheFlightPlanItself = false;
     bool ignoresFuelWrites = false;
     int setCurrentFuelCalls = 0;
     BoardBy boardMethod = BoardBy::Self;
@@ -118,6 +119,7 @@ public:
     }
 
     [[nodiscard]] bool SupportsFuelTopUp() const override { return supportsFuelTopUp; }
+    [[nodiscard]] bool TakesItsFuelFromTheFlightPlanItself() const override { return takesItsFuelFromTheFlightPlanItself; }
     [[nodiscard]] double GetCurrentZfwKg() const override { return currentZfwKg; }
     void SetCurrentZfwKg(const double value) override
     {
