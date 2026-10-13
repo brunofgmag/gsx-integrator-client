@@ -132,6 +132,8 @@ private slots:
     static void flightPlanLoadedWhenSessionReady();
     static void fuelSetterWritesNothing();
     static void uplinkPressesMcduKeysInSequence();
+    static void uplinkSettlingTicksDoNotCountWhilePowerIsOut();
+    static void uplinkSettlingTicksStartOverWhenTheLoadingDropsAndReturns();
     static void uplinkWaitsForPower();
     static void uplinkFiresOnApuPowerAlone();
     static void uplinkFiresImmediatelyWhenAlreadyPowered();
@@ -173,6 +175,7 @@ private slots:
     static void positionBeatsTheCommandOnceItArrives();
     static void doorStatusFallsBackToTheModeUntilThePositionArrives();
     static void reportsLoadMethods();
+    static void takesItsFuelFromTheFlightPlanItself();
     static void isReachableOnlyOnceTheEmptyWeightAndTheFuelHaveArrived();
     static void resumedWithTheLoadingStartedNeverPressesTheUplinkKeysAgain();
     static void resumedWithoutTheLoadingStartedStillRunsTheUplink();
@@ -315,15 +318,110 @@ void TolissA340Test::uplinkPressesMcduKeysInSequence()
     TickAircraft(aircraft, gateway, kLoading);
 
     QCOMPARE(gateway.lvars[kMcduAtsuKey], 1.0);
+    QCOMPARE(gateway.setLVarCalls, 2);
+
+    for (int tick = 0; tick < 2; ++tick)
+    {
+        TickAircraft(aircraft, gateway, kLoading);
+
+        QCOMPARE(gateway.setLVarCalls, 2);
+        QCOMPARE(gateway.WriteCount(kMcduAocMenuKey), 0);
+    }
 
     TickAircraft(aircraft, gateway, kLoading);
 
     QCOMPARE(gateway.lvars[kMcduAocMenuKey], 1.0);
+    QCOMPARE(gateway.setLVarCalls, 3);
 
     TickAircraft(aircraft, gateway, kLoading);
 
     QCOMPARE(gateway.lvars[kMcduFlightInitKey], 1.0);
     QCOMPARE(gateway.setLVarCalls, 4);
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway, kLoading);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 4);
+}
+
+void TolissA340Test::uplinkSettlingTicksDoNotCountWhilePowerIsOut()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    PowerFromTheExternalSource(gateway);
+
+    TickAircraft(aircraft, gateway, kLoading);
+    TickAircraft(aircraft, gateway, kLoading);
+
+    QCOMPARE(gateway.setLVarCalls, 2);
+
+    TickAircraft(aircraft, gateway, kLoading);
+
+    QCOMPARE(gateway.setLVarCalls, 2);
+
+    gateway.lvars[kExtAPb] = 0.0;
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway, kLoading);
+    }
+
+    QCOMPARE(gateway.setLVarCalls, 2);
+
+    PowerFromTheExternalSource(gateway);
+
+    TickAircraft(aircraft, gateway, kLoading);
+
+    QCOMPARE(gateway.setLVarCalls, 2);
+    QCOMPARE(gateway.WriteCount(kMcduAocMenuKey), 0);
+
+    TickAircraft(aircraft, gateway, kLoading);
+
+    QCOMPARE(gateway.setLVarCalls, 3);
+    QCOMPARE(gateway.lvars[kMcduAocMenuKey], 1.0);
+}
+
+void TolissA340Test::uplinkSettlingTicksStartOverWhenTheLoadingDropsAndReturns()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    PowerFromTheExternalSource(gateway);
+
+    TickAircraft(aircraft, gateway, kLoading);
+    TickAircraft(aircraft, gateway, kLoading);
+    TickAircraft(aircraft, gateway, kLoading);
+
+    QCOMPARE(gateway.setLVarCalls, 2);
+
+    TickAircraft(aircraft, gateway);
+
+    TickAircraft(aircraft, gateway, kLoading);
+
+    QCOMPARE(gateway.setLVarCalls, 3);
+    QCOMPARE(gateway.WriteCount(kMcduMenuKey), 2);
+
+    TickAircraft(aircraft, gateway, kLoading);
+
+    QCOMPARE(gateway.setLVarCalls, 4);
+    QCOMPARE(gateway.WriteCount(kMcduAtsuKey), 2);
+
+    for (int tick = 0; tick < 2; ++tick)
+    {
+        TickAircraft(aircraft, gateway, kLoading);
+
+        QCOMPARE(gateway.setLVarCalls, 4);
+    }
+
+    TickAircraft(aircraft, gateway, kLoading);
+
+    QCOMPARE(gateway.setLVarCalls, 5);
+    QCOMPARE(gateway.WriteCount(kMcduAocMenuKey), 1);
 }
 
 void TolissA340Test::uplinkWaitsForPower()
@@ -1021,6 +1119,15 @@ void TolissA340Test::reportsLoadMethods()
     QVERIFY(aircraft.GetRefuelMethod() == RefuelBy::Self);
     QVERIFY(aircraft.GetBoardMethod() == BoardBy::Self);
     QVERIFY(aircraft.SupportsStairsOrJetways());
+}
+
+void TolissA340Test::takesItsFuelFromTheFlightPlanItself()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TolissA340 aircraft(&gateway, &status);
+
+    QVERIFY(aircraft.TakesItsFuelFromTheFlightPlanItself());
 }
 
 void TolissA340Test::doorStatusOpenWhenAModeReadsOpen()
