@@ -124,6 +124,7 @@ private slots:
     static void smartSwitchReassertsResetWhileSimKeepsOldValue();
     static void smartSwitchReportsSinglePressPerActivation();
     static void emptyZfwReadsSimEmptyWeight();
+    static void doesNotTakeItsFuelFromTheFlightPlanItself();
     static void parkingBrakeReadsTheLeverAndIgnoresTheSimVar();
     static void heldInPlaceAcceptsChocksWithoutTheLever();
     static void readyToDeboardFollowsSafetyState();
@@ -397,6 +398,15 @@ void TfdiMd11Test::emptyZfwReadsSimEmptyWeight()
     gateway.avars[kSimEmptyWeight] = 128500.0;
 
     QCOMPARE(aircraft.GetEmptyZfwKg(), 128500.0);
+}
+
+void TfdiMd11Test::doesNotTakeItsFuelFromTheFlightPlanItself()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    const TfdiMd11 aircraft(&gateway, &status, false);
+
+    QVERIFY(!aircraft.TakesItsFuelFromTheFlightPlanItself());
 }
 
 void TfdiMd11Test::parkingBrakeReadsTheLeverAndIgnoresTheSimVar()

@@ -161,7 +161,7 @@ public:
     [[nodiscard]] bool RefuelByGsx() const;
     [[nodiscard]] bool RefuelBySelf() const;
     [[nodiscard]] bool HasGsxProfileConflict() const;
-    [[nodiscard]] QString GetGsxProfileAdvisoryText() const;
+    [[nodiscard]] static QString GetGsxProfileAdvisoryText();
     [[nodiscard]] QString GetGsxProfileActionLabel() const;
     [[nodiscard]] static QString GetPmdgOptionsAdvisoryText();
     [[nodiscard]] QString GetPmdgOptionsActionLabel() const;

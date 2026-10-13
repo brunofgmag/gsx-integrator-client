@@ -265,6 +265,11 @@ namespace
         data.fuelStayChecked = true;
         data.settledFuelKg = settledKg;
 
+        if (ctx.aircraft->TakesItsFuelFromTheFlightPlanItself())
+        {
+            return;
+        }
+
         const double writtenKg = PlannedFuelWithinCapacityKg(ctx);
 
         const double shortfallKg = writtenKg - settledKg;

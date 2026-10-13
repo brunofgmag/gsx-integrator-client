@@ -59,7 +59,6 @@ private slots:
     static void profileRootsKnownForPmdg777();
     static void profileRootsShareOneFolderAcrossPmdg737Variants();
     static void profileRootsEmptyForUnknownAircraft();
-    static void flagsMissingProfileOnlyForTolissA340();
     static void findCfgsScansRootsRecursively();
     static void findCfgsIgnoresMissingRoots();
 };
@@ -234,14 +233,6 @@ void GsxAircraftProfileTest::profileRootsShareOneFolderAcrossPmdg737Variants()
 void GsxAircraftProfileTest::profileRootsEmptyForUnknownAircraft()
 {
     QVERIFY(GsxAircraftProfile::ProfileRootsFor("Unknown Aircraft").empty());
-}
-
-void GsxAircraftProfileTest::flagsMissingProfileOnlyForTolissA340()
-{
-    QVERIFY(GsxAircraftProfile::FlagsMissingProfile("ToLiss A340-600"));
-    QVERIFY(!GsxAircraftProfile::FlagsMissingProfile("TFDi MD-11"));
-    QVERIFY(!GsxAircraftProfile::FlagsMissingProfile("Fenix A320"));
-    QVERIFY(!GsxAircraftProfile::FlagsMissingProfile("Unknown Aircraft"));
 }
 
 void GsxAircraftProfileTest::findCfgsScansRootsRecursively()

@@ -102,14 +102,12 @@ private:
         std::vector<std::filesystem::path> roots;
         std::vector<std::filesystem::path> cfgs;
         bool conflict = false;
-        bool flagsMissing = false;
 
         void Reset()
         {
             roots.clear();
             cfgs.clear();
             conflict = false;
-            flagsMissing = false;
         }
     };
 

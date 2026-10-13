@@ -743,13 +743,10 @@ bool OperationsViewModel::RefuelBySelf() const
     return snapshot_.refuelBySelf;
 }
 
-QString OperationsViewModel::GetGsxProfileAdvisoryText() const
+QString OperationsViewModel::GetGsxProfileAdvisoryText()
 {
-    return IsGsxProfileFixable()
-               ? QCoreApplication::translate("OperationsScreen",
-                                             "The GSX profile for this aircraft does not set 'refueling = 0', so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.")
-               : QCoreApplication::translate("OperationsScreen",
-                                             "No GSX profile with 'refueling = 0' was found for this aircraft. Install an aircraft profile and set 'refueling = 0' in its gsx.cfg.");
+    return QCoreApplication::translate("OperationsScreen",
+                                       "The GSX profile for this aircraft does not set 'refueling = 0', so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.");
 }
 
 QString OperationsViewModel::GetGsxProfileActionLabel() const

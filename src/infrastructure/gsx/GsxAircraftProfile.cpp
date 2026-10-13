@@ -150,11 +150,6 @@ std::vector<std::filesystem::path> GsxAircraftProfile::ProfileRootsFor(const std
     return roots;
 }
 
-bool GsxAircraftProfile::FlagsMissingProfile(const std::string& aircraftName)
-{
-    return aircraftName == TolissA340::kName;
-}
-
 std::vector<std::filesystem::path> GsxAircraftProfile::FindCfgs(const std::vector<std::filesystem::path>& roots)
 {
     std::vector<std::filesystem::path> cfgs;

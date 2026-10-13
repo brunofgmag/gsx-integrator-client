@@ -46,6 +46,7 @@ public:
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return true; }
     [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Self; }
+    [[nodiscard]] bool TakesItsFuelFromTheFlightPlanItself() const override { return true; }
     [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Self; }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;

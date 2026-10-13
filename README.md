@@ -105,7 +105,7 @@ Check five things on the GSX Settings page before your first flight:
 
 ### GSX aircraft profile
 
-On the MD-11, the Fenix, the PMDG aircraft and the A340, the aircraft's GSX profile needs `refueling = 0` in its `gsx.cfg`. Community profiles from flightsim.to often ship with `refueling = 1`, which hands the fuel back to GSX: on some aircraft the truck fills the tanks behind the client's back, and on the A340 it parks, pops a fuel quantity window and drives off without connecting the hose. The A340 also needs the profile to exist, and the client tells you when none is installed. The client checks the profile under `%APPDATA%\Virtuali\Airplanes\` and, when the setting is wrong, shows an advisory with a Fix profile button. GSX picks up the change after you restart it or reload the flight.
+On the MD-11, the Fenix, the PMDG aircraft and the A340, the aircraft's GSX profile needs `refueling = 0` in its `gsx.cfg`. Community profiles from flightsim.to often ship with `refueling = 1`, which hands the fuel back to GSX: on some aircraft the truck fills the tanks behind the client's back, and on the A340 it parks, pops a fuel quantity window and drives off without connecting the hose. The A340 ships with its own profile, already set to `refueling = 0`, so you don't have to install one. The client checks the profile under `%APPDATA%\Virtuali\Airplanes\` and, when the setting is wrong, shows an advisory with a Fix profile button. GSX picks up the change after you restart it or reload the flight.
 
 ### PMDG 777 and 737
 
