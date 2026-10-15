@@ -66,6 +66,9 @@ private slots:
     static void launchWithSimulatorFollowsTheService();
     static void launchWithSimulatorWithoutSimulatorStaysOff();
     static void launchWithSimulatorFailureNamesTheTarget();
+    static void launchWithSimulatorIsUnavailableWithoutSystemd();
+    static void launchWithSimulatorLosingSystemdTurnsTheToggleOff();
+    static void launchWithSimulatorServiceFailureHasItsOwnNotice();
 };
 
 void UpdateViewModelTest::notifyFlowDownloadsAndRestartsOnDemand()
@@ -619,6 +622,56 @@ void UpdateViewModelTest::launchWithSimulatorFailureNamesTheTarget()
     QVERIFY(!viewModel.IsLaunchWithSimulator());
     QCOMPARE(viewModel.GetAddonNotice(),
              QStringLiteral("Could not update EXE.xml for MSFS 2020 (Steam), MSFS 2024 (Steam)."));
+}
+
+void UpdateViewModelTest::launchWithSimulatorIsUnavailableWithoutSystemd()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    addons.canLaunch = false;
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+    viewModel.StartSimulatorAddons(&addons, true);
+
+    QVERIFY(!viewModel.IsLaunchWithSimulatorAvailable());
+
+    viewModel.SetLaunchWithSimulator(true);
+
+    QCOMPARE(addons.launchCalls, 0);
+    QVERIFY(!viewModel.IsLaunchWithSimulator());
+}
+
+void UpdateViewModelTest::launchWithSimulatorLosingSystemdTurnsTheToggleOff()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    addons.launchResult.unavailable = true;
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+    viewModel.StartSimulatorAddons(&addons, true);
+
+    QVERIFY(viewModel.IsLaunchWithSimulatorAvailable());
+
+    viewModel.SetLaunchWithSimulator(true);
+
+    QVERIFY(!viewModel.IsLaunchWithSimulator());
+    QVERIFY(!viewModel.IsLaunchWithSimulatorAvailable());
+    QCOMPARE(viewModel.GetAddonNotice(),
+             QStringLiteral("Starting with the simulator needs systemd user services, and this system does not offer them."));
+}
+
+void UpdateViewModelTest::launchWithSimulatorServiceFailureHasItsOwnNotice()
+{
+    FakeUpdateService service;
+    FakeSimulatorAddonService addons;
+    addons.launchResult.serviceFailed = true;
+    UpdateViewModel viewModel(&service, UpdateViewModel::Notify, true, FlightsimTo());
+    viewModel.StartSimulatorAddons(&addons, true);
+
+    viewModel.SetLaunchWithSimulator(true);
+
+    QVERIFY(!viewModel.IsLaunchWithSimulator());
+    QVERIFY(viewModel.IsLaunchWithSimulatorAvailable());
+    QCOMPARE(viewModel.GetAddonNotice(),
+             QStringLiteral("Could not set up the systemd service that starts GSX Integrator with the simulator."));
 }
 
 QTEST_GUILESS_MAIN(UpdateViewModelTest)

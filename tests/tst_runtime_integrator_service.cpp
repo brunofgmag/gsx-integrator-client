@@ -734,6 +734,7 @@ private slots:
     static void theSnapshotCarriesTheFuelOnBoardTheAircraftReportsNow();
     static void theFuelWaitsUntilTheRemoteApiAnnouncesItsConnection();
     static void openingSimConnectIsAnnouncedOncePerDisconnectedPeriod();
+    static void theLinkIsPreparedBeforeEveryAttemptAndItsRestartAdviceReachesTheSnapshot();
     static void theKeyReachesTheLogOncePerChangeAndNotPerMessage();
     static void theKeyPathsAreNoLongerWarnedAsUnknown();
     static void aBlipOnTheSameCouatlLogsNoNewKey();
@@ -1698,6 +1699,34 @@ void RuntimeIntegratorServiceTest::openingSimConnectIsAnnouncedOncePerDisconnect
     QVERIFY(retries.wait(kReconnectWaitMs));
     QVERIFY(!runtime.IsConnected());
     QCOMPARE(LogCapture::Count(QLatin1String(kOpeningSimConnect)), 2);
+}
+
+void RuntimeIntegratorServiceTest::theLinkIsPreparedBeforeEveryAttemptAndItsRestartAdviceReachesTheSnapshot()
+{
+    FakeSimConnectApi::openSucceeds = false;
+    int preparations = 0;
+    IntegratorRuntimeOptions options;
+    options.reconnectInterval = kFastReconnectInterval;
+    options.prepareLink = [&preparations]
+    {
+        ++preparations;
+
+        return QStringList{QStringLiteral("MSFS 2024 (Steam)")};
+    };
+    IntegratorRuntime runtime(options);
+    QSignalSpy updates(&runtime, &IntegratorRuntime::Updated);
+    runtime.Setup();
+
+    QCOMPARE(preparations, 1);
+    QCOMPARE(runtime.Snapshot().simulatorsToRestart, std::string("MSFS 2024 (Steam)"));
+
+    QVERIFY(updates.wait(kReconnectWaitMs));
+    QCOMPARE(preparations, 2);
+    QVERIFY(!runtime.IsConnected());
+
+    FakeSimConnectApi::openSucceeds = true;
+    QVERIFY(QTest::qWaitFor([&runtime] { return runtime.IsConnected(); }, kReconnectWaitMs * 2));
+    QVERIFY(runtime.Snapshot().simulatorsToRestart.empty());
 }
 
 void RuntimeIntegratorServiceTest::theKeyReachesTheLogOncePerChangeAndNotPerMessage()

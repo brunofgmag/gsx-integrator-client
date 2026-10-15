@@ -27,7 +27,7 @@ if (BUILD_TESTING)
     endif ()
 endif ()
 
-if (NOT GSXI_TESTS_ONLY)
+if (NOT GSXI_TESTS_ONLY AND WIN32)
     if (DEFINED ENV{MSFS2024_SDK})
         file(TO_CMAKE_PATH "$ENV{MSFS2024_SDK}" MSFS_SDK)
     elseif (DEFINED ENV{MSFS_SDK})

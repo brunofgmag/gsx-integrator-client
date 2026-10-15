@@ -3,6 +3,7 @@ set(SIMULATOR_FOLDER_SOURCES
         src/infrastructure/simulator/CaseInsensitivePath.h
         src/infrastructure/simulator/ProtonPrefix.cpp
         src/infrastructure/simulator/ProtonPrefix.h
+        src/infrastructure/simulator/ResolutionCache.h
         src/infrastructure/simulator/RunningProcess.cpp
         src/infrastructure/simulator/RunningProcess.h
         src/infrastructure/simulator/SimulatorCandidates.cpp
@@ -11,6 +12,15 @@ set(SIMULATOR_FOLDER_SOURCES
         src/infrastructure/simulator/SimulatorUserFolders.h
         src/infrastructure/simulator/SteamLibraries.cpp
         src/infrastructure/simulator/SteamLibraries.h
+)
+
+set(LINUX_PLATFORM_TEST_SOURCES
+        src/infrastructure/platform/ChildEnvironment.cpp
+        src/infrastructure/platform/ChildEnvironment.h
+        src/infrastructure/platform/XdgDirectories.cpp
+        src/infrastructure/platform/XdgDirectories.h
+        src/infrastructure/update/AppImageUpdate.cpp
+        src/infrastructure/update/AppImageUpdate.h
 )
 
 set(TURNAROUND_STATE_SOURCES
@@ -103,7 +113,6 @@ set(SIMCONNECT_TCP_SOURCES
 )
 
 set(APP_SOURCES
-        assets/app.rc
         assets/resources.qrc
         src/main.cpp
         src/application/model/CommandResult.h
@@ -299,6 +308,7 @@ set(APP_SOURCES
         src/infrastructure/simulator/ExeXml.h
         src/infrastructure/simulator/SimConnectXml.cpp
         src/infrastructure/simulator/SimConnectXml.h
+        src/infrastructure/simulator/SimulatorLauncher.h
         ${SIMULATOR_FOLDER_SOURCES}
         src/infrastructure/update/CommbusBundleInstaller.cpp
         src/infrastructure/update/CommbusBundleInstaller.h
@@ -333,8 +343,26 @@ set(APP_SOURCES
         src/infrastructure/gsx/GsxRemoteApiClient.cpp
 )
 
-if (NOT WIN32)
-    list(APPEND APP_SOURCES ${SIMCONNECT_TCP_SOURCES})
+if (WIN32)
+    list(APPEND APP_SOURCES assets/app.rc)
+else ()
+    list(APPEND APP_SOURCES
+            assets/fonts.qrc
+            src/infrastructure/platform/InstanceChannel.cpp
+            src/infrastructure/platform/InstanceChannel.h
+            src/infrastructure/platform/ChildEnvironment.cpp
+            src/infrastructure/platform/ChildEnvironment.h
+            src/infrastructure/platform/XdgDirectories.cpp
+            src/infrastructure/platform/XdgDirectories.h
+            src/infrastructure/simulator/SimConnectLink.cpp
+            src/infrastructure/simulator/SimConnectLink.h
+            src/infrastructure/simulator/SimulatorWatcherFiles.cpp
+            src/infrastructure/simulator/SimulatorWatcherFiles.h
+            src/infrastructure/simulator/SystemdSimulatorLauncher.cpp
+            src/infrastructure/simulator/SystemdSimulatorLauncher.h
+            src/infrastructure/update/AppImageUpdate.cpp
+            src/infrastructure/update/AppImageUpdate.h
+            ${SIMCONNECT_TCP_SOURCES})
 endif ()
 
 set(APP_QML_FILES

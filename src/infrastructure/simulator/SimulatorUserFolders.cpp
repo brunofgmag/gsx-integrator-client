@@ -3,10 +3,18 @@
 #include <string>
 #include <QtCore/QStandardPaths>
 #include "ProtonPrefix.h"
+#include "ResolutionCache.h"
 #include "SteamLibraries.h"
 
 namespace
 {
+    ResolutionCache& RoamingAppDataCache()
+    {
+        static ResolutionCache cache;
+
+        return cache;
+    }
+
     std::filesystem::path PathOf(const QString& directory)
     {
         const QByteArray utf8 = directory.toUtf8();
@@ -71,8 +79,18 @@ QString SimulatorRoamingAppDataDir()
 #ifdef Q_OS_WIN
     return {};
 #else
-    return ActiveSimulatorRoamingAppData(MachineHome(), IsProcessRunning);
+    const QString machineHome = MachineHome();
+
+    return RoamingAppDataCache().Resolve(machineHome, [&machineHome]
+    {
+        return ActiveSimulatorRoamingAppData(machineHome, IsProcessRunning);
+    });
 #endif
+}
+
+void ResetSimulatorFolderCache()
+{
+    RoamingAppDataCache().Reset();
 }
 
 std::optional<std::filesystem::path> SimulatorRoamingAppData()

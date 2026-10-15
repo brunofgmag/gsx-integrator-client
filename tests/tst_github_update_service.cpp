@@ -2,8 +2,10 @@
 #include <utility>
 #include <vector>
 
+#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -154,6 +156,7 @@ namespace
         return QJsonDocument(release).toJson(QJsonDocument::Compact);
     }
 
+#ifdef Q_OS_WIN
     constexpr auto kTestUninstallRoot = R"(HKEY_CURRENT_USER\Software\gsxi-test-uninstall)";
     constexpr auto kTestUninstallProviderRoot = R"(HKCU:\Software\gsxi-test-uninstall)";
     constexpr auto kTestExeName = "gsx-integrator-client.exe";
@@ -177,9 +180,24 @@ namespace
 
         return pid;
     }
+#endif
+
+    UpdateInfo PackageInfo(const MiniHttpServer& http)
+    {
+        UpdateInfo info;
+        info.version = QStringLiteral("9.9.9");
+        info.zipName = QStringLiteral("gsx-integrator-client-x.zip");
+        info.zipUrl = http.UrlFor("/z.zip");
+        info.shaUrl = http.UrlFor("/z.zip.sha256");
+        info.appImageUrl = http.UrlFor("/z.zip");
+        info.appImageShaUrl = http.UrlFor("/z.zip.sha256");
+
+        return info;
+    }
 
     bool WriteFile(const QString& path, const QByteArray& content)
     {
+        QDir().mkpath(QFileInfo(path).absolutePath());
         QFile file(path);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
         {
@@ -191,6 +209,76 @@ namespace
 
         return true;
     }
+
+#ifndef Q_OS_WIN
+    class ScopedEnvironment
+    {
+    public:
+        ScopedEnvironment(const char* name, const QByteArray& value)
+            : name_(name), previous_(qgetenv(name)), hadPrevious_(qEnvironmentVariableIsSet(name))
+        {
+            qputenv(name, value);
+        }
+
+        ~ScopedEnvironment()
+        {
+            if (hadPrevious_)
+            {
+                qputenv(name_, previous_);
+            }
+            else
+            {
+                qunsetenv(name_);
+            }
+        }
+
+    private:
+        const char* name_;
+        QByteArray previous_;
+        bool hadPrevious_;
+    };
+
+    class ScopedAppImage
+    {
+    public:
+        ScopedAppImage()
+            : path_(dir_.filePath(QStringLiteral("apps/gsx-integrator-client.AppImage")))
+        {
+            WriteFile(path_, "old appimage");
+            qputenv("APPIMAGE", path_.toUtf8());
+        }
+
+        explicit ScopedAppImage(const QString& existingPath)
+            : path_(existingPath)
+        {
+            qputenv("APPIMAGE", path_.toUtf8());
+        }
+
+        ~ScopedAppImage()
+        {
+            qunsetenv("APPIMAGE");
+        }
+
+        [[nodiscard]] const QString& Path() const { return path_; }
+        [[nodiscard]] QString Staged() const { return path_ + QStringLiteral(".new"); }
+
+    private:
+        QTemporaryDir dir_;
+        QString path_;
+    };
+
+    QByteArray ReadFile(const QString& path)
+    {
+        QFile file(path);
+
+        return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+    }
+
+    QByteArray ShaFileFor(const QByteArray& content)
+    {
+        return QCryptographicHash::hash(content, QCryptographicHash::Sha256).toHex() + "  gsx-integrator-client-9.9.9-x86_64.AppImage\n";
+    }
+#endif
 }
 
 class GithubUpdateServiceTest final : public QObject
@@ -208,10 +296,17 @@ private slots:
     static void downloadWithoutAssetsFailsImmediately();
     static void downloadWithInvalidShaFileFails();
     static void downloadWithChecksumMismatchDiscardsZip();
+#ifdef Q_OS_WIN
     static void applyArgumentsCarryTheNormalisedReleaseVersion_data();
     static void applyArgumentsCarryTheNormalisedReleaseVersion();
     static void applyScriptUpdatesDisplayVersionOnlyForThisInstall_data();
     static void applyScriptUpdatesDisplayVersionOnlyForThisInstall();
+#else
+    static void downloadOutsideAnAppImageSaysWhy();
+    static void aVerifiedAppImageIsStagedThenInstalledOverTheRunningOne();
+    static void installingRecordsTheVersionInTheInstallRecord();
+    static void aNewerReleaseDiscardsTheStagedAppImage();
+#endif
 
     static void cleanupTestCase();
 };
@@ -221,12 +316,16 @@ void GithubUpdateServiceTest::initTestCase()
     QCoreApplication::setOrganizationName(QStringLiteral("GsxIntegratorTests"));
     QCoreApplication::setApplicationName(QStringLiteral("GithubUpdateServiceTest"));
     QStandardPaths::setTestModeEnabled(true);
+#ifdef Q_OS_WIN
     DeleteTestUninstallRoot();
+#endif
 }
 
 void GithubUpdateServiceTest::cleanupTestCase()
 {
+#ifdef Q_OS_WIN
     DeleteTestUninstallRoot();
+#endif
 }
 
 void GithubUpdateServiceTest::clientCheckSuccessReportsUpdateAvailable()
@@ -349,6 +448,9 @@ void GithubUpdateServiceTest::downloadWithoutAssetsFailsImmediately()
 
 void GithubUpdateServiceTest::downloadWithInvalidShaFileFails()
 {
+#ifndef Q_OS_WIN
+    const ScopedAppImage appImage;
+#endif
     MiniHttpServer http;
     http.SetResponse("/z.zip.sha256", 200, "not-a-checksum");
 
@@ -356,12 +458,7 @@ void GithubUpdateServiceTest::downloadWithInvalidShaFileFails()
     RecordingObserver observer;
     service.AddObserver(&observer);
 
-    UpdateInfo info;
-    info.version = QStringLiteral("9.9.9");
-    info.zipName = QStringLiteral("gsx-integrator-client-x.zip");
-    info.zipUrl = http.UrlFor("/z.zip");
-    info.shaUrl = http.UrlFor("/z.zip.sha256");
-    service.DownloadAndStage(info);
+    service.DownloadAndStage(PackageInfo(http));
 
     QTRY_COMPARE(observer.stages.size(), std::size_t{1});
     QCOMPARE(observer.stages[0].ok, false);
@@ -371,6 +468,9 @@ void GithubUpdateServiceTest::downloadWithInvalidShaFileFails()
 
 void GithubUpdateServiceTest::downloadWithChecksumMismatchDiscardsZip()
 {
+#ifndef Q_OS_WIN
+    const ScopedAppImage appImage;
+#endif
     MiniHttpServer http;
     const QByteArray wrongSha(64, 'a');
     http.SetResponse("/z.zip.sha256", 200, wrongSha + " gsx-integrator-client-x.zip");
@@ -380,12 +480,7 @@ void GithubUpdateServiceTest::downloadWithChecksumMismatchDiscardsZip()
     RecordingObserver observer;
     service.AddObserver(&observer);
 
-    UpdateInfo info;
-    info.version = QStringLiteral("9.9.9");
-    info.zipName = QStringLiteral("gsx-integrator-client-x.zip");
-    info.zipUrl = http.UrlFor("/z.zip");
-    info.shaUrl = http.UrlFor("/z.zip.sha256");
-    service.DownloadAndStage(info);
+    service.DownloadAndStage(PackageInfo(http));
 
     QTRY_COMPARE(observer.stages.size(), std::size_t{1});
     QCOMPARE(observer.stages[0].ok, false);
@@ -393,11 +488,16 @@ void GithubUpdateServiceTest::downloadWithChecksumMismatchDiscardsZip()
     QVERIFY(observer.progressCalls > 0);
     QVERIFY(!service.HasStagedUpdate());
 
+#ifdef Q_OS_WIN
     const QString zipPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
         + QStringLiteral("/updates/download/gsx-integrator-client-x.zip");
     QVERIFY(!QFile::exists(zipPath));
+#else
+    QVERIFY(!QFile::exists(appImage.Staged()));
+#endif
 }
 
+#ifdef Q_OS_WIN
 void GithubUpdateServiceTest::applyArgumentsCarryTheNormalisedReleaseVersion_data()
 {
     QTest::addColumn<QString>("tag");
@@ -519,6 +619,101 @@ void GithubUpdateServiceTest::applyScriptUpdatesDisplayVersionOnlyForThisInstall
         QCOMPARE(registry.value(keyName + QStringLiteral("/InstallLocation")).toString(), installLocation);
     }
 }
+
+#else
+void GithubUpdateServiceTest::downloadOutsideAnAppImageSaysWhy()
+{
+    qunsetenv("APPIMAGE");
+    MiniHttpServer http;
+    http.SetResponse("/z.zip.sha256", 200, ShaFileFor("x"));
+    http.SetResponse("/z.zip", 200, "x");
+    GithubUpdateService service({}, {}, QStringLiteral("1.0.0"));
+    RecordingObserver observer;
+    service.AddObserver(&observer);
+
+    service.DownloadAndStage(PackageInfo(http));
+
+    QCOMPARE(observer.stages.size(), std::size_t{1});
+    QCOMPARE(observer.stages[0].ok, false);
+    QVERIFY(observer.stages[0].error.contains(QStringLiteral("not running from an AppImage")));
+    QVERIFY(!service.HasStagedUpdate());
+}
+
+void GithubUpdateServiceTest::aVerifiedAppImageIsStagedThenInstalledOverTheRunningOne()
+{
+    const ScopedAppImage appImage;
+    const QByteArray content = "new appimage bytes";
+    MiniHttpServer http;
+    http.SetResponse("/z.zip.sha256", 200, ShaFileFor(content));
+    http.SetResponse("/z.zip", 200, content);
+    GithubUpdateService service({}, {}, QStringLiteral("1.0.0"));
+    RecordingObserver observer;
+    service.AddObserver(&observer);
+
+    service.DownloadAndStage(PackageInfo(http));
+
+    QTRY_COMPARE(observer.stages.size(), std::size_t{1});
+    QVERIFY2(observer.stages[0].ok, qPrintable(observer.stages[0].error));
+    QVERIFY(service.HasStagedUpdate());
+    QCOMPARE(ReadFile(appImage.Staged()), content);
+    QCOMPARE(ReadFile(appImage.Path()), QByteArray("old appimage"));
+
+    QVERIFY(service.LaunchApplyHelper(false));
+
+    QCOMPARE(ReadFile(appImage.Path()), content);
+    QVERIFY(QFileInfo(appImage.Path()).isExecutable());
+    QVERIFY(!QFile::exists(appImage.Staged()));
+}
+
+void GithubUpdateServiceTest::installingRecordsTheVersionInTheInstallRecord()
+{
+    const QTemporaryDir dataHome;
+    const ScopedEnvironment xdg("XDG_DATA_HOME", dataHome.path().toUtf8());
+    const QString installed = dataHome.filePath(QStringLiteral("gsx-integrator-client/gsx-integrator-client.AppImage"));
+    const QString record = dataHome.filePath(QStringLiteral("gsx-integrator-client/install.ini"));
+    QVERIFY(WriteFile(installed, "old installed"));
+    QVERIFY(WriteFile(record, "[General]\nDisplayVersion=1.0.0\n"));
+    const ScopedAppImage appImage(installed);
+    const QByteArray content = "installed update";
+    MiniHttpServer http;
+    http.SetResponse("/z.zip.sha256", 200, ShaFileFor(content));
+    http.SetResponse("/z.zip", 200, content);
+    GithubUpdateService service({}, {}, QStringLiteral("1.0.0"));
+    RecordingObserver observer;
+    service.AddObserver(&observer);
+
+    service.DownloadAndStage(PackageInfo(http));
+    QTRY_COMPARE(observer.stages.size(), std::size_t{1});
+    QVERIFY(observer.stages[0].ok);
+    QVERIFY(service.LaunchApplyHelper(false));
+
+    QCOMPARE(ReadFile(installed), content);
+    QCOMPARE(QSettings(record, QSettings::IniFormat).value(QStringLiteral("DisplayVersion")).toString(),
+             QStringLiteral("9.9.9"));
+}
+
+void GithubUpdateServiceTest::aNewerReleaseDiscardsTheStagedAppImage()
+{
+    const ScopedAppImage appImage;
+    const QByteArray content = "staged";
+    MiniHttpServer http;
+    http.SetResponse("/z.zip.sha256", 200, ShaFileFor(content));
+    http.SetResponse("/z.zip", 200, content);
+    http.SetResponse("/client.json", 200, ReleaseFeed("v10.0.0", {}, {}));
+    GithubUpdateService service(http.UrlFor("/client.json"), {}, QStringLiteral("1.0.0"));
+    RecordingObserver observer;
+    service.AddObserver(&observer);
+    service.DownloadAndStage(PackageInfo(http));
+    QTRY_COMPARE(observer.stages.size(), std::size_t{1});
+    QVERIFY(service.HasStagedUpdate());
+
+    service.CheckForUpdates();
+
+    QTRY_COMPARE(observer.checks.size(), std::size_t{1});
+    QVERIFY(!service.HasStagedUpdate());
+    QVERIFY(!QFile::exists(appImage.Staged()));
+}
+#endif
 
 QTEST_GUILESS_MAIN(GithubUpdateServiceTest)
 

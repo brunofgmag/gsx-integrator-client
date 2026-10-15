@@ -1,4 +1,6 @@
+#ifdef _WIN32
 #include <windows.h>
+#endif
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -12,6 +14,7 @@
 #include <QtCore/QTimer>
 #include <QtCore/QTranslator>
 #include <QtGui/QFont>
+#include <QtGui/QFontDatabase>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QIcon>
 #include <QtGui/QStyleHints>
@@ -24,10 +27,20 @@
 #include "infrastructure/settings/QSettingsRepository.h"
 #include "infrastructure/platform/GraphicsBackend.h"
 #include "infrastructure/probe/ProbeLog.h"
+#ifdef _WIN32
 #include "infrastructure/platform/ShowWindowMessageFilter.h"
+#else
+#include "infrastructure/platform/InstanceChannel.h"
+#endif
 #include "infrastructure/platform/WindowForeground.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
 #include "infrastructure/simulator/DiskSimulatorAddonService.h"
+#include "infrastructure/simulator/SimulatorUserFolders.h"
+#ifndef _WIN32
+#include "infrastructure/simconnect/tcp/SimConnectTcpEndpoint.h"
+#include "infrastructure/simulator/SimConnectLink.h"
+#include "infrastructure/simulator/SystemdSimulatorLauncher.h"
+#endif
 #include "infrastructure/update/CommbusBundleInstaller.h"
 #include "infrastructure/update/DistributionParser.h"
 #include "infrastructure/update/GithubUpdateService.h"
@@ -78,21 +91,37 @@ namespace
 
     SimulatorAddonPaths BundledAddonPaths()
     {
+        const QString homeDir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+
         return {
             .bundleDir = QCoreApplication::applicationDirPath() + QStringLiteral("/commbus/gsx-integrator-commbus"),
             .communityOverrideDir = qEnvironmentVariable("GSXI_COMMBUS_COMMUNITY_DIR"),
-            .homeDir = QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
-            .exePath = QDir::toNativeSeparators(QCoreApplication::applicationFilePath())
+            .homeDir = homeDir,
+            .exePath = QDir::toNativeSeparators(QCoreApplication::applicationFilePath()),
+            .userHomes = SimulatorUserHomes(homeDir)
         };
+    }
+
+    std::unique_ptr<SimulatorLauncher> MakeSimulatorLauncher()
+    {
+#ifdef _WIN32
+        return nullptr;
+#else
+        return std::make_unique<SystemdSimulatorLauncher>(DefaultWatcherLocations(), RunSystemctlUser);
+#endif
     }
 
     bool LightTaskbar()
     {
+#ifdef _WIN32
         const QSettings personalize(
             QStringLiteral(
                 R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)"),
             QSettings::NativeFormat);
         return personalize.value(QStringLiteral("SystemUsesLightTheme"), 0).toInt() == 1;
+#else
+        return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Light;
+#endif
     }
 
     QtMessageHandler defaultMessageHandler = nullptr;
@@ -125,12 +154,14 @@ namespace
         return false;
     }
 
+#ifdef _WIN32
     bool SecondaryInstance()
     {
         CreateMutexW(nullptr, FALSE, L"Local\\gsx-integrator-client.single-instance");
 
         return GetLastError() == ERROR_ALREADY_EXISTS;
     }
+#endif
 
     void ConfigureApplication()
     {
@@ -139,6 +170,14 @@ namespace
         QGuiApplication::setApplicationName(QStringLiteral("gsx-integrator-client"));
         QGuiApplication::setApplicationDisplayName(QStringLiteral("GSX Integrator"));
         QGuiApplication::setApplicationVersion(QStringLiteral(GSXI_VERSION));
+
+#ifndef _WIN32
+        QGuiApplication::setDesktopFileName(QStringLiteral("gsx-integrator-client"));
+        for (const auto face : {":/fonts/CascadiaMono-Regular.ttf", ":/fonts/CascadiaMono-Bold.ttf"})
+        {
+            QFontDatabase::addApplicationFont(QLatin1String(face));
+        }
+#endif
 
         QFont monoFont(QStringLiteral("Cascadia Mono"));
         monoFont.setStyleHint(QFont::Monospace);
@@ -190,6 +229,7 @@ int main(int argc, char* argv[])
 {
     const bool trayArg = HasTrayArg(std::span<char*>(argv, static_cast<std::size_t>(argc)));
 
+#ifdef _WIN32
     if (SecondaryInstance())
     {
         if (!trayArg)
@@ -199,10 +239,23 @@ int main(int argc, char* argv[])
 
         return 0;
     }
+#endif
 
     defaultMessageHandler = qInstallMessageHandler(FilteredMessageHandler);
 
     const QGuiApplication app(argc, argv);
+#ifndef _WIN32
+    if (NotifyRunningInstance(InstanceChannelName(), !trayArg))
+    {
+        return 0;
+    }
+
+    InstanceServer instanceServer;
+    if (!instanceServer.Listen(InstanceChannelName()))
+    {
+        qWarning("Could not open the single-instance channel; a second instance will not be detected.");
+    }
+#endif
     ConfigureApplication();
 
     QSettingsRepository settingsRepository;
@@ -222,6 +275,16 @@ int main(int argc, char* argv[])
         QGuiApplication::applicationVersion());
     IntegratorRuntimeOptions runtimeOptions;
     runtimeOptions.checkpointStore = &checkpointStore;
+#ifndef _WIN32
+    runtimeOptions.prepareLink = []
+    {
+        const SimConnectLink link = PrepareSimConnectLink(
+            QStandardPaths::writableLocation(QStandardPaths::HomeLocation), IsProcessRunning);
+        SetSimConnectTcpEndpoint("127.0.0.1", link.port);
+
+        return link.simulatorsToRestart;
+    };
+#endif
     IntegratorRuntime runtime(runtimeOptions);
     RuntimeIntegratorService integratorService(&runtime);
     SettingsViewModel settingsViewModel(&settingsRepository, &integratorService,
@@ -265,7 +328,8 @@ int main(int argc, char* argv[])
     std::unique_ptr<DiskSimulatorAddonService> addonService;
     if (distribution.flightsimTo)
     {
-        addonService = std::make_unique<DiskSimulatorAddonService>(BundledAddonPaths(), IsProcessRunning);
+        addonService = std::make_unique<DiskSimulatorAddonService>(BundledAddonPaths(), IsProcessRunning,
+                                                                   MakeSimulatorLauncher());
         updateViewModel.StartSimulatorAddons(addonService.get(), settingsViewModel.GetCommbusManaged());
         QObject::connect(&updateViewModel, &UpdateViewModel::AddonsChanged, &settingsViewModel,
                          [&settingsViewModel, &updateViewModel]
@@ -343,10 +407,17 @@ int main(int argc, char* argv[])
     }
 
     auto* rootWindow = qobject_cast<QWindow*>(engine.rootObjects().first());
+#ifdef _WIN32
     ShowWindowMessageFilter showWindowFilter(rootWindow);
+#endif
     if (rootWindow != nullptr)
     {
+#ifdef _WIN32
         QCoreApplication::instance()->installNativeEventFilter(&showWindowFilter);
+#else
+        QObject::connect(&instanceServer, &InstanceServer::ShowRequested, rootWindow,
+                         [rootWindow] { WindowForeground::Bring(rootWindow); });
+#endif
         WindowsTitleBar::Apply(rootWindow, settingsViewModel.GetEffectiveDark());
 
         if (auto* quickWindow = qobject_cast<QQuickWindow*>(rootWindow))

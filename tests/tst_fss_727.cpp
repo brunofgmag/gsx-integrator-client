@@ -4184,7 +4184,8 @@ void Fss727Test::resumedDeboardingCompletionWaitsForTheDeckReading()
 void Fss727Test::memoryNamesCarryTheAircraftPrefix()
 {
     MemoryBag memory = MemoryOfAnAdapterWithTheMainLoaderAtTheDeck();
-    for (const MemoryBag::Entry& entry : MemoryOfAnAdapterThatOpenedTheFrontEntry().Entries())
+    const MemoryBag frontEntry = MemoryOfAnAdapterThatOpenedTheFrontEntry();
+    for (const MemoryBag::Entry& entry : frontEntry.Entries())
     {
         memory.PutText(entry.first, entry.second);
     }

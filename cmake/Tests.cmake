@@ -266,6 +266,9 @@ gsxi_add_qt_test(gsxi-github-update-service-tests github-update-service
         src/application/model/UpdateInfo.h
         ${SIMULATOR_FOLDER_SOURCES})
 target_link_libraries(gsxi-github-update-service-tests PRIVATE Qt6::Network)
+if (NOT WIN32)
+    target_sources(gsxi-github-update-service-tests PRIVATE ${LINUX_PLATFORM_TEST_SOURCES})
+endif ()
 
 gsxi_add_qt_test(gsxi-github-update-service-flightsim-to-tests github-update-service-flightsim-to
         tests/tst_github_update_service_flightsim_to.cpp
@@ -279,6 +282,9 @@ gsxi_add_qt_test(gsxi-github-update-service-flightsim-to-tests github-update-ser
         src/application/model/UpdateInfo.h
         ${SIMULATOR_FOLDER_SOURCES})
 target_link_libraries(gsxi-github-update-service-flightsim-to-tests PRIVATE Qt6::Network)
+if (NOT WIN32)
+    target_sources(gsxi-github-update-service-flightsim-to-tests PRIVATE ${LINUX_PLATFORM_TEST_SOURCES})
+endif ()
 target_compile_definitions(gsxi-github-update-service-flightsim-to-tests PRIVATE GSXI_FLIGHTSIM_TO)
 
 gsxi_add_qt_test(gsxi-qsettings-repository-tests qsettings-repository
@@ -1271,11 +1277,56 @@ if (NOT GSXI_TESTS_ONLY)
     endif ()
     get_filename_component(GSXI_QT_BIN_DIR "${GSXI_QT_CORE_DLL}" DIRECTORY)
     get_filename_component(GSXI_QT_PREFIX "${GSXI_QT_BIN_DIR}" DIRECTORY)
+    if (WIN32)
+        set_property(TEST qml-components APPEND PROPERTY ENVIRONMENT "PATH=${GSXI_QT_BIN_DIR}")
+    endif ()
     set_property(TEST qml-components APPEND PROPERTY ENVIRONMENT
-            "PATH=${GSXI_QT_BIN_DIR}"
             "QT_PLUGIN_PATH=${GSXI_QT_PREFIX}/plugins"
             "QML_IMPORT_PATH=${GSXI_QT_PREFIX}/qml"
             "QML2_IMPORT_PATH=${GSXI_QT_PREFIX}/qml")
+endif ()
+
+if (NOT WIN32)
+    gsxi_add_qt_test(gsxi-resolution-cache-tests resolution-cache
+            tests/tst_resolution_cache.cpp
+            src/infrastructure/simulator/ResolutionCache.h)
+
+    gsxi_add_qt_test(gsxi-instance-channel-tests instance-channel
+            tests/tst_instance_channel.cpp
+            src/infrastructure/platform/InstanceChannel.cpp
+            src/infrastructure/platform/InstanceChannel.h)
+    target_link_libraries(gsxi-instance-channel-tests PRIVATE Qt6::Network)
+
+    gsxi_add_qt_test(gsxi-simconnect-link-tests simconnect-link
+            tests/FakeProtonTree.h
+            tests/tst_simconnect_link.cpp
+            src/infrastructure/simulator/SimConnectLink.cpp
+            src/infrastructure/simulator/SimConnectLink.h
+            src/infrastructure/simulator/SimConnectXml.cpp
+            src/infrastructure/simulator/SimConnectXml.h
+            ${SIMULATOR_FOLDER_SOURCES})
+    target_compile_definitions(gsxi-simconnect-link-tests PRIVATE
+            GSX_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures\")
+
+    gsxi_add_qt_test(gsxi-simulator-watcher-tests simulator-watcher
+            tests/tst_simulator_watcher.cpp
+            src/infrastructure/platform/XdgDirectories.cpp
+            src/infrastructure/platform/XdgDirectories.h
+            src/infrastructure/simulator/SimulatorLauncher.h
+            src/infrastructure/simulator/SimulatorWatcherFiles.cpp
+            src/infrastructure/simulator/SimulatorWatcherFiles.h
+            src/infrastructure/simulator/SystemdSimulatorLauncher.cpp
+            src/infrastructure/simulator/SystemdSimulatorLauncher.h
+            ${SIMULATOR_FOLDER_SOURCES})
+
+    gsxi_add_qt_test(gsxi-appimage-update-tests appimage-update
+            tests/tst_appimage_update.cpp
+            ${LINUX_PLATFORM_TEST_SOURCES})
+
+    gsxi_add_qt_test(gsxi-child-environment-tests child-environment
+            tests/tst_child_environment.cpp
+            src/infrastructure/platform/ChildEnvironment.cpp
+            src/infrastructure/platform/ChildEnvironment.h)
 endif ()
 
 set(GSXI_GUARD_CHECKS
@@ -1289,9 +1340,20 @@ set(GSXI_GUARD_CHECKS
         check-avar-unit
         check-advisory-text-unpublished)
 
-foreach (GSXI_GUARD_CHECK ${GSXI_GUARD_CHECKS})
-    add_test(NAME ${GSXI_GUARD_CHECK}
-            COMMAND powershell -NoProfile -ExecutionPolicy Bypass
-            -File "${CMAKE_SOURCE_DIR}/tools/${GSXI_GUARD_CHECK}.ps1"
-            "${CMAKE_SOURCE_DIR}")
-endforeach ()
+if (WIN32)
+    set(GSXI_POWERSHELL powershell)
+else ()
+    find_program(GSXI_POWERSHELL NAMES pwsh)
+    if (NOT GSXI_POWERSHELL)
+        message(WARNING "pwsh was not found: the guard checks are not registered.")
+    endif ()
+endif ()
+
+if (GSXI_POWERSHELL)
+    foreach (GSXI_GUARD_CHECK ${GSXI_GUARD_CHECKS})
+        add_test(NAME ${GSXI_GUARD_CHECK}
+                COMMAND "${GSXI_POWERSHELL}" -NoProfile -ExecutionPolicy Bypass
+                -File "${CMAKE_SOURCE_DIR}/tools/${GSXI_GUARD_CHECK}.ps1"
+                "${CMAKE_SOURCE_DIR}")
+    endforeach ()
+endif ()

@@ -54,6 +54,17 @@ namespace GraphicsBackend
             || qEnvironmentVariableIsSet("QT_QUICK_BACKEND");
     }
 
+    inline QSGRendererInterface::GraphicsApi ForThisPlatform(const QSGRendererInterface::GraphicsApi api)
+    {
+#ifdef _WIN32
+        return api;
+#else
+        return api == QSGRendererInterface::Direct3D11 || api == QSGRendererInterface::Direct3D12
+                   ? QSGRendererInterface::Software
+                   : api;
+#endif
+    }
+
     inline void Apply(const QString& name)
     {
         if (OverriddenByEnvironment())
@@ -61,7 +72,7 @@ namespace GraphicsBackend
             return;
         }
 
-        QQuickWindow::setGraphicsApi(ToApi(name));
+        QQuickWindow::setGraphicsApi(ForThisPlatform(ToApi(name)));
     }
 }
 

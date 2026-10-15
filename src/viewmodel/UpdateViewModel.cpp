@@ -291,6 +291,7 @@ void UpdateViewModel::StartSimulatorAddons(SimulatorAddonService* addons, const 
     addons_ = addons;
     commbusManaged_ = commbusManaged;
     launchWithSimulator_ = addons_->IsLaunchedWithSimulator();
+    launchWithSimulatorAvailable_ = addons_->CanLaunchWithSimulator();
     if (commbusManaged_)
     {
         SetCommbusBundleResult(addons_->InstallCommbus());
@@ -309,15 +310,33 @@ bool UpdateViewModel::IsLaunchWithSimulator() const
     return launchWithSimulator_;
 }
 
+bool UpdateViewModel::IsLaunchWithSimulatorAvailable() const
+{
+    return launchWithSimulatorAvailable_;
+}
+
 void UpdateViewModel::SetLaunchWithSimulator(const bool enabled)
 {
-    if (addons_ == nullptr || launchWithSimulator_ == enabled)
+    if (addons_ == nullptr || launchWithSimulator_ == enabled || !launchWithSimulatorAvailable_)
     {
         return;
     }
 
     const LaunchWithSimulatorResult result = addons_->SetLaunchedWithSimulator(enabled);
     launchWithSimulator_ = addons_->IsLaunchedWithSimulator();
+
+    if (result.unavailable)
+    {
+        launchWithSimulatorAvailable_ = false;
+        SetAddonNotice(AddonNotice::NoSystemd);
+        return;
+    }
+
+    if (result.serviceFailed)
+    {
+        SetAddonNotice(AddonNotice::LaunchServiceFailed);
+        return;
+    }
 
     if (result.noSimulator)
     {
@@ -383,6 +402,10 @@ QString UpdateViewModel::GetAddonNotice() const
         return tr("Could not update EXE.xml for %1.").arg(addonNoticeTargets_);
     case AddonNotice::NoSimulator:
         return tr("No MSFS 2020 or 2024 installation found.");
+    case AddonNotice::NoSystemd:
+        return tr("Starting with the simulator needs systemd user services, and this system does not offer them.");
+    case AddonNotice::LaunchServiceFailed:
+        return tr("Could not set up the systemd service that starts GSX Integrator with the simulator.");
     default:
         return {};
     }

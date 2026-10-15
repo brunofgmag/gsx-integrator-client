@@ -75,6 +75,7 @@ struct IntegratorSnapshot
     bool engineerPanelExternalPower = false;
     bool groundPowerByClient = false;
 
+    std::string simulatorsToRestart;
     std::string aircraftName;
     std::string aircraftProfileId;
     SmartSwitchCue smartSwitch;

@@ -13,6 +13,7 @@
 #include "../infrastructure/logging/LogMacros.h"
 #include "../infrastructure/gsx/GsxAircraftProfile.h"
 #include "../infrastructure/pmdg/PmdgOptions.h"
+#include "../infrastructure/simulator/SimulatorUserFolders.h"
 #include "../infrastructure/gsx/GsxRemoteStateReducer.h"
 #include "../infrastructure/checkpoint/StoredText.h"
 #include "../domain/model/PlanConversion.h"
@@ -139,6 +140,7 @@ IntegratorRuntime::IntegratorRuntime(IntegratorRuntimeOptions options, QObject* 
       simbriefClient_(&status_, &settings_, this),
       flightPlanSource_(&simbriefClient_),
       actsOnTheSim_(std::move(options.actsOnTheSim)),
+      prepareLink_(std::move(options.prepareLink)),
       resumption_(options.checkpointStore)
 {
     if (!actsOnTheSim_)
@@ -449,6 +451,11 @@ void IntegratorRuntime::TryConnect()
         connectAttemptAnnounced_ = true;
     }
 
+    if (prepareLink_)
+    {
+        simulatorsToRestart_ = prepareLink_();
+    }
+
     if (!simConnect_.Open("GSX Integrator"))
     {
         reconnectTimer_.start();
@@ -459,6 +466,8 @@ void IntegratorRuntime::TryConnect()
     }
 
     reconnectTimer_.stop();
+    simulatorsToRestart_.clear();
+    ResetSimulatorFolderCache();
 
     simConnect_.SetOnOpen([this](const char* appName) { OnSimOpen(appName); });
 
@@ -523,6 +532,7 @@ void IntegratorRuntime::HandleDisconnected()
 
     connectAttemptAnnounced_ = false;
     simVersion_ = SimVersion::Unknown;
+    ResetSimulatorFolderCache();
 
     varGateway_.Detach();
     simConnect_.Close();
@@ -957,6 +967,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
 {
     IntegratorSnapshot snapshot;
     snapshot.connected = IsConnected();
+    snapshot.simulatorsToRestart = simulatorsToRestart_.join(QStringLiteral(", ")).toStdString();
     snapshot.sessionActive = IsSessionActive();
     snapshot.sessionReady = sessionReady_;
     snapshot.pilotOnFoot = pilotOnFoot_;

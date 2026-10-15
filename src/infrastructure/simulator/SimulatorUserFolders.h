@@ -13,6 +13,7 @@
 [[nodiscard]] QString ActiveSimulatorRoamingAppData(const QString& machineHome,
                                                     const ProcessRunningCheck& isProcessRunning);
 [[nodiscard]] QString SimulatorRoamingAppDataDir();
+void ResetSimulatorFolderCache();
 [[nodiscard]] std::optional<std::filesystem::path> SimulatorRoamingAppData();
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_SIMULATORUSERFOLDERS_H

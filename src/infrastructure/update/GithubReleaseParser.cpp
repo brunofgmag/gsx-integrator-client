@@ -59,6 +59,14 @@ std::optional<UpdateInfo> ParseLatestRelease(const QByteArray& json)
         {
             info.shaUrl = url;
         }
+        else if (name.endsWith(QStringLiteral("-x86_64.AppImage")))
+        {
+            info.appImageUrl = url;
+        }
+        else if (name.endsWith(QStringLiteral("-x86_64.AppImage.sha256")))
+        {
+            info.appImageShaUrl = url;
+        }
     }
 
     return info;

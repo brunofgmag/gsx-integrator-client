@@ -8,6 +8,7 @@
 #include <QtXml/QDomDocument>
 #include "CaseInsensitivePath.h"
 #include "SimulatorCandidates.h"
+#include "WindowsFileName.h"
 
 namespace
 {
@@ -122,7 +123,7 @@ bool ExeXmlAddUpdate(const QString& exeXmlPath, const QString& exePath, const QS
         return false;
     }
 
-    QList<QDomElement> launching = AddonsLaunching(root, QFileInfo(exePath).fileName());
+    QList<QDomElement> launching = AddonsLaunching(root, WindowsFileName(exePath));
     for (QDomElement& addon : launching)
     {
         FillAddon(doc, addon, exePath, appName);

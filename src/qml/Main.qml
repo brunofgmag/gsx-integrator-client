@@ -237,8 +237,8 @@ ApplicationWindow {
                 }
 
                 HeaderButton {
-                    font.family: "Segoe MDL2 Assets"
-                    text: "\uE80F"
+                    font.family: Theme.homeGlyphFamily
+                    text: Theme.homeGlyph
                     active: window.screen === 0
                     tip: qsTr("Operations")
                     onClicked: window.screen = 0
@@ -335,6 +335,7 @@ ApplicationWindow {
             }
 
             ConnectingPanel {
+                integratorVm: window.integratorVm
                 anchors.fill: parent
                 anchors.leftMargin: window.shellMargin
                 anchors.rightMargin: window.shellMargin

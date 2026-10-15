@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/fonts">
+        <file alias="CascadiaMono-Regular.ttf">fonts/CascadiaMono-Regular.ttf</file>
+        <file alias="CascadiaMono-Bold.ttf">fonts/CascadiaMono-Bold.ttf</file>
+    </qresource>
+</RCC>
