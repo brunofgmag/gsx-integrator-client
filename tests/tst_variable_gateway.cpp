@@ -5,12 +5,11 @@
 #include <cstring>
 #include <string>
 #include <vector>
-#include <windows.h>
-#include <SimConnect.h>
 #include <QtCore/QStringList>
 #include <QtCore/QTemporaryDir>
 #include "ProbeLines.h"
 #include "doubles/FakeSimConnectApi.h"
+#include "../src/infrastructure/simconnect/SimConnectApi.h"
 #include "../src/infrastructure/simconnect/SimConnectVariableGateway.h"
 
 namespace

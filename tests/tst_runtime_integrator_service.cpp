@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstring>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -105,7 +106,7 @@ namespace
     void PushSimOpen(const char* appName)
     {
         SIMCONNECT_RECV_OPEN open{};
-        strcpy_s(open.szApplicationName, appName);
+        std::memcpy(open.szApplicationName, appName, std::strlen(appName) + 1);
         FakeSimConnectApi::Push(open, SIMCONNECT_RECV_ID_OPEN);
     }
 

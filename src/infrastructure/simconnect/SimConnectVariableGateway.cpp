@@ -1,6 +1,7 @@
 #include "SimConnectVariableGateway.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstring>
 #include <optional>
 #include <QtCore/QDateTime>
@@ -15,6 +16,23 @@ namespace
     constexpr auto kNumberUnit = "Number";
     constexpr DWORD kFastIntervalFrames = 1;
     constexpr int kShownDigits = 15;
+
+    void CopyTruncated(char* destination, const std::size_t capacity, const char* source)
+    {
+        if (capacity == 0)
+        {
+            return;
+        }
+
+        std::size_t length = 0;
+        while (length < capacity - 1 && source[length] != '\0')
+        {
+            ++length;
+        }
+
+        std::memcpy(destination, source, length);
+        destination[length] = '\0';
+    }
 }
 
 void SimConnectVariableGateway::Attach(HANDLE hSimConnect)
@@ -305,7 +323,7 @@ bool SimConnectVariableGateway::FetchStringSlot(const char* key, const char* dat
         return false;
     }
 
-    strncpy_s(buffer, bufferSize - 1, slot.text, _TRUNCATE);
+    CopyTruncated(buffer, static_cast<std::size_t>(bufferSize - 1), slot.text);
     buffer[bufferSize - 1] = '\0';
 
     return true;
@@ -335,11 +353,7 @@ void SimConnectVariableGateway::StoreSample(Slot& slot, const void* payload)
 {
     if (slot.isString)
     {
-        strncpy_s(
-            slot.text,
-            sizeof(slot.text) - 1,
-            static_cast<const char*>(payload),
-            _TRUNCATE);
+        CopyTruncated(slot.text, sizeof(slot.text) - 1, static_cast<const char*>(payload));
         slot.text[sizeof(slot.text) - 1] = '\0';
     }
     else

@@ -220,7 +220,8 @@ void SimConnectSessionTest::openEventDeliversApplicationName()
     session.SetOnOpen([&appName](const char* name) { appName = name; });
 
     SIMCONNECT_RECV_OPEN open{};
-    strcpy_s(open.szApplicationName, "Microsoft Flight Simulator");
+    constexpr auto kSimulatorName = "Microsoft Flight Simulator";
+    std::memcpy(open.szApplicationName, kSimulatorName, std::strlen(kSimulatorName) + 1);
     FakeSimConnectApi::Push(open, SIMCONNECT_RECV_ID_OPEN);
 
     QVERIFY(session.Dispatch());

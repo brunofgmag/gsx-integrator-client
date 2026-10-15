@@ -92,6 +92,16 @@ set(TURNAROUND_SOURCES
         src/domain/turnaround/TurnaroundStateMachine.h
 )
 
+set(SIMCONNECT_TCP_SOURCES
+        src/infrastructure/simconnect/tcp/SimConnectTcpApi.cpp
+        src/infrastructure/simconnect/tcp/SimConnectTcpEndpoint.cpp
+        src/infrastructure/simconnect/tcp/SimConnectTcpEndpoint.h
+        src/infrastructure/simconnect/tcp/SimConnectTcpLink.cpp
+        src/infrastructure/simconnect/tcp/SimConnectTcpLink.h
+        src/infrastructure/simconnect/tcp/SimConnectWire.cpp
+        src/infrastructure/simconnect/tcp/SimConnectWire.h
+)
+
 set(APP_SOURCES
         assets/app.rc
         assets/resources.qrc
@@ -271,10 +281,12 @@ set(APP_SOURCES
         src/infrastructure/settings/QSettingsRepository.cpp
         src/infrastructure/settings/QSettingsRepository.h
         src/infrastructure/simvars/VariableGateway.h
+        src/infrastructure/simconnect/SimConnectApi.h
         src/infrastructure/simconnect/SimConnectSession.cpp
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
         src/infrastructure/simconnect/SimConnectVariableGateway.h
+        src/infrastructure/simconnect/tcp/SimConnectDefinitions.h
         src/application/model/CommbusBundleResult.h
         src/application/model/Distribution.h
         src/application/model/LaunchWithSimulatorResult.h
@@ -320,6 +332,10 @@ set(APP_SOURCES
         src/infrastructure/gsx/GsxRemoteApiClient.h
         src/infrastructure/gsx/GsxRemoteApiClient.cpp
 )
+
+if (NOT WIN32)
+    list(APPEND APP_SOURCES ${SIMCONNECT_TCP_SOURCES})
+endif ()
 
 set(APP_QML_FILES
         src/qml/Main.qml
