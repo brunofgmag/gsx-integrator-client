@@ -20,7 +20,16 @@ MSVC 2022 x64 is the only supported toolchain. MinGW configures, but only as an 
 
 `build.ps1 -RunTests` builds and tests in one go. `run-tests.ps1 -Filter <name>` runs a single test.
 
-The CMake configure step installs the git hooks (or run `git config core.hooksPath .githooks` yourself). The commit-msg hook enforces Conventional Commits. The pre-commit hook runs a full Release build with tests whenever a commit touches `src/`, `tests/`, `cmake/`, `tools/` or the build files.
+On Linux you need GCC or Clang, Ninja, CMake, Qt 6.8 or newer (kit `gcc_64`) and PowerShell (`pwsh`) for the guard checks. No SDK is needed, because the client talks to the simulator over TCP:
+
+```sh
+export QT_ROOT_DIR=~/Qt/6.8.3/gcc_64
+cmake --preset linux-release
+cmake --build --preset linux-release
+ctest --preset linux-release
+```
+
+The CMake configure step installs the git hooks (or run `git config core.hooksPath .githooks` yourself). The commit-msg hook enforces Conventional Commits. The pre-commit hook runs a full Release build with tests (the `linux-release` preset on Linux) whenever a commit touches `src/`, `tests/`, `cmake/`, `tools/` or the build files.
 
 ## Code layout
 
