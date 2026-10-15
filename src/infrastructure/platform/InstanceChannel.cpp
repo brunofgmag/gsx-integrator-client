@@ -58,13 +58,6 @@ InstanceServer::InstanceServer(QObject* parent)
 
 bool InstanceServer::Listen(const QString& name)
 {
-    if (server_.listen(name))
-    {
-        return true;
-    }
-
-    QLocalServer::removeServer(name);
-
     return server_.listen(name);
 }
 

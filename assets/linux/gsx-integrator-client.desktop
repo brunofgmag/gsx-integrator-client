@@ -5,5 +5,5 @@ Comment=Drives GSX Pro ground services in Microsoft Flight Simulator
 Exec=gsx-integrator-client
 Icon=gsx-integrator-client
 Terminal=false
-Categories=Utility;Game;
+Categories=Utility;
 StartupWMClass=gsx-integrator-client

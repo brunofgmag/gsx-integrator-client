@@ -1,5 +1,6 @@
 #include <QtCore/QCoreApplication>
-#include <QtCore/QFile>
+#include <QtCore/QFileInfo>
+#include <QtCore/QProcess>
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
@@ -58,9 +59,15 @@ void InstanceChannelTest::aStaleSocketFileDoesNotBlockTheNewFirstInstance()
 {
     const QTemporaryDir directory;
     const QString name = directory.filePath(QStringLiteral("stale.sock"));
-    QFile stale(name);
-    QVERIFY(stale.open(QIODevice::WriteOnly));
-    stale.close();
+    QProcess python;
+    python.start(QStringLiteral("python3"),
+                 {QStringLiteral("-c"),
+                  QStringLiteral("import socket,sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])"), name});
+    if (!python.waitForFinished(5000) || python.exitCode() != 0)
+    {
+        QSKIP("python3 is needed to leave a stale socket file behind");
+    }
+    QVERIFY(QFileInfo(name).exists());
     QVERIFY(!NotifyRunningInstance(name, true, 200));
 
     InstanceServer server;
