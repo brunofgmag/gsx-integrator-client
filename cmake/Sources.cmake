@@ -285,6 +285,8 @@ set(APP_SOURCES
         src/infrastructure/simulator/DiskSimulatorAddonService.h
         src/infrastructure/simulator/ExeXml.cpp
         src/infrastructure/simulator/ExeXml.h
+        src/infrastructure/simulator/SimConnectXml.cpp
+        src/infrastructure/simulator/SimConnectXml.h
         ${SIMULATOR_FOLDER_SOURCES}
         src/infrastructure/update/CommbusBundleInstaller.cpp
         src/infrastructure/update/CommbusBundleInstaller.h

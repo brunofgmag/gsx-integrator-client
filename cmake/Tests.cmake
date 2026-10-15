@@ -1004,6 +1004,15 @@ gsxi_add_qt_test(gsxi-running-process-tests running-process
         tests/tst_running_process.cpp
         ${SIMULATOR_FOLDER_SOURCES})
 
+gsxi_add_qt_test(gsxi-simconnect-xml-tests simconnect-xml
+        tests/FakeProtonTree.h
+        tests/tst_simconnect_xml.cpp
+        src/infrastructure/simulator/SimConnectXml.cpp
+        src/infrastructure/simulator/SimConnectXml.h
+        ${SIMULATOR_FOLDER_SOURCES})
+target_compile_definitions(gsxi-simconnect-xml-tests PRIVATE
+        GSX_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures\")
+
 if (NOT WIN32)
     gsxi_add_qt_test(gsxi-steam-libraries-tests steam-libraries
             tests/FakeProtonTree.h
