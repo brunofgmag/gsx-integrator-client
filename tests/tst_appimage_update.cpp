@@ -140,7 +140,7 @@ void AppImageUpdateTest::theInstallRecordGetsTheNormalisedVersionAndKeepsEveryth
 {
     const InstallTree tree;
 
-    QVERIFY(RecordInstalledVersion(tree.appImage, tree.dataHome, QStringLiteral("v1.41.0-rc.1")));
+    QVERIFY(RecordInstalledVersion(tree.appImage, tree.dataHome, QStringLiteral("1.41.0-rc.1")));
 
     const QSettings settings(tree.record, QSettings::IniFormat);
     QCOMPARE(settings.value(QStringLiteral("DisplayVersion")).toString(), QStringLiteral("1.41.0"));
@@ -196,11 +196,13 @@ void AppImageUpdateTest::relaunchStartsTheNewFileWithoutTheAppImageVariables()
 
     QProcess finished;
     finished.start(QStringLiteral("/bin/true"));
+    QVERIFY(finished.waitForStarted());
+    const qint64 exitedPid = finished.processId();
     QVERIFY(finished.waitForFinished());
     qputenv("APPIMAGE", "/old/x.AppImage");
     qputenv("APPDIR", "/tmp/.mount_old");
 
-    QVERIFY(RelaunchAppImage(finished.processId(), app));
+    QVERIFY(RelaunchAppImage(exitedPid, app));
 
     QTRY_VERIFY_WITH_TIMEOUT(QFile::exists(marker) && !ReadTestFile(marker).isEmpty(), 5000);
     QCOMPARE(ReadTestFile(marker), QByteArray("started appimage=[] appdir=[]\n"));
