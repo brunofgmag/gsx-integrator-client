@@ -325,6 +325,21 @@ gsxi_add_qt_test(gsxi-variable-gateway-tests variable-gateway
         src/infrastructure/simconnect/SimConnectVariableGateway.h)
 target_include_directories(gsxi-variable-gateway-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
+if (NOT WIN32)
+    gsxi_add_qt_test(gsxi-simconnect-tcp-tests simconnect-tcp
+            tests/tst_simconnect_tcp.cpp
+            src/infrastructure/probe/ProbeChannels.h
+            src/infrastructure/probe/ProbeLog.h
+            src/infrastructure/probe/ProbeWriteMemo.h
+            src/infrastructure/simconnect/SimConnectApi.h
+            src/infrastructure/simconnect/SimConnectSession.cpp
+            src/infrastructure/simconnect/SimConnectSession.h
+            src/infrastructure/simconnect/SimConnectVariableGateway.cpp
+            src/infrastructure/simconnect/SimConnectVariableGateway.h
+            src/infrastructure/simconnect/tcp/SimConnectDefinitions.h
+            ${SIMCONNECT_TCP_SOURCES})
+endif ()
+
 gsxi_add_qt_test(gsxi-echo-wait-tests echo-wait
         tests/tst_echo_wait.cpp
         src/infrastructure/aircraft/EchoWait.h)
