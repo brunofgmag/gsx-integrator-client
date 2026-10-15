@@ -4,8 +4,7 @@
 #include <deque>
 #include <string>
 #include <unordered_map>
-#include <windows.h>
-#include <SimConnect.h>
+#include "SimConnectApi.h"
 #include "../probe/ProbeWriteMemo.h"
 #include "../simvars/VariableGateway.h"
 

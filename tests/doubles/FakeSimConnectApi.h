@@ -7,8 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <windows.h>
-#include <SimConnect.h>
+#include "../../src/infrastructure/simconnect/SimConnectApi.h"
 
 struct FakeSimConnectApi
 {

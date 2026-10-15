@@ -20,4 +20,6 @@ endif ()
 
 if (MSVC)
     add_compile_options(/MP /we4834)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-Wno-invalid-offsetof)
 endif ()

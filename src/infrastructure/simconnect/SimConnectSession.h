@@ -6,8 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
-#include <windows.h>
-#include <SimConnect.h>
+#include "SimConnectApi.h"
 
 class SimConnectVariableGateway;
 

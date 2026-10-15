@@ -1,0 +1,11 @@
+#ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_SIMCONNECTAPI_H
+#define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_SIMCONNECTAPI_H
+
+#ifdef _WIN32
+#include <windows.h>
+#include <SimConnect.h>
+#else
+#include "tcp/SimConnectDefinitions.h"
+#endif
+
+#endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_SIMCONNECTAPI_H
