@@ -18,6 +18,9 @@ function(configure_gsxi_test TARGET_NAME TEST_NAME)
             RUNTIME_OUTPUT_DIRECTORY "${GSXI_TEST_RUNTIME_DIR}")
     add_test(NAME ${TEST_NAME} COMMAND ${TARGET_NAME} ${ARGN})
     set_property(TEST ${TEST_NAME} PROPERTY ENVIRONMENT QT_FORCE_STDERR_LOGGING=1)
+    if (NOT WIN32)
+        set_property(TEST ${TEST_NAME} APPEND PROPERTY ENVIRONMENT "APPDATA=${CMAKE_BINARY_DIR}/appdata")
+    endif ()
     add_dependencies(${TARGET_NAME} gsxi-test-qt-runtime)
 endfunction()
 
@@ -219,7 +222,8 @@ gsxi_add_qt_test(gsxi-gsx-menu-navigator-tests gsx-menu-navigator
         src/domain/ports/GsxMenuGateway.h
         src/domain/ports/DomainLogger.h
         src/domain/model/AutomationSettings.h
-        src/domain/model/MemoryBag.h)
+        src/domain/model/MemoryBag.h
+        ${SIMULATOR_FOLDER_SOURCES})
 target_link_libraries(gsxi-gsx-menu-navigator-tests PRIVATE Qt6::WebSockets)
 
 gsxi_add_qt_test(gsxi-gsx-door-sync-tests gsx-door-sync
@@ -246,7 +250,8 @@ gsxi_add_qt_test(gsxi-gsx-interface-tests gsx-interface
 gsxi_add_qt_test(gsxi-gsx-remote-api-client-tests gsx-remote-api-client
         tests/tst_gsx_remote_api_client.cpp
         src/infrastructure/gsx/GsxRemoteApiClient.cpp
-        src/infrastructure/gsx/GsxRemoteApiClient.h)
+        src/infrastructure/gsx/GsxRemoteApiClient.h
+        ${SIMULATOR_FOLDER_SOURCES})
 target_link_libraries(gsxi-gsx-remote-api-client-tests PRIVATE Qt6::WebSockets)
 
 gsxi_add_qt_test(gsxi-github-update-service-tests github-update-service
@@ -258,7 +263,8 @@ gsxi_add_qt_test(gsxi-github-update-service-tests github-update-service
         src/infrastructure/update/CommbusInstallProbe.cpp
         src/infrastructure/update/CommbusInstallProbe.h
         src/application/ports/UpdateService.h
-        src/application/model/UpdateInfo.h)
+        src/application/model/UpdateInfo.h
+        ${SIMULATOR_FOLDER_SOURCES})
 target_link_libraries(gsxi-github-update-service-tests PRIVATE Qt6::Network)
 
 gsxi_add_qt_test(gsxi-github-update-service-flightsim-to-tests github-update-service-flightsim-to
@@ -270,7 +276,8 @@ gsxi_add_qt_test(gsxi-github-update-service-flightsim-to-tests github-update-ser
         src/infrastructure/update/CommbusInstallProbe.cpp
         src/infrastructure/update/CommbusInstallProbe.h
         src/application/ports/UpdateService.h
-        src/application/model/UpdateInfo.h)
+        src/application/model/UpdateInfo.h
+        ${SIMULATOR_FOLDER_SOURCES})
 target_link_libraries(gsxi-github-update-service-flightsim-to-tests PRIVATE Qt6::Network)
 target_compile_definitions(gsxi-github-update-service-flightsim-to-tests PRIVATE GSXI_FLIGHTSIM_TO)
 
@@ -381,19 +388,22 @@ gsxi_add_qt_test(gsxi-ifly-737max-tests ifly-737max
         src/infrastructure/simbrief/SimbriefOfpParser.h
         src/domain/model/AutomationStatus.h
         src/infrastructure/gsx/GsxDoorSync.cpp
-        src/infrastructure/gsx/GsxDoorSync.h)
+        src/infrastructure/gsx/GsxDoorSync.h
+        ${SIMULATOR_FOLDER_SOURCES})
 
 gsxi_add_qt_test(gsxi-ifly-plan-file-tests ifly-plan-file
         tests/tst_ifly_plan_file.cpp
         src/infrastructure/ifly/IFlyPlanFile.cpp
         src/infrastructure/ifly/IFlyPlanFile.h
         src/infrastructure/simbrief/SimbriefOfpParser.cpp
-        src/infrastructure/simbrief/SimbriefOfpParser.h)
+        src/infrastructure/simbrief/SimbriefOfpParser.h
+        ${SIMULATOR_FOLDER_SOURCES})
 
 gsxi_add_qt_test(gsxi-gsx-aircraft-profile-tests gsx-aircraft-profile
         tests/tst_gsx_aircraft_profile.cpp
         src/infrastructure/gsx/GsxAircraftProfile.cpp
-        src/infrastructure/gsx/GsxAircraftProfile.h)
+        src/infrastructure/gsx/GsxAircraftProfile.h
+        ${SIMULATOR_FOLDER_SOURCES})
 
 gsxi_add_qt_test(gsxi-avro-rj-tests avro-rj
         tests/TestDoubles.h
@@ -582,7 +592,8 @@ target_include_directories(gsxi-pmdg737-data-client-tests PRIVATE "${SIMCONNECT_
 gsxi_add_qt_test(gsxi-pmdg-options-tests pmdg-options
         tests/tst_pmdg_options.cpp
         src/infrastructure/pmdg/PmdgOptions.cpp
-        src/infrastructure/pmdg/PmdgOptions.h)
+        src/infrastructure/pmdg/PmdgOptions.h
+        ${SIMULATOR_FOLDER_SOURCES})
 target_include_directories(gsxi-pmdg-options-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
 gsxi_add_qt_test(gsxi-pmdg-route-file-tests pmdg-route-file
@@ -590,7 +601,8 @@ gsxi_add_qt_test(gsxi-pmdg-route-file-tests pmdg-route-file
         src/infrastructure/pmdg/PmdgRouteFile.cpp
         src/infrastructure/pmdg/PmdgRouteFile.h
         src/infrastructure/pmdg/PmdgOptions.cpp
-        src/infrastructure/pmdg/PmdgOptions.h)
+        src/infrastructure/pmdg/PmdgOptions.h
+        ${SIMULATOR_FOLDER_SOURCES})
 target_include_directories(gsxi-pmdg-route-file-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
 gsxi_add_qt_test(gsxi-pmdg-tablet-client-tests pmdg-tablet-client
@@ -681,7 +693,8 @@ gsxi_add_qt_test(gsxi-pmdg-777-tests pmdg-777
         src/infrastructure/simconnect/SimConnectSession.cpp
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
-        src/infrastructure/simconnect/SimConnectVariableGateway.h)
+        src/infrastructure/simconnect/SimConnectVariableGateway.h
+        ${SIMULATOR_FOLDER_SOURCES})
 target_include_directories(gsxi-pmdg-777-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
 gsxi_add_qt_test(gsxi-pmdg-737-tests pmdg-737
@@ -737,7 +750,8 @@ gsxi_add_qt_test(gsxi-pmdg-737-tests pmdg-737
         src/infrastructure/simconnect/SimConnectSession.cpp
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
-        src/infrastructure/simconnect/SimConnectVariableGateway.h)
+        src/infrastructure/simconnect/SimConnectVariableGateway.h
+        ${SIMULATOR_FOLDER_SOURCES})
 target_include_directories(gsxi-pmdg-737-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
 gsxi_add_qt_test(gsxi-aircraft-matching-tests aircraft-matching
@@ -916,7 +930,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/gsx/GsxDoorSync.cpp
         src/infrastructure/gsx/GsxDoorSync.h
         src/domain/model/AutomationStatus.h
-        src/domain/support/Weight.h)
+        src/domain/support/Weight.h
+        ${SIMULATOR_FOLDER_SOURCES})
 target_link_libraries(gsxi-aircraft-detection-tests PRIVATE Qt6::Network)
 target_include_directories(gsxi-aircraft-detection-tests PRIVATE "${SIMCONNECT_INCLUDE_DIR}")
 
@@ -944,22 +959,23 @@ gsxi_add_qt_test(gsxi-update-viewmodel-tests update-viewmodel
 gsxi_add_qt_test(gsxi-commbus-install-probe-tests commbus-install-probe
         tests/tst_commbus_install_probe.cpp
         src/infrastructure/update/CommbusInstallProbe.cpp
-        src/infrastructure/update/CommbusInstallProbe.h)
+        src/infrastructure/update/CommbusInstallProbe.h
+        ${SIMULATOR_FOLDER_SOURCES})
 
 gsxi_add_qt_test(gsxi-commbus-bundle-installer-tests commbus-bundle-installer
         tests/tst_commbus_bundle_installer.cpp
         src/application/model/CommbusBundleResult.h
-        src/infrastructure/simulator/SimulatorCandidates.h
         src/infrastructure/update/CommbusBundleInstaller.cpp
         src/infrastructure/update/CommbusBundleInstaller.h
         src/infrastructure/update/CommbusInstallProbe.cpp
-        src/infrastructure/update/CommbusInstallProbe.h)
+        src/infrastructure/update/CommbusInstallProbe.h
+        ${SIMULATOR_FOLDER_SOURCES})
 
 gsxi_add_qt_test(gsxi-exe-xml-tests exe-xml
         tests/tst_exe_xml.cpp
         src/infrastructure/simulator/ExeXml.cpp
         src/infrastructure/simulator/ExeXml.h
-        src/infrastructure/simulator/SimulatorCandidates.h)
+        ${SIMULATOR_FOLDER_SOURCES})
 target_link_libraries(gsxi-exe-xml-tests PRIVATE Qt6::Xml)
 
 gsxi_add_qt_test(gsxi-disk-simulator-addon-service-tests disk-simulator-addon-service
@@ -971,12 +987,41 @@ gsxi_add_qt_test(gsxi-disk-simulator-addon-service-tests disk-simulator-addon-se
         src/infrastructure/simulator/DiskSimulatorAddonService.h
         src/infrastructure/simulator/ExeXml.cpp
         src/infrastructure/simulator/ExeXml.h
-        src/infrastructure/simulator/SimulatorCandidates.h
         src/infrastructure/update/CommbusBundleInstaller.cpp
         src/infrastructure/update/CommbusBundleInstaller.h
         src/infrastructure/update/CommbusInstallProbe.cpp
-        src/infrastructure/update/CommbusInstallProbe.h)
+        src/infrastructure/update/CommbusInstallProbe.h
+        ${SIMULATOR_FOLDER_SOURCES})
 target_link_libraries(gsxi-disk-simulator-addon-service-tests PRIVATE Qt6::Xml)
+
+gsxi_add_qt_test(gsxi-simulator-candidates-tests simulator-candidates
+        tests/FakeProtonTree.h
+        tests/tst_simulator_candidates.cpp
+        ${SIMULATOR_FOLDER_SOURCES})
+
+gsxi_add_qt_test(gsxi-running-process-tests running-process
+        tests/FakeProtonTree.h
+        tests/tst_running_process.cpp
+        ${SIMULATOR_FOLDER_SOURCES})
+
+if (NOT WIN32)
+    gsxi_add_qt_test(gsxi-steam-libraries-tests steam-libraries
+            tests/FakeProtonTree.h
+            tests/tst_steam_libraries.cpp
+            ${SIMULATOR_FOLDER_SOURCES})
+    target_compile_definitions(gsxi-steam-libraries-tests PRIVATE
+            GSX_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures\")
+
+    gsxi_add_qt_test(gsxi-proton-prefix-tests proton-prefix
+            tests/FakeProtonTree.h
+            tests/tst_proton_prefix.cpp
+            ${SIMULATOR_FOLDER_SOURCES})
+
+    gsxi_add_qt_test(gsxi-simulator-user-folders-tests simulator-user-folders
+            tests/FakeProtonTree.h
+            tests/tst_simulator_user_folders.cpp
+            ${SIMULATOR_FOLDER_SOURCES})
+endif ()
 
 gsxi_add_qt_test(gsxi-distribution-parser-tests distribution-parser
         tests/tst_distribution_parser.cpp
@@ -1168,7 +1213,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/simconnect/SimConnectSession.cpp
         src/infrastructure/simconnect/SimConnectSession.h
         src/infrastructure/simconnect/SimConnectVariableGateway.cpp
-        src/infrastructure/simconnect/SimConnectVariableGateway.h)
+        src/infrastructure/simconnect/SimConnectVariableGateway.h
+        ${SIMULATOR_FOLDER_SOURCES})
 target_link_libraries(gsxi-runtime-integrator-service-tests PRIVATE
         gsxi-turnaround-state-test-support
         Qt6::Network)

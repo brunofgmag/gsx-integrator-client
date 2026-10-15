@@ -1,11 +1,11 @@
 #include "IFlyPlanFile.h"
 
-#include <cstdlib>
 #include <fstream>
 #include <string>
 #include <system_error>
 #include "../logging/LogMacros.h"
 #include "../simbrief/SimbriefOfpParser.h"
+#include "../simulator/SimulatorUserFolders.h"
 
 namespace
 {
@@ -46,18 +46,13 @@ std::optional<std::filesystem::path> IFlyPlanFile::DirectoryUnder(const std::fil
 
 std::optional<std::filesystem::path> IFlyPlanFile::DirectoryFor()
 {
-    char* appData = nullptr;
-    std::size_t appDataLength = 0;
-    if (_dupenv_s(&appData, &appDataLength, "APPDATA") != 0 || appData == nullptr)
+    const std::optional<std::filesystem::path> appData = SimulatorRoamingAppData();
+    if (!appData.has_value())
     {
         return std::nullopt;
     }
 
-    const std::optional<std::filesystem::path> directory = DirectoryUnder(appData);
-
-    std::free(appData);
-
-    return directory;
+    return DirectoryUnder(*appData);
 }
 
 long long IFlyPlanFile::PlanEpochIn(const std::filesystem::path& directory)

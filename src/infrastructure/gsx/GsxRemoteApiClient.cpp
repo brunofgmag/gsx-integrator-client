@@ -9,12 +9,13 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QSettings>
-#include <QStandardPaths>
 #include <QTimer>
 #include <QUrl>
 #include <QtWebSockets/QWebSocket>
 
 #include "../logging/LogMacros.h"
+#include "../simulator/CaseInsensitivePath.h"
+#include "../simulator/SimulatorUserFolders.h"
 
 namespace
 {
@@ -229,8 +230,17 @@ void GsxRemoteApiClient::HandleResult(const QJsonObject& msg)
 
 quint16 GsxRemoteApiClient::ResolvePort()
 {
-    const QString appData = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    const QString ini = QDir(appData).filePath("../../Virtuali/CouatlAddons.ini");
+    return ResolvePortUnder(SimulatorRoamingAppDataDir());
+}
+
+quint16 GsxRemoteApiClient::ResolvePortUnder(const QString& roamingAppData)
+{
+    if (roamingAppData.isEmpty())
+    {
+        return kFallbackPort;
+    }
+
+    const QString ini = ResolveCaseInsensitive(roamingAppData, QStringLiteral("Virtuali/CouatlAddons.ini"));
     if (QFileInfo::exists(ini))
     {
         const QSettings cfg(ini, QSettings::IniFormat);

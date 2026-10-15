@@ -23,6 +23,7 @@ public:
 
     void SetHandshakeTimeoutForTest(const int milliseconds) { handshakeTimeoutMs_ = milliseconds; }
     void SetPortForTest(const quint16 port) { portForTest_ = port; }
+    [[nodiscard]] static quint16 ResolvePortUnder(const QString& roamingAppData);
 
 signals:
     void SnapshotReceived(const QJsonObject& snapshot);

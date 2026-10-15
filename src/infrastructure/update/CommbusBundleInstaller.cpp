@@ -1,8 +1,6 @@
 #include "CommbusBundleInstaller.h"
 
 #include <algorithm>
-#include <windows.h>
-#include <tlhelp32.h>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
@@ -75,7 +73,7 @@ namespace
         const QFileInfo entry(packageDir);
         if (entry.isJunction() || entry.isSymbolicLink())
         {
-            return QDir().rmdir(packageDir);
+            return QDir().rmdir(packageDir) || QFile::remove(packageDir);
         }
 
         if (!QDir(packageDir).exists())
@@ -210,8 +208,7 @@ std::vector<CommbusInstallTarget> DetectCommbusInstallTargets(const QString& hom
     std::vector<CommbusInstallTarget> targets;
     for (const SimulatorCandidate& candidate : kSimulatorCandidates)
     {
-        const QString packagesPath = ParseInstalledPackagesPath(
-            ReadFileIfExists(homeDir + u'/' + QLatin1String(candidate.userCfgSubPath)));
+        const QString packagesPath = InstalledPackagesPathOf(homeDir, candidate);
         if (packagesPath.isEmpty())
         {
             continue;
@@ -310,32 +307,4 @@ CommbusBundleResult RemoveCommbusBundle(const std::vector<CommbusInstallTarget>&
     }
 
     return result;
-}
-
-bool IsProcessRunning(const QString& exeName)
-{
-    const HANDLE& snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (snapshot == INVALID_HANDLE_VALUE)
-    {
-        return false;
-    }
-
-    PROCESSENTRY32W entry{};
-    entry.dwSize = sizeof(entry);
-
-    bool found = false;
-    if (Process32FirstW(snapshot, &entry) != FALSE)
-    {
-        do
-        {
-            if (exeName.compare(QString::fromWCharArray(entry.szExeFile), Qt::CaseInsensitive) == 0)
-            {
-                found = true;
-                break;
-            }
-        } while (Process32NextW(snapshot, &entry) != FALSE);
-    }
-    CloseHandle(snapshot);
-
-    return found;
 }

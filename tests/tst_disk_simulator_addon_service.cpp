@@ -226,6 +226,9 @@ void DiskSimulatorAddonServiceTest::removeDeletesThePackage()
 
 void DiskSimulatorAddonServiceTest::removeUnlinksAJunctionWithoutTouchingItsTarget()
 {
+#ifndef Q_OS_WIN
+    QSKIP("mklink /J exists only on Windows");
+#endif
     const QTemporaryDir root;
     const QString community = AddSimulator(root.path() + QStringLiteral("/home"), kSteam2024UserCfg,
                                            QStringLiteral("packages2024"));

@@ -6,6 +6,7 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QList>
 #include <QtXml/QDomDocument>
+#include "CaseInsensitivePath.h"
 #include "SimulatorCandidates.h"
 
 namespace
@@ -186,15 +187,15 @@ std::vector<ExeXmlTarget> CandidateExeXmlTargets(const QString& homeDir)
     std::vector<ExeXmlTarget> targets;
     for (const SimulatorCandidate& candidate : kSimulatorCandidates)
     {
-        const QFileInfo userCfg(homeDir + u'/' + QLatin1String(candidate.userCfgSubPath));
-        if (!QFileInfo(userCfg.absolutePath()).isDir())
+        const QString baseDir = QFileInfo(SimulatorBaseDir(homeDir, candidate)).absoluteFilePath();
+        if (!QFileInfo(baseDir).isDir())
         {
             continue;
         }
 
         targets.push_back({
             QLatin1String(candidate.label),
-            QDir::toNativeSeparators(userCfg.absolutePath() + u'/' + kExeXmlName)
+            QDir::toNativeSeparators(ResolveCaseInsensitive(baseDir, kExeXmlName))
         });
     }
 

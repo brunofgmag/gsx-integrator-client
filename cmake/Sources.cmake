@@ -1,3 +1,18 @@
+set(SIMULATOR_FOLDER_SOURCES
+        src/infrastructure/simulator/CaseInsensitivePath.cpp
+        src/infrastructure/simulator/CaseInsensitivePath.h
+        src/infrastructure/simulator/ProtonPrefix.cpp
+        src/infrastructure/simulator/ProtonPrefix.h
+        src/infrastructure/simulator/RunningProcess.cpp
+        src/infrastructure/simulator/RunningProcess.h
+        src/infrastructure/simulator/SimulatorCandidates.cpp
+        src/infrastructure/simulator/SimulatorCandidates.h
+        src/infrastructure/simulator/SimulatorUserFolders.cpp
+        src/infrastructure/simulator/SimulatorUserFolders.h
+        src/infrastructure/simulator/SteamLibraries.cpp
+        src/infrastructure/simulator/SteamLibraries.h
+)
+
 set(TURNAROUND_STATE_SOURCES
         src/domain/turnaround/TurnaroundData.h
         src/domain/turnaround/TurnaroundCheckpoint.h
@@ -270,7 +285,7 @@ set(APP_SOURCES
         src/infrastructure/simulator/DiskSimulatorAddonService.h
         src/infrastructure/simulator/ExeXml.cpp
         src/infrastructure/simulator/ExeXml.h
-        src/infrastructure/simulator/SimulatorCandidates.h
+        ${SIMULATOR_FOLDER_SOURCES}
         src/infrastructure/update/CommbusBundleInstaller.cpp
         src/infrastructure/update/CommbusBundleInstaller.h
         src/infrastructure/update/CommbusInstallProbe.cpp
