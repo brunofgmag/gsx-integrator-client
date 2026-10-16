@@ -730,27 +730,27 @@
 <context>
     <name>Main</name>
     <message>
-        <location filename="../src/qml/Main.qml" line="20"/>
-        <location filename="../src/qml/Main.qml" line="35"/>
-        <location filename="../src/qml/Main.qml" line="69"/>
-        <location filename="../src/qml/Main.qml" line="151"/>
-        <location filename="../src/qml/Main.qml" line="152"/>
+        <location filename="../src/qml/Main.qml" line="18"/>
+        <location filename="../src/qml/Main.qml" line="39"/>
+        <location filename="../src/qml/Main.qml" line="73"/>
+        <location filename="../src/qml/Main.qml" line="154"/>
+        <location filename="../src/qml/Main.qml" line="155"/>
         <source>GSX Integrator</source>
         <translation>GSX Integrator</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="70"/>
+        <location filename="../src/qml/Main.qml" line="74"/>
         <source>Still running in the tray. Right-click the icon to open or quit.</source>
         <translation>Ainda em execução na bandeja. Clique com o botão direito no ícone para abrir ou fechar.</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="156"/>
+        <location filename="../src/qml/Main.qml" line="159"/>
         <source>Open</source>
         <translation>Abrir</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="137"/>
-        <location filename="../src/qml/Main.qml" line="160"/>
+        <location filename="../src/qml/Main.qml" line="140"/>
+        <location filename="../src/qml/Main.qml" line="163"/>
         <source>Quit</source>
         <translation>Fechar</translation>
     </message>
@@ -759,62 +759,62 @@
         <translation type="vanished">Aguardando ação: pressione INICIAR CARREGAMENTO ou acione o SmartSwitch.</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="117"/>
+        <location filename="../src/qml/Main.qml" line="120"/>
         <source>Quit GSX Integrator?</source>
         <translation>Fechar o GSX Integrator?</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="130"/>
+        <location filename="../src/qml/Main.qml" line="133"/>
         <source>Cancel</source>
         <translation>Cancelar</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="224"/>
+        <location filename="../src/qml/Main.qml" line="227"/>
         <source>Restart to update</source>
         <translation>Reiniciar para atualizar</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="226"/>
+        <location filename="../src/qml/Main.qml" line="229"/>
         <source>↓ CommBus</source>
         <translation>↓ CommBus</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="228"/>
+        <location filename="../src/qml/Main.qml" line="231"/>
         <source>Apply the update and restart now</source>
         <translation>Aplicar a atualização e reiniciar agora</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="229"/>
+        <location filename="../src/qml/Main.qml" line="232"/>
         <source>Update available</source>
         <translation>Atualização disponível</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="243"/>
+        <location filename="../src/qml/Main.qml" line="246"/>
         <source>Operations</source>
         <translation>Operações</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="249"/>
+        <location filename="../src/qml/Main.qml" line="253"/>
         <source>Switch to light theme</source>
         <translation>Mudar para o tema claro</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="249"/>
+        <location filename="../src/qml/Main.qml" line="253"/>
         <source>Switch to dark theme</source>
         <translation>Mudar para o tema escuro</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="263"/>
+        <location filename="../src/qml/Main.qml" line="268"/>
         <source>About</source>
         <translation>Sobre</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="406"/>
+        <location filename="../src/qml/Main.qml" line="412"/>
         <source>Save settings</source>
         <translation>Salvar ajustes</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="256"/>
+        <location filename="../src/qml/Main.qml" line="261"/>
         <source>Settings</source>
         <translation>Configurações</translation>
     </message>
@@ -1560,32 +1560,32 @@
         <translation type="vanished">SimBrief</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="21"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="22"/>
         <source>Automation</source>
         <translation>Automação</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="21"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="22"/>
         <source>General</source>
         <translation>Geral</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="21"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="22"/>
         <source>Services</source>
         <translation>Serviços</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="22"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="23"/>
         <source>Window</source>
         <translation>Janela</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="22"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="23"/>
         <source>Profiles</source>
         <translation>Perfis</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/SettingsScreen.qml" line="22"/>
+        <location filename="../src/qml/screens/SettingsScreen.qml" line="23"/>
         <source>Advanced</source>
         <translation>Avançado</translation>
     </message>
@@ -2288,24 +2288,34 @@
 <context>
     <name>WindowPane</name>
     <message>
-        <location filename="../src/qml/screens/settings/WindowPane.qml" line="16"/>
+        <location filename="../src/qml/screens/settings/WindowPane.qml" line="17"/>
         <source>Close to tray</source>
         <translation>Fechar para a bandeja</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/WindowPane.qml" line="17"/>
+        <location filename="../src/qml/screens/settings/WindowPane.qml" line="19"/>
         <source>Closing hides the window to the tray</source>
         <translation>Fechar esconde a janela para a bandeja</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/WindowPane.qml" line="24"/>
+        <location filename="../src/qml/screens/settings/WindowPane.qml" line="20"/>
+        <source>No system tray found, so closing asks to quit</source>
+        <translation>Nenhuma bandeja do sistema encontrada, então fechar pede para sair</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/WindowPane.qml" line="27"/>
         <source>Minimize to tray</source>
         <translation>Minimizar para a bandeja</translation>
     </message>
     <message>
-        <location filename="../src/qml/screens/settings/WindowPane.qml" line="25"/>
+        <location filename="../src/qml/screens/settings/WindowPane.qml" line="29"/>
         <source>Minimizing hides the window to the tray</source>
         <translation>Minimizar esconde a janela para a bandeja</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/screens/settings/WindowPane.qml" line="30"/>
+        <source>No system tray found, so minimizing keeps the window</source>
+        <translation>Nenhuma bandeja do sistema encontrada, então minimizar mantém a janela</translation>
     </message>
 </context>
 </TS>

@@ -14,9 +14,7 @@ ApplicationWindow {
     maximumWidth: 1080
     minimumWidth: 720
     minimumHeight: 500
-    visibility: startHidden ? Window.Hidden
-              : startMinimized ? Window.Minimized
-              : Window.AutomaticVisibility
+    visibility: startVisibility
     title: qsTr("GSX Integrator")
     color: Theme.bg
 
@@ -26,6 +24,12 @@ ApplicationWindow {
     required property bool startHidden
     required property bool startMinimized
     required property string trayIconSource
+
+    property bool trayAvailable: tray.available
+
+    readonly property int startVisibility: startHidden ? (trayAvailable ? Window.Hidden : Window.Windowed)
+                                           : startMinimized ? Window.Minimized
+                                           : Window.AutomaticVisibility
 
     readonly property int shellMargin: 20
 
@@ -73,17 +77,16 @@ ApplicationWindow {
     }
 
     onClosing: close => {
-        if (window.settingsVm.closeToTray) {
-            close.accepted = false
+        close.accepted = false
+        if (window.settingsVm.closeToTray && window.trayAvailable) {
             window.hideToTray()
         } else {
-            close.accepted = false
             window.confirmQuit()
         }
     }
 
     onVisibilityChanged: {
-        if (window.visibility === Window.Minimized && window.settingsVm.minimizeToTray) {
+        if (window.visibility === Window.Minimized && window.settingsVm.minimizeToTray && window.trayAvailable) {
             window.hideToTray()
         }
     }
@@ -322,6 +325,7 @@ ApplicationWindow {
                     }
 
                     SettingsScreen {
+                        trayAvailable: window.trayAvailable
                         paneGutter: flick.rightGutter
                         settingsVm: window.settingsVm
                         updateModeVisible: window.updateVm.downloadsAllowed
