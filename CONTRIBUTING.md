@@ -29,6 +29,8 @@ cmake --build --preset linux-release
 ctest --preset linux-release
 ```
 
+`tools/build-appimage.sh` packages the build into the release AppImage. It needs `APP_VERSION` and `QT_ROOT_DIR`, and writes the AppImage and its `.sha256` to `dist/`.
+
 The CMake configure step installs the git hooks (or run `git config core.hooksPath .githooks` yourself). The commit-msg hook enforces Conventional Commits. The pre-commit hook runs a full Release build with tests (the `linux-release` preset on Linux) whenever a commit touches `src/`, `tests/`, `cmake/`, `tools/` or the build files.
 
 ## Code layout
