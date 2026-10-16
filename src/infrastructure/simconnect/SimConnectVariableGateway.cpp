@@ -1,6 +1,7 @@
 #include "SimConnectVariableGateway.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <cstring>
 #include <optional>
@@ -16,6 +17,25 @@ namespace
     constexpr auto kNumberUnit = "Number";
     constexpr DWORD kFastIntervalFrames = 1;
     constexpr int kShownDigits = 15;
+    constexpr long long kRetryBaseMs = 1000;
+    constexpr long long kRetryMaxMs = 16000;
+    constexpr unsigned kRetryMaxDoublings = 4;
+    constexpr unsigned kMaxRetries = 30;
+    constexpr auto kLVarPrefix = "L:";
+    constexpr DWORD kUnknownSendId = 0;
+
+    long long SteadyNowMs()
+    {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
+
+    long long RetryDelayMs(const unsigned rejections)
+    {
+        const unsigned doublings = (std::min)(rejections - 1, kRetryMaxDoublings);
+
+        return (std::min)(kRetryBaseMs << doublings, kRetryMaxMs);
+    }
 
     void CopyTruncated(char* destination, const std::size_t capacity, const char* source)
     {
@@ -42,6 +62,7 @@ void SimConnectVariableGateway::Attach(HANDLE hSimConnect)
     for (auto& slot : slots_)
     {
         slot.registered = false;
+        ClearRetryState(slot);
         slot.received = false;
         slot.tickMarked = false;
         slot.changedThisTick = true;
@@ -58,6 +79,7 @@ void SimConnectVariableGateway::Detach()
     for (auto& slot : slots_)
     {
         slot.registered = false;
+        ClearRetryState(slot);
         slot.received = false;
         slot.tickMarked = false;
         slot.changedThisTick = true;
@@ -76,6 +98,7 @@ void SimConnectVariableGateway::ForgetTextSlots()
         const bool wasRegistered = slot.registered;
         slot.received = false;
         slot.registered = false;
+        ClearRetryState(slot);
         slot.text[0] = '\0';
 
         if (hSimConnect_ == nullptr)
@@ -93,6 +116,16 @@ void SimConnectVariableGateway::ForgetTextSlots()
             LOG_WARN("Failed to re-register variable '%s'", slot.datumName.c_str());
         }
     }
+}
+
+void SimConnectVariableGateway::SetClock(std::function<long long()> clock)
+{
+    clock_ = std::move(clock);
+}
+
+long long SimConnectVariableGateway::NowMs() const
+{
+    return clock_ ? clock_() : SteadyNowMs();
 }
 
 void SimConnectVariableGateway::MarkTick()
@@ -157,6 +190,7 @@ void SimConnectVariableGateway::PromoteToFastRefresh(Slot& slot) const
 {
     slot.fast = true;
     slot.registered = false;
+    ClearRetryState(slot);
 
     if (!RegisterSlot(slot))
     {
@@ -190,6 +224,12 @@ bool SimConnectVariableGateway::RegisterSlot(Slot& slot) const
         return false;
     }
 
+    DWORD sendId = 0;
+    if (SUCCEEDED(SimConnect_GetLastSentPacketID(hSimConnect_, &sendId)))
+    {
+        slot.definitionSendId = sendId;
+    }
+
     hr = SimConnect_RequestDataOnSimObject(hSimConnect_,
                                            slot.defineId,
                                            slot.defineId,
@@ -204,8 +244,116 @@ bool SimConnectVariableGateway::RegisterSlot(Slot& slot) const
         return false;
     }
 
+    if (SUCCEEDED(SimConnect_GetLastSentPacketID(hSimConnect_, &sendId)))
+    {
+        slot.requestSendId = sendId;
+    }
+
     slot.registered = true;
     return true;
+}
+
+void SimConnectVariableGateway::ClearRetryState(Slot& slot)
+{
+    slot.definitionSendId.reset();
+    slot.requestSendId.reset();
+    slot.retryPending = false;
+    slot.retryAtMs = 0;
+    slot.rejections = 0;
+}
+
+bool SimConnectVariableGateway::IsRetryable(const Slot& slot, const DWORD exception)
+{
+    if (exception == static_cast<DWORD>(SIMCONNECT_EXCEPTION_UNRECOGNIZED_ID))
+    {
+        return true;
+    }
+
+    return exception == static_cast<DWORD>(SIMCONNECT_EXCEPTION_NAME_UNRECOGNIZED)
+        && slot.datumName.starts_with(kLVarPrefix);
+}
+
+void SimConnectVariableGateway::HandleException(const SIMCONNECT_RECV_EXCEPTION* pData)
+{
+    if (!pData || pData->dwSendID == kUnknownSendId)
+    {
+        return;
+    }
+
+    for (auto& slot : slots_)
+    {
+        if (slot.definitionSendId == pData->dwSendID || slot.requestSendId == pData->dwSendID)
+        {
+            RejectSlot(slot, pData->dwException);
+
+            return;
+        }
+    }
+}
+
+void SimConnectVariableGateway::RejectSlot(Slot& slot, const DWORD exception)
+{
+    slot.registered = false;
+    slot.definitionSendId.reset();
+    slot.requestSendId.reset();
+
+    if (!IsRetryable(slot, exception))
+    {
+        slot.retryPending = false;
+        LOG_WARN("The simulator rejected variable '%s' (exception %u); it will not be requested again until reconnect",
+                 slot.datumName.c_str(), static_cast<unsigned>(exception));
+
+        return;
+    }
+
+    if (slot.rejections == 0)
+    {
+        LOG_INFO("The simulator rejected variable '%s' (exception %u); requesting it again",
+                 slot.datumName.c_str(), static_cast<unsigned>(exception));
+    }
+
+    ScheduleRetry(slot, NowMs());
+}
+
+void SimConnectVariableGateway::ScheduleRetry(Slot& slot, const long long nowMs)
+{
+    ++slot.rejections;
+    if (slot.rejections > kMaxRetries)
+    {
+        slot.retryPending = false;
+        LOG_WARN("Variable '%s' is still rejected after %u attempts; giving up until reconnect",
+                 slot.datumName.c_str(), kMaxRetries);
+
+        return;
+    }
+
+    slot.retryPending = true;
+    slot.retryAtMs = nowMs + RetryDelayMs(slot.rejections);
+}
+
+void SimConnectVariableGateway::RetryRejected()
+{
+    if (hSimConnect_ == nullptr)
+    {
+        return;
+    }
+
+    const long long now = NowMs();
+    for (auto& slot : slots_)
+    {
+        if (!slot.retryPending || now < slot.retryAtMs)
+        {
+            continue;
+        }
+
+        slot.retryPending = false;
+        (void)SimConnect_ClearDataDefinition(hSimConnect_, slot.defineId);
+
+        if (!RegisterSlot(slot))
+        {
+            ScheduleRetry(slot, now);
+        }
+    }
 }
 
 double SimConnectVariableGateway::GetLVar(const std::string& name, const double defaultValue)
@@ -344,6 +492,11 @@ void SimConnectVariableGateway::HandleSimObjectData(const SIMCONNECT_RECV_SIMOBJ
         }
 
         StoreSample(slot, &pData->dwData);
+        if (slot.rejections > 0)
+        {
+            LOG_INFO("Variable '%s' answered after %u rejections", slot.datumName.c_str(), slot.rejections);
+        }
+        ClearRetryState(slot);
 
         return;
     }

@@ -36,6 +36,9 @@ namespace
     constexpr int kPatient = 2000;
     constexpr int kAMoment = 30;
     constexpr std::size_t kClientDataSize = 8192;
+    constexpr long long kLongestWaitMs = 16000;
+    constexpr std::uint32_t kRetryBudget = 30;
+    constexpr std::uint32_t kNameUnrecognizedException = 7;
 
     constexpr std::uint32_t kOpenType = 0x01;
     constexpr std::uint32_t kMapClientEventType = 0x04;
@@ -414,6 +417,78 @@ namespace
         ~ClosingSession() { Close(); }
     };
 
+    Bytes ExceptionPacket(const std::uint32_t exception, const std::uint32_t sendId)
+    {
+        return Incoming(kRecvException, Join({U32(exception), U32(sendId), U32(0)}));
+    }
+
+    struct GatewayRig
+    {
+        long long nowMs = 0;
+        Rig peer;
+        ClosingSession session;
+        SimConnectVariableGateway gateway;
+
+        GatewayRig()
+        {
+            gateway.SetClock([this] { return nowMs; });
+        }
+
+        bool Start()
+        {
+            if (!session.Open("GSX Integrator") || !peer.simulator.Accept())
+            {
+                return false;
+            }
+
+            static_cast<void>(peer.simulator.ReadPacket());
+            session.SetVarManager(&gateway);
+            gateway.Attach(session.Handle());
+
+            return true;
+        }
+
+        [[nodiscard]] DWORD LastSent() const
+        {
+            DWORD lastSent = 0;
+            static_cast<void>(SimConnect_GetLastSentPacketID(session.Handle(), &lastSent));
+
+            return lastSent;
+        }
+
+        bool PumpUntilSent(const DWORD sendId)
+        {
+            const Clock::time_point start = Clock::now();
+            while (ElapsedMs(start) < kPatient)
+            {
+                nowMs += kLongestWaitMs;
+                if (!session.Dispatch())
+                {
+                    return false;
+                }
+
+                if (LastSent() >= sendId)
+                {
+                    return true;
+                }
+
+                QTest::qSleep(1);
+            }
+
+            return false;
+        }
+
+        void PumpQuietly(const int rounds)
+        {
+            for (int round = 0; round < rounds; ++round)
+            {
+                nowMs += kLongestWaitMs;
+                static_cast<void>(session.Dispatch());
+                QTest::qSleep(1);
+            }
+        }
+    };
+
     struct PacketCase
     {
         std::function<HRESULT(HANDLE)> call;
@@ -471,6 +546,10 @@ private slots:
     static void sessionRequestsClientDataAndHandsOverTheArea();
     static void gatewayRegistersAndReadsAnLVarOverTheWire();
     static void gatewayWritesAnLVarAsASetDataPacket();
+    static void aRejectedFirstRequestIsAskedAgainOverTheWireAndTheValueArrives_data();
+    static void aRejectedFirstRequestIsAskedAgainOverTheWireAndTheValueArrives();
+    static void aRejectedAVarIsNotAskedAgainOverTheWire();
+    static void theRetriesOverTheWireStopAtTheBudget();
 };
 
 void SimConnectTcpTest::init()
@@ -1312,6 +1391,124 @@ void SimConnectTcpTest::gatewayWritesAnLVarAsASetDataPacket()
     QCOMPARE(Hex(rig.simulator.ReadPacket()),
              Hex(Outgoing(kSetDataOnSimObjectType, 3,
                       Join({U32(1), U32(0), U32(0), U32(1), U32(8), Bytes{0, 0, 0, 0, 0, 0x40, 0x45, 0x40}}))));
+}
+
+void SimConnectTcpTest::aRejectedFirstRequestIsAskedAgainOverTheWireAndTheValueArrives_data()
+{
+    QTest::addColumn<Bytes>("rejections");
+
+    QTest::newRow("the request is rejected while the flight loads")
+        << ExceptionPacket(kUnrecognizedIdException, 2);
+    QTest::newRow("the variable does not exist yet and the request follows it")
+        << Join({ExceptionPacket(kNameUnrecognizedException, 1), ExceptionPacket(kUnrecognizedIdException, 2)});
+}
+
+void SimConnectTcpTest::aRejectedFirstRequestIsAskedAgainOverTheWireAndTheValueArrives()
+{
+    QFETCH(Bytes, rejections);
+
+    GatewayRig rig;
+    QVERIFY(rig.Start());
+
+    QCOMPARE(rig.gateway.GetLVar("FSDT_GSX_COUATL_STARTED", -1.0), -1.0);
+
+    const Bytes definition = Outgoing(kAddToDataDefinitionType, 1,
+                                      Join({U32(1), Text("L:FSDT_GSX_COUATL_STARTED", 256), Text("Number", 256),
+                                            U32(4), F32(0.0F), U32(kUnused)}));
+    const Bytes request = Outgoing(kRequestDataOnSimObjectType, 2,
+                                   Join({U32(1), U32(1), U32(0), U32(4), U32(1), U32(0), U32(0), U32(0)}));
+    QCOMPARE(Hex(rig.peer.simulator.ReadPacket()), Hex(definition));
+    QCOMPARE(Hex(rig.peer.simulator.ReadPacket()), Hex(request));
+
+    rig.peer.simulator.Send(rejections);
+
+    QVERIFY(rig.PumpUntilSent(5));
+
+    QCOMPARE(Hex(rig.peer.simulator.ReadPacket()), Hex(Outgoing(kClearDataDefinitionType, 3, U32(1))));
+    QCOMPARE(Hex(rig.peer.simulator.ReadPacket()),
+             Hex(Outgoing(kAddToDataDefinitionType, 4,
+                          Join({U32(1), Text("L:FSDT_GSX_COUATL_STARTED", 256), Text("Number", 256), U32(4),
+                                F32(0.0F), U32(kUnused)}))));
+    QCOMPARE(Hex(rig.peer.simulator.ReadPacket()),
+             Hex(Outgoing(kRequestDataOnSimObjectType, 5,
+                          Join({U32(1), U32(1), U32(0), U32(4), U32(1), U32(0), U32(0), U32(0)}))));
+
+    QCOMPARE(rig.gateway.GetLVar("FSDT_GSX_COUATL_STARTED", -1.0), -1.0);
+
+    rig.peer.simulator.Send(SimObjectDouble(1, 1.0));
+
+    const Clock::time_point start = Clock::now();
+    while (!rig.gateway.HasReceivedLVar("FSDT_GSX_COUATL_STARTED") && ElapsedMs(start) < kPatient)
+    {
+        QVERIFY(rig.session.Dispatch());
+        QTest::qSleep(1);
+    }
+
+    QCOMPARE(rig.gateway.GetLVar("FSDT_GSX_COUATL_STARTED", -1.0), 1.0);
+    QCOMPARE(rig.LastSent(), DWORD{5});
+}
+
+void SimConnectTcpTest::aRejectedAVarIsNotAskedAgainOverTheWire()
+{
+    GatewayRig rig;
+    QVERIFY(rig.Start());
+
+    int ticks = 0;
+    QVERIFY(rig.session.SubscribeOneSecond([&ticks] { ++ticks; }));
+    static_cast<void>(rig.peer.simulator.ReadPacket());
+
+    QCOMPARE(rig.gateway.GetAVar("FUEL TOTAL QUANTITY WEIGHT", "kilogramz", -1.0), -1.0);
+    static_cast<void>(rig.peer.simulator.ReadPacket());
+    static_cast<void>(rig.peer.simulator.ReadPacket());
+
+    rig.peer.simulator.Send(Join({ExceptionPacket(kNameUnrecognizedException, 2),
+                                 ExceptionPacket(kUnrecognizedIdException, 3), EventPacket(1, 0)}));
+
+    const Clock::time_point start = Clock::now();
+    while (ticks == 0 && ElapsedMs(start) < kPatient)
+    {
+        QVERIFY(rig.session.Dispatch());
+        QTest::qSleep(1);
+    }
+
+    QCOMPARE(ticks, 1);
+
+    rig.PumpQuietly(40);
+
+    QCOMPARE(rig.LastSent(), DWORD{3});
+    QCOMPARE(rig.peer.simulator.ReadPacket(kAMoment).size(), std::size_t{0});
+    QCOMPARE(rig.gateway.GetAVar("FUEL TOTAL QUANTITY WEIGHT", "kilogramz", -1.0), -1.0);
+}
+
+void SimConnectTcpTest::theRetriesOverTheWireStopAtTheBudget()
+{
+    GatewayRig rig;
+    QVERIFY(rig.Start());
+
+    QCOMPARE(rig.gateway.GetLVar("FSDT_GSX_COUATL_STARTED", -1.0), -1.0);
+    static_cast<void>(rig.peer.simulator.ReadPacket());
+    static_cast<void>(rig.peer.simulator.ReadPacket());
+
+    DWORD requestSendId = 2;
+    for (std::uint32_t retry = 1; retry <= kRetryBudget; ++retry)
+    {
+        rig.peer.simulator.Send(ExceptionPacket(kUnrecognizedIdException, requestSendId));
+
+        QVERIFY(rig.PumpUntilSent(requestSendId + 3));
+
+        QCOMPARE(Word(rig.peer.simulator.ReadPacket(), 12), requestSendId + 1);
+        QCOMPARE(Word(rig.peer.simulator.ReadPacket(), 12), requestSendId + 2);
+        QCOMPARE(Word(rig.peer.simulator.ReadPacket(), 12), requestSendId + 3);
+
+        requestSendId += 3;
+    }
+
+    rig.peer.simulator.Send(ExceptionPacket(kUnrecognizedIdException, requestSendId));
+    rig.PumpQuietly(40);
+
+    QCOMPARE(rig.LastSent(), requestSendId);
+    QCOMPARE(rig.peer.simulator.ReadPacket(kAMoment).size(), std::size_t{0});
+    QCOMPARE(rig.gateway.GetLVar("FSDT_GSX_COUATL_STARTED", -1.0), -1.0);
 }
 
 QTEST_GUILESS_MAIN(SimConnectTcpTest)
