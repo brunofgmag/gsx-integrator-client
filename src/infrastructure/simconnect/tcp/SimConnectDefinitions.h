@@ -100,6 +100,12 @@ enum SIMCONNECT_DATATYPE
     SIMCONNECT_DATATYPE_STRING260 = 10,
 };
 
+enum SIMCONNECT_EXCEPTION
+{
+    SIMCONNECT_EXCEPTION_UNRECOGNIZED_ID = 3,
+    SIMCONNECT_EXCEPTION_NAME_UNRECOGNIZED = 7,
+};
+
 enum SIMCONNECT_RECV_ID
 {
     SIMCONNECT_RECV_ID_NULL = 0,
@@ -184,6 +190,8 @@ SIMCONNECTAPI SimConnect_Open(HANDLE* phSimConnect, LPCSTR szName, HWND hWnd, DW
 SIMCONNECTAPI SimConnect_Close(HANDLE hSimConnect);
 
 SIMCONNECTAPI SimConnect_CallDispatch(HANDLE hSimConnect, DispatchProc pfcnDispatch, void* pContext);
+
+SIMCONNECTAPI SimConnect_GetLastSentPacketID(HANDLE hSimConnect, DWORD* pdwError);
 
 SIMCONNECTAPI SimConnect_MapClientEventToSimEvent(HANDLE hSimConnect, SIMCONNECT_CLIENT_EVENT_ID EventID,
                                                   const char* EventName = "");

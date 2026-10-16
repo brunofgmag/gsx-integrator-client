@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <vector>
 #include <QtCore/QStringList>
@@ -26,6 +27,50 @@ namespace
     constexpr std::size_t kString256 = 256;
     constexpr auto kSuper27FreighterTitle = "Boeing 727-200RE Super 27 Freighter";
     constexpr auto kSuper27AtcModel = "B727RE";
+    constexpr auto kUnitTypo = "gallonz";
+    constexpr DWORD kUnrecognizedId = SIMCONNECT_EXCEPTION_UNRECOGNIZED_ID;
+    constexpr DWORD kNameUnrecognized = SIMCONNECT_EXCEPTION_NAME_UNRECOGNIZED;
+    constexpr DWORD kIllegalOperation = 25;
+    constexpr long long kFirstRetryMs = 1000;
+    constexpr long long kLongestWaitMs = 16000;
+    constexpr unsigned kRetryBudget = 30;
+
+    struct Rejections
+    {
+        long long nowMs = 0;
+        SimConnectVariableGateway gateway;
+
+        Rejections()
+        {
+            FakeSimConnectApi::Reset();
+            gateway.SetClock([this] { return nowMs; });
+            gateway.Attach(reinterpret_cast<HANDLE>(0x5150));
+        }
+
+        void Reject(const DWORD exception, const DWORD sendId)
+        {
+            SIMCONNECT_RECV_EXCEPTION message{};
+            message.dwException = exception;
+            message.dwSendID = sendId;
+            gateway.HandleException(&message);
+        }
+
+        void RejectLastRequest(const DWORD exception = kUnrecognizedId)
+        {
+            Reject(exception, FakeSimConnectApi::dataRequests.back().sendId);
+        }
+
+        void Wait(const long long ms)
+        {
+            nowMs += ms;
+            gateway.RetryRejected();
+        }
+
+        [[nodiscard]] std::size_t Requests() const
+        {
+            return FakeSimConnectApi::DataRequestsFor(kFirstDefineId);
+        }
+    };
 
     void DeliverDouble(SimConnectVariableGateway& gateway, const DWORD requestId, const double value)
     {
@@ -75,6 +120,23 @@ private slots:
     static void everyWriteToTheSimLandsInTheWritesLog();
     static void aRepeatedWriteIsCountedAndLoggedOnceUntilTheValueChanges();
     static void aWriteThatNeverLeftIsNotLogged();
+
+    static void aRejectedRequestKeepsTheDefaultUntilItIsAskedAgainAndAnswered();
+    static void aRejectedRequestIsNotAskedAgainBeforeTheBackoffPasses();
+    static void theBackoffDoublesUpToACeiling();
+    static void aRejectedAircraftTitleIsAskedAgain();
+    static void aRetryRebuildsTheDefinitionInsteadOfAppendingToIt();
+    static void aRejectedDefinitionOfAnLVarIsAskedAgainAndTheFollowUpRejectionIsAbsorbed();
+    static void aRejectedDefinitionOfAnAVarIsNotAskedAgain();
+    static void anExceptionThatIsNotATimingProblemIsNotAskedAgain_data();
+    static void anExceptionThatIsNotATimingProblemIsNotAskedAgain();
+    static void theRetriesStopAtTheBudget();
+    static void reconnectingGivesTheBudgetBack();
+    static void anExceptionForAnotherCallIsIgnored();
+    static void anExceptionAfterTheDataArrivedIsIgnored();
+    static void anExceptionWithoutASendIdIsNeverAttributedToAVariable();
+    static void detachingCancelsThePendingRetry();
+    static void aRetryThatCouldNotBeSentIsScheduledAgain();
 
 private:
     QTemporaryDir directory_;
@@ -445,3 +507,301 @@ void VariableGatewayTest::aWriteThatNeverLeftIsNotLogged()
 QTEST_APPLESS_MAIN(VariableGatewayTest)
 
 #include "tst_variable_gateway.moc"
+
+void VariableGatewayTest::aRejectedRequestKeepsTheDefaultUntilItIsAskedAgainAndAnswered()
+{
+    Rejections rig;
+    QCOMPARE(rig.gateway.GetLVar(kEng3N1, -1.0), -1.0);
+    QCOMPARE(rig.Requests(), std::size_t{1});
+
+    rig.RejectLastRequest();
+
+    QCOMPARE(rig.gateway.GetLVar(kEng3N1, -1.0), -1.0);
+    QVERIFY(!rig.gateway.HasReceivedLVar(kEng3N1));
+
+    rig.Wait(kFirstRetryMs);
+
+    QCOMPARE(rig.Requests(), std::size_t{2});
+    QCOMPARE(FakeSimConnectApi::dataRequests.back().period, SIMCONNECT_PERIOD_SECOND);
+
+    DeliverDouble(rig.gateway, kFirstDefineId, 84.5);
+
+    QCOMPARE(rig.gateway.GetLVar(kEng3N1, -1.0), 84.5);
+    QVERIFY(rig.gateway.HasReceivedLVar(kEng3N1));
+}
+
+void VariableGatewayTest::aRejectedRequestIsNotAskedAgainBeforeTheBackoffPasses()
+{
+    Rejections rig;
+    rig.gateway.GetLVar(kEng3N1, 0.0);
+    rig.RejectLastRequest();
+
+    rig.Wait(0);
+    rig.Wait(kFirstRetryMs - 1);
+
+    QCOMPARE(rig.Requests(), std::size_t{1});
+
+    rig.Wait(1);
+
+    QCOMPARE(rig.Requests(), std::size_t{2});
+
+    rig.Wait(kLongestWaitMs);
+
+    QCOMPARE(rig.Requests(), std::size_t{2});
+}
+
+void VariableGatewayTest::theBackoffDoublesUpToACeiling()
+{
+    Rejections rig;
+    rig.gateway.GetLVar(kEng3N1, 0.0);
+
+    const long long expectedWaits[] = {1000, 2000, 4000, 8000, 16000, 16000, 16000};
+    std::size_t requests = 1;
+    for (const long long wait : expectedWaits)
+    {
+        rig.RejectLastRequest();
+
+        rig.Wait(wait - 1);
+        QCOMPARE(rig.Requests(), requests);
+
+        rig.Wait(1);
+        QCOMPARE(rig.Requests(), ++requests);
+    }
+}
+
+void VariableGatewayTest::aRejectedAircraftTitleIsAskedAgain()
+{
+    Rejections rig;
+    char title[kString256] = {};
+    QVERIFY(!rig.gateway.FetchAircraftName(title, sizeof title));
+    rig.RejectLastRequest();
+
+    rig.Wait(kFirstRetryMs);
+
+    QCOMPARE(rig.Requests(), std::size_t{2});
+
+    DeliverText(rig.gateway, kFirstDefineId, kSuper27FreighterTitle);
+
+    QVERIFY(rig.gateway.FetchAircraftName(title, sizeof title));
+    QCOMPARE(std::string(title), std::string(kSuper27FreighterTitle));
+}
+
+void VariableGatewayTest::aRetryRebuildsTheDefinitionInsteadOfAppendingToIt()
+{
+    Rejections rig;
+    rig.gateway.GetLVar(kEng3N1, 0.0);
+    QCOMPARE(FakeSimConnectApi::DatumsIn(kFirstDefineId), std::size_t{1});
+
+    for (int attempt = 0; attempt < 3; ++attempt)
+    {
+        rig.RejectLastRequest();
+        rig.Wait(kLongestWaitMs);
+    }
+
+    QCOMPARE(FakeSimConnectApi::DatumsIn(kFirstDefineId), std::size_t{1});
+    QCOMPARE(FakeSimConnectApi::clearedDefinitions.size(), std::size_t{3});
+}
+
+void VariableGatewayTest::aRejectedDefinitionOfAnLVarIsAskedAgainAndTheFollowUpRejectionIsAbsorbed()
+{
+    Rejections rig;
+    rig.gateway.GetLVar(kEng3N1, 0.0);
+    const DWORD definitionSendId = FakeSimConnectApi::LastDefinitionSendId(kFirstDefineId);
+    const DWORD requestSendId = FakeSimConnectApi::dataRequests.back().sendId;
+    QVERIFY(definitionSendId != requestSendId);
+
+    rig.Reject(kNameUnrecognized, definitionSendId);
+    rig.Reject(kUnrecognizedId, requestSendId);
+
+    rig.Wait(kFirstRetryMs);
+
+    QCOMPARE(rig.Requests(), std::size_t{2});
+
+    rig.Wait(kLongestWaitMs);
+
+    QCOMPARE(rig.Requests(), std::size_t{2});
+
+    DeliverDouble(rig.gateway, kFirstDefineId, 3.0);
+
+    QCOMPARE(rig.gateway.GetLVar(kEng3N1, 0.0), 3.0);
+}
+
+void VariableGatewayTest::aRejectedDefinitionOfAnAVarIsNotAskedAgain()
+{
+    Rejections rig;
+    QCOMPARE(rig.gateway.GetAVar(kSimFuelTotalKg, kUnitTypo, 0.0), 0.0);
+    const DWORD definitionSendId = FakeSimConnectApi::LastDefinitionSendId(kFirstDefineId);
+    const DWORD requestSendId = FakeSimConnectApi::dataRequests.back().sendId;
+
+    rig.Reject(kNameUnrecognized, definitionSendId);
+    rig.Reject(kUnrecognizedId, requestSendId);
+
+    for (int wait = 0; wait < 40; ++wait)
+    {
+        rig.Wait(kLongestWaitMs);
+    }
+
+    QCOMPARE(rig.Requests(), std::size_t{1});
+    QCOMPARE(FakeSimConnectApi::clearedDefinitions.size(), std::size_t{0});
+    QCOMPARE(rig.gateway.GetAVar(kSimFuelTotalKg, kUnitTypo, -1.0), -1.0);
+}
+
+void VariableGatewayTest::anExceptionThatIsNotATimingProblemIsNotAskedAgain_data()
+{
+    QTest::addColumn<DWORD>("exception");
+
+    QTest::newRow("error") << DWORD{1};
+    QTest::newRow("size mismatch") << DWORD{2};
+    QTest::newRow("unopened") << DWORD{4};
+    QTest::newRow("too many requests") << DWORD{12};
+    QTest::newRow("illegal operation") << kIllegalOperation;
+    QTest::newRow("definition error") << DWORD{28};
+}
+
+void VariableGatewayTest::anExceptionThatIsNotATimingProblemIsNotAskedAgain()
+{
+    QFETCH(DWORD, exception);
+
+    Rejections rig;
+    rig.gateway.GetLVar(kEng3N1, 0.0);
+    rig.RejectLastRequest(exception);
+
+    for (int wait = 0; wait < 40; ++wait)
+    {
+        rig.Wait(kLongestWaitMs);
+    }
+
+    QCOMPARE(rig.Requests(), std::size_t{1});
+}
+
+void VariableGatewayTest::theRetriesStopAtTheBudget()
+{
+    Rejections rig;
+    rig.gateway.GetLVar(kEng3N1, 0.0);
+
+    for (unsigned retry = 1; retry <= kRetryBudget; ++retry)
+    {
+        rig.RejectLastRequest();
+        rig.Wait(kLongestWaitMs);
+
+        QCOMPARE(rig.Requests(), std::size_t{retry + 1});
+    }
+
+    rig.RejectLastRequest();
+    for (int wait = 0; wait < 40; ++wait)
+    {
+        rig.Wait(kLongestWaitMs);
+    }
+
+    QCOMPARE(rig.Requests(), std::size_t{kRetryBudget + 1});
+    QCOMPARE(rig.gateway.GetLVar(kEng3N1, -1.0), -1.0);
+}
+
+void VariableGatewayTest::reconnectingGivesTheBudgetBack()
+{
+    Rejections rig;
+    rig.gateway.GetLVar(kEng3N1, 0.0);
+
+    for (unsigned retry = 0; retry <= kRetryBudget; ++retry)
+    {
+        rig.RejectLastRequest();
+        rig.Wait(kLongestWaitMs);
+    }
+
+    const std::size_t exhausted = rig.Requests();
+
+    rig.gateway.Detach();
+    rig.gateway.Attach(reinterpret_cast<HANDLE>(0x5150));
+
+    QCOMPARE(rig.Requests(), exhausted + 1);
+
+    rig.RejectLastRequest();
+    rig.Wait(kFirstRetryMs);
+
+    QCOMPARE(rig.Requests(), exhausted + 2);
+}
+
+void VariableGatewayTest::anExceptionForAnotherCallIsIgnored()
+{
+    Rejections rig;
+    rig.gateway.GetLVar(kEng3N1, 0.0);
+    const DWORD requestSendId = FakeSimConnectApi::dataRequests.back().sendId;
+
+    rig.Reject(kUnrecognizedId, 0);
+    rig.Reject(kUnrecognizedId, requestSendId + 1);
+    rig.Reject(kUnrecognizedId, requestSendId + 100);
+
+    for (int wait = 0; wait < 40; ++wait)
+    {
+        rig.Wait(kLongestWaitMs);
+    }
+
+    QCOMPARE(rig.Requests(), std::size_t{1});
+}
+
+void VariableGatewayTest::anExceptionAfterTheDataArrivedIsIgnored()
+{
+    Rejections rig;
+    rig.gateway.GetLVar(kEng3N1, 0.0);
+    DeliverDouble(rig.gateway, kFirstDefineId, 12.0);
+
+    rig.RejectLastRequest();
+
+    for (int wait = 0; wait < 40; ++wait)
+    {
+        rig.Wait(kLongestWaitMs);
+    }
+
+    QCOMPARE(rig.Requests(), std::size_t{1});
+    QCOMPARE(rig.gateway.GetLVar(kEng3N1, 0.0), 12.0);
+}
+
+void VariableGatewayTest::detachingCancelsThePendingRetry()
+{
+    Rejections rig;
+    rig.gateway.GetLVar(kEng3N1, 0.0);
+    rig.RejectLastRequest();
+
+    rig.gateway.Detach();
+    rig.Wait(kLongestWaitMs);
+
+    QCOMPARE(rig.Requests(), std::size_t{1});
+}
+
+void VariableGatewayTest::aRetryThatCouldNotBeSentIsScheduledAgain()
+{
+    Rejections rig;
+    rig.gateway.GetLVar(kEng3N1, 0.0);
+    rig.RejectLastRequest();
+
+    FakeSimConnectApi::definitionsSucceed = false;
+    rig.Wait(kFirstRetryMs);
+
+    QCOMPARE(rig.Requests(), std::size_t{1});
+
+    FakeSimConnectApi::definitionsSucceed = true;
+    rig.Wait(2 * kFirstRetryMs - 1);
+
+    QCOMPARE(rig.Requests(), std::size_t{1});
+
+    rig.Wait(1);
+
+    QCOMPARE(rig.Requests(), std::size_t{2});
+}
+
+void VariableGatewayTest::anExceptionWithoutASendIdIsNeverAttributedToAVariable()
+{
+    Rejections rig;
+    FakeSimConnectApi::lastSentPacketId = (std::numeric_limits<DWORD>::max)();
+    rig.gateway.GetLVar(kEng3N1, 0.0);
+    QCOMPARE(FakeSimConnectApi::LastDefinitionSendId(kFirstDefineId), DWORD{0});
+
+    rig.Reject(kUnrecognizedId, 0);
+
+    for (int wait = 0; wait < 40; ++wait)
+    {
+        rig.Wait(kLongestWaitMs);
+    }
+
+    QCOMPARE(rig.Requests(), std::size_t{1});
+}
