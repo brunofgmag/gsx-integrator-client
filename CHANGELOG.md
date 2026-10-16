@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.48.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.47.4...v1.48.0) (2026-10-16)
+
+
+* run the client natively on linux ([#253](https://github.com/brunofgmag/gsx-integrator-client/issues/253)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+
+
+### Features
+
+* read and add the static simconnect port in simconnect.xml ([ca61aa4](https://github.com/brunofgmag/gsx-integrator-client/commit/ca61aa463bdfabb3ec6f076b1aa1ca444852fdbc)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* resolve simulator paths through the proton prefix on linux ([f5ecf0c](https://github.com/brunofgmag/gsx-integrator-client/commit/f5ecf0caa16886ee65607989be8a0984e3c0dd24)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* run the client natively on linux ([24cb01c](https://github.com/brunofgmag/gsx-integrator-client/commit/24cb01c9a6075e56e18bf5c671954825e3ca8ed5)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* **simconnect:** add SimConnect_GetLastSentPacketID to the tcp implementation ([16fc040](https://github.com/brunofgmag/gsx-integrator-client/commit/16fc040bc706ea05d2a59fac4d777b8a2ea100b5)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* **simconnect:** speak the simconnect network protocol over tcp on non-windows builds ([22f5851](https://github.com/brunofgmag/gsx-integrator-client/commit/22f585197d5d081a19600bc064200a09de66a7aa)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* translate the linux texts into portuguese ([727fc58](https://github.com/brunofgmag/gsx-integrator-client/commit/727fc58d9aaa8e86e956292e1a172c6aa4ae419c)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+
+
+### Bug Fixes
+
+* bundle a symbol font for the header theme and settings glyphs on linux ([48b174a](https://github.com/brunofgmag/gsx-integrator-client/commit/48b174a881d845c6332adf15bd48d395ab73505d)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* leave stale socket handling to qt and keep the desktop entry in one category ([319ec16](https://github.com/brunofgmag/gsx-integrator-client/commit/319ec1667593c368c830a1d0e5164dde73a7490d)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* **linux:** bundle the wayland shell plugins in the appimage ([007d979](https://github.com/brunofgmag/gsx-integrator-client/commit/007d979d17c4ea2edabb4e85db7aae850f7d87d9)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* **linux:** give the appimage window its icon on wayland ([18ff0c7](https://github.com/brunofgmag/gsx-integrator-client/commit/18ff0c707ddeb2d4fe4bcbf90aec50cadf33cc61)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* match the client by its program name in the watcher script ([31d8c83](https://github.com/brunofgmag/gsx-integrator-client/commit/31d8c83b611dae5dd176a073ff6ea45f8a08addf)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* quit instead of hiding to the tray when the system has no tray ([d977884](https://github.com/brunofgmag/gsx-integrator-client/commit/d9778849d67698ba3d938dc392b75a42d748af7f)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* **simconnect:** ask the simulator again for variables it rejected ([7b564fc](https://github.com/brunofgmag/gsx-integrator-client/commit/7b564fc7d4d6b5486b71bd82aa92b14784978c07)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* **simconnect:** name the connection in the exception log ([c7c58f1](https://github.com/brunofgmag/gsx-integrator-client/commit/c7c58f168069539619e050fb8547e55b4231b3ce)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+* **simconnect:** reconnect instead of quitting while the simulator has not answered ([40cada5](https://github.com/brunofgmag/gsx-integrator-client/commit/40cada56e4fd92852d8787679332d3af68c7e362)) ([d4f5049](https://github.com/brunofgmag/gsx-integrator-client/commit/d4f5049cead258ffc99ece1c806a5e6db7cbde77))
+
 ## [1.47.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.47.3...v1.47.4) (2026-10-13)
 
 
