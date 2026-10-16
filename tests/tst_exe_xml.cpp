@@ -75,6 +75,9 @@ private slots:
     static void enabledEntryIsFoundCaseInsensitively();
     static void disabledOrAbsentEntryIsNotEnabled();
     static void candidatesAreTheFoldersThatExist();
+    static void allFourSimulatorLocationsAreCandidatesInOrder();
+    static void anExistingFileOfAnotherCaseIsTheTarget();
+    static void aFolderOfAnotherCaseIsStillTheSimulatorFolder();
 };
 
 void ExeXmlTest::addUpdateCreatesFileWithEntry()
@@ -240,6 +243,57 @@ void ExeXmlTest::candidatesAreTheFoldersThatExist()
     QCOMPARE(targets[1].label, QStringLiteral("MSFS 2024 (Steam)"));
     QCOMPARE(targets[1].path, QDir::toNativeSeparators(home.filePath(
                  QStringLiteral("AppData/Roaming/Microsoft Flight Simulator 2024/EXE.xml"))));
+}
+
+void ExeXmlTest::allFourSimulatorLocationsAreCandidatesInOrder()
+{
+    const QTemporaryDir home;
+    for (const char* folder : {"AppData/Roaming/Microsoft Flight Simulator",
+                               "AppData/Local/Packages/Microsoft.FlightSimulator_8wekyb3d8bbwe/LocalCache",
+                               "AppData/Roaming/Microsoft Flight Simulator 2024",
+                               "AppData/Local/Packages/Microsoft.Limitless_8wekyb3d8bbwe/LocalCache"})
+    {
+        QDir().mkpath(home.filePath(QLatin1String(folder)));
+    }
+
+    const std::vector<ExeXmlTarget> targets = CandidateExeXmlTargets(home.path());
+
+    QCOMPARE(targets.size(), 4u);
+    QCOMPARE(targets[0].label, QStringLiteral("MSFS 2020 (Steam)"));
+    QCOMPARE(targets[1].label, QStringLiteral("MSFS 2020 (Microsoft Store)"));
+    QCOMPARE(targets[2].label, QStringLiteral("MSFS 2024 (Steam)"));
+    QCOMPARE(targets[3].label, QStringLiteral("MSFS 2024 (Microsoft Store)"));
+}
+
+void ExeXmlTest::anExistingFileOfAnotherCaseIsTheTarget()
+{
+#ifdef Q_OS_WIN
+    QSKIP("the file system already ignores case on Windows");
+#endif
+    const QTemporaryDir home;
+    const QString folder = home.filePath(QStringLiteral("AppData/Roaming/Microsoft Flight Simulator 2024"));
+    QDir().mkpath(folder);
+    WriteAll(folder + QStringLiteral("/exe.xml"), WithAddons(OtherToolAddon()));
+
+    const std::vector<ExeXmlTarget> targets = CandidateExeXmlTargets(home.path());
+
+    QCOMPARE(targets.size(), 1u);
+    QCOMPARE(targets[0].path, folder + QStringLiteral("/exe.xml"));
+}
+
+void ExeXmlTest::aFolderOfAnotherCaseIsStillTheSimulatorFolder()
+{
+#ifdef Q_OS_WIN
+    QSKIP("the file system already ignores case on Windows");
+#endif
+    const QTemporaryDir home;
+    const QString folder = home.filePath(QStringLiteral("appdata/roaming/microsoft flight simulator 2024"));
+    QDir().mkpath(folder);
+
+    const std::vector<ExeXmlTarget> targets = CandidateExeXmlTargets(home.path());
+
+    QCOMPARE(targets.size(), 1u);
+    QCOMPARE(targets[0].path, folder + QStringLiteral("/EXE.xml"));
 }
 
 QTEST_APPLESS_MAIN(ExeXmlTest)

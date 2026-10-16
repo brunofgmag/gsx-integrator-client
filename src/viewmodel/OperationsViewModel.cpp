@@ -357,6 +357,18 @@ bool OperationsViewModel::IsConnected() const
     return snapshot_.connected;
 }
 
+QString OperationsViewModel::GetSimConnectSetupText() const
+{
+    if (snapshot_.simulatorsToRestart.empty())
+    {
+        return {};
+    }
+
+    return QCoreApplication::translate("OperationsScreen",
+                                       "The simulator (%1) is open without a SimConnect port for GSX Integrator. Close it and open it again: GSX Integrator adds the port to SimConnect.xml while the simulator is closed.")
+        .arg(QString::fromStdString(snapshot_.simulatorsToRestart));
+}
+
 bool OperationsViewModel::IsSessionActive() const
 {
     return snapshot_.sessionActive;

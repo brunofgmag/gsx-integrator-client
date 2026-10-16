@@ -6,8 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
-#include <windows.h>
-#include <SimConnect.h>
+#include "SimConnectApi.h"
 
 class SimConnectVariableGateway;
 
@@ -84,13 +83,14 @@ private:
     void HandleEvent(const SIMCONNECT_RECV* pData, DWORD cbData) const;
     void HandleSystemState(const SIMCONNECT_RECV* pData, DWORD cbData) const;
     void HandleClientData(const SIMCONNECT_RECV* pData, DWORD cbData) const;
-    static void HandleException(const SIMCONNECT_RECV* pData);
+    void HandleException(const SIMCONNECT_RECV* pData, DWORD cbData) const;
     void ReportEvent(const char* eventName, DWORD parameter, const char* label);
 
     template <typename Fn>
     bool SubscribeSystemEvent(Fn& target, Fn handler, SIMCONNECT_CLIENT_EVENT_ID eventId, const char* name);
 
     HANDLE hSimConnect_ = nullptr;
+    std::string name_;
     SimConnectVariableGateway* varManager_ = nullptr;
     bool quitPending_ = false;
     OpenFn onOpen_ = nullptr;

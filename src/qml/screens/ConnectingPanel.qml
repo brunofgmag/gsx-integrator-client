@@ -4,6 +4,8 @@ import QtQuick.Layouts
 ColumnLayout {
     id: root
 
+    required property var integratorVm
+
     spacing: 14
 
     Item {
@@ -147,6 +149,12 @@ ColumnLayout {
                 }
             }
         }
+    }
+
+    Advisory {
+        Layout.alignment: Qt.AlignHCenter
+        Layout.preferredWidth: Math.min(520, root.width)
+        text: root.integratorVm.simConnectSetupText
     }
 
     Item {

@@ -5,6 +5,7 @@
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
+#include "FakeProtonTree.h"
 #include "../src/infrastructure/update/CommbusBundleInstaller.h"
 #include "../src/infrastructure/update/CommbusInstallProbe.h"
 
@@ -94,6 +95,7 @@ private slots:
     static void runningSimulatorSkipsTheTarget();
     static void upToDateTargetIsNotBlockedByTheRunningSimulator();
     static void junctionIsUnlinkedWithoutTouchingItsTarget();
+    static void symlinkIsUnlinkedWithoutTouchingItsTarget();
     static void bundleWithoutManifestFailsEveryTarget();
     static void installedVersionPrefersTheMarkerOverTheManifest();
     static void detectsTargetsWhoseCommunityFolderExists();
@@ -102,6 +104,7 @@ private slots:
     static void everySiblingHoldingTheBridgeIsATargetInProbeOrder();
     static void aSuffixedSiblingWithoutTheBridgeIsNeverATarget();
     static void overrideDirIsTheOnlyTargetAndHasNoProcess();
+    static void detectsTheTargetOfAProtonPrefixThroughItsDriveLetters();
 };
 
 void CommbusBundleInstallerTest::freshInstallCopiesTheBundleAndWritesTheMarker()
@@ -196,6 +199,9 @@ void CommbusBundleInstallerTest::upToDateTargetIsNotBlockedByTheRunningSimulator
 
 void CommbusBundleInstallerTest::junctionIsUnlinkedWithoutTouchingItsTarget()
 {
+#ifndef Q_OS_WIN
+    QSKIP("mklink /J exists only on Windows");
+#endif
     const QTemporaryDir root;
     const QString bundle = root.path() + QStringLiteral("/bundle");
     const QString community = root.path() + QStringLiteral("/Community");
@@ -216,6 +222,30 @@ void CommbusBundleInstallerTest::junctionIsUnlinkedWithoutTouchingItsTarget()
 
     QCOMPARE(result.targets[0].status, CommbusBundleStatus::Installed);
     QVERIFY(!QFileInfo(PackageDir(community)).isJunction());
+    QCOMPARE(ReadFile(devCheckout + QStringLiteral("/manifest.json")), Manifest(QStringLiteral("0.3.2")));
+    QVERIFY(QFile::exists(devCheckout + QStringLiteral("/SimObjects/bridge.wasm")));
+    QCOMPARE(ReadFile(PackageDir(community) + QStringLiteral("/manifest.json")), Manifest(QStringLiteral("0.4.0")));
+}
+
+void CommbusBundleInstallerTest::symlinkIsUnlinkedWithoutTouchingItsTarget()
+{
+#ifdef Q_OS_WIN
+    QSKIP("directory symlinks need a privilege on Windows; the junction test covers it");
+#endif
+    const QTemporaryDir root;
+    const QString bundle = root.path() + QStringLiteral("/bundle");
+    const QString community = root.path() + QStringLiteral("/Community");
+    const QString devCheckout = root.path() + QStringLiteral("/dev-checkout");
+    MakeBundle(bundle, QStringLiteral("0.4.0"));
+    MakeBundle(devCheckout, QStringLiteral("0.3.2"));
+    QDir().mkpath(community);
+    QVERIFY(QFile::link(devCheckout, PackageDir(community)));
+    QVERIFY(QFileInfo(PackageDir(community)).isSymLink());
+
+    const CommbusBundleResult result = InstallCommbusBundle(bundle, OneTarget(community), NothingRunning);
+
+    QCOMPARE(result.targets[0].status, CommbusBundleStatus::Installed);
+    QVERIFY(!QFileInfo(PackageDir(community)).isSymLink());
     QCOMPARE(ReadFile(devCheckout + QStringLiteral("/manifest.json")), Manifest(QStringLiteral("0.3.2")));
     QVERIFY(QFile::exists(devCheckout + QStringLiteral("/SimObjects/bridge.wasm")));
     QCOMPARE(ReadFile(PackageDir(community) + QStringLiteral("/manifest.json")), Manifest(QStringLiteral("0.4.0")));
@@ -337,6 +367,25 @@ void CommbusBundleInstallerTest::overrideDirIsTheOnlyTargetAndHasNoProcess()
                                                             [](const QString&) { return true; });
 
     QCOMPARE(result.targets[0].status, CommbusBundleStatus::Installed);
+}
+
+void CommbusBundleInstallerTest::detectsTheTargetOfAProtonPrefixThroughItsDriveLetters()
+{
+#ifdef Q_OS_WIN
+    QSKIP("Proton prefixes exist only on Linux");
+#endif
+    const QTemporaryDir root;
+    const FakeProtonTree::Tree tree = FakeProtonTree::Build(root.path());
+    QDir().mkpath(tree.secondLibrary + QStringLiteral("/MSFS2024 Packages/Community"));
+    WriteFile(tree.userHome2024 + QStringLiteral("/AppData/Roaming/Microsoft Flight Simulator 2024/UserCfg.opt"),
+              "InstalledPackagesPath \"S:\\MSFS2024 Packages\"\n");
+
+    const std::vector<CommbusInstallTarget> targets = DetectCommbusInstallTargets(tree.userHome2024);
+
+    QCOMPARE(targets.size(), 1U);
+    QCOMPARE(targets[0].label, QStringLiteral("MSFS 2024 (Steam)"));
+    QCOMPARE(targets[0].communityPath, tree.secondLibrary + QStringLiteral("/MSFS2024 Packages/Community"));
+    QCOMPARE(targets[0].processName, QStringLiteral("FlightSimulator2024.exe"));
 }
 
 QTEST_GUILESS_MAIN(CommbusBundleInstallerTest)

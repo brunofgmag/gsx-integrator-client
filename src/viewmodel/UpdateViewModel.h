@@ -37,6 +37,7 @@ class UpdateViewModel final : public QObject, public UpdateServiceObserver
     Q_PROPERTY(QString externalDownloadUrl READ GetExternalDownloadUrl CONSTANT)
     Q_PROPERTY(bool addonsAvailable READ AreAddonsAvailable NOTIFY AddonsChanged)
     Q_PROPERTY(bool launchWithSimulator READ IsLaunchWithSimulator WRITE SetLaunchWithSimulator NOTIFY AddonsChanged)
+    Q_PROPERTY(bool launchWithSimulatorAvailable READ IsLaunchWithSimulatorAvailable NOTIFY AddonsChanged)
     Q_PROPERTY(bool commbusManaged READ IsCommbusManaged WRITE SetCommbusManaged NOTIFY AddonsChanged)
     Q_PROPERTY(bool commbusRemoved READ IsCommbusRemoved NOTIFY AddonsChanged)
     Q_PROPERTY(QString addonNotice READ GetAddonNotice NOTIFY AddonsChanged)
@@ -82,6 +83,7 @@ public:
     [[nodiscard]] QString GetExternalDownloadUrl() const;
     [[nodiscard]] bool AreAddonsAvailable() const;
     [[nodiscard]] bool IsLaunchWithSimulator() const;
+    [[nodiscard]] bool IsLaunchWithSimulatorAvailable() const;
     void SetLaunchWithSimulator(bool enabled);
     [[nodiscard]] bool IsCommbusManaged() const;
     void SetCommbusManaged(bool managed);
@@ -111,7 +113,7 @@ signals:
     void AddonsChanged();
 
 private:
-    enum class AddonNotice { None, SimulatorRunning, CommbusInstallFailed, CommbusRemoveFailed, ExeXmlFailed, NoSimulator };
+    enum class AddonNotice { None, SimulatorRunning, CommbusInstallFailed, CommbusRemoveFailed, ExeXmlFailed, NoSimulator, NoSystemd, LaunchServiceFailed };
 
     void StartBackgroundCheck();
     void SetAddonNotice(AddonNotice notice, const QString& targets = {});
@@ -141,6 +143,7 @@ private:
 
     SimulatorAddonService* addons_ = nullptr;
     bool launchWithSimulator_ = false;
+    bool launchWithSimulatorAvailable_ = true;
     bool commbusManaged_ = true;
     AddonNotice addonNotice_ = AddonNotice::None;
     QString addonNoticeTargets_;

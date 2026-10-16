@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -9,6 +10,7 @@
 #include "ProbeLines.h"
 #include "doubles/FakeSimConnectApi.h"
 #include "../src/infrastructure/simconnect/SimConnectSession.h"
+#include "../src/infrastructure/simconnect/SimConnectVariableGateway.h"
 
 namespace
 {
@@ -24,6 +26,75 @@ namespace
     constexpr DWORD kMouseLeftSingle = 536870912;
     constexpr int kAMoment = 50;
     constexpr auto kWritesLog = "writes.log";
+    constexpr auto kEng3N1 = "md11_eng3_n1";
+    constexpr DWORD kFirstDefineId = 1;
+    constexpr long long kFirstRetryMs = 1000;
+    constexpr DWORD kUnrecognizedId = SIMCONNECT_EXCEPTION_UNRECOGNIZED_ID;
+
+    class LogCapture
+    {
+    public:
+        LogCapture()
+            : previous_(qInstallMessageHandler(Collect))
+        {
+            Lines().clear();
+        }
+
+        ~LogCapture()
+        {
+            qInstallMessageHandler(previous_);
+        }
+
+        LogCapture(const LogCapture&) = delete;
+        LogCapture& operator=(const LogCapture&) = delete;
+        LogCapture(LogCapture&&) = delete;
+        LogCapture& operator=(LogCapture&&) = delete;
+
+        [[nodiscard]] static bool Contains(const QString& fragment)
+        {
+            return std::ranges::any_of(Lines(), [&fragment](const QString& line) { return line.contains(fragment); });
+        }
+
+    private:
+        static QStringList& Lines()
+        {
+            static QStringList lines;
+
+            return lines;
+        }
+
+        static void Collect(QtMsgType, const QMessageLogContext&, const QString& message)
+        {
+            Lines().append(message);
+        }
+
+        QtMessageHandler previous_;
+    };
+
+    struct VariableRig
+    {
+        long long nowMs = 0;
+        SimConnectSession session;
+        SimConnectVariableGateway gateway;
+
+        VariableRig()
+        {
+            gateway.SetClock([this] { return nowMs; });
+        }
+
+        bool Connect()
+        {
+            if (!session.Open("test"))
+            {
+                return false;
+            }
+
+            session.SetVarManager(&gateway);
+            gateway.Attach(session.Handle());
+
+            return true;
+        }
+    };
 
     SIMCONNECT_RECV_EVENT MakeEvent(const DWORD eventId, const DWORD data)
     {
@@ -60,6 +131,12 @@ private slots:
     static void theEventCountFollowsTheSimConnectNameNotTheLabel();
     static void aToggleSentTwiceAMomentApartIsLoggedTwice();
     static void anEventThatNeverLeftIsNotLogged();
+    static void anExceptionForARequestedVariableMakesTheNextDispatchesAskAgain();
+    static void anExceptionForAnotherCallLeavesTheVariablesAlone();
+    static void aTruncatedExceptionIsIgnored();
+    static void anExceptionIsLoggedWithTheNameTheSessionWasOpenedAs();
+    static void aReopenedSessionLogsItsNewName();
+    static void anExceptionWithoutAGatewayIsHarmless();
 
 private:
     QTemporaryDir directory_;
@@ -220,7 +297,8 @@ void SimConnectSessionTest::openEventDeliversApplicationName()
     session.SetOnOpen([&appName](const char* name) { appName = name; });
 
     SIMCONNECT_RECV_OPEN open{};
-    strcpy_s(open.szApplicationName, "Microsoft Flight Simulator");
+    constexpr auto kSimulatorName = "Microsoft Flight Simulator";
+    std::memcpy(open.szApplicationName, kSimulatorName, std::strlen(kSimulatorName) + 1);
     FakeSimConnectApi::Push(open, SIMCONNECT_RECV_ID_OPEN);
 
     QVERIFY(session.Dispatch());
@@ -372,6 +450,111 @@ void SimConnectSessionTest::anEventThatNeverLeftIsNotLogged()
 
     QCOMPARE(FakeSimConnectApi::transmittedEvents, 0);
     QCOMPARE(ProbeLines(kWritesLog).size(), before);
+}
+
+void SimConnectSessionTest::anExceptionForARequestedVariableMakesTheNextDispatchesAskAgain()
+{
+    VariableRig rig;
+    QVERIFY(rig.Connect());
+
+    QCOMPARE(rig.gateway.GetLVar(kEng3N1, -1.0), -1.0);
+    const DWORD requestSendId = FakeSimConnectApi::dataRequests.back().sendId;
+
+    FakeSimConnectApi::PushException(kUnrecognizedId, requestSendId);
+    QVERIFY(rig.session.Dispatch());
+
+    QCOMPARE(FakeSimConnectApi::DataRequestsFor(kFirstDefineId), std::size_t{1});
+
+    rig.nowMs += kFirstRetryMs;
+    QVERIFY(rig.session.Dispatch());
+
+    QCOMPARE(FakeSimConnectApi::DataRequestsFor(kFirstDefineId), std::size_t{2});
+
+    FakeSimConnectApi::PushSimObjectDouble(kFirstDefineId, 84.5);
+    QVERIFY(rig.session.Dispatch());
+
+    QCOMPARE(rig.gateway.GetLVar(kEng3N1, -1.0), 84.5);
+}
+
+void SimConnectSessionTest::anExceptionForAnotherCallLeavesTheVariablesAlone()
+{
+    VariableRig rig;
+    QVERIFY(rig.Connect());
+
+    QVERIFY(rig.session.SubscribeOneSecond([] {}));
+    const DWORD subscriptionSendId = FakeSimConnectApi::lastSentPacketId;
+    rig.gateway.GetLVar(kEng3N1, -1.0);
+
+    FakeSimConnectApi::PushException(kUnrecognizedId, subscriptionSendId);
+    QVERIFY(rig.session.Dispatch());
+
+    rig.nowMs += 60000;
+    QVERIFY(rig.session.Dispatch());
+
+    QCOMPARE(FakeSimConnectApi::DataRequestsFor(kFirstDefineId), std::size_t{1});
+}
+
+void SimConnectSessionTest::aTruncatedExceptionIsIgnored()
+{
+    VariableRig rig;
+    QVERIFY(rig.Connect());
+
+    rig.gateway.GetLVar(kEng3N1, -1.0);
+    const DWORD requestSendId = FakeSimConnectApi::dataRequests.back().sendId;
+
+    SIMCONNECT_RECV_EXCEPTION message{};
+    message.dwException = kUnrecognizedId;
+    message.dwSendID = requestSendId;
+    FakeSimConnectApi::PushTruncated(message, SIMCONNECT_RECV_ID_EXCEPTION,
+                                     sizeof(SIMCONNECT_RECV_EXCEPTION) - sizeof(DWORD));
+    QVERIFY(rig.session.Dispatch());
+
+    rig.nowMs += 60000;
+    QVERIFY(rig.session.Dispatch());
+
+    QCOMPARE(FakeSimConnectApi::DataRequestsFor(kFirstDefineId), std::size_t{1});
+}
+
+void SimConnectSessionTest::anExceptionWithoutAGatewayIsHarmless()
+{
+    SimConnectSession session;
+    QVERIFY(session.Open("test"));
+
+    int ticks = 0;
+    QVERIFY(session.SubscribeOneSecond([&ticks] { ++ticks; }));
+
+    FakeSimConnectApi::PushException(kUnrecognizedId, 5);
+    FakeSimConnectApi::Push(MakeEvent(kEvent1Sec, 0), SIMCONNECT_RECV_ID_EVENT);
+    QVERIFY(session.Dispatch());
+
+    QCOMPARE(ticks, 1);
+}
+
+void SimConnectSessionTest::anExceptionIsLoggedWithTheNameTheSessionWasOpenedAs()
+{
+    SimConnectSession session;
+    QVERIFY(session.Open("A"));
+
+    const LogCapture capture;
+    FakeSimConnectApi::PushException(kUnrecognizedId, 5);
+    QVERIFY(session.Dispatch());
+
+    QVERIFY(LogCapture::Contains(QStringLiteral("SimConnect exception %1 on 'A' (sendId=5")
+                                     .arg(kUnrecognizedId)));
+}
+
+void SimConnectSessionTest::aReopenedSessionLogsItsNewName()
+{
+    SimConnectSession session;
+    QVERIFY(session.Open("A"));
+    QVERIFY(session.Open("B"));
+
+    const LogCapture capture;
+    FakeSimConnectApi::PushException(kUnrecognizedId, 5);
+    QVERIFY(session.Dispatch());
+
+    QVERIFY(LogCapture::Contains(QStringLiteral("on 'B'")));
+    QVERIFY(!LogCapture::Contains(QStringLiteral("on 'A'")));
 }
 
 QTEST_GUILESS_MAIN(SimConnectSessionTest)

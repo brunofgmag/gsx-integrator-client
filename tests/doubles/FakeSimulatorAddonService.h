@@ -6,6 +6,11 @@
 class FakeSimulatorAddonService final : public SimulatorAddonService
 {
 public:
+    [[nodiscard]] bool CanLaunchWithSimulator() const override
+    {
+        return canLaunch;
+    }
+
     [[nodiscard]] bool IsLaunchedWithSimulator() const override
     {
         return launched;
@@ -14,7 +19,8 @@ public:
     [[nodiscard]] LaunchWithSimulatorResult SetLaunchedWithSimulator(const bool enabled) override
     {
         ++launchCalls;
-        if (!launchResult.noSimulator && launchResult.failedTargets.isEmpty())
+        if (!launchResult.noSimulator && !launchResult.unavailable && !launchResult.serviceFailed
+            && launchResult.failedTargets.isEmpty())
         {
             launched = enabled;
         }
@@ -44,6 +50,7 @@ public:
     }
 
     bool launched = false;
+    bool canLaunch = true;
     LaunchWithSimulatorResult launchResult;
     CommbusBundleResult installResult;
     CommbusBundleResult enableResult;

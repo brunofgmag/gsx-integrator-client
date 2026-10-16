@@ -8,13 +8,16 @@ ColumnLayout {
     id: root
 
     required property var settingsVm
+    property bool trayAvailable: true
 
     spacing: 8
 
     SwitchRow {
         Layout.fillWidth: true
         title: qsTr("Close to tray")
-        caption: qsTr("Closing hides the window to the tray")
+        caption: root.trayAvailable
+                 ? qsTr("Closing hides the window to the tray")
+                 : qsTr("No system tray found, so closing asks to quit")
         checked: root.settingsVm.closeToTray
         onToggled: checked => root.settingsVm.closeToTray = checked
     }
@@ -22,7 +25,9 @@ ColumnLayout {
     SwitchRow {
         Layout.fillWidth: true
         title: qsTr("Minimize to tray")
-        caption: qsTr("Minimizing hides the window to the tray")
+        caption: root.trayAvailable
+                 ? qsTr("Minimizing hides the window to the tray")
+                 : qsTr("No system tray found, so minimizing keeps the window")
         checked: root.settingsVm.minimizeToTray
         onToggled: checked => root.settingsVm.minimizeToTray = checked
     }

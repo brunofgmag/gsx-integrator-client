@@ -6,10 +6,13 @@
 #include <QtCore/QJsonObject>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QVersionNumber>
+#include "../simulator/SimulatorCandidates.h"
+#include "../simulator/SimulatorUserFolders.h"
 
 namespace
 {
     constexpr auto kPackageDirName = "gsx-integrator-commbus";
+    constexpr auto kCommunityPrefix = "Community";
 
     QByteArray ReadFileIfExists(const QString& path)
     {
@@ -32,7 +35,16 @@ QString ParseInstalledPackagesPath(const QByteArray& userCfg)
         return {};
     }
 
-    return QDir::fromNativeSeparators(match.captured(1).trimmed());
+    QString path = match.captured(1).trimmed();
+    path.replace(u'\\', u'/');
+
+    return path;
+}
+
+QString InstalledPackagesPathOf(const QString& userHome, const SimulatorCandidate& candidate)
+{
+    return SimulatorLocalPath(
+        userHome, ParseInstalledPackagesPath(ReadFileIfExists(SimulatorUserCfgPath(userHome, candidate))));
 }
 
 QString ParseManifestVersion(const QByteArray& manifestJson)
@@ -69,9 +81,12 @@ QStringList CommunityDirsUnder(const QString& packagesPath)
     }
 
     QStringList dirs;
-    for (const QString& name : base.entryList({QStringLiteral("Community*")}, QDir::Dirs | QDir::NoDotAndDotDot))
+    for (const QString& name : base.entryList(QDir::Dirs | QDir::NoDotAndDotDot))
     {
-        dirs.append(base.filePath(name));
+        if (name.startsWith(QLatin1String(kCommunityPrefix), Qt::CaseInsensitive))
+        {
+            dirs.append(base.filePath(name));
+        }
     }
 
     return dirs;
@@ -79,23 +94,19 @@ QStringList CommunityDirsUnder(const QString& packagesPath)
 
 QStringList CandidateCommunityDirs()
 {
-    const QString localAppData = QDir::fromNativeSeparators(qEnvironmentVariable("LOCALAPPDATA"));
-    const QString appData = QDir::fromNativeSeparators(qEnvironmentVariable("APPDATA"));
+    return CandidateCommunityDirsIn(SimulatorUserHomes());
+}
 
-    const QStringList simBaseDirs = {
-        localAppData + QStringLiteral("/Packages/Microsoft.FlightSimulator_8wekyb3d8bbwe/LocalCache"),
-        localAppData + QStringLiteral("/Packages/Microsoft.Limitless_8wekyb3d8bbwe/LocalCache"),
-        appData + QStringLiteral("/Microsoft Flight Simulator"),
-        appData + QStringLiteral("/Microsoft Flight Simulator 2024"),
-    };
-
+QStringList CandidateCommunityDirsIn(const QStringList& userHomes)
+{
     QStringList result;
-    for (const QString& base : simBaseDirs)
+    for (const QString& userHome : userHomes)
     {
-        const QString packagesPath =
-            ParseInstalledPackagesPath(ReadFileIfExists(base + QStringLiteral("/UserCfg.opt")));
-        result.append(CommunityDirsUnder(packagesPath));
-        result.append(base + QStringLiteral("/Packages/Community"));
+        for (const SimulatorCandidate& candidate : kSimulatorCandidates)
+        {
+            result.append(CommunityDirsUnder(InstalledPackagesPathOf(userHome, candidate)));
+            result.append(SimulatorFallbackCommunityDir(userHome, candidate));
+        }
     }
 
     result.removeDuplicates();

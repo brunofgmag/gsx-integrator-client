@@ -13,6 +13,7 @@
 #include "../infrastructure/logging/LogMacros.h"
 #include "../infrastructure/gsx/GsxAircraftProfile.h"
 #include "../infrastructure/pmdg/PmdgOptions.h"
+#include "../infrastructure/simulator/SimulatorUserFolders.h"
 #include "../infrastructure/gsx/GsxRemoteStateReducer.h"
 #include "../infrastructure/checkpoint/StoredText.h"
 #include "../domain/model/PlanConversion.h"
@@ -139,6 +140,7 @@ IntegratorRuntime::IntegratorRuntime(IntegratorRuntimeOptions options, QObject* 
       simbriefClient_(&status_, &settings_, this),
       flightPlanSource_(&simbriefClient_),
       actsOnTheSim_(std::move(options.actsOnTheSim)),
+      prepareLink_(std::move(options.prepareLink)),
       resumption_(options.checkpointStore)
 {
     if (!actsOnTheSim_)
@@ -431,8 +433,11 @@ bool IntegratorRuntime::IsSimOnMenu()
 
 void IntegratorRuntime::OnSimOpen(const char* appName)
 {
+    simAnswered_ = true;
+    unansweredAnnounced_ = false;
     simVersion_ = SimVersionDetect::FromAppName(appName != nullptr ? appName : "");
 
+    LOG_INFO("GSX Integrator connected to the simulator.");
     LOG_INFO("Connected simulator: '%s' (%s)", appName != nullptr ? appName : "?", SimVersionLabel(simVersion_));
 }
 
@@ -449,6 +454,11 @@ void IntegratorRuntime::TryConnect()
         connectAttemptAnnounced_ = true;
     }
 
+    if (prepareLink_)
+    {
+        simulatorsToRestart_ = prepareLink_();
+    }
+
     if (!simConnect_.Open("GSX Integrator"))
     {
         reconnectTimer_.start();
@@ -459,6 +469,8 @@ void IntegratorRuntime::TryConnect()
     }
 
     reconnectTimer_.stop();
+    simulatorsToRestart_.clear();
+    ResetSimulatorFolderCache();
 
     simConnect_.SetOnOpen([this](const char* appName) { OnSimOpen(appName); });
 
@@ -478,8 +490,6 @@ void IntegratorRuntime::TryConnect()
 
     varGateway_.SetFastRefresh("FSDT_GSX_JETWAY");
     varGateway_.SetFastRefresh("FSDT_GSX_STAIRS");
-
-    LOG_INFO("GSX Integrator connected to the simulator.");
 
     emit Updated();
 }
@@ -519,10 +529,25 @@ bool IntegratorRuntime::SubscribeSimEvents()
 
 void IntegratorRuntime::HandleDisconnected()
 {
-    LOG_INFO("Lost connection to the simulator.");
+    const bool simulatorAnswered = simAnswered_;
+    simAnswered_ = false;
 
-    connectAttemptAnnounced_ = false;
+    if (simulatorAnswered)
+    {
+        LOG_INFO("Lost connection to the simulator.");
+        connectAttemptAnnounced_ = false;
+    }
+    else if (!unansweredAnnounced_)
+    {
+        LOG_INFO("The simulator accepted the connection but has not answered yet; retrying.");
+        unansweredAnnounced_ = true;
+    }
+
     simVersion_ = SimVersion::Unknown;
+    ResetSimulatorFolderCache();
+
+    pluginClient_.Shutdown();
+    bridgeClient_.Shutdown();
 
     varGateway_.Detach();
     simConnect_.Close();
@@ -536,7 +561,10 @@ void IntegratorRuntime::HandleDisconnected()
 
     emit Updated();
 
-    emit SimulatorQuit();
+    if (simulatorAnswered)
+    {
+        emit SimulatorQuit();
+    }
 }
 
 void IntegratorRuntime::OnDispatchTimer()
@@ -839,6 +867,7 @@ void IntegratorRuntime::Shutdown()
 
     bridgeClient_.Shutdown();
 
+    simAnswered_ = false;
     varGateway_.Detach();
     simConnect_.Close();
     gsxMenu_.Reset();
@@ -957,6 +986,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
 {
     IntegratorSnapshot snapshot;
     snapshot.connected = IsConnected();
+    snapshot.simulatorsToRestart = simulatorsToRestart_.join(QStringLiteral(", ")).toStdString();
     snapshot.sessionActive = IsSessionActive();
     snapshot.sessionReady = sessionReady_;
     snapshot.pilotOnFoot = pilotOnFoot_;

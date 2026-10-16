@@ -7,7 +7,7 @@
 
 # GSX Integrator Client
 
-A Windows app that runs your GSX Pro turnaround in Microsoft Flight Simulator. It reads your SimBrief flight plan, asks GSX for refueling and boarding with the numbers you dispatched, and runs the departure sequence once the aircraft is ready.
+A Windows and Linux app that runs your GSX Pro turnaround in Microsoft Flight Simulator. It reads your SimBrief flight plan, asks GSX for refueling and boarding with the numbers you dispatched, and runs the departure sequence once the aircraft is ready.
 
 It runs outside the simulator and talks to it through SimConnect. The only thing that goes into the sim is the CommBus plugin.
 
@@ -24,6 +24,15 @@ You need:
 - GSX Pro 4.0.19 or newer
 - A SimBrief account
 - The CommBus plugin, version 0.2.0 or newer for the PMDG aircraft
+
+### Linux
+
+There is a native Linux build for MSFS 2024 and 2020 on the Steam of your distribution, running under Proton. The Flatpak Steam and the Microsoft Store versions aren't covered.
+
+1. Download `gsx-integrator-client-<version>-x86_64.AppImage` from the [latest release](https://github.com/brunofgmag/gsx-integrator-client/releases), make it executable and run it. The installer does the same and also adds the shortcuts and the auto-start.
+2. The client finds each simulator through the Steam library files. It reads the SimConnect port from `SimConnect.xml`. If no TCP port of 1024 or higher is set there, it adds port 5111, but only while the simulator is closed, so restart the simulator after the first run.
+3. The tray icon needs a desktop with StatusNotifier support, like KDE Plasma.
+4. The client updates itself by replacing its AppImage. That needs the file to sit in a folder you can write to.
 
 ## Supported aircraft
 

@@ -11,6 +11,7 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_OBJECT
 
     Q_PROPERTY(bool connected READ IsConnected NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString simConnectSetupText READ GetSimConnectSetupText NOTIFY SnapshotChanged)
     Q_PROPERTY(bool enabled READ IsEnabled WRITE SetEnabled NOTIFY SnapshotChanged)
     Q_PROPERTY(bool gsxAvailable READ IsGsxAvailable NOTIFY SnapshotChanged)
     Q_PROPERTY(bool aircraftSupported READ IsAircraftSupported NOTIFY SnapshotChanged)
@@ -105,6 +106,7 @@ public:
     ~OperationsViewModel() override;
 
     [[nodiscard]] bool IsConnected() const;
+    [[nodiscard]] QString GetSimConnectSetupText() const;
     [[nodiscard]] bool IsSessionActive() const;
     [[nodiscard]] bool IsEnabled() const;
     void SetEnabled(bool enabled);

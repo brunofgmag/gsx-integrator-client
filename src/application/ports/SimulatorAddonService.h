@@ -9,6 +9,7 @@ class SimulatorAddonService
 public:
     virtual ~SimulatorAddonService() = default;
 
+    [[nodiscard]] virtual bool CanLaunchWithSimulator() const { return true; }
     [[nodiscard]] virtual bool IsLaunchedWithSimulator() const = 0;
     [[nodiscard]] virtual LaunchWithSimulatorResult SetLaunchedWithSimulator(bool enabled) = 0;
     [[nodiscard]] virtual CommbusBundleResult InstallCommbus() = 0;

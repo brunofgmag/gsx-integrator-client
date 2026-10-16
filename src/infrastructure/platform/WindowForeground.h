@@ -1,7 +1,9 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_WINDOWFOREGROUND_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_WINDOWFOREGROUND_H
 
+#ifdef _WIN32
 #include <windows.h>
+#endif
 #include <QtGui/QWindow>
 
 namespace WindowForeground
@@ -17,6 +19,7 @@ namespace WindowForeground
         window->raise();
         window->requestActivate();
 
+#ifdef _WIN32
         const auto hwnd = reinterpret_cast<HWND>(window->winId());
         if (!hwnd)
         {
@@ -47,6 +50,7 @@ namespace WindowForeground
         {
             AttachThreadInput(thisThread, foregroundThread, FALSE);
         }
+#endif
     }
 }
 

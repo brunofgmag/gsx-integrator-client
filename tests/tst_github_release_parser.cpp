@@ -23,6 +23,8 @@ class GithubReleaseParserTest final : public QObject
 
 private slots:
     static void parsesLatestRelease();
+    static void parsesTheAppImagePairWithoutMixingItWithTheZip();
+    static void theAppImageNeverEndsUpInTheZipFields();
     static void rejectsMalformedJson();
     static void rejectsMissingTag();
     static void releaseWithoutClientAssetsStillParses();
@@ -43,6 +45,51 @@ void GithubReleaseParserTest::parsesLatestRelease()
     QCOMPARE(info->zipName, QStringLiteral("gsx-integrator-client-1.4.0.zip"));
     QVERIFY(info->zipUrl.endsWith(QStringLiteral("/gsx-integrator-client-1.4.0.zip")));
     QVERIFY(info->shaUrl.endsWith(QStringLiteral("/gsx-integrator-client-1.4.0.zip.sha256")));
+}
+
+namespace
+{
+    QByteArray ReleaseWithAssets(const QStringList& names)
+    {
+        QString assets;
+        for (const QString& name : names)
+        {
+            assets += QStringLiteral("{\"name\":\"%1\",\"browser_download_url\":\"https://example.test/%1\"},").arg(name);
+        }
+        assets.chop(1);
+
+        return QStringLiteral("{\"tag_name\":\"v2.0.0\",\"html_url\":\"https://example.test/r\",\"assets\":[%1]}")
+            .arg(assets).toUtf8();
+    }
+}
+
+void GithubReleaseParserTest::parsesTheAppImagePairWithoutMixingItWithTheZip()
+{
+    const auto info = ParseLatestRelease(ReleaseWithAssets({
+        QStringLiteral("gsx-integrator-client-2.0.0.zip"),
+        QStringLiteral("gsx-integrator-client-2.0.0.zip.sha256"),
+        QStringLiteral("gsx-integrator-client-2.0.0-x86_64.AppImage"),
+        QStringLiteral("gsx-integrator-client-2.0.0-x86_64.AppImage.sha256"),
+        QStringLiteral("gsx-integrator-flightsim-to-2.0.0.zip")}));
+
+    QVERIFY(info.has_value());
+    QVERIFY(info->appImageUrl.endsWith(QStringLiteral("/gsx-integrator-client-2.0.0-x86_64.AppImage")));
+    QVERIFY(info->appImageShaUrl.endsWith(QStringLiteral("/gsx-integrator-client-2.0.0-x86_64.AppImage.sha256")));
+    QCOMPARE(info->zipName, QStringLiteral("gsx-integrator-client-2.0.0.zip"));
+    QVERIFY(info->shaUrl.endsWith(QStringLiteral(".zip.sha256")));
+}
+
+void GithubReleaseParserTest::theAppImageNeverEndsUpInTheZipFields()
+{
+    const auto info = ParseLatestRelease(ReleaseWithAssets({
+        QStringLiteral("gsx-integrator-client-2.0.0-x86_64.AppImage"),
+        QStringLiteral("gsx-integrator-client-2.0.0-x86_64.AppImage.sha256")}));
+
+    QVERIFY(info.has_value());
+    QVERIFY(info->zipUrl.isEmpty());
+    QVERIFY(info->zipName.isEmpty());
+    QVERIFY(info->shaUrl.isEmpty());
+    QVERIFY(!info->appImageUrl.isEmpty());
 }
 
 void GithubReleaseParserTest::rejectsMalformedJson()

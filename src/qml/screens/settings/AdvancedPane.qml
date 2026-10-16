@@ -12,7 +12,8 @@ ColumnLayout {
     property var updateVm: null
     property bool simulatorAddonsVisible: false
 
-    readonly property var rendererIds: ["software", "d3d12", "opengl"]
+    readonly property var rendererIds: Theme.windows ? ["software", "d3d12", "opengl"] : ["software", "opengl"]
+    readonly property var rendererNames: Theme.windows ? ["Software", "D3D12", "OpenGL"] : ["Software", "OpenGL"]
     readonly property var rendererLabels: ({
         "d3d12": "D3D12", "opengl": "OpenGL", "vulkan": "Vulkan",
         "software": "Software", "d3d11": "D3D11"
@@ -29,11 +30,13 @@ ColumnLayout {
         Layout.fillWidth: true
         title: qsTr("Renderer")
         caption: qsTr("Graphics backend")
-        helpText: qsTr("Software is the default because it uses the least RAM and VRAM. D3D12 draws on the graphics card; OpenGL is there for drivers that misbehave.")
+        helpText: Theme.windows
+                  ? qsTr("Software is the default because it uses the least RAM and VRAM. D3D12 draws on the graphics card; OpenGL is there for drivers that misbehave.")
+                  : qsTr("Software is the default because it uses the least RAM and VRAM. OpenGL draws on the graphics card.")
 
         SegmentedControl {
             anchors.verticalCenter: parent.verticalCenter
-            model: ["Software", "D3D12", "OpenGL"]
+            model: root.rendererNames
             currentIndex: Math.max(0, root.rendererIds.indexOf(root.settingsVm.renderer))
             onActivated: index => root.settingsVm.renderer = root.rendererIds[index]
         }
@@ -72,7 +75,12 @@ ColumnLayout {
         visible: root.simulatorAddonsVisible
         title: qsTr("Start with the simulator")
         caption: qsTr("Open GSX Integrator when MSFS starts")
-        helpText: qsTr("Adds GSX Integrator to the EXE.xml of each MSFS 2020 and 2024 installation, so the simulator opens it in the tray. Turning it off removes the entry.")
+        enabled: !root.simulatorAddonsVisible || root.updateVm.launchWithSimulatorAvailable
+        helpText: root.simulatorAddonsVisible && !root.updateVm.launchWithSimulatorAvailable
+                  ? qsTr("Starting with the simulator needs systemd user services, and this system does not offer them.")
+                  : Theme.windows
+                    ? qsTr("Adds GSX Integrator to the EXE.xml of each MSFS 2020 and 2024 installation, so the simulator opens it in the tray. Turning it off removes the entry.")
+                    : qsTr("Installs a systemd user service that watches for MSFS 2020 and 2024. It opens GSX Integrator in the tray when the simulator starts and closes it when the simulator exits. Turning it off removes the service. Needs systemd user services.")
         checked: root.simulatorAddonsVisible && root.updateVm.launchWithSimulator
         onToggled: checked => root.updateVm.launchWithSimulator = checked
     }

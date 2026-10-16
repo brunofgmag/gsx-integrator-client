@@ -1,3 +1,4 @@
+#include <memory>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
@@ -72,6 +73,25 @@ namespace
         };
     }
 
+    class RecordingLauncher final : public SimulatorLauncher
+    {
+    public:
+        [[nodiscard]] bool IsAvailable() const override { return available; }
+        [[nodiscard]] bool IsEnabled() const override { return enabled; }
+
+        [[nodiscard]] LaunchWithSimulatorResult Set(const bool value) override
+        {
+            requests.append(value);
+            enabled = value;
+
+            return {};
+        }
+
+        bool available = true;
+        bool enabled = false;
+        QList<bool> requests;
+    };
+
     bool NothingRunning(const QString&)
     {
         return false;
@@ -99,6 +119,10 @@ private slots:
     static void removeFromTheOverrideDirIgnoresTheProcessCheck();
     static void enableIsRefusedWhileTheSimulatorRunsAndTheInstallIsOutdated();
     static void reEnableInstallsThePackageAgain();
+    static void commbusTargetsSpanEveryUserHome();
+    static void aTargetFoundThroughTwoHomesIsInstalledOnce();
+    static void aLauncherReplacesTheExeXmlForTheStartWithTheSimulator();
+    static void withoutALauncherLaunchingIsAlwaysAvailable();
 };
 
 void DiskSimulatorAddonServiceTest::launchWithSimulatorWritesAndRemovesEveryCandidate()
@@ -226,6 +250,9 @@ void DiskSimulatorAddonServiceTest::removeDeletesThePackage()
 
 void DiskSimulatorAddonServiceTest::removeUnlinksAJunctionWithoutTouchingItsTarget()
 {
+#ifndef Q_OS_WIN
+    QSKIP("mklink /J exists only on Windows");
+#endif
     const QTemporaryDir root;
     const QString community = AddSimulator(root.path() + QStringLiteral("/home"), kSteam2024UserCfg,
                                            QStringLiteral("packages2024"));
@@ -314,6 +341,69 @@ void DiskSimulatorAddonServiceTest::reEnableInstallsThePackageAgain()
     QCOMPARE(result.targets[0].status, CommbusBundleStatus::Installed);
     QCOMPARE(ReadFile(PackageDir(community) + QStringLiteral("/SimObjects/bridge.wasm")), QByteArray("wasm 0.4.0"));
     QCOMPARE(ReadFile(PackageDir(community) + QStringLiteral("/.gsxi-version")), QByteArray("0.4.0"));
+}
+
+void DiskSimulatorAddonServiceTest::commbusTargetsSpanEveryUserHome()
+{
+    const QTemporaryDir root;
+    const QString homeA = root.path() + QStringLiteral("/prefix2024/home");
+    const QString homeB = root.path() + QStringLiteral("/prefix2020/home");
+    const QString communityA = AddSimulator(homeA, kSteam2024UserCfg, QStringLiteral("packages2024"));
+    const QString communityB = AddSimulator(homeB, kStore2020UserCfg, QStringLiteral("packages2020"));
+    MakeBundle(root.path() + QStringLiteral("/bundle"), QStringLiteral("0.4.0"));
+    DiskSimulatorAddonService service({root.path() + QStringLiteral("/bundle"), {}, root.path(),
+                                       QLatin1String(kClientExePath), {homeA, homeB}},
+                                      NothingRunning);
+
+    const CommbusBundleResult result = service.InstallCommbus();
+
+    QCOMPARE(result.targets.size(), std::size_t{2});
+    QVERIFY(QFileInfo::exists(PackageDir(communityA) + QStringLiteral("/manifest.json")));
+    QVERIFY(QFileInfo::exists(PackageDir(communityB) + QStringLiteral("/manifest.json")));
+}
+
+void DiskSimulatorAddonServiceTest::aTargetFoundThroughTwoHomesIsInstalledOnce()
+{
+    const QTemporaryDir root;
+    const QString home = root.path() + QStringLiteral("/home");
+    AddSimulator(home, kSteam2024UserCfg, QStringLiteral("packages2024"));
+    MakeBundle(root.path() + QStringLiteral("/bundle"), QStringLiteral("0.4.0"));
+    DiskSimulatorAddonService service({root.path() + QStringLiteral("/bundle"), {}, root.path(),
+                                       QLatin1String(kClientExePath), {home, home}},
+                                      NothingRunning);
+
+    QCOMPARE(service.InstallCommbus().targets.size(), std::size_t{1});
+}
+
+void DiskSimulatorAddonServiceTest::aLauncherReplacesTheExeXmlForTheStartWithTheSimulator()
+{
+    const QTemporaryDir root;
+    const QString home = root.path() + QStringLiteral("/home");
+    AddSimulator(home, kSteam2024UserCfg, QStringLiteral("packages2024"));
+    auto launcher = std::make_unique<RecordingLauncher>();
+    RecordingLauncher* recorded = launcher.get();
+    DiskSimulatorAddonService service({root.path() + QStringLiteral("/bundle"), {}, home, QLatin1String(kClientExePath)},
+                                      NothingRunning, std::move(launcher));
+
+    QVERIFY(!service.IsLaunchedWithSimulator());
+    const LaunchWithSimulatorResult result = service.SetLaunchedWithSimulator(true);
+
+    QVERIFY(!result.noSimulator);
+    QVERIFY(service.IsLaunchedWithSimulator());
+    QCOMPARE(recorded->requests, QList<bool>{true});
+    QVERIFY(!QFileInfo::exists(ExeXmlNextTo(home, kSteam2024UserCfg)));
+
+    recorded->available = false;
+
+    QVERIFY(!service.CanLaunchWithSimulator());
+}
+
+void DiskSimulatorAddonServiceTest::withoutALauncherLaunchingIsAlwaysAvailable()
+{
+    const QTemporaryDir root;
+    DiskSimulatorAddonService service = MakeService(root.path(), NothingRunning);
+
+    QVERIFY(service.CanLaunchWithSimulator());
 }
 
 QTEST_GUILESS_MAIN(DiskSimulatorAddonServiceTest)

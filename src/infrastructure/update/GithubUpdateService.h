@@ -8,6 +8,7 @@
 #include <QtCore/QStringList>
 #include <QtNetwork/QNetworkAccessManager>
 #include "../../application/ports/UpdateService.h"
+#include "AppImageUpdate.h"
 
 class QNetworkReply;
 class QProcess;
@@ -67,6 +68,7 @@ private:
     QProcess* extractProcess_ = nullptr;
 
     UpdateInfo pendingDownload_;
+    AppImageUpdateTarget updateTarget_;
     QString expectedSha256_;
     QString stagedVersion_;
     bool helperLaunched_ = false;

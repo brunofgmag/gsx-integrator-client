@@ -22,6 +22,7 @@ jobs:
     with:
       qt-modules: qtwebsockets
       fork-tests-only: true
+      linux-preset: linux-release
       sdk-required-paths: |
         SimConnect SDK/include/SimConnect.h
         SimConnect SDK/lib/SimConnect.lib

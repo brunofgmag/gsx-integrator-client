@@ -30,6 +30,7 @@ class OperationsViewModelTest final : public QObject
 
 private slots:
     static void exposesUpdatedSnapshot();
+    static void aSimulatorToRestartIsExplainedOnTheConnectingScreen();
     static void emitsOneSignalForSnapshotChanges();
     static void doesNotEmitWhenSnapshotIsUnchanged();
     static void ignoresInsignificantFloatingPointChanges();
@@ -179,6 +180,28 @@ void OperationsViewModelTest::exposesUpdatedSnapshot()
 
     QVERIFY(viewModel.IsConnected());
     QCOMPARE(viewModel.GetStateText(), QStringLiteral("Waiting for aircraft ready"));
+}
+
+void OperationsViewModelTest::aSimulatorToRestartIsExplainedOnTheConnectingScreen()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    const QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
+
+    QVERIFY(viewModel.GetSimConnectSetupText().isEmpty());
+
+    service.snapshot.simulatorsToRestart = "MSFS 2024 (Steam)";
+    service.Notify();
+
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(viewModel.GetSimConnectSetupText(),
+             QStringLiteral("The simulator (MSFS 2024 (Steam)) is open without a SimConnect port for GSX Integrator. Close it and open it again: GSX Integrator adds the port to SimConnect.xml while the simulator is closed."));
+
+    service.snapshot.simulatorsToRestart.clear();
+    service.Notify();
+
+    QVERIFY(viewModel.GetSimConnectSetupText().isEmpty());
 }
 
 void OperationsViewModelTest::emitsOneSignalForSnapshotChanges()

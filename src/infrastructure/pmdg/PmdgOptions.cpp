@@ -1,10 +1,10 @@
 #include "PmdgOptions.h"
 
-#include <cstdlib>
 #include <fstream>
 #include <sstream>
 #include "../aircraft/pmdg/Pmdg737.h"
 #include "../aircraft/pmdg/Pmdg777.h"
+#include "../simulator/SimulatorUserFolders.h"
 
 namespace
 {
@@ -97,18 +97,13 @@ std::optional<std::filesystem::path> PmdgOptions::PathFor(const std::string& air
         return std::nullopt;
     }
 
-    char* appData = nullptr;
-    std::size_t appDataLength = 0;
-    if (_dupenv_s(&appData, &appDataLength, "APPDATA") != 0 || appData == nullptr)
+    const std::optional<std::filesystem::path> appData = SimulatorRoamingAppData();
+    if (!appData.has_value())
     {
         return std::nullopt;
     }
 
-    const std::filesystem::path appDataPath(appData);
-
-    std::free(appData);
-
-    return appDataPath / "Microsoft Flight Simulator 2024" / "WASM" / "MSFS2024" / package->package
+    return *appData / "Microsoft Flight Simulator 2024" / "WASM" / "MSFS2024" / package->package
         / "work" / package->iniName;
 }
 
