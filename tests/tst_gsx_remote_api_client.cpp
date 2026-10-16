@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include <QDir>
 #include <QFile>
 #include <QHostAddress>
 #include <QJsonObject>
@@ -160,6 +161,9 @@ private slots:
     static void anAnsweredConnectionAnnouncesTheNextAttempt();
     static void aConnectionGsxNeverAnsweredKeepsTheRetriesQuiet();
     static void everySentMessageLandsInTheWireLog();
+    static void thePortComesFromTheCouatlAddonsIniOfTheRoamingFolder();
+    static void theIniIsFoundWhateverTheCaseOfItsFolderAndName();
+    static void withoutAUsableIniTheDefaultPortStays();
 
 private:
     QTemporaryDir probeDirectory_;
@@ -502,6 +506,52 @@ void GsxRemoteApiClientTest::everySentMessageLandsInTheWireLog()
         QStringLiteral("{\"type\":\"sent\",\"message\":{\"channels\":[\"state\",\"prompts\",\"toasts\"],\"type\":\"subscribe\"}}")));
     QVERIFY(lines.at(1).endsWith(
         QStringLiteral("{\"type\":\"sent\",\"message\":{\"args\":{\"index\":2},\"type\":\"command\",\"verb\":\"menu.open\"}}")));
+}
+
+void GsxRemoteApiClientTest::thePortComesFromTheCouatlAddonsIniOfTheRoamingFolder()
+{
+    const QTemporaryDir roaming;
+    QDir().mkpath(roaming.filePath(QStringLiteral("Virtuali")));
+    QFile ini(roaming.filePath(QStringLiteral("Virtuali/CouatlAddons.ini")));
+
+    QVERIFY(ini.open(QIODevice::WriteOnly));
+    ini.write("[gsx]\nremote_server_port=9123\n");
+    ini.close();
+
+    QCOMPARE(GsxRemoteApiClient::ResolvePortUnder(roaming.path()), quint16(9123));
+}
+
+void GsxRemoteApiClientTest::theIniIsFoundWhateverTheCaseOfItsFolderAndName()
+{
+#ifdef Q_OS_WIN
+    QSKIP("the file system already ignores case on Windows");
+#endif
+    const QTemporaryDir roaming;
+    QDir().mkpath(roaming.filePath(QStringLiteral("VIRTUALI")));
+    QFile ini(roaming.filePath(QStringLiteral("VIRTUALI/Couatladdons.ini")));
+
+    QVERIFY(ini.open(QIODevice::WriteOnly));
+    ini.write("[gsx]\nremote_server_port=9124\n");
+    ini.close();
+
+    QCOMPARE(GsxRemoteApiClient::ResolvePortUnder(roaming.path()), quint16(9124));
+}
+
+void GsxRemoteApiClientTest::withoutAUsableIniTheDefaultPortStays()
+{
+    const QTemporaryDir roaming;
+    QDir().mkpath(roaming.filePath(QStringLiteral("Virtuali")));
+
+    QCOMPARE(GsxRemoteApiClient::ResolvePortUnder(roaming.path()), quint16(8744));
+    QCOMPARE(GsxRemoteApiClient::ResolvePortUnder({}), quint16(8744));
+
+    QFile ini(roaming.filePath(QStringLiteral("Virtuali/CouatlAddons.ini")));
+
+    QVERIFY(ini.open(QIODevice::WriteOnly));
+    ini.write("[gsx]\nremote_server_port=0\n");
+    ini.close();
+
+    QCOMPARE(GsxRemoteApiClient::ResolvePortUnder(roaming.path()), quint16(8744));
 }
 
 QTEST_GUILESS_MAIN(GsxRemoteApiClientTest)

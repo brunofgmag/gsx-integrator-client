@@ -98,11 +98,11 @@ ColumnLayout {
     SettingRow {
         Layout.fillWidth: true
         title: qsTr("Theme")
-        caption: qsTr("\"Windows\" follows the system")
+        caption: Theme.windows ? qsTr("\"Windows\" follows the system") : qsTr("\"System\" follows the system")
 
         SegmentedControl {
             anchors.verticalCenter: parent.verticalCenter
-            model: [qsTr("Light"), qsTr("Dark"), qsTr("Windows")]
+            model: [qsTr("Light"), qsTr("Dark"), Theme.windows ? qsTr("Windows") : qsTr("System")]
             currentIndex: root.settingsVm.themeMode
             onActivated: index => root.settingsVm.themeMode = index
         }
@@ -111,11 +111,11 @@ ColumnLayout {
     SettingRow {
         Layout.fillWidth: true
         title: qsTr("Language")
-        caption: qsTr("\"Windows\" uses the system language")
+        caption: Theme.windows ? qsTr("\"Windows\" uses the system language") : qsTr("\"System\" uses the system language")
 
         SegmentedControl {
             anchors.verticalCenter: parent.verticalCenter
-            model: [qsTr("Windows"), "English", "Português (BR)"]
+            model: [Theme.windows ? qsTr("Windows") : qsTr("System"), "English", "Português (BR)"]
             currentIndex: root.settingsVm.language === "system" ? 0
                         : root.settingsVm.language === "pt_BR" ? 2 : 1
             onActivated: index => root.settingsVm.language = ["system", "en", "pt_BR"][index]

@@ -10,6 +10,10 @@
 #include <QtCore/QStandardPaths>
 #include <QtCore/QVersionNumber>
 #include <QtNetwork/QNetworkReply>
+#ifndef _WIN32
+#include "../platform/XdgDirectories.h"
+#include "AppImageUpdate.h"
+#endif
 #include "CommbusInstallProbe.h"
 #include "GithubReleaseParser.h"
 
@@ -18,7 +22,7 @@ namespace
     constexpr auto kZipRootDir = "gsx-integrator-client";
     constexpr int kTransferTimeoutMs = 30000;
 
-#if !defined(GSXI_FLIGHTSIM_TO)
+#if !defined(GSXI_FLIGHTSIM_TO) && defined(_WIN32)
     constexpr auto kApplyScript =
         R"PS(param([int]$AppPid, [string]$Source, [string]$Dest, [string]$ExeName, [int]$Relaunch, [string]$Version,
       [string]$UninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\gsx-integrator-client')
@@ -76,6 +80,26 @@ Remove-Item -Force $PSCommandPath -ErrorAction SilentlyContinue
         return true;
     }
 
+    QString PackageUrlOf(const UpdateInfo& info)
+    {
+#ifdef _WIN32
+        return info.zipUrl;
+#else
+        return info.appImageUrl;
+#endif
+    }
+
+    QString ShaUrlOf(const UpdateInfo& info)
+    {
+#ifdef _WIN32
+        return info.shaUrl;
+#else
+        return info.appImageShaUrl;
+#endif
+    }
+#endif
+
+#if !defined(GSXI_FLIGHTSIM_TO) && defined(_WIN32)
     bool WriteApplyScript(const QString& scriptPath)
     {
         QFile script(scriptPath);
@@ -135,16 +159,25 @@ void GithubUpdateService::DownloadAndStage(const UpdateInfo& info)
         return;
     }
 
-    if (info.zipUrl.isEmpty() || info.shaUrl.isEmpty())
+    if (PackageUrlOf(info).isEmpty() || ShaUrlOf(info).isEmpty())
     {
         NotifyStageFinished(false, tr("The release has no download assets."));
         return;
     }
 
+#ifndef _WIN32
+    updateTarget_ = ResolveAppImageUpdateTarget(qEnvironmentVariable("APPIMAGE"));
+    if (!updateTarget_.error.isEmpty())
+    {
+        NotifyStageFinished(false, updateTarget_.error);
+        return;
+    }
+#endif
+
     DiscardStaged();
     pendingDownload_ = info;
 
-    shaReply_ = StartGet(info.shaUrl);
+    shaReply_ = StartGet(ShaUrlOf(info));
 
     connect(shaReply_, &QNetworkReply::finished,
             this, &GithubUpdateService::OnShaHttpFinished);
@@ -164,6 +197,12 @@ void GithubUpdateService::DiscardStaged()
 
     QDir(UpdatesRootDir() + QStringLiteral("/download")).removeRecursively();
     QDir(UpdatesRootDir() + QStringLiteral("/staged")).removeRecursively();
+#ifndef _WIN32
+    if (const QString staged = StagedAppImagePathFor(qEnvironmentVariable("APPIMAGE")); !staged.isEmpty())
+    {
+        QFile::remove(staged);
+    }
+#endif
 
     stagedVersion_.clear();
 }
@@ -184,6 +223,7 @@ bool GithubUpdateService::HasStagedUpdate() const
     return !stagedVersion_.isEmpty();
 }
 
+#ifdef _WIN32
 bool GithubUpdateService::LaunchApplyHelper(const bool relaunch)
 {
     if (helperLaunched_)
@@ -218,6 +258,27 @@ QByteArray GithubUpdateService::ApplyScript()
 {
     return kApplyScript;
 }
+#else
+bool GithubUpdateService::LaunchApplyHelper(const bool relaunch)
+{
+    if (helperLaunched_)
+    {
+        return true;
+    }
+
+    if (stagedVersion_.isEmpty() || !QFile::exists(updateTarget_.stagedPath)
+        || !InstallStagedAppImage(updateTarget_.stagedPath, updateTarget_.appImagePath))
+    {
+        return false;
+    }
+
+    helperLaunched_ = true;
+    (void)RecordInstalledVersion(updateTarget_.appImagePath,
+                                 XdgDataHome(), stagedVersion_);
+
+    return !relaunch || RelaunchAppImage(QCoreApplication::applicationPid(), updateTarget_.appImagePath);
+}
+#endif
 #endif
 
 QStringList GithubUpdateService::BuildApplyArguments(const QString& scriptPath, const qint64 appPid,
@@ -318,8 +379,10 @@ void GithubUpdateService::OnShaHttpFinished()
         return;
     }
 
+#ifdef _WIN32
     QDir().mkpath(UpdatesRootDir() + QStringLiteral("/download"));
-    zipReply_ = StartGet(pendingDownload_.zipUrl);
+#endif
+    zipReply_ = StartGet(PackageUrlOf(pendingDownload_));
     connect(zipReply_, &QNetworkReply::downloadProgress, this,
             [this](const qint64 received, const qint64 total)
             {
@@ -342,8 +405,12 @@ void GithubUpdateService::OnZipHttpFinished()
         return;
     }
 
+#ifdef _WIN32
     const QString zipPath = UpdatesRootDir() + QStringLiteral("/download/")
         + pendingDownload_.zipName;
+#else
+    const QString zipPath = updateTarget_.stagedPath;
+#endif
     if (!WriteDownloadedZip(reply, zipPath))
     {
         NotifyStageFinished(false, tr("Could not write the download."));
@@ -356,7 +423,12 @@ void GithubUpdateService::OnZipHttpFinished()
         return;
     }
 
+#ifdef _WIN32
     StartExtraction(zipPath, UpdatesRootDir() + QStringLiteral("/staged"));
+#else
+    stagedVersion_ = pendingDownload_.version;
+    NotifyStageFinished(true, {});
+#endif
 }
 
 bool GithubUpdateService::VerifyChecksum(const QString& zipPath) const
@@ -377,6 +449,7 @@ bool GithubUpdateService::VerifyChecksum(const QString& zipPath) const
     return true;
 }
 
+#ifdef _WIN32
 void GithubUpdateService::StartExtraction(const QString& zipPath, const QString& stagedRoot)
 {
     (void)QDir().mkpath(stagedRoot);
@@ -417,6 +490,7 @@ void GithubUpdateService::OnExtractFinished(const int exitCode)
     stagedVersion_ = pendingDownload_.version;
     NotifyStageFinished(true, {});
 }
+#endif
 #endif
 
 QNetworkReply* GithubUpdateService::StartGet(const QString& url)

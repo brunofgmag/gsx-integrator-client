@@ -2,6 +2,8 @@
 #include <QtCore/QTemporaryDir>
 #include <QtTest/QTest>
 
+#include "FakeProtonTree.h"
+#include "../src/infrastructure/simulator/SimulatorCandidates.h"
 #include "../src/infrastructure/update/CommbusInstallProbe.h"
 
 class CommbusInstallProbeTest final : public QObject
@@ -17,6 +19,11 @@ private slots:
     static void detectionReturnsEmptyWithoutManifest();
     static void listsEveryCommunitySiblingUnderThePackagesPath();
     static void listsNothingWhenThePackagesPathHasNoCommunityFolder();
+    static void parsesBackslashPathsOfAnyDrive();
+    static void candidatesAreTheFourSimulatorLocationsEachWithTheCommunityFallback();
+    static void candidatesAddTheSiblingsTheUserCfgPointsTo();
+    static void candidatesFollowAPrefixDriveLetterAndIgnoreCase();
+    static void candidatesOfNoHomeAreEmpty();
 };
 
 void CommbusInstallProbeTest::parsesInstalledPackagesPath()
@@ -104,6 +111,66 @@ void CommbusInstallProbeTest::listsNothingWhenThePackagesPathHasNoCommunityFolde
 
     QVERIFY(CommunityDirsUnder(root.path()).isEmpty());
     QVERIFY(CommunityDirsUnder(QString()).isEmpty());
+}
+
+void CommbusInstallProbeTest::parsesBackslashPathsOfAnyDrive()
+{
+    QCOMPARE(ParseInstalledPackagesPath("InstalledPackagesPath \"S:\\MSFS 2024\\Packages\"\n"),
+             QStringLiteral("S:/MSFS 2024/Packages"));
+}
+
+void CommbusInstallProbeTest::candidatesAreTheFourSimulatorLocationsEachWithTheCommunityFallback()
+{
+    const QTemporaryDir home;
+
+    QStringList expected;
+    for (const SimulatorCandidate& candidate : kSimulatorCandidates)
+    {
+        expected.append(home.filePath(QLatin1String(candidate.baseSubPath)) + QStringLiteral("/Packages/Community"));
+    }
+
+    QCOMPARE(expected.size(), 4);
+    QCOMPARE(CandidateCommunityDirsIn({home.path()}), expected);
+}
+
+void CommbusInstallProbeTest::candidatesAddTheSiblingsTheUserCfgPointsTo()
+{
+    const QTemporaryDir home;
+    const QString packages = home.filePath(QStringLiteral("packages2024"));
+    QDir().mkpath(packages + QStringLiteral("/Community"));
+    QDir().mkpath(packages + QStringLiteral("/Community2"));
+    FakeProtonTree::WriteFile(
+        home.filePath(QStringLiteral("AppData/Roaming/Microsoft Flight Simulator 2024/UserCfg.opt")),
+        "InstalledPackagesPath \"" + packages.toUtf8() + "\"\n");
+
+    const QStringList dirs = CandidateCommunityDirsIn({home.path()});
+
+    QVERIFY(dirs.contains(packages + QStringLiteral("/Community")));
+    QVERIFY(dirs.contains(packages + QStringLiteral("/Community2")));
+    QVERIFY(dirs.contains(home.filePath(QStringLiteral("AppData/Roaming/Microsoft Flight Simulator 2024/Packages/Community"))));
+    QCOMPARE(dirs.size(), 6);
+}
+
+void CommbusInstallProbeTest::candidatesFollowAPrefixDriveLetterAndIgnoreCase()
+{
+#ifdef Q_OS_WIN
+    QSKIP("Proton prefixes exist only on Linux");
+#endif
+    const QTemporaryDir root;
+    const FakeProtonTree::Tree tree = FakeProtonTree::Build(root.path());
+    QDir().mkpath(tree.secondLibrary + QStringLiteral("/Packages2024/community"));
+    FakeProtonTree::WriteFile(
+        tree.userHome2024 + QStringLiteral("/AppData/Roaming/Microsoft Flight Simulator 2024/usercfg.OPT"),
+        "InstalledPackagesPath \"S:\\packages2024\"\n");
+
+    const QStringList dirs = CandidateCommunityDirsIn({tree.userHome2024});
+
+    QVERIFY(dirs.contains(QFileInfo(tree.secondLibrary).canonicalFilePath() + QStringLiteral("/Packages2024/community")));
+}
+
+void CommbusInstallProbeTest::candidatesOfNoHomeAreEmpty()
+{
+    QVERIFY(CandidateCommunityDirsIn({}).isEmpty());
 }
 
 QTEST_APPLESS_MAIN(CommbusInstallProbeTest)

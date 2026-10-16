@@ -33,6 +33,9 @@ private slots:
     static void advancesWithoutChocksControlWhileTheParkingBrakeIsReleased();
     static void leavesAnInheritedGpuAloneAndAdvances();
     static void dismissesAnInheritedGpuWhenGsxConfirmsItIsBusy();
+    static void dismissesTheGpuThisTurnaroundRequestedWhenBothOptionsAreOff();
+    static void dismissesTheArrivalGpuThisTurnaroundRequestedWhenBothOptionsAreOff();
+    static void commandsAircraftGpuOffForTheGpuThisTurnaroundRequestedWhenBothOptionsAreOff();
 };
 
 void RemoveGroundEquipmentStateTest::skipsWhenGpuManagementDisabled()
@@ -557,6 +560,76 @@ void RemoveGroundEquipmentStateTest::dismissesAnInheritedGpuWhenGsxConfirmsItIsB
     QVERIFY(!state.Evaluate(f.ctx).has_value());
     QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
     QVERIFY(f.ctx.data.gpuDismissRequested);
+}
+
+void RemoveGroundEquipmentStateTest::dismissesTheGpuThisTurnaroundRequestedWhenBothOptionsAreOff()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = true;
+
+    f.settings.callGpu = false;
+    f.settings.callGpuOnArrival = false;
+    f.ctx.data.gpuRequested = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
+    QVERIFY(f.ctx.data.gpuDismissRequested);
+
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
+}
+
+void RemoveGroundEquipmentStateTest::dismissesTheArrivalGpuThisTurnaroundRequestedWhenBothOptionsAreOff()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = true;
+
+    f.settings.callGpu = false;
+    f.settings.callGpuOnArrival = false;
+    f.ctx.data.arrivalGpuRequested = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
+    QVERIFY(f.ctx.data.gpuDismissRequested);
+
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
+}
+
+void RemoveGroundEquipmentStateTest::commandsAircraftGpuOffForTheGpuThisTurnaroundRequestedWhenBothOptionsAreOff()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = true;
+
+    f.settings.callGpu = false;
+    f.settings.callGpuOnArrival = false;
+    f.ctx.data.gpuRequested = true;
+    f.aircraft.supportsGroundPowerControl = true;
+    f.aircraft.groundPowerStatus = GroundPowerStatus::Connected;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 1);
+    QVERIFY(!f.aircraft.groundPowerOn);
+    QVERIFY(f.ctx.data.gpuDismissRequested);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
 }
 
 QTEST_APPLESS_MAIN(RemoveGroundEquipmentStateTest)

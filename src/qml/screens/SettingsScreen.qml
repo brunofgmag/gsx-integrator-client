@@ -12,6 +12,7 @@ ColumnLayout {
     property bool updateModeVisible: true
     property var updateVm: null
     property bool simulatorAddonsVisible: false
+    property bool trayAvailable: true
     property int sectionIndex: 0
     property int paneGutter: 20
 
@@ -121,6 +122,7 @@ ColumnLayout {
 
                 WindowPane {
                     settingsVm: root.settingsVm
+                    trayAvailable: root.trayAvailable
                 }
 
                 AdvancedPane {

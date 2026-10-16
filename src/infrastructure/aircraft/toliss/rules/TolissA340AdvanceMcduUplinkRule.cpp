@@ -11,8 +11,19 @@ namespace
 {
     constexpr auto kRuleName = "toliss-a340-advance-mcdu-uplink";
 
+    constexpr int kAtsuPageSettleTicks = 2;
+
+    struct McduUplinkKey
+    {
+        const char* lvar;
+        int settleTicks;
+    };
+
     constexpr std::array kMcduUplinkKeys =
-        {"AB_MCDU3_MENU", "AB_MCDU3_LSK6L", "AB_MCDU3_LSK1R", "AB_MCDU3_LSK1L"};
+        {McduUplinkKey{.lvar = "AB_MCDU3_MENU", .settleTicks = 0},
+         McduUplinkKey{.lvar = "AB_MCDU3_LSK6L", .settleTicks = kAtsuPageSettleTicks},
+         McduUplinkKey{.lvar = "AB_MCDU3_LSK1R", .settleTicks = 0},
+         McduUplinkKey{.lvar = "AB_MCDU3_LSK1L", .settleTicks = 0}};
 
     constexpr double kKeyPressed = 1.0;
 }
@@ -36,6 +47,7 @@ void TolissA340AdvanceMcduUplinkRule::ResumeWithTheUplinkDone()
 {
     loadingSeen_ = true;
     step_ = static_cast<int>(kMcduUplinkKeys.size());
+    settleTicksLeft_ = 0;
 }
 
 void TolissA340AdvanceMcduUplinkRule::Act(const RuleContext& context, VariableWriter& writer)
@@ -44,6 +56,7 @@ void TolissA340AdvanceMcduUplinkRule::Act(const RuleContext& context, VariableWr
     {
         loadingSeen_ = false;
         step_ = -1;
+        settleTicksLeft_ = 0;
 
         return;
     }
@@ -61,11 +74,21 @@ void TolissA340AdvanceMcduUplinkRule::Act(const RuleContext& context, VariableWr
         return;
     }
 
+    if (settleTicksLeft_ > 0)
+    {
+        --settleTicksLeft_;
+
+        return;
+    }
+
     if (step_ == 0)
     {
         LOG_INFO("Starting SimBrief uplink through the center MCDU");
     }
 
-    writer.SetLVar(kMcduUplinkKeys[step_], kKeyPressed);
+    const McduUplinkKey& key = kMcduUplinkKeys[step_];
+
+    writer.SetLVar(key.lvar, kKeyPressed);
+    settleTicksLeft_ = key.settleTicks;
     ++step_;
 }

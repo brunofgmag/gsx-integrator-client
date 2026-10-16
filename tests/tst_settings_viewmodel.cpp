@@ -699,6 +699,9 @@ void SettingsViewModelTest::loggingActiveAndTheSavedToggleMoveApart()
 
 void SettingsViewModelTest::logLocationIsReportedWithNativeSeparators()
 {
+#ifndef Q_OS_WIN
+    QSKIP("Native separators are backslashes only on Windows");
+#endif
     FakeSettingsRepository repository;
     FakeIntegratorService service;
     SettingsViewModel viewModel(&repository, &service);

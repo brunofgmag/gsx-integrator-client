@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
-#include <cstdlib>
 #include <fstream>
 #include <sstream>
 #include "../aircraft/fenix/FenixA32x.h"
@@ -11,6 +10,7 @@
 #include "../aircraft/pmdg/Pmdg777.h"
 #include "../aircraft/toliss/TolissA340.h"
 #include "../aircraft/tfdi/TfdiMd11.h"
+#include "../simulator/SimulatorUserFolders.h"
 
 namespace
 {
@@ -126,17 +126,13 @@ namespace
 
 std::vector<std::filesystem::path> GsxAircraftProfile::ProfileRootsFor(const std::string& aircraftName)
 {
-    char* appData = nullptr;
-    size_t appDataLength = 0;
-    if (_dupenv_s(&appData, &appDataLength, "APPDATA") != 0 || appData == nullptr)
+    const std::optional<std::filesystem::path> appData = SimulatorRoamingAppData();
+    if (!appData.has_value())
     {
         return {};
     }
 
-    const std::filesystem::path airplanes =
-        std::filesystem::path(appData) / "Virtuali" / "Airplanes";
-
-    std::free(appData);
+    const std::filesystem::path airplanes = *appData / "Virtuali" / "Airplanes";
 
     std::vector<std::filesystem::path> roots;
     for (const auto& [name, folder] : kProfileFolders)
@@ -148,11 +144,6 @@ std::vector<std::filesystem::path> GsxAircraftProfile::ProfileRootsFor(const std
     }
 
     return roots;
-}
-
-bool GsxAircraftProfile::FlagsMissingProfile(const std::string& aircraftName)
-{
-    return aircraftName == TolissA340::kName;
 }
 
 std::vector<std::filesystem::path> GsxAircraftProfile::FindCfgs(const std::vector<std::filesystem::path>& roots)

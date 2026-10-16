@@ -329,4 +329,101 @@ TestCase {
 
         compare(fake.skipCalls, 2)
     }
+
+    function trayShell(options) {
+        const fake = createTemporaryObject(fakeIntegratorComponent, testCase)
+        verify(fake)
+        const shell = createTemporaryObject(shellComponent, null, {
+            integratorVm: fake,
+            trayAvailable: options.trayAvailable,
+            startHidden: options.startHidden ?? false,
+            settingsVm: lenientVm({ activeRenderer: "software", effectiveDark: true,
+                                    closeToTray: options.closeToTray ?? false,
+                                    minimizeToTray: options.minimizeToTray ?? false,
+                                    trayTipShown: true, canSave: false, validationMessage: "",
+                                    saveMessage: "", saveError: false })
+        })
+        verify(shell)
+        return shell
+    }
+
+    function shownTrayShell(options) {
+        const shell = trayShell(options)
+        shell.show()
+        tryVerify(() => shell.visible)
+        return shell
+    }
+
+    function quitPromptShown(shell) {
+        return findText(shell.Overlay.overlay, "Quit GSX Integrator?") !== null
+    }
+
+    function findText(item, text) {
+        if (item.text === text && item.visible)
+            return item
+        const kids = item.children
+        for (let i = 0; i < kids.length; i++) {
+            const hit = findText(kids[i], text)
+            if (hit)
+                return hit
+        }
+        return null
+    }
+
+    function test_closingHidesTheWindowWhenCloseToTrayIsOnAndTheTrayIsAvailable() {
+        const shell = shownTrayShell({ trayAvailable: true, closeToTray: true })
+
+        shell.close()
+
+        tryVerify(() => !shell.visible)
+        verify(!quitPromptShown(shell))
+    }
+
+    function test_closingAsksToQuitWhenCloseToTrayIsOnAndTheTrayIsUnavailable() {
+        const shell = shownTrayShell({ trayAvailable: false, closeToTray: true })
+
+        shell.close()
+
+        tryVerify(() => quitPromptShown(shell))
+        verify(shell.visible)
+    }
+
+    function test_closingAsksToQuitWhenCloseToTrayIsOffAndTheTrayIsAvailable() {
+        const shell = shownTrayShell({ trayAvailable: true, closeToTray: false })
+
+        shell.close()
+
+        tryVerify(() => quitPromptShown(shell))
+        verify(shell.visible)
+    }
+
+    function test_startingWithTheTrayArgumentStaysHiddenWhenTheTrayIsAvailable() {
+        const shell = trayShell({ trayAvailable: true, startHidden: true, closeToTray: true })
+
+        compare(shell.startVisibility, Window.Hidden)
+    }
+
+    function test_startingWithTheTrayArgumentShowsTheWindowWhenTheTrayIsUnavailable() {
+        const shell = trayShell({ trayAvailable: false, startHidden: true, closeToTray: true })
+
+        compare(shell.startVisibility, Window.Windowed)
+    }
+
+    function test_minimizingHidesTheWindowWhenMinimizeToTrayIsOnAndTheTrayIsAvailable() {
+        const shell = shownTrayShell({ trayAvailable: true, minimizeToTray: true })
+
+        shell.showMinimized()
+
+        tryVerify(() => !shell.visible)
+    }
+
+    function test_minimizingKeepsTheWindowWhenMinimizeToTrayIsOnAndTheTrayIsUnavailable() {
+        const shell = shownTrayShell({ trayAvailable: false, minimizeToTray: true })
+
+        shell.showMinimized()
+        wait(300)
+
+        verify(shell.visible)
+        compare(shell.visibility, Window.Minimized)
+    }
 }

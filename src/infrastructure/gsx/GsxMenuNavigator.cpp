@@ -28,6 +28,7 @@ namespace
     constexpr auto kPushbackDirectionText = "pushback direction";
     constexpr auto kConfirmEnginesText = "Confirm good engine";
     constexpr auto kCompletePushbackText = "complete pushback procedure";
+    constexpr auto kInterruptPushbackTitle = "Interrupt pushback";
     constexpr auto kServiceInProgressTitle = "Service in progress";
     constexpr auto kCompleteNowText = "Complete now";
     constexpr auto kRefuelingEntryText = "Refueling:";
@@ -97,6 +98,11 @@ namespace
         const auto it = std::ranges::search(hay, needle, SameIgnoringCase).begin();
 
         return it != hay.end();
+    }
+
+    bool AnyEntryContains(const std::vector<std::string>& entries, const std::string& needle)
+    {
+        return std::ranges::any_of(entries, [&needle](const std::string& entry) { return Contains(entry, needle); });
     }
 
     bool IsArmedVerb(const QString& verb)
@@ -274,7 +280,19 @@ bool GsxMenuNavigator::ConfirmGoodEngines()
 
 bool GsxMenuNavigator::CompletePushback()
 {
-    return PickNowOrArm(kCompletePushbackText, completingPushback_);
+    if (!PickNowOrArm(kCompletePushbackText, completingPushback_))
+    {
+        return false;
+    }
+
+    ArmInterruptFollowUp();
+
+    return true;
+}
+
+void GsxMenuNavigator::ArmInterruptFollowUp()
+{
+    answeringInterruptFollowUp_ = {.active = true, .sinceMs = nowMs_()};
 }
 
 void GsxMenuNavigator::CompleteRefuel()
@@ -310,6 +328,7 @@ void GsxMenuNavigator::Reset()
 {
     reposition_ = Reposition::Idle;
     completingPushback_ = {};
+    answeringInterruptFollowUp_ = {};
     completingRefuel_ = {};
     completingBoarding_ = {};
     serviceOpenedBy_ = nullptr;
@@ -521,6 +540,7 @@ void GsxMenuNavigator::HandleMenu()
 void GsxMenuNavigator::ExpireTimedIntents()
 {
     ExpireIntent(completingPushback_, "complete-pushback");
+    ExpireIntent(answeringInterruptFollowUp_, "interrupt-follow-up");
     ExpireIntent(completingRefuel_, "complete-refuel");
     ExpireIntent(completingBoarding_, "complete-boarding");
     ExpireIntent(confirmingEngines_, "confirm-engines");
@@ -743,12 +763,35 @@ bool GsxMenuNavigator::HandleAutoPicks()
     return false;
 }
 
+bool GsxMenuNavigator::AnswerTheInterruptFollowUp()
+{
+    const auto& menu = state_->menu;
+    if (!answeringInterruptFollowUp_.active
+        || !Contains(menu.title, kInterruptPushbackTitle)
+        || AnyEntryContains(menu.entries, kCompletePushbackText)
+        || !PickByPrefix("No"))
+    {
+        return false;
+    }
+
+    answeringInterruptFollowUp_ = {};
+    logger_->LogInfo("RemoteAPI answering No to the interrupt pushback question the GSX asked after the complete choice");
+
+    return true;
+}
+
 bool GsxMenuNavigator::HandlePendingCompletions()
 {
     if (completingPushback_.active && PickByContains(kCompletePushbackText))
     {
         completingPushback_ = {};
+        ArmInterruptFollowUp();
 
+        return true;
+    }
+
+    if (AnswerTheInterruptFollowUp())
+    {
         return true;
     }
 

@@ -7,13 +7,14 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <windows.h>
-#include <SimConnect.h>
+#include "../../src/infrastructure/simconnect/SimConnectApi.h"
 
 struct FakeSimConnectApi
 {
     static inline bool openSucceeds = true;
     static inline bool subscribeSucceeds = true;
+    static inline bool definitionsSucceed = true;
+    static inline bool dispatchSucceeds = true;
     static inline std::vector<std::pair<DWORD, std::string>> systemEventSubscriptions;
     static inline std::vector<std::string> systemStateRequests;
     static inline int transmittedEvents = 0;
@@ -29,15 +30,22 @@ struct FakeSimConnectApi
         DWORD defineId = 0;
         SIMCONNECT_PERIOD period = SIMCONNECT_PERIOD_NEVER;
         DWORD interval = 0;
+        DWORD sendId = 0;
     };
 
     static inline std::vector<DataRequest> dataRequests;
     static inline std::vector<std::pair<DWORD, std::string>> dataDefinitions;
+    static inline std::vector<std::pair<DWORD, DWORD>> definitionSendIds;
+    static inline std::vector<DWORD> clearedDefinitions;
+    static inline DWORD lastSentPacketId = 0;
+    static inline std::vector<std::string> openedNames;
 
     static void Reset()
     {
         openSucceeds = true;
         subscribeSucceeds = true;
+        definitionsSucceed = true;
+        dispatchSucceeds = true;
         systemEventSubscriptions.clear();
         systemStateRequests.clear();
         transmittedEvents = 0;
@@ -49,6 +57,40 @@ struct FakeSimConnectApi
         writtenSimObjectData.clear();
         dataRequests.clear();
         dataDefinitions.clear();
+        definitionSendIds.clear();
+        clearedDefinitions.clear();
+        openedNames.clear();
+        lastSentPacketId = 0;
+    }
+
+    static DWORD LastDefinitionSendId(const DWORD defineId)
+    {
+        for (auto it = definitionSendIds.rbegin(); it != definitionSendIds.rend(); ++it)
+        {
+            if (it->first == defineId)
+            {
+                return it->second;
+            }
+        }
+
+        return 0;
+    }
+
+    static std::size_t DataRequestsFor(const DWORD defineId)
+    {
+        return static_cast<std::size_t>(std::ranges::count_if(dataRequests, [defineId](const DataRequest& request)
+        {
+            return request.defineId == defineId;
+        }));
+    }
+
+    static void PushException(const DWORD exception, const DWORD sendId, const DWORD index = 0)
+    {
+        SIMCONNECT_RECV_EXCEPTION message{};
+        message.dwException = exception;
+        message.dwSendID = sendId;
+        message.dwIndex = index;
+        Push(message, SIMCONNECT_RECV_ID_EXCEPTION);
     }
 
     static std::size_t DatumsIn(const DWORD defineId)

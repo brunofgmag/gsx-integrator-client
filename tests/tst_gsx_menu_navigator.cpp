@@ -156,6 +156,12 @@ private slots:
     static void completePushbackOpensTheMenuWhenTheInterruptEntriesAreLeftOver();
     static void completePushbackPicksEntryOnInterruptPushbackMenu();
     static void deferredConfirmEnginesPicksEntryOnInterruptPushbackMenu();
+    static void completePushbackAnswersNoToTheInterruptQuestionTheGsxAsksNext();
+    static void completePushbackSentAtOnceAnswersNoToTheInterruptQuestionTheGsxAsksNext();
+    static void anInterruptYesNoMenuWithoutACompletePushbackChoiceIsLeftUnanswered();
+    static void confirmGoodEnginesDoesNotAnswerAnInterruptYesNoMenu();
+    static void theInterruptAnswerIsDroppedAfterTheTtlWithOneExpiryLine();
+    static void aRefusedInterruptAnswerExpiresWithOneExpiryLine();
     static void completeRefuelPicksCompleteNowViaServiceMenu();
     static void completeRefuelIntentExpiresAfterTtl();
     static void completeRefuelMatchesLbsLoadedEntry();
@@ -4035,6 +4041,158 @@ void GsxMenuNavigatorTest::aRefusedConfirmEnginesDoesNotKeepItsIntentAlive()
     rig.nav.OnMenuChanged();
 
     QCOMPARE(rig.client.Count("menu.pick"), 0);
+}
+
+namespace
+{
+    const std::vector<std::string> kInterruptMenuEntries = {
+        "Engines not started, call you back later",
+        "Return to parking",
+        "Stop here and complete pushback procedure",
+        "Abort pushback",
+        "Cameras \xE2\x96\xB6"
+    };
+
+    const std::vector<std::string> kInterruptFollowUpEntries = {"Yes", "No", "Cameras \xE2\x96\xB6"};
+
+    constexpr auto kInterruptTitle = "Interrupt pushback?";
+}
+
+void GsxMenuNavigatorTest::completePushbackAnswersNoToTheInterruptQuestionTheGsxAsksNext()
+{
+    NavigatorRig rig;
+
+    QVERIFY(!rig.nav.CompletePushback());
+
+    ShowMenu(rig.state, kInterruptTitle, kInterruptMenuEntries);
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 1);
+    QCOMPARE(rig.client.Last("menu.pick")->args.value("index").toInt(), 2);
+
+    rig.now += 170;
+    ShowMenu(rig.state, kInterruptTitle, kInterruptFollowUpEntries);
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 2);
+    QCOMPARE(rig.client.Last("menu.pick")->args.value("index").toInt(), 1);
+    QVERIFY(Logged(rig.logger, "answering No"));
+
+    rig.now += 1000;
+    ShowMenu(rig.state, kInterruptTitle, kInterruptFollowUpEntries);
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 2);
+}
+
+void GsxMenuNavigatorTest::completePushbackSentAtOnceAnswersNoToTheInterruptQuestionTheGsxAsksNext()
+{
+    NavigatorRig rig;
+
+    ShowMenu(rig.state, kInterruptTitle, kInterruptMenuEntries);
+
+    QVERIFY(rig.nav.CompletePushback());
+
+    QCOMPARE(rig.client.Count("menu.pick"), 1);
+    QCOMPARE(rig.client.Last("menu.pick")->args.value("index").toInt(), 2);
+
+    rig.now += 170;
+    ShowMenu(rig.state, kInterruptTitle, kInterruptFollowUpEntries);
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 2);
+    QCOMPARE(rig.client.Last("menu.pick")->args.value("index").toInt(), 1);
+
+    rig.now += 1000;
+    ShowMenu(rig.state, kInterruptTitle, kInterruptFollowUpEntries);
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 2);
+}
+
+void GsxMenuNavigatorTest::anInterruptYesNoMenuWithoutACompletePushbackChoiceIsLeftUnanswered()
+{
+    NavigatorRig rig;
+
+    ShowMenu(rig.state, kInterruptTitle, kInterruptFollowUpEntries);
+    rig.nav.OnMenuChanged();
+
+    rig.now += 1000;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 0);
+}
+
+void GsxMenuNavigatorTest::confirmGoodEnginesDoesNotAnswerAnInterruptYesNoMenu()
+{
+    NavigatorRig rig;
+
+    QVERIFY(!rig.nav.ConfirmGoodEngines());
+
+    ShowMenu(rig.state, kInterruptTitle,
+             {"Confirm good engine Start", "Stop here and complete pushback procedure", "Abort pushback"});
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 1);
+    QCOMPARE(rig.client.Last("menu.pick")->args.value("index").toInt(), 0);
+
+    rig.now += 170;
+    ShowMenu(rig.state, kInterruptTitle, kInterruptFollowUpEntries);
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 1);
+}
+
+void GsxMenuNavigatorTest::theInterruptAnswerIsDroppedAfterTheTtlWithOneExpiryLine()
+{
+    NavigatorRig rig;
+
+    QVERIFY(!rig.nav.CompletePushback());
+
+    ShowMenu(rig.state, kInterruptTitle, kInterruptMenuEntries);
+    rig.nav.OnMenuChanged();
+
+    rig.now += 20000;
+    ShowMenu(rig.state, kInterruptTitle, kInterruptFollowUpEntries);
+
+    for (int pass = 0; pass < 3; ++pass)
+    {
+        rig.now += 1000;
+        rig.nav.OnMenuChanged();
+    }
+
+    QCOMPARE(rig.client.Count("menu.pick"), 1);
+    QCOMPARE(MessagesWith(rig.logger, "interrupt-follow-up intent expired"), 1);
+}
+
+void GsxMenuNavigatorTest::aRefusedInterruptAnswerExpiresWithOneExpiryLine()
+{
+    NavigatorRig rig;
+
+    QVERIFY(!rig.nav.CompletePushback());
+
+    ShowMenu(rig.state, kInterruptTitle, kInterruptMenuEntries);
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 1);
+
+    rig.client.refusing = true;
+    ShowMenu(rig.state, kInterruptTitle, kInterruptFollowUpEntries);
+
+    for (int pass = 0; pass < 25; ++pass)
+    {
+        rig.now += 1000;
+        rig.nav.OnMenuChanged();
+    }
+
+    QVERIFY(rig.client.Refused("menu.pick") >= 1);
+    QCOMPARE(MessagesWith(rig.logger, "interrupt-follow-up intent expired"), 1);
+
+    rig.client.refusing = false;
+    rig.now += 1000;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 1);
 }
 
 void GsxMenuNavigatorTest::aRequestNeverSentIsDroppedAfterTheGiveUpWindow_data()

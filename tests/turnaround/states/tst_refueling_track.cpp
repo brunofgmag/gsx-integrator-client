@@ -64,6 +64,7 @@ private slots:
     static void rebaselinesInitialFuelWhenCapturedBeforeSimData();
     static void staysQuietWhenThePlanSimplyDidNotFit();
     static void warnsWhenTheAircraftRefusedFuelThatWasWritten();
+    static void staysQuietWhenTheAircraftFillsItsOwnTanksFromThePlan();
     static void topsUpAGsxRefuelThatEndedShortOnAnAircraftThatCanWriteFuel();
     static void keepsTheWarningWhenTheAircraftCannotWriteFuel();
     static void doesNotTopUpAShortfallWithinTheTolerance();
@@ -688,6 +689,30 @@ void RefuelingTrackTest::warnsWhenTheAircraftRefusedFuelThatWasWritten()
     QVERIFY(RefuelingTrack::Advance(f.ctx));
     QVERIFY(f.ctx.data.fuelDidNotStay);
     QCOMPARE(f.ctx.data.fuelShortfallKg, 942.0);
+}
+
+void RefuelingTrackTest::staysQuietWhenTheAircraftFillsItsOwnTanksFromThePlan()
+{
+    TurnaroundStateFixture f;
+
+    f.aircraft.refuelMethod = RefuelBy::Gsx;
+    f.aircraft.takesItsFuelFromTheFlightPlanItself = true;
+    f.aircraft.fuelCapacityKg = 10360.0;
+    f.aircraft.currentFuelKg = 9418.0;
+    f.ctx.data.plannedFuelKg = 10360.0;
+    f.ctx.data.initialFuelKg = 2000.0;
+    f.ctx.data.loadedFuelKg = 9418.0;
+    f.gsxService.refuelingState = GsxStateStatus::Completed;
+
+    QVERIFY(RefuelingTrack::Advance(f.ctx));
+    QVERIFY(!f.ctx.data.fuelDidNotStay);
+    QCOMPARE(f.ctx.data.fuelShortfallKg, 0.0);
+    QCOMPARE(f.ctx.data.settledFuelKg, 9418.0);
+
+    for (const std::string& message : f.logger.messages)
+    {
+        QVERIFY(message.find("did not stay") == std::string::npos);
+    }
 }
 
 void RefuelingTrackTest::topsUpAGsxRefuelThatEndedShortOnAnAircraftThatCanWriteFuel()

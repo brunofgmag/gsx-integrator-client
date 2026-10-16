@@ -4,6 +4,19 @@ set_target_properties(${APP_NAME} PROPERTIES
         WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
 )
 
+if (UNIX)
+    include(GNUInstallDirs)
+    install(TARGETS ${APP_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+    install(FILES "${CMAKE_SOURCE_DIR}/assets/linux/gsx-integrator-client.desktop"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
+    install(FILES "${CMAKE_SOURCE_DIR}/assets/branding/icon_256.png"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps"
+            RENAME "gsx-integrator-client.png")
+    install(FILES "${CMAKE_SOURCE_DIR}/assets/branding/icon.svg"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps"
+            RENAME "gsx-integrator-client.svg")
+endif ()
+
 if (MSVC)
     set_target_properties(${APP_NAME} PROPERTIES
             INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
@@ -15,15 +28,17 @@ foreach (CONFIG Debug Release RelWithDebInfo MinSizeRel)
             "RUNTIME_OUTPUT_DIRECTORY_${CONFIG_UPPER}" "${CMAKE_BINARY_DIR}/bin")
 endforeach ()
 
-if (EXISTS "${SIMCONNECT_DLL}")
-    add_custom_command(TARGET ${APP_NAME} POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-            "${SIMCONNECT_DLL}"
-            "$<TARGET_FILE_DIR:${APP_NAME}>"
-            COMMENT "Copying SimConnect.dll next to ${APP_NAME}.exe"
-            VERBATIM)
-else ()
-    message(STATUS "SimConnect.dll not found at ${SIMCONNECT_DLL}; copy it manually next to the exe.")
+if (WIN32)
+    if (EXISTS "${SIMCONNECT_DLL}")
+        add_custom_command(TARGET ${APP_NAME} POST_BUILD
+                COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                "${SIMCONNECT_DLL}"
+                "$<TARGET_FILE_DIR:${APP_NAME}>"
+                COMMENT "Copying SimConnect.dll next to ${APP_NAME}.exe"
+                VERBATIM)
+    else ()
+        message(STATUS "SimConnect.dll not found at ${SIMCONNECT_DLL}; copy it manually next to the exe.")
+    endif ()
 endif ()
 
 if (MSVC)

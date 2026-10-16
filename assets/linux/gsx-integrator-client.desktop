@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=GSX Integrator
+Comment=Drives GSX Pro ground services in Microsoft Flight Simulator
+Exec=gsx-integrator-client
+Icon=gsx-integrator-client
+Terminal=false
+Categories=Utility;
+StartupWMClass=gsx-integrator-client

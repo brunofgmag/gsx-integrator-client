@@ -10,6 +10,7 @@
 #include <vector>
 #include <QtCore/QObject>
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 #include <QtCore/QTimer>
 #include "TurnaroundResumption.h"
 #include "model/IntegratorSnapshot.h"
@@ -40,6 +41,7 @@ struct IntegratorRuntimeOptions
 
     std::chrono::milliseconds reconnectInterval = kDefaultReconnectInterval;
     std::function<bool()> actsOnTheSim;
+    std::function<QStringList()> prepareLink;
     TurnaroundCheckpointStore* checkpointStore = nullptr;
 };
 
@@ -102,14 +104,12 @@ private:
         std::vector<std::filesystem::path> roots;
         std::vector<std::filesystem::path> cfgs;
         bool conflict = false;
-        bool flagsMissing = false;
 
         void Reset()
         {
             roots.clear();
             cfgs.clear();
             conflict = false;
-            flagsMissing = false;
         }
     };
 
@@ -209,12 +209,16 @@ private:
     QTimer dispatchTimer_;
     QTimer reconnectTimer_;
     std::function<bool()> actsOnTheSim_;
+    std::function<QStringList()> prepareLink_;
     TurnaroundResumption resumption_;
     QtDomainLogger qtLogger_;
     ProbeObserver probe_;
 
     SimVersion simVersion_ = SimVersion::Unknown;
     bool connectAttemptAnnounced_ = false;
+    bool simAnswered_ = false;
+    bool unansweredAnnounced_ = false;
+    QStringList simulatorsToRestart_;
     bool isSessionActive_ = false;
     bool sessionReady_ = false;
     bool pilotOnFoot_ = false;

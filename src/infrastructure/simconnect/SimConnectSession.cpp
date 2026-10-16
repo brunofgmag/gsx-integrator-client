@@ -17,6 +17,8 @@ bool SimConnectSession::Open(const char* name)
         return false;
     }
 
+    name_ = name;
+
     return true;
 }
 
@@ -268,6 +270,11 @@ bool SimConnectSession::Dispatch()
 
     const HRESULT hr = SimConnect_CallDispatch(hSimConnect_, &DispatchTrampoline, this);
 
+    if (IsConnected() && varManager_ != nullptr)
+    {
+        varManager_->RetryRejected();
+    }
+
     if (quitPending_)
     {
         quitPending_ = false;
@@ -319,7 +326,7 @@ void SimConnectSession::HandleMessage(SIMCONNECT_RECV* pData, const DWORD cbData
         break;
 
     case SIMCONNECT_RECV_ID_EXCEPTION:
-        HandleException(pData);
+        HandleException(pData, cbData);
         break;
 
     case SIMCONNECT_RECV_ID_QUIT:
@@ -332,13 +339,24 @@ void SimConnectSession::HandleMessage(SIMCONNECT_RECV* pData, const DWORD cbData
     }
 }
 
-void SimConnectSession::HandleException(const SIMCONNECT_RECV* pData)
+void SimConnectSession::HandleException(const SIMCONNECT_RECV* pData, const DWORD cbData) const
 {
+    if (cbData < sizeof(SIMCONNECT_RECV_EXCEPTION))
+    {
+        return;
+    }
+
     const auto* exception = static_cast<const SIMCONNECT_RECV_EXCEPTION*>(pData);
-    LOG_WARN("SimConnect exception %u (sendId=%u, index=%u)",
+    LOG_WARN("SimConnect exception %u on '%s' (sendId=%u, index=%u)",
              static_cast<unsigned>(exception->dwException),
+             name_.c_str(),
              static_cast<unsigned>(exception->dwSendID),
              static_cast<unsigned>(exception->dwIndex));
+
+    if (varManager_ != nullptr)
+    {
+        varManager_->HandleException(exception);
+    }
 }
 
 void SimConnectSession::HandleOpen(const SIMCONNECT_RECV* pData, const DWORD cbData) const

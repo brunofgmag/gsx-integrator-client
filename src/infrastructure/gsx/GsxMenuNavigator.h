@@ -158,6 +158,8 @@ private:
     bool MaybeCloseStaleMenu();
     bool HandleAutoPicks();
     bool HandlePendingCompletions();
+    bool AnswerTheInterruptFollowUp();
+    void ArmInterruptFollowUp();
     bool CompleteTheServiceItOpened();
     [[nodiscard]] bool RepositionWalking() const;
     bool HandleRepositionFlow();
@@ -179,6 +181,7 @@ private:
 
     Reposition reposition_ = Reposition::Idle;
     TimedIntent completingPushback_;
+    TimedIntent answeringInterruptFollowUp_;
     TimedIntent completingRefuel_;
     TimedIntent completingBoarding_;
     TimedIntent* serviceOpenedBy_ = nullptr;

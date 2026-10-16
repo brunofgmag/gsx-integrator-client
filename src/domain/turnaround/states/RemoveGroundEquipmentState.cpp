@@ -13,7 +13,10 @@ namespace
 
     bool ManagesGpu(const TurnaroundContext& ctx)
     {
-        return ctx.settings != nullptr && (ctx.settings->callGpu || ctx.settings->callGpuOnArrival);
+        const bool manageGpu =
+            ctx.settings != nullptr && (ctx.settings->callGpu || ctx.settings->callGpuOnArrival);
+
+        return manageGpu || ctx.data.gpuRequested || ctx.data.arrivalGpuRequested;
     }
 
     bool ShouldRemoveChocks(const TurnaroundContext& ctx)

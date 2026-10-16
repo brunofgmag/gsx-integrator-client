@@ -20,6 +20,7 @@ private:
     const TolissA340* aircraft_;
     bool loadingSeen_ = false;
     int step_ = -1;
+    int settleTicksLeft_ = 0;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_TOLISSA340ADVANCEMCDUUPLINKRULE_H

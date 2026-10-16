@@ -14,9 +14,11 @@ qt_add_translations(${APP_NAME}
         RESOURCE_PREFIX "/i18n"
 )
 
-target_include_directories(${APP_NAME} SYSTEM PRIVATE
-        "${SIMCONNECT_INCLUDE_DIR}"
-)
+if (WIN32)
+    target_include_directories(${APP_NAME} SYSTEM PRIVATE
+            "${SIMCONNECT_INCLUDE_DIR}"
+    )
+endif ()
 
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
         "${CMAKE_SOURCE_DIR}/VERSION.txt")
@@ -24,11 +26,13 @@ file(READ "${CMAKE_SOURCE_DIR}/VERSION.txt" GSXI_VERSION)
 string(STRIP "${GSXI_VERSION}" GSXI_VERSION)
 
 target_compile_definitions(${APP_NAME} PRIVATE
-        WIN32_LEAN_AND_MEAN
-        NOMINMAX
         GSXI_VERSION="${GSXI_VERSION}"
         $<$<CONFIG:Release>:NDEBUG>
 )
+
+if (WIN32)
+    target_compile_definitions(${APP_NAME} PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+endif ()
 
 if (MSVC)
     target_compile_options(${APP_NAME} PRIVATE /W4 /permissive- /Zc:preprocessor /external:W0 /wd4702)
@@ -51,9 +55,14 @@ target_link_libraries(${APP_NAME} PRIVATE
         Qt6::Network
         Qt6::WebSockets
         Qt6::Xml
-        "${SIMCONNECT_IMPORT_LIB}"
-        dwmapi
 )
+
+if (WIN32)
+    target_link_libraries(${APP_NAME} PRIVATE
+            "${SIMCONNECT_IMPORT_LIB}"
+            dwmapi
+    )
+endif ()
 
 if (MINGW)
     target_compile_definitions(${APP_NAME} PRIVATE MINGW_HAS_SECURE_API)

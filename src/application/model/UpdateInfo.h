@@ -10,6 +10,8 @@ struct UpdateInfo
     QString zipUrl;
     QString shaUrl;
     QString zipName;
+    QString appImageUrl;
+    QString appImageShaUrl;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_UPDATEINFO_H

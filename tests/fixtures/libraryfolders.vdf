@@ -1,0 +1,30 @@
+"libraryfolders"
+{
+	"0"
+	{
+		"path"		"/home/bruno/.local/share/Steam"
+		"label"		""
+		"contentid"		"4378564654297839021"
+		"totalsize"		"0"
+		"update_clean_bytes_tally"		"3948572001"
+		"time_last_update_corruption"		"0"
+		"apps"
+		{
+			"228980"		"412987331"
+			"1250410"		"87654321098"
+		}
+	}
+	"1"
+	{
+		"path"		"/home/bruno/Jogos/SteamLibrary"
+		"label"		""
+		"contentid"		"8160270331127415582"
+		"totalsize"		"1000203091968"
+		"update_clean_bytes_tally"		"88213344"
+		"time_last_update_corruption"		"0"
+		"apps"
+		{
+			"2537590"		"131941203990"
+		}
+	}
+}

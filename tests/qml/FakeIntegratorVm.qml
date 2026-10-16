@@ -9,6 +9,7 @@ QtObject {
     property bool longPhase: root.phase % 2 !== 0
 
     readonly property bool connected: true
+    readonly property string simConnectSetupText: ""
     readonly property bool debugToolsAvailable: true
     readonly property bool canStartLoading: false
     readonly property bool canStartFlow: true

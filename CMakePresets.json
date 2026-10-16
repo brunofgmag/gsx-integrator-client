@@ -70,6 +70,23 @@
             }
         },
         {
+            "name": "linux-release",
+            "displayName": "Qt Linux x64 - Release",
+            "description": "Build Release nativo de Linux com Ninja, GCC ou Clang e Qt gcc_64.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "BUILD_TESTING": "ON",
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_PREFIX_PATH": "$env{QT_ROOT_DIR}"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
             "name": "clangd-db",
             "displayName": "Compile DB (Ninja) p/ clangd",
             "description": "Gera compile_commands.json com cl.exe para o include analyzer do clangd/CLion. Configure num x64 Native Tools Command Prompt.",
@@ -121,6 +138,11 @@
             "displayName": "Build Qt MSVC RelWithDebInfo (flightsim.to)",
             "configurePreset": "relwithdebinfo-flightsim-to",
             "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Build Qt Linux Release",
+            "configurePreset": "linux-release"
         }
     ],
     "testPresets": [
@@ -138,6 +160,17 @@
             "displayName": "Test Qt MSVC Release",
             "configurePreset": "release",
             "configuration": "Release",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "linux-release",
+            "displayName": "Test Qt Linux Release",
+            "configurePreset": "linux-release",
+            "environment": {
+                "QT_QPA_PLATFORM": "offscreen"
+            },
             "output": {
                 "outputOnFailure": true
             }

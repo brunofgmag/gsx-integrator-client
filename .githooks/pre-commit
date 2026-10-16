@@ -13,17 +13,39 @@ fi
 
 echo "[pre-commit] sources changed -> building and testing locally (Release)..."
 
-if command -v pwsh >/dev/null 2>&1; then
-  PS=pwsh
-else
-  PS=powershell
-fi
-
-"$PS" -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 -Config Release -RunTests
-if [ $? -ne 0 ]; then
+fail() {
   echo "[pre-commit] build or tests failed - aborting commit." >&2
   echo "[pre-commit] fix the failure before committing." >&2
   exit 1
+}
+
+if [ "$(uname -s)" = "Linux" ]; then
+  if [ -z "$QT_ROOT_DIR" ]; then
+    for kit in $(ls -d "$HOME"/Qt/6.*/gcc_64 /opt/Qt/6.*/gcc_64 2>/dev/null | sort -rV); do
+      QT_ROOT_DIR=$kit
+      break
+    done
+    export QT_ROOT_DIR
+  fi
+  if [ -z "$QT_ROOT_DIR" ]; then
+    echo "[pre-commit] QT_ROOT_DIR must point to a Qt 6.8+ gcc_64 kit." >&2
+    exit 1
+  fi
+
+  cmake --preset linux-release || fail
+  cmake --build --preset linux-release --parallel || fail
+  ctest --preset linux-release || fail
+else
+  if command -v pwsh >/dev/null 2>&1; then
+    PS=pwsh
+  else
+    PS=powershell
+  fi
+
+  "$PS" -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 -Config Release -RunTests
+  if [ $? -ne 0 ]; then
+    fail
+  fi
 fi
 
 echo "[pre-commit] local build and tests OK (artifacts not staged)."

@@ -1,11 +1,13 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstring>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include <QtCore/QByteArray>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
 #include <QtCore/QJsonArray>
@@ -44,6 +46,10 @@ namespace
     constexpr auto kMd11AtcModel = "MD11";
     constexpr auto kMd11ProfileId = "tfdi-md11";
     constexpr auto kRj85Title = "Just Flight RJ85";
+    constexpr auto kA340Title = "Aerosoft A346 Pro";
+    constexpr auto kA340AtcModel = "A346";
+    constexpr auto kA340ProfileId = "toliss-a340";
+    constexpr auto kA340ProfileFolder = "airbus-a346-pro";
     constexpr auto kUnsupportedTitle = "Cessna Skyhawk G1000 Asobo";
     constexpr auto kUnsupportedAtcModel = "C172";
     constexpr auto kRj85AtcModel = "RJ85";
@@ -59,8 +65,12 @@ namespace
     constexpr int kLoaderNoticeTickBudget = 120;
     constexpr int kReconnectWaitMs = 1000;
     constexpr std::chrono::milliseconds kFastReconnectInterval{50};
+    constexpr std::chrono::milliseconds kObservableReconnectInterval{300};
     constexpr int kPersonalPilotId = 4815162;
     constexpr auto kOpeningSimConnect = "Opening SimConnect...";
+    constexpr auto kNotAnswered = "has not answered yet";
+    constexpr auto kLostConnection = "Lost connection to the simulator.";
+    constexpr auto kConnectedLine = "GSX Integrator connected to the simulator.";
     constexpr auto kMd11SlowRuleObserved = "Rule tfdi-md11-commit-efb-targets would pass";
     constexpr auto kTakingOverFuelAndPayload = "Taking over fuel and payload insertion";
     constexpr auto kKeyLine = "GSX reports ";
@@ -100,7 +110,7 @@ namespace
     void PushSimOpen(const char* appName)
     {
         SIMCONNECT_RECV_OPEN open{};
-        strcpy_s(open.szApplicationName, appName);
+        std::memcpy(open.szApplicationName, appName, std::strlen(appName) + 1);
         FakeSimConnectApi::Push(open, SIMCONNECT_RECV_ID_OPEN);
     }
 
@@ -147,6 +157,40 @@ namespace
     bool DispatchPending()
     {
         return QTest::qWaitFor([] { return FakeSimConnectApi::pendingMessages.empty(); }, 2000);
+    }
+
+    bool WaitForAttempts(const int& attempts, const int target)
+    {
+        return QTest::qWaitFor([&attempts, target] { return attempts >= target; }, 5000);
+    }
+
+    class ScopedAppData
+    {
+    public:
+        explicit ScopedAppData(const QString& path)
+            : previous_(qgetenv("APPDATA"))
+        {
+            qputenv("APPDATA", path.toUtf8());
+        }
+
+        ScopedAppData(const ScopedAppData&) = delete;
+        ScopedAppData& operator=(const ScopedAppData&) = delete;
+
+        ~ScopedAppData()
+        {
+            qputenv("APPDATA", previous_);
+        }
+
+    private:
+        QByteArray previous_;
+    };
+
+    bool WriteGsxCfg(const QString& appData, const QByteArray& content)
+    {
+        const QDir folder(QDir(appData).filePath(QStringLiteral("Virtuali/Airplanes/%1/common/config").arg(kA340ProfileFolder)));
+        QFile cfg(folder.filePath(QStringLiteral("gsx.cfg")));
+
+        return folder.mkpath(QStringLiteral(".")) && cfg.open(QIODevice::WriteOnly) && cfg.write(content) == content.size();
     }
 
     bool WasWritten(const std::string& datumName)
@@ -672,12 +716,20 @@ private slots:
     static void observersAreDedupedAndNotified();
     static void automationToggleEmitsOncePerChange();
     static void runtimeGettersOnEmptyRuntime();
+    static void anA340WithNoGsxProfileOnDiskRaisesNoProfileConflict();
+    static void anA340ProfileThatKeepsRefuelingOnRaisesAFixableConflict();
     static void setupConnectsThroughFakeSimConnect();
     static void setupStartsTheRemoteApiClientWithoutOpeningASocket();
     static void connectedCommandsFollowGuardOrder();
     static void subscribeFailureDisconnects();
     static void subscribeFailureKeepsRetrying();
     static void simulatorQuitRearmsTheReconnect();
+    static void aDispatchFailureBeforeTheSimulatorAnswersIsNotASimulatorQuit();
+    static void aQuitBeforeTheSimulatorAnswersIsNotASimulatorQuit();
+    static void aDispatchFailureAfterTheSimulatorAnsweredIsASimulatorQuit();
+    static void attemptsThatEndBeforeTheSimulatorAnswersLogOncePerPeriod();
+    static void theAnsweredFlagBelongsToTheConnection();
+    static void aReconnectReopensTheCommBusBridge();
     static void aTouchWithoutTheFlowRunningIsRefused();
     static void aTouchStampedWithAnotherPhaseIsRefusedAndNothingMoves();
     static void aTouchStampedWithAPhaseThatTakesNoneIsRefused();
@@ -697,6 +749,7 @@ private slots:
     static void theSnapshotCarriesTheFuelOnBoardTheAircraftReportsNow();
     static void theFuelWaitsUntilTheRemoteApiAnnouncesItsConnection();
     static void openingSimConnectIsAnnouncedOncePerDisconnectedPeriod();
+    static void theLinkIsPreparedBeforeEveryAttemptAndItsRestartAdviceReachesTheSnapshot();
     static void theKeyReachesTheLogOncePerChangeAndNotPerMessage();
     static void theKeyPathsAreNoLongerWarnedAsUnknown();
     static void aBlipOnTheSameCouatlLogsNoNewKey();
@@ -1032,6 +1085,45 @@ void RuntimeIntegratorServiceTest::runtimeGettersOnEmptyRuntime()
     QVERIFY(!runtime.ReloadSimbrief());
 }
 
+void RuntimeIntegratorServiceTest::anA340WithNoGsxProfileOnDiskRaisesNoProfileConflict()
+{
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    const ScopedAppData scopedAppData(appData.path());
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kA340Title, kA340AtcModel, kA340ProfileId));
+
+    const IntegratorSnapshot snapshot = runtime.Snapshot();
+
+    QVERIFY(!runtime.HasGsxProfileConflict());
+    QVERIFY(!snapshot.gsxProfileConflict);
+    QVERIFY(!snapshot.gsxProfileFixable);
+}
+
+void RuntimeIntegratorServiceTest::anA340ProfileThatKeepsRefuelingOnRaisesAFixableConflict()
+{
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    QVERIFY(WriteGsxCfg(appData.path(), "[aircraft]\nrefueling = 1\n"));
+    const ScopedAppData scopedAppData(appData.path());
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kA340Title, kA340AtcModel, kA340ProfileId));
+
+    const IntegratorSnapshot snapshot = runtime.Snapshot();
+
+    QVERIFY(runtime.HasGsxProfileConflict());
+    QVERIFY(snapshot.gsxProfileConflict);
+    QVERIFY(snapshot.gsxProfileFixable);
+}
+
 void RuntimeIntegratorServiceTest::setupConnectsThroughFakeSimConnect()
 {
     IntegratorRuntime runtime;
@@ -1117,12 +1209,164 @@ void RuntimeIntegratorServiceTest::simulatorQuitRearmsTheReconnect()
 
     QSignalSpy quits(&runtime, &IntegratorRuntime::SimulatorQuit);
 
+    PushSimOpen("KittyHawk");
     constexpr SIMCONNECT_RECV quit{};
     FakeSimConnectApi::Push(quit, SIMCONNECT_RECV_ID_QUIT);
 
     QVERIFY(quits.wait(2000));
     QVERIFY(!runtime.IsConnected());
     QVERIFY(runtime.IsReconnectPending());
+}
+
+void RuntimeIntegratorServiceTest::aDispatchFailureBeforeTheSimulatorAnswersIsNotASimulatorQuit()
+{
+    IntegratorRuntimeOptions options;
+    options.reconnectInterval = kObservableReconnectInterval;
+    IntegratorRuntime runtime(options);
+    runtime.Setup();
+
+    QVERIFY(runtime.IsConnected());
+
+    const QSignalSpy quits(&runtime, &IntegratorRuntime::SimulatorQuit);
+    FakeSimConnectApi::dispatchSucceeds = false;
+
+    QVERIFY(QTest::qWaitFor([&runtime] { return !runtime.IsConnected(); }, 2000));
+    QVERIFY(runtime.IsReconnectPending());
+
+    FakeSimConnectApi::dispatchSucceeds = true;
+
+    QVERIFY(QTest::qWaitFor([&runtime] { return runtime.IsConnected(); }, 2000));
+    QCOMPARE(quits.count(), 0);
+}
+
+void RuntimeIntegratorServiceTest::aReconnectReopensTheCommBusBridge()
+{
+    IntegratorRuntimeOptions options;
+    options.reconnectInterval = kObservableReconnectInterval;
+    IntegratorRuntime runtime(options);
+    runtime.Setup();
+
+    QVERIFY(runtime.IsConnected());
+    const auto bridgeOpens = []
+    {
+        return std::ranges::count(FakeSimConnectApi::openedNames, std::string("GsxIntegratorCommBusBridge"));
+    };
+    QCOMPARE(bridgeOpens(), 1);
+
+    FakeSimConnectApi::dispatchSucceeds = false;
+
+    QVERIFY(QTest::qWaitFor([&runtime] { return !runtime.IsConnected(); }, 2000));
+
+    FakeSimConnectApi::dispatchSucceeds = true;
+
+    QVERIFY(QTest::qWaitFor([&runtime] { return runtime.IsConnected(); }, 2000));
+    QCOMPARE(bridgeOpens(), 2);
+}
+
+void RuntimeIntegratorServiceTest::aQuitBeforeTheSimulatorAnswersIsNotASimulatorQuit()
+{
+    IntegratorRuntimeOptions options;
+    options.reconnectInterval = kObservableReconnectInterval;
+    IntegratorRuntime runtime(options);
+    runtime.Setup();
+
+    QVERIFY(runtime.IsConnected());
+
+    const QSignalSpy quits(&runtime, &IntegratorRuntime::SimulatorQuit);
+    constexpr SIMCONNECT_RECV quit{};
+    FakeSimConnectApi::Push(quit, SIMCONNECT_RECV_ID_QUIT);
+
+    QVERIFY(QTest::qWaitFor([&runtime] { return !runtime.IsConnected(); }, 2000));
+    QVERIFY(runtime.IsReconnectPending());
+    QVERIFY(QTest::qWaitFor([&runtime] { return runtime.IsConnected(); }, 2000));
+    QCOMPARE(quits.count(), 0);
+}
+
+void RuntimeIntegratorServiceTest::aDispatchFailureAfterTheSimulatorAnsweredIsASimulatorQuit()
+{
+    IntegratorRuntimeOptions options;
+    options.reconnectInterval = kObservableReconnectInterval;
+    IntegratorRuntime runtime(options);
+    runtime.Setup();
+
+    QVERIFY(runtime.IsConnected());
+
+    const QSignalSpy quits(&runtime, &IntegratorRuntime::SimulatorQuit);
+    PushSimOpen("KittyHawk");
+    FakeSimConnectApi::dispatchSucceeds = false;
+
+    QVERIFY(QTest::qWaitFor([&quits] { return quits.count() > 0; }, 2000));
+
+    FakeSimConnectApi::dispatchSucceeds = true;
+
+    QVERIFY(QTest::qWaitFor([&runtime] { return runtime.IsConnected(); }, 2000));
+    QTest::qWait(static_cast<int>(2 * kObservableReconnectInterval.count()));
+    QCOMPARE(quits.count(), 1);
+    QVERIFY(runtime.IsConnected());
+}
+
+void RuntimeIntegratorServiceTest::attemptsThatEndBeforeTheSimulatorAnswersLogOncePerPeriod()
+{
+    const LogCapture log;
+    int attempts = 0;
+    IntegratorRuntimeOptions options;
+    options.reconnectInterval = kFastReconnectInterval;
+    options.prepareLink = [&attempts]
+    {
+        ++attempts;
+
+        return QStringList{};
+    };
+    IntegratorRuntime runtime(options);
+    FakeSimConnectApi::dispatchSucceeds = false;
+    runtime.Setup();
+
+    const QSignalSpy quits(&runtime, &IntegratorRuntime::SimulatorQuit);
+
+    QVERIFY(WaitForAttempts(attempts, 4));
+    QCOMPARE(quits.count(), 0);
+    QCOMPARE(LogCapture::Count(QLatin1String(kNotAnswered)), 1);
+    QCOMPARE(LogCapture::Count(QLatin1String(kOpeningSimConnect)), 1);
+    QCOMPARE(LogCapture::Count(QLatin1String(kLostConnection)), 0);
+    QCOMPARE(LogCapture::Count(QLatin1String(kConnectedLine)), 0);
+}
+
+void RuntimeIntegratorServiceTest::theAnsweredFlagBelongsToTheConnection()
+{
+    int attempts = 0;
+    IntegratorRuntimeOptions options;
+    options.reconnectInterval = kFastReconnectInterval;
+    options.prepareLink = [&attempts]
+    {
+        ++attempts;
+
+        return QStringList{};
+    };
+    IntegratorRuntime runtime(options);
+    FakeSimConnectApi::dispatchSucceeds = false;
+    runtime.Setup();
+
+    const QSignalSpy quits(&runtime, &IntegratorRuntime::SimulatorQuit);
+
+    QVERIFY(WaitForAttempts(attempts, 3));
+    QCOMPARE(quits.count(), 0);
+
+    FakeSimConnectApi::dispatchSucceeds = true;
+
+    QVERIFY(QTest::qWaitFor([&runtime] { return runtime.IsConnected(); }, 2000));
+
+    PushSimOpen("KittyHawk");
+    constexpr SIMCONNECT_RECV quit{};
+    FakeSimConnectApi::Push(quit, SIMCONNECT_RECV_ID_QUIT);
+
+    QVERIFY(QTest::qWaitFor([&quits] { return quits.count() > 0; }, 2000));
+    QCOMPARE(quits.count(), 1);
+
+    FakeSimConnectApi::dispatchSucceeds = false;
+    const int attemptsAfterTheQuit = attempts;
+
+    QVERIFY(WaitForAttempts(attempts, attemptsAfterTheQuit + 3));
+    QCOMPARE(quits.count(), 1);
 }
 
 void RuntimeIntegratorServiceTest::aTouchWithoutTheFlowRunningIsRefused()
@@ -1608,6 +1852,7 @@ void RuntimeIntegratorServiceTest::openingSimConnectIsAnnouncedOncePerDisconnect
 
     const QSignalSpy quits(&runtime, &IntegratorRuntime::SimulatorQuit);
     FakeSimConnectApi::openSucceeds = false;
+    PushSimOpen("KittyHawk");
     constexpr SIMCONNECT_RECV quit{};
     FakeSimConnectApi::Push(quit, SIMCONNECT_RECV_ID_QUIT);
 
@@ -1622,6 +1867,34 @@ void RuntimeIntegratorServiceTest::openingSimConnectIsAnnouncedOncePerDisconnect
     QVERIFY(retries.wait(kReconnectWaitMs));
     QVERIFY(!runtime.IsConnected());
     QCOMPARE(LogCapture::Count(QLatin1String(kOpeningSimConnect)), 2);
+}
+
+void RuntimeIntegratorServiceTest::theLinkIsPreparedBeforeEveryAttemptAndItsRestartAdviceReachesTheSnapshot()
+{
+    FakeSimConnectApi::openSucceeds = false;
+    int preparations = 0;
+    IntegratorRuntimeOptions options;
+    options.reconnectInterval = kFastReconnectInterval;
+    options.prepareLink = [&preparations]
+    {
+        ++preparations;
+
+        return QStringList{QStringLiteral("MSFS 2024 (Steam)")};
+    };
+    IntegratorRuntime runtime(options);
+    QSignalSpy updates(&runtime, &IntegratorRuntime::Updated);
+    runtime.Setup();
+
+    QCOMPARE(preparations, 1);
+    QCOMPARE(runtime.Snapshot().simulatorsToRestart, std::string("MSFS 2024 (Steam)"));
+
+    QVERIFY(updates.wait(kReconnectWaitMs));
+    QCOMPARE(preparations, 2);
+    QVERIFY(!runtime.IsConnected());
+
+    FakeSimConnectApi::openSucceeds = true;
+    QVERIFY(QTest::qWaitFor([&runtime] { return runtime.IsConnected(); }, kReconnectWaitMs * 2));
+    QVERIFY(runtime.Snapshot().simulatorsToRestart.empty());
 }
 
 void RuntimeIntegratorServiceTest::theKeyReachesTheLogOncePerChangeAndNotPerMessage()
@@ -3177,6 +3450,7 @@ void RuntimeIntegratorServiceTest::aSimulatorQuitWithoutASessionLeavesTheAutomat
     QVERIFY(!runtime.IsSessionActive());
 
     const QSignalSpy quits(&runtime, &IntegratorRuntime::SimulatorQuit);
+    PushSimOpen("KittyHawk");
     constexpr SIMCONNECT_RECV quit{};
     FakeSimConnectApi::Push(quit, SIMCONNECT_RECV_ID_QUIT);
 

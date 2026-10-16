@@ -6,6 +6,8 @@
 struct LaunchWithSimulatorResult
 {
     bool noSimulator = false;
+    bool unavailable = false;
+    bool serviceFailed = false;
     QStringList failedTargets;
 };
 
