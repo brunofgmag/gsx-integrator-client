@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -29,6 +30,46 @@ namespace
     constexpr DWORD kFirstDefineId = 1;
     constexpr long long kFirstRetryMs = 1000;
     constexpr DWORD kUnrecognizedId = SIMCONNECT_EXCEPTION_UNRECOGNIZED_ID;
+
+    class LogCapture
+    {
+    public:
+        LogCapture()
+            : previous_(qInstallMessageHandler(Collect))
+        {
+            Lines().clear();
+        }
+
+        ~LogCapture()
+        {
+            qInstallMessageHandler(previous_);
+        }
+
+        LogCapture(const LogCapture&) = delete;
+        LogCapture& operator=(const LogCapture&) = delete;
+        LogCapture(LogCapture&&) = delete;
+        LogCapture& operator=(LogCapture&&) = delete;
+
+        [[nodiscard]] static bool Contains(const QString& fragment)
+        {
+            return std::ranges::any_of(Lines(), [&fragment](const QString& line) { return line.contains(fragment); });
+        }
+
+    private:
+        static QStringList& Lines()
+        {
+            static QStringList lines;
+
+            return lines;
+        }
+
+        static void Collect(QtMsgType, const QMessageLogContext&, const QString& message)
+        {
+            Lines().append(message);
+        }
+
+        QtMessageHandler previous_;
+    };
 
     struct VariableRig
     {
@@ -93,6 +134,8 @@ private slots:
     static void anExceptionForARequestedVariableMakesTheNextDispatchesAskAgain();
     static void anExceptionForAnotherCallLeavesTheVariablesAlone();
     static void aTruncatedExceptionIsIgnored();
+    static void anExceptionIsLoggedWithTheNameTheSessionWasOpenedAs();
+    static void aReopenedSessionLogsItsNewName();
     static void anExceptionWithoutAGatewayIsHarmless();
 
 private:
@@ -485,6 +528,33 @@ void SimConnectSessionTest::anExceptionWithoutAGatewayIsHarmless()
     QVERIFY(session.Dispatch());
 
     QCOMPARE(ticks, 1);
+}
+
+void SimConnectSessionTest::anExceptionIsLoggedWithTheNameTheSessionWasOpenedAs()
+{
+    SimConnectSession session;
+    QVERIFY(session.Open("A"));
+
+    const LogCapture capture;
+    FakeSimConnectApi::PushException(kUnrecognizedId, 5);
+    QVERIFY(session.Dispatch());
+
+    QVERIFY(LogCapture::Contains(QStringLiteral("SimConnect exception %1 on 'A' (sendId=5")
+                                     .arg(kUnrecognizedId)));
+}
+
+void SimConnectSessionTest::aReopenedSessionLogsItsNewName()
+{
+    SimConnectSession session;
+    QVERIFY(session.Open("A"));
+    QVERIFY(session.Open("B"));
+
+    const LogCapture capture;
+    FakeSimConnectApi::PushException(kUnrecognizedId, 5);
+    QVERIFY(session.Dispatch());
+
+    QVERIFY(LogCapture::Contains(QStringLiteral("on 'B'")));
+    QVERIFY(!LogCapture::Contains(QStringLiteral("on 'A'")));
 }
 
 QTEST_GUILESS_MAIN(SimConnectSessionTest)

@@ -90,6 +90,7 @@ private:
     bool SubscribeSystemEvent(Fn& target, Fn handler, SIMCONNECT_CLIENT_EVENT_ID eventId, const char* name);
 
     HANDLE hSimConnect_ = nullptr;
+    std::string name_;
     SimConnectVariableGateway* varManager_ = nullptr;
     bool quitPending_ = false;
     OpenFn onOpen_ = nullptr;

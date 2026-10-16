@@ -17,6 +17,8 @@ bool SimConnectSession::Open(const char* name)
         return false;
     }
 
+    name_ = name;
+
     return true;
 }
 
@@ -345,8 +347,9 @@ void SimConnectSession::HandleException(const SIMCONNECT_RECV* pData, const DWOR
     }
 
     const auto* exception = static_cast<const SIMCONNECT_RECV_EXCEPTION*>(pData);
-    LOG_WARN("SimConnect exception %u (sendId=%u, index=%u)",
+    LOG_WARN("SimConnect exception %u on '%s' (sendId=%u, index=%u)",
              static_cast<unsigned>(exception->dwException),
+             name_.c_str(),
              static_cast<unsigned>(exception->dwSendID),
              static_cast<unsigned>(exception->dwIndex));
 
