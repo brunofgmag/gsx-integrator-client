@@ -439,6 +439,8 @@ private slots:
     static void everyOutgoingCallProducesItsExactPacket();
     static void aTransmittedEventMatchesALiteralPacket();
     static void sendIdsCountUpFromTheOpenPacket();
+    static void theLastSentPacketIdIsTheSendIdOnTheWireOfTheLastCall();
+    static void theLastSentPacketIdRejectsBadArguments();
     static void aBacklogLargerThanTheSocketBuffersArrivesWholeAndInOrder();
     static void aBacklogBeyondTheCapFailsTheCall();
 
@@ -672,6 +674,47 @@ void SimConnectTcpTest::sendIdsCountUpFromTheOpenPacket()
 
         QCOMPARE(Word(packet, 12), expectedId);
     }
+}
+
+void SimConnectTcpTest::theLastSentPacketIdIsTheSendIdOnTheWireOfTheLastCall()
+{
+    Rig rig;
+    QVERIFY(rig.Connect());
+
+    DWORD lastSent = kUnused;
+    QVERIFY(SUCCEEDED(SimConnect_GetLastSentPacketID(rig.handle, &lastSent)));
+    QCOMPARE(lastSent, DWORD{0});
+
+    QVERIFY(SUCCEEDED(SimConnect_AddToDataDefinition(rig.handle, 1, "L:SOME_VAR", "Number",
+                                                     SIMCONNECT_DATATYPE_FLOAT64)));
+    QVERIFY(SUCCEEDED(SimConnect_GetLastSentPacketID(rig.handle, &lastSent)));
+    const DWORD afterTheDefinition = lastSent;
+
+    QVERIFY(SUCCEEDED(SimConnect_RequestDataOnSimObject(rig.handle, 1, 1, SIMCONNECT_OBJECT_ID_USER,
+                                                        SIMCONNECT_PERIOD_SECOND, 0, 0, 0, 0)));
+    QVERIFY(SUCCEEDED(SimConnect_GetLastSentPacketID(rig.handle, &lastSent)));
+    const DWORD afterTheRequest = lastSent;
+
+    QCOMPARE(Word(rig.simulator.ReadPacket(), 12), afterTheDefinition);
+    QCOMPARE(Word(rig.simulator.ReadPacket(), 12), afterTheRequest);
+    QCOMPARE(afterTheRequest, afterTheDefinition + 1);
+}
+
+void SimConnectTcpTest::theLastSentPacketIdRejectsBadArguments()
+{
+    Rig rig;
+    QVERIFY(rig.Connect());
+
+    DWORD lastSent = 0;
+
+    QCOMPARE(SimConnect_GetLastSentPacketID(rig.handle, nullptr), E_INVALIDARG);
+    QCOMPARE(SimConnect_GetLastSentPacketID(nullptr, &lastSent), E_HANDLE);
+
+    HANDLE stale = rig.handle;
+    QVERIFY(SUCCEEDED(SimConnect_Close(stale)));
+    rig.handle = nullptr;
+
+    QCOMPARE(SimConnect_GetLastSentPacketID(stale, &lastSent), E_HANDLE);
 }
 
 void SimConnectTcpTest::aBacklogLargerThanTheSocketBuffersArrivesWholeAndInOrder()

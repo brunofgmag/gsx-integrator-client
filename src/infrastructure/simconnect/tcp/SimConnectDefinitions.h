@@ -185,6 +185,8 @@ SIMCONNECTAPI SimConnect_Close(HANDLE hSimConnect);
 
 SIMCONNECTAPI SimConnect_CallDispatch(HANDLE hSimConnect, DispatchProc pfcnDispatch, void* pContext);
 
+SIMCONNECTAPI SimConnect_GetLastSentPacketID(HANDLE hSimConnect, DWORD* pdwError);
+
 SIMCONNECTAPI SimConnect_MapClientEventToSimEvent(HANDLE hSimConnect, SIMCONNECT_CLIENT_EVENT_ID EventID,
                                                   const char* EventName = "");
 

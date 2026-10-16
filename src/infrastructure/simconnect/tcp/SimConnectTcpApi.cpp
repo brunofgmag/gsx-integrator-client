@@ -223,6 +223,24 @@ SIMCONNECTAPI SimConnect_CallDispatch(HANDLE hSimConnect, const DispatchProc pfc
     return S_OK;
 }
 
+SIMCONNECTAPI SimConnect_GetLastSentPacketID(HANDLE hSimConnect, DWORD* pdwError)
+{
+    if (pdwError == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    const Connection* connection = Find(hSimConnect);
+    if (connection == nullptr)
+    {
+        return E_HANDLE;
+    }
+
+    *pdwError = connection->nextSendId - 1;
+
+    return S_OK;
+}
+
 SIMCONNECTAPI SimConnect_MapClientEventToSimEvent(HANDLE hSimConnect, const SIMCONNECT_CLIENT_EVENT_ID EventID,
                                                   const char* EventName)
 {
