@@ -433,8 +433,11 @@ bool IntegratorRuntime::IsSimOnMenu()
 
 void IntegratorRuntime::OnSimOpen(const char* appName)
 {
+    simAnswered_ = true;
+    unansweredAnnounced_ = false;
     simVersion_ = SimVersionDetect::FromAppName(appName != nullptr ? appName : "");
 
+    LOG_INFO("GSX Integrator connected to the simulator.");
     LOG_INFO("Connected simulator: '%s' (%s)", appName != nullptr ? appName : "?", SimVersionLabel(simVersion_));
 }
 
@@ -488,8 +491,6 @@ void IntegratorRuntime::TryConnect()
     varGateway_.SetFastRefresh("FSDT_GSX_JETWAY");
     varGateway_.SetFastRefresh("FSDT_GSX_STAIRS");
 
-    LOG_INFO("GSX Integrator connected to the simulator.");
-
     emit Updated();
 }
 
@@ -528,11 +529,25 @@ bool IntegratorRuntime::SubscribeSimEvents()
 
 void IntegratorRuntime::HandleDisconnected()
 {
-    LOG_INFO("Lost connection to the simulator.");
+    const bool simulatorAnswered = simAnswered_;
+    simAnswered_ = false;
 
-    connectAttemptAnnounced_ = false;
+    if (simulatorAnswered)
+    {
+        LOG_INFO("Lost connection to the simulator.");
+        connectAttemptAnnounced_ = false;
+    }
+    else if (!unansweredAnnounced_)
+    {
+        LOG_INFO("The simulator accepted the connection but has not answered yet; retrying.");
+        unansweredAnnounced_ = true;
+    }
+
     simVersion_ = SimVersion::Unknown;
     ResetSimulatorFolderCache();
+
+    pluginClient_.Shutdown();
+    bridgeClient_.Shutdown();
 
     varGateway_.Detach();
     simConnect_.Close();
@@ -546,7 +561,10 @@ void IntegratorRuntime::HandleDisconnected()
 
     emit Updated();
 
-    emit SimulatorQuit();
+    if (simulatorAnswered)
+    {
+        emit SimulatorQuit();
+    }
 }
 
 void IntegratorRuntime::OnDispatchTimer()
@@ -849,6 +867,7 @@ void IntegratorRuntime::Shutdown()
 
     bridgeClient_.Shutdown();
 
+    simAnswered_ = false;
     varGateway_.Detach();
     simConnect_.Close();
     gsxMenu_.Reset();

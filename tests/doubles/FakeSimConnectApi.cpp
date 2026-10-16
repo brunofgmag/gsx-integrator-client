@@ -1,7 +1,9 @@
 #include "FakeSimConnectApi.h"
 
-SIMCONNECTAPI SimConnect_Open(HANDLE* phSimConnect, LPCSTR, HWND, DWORD, HANDLE, DWORD)
+SIMCONNECTAPI SimConnect_Open(HANDLE* phSimConnect, const LPCSTR szName, HWND, DWORD, HANDLE, DWORD)
 {
+    FakeSimConnectApi::openedNames.emplace_back(szName != nullptr ? szName : "");
+
     if (!FakeSimConnectApi::openSucceeds)
     {
         *phSimConnect = nullptr;
@@ -104,7 +106,7 @@ SIMCONNECTAPI SimConnect_CallDispatch(HANDLE, const DispatchProc pfcnDispatch, v
                      static_cast<DWORD>(bytes.size()), pContext);
     }
 
-    return S_OK;
+    return FakeSimConnectApi::dispatchSucceeds ? S_OK : E_FAIL;
 }
 
 SIMCONNECTAPI SimConnect_AddToDataDefinition(HANDLE, const SIMCONNECT_DATA_DEFINITION_ID DefineID,

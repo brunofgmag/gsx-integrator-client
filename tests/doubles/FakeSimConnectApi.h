@@ -14,6 +14,7 @@ struct FakeSimConnectApi
     static inline bool openSucceeds = true;
     static inline bool subscribeSucceeds = true;
     static inline bool definitionsSucceed = true;
+    static inline bool dispatchSucceeds = true;
     static inline std::vector<std::pair<DWORD, std::string>> systemEventSubscriptions;
     static inline std::vector<std::string> systemStateRequests;
     static inline int transmittedEvents = 0;
@@ -37,12 +38,14 @@ struct FakeSimConnectApi
     static inline std::vector<std::pair<DWORD, DWORD>> definitionSendIds;
     static inline std::vector<DWORD> clearedDefinitions;
     static inline DWORD lastSentPacketId = 0;
+    static inline std::vector<std::string> openedNames;
 
     static void Reset()
     {
         openSucceeds = true;
         subscribeSucceeds = true;
         definitionsSucceed = true;
+        dispatchSucceeds = true;
         systemEventSubscriptions.clear();
         systemStateRequests.clear();
         transmittedEvents = 0;
@@ -56,6 +59,7 @@ struct FakeSimConnectApi
         dataDefinitions.clear();
         definitionSendIds.clear();
         clearedDefinitions.clear();
+        openedNames.clear();
         lastSentPacketId = 0;
     }
 

@@ -216,6 +216,8 @@ private:
 
     SimVersion simVersion_ = SimVersion::Unknown;
     bool connectAttemptAnnounced_ = false;
+    bool simAnswered_ = false;
+    bool unansweredAnnounced_ = false;
     QStringList simulatorsToRestart_;
     bool isSessionActive_ = false;
     bool sessionReady_ = false;
