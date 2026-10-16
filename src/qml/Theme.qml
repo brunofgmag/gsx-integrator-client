@@ -32,6 +32,7 @@ QtObject {
 
     readonly property string monoFamily: "Cascadia Mono"
     readonly property bool windows: Qt.platform.os === "windows"
+    readonly property string symbolFamily: windows ? monoFamily : "GSX Symbols"
     readonly property string homeGlyphFamily: windows ? "Segoe MDL2 Assets" : monoFamily
     readonly property string homeGlyph: windows ? "\uE80F" : "\u2302"
 }

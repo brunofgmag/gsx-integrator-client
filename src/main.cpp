@@ -173,7 +173,8 @@ namespace
 
 #ifndef _WIN32
         QGuiApplication::setDesktopFileName(QStringLiteral("gsx-integrator-client"));
-        for (const auto face : {":/fonts/CascadiaMono-Regular.ttf", ":/fonts/CascadiaMono-Bold.ttf"})
+        for (const auto face : {":/fonts/CascadiaMono-Regular.ttf", ":/fonts/CascadiaMono-Bold.ttf",
+                                 ":/fonts/GsxSymbols-Regular.ttf"})
         {
             QFontDatabase::addApplicationFont(QLatin1String(face));
         }

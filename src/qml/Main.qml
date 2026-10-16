@@ -245,12 +245,14 @@ ApplicationWindow {
                 }
 
                 HeaderButton {
+                    font.family: Theme.symbolFamily
                     text: Theme.dark ? "☀" : "☾"
                     tip: Theme.dark ? qsTr("Switch to light theme") : qsTr("Switch to dark theme")
                     onClicked: window.settingsVm.themeMode = window.settingsVm.effectiveDark ? 0 : 1
                 }
 
                 HeaderButton {
+                    font.family: Theme.symbolFamily
                     text: "⚙"
                     active: window.screen === 1
                     tip: qsTr("Settings")

@@ -2,5 +2,6 @@
     <qresource prefix="/fonts">
         <file alias="CascadiaMono-Regular.ttf">fonts/CascadiaMono-Regular.ttf</file>
         <file alias="CascadiaMono-Bold.ttf">fonts/CascadiaMono-Bold.ttf</file>
+        <file alias="GsxSymbols-Regular.ttf">fonts/GsxSymbols-Regular.ttf</file>
     </qresource>
 </RCC>
