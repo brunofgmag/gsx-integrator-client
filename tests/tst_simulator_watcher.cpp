@@ -199,6 +199,7 @@ private slots:
     static void enabledMeansTheUnitExistsAndSystemdSaysSo();
     static void defaultLocationsFollowTheXdgRule();
     static void scriptStartsTheClientOncePerSimulatorRunAndStopsItWithTheSimulator();
+    static void scriptStartsTheClientWhenAnotherProcessOnlyMentionsItsName();
     static void scriptDoesNotCountItsOwnProcessAsTheSimulator();
     static void scriptRefusesToRunWithoutSimulators();
 };
@@ -434,6 +435,18 @@ void SimulatorWatcherTest::scriptStartsTheClientOncePerSimulatorRunAndStopsItWit
 
     QVERIFY(run.AddProcess(QStringLiteral("200"), Cmdline({"S:\\x\\FlightSimulator2024.exe"})));
     QVERIFY(WaitFor([&] { return CountLines(run.log, QStringLiteral("started")) == 2; }));
+}
+
+void SimulatorWatcherTest::scriptStartsTheClientWhenAnotherProcessOnlyMentionsItsName()
+{
+    ScriptRun run;
+    QVERIFY(run.Start(QStringLiteral("FlightSimulator2024.exe")));
+    QVERIFY(run.AddProcess(QStringLiteral("320"), Cmdline({"ninja", "gsx-integrator-client"})));
+    QVERIFY(run.AddProcess(QStringLiteral("321"), Cmdline({"/usr/bin/tail", "-f", "/x/gsx-integrator-client.AppImage"})));
+
+    QVERIFY(run.AddProcess(QStringLiteral("100"), Cmdline({"S:\\x\\FlightSimulator2024.exe"})));
+
+    QVERIFY(WaitFor([&] { return CountLines(run.log, QStringLiteral("started")) == 1; }));
 }
 
 void SimulatorWatcherTest::scriptDoesNotCountItsOwnProcessAsTheSimulator()

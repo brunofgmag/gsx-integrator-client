@@ -35,8 +35,25 @@ running() {
     return 1
 }
 
+program_running() {
+    local cmdline pid arg base name
+    for cmdline in "$proc_root"/[0-9]*/cmdline; do
+        pid="${cmdline%/cmdline}"
+        pid="${pid##*/}"
+        [[ $pid == "$$" ]] && continue
+        arg=""
+        IFS= read -r -d '' arg 2>/dev/null <"$cmdline"
+        arg="${arg//\"/}"
+        base="${arg##*[/\\]}"
+        for name in "$@"; do
+            [[ $base == "$name" ]] && return 0
+        done
+    done
+    return 1
+}
+
 client_running() {
-    running "${client_names[@]}" && return 0
+    program_running "${client_names[@]}" && return 0
     [[ -n $(find "$proc_root" -maxdepth 2 -path "$proc_root/[0-9]*/exe" -ilname '*/gsx-integrator-client' -print -quit 2>/dev/null) ]]
 }
 
