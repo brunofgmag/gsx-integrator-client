@@ -7,6 +7,7 @@
 #include <span>
 #include <QtCore/QDir>
 #include <QtCore/QFile>
+#include <QtCore/QFileInfo>
 #include <QtCore/QLocale>
 #include <QtCore/QSettings>
 #include <QtCore/QSize>
@@ -37,6 +38,8 @@
 #include "infrastructure/simulator/DiskSimulatorAddonService.h"
 #include "infrastructure/simulator/SimulatorUserFolders.h"
 #ifndef _WIN32
+#include "infrastructure/platform/AppImageDesktopEntry.h"
+#include "infrastructure/platform/XdgDirectories.h"
 #include "infrastructure/simconnect/tcp/SimConnectTcpEndpoint.h"
 #include "infrastructure/simulator/SimConnectLink.h"
 #include "infrastructure/simulator/SystemdSimulatorLauncher.h"
@@ -224,6 +227,29 @@ namespace
 
         return appIcon;
     }
+
+#ifndef _WIN32
+    void EnsureDesktopEntryForAppImage()
+    {
+        const QFileInfo appImage(qEnvironmentVariable("APPIMAGE"));
+        if (!appImage.isFile())
+        {
+            return;
+        }
+
+        QFile icon(QStringLiteral(":/icons/app-icon_256.png"));
+        if (!icon.open(QIODevice::ReadOnly))
+        {
+            return;
+        }
+
+        if (EnsureAppImageDesktopEntry(appImage.absoluteFilePath(), XdgDataHome(), icon.readAll())
+            == DesktopEntryOutcome::Written)
+        {
+            qInfo("Wrote the hidden desktop entry that gives the window its icon.");
+        }
+    }
+#endif
 }
 
 int main(int argc, char* argv[])
@@ -258,6 +284,9 @@ int main(int argc, char* argv[])
     }
 #endif
     ConfigureApplication();
+#ifndef _WIN32
+    EnsureDesktopEntryForAppImage();
+#endif
 
     QSettingsRepository settingsRepository;
     const AppSettings startupSettings = settingsRepository.Load();

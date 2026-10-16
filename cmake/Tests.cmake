@@ -1327,6 +1327,11 @@ if (NOT WIN32)
             tests/tst_child_environment.cpp
             src/infrastructure/platform/ChildEnvironment.cpp
             src/infrastructure/platform/ChildEnvironment.h)
+
+    gsxi_add_qt_test(gsxi-app-image-desktop-entry-tests app-image-desktop-entry
+            tests/tst_app_image_desktop_entry.cpp
+            src/infrastructure/platform/AppImageDesktopEntry.cpp
+            src/infrastructure/platform/AppImageDesktopEntry.h)
 endif ()
 
 set(GSXI_GUARD_CHECKS

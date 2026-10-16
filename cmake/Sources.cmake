@@ -348,6 +348,8 @@ if (WIN32)
 else ()
     list(APPEND APP_SOURCES
             assets/fonts.qrc
+            src/infrastructure/platform/AppImageDesktopEntry.cpp
+            src/infrastructure/platform/AppImageDesktopEntry.h
             src/infrastructure/platform/InstanceChannel.cpp
             src/infrastructure/platform/InstanceChannel.h
             src/infrastructure/platform/ChildEnvironment.cpp
