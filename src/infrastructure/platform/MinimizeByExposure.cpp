@@ -11,7 +11,8 @@ MinimizeByExposure::MinimizeByExposure(QWindow* window)
 
 bool MinimizeByExposure::eventFilter(QObject* watched, QEvent* event)
 {
-    if (watched == window_ && event->type() == QEvent::Expose && window_->isVisible() && !window_->isExposed())
+    if (watched == window_ && event->type() == QEvent::Expose && window_->isVisible() && window_->isActive()
+        && !window_->isExposed())
     {
         emit Minimized();
     }
