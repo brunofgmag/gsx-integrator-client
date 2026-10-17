@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.48.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.48.1...v1.48.2) (2026-10-17)
+
+
+* restart the simulator watcher on script changes and hide to the tray only when focused ([#260](https://github.com/brunofgmag/gsx-integrator-client/issues/260)) ([e46fd2f](https://github.com/brunofgmag/gsx-integrator-client/commit/e46fd2f1756345292d6e78e3939b2fc9b31a7a82))
+
+
+### Bug Fixes
+
+* hide to the tray only when the focused window is minimized ([8eb8e0c](https://github.com/brunofgmag/gsx-integrator-client/commit/8eb8e0c0804d2ffbecaf8b7696f4c0316dfa6f23)) ([e46fd2f](https://github.com/brunofgmag/gsx-integrator-client/commit/e46fd2f1756345292d6e78e3939b2fc9b31a7a82))
+* restart the simulator watcher when its script changes ([30c318d](https://github.com/brunofgmag/gsx-integrator-client/commit/30c318dd016af69928fc08594846215caa066930)) ([e46fd2f](https://github.com/brunofgmag/gsx-integrator-client/commit/e46fd2f1756345292d6e78e3939b2fc9b31a7a82))
+
 ## [1.48.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.48.0...v1.48.1) (2026-10-17)
 
 
