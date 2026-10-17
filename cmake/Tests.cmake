@@ -1297,6 +1297,13 @@ if (NOT WIN32)
             src/infrastructure/platform/InstanceChannel.h)
     target_link_libraries(gsxi-instance-channel-tests PRIVATE Qt6::Network)
 
+    add_executable(gsxi-minimize-by-exposure-tests
+            tests/tst_minimize_by_exposure.cpp
+            src/infrastructure/platform/MinimizeByExposure.cpp
+            src/infrastructure/platform/MinimizeByExposure.h)
+    target_link_libraries(gsxi-minimize-by-exposure-tests PRIVATE Qt6::Gui)
+    configure_gsxi_test(gsxi-minimize-by-exposure-tests minimize-by-exposure -platform offscreen)
+
     gsxi_add_qt_test(gsxi-simconnect-link-tests simconnect-link
             tests/FakeProtonTree.h
             tests/tst_simconnect_link.cpp
