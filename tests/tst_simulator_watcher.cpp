@@ -1,4 +1,5 @@
 #include <functional>
+#include <signal.h>
 #include <QtCore/QDir>
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QFile>
@@ -81,6 +82,73 @@ namespace
         return {QStringLiteral("FlightSimulator.exe"), QStringLiteral("FlightSimulator2024.exe")};
     }
 
+    constexpr int kLongCommandLineArguments = 200000;
+
+    QChar ProcessState(const QString& pid)
+    {
+        const QByteArray stat = ReadTestFile(QStringLiteral("/proc/%1/stat").arg(pid));
+        const qsizetype end = stat.lastIndexOf(')');
+
+        return end >= 0 && end + 2 < stat.size() ? QChar::fromLatin1(stat.at(end + 2)) : QChar();
+    }
+
+    bool IsAlive(const QString& pid)
+    {
+        const QChar state = ProcessState(pid);
+
+        return !state.isNull() && state != u'Z';
+    }
+
+    bool IsReadingInsideOf(const qint64 pid, const QString& file, const qint64 size)
+    {
+        if (QFile::symLinkTarget(QStringLiteral("/proc/%1/fd/0").arg(pid)) != file)
+        {
+            return false;
+        }
+
+        static const QRegularExpression positionLine(QStringLiteral("^pos:\\s+(\\d+)$"),
+                                                     QRegularExpression::MultilineOption);
+        const QRegularExpressionMatch match = positionLine.match(
+            QString::fromLatin1(ReadTestFile(QStringLiteral("/proc/%1/fdinfo/0").arg(pid))));
+        const qint64 position = match.hasMatch() ? match.captured(1).toLongLong() : 0;
+
+        return position > 0 && position < size;
+    }
+
+    bool FreezeWhileReadingInsideOf(const qint64 pid, const QString& file, const qint64 size)
+    {
+        if (!IsReadingInsideOf(pid, file, size))
+        {
+            return false;
+        }
+
+        ::kill(static_cast<pid_t>(pid), SIGSTOP);
+        const QString watcher = QString::number(pid);
+        const bool frozen = WaitFor([&] { return ProcessState(watcher) == u'T'; }, 2000);
+        if (frozen && IsReadingInsideOf(pid, file, size))
+        {
+            return true;
+        }
+        ::kill(static_cast<pid_t>(pid), SIGCONT);
+
+        return false;
+    }
+
+    bool CatchReadingInsideOf(const qint64 pid, const QString& file, const qint64 size)
+    {
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.elapsed() < 15000)
+        {
+            if (FreezeWhileReadingInsideOf(pid, file, size))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     struct FakeSystemctl
     {
         QStringList calls;
@@ -128,6 +196,7 @@ namespace
         QTemporaryDir dir;
         QString proc = dir.filePath(QStringLiteral("proc"));
         QString log = dir.filePath(QStringLiteral("client.log"));
+        QString clientPid = dir.filePath(QStringLiteral("client.pid"));
         QProcess process;
 
         bool Start(const QString& simulators)
@@ -137,9 +206,10 @@ namespace
             const SimulatorWatcherFiles files = WatcherFilesFor(scriptPath, {QStringLiteral("FlightSimulator2024.exe")});
             const QString client = QStringLiteral(
                 "#!/bin/sh\n"
+                "echo $$ > \"%2\"\n"
                 "echo \"started $*\" >> \"%1\"\n"
                 "trap 'echo stopped >> \"%1\"; exit 0' TERM\n"
-                "while true; do sleep 0.05; done\n").arg(log);
+                "while [ -d \"%3\" ]; do sleep 0.05; done\n").arg(log, clientPid, dir.path());
 
             const auto executable = QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner;
             if (!QDir().mkpath(proc) || !WriteTestFile(scriptPath, files.script.toUtf8())
@@ -168,6 +238,11 @@ namespace
         bool RemoveProcess(const QString& pid) const
         {
             return QDir(proc + u'/' + pid).removeRecursively();
+        }
+
+        bool LinkProcess(const QString& pid, const QString& cmdline) const
+        {
+            return QDir().mkpath(proc + u'/' + pid) && QFile::link(cmdline, proc + u'/' + pid + QStringLiteral("/cmdline"));
         }
 
         ~ScriptRun()
@@ -202,6 +277,8 @@ private slots:
     static void scriptStartsTheClientWhenAnotherProcessOnlyMentionsItsName();
     static void scriptDoesNotCountItsOwnProcessAsTheSimulator();
     static void scriptRefusesToRunWithoutSimulators();
+    static void scriptKeepsWatchingWhenAProcessDiesWhileItsCommandLineIsRead();
+    static void theFakeClientDiesWithItsRun();
 };
 
 void SimulatorWatcherTest::unitTextIsExactlyWhatTheInstallerWrites()
@@ -468,6 +545,50 @@ void SimulatorWatcherTest::scriptRefusesToRunWithoutSimulators()
 
     QVERIFY(run.process.waitForFinished(5000));
     QCOMPARE(run.process.exitCode(), 1);
+}
+
+void SimulatorWatcherTest::scriptKeepsWatchingWhenAProcessDiesWhileItsCommandLineIsRead()
+{
+    QStringList arguments{QStringLiteral("-c"), QStringLiteral("read -r _"), QStringLiteral("bash")};
+    for (int i = 0; i < kLongCommandLineArguments; ++i)
+    {
+        arguments.append(QStringLiteral("x"));
+    }
+    QProcess dying;
+    dying.start(QStringLiteral("bash"), arguments);
+    QVERIFY(dying.waitForStarted());
+    const QString dyingCmdline = QStringLiteral("/proc/%1/cmdline").arg(dying.processId());
+    QVERIFY(WaitFor([&] { return ReadTestFile(dyingCmdline).count('x') == kLongCommandLineArguments; }));
+    const qint64 size = ReadTestFile(dyingCmdline).size();
+
+    ScriptRun run;
+    QVERIFY(run.LinkProcess(QStringLiteral("150"), dyingCmdline));
+    QVERIFY(run.Start(QStringLiteral("FlightSimulator2024.exe")));
+    const qint64 watcher = run.process.processId();
+    QVERIFY(CatchReadingInsideOf(watcher, dyingCmdline, size));
+
+    dying.kill();
+    const bool reaped = dying.waitForFinished(5000);
+    ::kill(static_cast<pid_t>(watcher), SIGCONT);
+    QVERIFY(reaped);
+
+    QVERIFY(run.AddProcess(QStringLiteral("200"), Cmdline({"S:\\x\\FlightSimulator2024.exe"})));
+    QVERIFY(WaitFor([&] { return CountLines(run.log, QStringLiteral("started")) == 1; }));
+}
+
+void SimulatorWatcherTest::theFakeClientDiesWithItsRun()
+{
+    QString clientPid;
+    {
+        ScriptRun run;
+        QVERIFY(run.Start(QStringLiteral("FlightSimulator2024.exe")));
+        QVERIFY(run.AddProcess(QStringLiteral("100"), Cmdline({"S:\\x\\FlightSimulator2024.exe"})));
+        QVERIFY(WaitFor([&] { return !ReadTestFile(run.clientPid).trimmed().isEmpty(); }));
+        clientPid = QString::fromLatin1(ReadTestFile(run.clientPid).trimmed());
+        QVERIFY(IsAlive(clientPid));
+    }
+
+    QVERIFY(WaitFor([&] { return !IsAlive(clientPid); }));
 }
 
 QTEST_GUILESS_MAIN(SimulatorWatcherTest)
