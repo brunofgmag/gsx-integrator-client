@@ -60,22 +60,31 @@ client_running() {
     [[ -n $(find "$proc_root" -maxdepth 2 -path "$proc_root/[0-9]*/exe" -ilname '*/gsx-integrator-client' -print -quit 2>/dev/null) ]]
 }
 
+echo "Watching for ${simulators[*]}"
 client_pid=""
 active=0
 while true; do
     if running "${simulators[@]}"; then
         if (( ! active )); then
             active=1
-            if [[ -x $client ]] && ! client_running; then
+            if [[ ! -x $client ]]; then
+                echo "Simulator started, but the client at $client is not executable"
+            elif client_running; then
+                echo "Simulator started and the client is already running"
+            else
                 setsid "$client" --tray >/dev/null 2>&1 &
                 client_pid=$!
+                echo "Simulator started, started the client as pid $client_pid"
             fi
         fi
     elif (( active )); then
         active=0
         if [[ -n $client_pid ]]; then
             kill -- "-$client_pid" 2>/dev/null || kill "$client_pid" 2>/dev/null
+            echo "Simulator closed, stopped the client at pid $client_pid"
             client_pid=""
+        else
+            echo "Simulator closed"
         fi
     fi
     sleep "$poll"
