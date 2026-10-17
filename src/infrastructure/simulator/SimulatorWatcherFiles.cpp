@@ -19,23 +19,12 @@ if [[ ${#simulators[@]} -eq 0 ]]; then
 fi
 
 running() {
-    local cmdline pid arg base name
-    local -a args
-    for cmdline in "$proc_root"/[0-9]*/cmdline; do
-        pid="${cmdline%/cmdline}"
-        pid="${pid##*/}"
-        [[ $pid == "$$" ]] && continue
-        args=()
-        mapfile -d '' -t args 2>/dev/null <"$cmdline"
-        for arg in "${args[@]}"; do
-            arg="${arg//\"/}"
-            base="${arg##*[/\\]}"
-            for name in "$@"; do
-                [[ $base == "$name" ]] && return 0
-            done
-        done
-    done
-    return 1
+    local names pattern hits
+    names=$(IFS='|'; echo "$*")
+    pattern='^"?(.*[/\\])?('"${names//./\\.}"')"?$'
+    hits=$(grep -s -z -l -i -E -- "$pattern" "$proc_root"/[0-9]*/cmdline)
+    hits=${hits//"$proc_root/$$/cmdline"/}
+    [[ $hits == *[![:space:]]* ]]
 }
 
 program_running() {
