@@ -48,6 +48,13 @@ namespace
         return QFile::setPermissions(path, permissions);
     }
 
+    bool DiffersFrom(const QString& path, const QString& content)
+    {
+        QFile existing(path);
+
+        return !existing.open(QIODevice::ReadOnly) || QString::fromUtf8(existing.readAll()) != content;
+    }
+
     QStringList SimulatorProcessNames()
     {
         QStringList names;
@@ -154,10 +161,8 @@ bool SystemdSimulatorLauncher::Enable() const
                                        : locations_.clientPath;
     const SimulatorWatcherFiles files = WatcherFilesFor(locations_.scriptPath, locations_.processNames, clientOverride);
 
-    QFile previous(UnitPath());
-    const bool unitExisted = previous.open(QIODevice::ReadOnly);
-    const bool unitChanged = !unitExisted || QString::fromUtf8(previous.readAll()) != files.unit;
-    previous.close();
+    const bool unitExisted = QFile::exists(UnitPath());
+    const bool filesChanged = DiffersFrom(UnitPath(), files.unit) || DiffersFrom(locations_.scriptPath, files.script);
 
     if (!WriteIfChanged(locations_.scriptPath, files.script, kScriptPermissions)
         || !WriteIfChanged(UnitPath(), files.unit, kUnitPermissions))
@@ -172,7 +177,7 @@ bool SystemdSimulatorLauncher::Enable() const
         return false;
     }
 
-    return !(unitExisted && unitChanged) || systemctl_({QStringLiteral("restart"), unitName}).Succeeded();
+    return !(unitExisted && filesChanged) || systemctl_({QStringLiteral("restart"), unitName}).Succeeded();
 }
 
 bool SystemdSimulatorLauncher::Disable() const

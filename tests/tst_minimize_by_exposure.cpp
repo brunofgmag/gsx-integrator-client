@@ -1,5 +1,6 @@
 #include <QtGui/QExposeEvent>
 #include <QtGui/QWindow>
+#include <QtGui/qpa/qwindowsysteminterface.h>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
@@ -12,6 +13,11 @@ namespace
         QExposeEvent event{QRegion()};
         QCoreApplication::sendEvent(&window, &event);
     }
+
+    void Focus(QWindow& window)
+    {
+        QWindowSystemInterface::handleFocusWindowChanged<QWindowSystemInterface::SynchronousDelivery>(&window);
+    }
 }
 
 class MinimizeByExposureTest final : public QObject
@@ -19,12 +25,31 @@ class MinimizeByExposureTest final : public QObject
     Q_OBJECT
 
 private slots:
-    static void aShownWindowThatIsNotExposedCountsAsMinimized();
+    static void aFocusedWindowThatLosesExposureCountsAsMinimized();
+    static void aWindowThatLostFocusBeforeExposureIsNotMinimized();
     static void anExposedWindowIsNotMinimized();
     static void aHiddenWindowIsNotMinimized();
 };
 
-void MinimizeByExposureTest::aShownWindowThatIsNotExposedCountsAsMinimized()
+void MinimizeByExposureTest::aFocusedWindowThatLosesExposureCountsAsMinimized()
+{
+    QWindow window;
+    window.resize(200, 150);
+    const MinimizeByExposure watch(&window);
+    const QSignalSpy minimized(&watch, &MinimizeByExposure::Minimized);
+
+    window.show();
+    Focus(window);
+    QVERIFY(window.isVisible());
+    QVERIFY(window.isActive());
+    QVERIFY(!window.isExposed());
+
+    SendExpose(window);
+
+    QCOMPARE(minimized.count(), 1);
+}
+
+void MinimizeByExposureTest::aWindowThatLostFocusBeforeExposureIsNotMinimized()
 {
     QWindow window;
     window.resize(200, 150);
@@ -33,11 +58,12 @@ void MinimizeByExposureTest::aShownWindowThatIsNotExposedCountsAsMinimized()
 
     window.show();
     QVERIFY(window.isVisible());
+    QVERIFY(!window.isActive());
     QVERIFY(!window.isExposed());
 
     SendExpose(window);
 
-    QCOMPARE(minimized.count(), 1);
+    QCOMPARE(minimized.count(), 0);
 }
 
 void MinimizeByExposureTest::anExposedWindowIsNotMinimized()

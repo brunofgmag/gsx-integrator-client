@@ -198,6 +198,14 @@ namespace
         QString log = dir.filePath(QStringLiteral("client.log"));
         QString clientPid = dir.filePath(QStringLiteral("client.pid"));
         QProcess process;
+        QByteArray output;
+
+        bool Printed(const QByteArray& line)
+        {
+            output += process.readAllStandardOutput();
+
+            return output.contains(line);
+        }
 
         bool Start(const QString& simulators)
         {
@@ -266,6 +274,7 @@ private slots:
     static void enableWritesExecutableScriptAndUnitThenEnablesNow();
     static void enableTwiceWithTheSameFilesRestartsNothing();
     static void enablingAChangedUnitRestartsTheService();
+    static void enablingAChangedScriptRestartsTheService();
     static void enableWithoutSystemdWritesNothingAndSaysUnavailable();
     static void enableFailureIsReported();
     static void disableStopsRemovesBothFilesAndReloads();
@@ -279,6 +288,7 @@ private slots:
     static void scriptRefusesToRunWithoutSimulators();
     static void scriptKeepsWatchingWhenAProcessDiesWhileItsCommandLineIsRead();
     static void theFakeClientDiesWithItsRun();
+    static void scriptLogsWhatItSeesAndWhatItDoes();
 };
 
 void SimulatorWatcherTest::unitTextIsExactlyWhatTheInstallerWrites()
@@ -392,6 +402,18 @@ void SimulatorWatcherTest::enablingAChangedUnitRestartsTheService()
     QVERIFY(!box.Launcher(QStringLiteral("/home/u/Downloads/other.AppImage")).Set(true).serviceFailed);
 
     QVERIFY(QString::fromUtf8(ReadTestFile(box.unit)).contains(QStringLiteral("GSXI_CLIENT=/home/u/Downloads/other.AppImage")));
+    QVERIFY(box.systemctl.calls.contains(QStringLiteral("restart gsx-integrator-client.service")));
+}
+
+void SimulatorWatcherTest::enablingAChangedScriptRestartsTheService()
+{
+    Sandbox box;
+    QVERIFY(!box.Launcher().Set(true).serviceFailed);
+    QVERIFY(WriteTestFile(box.script, "#!/usr/bin/env bash\necho an older watcher\n"));
+
+    QVERIFY(!box.Launcher().Set(true).serviceFailed);
+
+    QCOMPARE(QString::fromUtf8(ReadTestFile(box.script)), WatcherFilesFor(box.script, BothSimulators()).script);
     QVERIFY(box.systemctl.calls.contains(QStringLiteral("restart gsx-integrator-client.service")));
 }
 
@@ -589,6 +611,19 @@ void SimulatorWatcherTest::theFakeClientDiesWithItsRun()
     }
 
     QVERIFY(WaitFor([&] { return !IsAlive(clientPid); }));
+}
+
+void SimulatorWatcherTest::scriptLogsWhatItSeesAndWhatItDoes()
+{
+    ScriptRun run;
+    QVERIFY(run.Start(QStringLiteral("FlightSimulator2024.exe")));
+    QVERIFY(WaitFor([&] { return run.Printed("Watching for FlightSimulator2024.exe\n"); }));
+
+    QVERIFY(run.AddProcess(QStringLiteral("100"), Cmdline({"S:\\x\\FlightSimulator2024.exe"})));
+    QVERIFY(WaitFor([&] { return run.Printed("Simulator started, started the client as pid "); }));
+
+    QVERIFY(run.RemoveProcess(QStringLiteral("100")));
+    QVERIFY(WaitFor([&] { return run.Printed("Simulator closed, stopped the client at pid "); }));
 }
 
 QTEST_GUILESS_MAIN(SimulatorWatcherTest)

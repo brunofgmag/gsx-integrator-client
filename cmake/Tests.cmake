@@ -1301,7 +1301,7 @@ if (NOT WIN32)
             tests/tst_minimize_by_exposure.cpp
             src/infrastructure/platform/MinimizeByExposure.cpp
             src/infrastructure/platform/MinimizeByExposure.h)
-    target_link_libraries(gsxi-minimize-by-exposure-tests PRIVATE Qt6::Gui)
+    target_link_libraries(gsxi-minimize-by-exposure-tests PRIVATE Qt6::Gui Qt6::GuiPrivate)
     configure_gsxi_test(gsxi-minimize-by-exposure-tests minimize-by-exposure -platform offscreen)
 
     gsxi_add_qt_test(gsxi-simconnect-link-tests simconnect-link
