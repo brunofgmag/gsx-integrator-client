@@ -1,5 +1,4 @@
 #include <functional>
-#include <signal.h>
 #include <QtCore/QDir>
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QFile>
@@ -82,8 +81,6 @@ namespace
         return {QStringLiteral("FlightSimulator.exe"), QStringLiteral("FlightSimulator2024.exe")};
     }
 
-    constexpr int kLongCommandLineArguments = 200000;
-
     QChar ProcessState(const QString& pid)
     {
         const QByteArray stat = ReadTestFile(QStringLiteral("/proc/%1/stat").arg(pid));
@@ -97,56 +94,6 @@ namespace
         const QChar state = ProcessState(pid);
 
         return !state.isNull() && state != u'Z';
-    }
-
-    bool IsReadingInsideOf(const qint64 pid, const QString& file, const qint64 size)
-    {
-        if (QFile::symLinkTarget(QStringLiteral("/proc/%1/fd/0").arg(pid)) != file)
-        {
-            return false;
-        }
-
-        static const QRegularExpression positionLine(QStringLiteral("^pos:\\s+(\\d+)$"),
-                                                     QRegularExpression::MultilineOption);
-        const QRegularExpressionMatch match = positionLine.match(
-            QString::fromLatin1(ReadTestFile(QStringLiteral("/proc/%1/fdinfo/0").arg(pid))));
-        const qint64 position = match.hasMatch() ? match.captured(1).toLongLong() : 0;
-
-        return position > 0 && position < size;
-    }
-
-    bool FreezeWhileReadingInsideOf(const qint64 pid, const QString& file, const qint64 size)
-    {
-        if (!IsReadingInsideOf(pid, file, size))
-        {
-            return false;
-        }
-
-        ::kill(static_cast<pid_t>(pid), SIGSTOP);
-        const QString watcher = QString::number(pid);
-        const bool frozen = WaitFor([&] { return ProcessState(watcher) == u'T'; }, 2000);
-        if (frozen && IsReadingInsideOf(pid, file, size))
-        {
-            return true;
-        }
-        ::kill(static_cast<pid_t>(pid), SIGCONT);
-
-        return false;
-    }
-
-    bool CatchReadingInsideOf(const qint64 pid, const QString& file, const qint64 size)
-    {
-        QElapsedTimer timer;
-        timer.start();
-        while (timer.elapsed() < 15000)
-        {
-            if (FreezeWhileReadingInsideOf(pid, file, size))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     struct FakeSystemctl
@@ -286,7 +233,7 @@ private slots:
     static void scriptStartsTheClientWhenAnotherProcessOnlyMentionsItsName();
     static void scriptDoesNotCountItsOwnProcessAsTheSimulator();
     static void scriptRefusesToRunWithoutSimulators();
-    static void scriptKeepsWatchingWhenAProcessDiesWhileItsCommandLineIsRead();
+    static void scriptQuietlySkipsCommandLinesItCannotRead();
     static void theFakeClientDiesWithItsRun();
     static void scriptLogsWhatItSeesAndWhatItDoes();
 };
@@ -569,33 +516,17 @@ void SimulatorWatcherTest::scriptRefusesToRunWithoutSimulators()
     QCOMPARE(run.process.exitCode(), 1);
 }
 
-void SimulatorWatcherTest::scriptKeepsWatchingWhenAProcessDiesWhileItsCommandLineIsRead()
+void SimulatorWatcherTest::scriptQuietlySkipsCommandLinesItCannotRead()
 {
-    QStringList arguments{QStringLiteral("-c"), QStringLiteral("read -r _"), QStringLiteral("bash")};
-    for (int i = 0; i < kLongCommandLineArguments; ++i)
-    {
-        arguments.append(QStringLiteral("x"));
-    }
-    QProcess dying;
-    dying.start(QStringLiteral("bash"), arguments);
-    QVERIFY(dying.waitForStarted());
-    const QString dyingCmdline = QStringLiteral("/proc/%1/cmdline").arg(dying.processId());
-    QVERIFY(WaitFor([&] { return ReadTestFile(dyingCmdline).count('x') == kLongCommandLineArguments; }));
-    const qint64 size = ReadTestFile(dyingCmdline).size();
-
     ScriptRun run;
-    QVERIFY(run.LinkProcess(QStringLiteral("150"), dyingCmdline));
+    QVERIFY(QDir().mkpath(run.proc + QStringLiteral("/150/cmdline")));
+    QVERIFY(run.LinkProcess(QStringLiteral("151"), run.dir.filePath(QStringLiteral("gone/cmdline"))));
     QVERIFY(run.Start(QStringLiteral("FlightSimulator2024.exe")));
-    const qint64 watcher = run.process.processId();
-    QVERIFY(CatchReadingInsideOf(watcher, dyingCmdline, size));
-
-    dying.kill();
-    const bool reaped = dying.waitForFinished(5000);
-    ::kill(static_cast<pid_t>(watcher), SIGCONT);
-    QVERIFY(reaped);
+    QTest::qWait(300);
 
     QVERIFY(run.AddProcess(QStringLiteral("200"), Cmdline({"S:\\x\\FlightSimulator2024.exe"})));
     QVERIFY(WaitFor([&] { return CountLines(run.log, QStringLiteral("started")) == 1; }));
+    QCOMPARE(run.process.readAllStandardError(), QByteArray());
 }
 
 void SimulatorWatcherTest::theFakeClientDiesWithItsRun()
