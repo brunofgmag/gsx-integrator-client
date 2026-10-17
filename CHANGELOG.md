@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.48.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.48.0...v1.48.1) (2026-10-17)
+
+
+* keep the simulator watcher alive and hide to the tray on Wayland ([#257](https://github.com/brunofgmag/gsx-integrator-client/issues/257)) ([9077213](https://github.com/brunofgmag/gsx-integrator-client/commit/907721310d467ef845284e8c4c748ac0ed2c0adf))
+
+
+### Bug Fixes
+
+* hide to the tray when minimized on Wayland ([6c25c74](https://github.com/brunofgmag/gsx-integrator-client/commit/6c25c741d1cef6643a56c35dbd5b22b4d7d8a974)) ([9077213](https://github.com/brunofgmag/gsx-integrator-client/commit/907721310d467ef845284e8c4c748ac0ed2c0adf))
+* keep the simulator watcher alive when a process exits mid-read ([74e1607](https://github.com/brunofgmag/gsx-integrator-client/commit/74e160785e835a8e9aa0d7eb21bbb4f4799ec0e9)) ([9077213](https://github.com/brunofgmag/gsx-integrator-client/commit/907721310d467ef845284e8c4c748ac0ed2c0adf))
+
 ## [1.48.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.47.4...v1.48.0) (2026-10-16)
 
 
