@@ -352,6 +352,8 @@ else ()
             src/infrastructure/platform/AppImageDesktopEntry.h
             src/infrastructure/platform/InstanceChannel.cpp
             src/infrastructure/platform/InstanceChannel.h
+            src/infrastructure/platform/MinimizeByExposure.cpp
+            src/infrastructure/platform/MinimizeByExposure.h
             src/infrastructure/platform/ChildEnvironment.cpp
             src/infrastructure/platform/ChildEnvironment.h
             src/infrastructure/platform/XdgDirectories.cpp
