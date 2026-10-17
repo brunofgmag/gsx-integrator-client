@@ -20,17 +20,20 @@ fi
 
 running() {
     local cmdline pid arg base name
+    local -a args
     for cmdline in "$proc_root"/[0-9]*/cmdline; do
         pid="${cmdline%/cmdline}"
         pid="${pid##*/}"
         [[ $pid == "$$" ]] && continue
-        while IFS= read -r -d '' arg || [[ -n $arg ]]; do
+        args=()
+        mapfile -d '' -t args 2>/dev/null <"$cmdline"
+        for arg in "${args[@]}"; do
             arg="${arg//\"/}"
             base="${arg##*[/\\]}"
             for name in "$@"; do
                 [[ $base == "$name" ]] && return 0
             done
-        done 2>/dev/null <"$cmdline"
+        done
     done
     return 1
 }

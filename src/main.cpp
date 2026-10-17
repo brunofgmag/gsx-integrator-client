@@ -32,6 +32,7 @@
 #include "infrastructure/platform/ShowWindowMessageFilter.h"
 #else
 #include "infrastructure/platform/InstanceChannel.h"
+#include "infrastructure/platform/MinimizeByExposure.h"
 #endif
 #include "infrastructure/platform/WindowForeground.h"
 #include "infrastructure/platform/WindowsTitleBar.h"
@@ -447,6 +448,9 @@ int main(int argc, char* argv[])
 #else
         QObject::connect(&instanceServer, &InstanceServer::ShowRequested, rootWindow,
                          [rootWindow] { WindowForeground::Bring(rootWindow); });
+        const auto* minimizeByExposure = new MinimizeByExposure(rootWindow);
+        QObject::connect(minimizeByExposure, &MinimizeByExposure::Minimized, rootWindow,
+                         [rootWindow] { QMetaObject::invokeMethod(rootWindow, "hideToTrayOnMinimize"); });
 #endif
         WindowsTitleBar::Apply(rootWindow, settingsViewModel.GetEffectiveDark());
 

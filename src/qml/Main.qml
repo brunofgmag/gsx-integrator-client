@@ -85,9 +85,15 @@ ApplicationWindow {
         }
     }
 
-    onVisibilityChanged: {
-        if (window.visibility === Window.Minimized && window.settingsVm.minimizeToTray && window.trayAvailable) {
+    function hideToTrayOnMinimize() {
+        if (window.settingsVm.minimizeToTray && window.trayAvailable) {
             window.hideToTray()
+        }
+    }
+
+    onVisibilityChanged: {
+        if (window.visibility === Window.Minimized) {
+            window.hideToTrayOnMinimize()
         }
     }
 
