@@ -240,6 +240,7 @@ private slots:
     static void doorsUntouchedWithoutGsx();
     static void doorsUntouchedWhileEfbUnavailable();
     static void closeAllDoorsForcesEveryDoorClosed();
+    static void closeAllDoorsLeavesTheMidPaxDoorAloneOutsideTheA321();
     static void stairsReopenDoorAfterCloseAllDoors();
     static void holdsTheAftPaxDoorWhileItsExitIsStillMoving();
     static void groundPowerWritesEfbDataref();
@@ -810,7 +811,7 @@ void FenixA32xTest::doorsUntouchedWhileEfbUnavailable()
 
 void FenixA32xTest::closeAllDoorsForcesEveryDoorClosed()
 {
-    FenixFixture fixture;
+    FenixFixture fixture{FenixVariant::A321};
 
     fixture.aircraft.CloseAllDoors();
 
@@ -821,6 +822,20 @@ void FenixA32xTest::closeAllDoorsForcesEveryDoorClosed()
     QCOMPARE(fixture.efb.WrittenBool(kAftCateringDoor), 0);
     QCOMPARE(fixture.efb.WrittenBool(kFwdCargoDoor), 0);
     QCOMPARE(fixture.efb.WrittenBool(kAftCargoDoor), 0);
+}
+
+void FenixA32xTest::closeAllDoorsLeavesTheMidPaxDoorAloneOutsideTheA321()
+{
+    for (const FenixVariant variant : {FenixVariant::A319, FenixVariant::A320})
+    {
+        FenixFixture fixture{variant};
+
+        fixture.aircraft.CloseAllDoors();
+
+        QCOMPARE(fixture.efb.WrittenBool(kMidPaxDoor), -1);
+        QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 0);
+        QCOMPARE(fixture.efb.WrittenBool(kAftCargoDoor), 0);
+    }
 }
 
 void FenixA32xTest::stairsReopenDoorAfterCloseAllDoors()
