@@ -273,7 +273,8 @@ int main(int argc, char* argv[])
 
     const QGuiApplication app(argc, argv);
 #ifndef _WIN32
-    if (NotifyRunningInstance(InstanceChannelName(), !trayArg))
+    if (NotifyRunningInstance(InstanceChannelName(), !trayArg,
+                              qEnvironmentVariable(WindowForeground::kActivationTokenVariable)))
     {
         return 0;
     }
@@ -447,7 +448,10 @@ int main(int argc, char* argv[])
         QCoreApplication::instance()->installNativeEventFilter(&showWindowFilter);
 #else
         QObject::connect(&instanceServer, &InstanceServer::ShowRequested, rootWindow,
-                         [rootWindow] { WindowForeground::Bring(rootWindow); });
+                         [rootWindow](const QString& activationToken)
+                         {
+                             WindowForeground::Bring(rootWindow, activationToken);
+                         });
         const auto* minimizeByExposure = new MinimizeByExposure(rootWindow);
         QObject::connect(minimizeByExposure, &MinimizeByExposure::Minimized, rootWindow,
                          [rootWindow] { QMetaObject::invokeMethod(rootWindow, "hideToTrayOnMinimize"); });
