@@ -23,13 +23,14 @@ private slots:
     static void nobodyListeningMeansThisIsTheFirstInstance();
     static void aSecondInstanceAsksTheFirstToShowItsWindow();
     static void aSecondInstanceStartedHiddenDoesNotAskForTheWindow();
+    static void theShowRequestCarriesTheActivationTokenOfTheSecondInstance();
     static void aStaleSocketFileDoesNotBlockTheNewFirstInstance();
     static void theChannelNameIsFixed();
 };
 
 void InstanceChannelTest::nobodyListeningMeansThisIsTheFirstInstance()
 {
-    QVERIFY(!NotifyRunningInstance(UniqueName(), true, 200));
+    QVERIFY(!NotifyRunningInstance(UniqueName(), true, {}, 200));
 }
 
 void InstanceChannelTest::aSecondInstanceAsksTheFirstToShowItsWindow()
@@ -41,6 +42,19 @@ void InstanceChannelTest::aSecondInstanceAsksTheFirstToShowItsWindow()
     QVERIFY(NotifyRunningInstance(UniqueName(), true));
 
     QTRY_COMPARE(shown.count(), 1);
+    QCOMPARE(shown.first().first().toString(), QString());
+}
+
+void InstanceChannelTest::theShowRequestCarriesTheActivationTokenOfTheSecondInstance()
+{
+    InstanceServer server;
+    QVERIFY(server.Listen(UniqueName()));
+    QSignalSpy shown(&server, &InstanceServer::ShowRequested);
+
+    QVERIFY(NotifyRunningInstance(UniqueName(), true, QStringLiteral("kwin-1234_token")));
+
+    QTRY_COMPARE(shown.count(), 1);
+    QCOMPARE(shown.first().first().toString(), QStringLiteral("kwin-1234_token"));
 }
 
 void InstanceChannelTest::aSecondInstanceStartedHiddenDoesNotAskForTheWindow()
@@ -68,7 +82,7 @@ void InstanceChannelTest::aStaleSocketFileDoesNotBlockTheNewFirstInstance()
         QSKIP("python3 is needed to leave a stale socket file behind");
     }
     QVERIFY(QFileInfo(name).exists());
-    QVERIFY(!NotifyRunningInstance(name, true, 200));
+    QVERIFY(!NotifyRunningInstance(name, true, {}, 200));
 
     InstanceServer server;
 

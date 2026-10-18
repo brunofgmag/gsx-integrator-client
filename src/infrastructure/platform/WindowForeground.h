@@ -4,15 +4,23 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#include <QtCore/QString>
 #include <QtGui/QWindow>
 
 namespace WindowForeground
 {
-    inline void Bring(QWindow* window)
+    inline constexpr auto kActivationTokenVariable = "XDG_ACTIVATION_TOKEN";
+
+    inline void Bring(QWindow* window, const QString& activationToken = {})
     {
         if (!window)
         {
             return;
+        }
+
+        if (!activationToken.isEmpty())
+        {
+            qputenv(kActivationTokenVariable, activationToken.toUtf8());
         }
 
         window->showNormal();

@@ -8,7 +8,7 @@
 inline constexpr int kInstanceChannelTimeoutMs = 1000;
 
 [[nodiscard]] QString InstanceChannelName();
-[[nodiscard]] bool NotifyRunningInstance(const QString& name, bool show,
+[[nodiscard]] bool NotifyRunningInstance(const QString& name, bool show, const QString& activationToken = {},
                                          int timeoutMs = kInstanceChannelTimeoutMs);
 
 class InstanceServer final : public QObject
@@ -21,7 +21,7 @@ public:
     [[nodiscard]] bool Listen(const QString& name);
 
 signals:
-    void ShowRequested();
+    void ShowRequested(const QString& activationToken);
 
 private:
     void OnNewConnection();
