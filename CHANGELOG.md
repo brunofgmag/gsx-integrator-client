@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.48.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.48.4...v1.48.5) (2026-10-18)
+
+
+* hide to the tray and come to the front on Wayland, and leave the A319 mid door alone ([#269](https://github.com/brunofgmag/gsx-integrator-client/issues/269)) ([5449396](https://github.com/brunofgmag/gsx-integrator-client/commit/54493966f98719b3a08fdf81753e759e121a2dfc))
+
+
+### Bug Fixes
+
+* hide to the tray when the Wayland title-bar minimize drops focus first ([03ff621](https://github.com/brunofgmag/gsx-integrator-client/commit/03ff621a955d70fe9761a110a660480a4c940b71)) ([5449396](https://github.com/brunofgmag/gsx-integrator-client/commit/54493966f98719b3a08fdf81753e759e121a2dfc))
+* leave the missing mid passenger door alone when closing every Fenix A319 and A320 door ([271b45a](https://github.com/brunofgmag/gsx-integrator-client/commit/271b45adbaf665a6e59cd04281118857633fdbac)) ([5449396](https://github.com/brunofgmag/gsx-integrator-client/commit/54493966f98719b3a08fdf81753e759e121a2dfc))
+* pass the launcher's activation token to the running instance on Wayland ([4e96d92](https://github.com/brunofgmag/gsx-integrator-client/commit/4e96d925bcccae1ed867f87be2c281f0ac74b44e)) ([5449396](https://github.com/brunofgmag/gsx-integrator-client/commit/54493966f98719b3a08fdf81753e759e121a2dfc))
+
 ## [1.48.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.48.3...v1.48.4) (2026-10-18)
 
 
