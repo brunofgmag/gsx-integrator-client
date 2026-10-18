@@ -18,6 +18,11 @@ namespace
     {
         QWindowSystemInterface::handleFocusWindowChanged<QWindowSystemInterface::SynchronousDelivery>(&window);
     }
+
+    void Unfocus()
+    {
+        QWindowSystemInterface::handleFocusWindowChanged<QWindowSystemInterface::SynchronousDelivery>(nullptr);
+    }
 }
 
 class MinimizeByExposureTest final : public QObject
@@ -26,7 +31,9 @@ class MinimizeByExposureTest final : public QObject
 
 private slots:
     static void aFocusedWindowThatLosesExposureCountsAsMinimized();
-    static void aWindowThatLostFocusBeforeExposureIsNotMinimized();
+    static void aWindowThatNeverHadFocusIsNotMinimized();
+    static void aWindowThatLostFocusJustBeforeExposureCountsAsMinimized();
+    static void aWindowThatLostFocusLongerAgoThanTheGraceIsNotMinimized();
     static void anExposedWindowIsNotMinimized();
     static void aHiddenWindowIsNotMinimized();
 };
@@ -49,7 +56,7 @@ void MinimizeByExposureTest::aFocusedWindowThatLosesExposureCountsAsMinimized()
     QCOMPARE(minimized.count(), 1);
 }
 
-void MinimizeByExposureTest::aWindowThatLostFocusBeforeExposureIsNotMinimized()
+void MinimizeByExposureTest::aWindowThatNeverHadFocusIsNotMinimized()
 {
     QWindow window;
     window.resize(200, 150);
@@ -59,6 +66,44 @@ void MinimizeByExposureTest::aWindowThatLostFocusBeforeExposureIsNotMinimized()
     window.show();
     QVERIFY(window.isVisible());
     QVERIFY(!window.isActive());
+    QVERIFY(!window.isExposed());
+
+    SendExpose(window);
+
+    QCOMPARE(minimized.count(), 0);
+}
+
+void MinimizeByExposureTest::aWindowThatLostFocusJustBeforeExposureCountsAsMinimized()
+{
+    QWindow window;
+    window.resize(200, 150);
+    const MinimizeByExposure watch(&window);
+    const QSignalSpy minimized(&watch, &MinimizeByExposure::Minimized);
+
+    window.show();
+    Focus(window);
+    Unfocus();
+    QVERIFY(window.isVisible());
+    QVERIFY(!window.isActive());
+    QVERIFY(!window.isExposed());
+
+    SendExpose(window);
+
+    QCOMPARE(minimized.count(), 1);
+}
+
+void MinimizeByExposureTest::aWindowThatLostFocusLongerAgoThanTheGraceIsNotMinimized()
+{
+    QWindow window;
+    window.resize(200, 150);
+    const MinimizeByExposure watch(&window, std::chrono::milliseconds{20});
+    const QSignalSpy minimized(&watch, &MinimizeByExposure::Minimized);
+
+    window.show();
+    Focus(window);
+    Unfocus();
+    QTest::qSleep(80);
+    QVERIFY(window.isVisible());
     QVERIFY(!window.isExposed());
 
     SendExpose(window);
