@@ -314,6 +314,11 @@ void FenixA32x::CloseAllDoors()
 {
     doors_.CloseAll([this](const GsxDoor door, bool)
     {
+        if (door == GsxDoor::MidPax && variant_ != FenixVariant::A321)
+        {
+            return;
+        }
+
         efb_->SetBool(DoorDataref(door), false);
     });
 

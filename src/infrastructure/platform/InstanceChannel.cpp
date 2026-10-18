@@ -1,6 +1,7 @@
 #include "InstanceChannel.h"
 
 #include <QtCore/QByteArray>
+#include <QtCore/QList>
 #include <QtNetwork/QLocalSocket>
 
 namespace
@@ -12,9 +13,10 @@ namespace
     {
         while (socket->canReadLine())
         {
-            if (socket->readLine().trimmed() == QByteArray(kShowCommand))
+            const QList<QByteArray> words = socket->readLine().trimmed().split(' ');
+            if (words.first() == QByteArray(kShowCommand))
             {
-                emit server->ShowRequested();
+                emit server->ShowRequested(words.size() > 1 ? QString::fromUtf8(words.at(1)) : QString());
             }
         }
     }
@@ -25,7 +27,7 @@ QString InstanceChannelName()
     return QLatin1String(kChannelName);
 }
 
-bool NotifyRunningInstance(const QString& name, const bool show, const int timeoutMs)
+bool NotifyRunningInstance(const QString& name, const bool show, const QString& activationToken, const int timeoutMs)
 {
     QLocalSocket socket;
     socket.connectToServer(name);
@@ -36,7 +38,13 @@ bool NotifyRunningInstance(const QString& name, const bool show, const int timeo
 
     if (show)
     {
-        socket.write(QByteArray(kShowCommand) + '\n');
+        QByteArray command(kShowCommand);
+        if (!activationToken.isEmpty())
+        {
+            command += ' ' + activationToken.toUtf8();
+        }
+
+        socket.write(command + '\n');
         socket.waitForBytesWritten(timeoutMs);
     }
 
