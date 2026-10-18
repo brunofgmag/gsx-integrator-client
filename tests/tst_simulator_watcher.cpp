@@ -3,6 +3,7 @@
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QFile>
 #include <QtCore/QFileInfo>
+#include <QtCore/QMap>
 #include <QtCore/QProcess>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QTemporaryDir>
@@ -146,6 +147,23 @@ namespace
         QString clientPid = dir.filePath(QStringLiteral("client.pid"));
         QProcess process;
         QByteArray output;
+        QMap<QString, QString> watcherEnvironment;
+        QString managerOutput;
+        int systemctlExitCode = 0;
+        QString systemctlOverride;
+
+        [[nodiscard]] QString EnvironmentLine() const
+        {
+            for (const QString& line : QString::fromUtf8(ReadTestFile(log)).split(u'\n', Qt::SkipEmptyParts))
+            {
+                if (line.startsWith(QStringLiteral("environment ")))
+                {
+                    return line;
+                }
+            }
+
+            return {};
+        }
 
         bool Printed(const QByteArray& line)
         {
@@ -163,6 +181,8 @@ namespace
                 "#!/bin/sh\n"
                 "echo $$ > \"%2\"\n"
                 "echo \"started $*\" >> \"%1\"\n"
+                "echo \"environment $DISPLAY|$WAYLAND_DISPLAY|$XAUTHORITY|$XDG_SESSION_TYPE|$XDG_CURRENT_DESKTOP"
+                "|imported=$GSXI_NOT_IMPORTED|lowercase=$display\" >> \"%1\"\n"
                 "trap 'echo stopped >> \"%1\"; exit 0' TERM\n"
                 "while [ -d \"%3\" ]; do sleep 0.05; done\n").arg(log, clientPid, dir.path());
 
@@ -174,7 +194,27 @@ namespace
                 return false;
             }
 
+            const QString managerPath = dir.filePath(QStringLiteral("manager.txt"));
+            const QString systemctlPath = dir.filePath(QStringLiteral("fake-systemctl.sh"));
+            const QString systemctl = QStringLiteral("#!/bin/sh\ncat \"%1\"\nexit %2\n").arg(managerPath).arg(systemctlExitCode);
+            if (!WriteTestFile(managerPath, managerOutput.toUtf8()) || !WriteTestFile(systemctlPath, systemctl.toUtf8())
+                || !QFile::setPermissions(systemctlPath, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner))
+            {
+                return false;
+            }
+
             QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+            for (const QString& name : {QStringLiteral("DISPLAY"), QStringLiteral("WAYLAND_DISPLAY"), QStringLiteral("XAUTHORITY"),
+                                        QStringLiteral("XDG_SESSION_TYPE"), QStringLiteral("XDG_CURRENT_DESKTOP"),
+                                        QStringLiteral("GSXI_NOT_IMPORTED"), QStringLiteral("display")})
+            {
+                env.remove(name);
+            }
+            for (auto it = watcherEnvironment.cbegin(); it != watcherEnvironment.cend(); ++it)
+            {
+                env.insert(it.key(), it.value());
+            }
+            env.insert(QStringLiteral("GSXI_SYSTEMCTL"), systemctlOverride.isEmpty() ? systemctlPath : systemctlOverride);
             env.insert(QStringLiteral("GSXI_PROC_ROOT"), proc);
             env.insert(QStringLiteral("GSXI_POLL_SECONDS"), QStringLiteral("0.05"));
             env.insert(QStringLiteral("GSXI_SIMULATORS"), simulators);
@@ -236,6 +276,9 @@ private slots:
     static void scriptQuietlySkipsCommandLinesItCannotRead();
     static void theFakeClientDiesWithItsRun();
     static void scriptLogsWhatItSeesAndWhatItDoes();
+    static void scriptImportsOnlyTheSessionVariablesTheUserManagerHolds();
+    static void theUserManagerOverridesTheWatchersOwnDisplay();
+    static void scriptKeepsItsOwnEnvironmentWhenTheUserManagerCannotAnswer();
 };
 
 void SimulatorWatcherTest::unitTextIsExactlyWhatTheInstallerWrites()
@@ -555,6 +598,59 @@ void SimulatorWatcherTest::scriptLogsWhatItSeesAndWhatItDoes()
 
     QVERIFY(run.RemoveProcess(QStringLiteral("100")));
     QVERIFY(WaitFor([&] { return run.Printed("Simulator closed, stopped the client at pid "); }));
+}
+
+void SimulatorWatcherTest::scriptImportsOnlyTheSessionVariablesTheUserManagerHolds()
+{
+    ScriptRun run;
+    run.managerOutput = QStringLiteral(
+        "DISPLAY=:7\nWAYLAND_DISPLAY=wayland-test\nXAUTHORITY=/tmp/x\nXDG_SESSION_TYPE=wayland\n"
+        "XDG_CURRENT_DESKTOP=KDE\nGSXI_NOT_IMPORTED=1\ndisplay=:9\n");
+    QVERIFY(run.Start(QStringLiteral("FlightSimulator2024.exe")));
+    QVERIFY(run.AddProcess(QStringLiteral("100"), Cmdline({"S:\\x\\FlightSimulator2024.exe"})));
+
+    QVERIFY(WaitFor([&] { return !run.EnvironmentLine().isEmpty(); }));
+    QCOMPARE(run.EnvironmentLine(),
+             QStringLiteral("environment :7|wayland-test|/tmp/x|wayland|KDE|imported=|lowercase="));
+}
+
+void SimulatorWatcherTest::theUserManagerOverridesTheWatchersOwnDisplay()
+{
+    ScriptRun run;
+    run.watcherEnvironment.insert(QStringLiteral("DISPLAY"), QStringLiteral(":1"));
+    run.managerOutput = QStringLiteral("DISPLAY=:7\n");
+    QVERIFY(run.Start(QStringLiteral("FlightSimulator2024.exe")));
+    QVERIFY(run.AddProcess(QStringLiteral("100"), Cmdline({"S:\\x\\FlightSimulator2024.exe"})));
+
+    QVERIFY(WaitFor([&] { return !run.EnvironmentLine().isEmpty(); }));
+    QCOMPARE(run.EnvironmentLine(), QStringLiteral("environment :7|||||imported=|lowercase="));
+}
+
+void SimulatorWatcherTest::scriptKeepsItsOwnEnvironmentWhenTheUserManagerCannotAnswer()
+{
+    const QString expected = QStringLiteral("environment :1|wayland-own||||imported=|lowercase=");
+    {
+        ScriptRun run;
+        run.watcherEnvironment.insert(QStringLiteral("DISPLAY"), QStringLiteral(":1"));
+        run.watcherEnvironment.insert(QStringLiteral("WAYLAND_DISPLAY"), QStringLiteral("wayland-own"));
+        run.systemctlOverride = run.dir.filePath(QStringLiteral("no-such-systemctl"));
+        QVERIFY(run.Start(QStringLiteral("FlightSimulator2024.exe")));
+        QVERIFY(run.AddProcess(QStringLiteral("100"), Cmdline({"S:\\x\\FlightSimulator2024.exe"})));
+
+        QVERIFY(WaitFor([&] { return !run.EnvironmentLine().isEmpty(); }));
+        QCOMPARE(run.EnvironmentLine(), expected);
+    }
+    {
+        ScriptRun run;
+        run.watcherEnvironment.insert(QStringLiteral("DISPLAY"), QStringLiteral(":1"));
+        run.watcherEnvironment.insert(QStringLiteral("WAYLAND_DISPLAY"), QStringLiteral("wayland-own"));
+        run.systemctlExitCode = 3;
+        QVERIFY(run.Start(QStringLiteral("FlightSimulator2024.exe")));
+        QVERIFY(run.AddProcess(QStringLiteral("100"), Cmdline({"S:\\x\\FlightSimulator2024.exe"})));
+
+        QVERIFY(WaitFor([&] { return !run.EnvironmentLine().isEmpty(); }));
+        QCOMPARE(run.EnvironmentLine(), expected);
+    }
 }
 
 QTEST_GUILESS_MAIN(SimulatorWatcherTest)

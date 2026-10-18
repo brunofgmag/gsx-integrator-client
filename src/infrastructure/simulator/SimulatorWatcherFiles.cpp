@@ -10,6 +10,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 client="${GSXI_CLIENT:-$here/@CLIENT@}"
 proc_root="${GSXI_PROC_ROOT:-/proc}"
 poll="${GSXI_POLL_SECONDS:-2}"
+systemctl="${GSXI_SYSTEMCTL:-systemctl}"
 read -r -a simulators <<<"${GSXI_SIMULATORS:-}"
 client_names=(gsx-integrator-client @CLIENT@)
 
@@ -44,6 +45,20 @@ program_running() {
     return 1
 }
 
+session_environment() {
+    local line name
+    shopt -u nocasematch
+    while IFS= read -r line; do
+        name="${line%%=*}"
+        case $name in
+            DISPLAY|WAYLAND_DISPLAY|XAUTHORITY|XDG_SESSION_TYPE|XDG_CURRENT_DESKTOP)
+                export "$name=${line#*=}"
+                ;;
+        esac
+    done < <("$systemctl" --user show-environment 2>/dev/null)
+    shopt -s nocasematch
+}
+
 client_running() {
     program_running "${client_names[@]}" && return 0
     [[ -n $(find "$proc_root" -maxdepth 2 -path "$proc_root/[0-9]*/exe" -ilname '*/gsx-integrator-client' -print -quit 2>/dev/null) ]]
@@ -61,6 +76,7 @@ while true; do
             elif client_running; then
                 echo "Simulator started and the client is already running"
             else
+                session_environment
                 setsid "$client" --tray >/dev/null 2>&1 &
                 client_pid=$!
                 echo "Simulator started, started the client as pid $client_pid"
