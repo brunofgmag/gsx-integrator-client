@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FENIXEFBGATEWAY_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_FENIXEFBGATEWAY_H
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -10,11 +11,14 @@ public:
     virtual ~FenixEfbGateway() = default;
 
     virtual void Subscribe(const std::string& name) = 0;
+    virtual void SubscribeSetting(const std::string& key) = 0;
     virtual void Poll() = 0;
     [[nodiscard]] virtual bool IsAvailable() const = 0;
     [[nodiscard]] virtual double GetNumber(const std::string& name, double defaultValue) const = 0;
     [[nodiscard]] virtual std::string GetString(const std::string& name, const std::string& defaultValue) const = 0;
     [[nodiscard]] virtual std::vector<bool> GetBoolArray(const std::string& name) const = 0;
+    [[nodiscard]] virtual std::string GetSetting(const std::string& key, const std::string& defaultValue) const = 0;
+    [[nodiscard]] virtual std::optional<int> GetSoftwareMajorVersion() const = 0;
     virtual void SetFloat(const std::string& name, double value) = 0;
     virtual void SetBool(const std::string& name, bool value) = 0;
     virtual void SetString(const std::string& name, const std::string& value) = 0;
