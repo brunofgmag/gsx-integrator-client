@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.49.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.48.5...v1.49.0) (2026-10-23)
+
+
+* let the Fenix 3 load its own payload ([#272](https://github.com/brunofgmag/gsx-integrator-client/issues/272)) ([1e3785e](https://github.com/brunofgmag/gsx-integrator-client/commit/1e3785e15c14a2b2d6f4812f3328eb9eaa4ee5ff))
+
+
+### Features
+
+* **fenix:** read the EFB version and weight unit from its settings ([c5ed04a](https://github.com/brunofgmag/gsx-integrator-client/commit/c5ed04a0a7ce6bbe1d8e05a2ca5446b7baa486bf)) ([1e3785e](https://github.com/brunofgmag/gsx-integrator-client/commit/1e3785e15c14a2b2d6f4812f3328eb9eaa4ee5ff))
+
+
+### Bug Fixes
+
+* **fenix:** leave seats, holds and loadsheets to the Fenix 3 ([1bf7843](https://github.com/brunofgmag/gsx-integrator-client/commit/1bf78431fc941feaf4f1ca9268527e6550da1f29)) ([1e3785e](https://github.com/brunofgmag/gsx-integrator-client/commit/1e3785e15c14a2b2d6f4812f3328eb9eaa4ee5ff))
+* **turnaround:** show the deboarded passengers GSX counts on the deboarding card ([d467e41](https://github.com/brunofgmag/gsx-integrator-client/commit/d467e41fc219c2138d06fc4b583d4111c43360ab)) ([1e3785e](https://github.com/brunofgmag/gsx-integrator-client/commit/1e3785e15c14a2b2d6f4812f3328eb9eaa4ee5ff))
+* **turnaround:** wait for the aircraft GPU reading before removing it ([4233ec5](https://github.com/brunofgmag/gsx-integrator-client/commit/4233ec54282ba81a0fbdb6deb237f233340a9651)) ([1e3785e](https://github.com/brunofgmag/gsx-integrator-client/commit/1e3785e15c14a2b2d6f4812f3328eb9eaa4ee5ff))
+
 ## [1.48.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.48.4...v1.48.5) (2026-10-18)
 
 
