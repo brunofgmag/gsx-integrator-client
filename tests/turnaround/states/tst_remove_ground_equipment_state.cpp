@@ -36,6 +36,8 @@ private slots:
     static void dismissesTheGpuThisTurnaroundRequestedWhenBothOptionsAreOff();
     static void dismissesTheArrivalGpuThisTurnaroundRequestedWhenBothOptionsAreOff();
     static void commandsAircraftGpuOffForTheGpuThisTurnaroundRequestedWhenBothOptionsAreOff();
+    static void holdsWhileTheAircraftGpuReadingHasNotArrived();
+    static void advancesWhenTheAircraftGpuReadingNeverArrives();
 };
 
 void RemoveGroundEquipmentStateTest::skipsWhenGpuManagementDisabled()
@@ -630,6 +632,56 @@ void RemoveGroundEquipmentStateTest::commandsAircraftGpuOffForTheGpuThisTurnarou
     QVERIFY(!f.aircraft.groundPowerOn);
     QVERIFY(f.ctx.data.gpuDismissRequested);
     QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+}
+
+void RemoveGroundEquipmentStateTest::holdsWhileTheAircraftGpuReadingHasNotArrived()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = true;
+
+    f.settings.callGpu = true;
+    f.aircraft.supportsGroundPowerControl = true;
+    f.aircraft.groundPowerStatus = GroundPowerStatus::Unknown;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+
+    ++f.ctx.data.stateTickCount;
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 0);
+
+    f.aircraft.groundPowerStatus = GroundPowerStatus::Connected;
+
+    ++f.ctx.data.stateTickCount;
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 1);
+    QVERIFY(!f.aircraft.groundPowerOn);
+}
+
+void RemoveGroundEquipmentStateTest::advancesWhenTheAircraftGpuReadingNeverArrives()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = true;
+
+    f.settings.callGpu = true;
+    f.aircraft.supportsGroundPowerControl = true;
+    f.aircraft.groundPowerStatus = GroundPowerStatus::Unknown;
+
+    std::optional<TurnaroundTransition> transition;
+    int ticks = 0;
+    while (ticks < 120 && !transition)
+    {
+        ++ticks;
+        ++f.ctx.data.stateTickCount;
+        transition = state.Evaluate(f.ctx);
+    }
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+    QCOMPARE(ticks, 60);
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 0);
 }
 
 QTEST_APPLESS_MAIN(RemoveGroundEquipmentStateTest)

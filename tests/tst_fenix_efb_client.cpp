@@ -23,6 +23,13 @@ namespace
     constexpr auto kHeaderEnd = "\r\n\r\n";
     constexpr auto kContentLength = "content-length:";
     constexpr auto kReadyReply = R"({"data":{"dataRef":{"fenixtestready":{"value":true,"__typename":"DataRef"}}}})";
+    constexpr auto kWeightUnitSetting = "weight_unit";
+    constexpr auto kSettingsRequestMarker = "softwareVersion";
+    constexpr auto kSettingsReply =
+        R"({"data":{"settings":{"softwareVersion":"3.0.0.7438","state":{"settings":[)"
+        R"({"key":"weight_unit","value":"Pounds"},)"
+        R"({"key":"navigraph_refresh_token","value":"not-a-real-token"}]}}}})";
+    constexpr auto kSchemaErrorReply = R"({"errors":[{"message":"Cannot query field settings on type Query."}]})";
 
     qsizetype ContentLength(const QByteArray& headers)
     {
@@ -39,10 +46,8 @@ namespace
         return 0;
     }
 
-    QByteArray Reply()
+    QByteArray Reply(const QByteArray& body)
     {
-        const QByteArray body(kReadyReply);
-
         return QByteArrayLiteral("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ")
             + QByteArray::number(body.size()) + QByteArrayLiteral("\r\n\r\n") + body;
     }
@@ -65,6 +70,31 @@ namespace
         [[nodiscard]] int Requests() const
         {
             return requests_;
+        }
+
+        [[nodiscard]] int SettingsRequests() const
+        {
+            return settingsRequests_;
+        }
+
+        void ReplyToDataRefsWith(const QByteArray& body)
+        {
+            dataRefBody_ = body;
+        }
+
+        void ReplyToSettingsWith(const QByteArray& body)
+        {
+            settingsBody_ = body;
+        }
+
+        void HoldSettingsReplies()
+        {
+            holdSettings_ = true;
+        }
+
+        void HoldDataRefReplies()
+        {
+            holdDataRefs_ = true;
         }
 
     private:
@@ -91,15 +121,41 @@ namespace
                     return;
                 }
 
+                const qsizetype bodyStart = headerEnd + static_cast<qsizetype>(std::strlen(kHeaderEnd));
+                const QByteArray request = pending.mid(bodyStart, total - bodyStart);
                 pending.remove(0, total);
                 ++requests_;
-                socket.write(Reply());
+                Answer(socket, request);
+            }
+        }
+
+        void Answer(QTcpSocket& socket, const QByteArray& request)
+        {
+            if (!request.contains(kSettingsRequestMarker))
+            {
+                if (!holdDataRefs_)
+                {
+                    socket.write(Reply(dataRefBody_));
+                }
+
+                return;
+            }
+
+            ++settingsRequests_;
+            if (!holdSettings_)
+            {
+                socket.write(Reply(settingsBody_));
             }
         }
 
         QTcpServer server_;
         std::map<QTcpSocket*, QByteArray> pending_;
+        QByteArray dataRefBody_ = kReadyReply;
+        QByteArray settingsBody_ = kSettingsReply;
+        bool holdSettings_ = false;
+        bool holdDataRefs_ = false;
         int requests_ = 0;
+        int settingsRequests_ = 0;
     };
 }
 
@@ -122,6 +178,16 @@ private slots:
     static void readsCoerceNumbersAndBools();
     static void aSentWriteLandsInTheWritesLog();
     static void aWriteWhileTheEfbIsUnreachableIsNotLogged();
+    static void settingsQueryAsksForTheVersionAndTheStateSettings();
+    static void parsesTheMajorVersionFromTheSoftwareVersion();
+    static void rejectsASoftwareVersionWithoutAMajorNumber();
+    static void keepsOnlyTheSubscribedSettings();
+    static void rejectsASettingsResponseWithoutSettings();
+    static void learnsTheVersionAndTheSubscribedSettingFromTheEfb();
+    static void aSettingsAnswerNeverMakesTheClientAvailable();
+    static void aFailedSettingsAnswerKeepsTheVersionAndTheSettings();
+    static void settingsAreRequestedOnTheFirstPollAndEveryTenthAfter();
+    static void noSettingsRequestGoesOutWhileAnotherIsInFlight();
 
 private:
     QTemporaryDir directory_;
@@ -266,6 +332,181 @@ void FenixEfbClientTest::aWriteWhileTheEfbIsUnreachableIsNotLogged()
 
     QVERIFY(!client.IsAvailable());
     QCOMPARE(ProbeLines(kWritesLog).size(), before);
+}
+
+void FenixEfbClientTest::settingsQueryAsksForTheVersionAndTheStateSettings()
+{
+    const QByteArray query = FenixEfbClient::BuildSettingsQuery();
+
+    QVERIFY(query.contains("{ settings { softwareVersion state { settings { key value } } } }"));
+    QVERIFY(!query.contains("dataRef"));
+    QVERIFY(query.contains("\"variables\":{}"));
+}
+
+void FenixEfbClientTest::parsesTheMajorVersionFromTheSoftwareVersion()
+{
+    const auto fenix3 = FenixEfbClient::ParseSettingsResponse(kSettingsReply, {kWeightUnitSetting});
+    const auto fenix2 = FenixEfbClient::ParseSettingsResponse(
+        R"({"data":{"settings":{"softwareVersion":"2.1.0.5120","state":{"settings":[]}}}})", {kWeightUnitSetting});
+
+    QVERIFY(fenix3.has_value());
+    QCOMPARE(fenix3->softwareMajorVersion, 3);
+    QVERIFY(fenix2.has_value());
+    QCOMPARE(fenix2->softwareMajorVersion, 2);
+}
+
+void FenixEfbClientTest::rejectsASoftwareVersionWithoutAMajorNumber()
+{
+    QVERIFY(!FenixEfbClient::ParseSettingsResponse(
+        R"({"data":{"settings":{"softwareVersion":"beta.3","state":{"settings":[]}}}})",
+        {kWeightUnitSetting}).has_value());
+    QVERIFY(!FenixEfbClient::ParseSettingsResponse(
+        R"({"data":{"settings":{"state":{"settings":[]}}}})", {kWeightUnitSetting}).has_value());
+}
+
+void FenixEfbClientTest::keepsOnlyTheSubscribedSettings()
+{
+    const auto snapshot = FenixEfbClient::ParseSettingsResponse(kSettingsReply, {kWeightUnitSetting});
+
+    QVERIFY(snapshot.has_value());
+    QCOMPARE(snapshot->values.size(), std::size_t{1});
+    QCOMPARE(snapshot->values.at(kWeightUnitSetting), std::string("Pounds"));
+    QVERIFY(!snapshot->values.contains("navigraph_refresh_token"));
+
+    const auto none = FenixEfbClient::ParseSettingsResponse(kSettingsReply, {});
+
+    QVERIFY(none.has_value());
+    QVERIFY(none->values.empty());
+}
+
+void FenixEfbClientTest::rejectsASettingsResponseWithoutSettings()
+{
+    QVERIFY(!FenixEfbClient::ParseSettingsResponse(kSchemaErrorReply, {kWeightUnitSetting}).has_value());
+    QVERIFY(!FenixEfbClient::ParseSettingsResponse(R"({"data":{}})", {kWeightUnitSetting}).has_value());
+    QVERIFY(!FenixEfbClient::ParseSettingsResponse("<html>502 Bad Gateway</html>", {kWeightUnitSetting}).has_value());
+    QVERIFY(!FenixEfbClient::ParseSettingsResponse({}, {kWeightUnitSetting}).has_value());
+}
+
+void FenixEfbClientTest::learnsTheVersionAndTheSubscribedSettingFromTheEfb()
+{
+    FakeFenixEfb efb;
+    QVERIFY(efb.Listen());
+    FenixEfbClient client;
+    client.SetEndpointForTest(efb.Endpoint());
+    client.SubscribeSetting(kWeightUnitSetting);
+
+    QVERIFY(!client.GetSoftwareMajorVersion().has_value());
+    QCOMPARE(client.GetSetting(kWeightUnitSetting, "unset"), std::string("unset"));
+
+    client.Poll();
+
+    QTRY_VERIFY(client.GetSoftwareMajorVersion() == 3);
+    QCOMPARE(client.GetSetting(kWeightUnitSetting, "unset"), std::string("Pounds"));
+    QCOMPARE(client.GetSetting("navigraph_refresh_token", "unset"), std::string("unset"));
+}
+
+void FenixEfbClientTest::aSettingsAnswerNeverMakesTheClientAvailable()
+{
+    FakeFenixEfb efb;
+    QVERIFY(efb.Listen());
+    efb.ReplyToDataRefsWith(kSchemaErrorReply);
+    FenixEfbClient client;
+    client.SetEndpointForTest(efb.Endpoint());
+    client.Subscribe(kReadyDataref);
+    client.SubscribeSetting(kWeightUnitSetting);
+
+    client.Poll();
+
+    QTRY_VERIFY(client.GetSoftwareMajorVersion() == 3);
+    QTRY_COMPARE(efb.Requests(), 2);
+    QVERIFY(!client.IsAvailable());
+}
+
+void FenixEfbClientTest::aFailedSettingsAnswerKeepsTheVersionAndTheSettings()
+{
+    FakeFenixEfb efb;
+    QVERIFY(efb.Listen());
+    FenixEfbClient client;
+    client.SetEndpointForTest(efb.Endpoint());
+    client.Subscribe(kReadyDataref);
+    client.SubscribeSetting(kWeightUnitSetting);
+    client.Poll();
+    QTRY_VERIFY(client.GetSoftwareMajorVersion() == 3);
+    QTRY_VERIFY(client.IsAvailable());
+
+    efb.HoldDataRefReplies();
+    efb.ReplyToSettingsWith(kSchemaErrorReply);
+    const auto pollTimes = [&client](const int times)
+    {
+        for (int poll = 0; poll < times; ++poll)
+        {
+            client.Poll();
+        }
+    };
+    const auto pollUntilSettingsRequests = [&client, &efb](const int expected)
+    {
+        client.Poll();
+
+        return efb.SettingsRequests() >= expected;
+    };
+
+    pollTimes(9);
+    QTRY_VERIFY(pollUntilSettingsRequests(2));
+    pollTimes(9);
+    QTRY_VERIFY(pollUntilSettingsRequests(3));
+    QTest::qWait(50);
+
+    QVERIFY(client.GetSoftwareMajorVersion() == 3);
+    QCOMPARE(client.GetSetting(kWeightUnitSetting, "unset"), std::string("Pounds"));
+    QVERIFY(client.IsAvailable());
+}
+
+void FenixEfbClientTest::settingsAreRequestedOnTheFirstPollAndEveryTenthAfter()
+{
+    FakeFenixEfb efb;
+    QVERIFY(efb.Listen());
+    FenixEfbClient client;
+    client.SetEndpointForTest(efb.Endpoint());
+    client.SubscribeSetting(kWeightUnitSetting);
+
+    client.Poll();
+
+    QTRY_VERIFY(client.GetSoftwareMajorVersion().has_value());
+    QCOMPARE(efb.SettingsRequests(), 1);
+
+    for (int poll = 2; poll <= 10; ++poll)
+    {
+        client.Poll();
+        QTest::qWait(10);
+    }
+
+    QCOMPARE(efb.SettingsRequests(), 1);
+
+    client.Poll();
+
+    QTRY_COMPARE(efb.SettingsRequests(), 2);
+}
+
+void FenixEfbClientTest::noSettingsRequestGoesOutWhileAnotherIsInFlight()
+{
+    FakeFenixEfb efb;
+    QVERIFY(efb.Listen());
+    efb.HoldSettingsReplies();
+    FenixEfbClient client;
+    client.SetEndpointForTest(efb.Endpoint());
+    client.SubscribeSetting(kWeightUnitSetting);
+
+    client.Poll();
+    QTRY_COMPARE(efb.SettingsRequests(), 1);
+
+    for (int poll = 2; poll <= 14; ++poll)
+    {
+        client.Poll();
+    }
+
+    QTest::qWait(100);
+
+    QCOMPARE(efb.SettingsRequests(), 1);
 }
 
 QTEST_GUILESS_MAIN(FenixEfbClientTest)

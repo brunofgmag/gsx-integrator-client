@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 #include "../SmartSwitch.h"
@@ -58,7 +59,7 @@ public:
     [[nodiscard]] bool SupportsStairsOrJetways() const override { return true; }
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return false; }
     [[nodiscard]] RefuelBy GetRefuelMethod() const override { return RefuelBy::Client; }
-    [[nodiscard]] BoardBy GetBoardMethod() const override { return BoardBy::Client; }
+    [[nodiscard]] BoardBy GetBoardMethod() const override;
 
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
@@ -78,6 +79,8 @@ private:
     [[nodiscard]] std::optional<bool> DoorOpen(const char* dataref) const;
     void AdvanceDoorSettle();
     void ReportProbe() const;
+    void DetectThirdGeneration();
+    void ReportWeightUnitChange();
     void SyncPassengersAndCargo(double zfwKg);
     void WriteSeatOccupation(int passengersOnBoard);
     void MaybeRequestFinalLoadsheet(double zfwKg);
@@ -96,6 +99,8 @@ private:
     std::vector<AircraftRule*> rules_;
     bool finalLoadsheetRequested_ = true;
     bool chocksRefusalReported_ = false;
+    bool thirdGenerationDetected_ = false;
+    std::optional<WeightUnit> reportedWeightUnit_;
     double lastFuelKg_ = -1.0;
     double lastZfwKg_ = -1.0;
     int lastPassengersOnBoard_ = -1;

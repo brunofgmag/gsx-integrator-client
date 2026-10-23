@@ -1,6 +1,5 @@
 #include "OperationsViewModel.h"
 
-#include <cmath>
 #include <QtCore/QCoreApplication>
 #include <QtCore/QLocale>
 #include "../domain/turnaround/PilotTouch.h"
@@ -965,7 +964,7 @@ int OperationsViewModel::GetBoardedPax() const
 
 int OperationsViewModel::GetDeboardedPax() const
 {
-    return static_cast<int>(std::lround(snapshot_.deboardingProgress / 100.0 * snapshot_.targetPax));
+    return snapshot_.deboardedPax;
 }
 
 double OperationsViewModel::GetTargetFuelKg() const

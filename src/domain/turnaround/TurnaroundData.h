@@ -24,6 +24,7 @@ struct TurnaroundData
     double plannedZfwKg = 0.0;
     int plannedPassengers = 0;
     int boardedPassengers = 0;
+    int deboardedPassengers = 0;
 
     double loadedFuelKg = 0.0;
     double initialFuelKg = 0.0;
@@ -147,6 +148,7 @@ namespace turnaround
         visit("plannedZfwKg", Field(&TurnaroundData::plannedZfwKg), FieldRestore::Raw);
         visit("plannedPassengers", Field(&TurnaroundData::plannedPassengers), FieldRestore::Raw);
         visit("boardedPassengers", Field(&TurnaroundData::boardedPassengers), FieldRestore::Rebuilt);
+        visit("deboardedPassengers", Field(&TurnaroundData::deboardedPassengers), FieldRestore::Rebuilt);
         visit("loadedFuelKg", Field(&TurnaroundData::loadedFuelKg), FieldRestore::Rebuilt);
         visit("initialFuelKg", Field(&TurnaroundData::initialFuelKg), FieldRestore::Raw);
         visit("loadedZfwKg", Field(&TurnaroundData::loadedZfwKg), FieldRestore::Rebuilt);

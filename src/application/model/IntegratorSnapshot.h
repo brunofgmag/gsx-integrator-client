@@ -96,6 +96,7 @@ struct IntegratorSnapshot
     SnapshotDouble plannedZfwKg;
     int plannedPax = 0;
     int boardedPax = 0;
+    int deboardedPax = 0;
     SnapshotDouble targetFuelKg;
     SnapshotDouble targetZfwKg;
     SnapshotDouble emptyZfwKg;

@@ -1762,6 +1762,7 @@ void OperationsViewModelTest::theBoardingCardFollowsTheDeboardingPhase()
     service.snapshot.boardedPax = 42;
     service.snapshot.boardingProgress = 23.0;
     service.snapshot.deboardingProgress = 50.0;
+    service.snapshot.deboardedPax = 12;
     service.snapshot.phase = TurnaroundPhase::Loading;
     service.Notify();
 
@@ -1773,7 +1774,7 @@ void OperationsViewModelTest::theBoardingCardFollowsTheDeboardingPhase()
     service.Notify();
 
     QCOMPARE(viewModel.GetPaxCardLabel(), QStringLiteral("Deboarding"));
-    QCOMPARE(viewModel.GetPaxCountText(), QStringLiteral("90 / 180"));
+    QCOMPARE(viewModel.GetPaxCountText(), QStringLiteral("12 / 180"));
     QCOMPARE(viewModel.GetPaxProgressText(), QStringLiteral("50%"));
 }
 

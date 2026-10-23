@@ -18,15 +18,24 @@ class QNetworkReply;
 class FenixEfbClient final : public FenixEfbGateway
 {
 public:
+    struct SettingsSnapshot
+    {
+        int softwareMajorVersion = 0;
+        std::map<std::string, std::string> values;
+    };
+
     FenixEfbClient();
     ~FenixEfbClient() override;
 
     void Subscribe(const std::string& name) override;
+    void SubscribeSetting(const std::string& key) override;
     void Poll() override;
     [[nodiscard]] bool IsAvailable() const override;
     [[nodiscard]] double GetNumber(const std::string& name, double defaultValue) const override;
     [[nodiscard]] std::string GetString(const std::string& name, const std::string& defaultValue) const override;
     [[nodiscard]] std::vector<bool> GetBoolArray(const std::string& name) const override;
+    [[nodiscard]] std::string GetSetting(const std::string& key, const std::string& defaultValue) const override;
+    [[nodiscard]] std::optional<int> GetSoftwareMajorVersion() const override;
     void SetFloat(const std::string& name, double value) override;
     void SetBool(const std::string& name, bool value) override;
     void SetString(const std::string& name, const std::string& value) override;
@@ -37,6 +46,9 @@ public:
     [[nodiscard]] static QByteArray BuildValuesQuery(const std::vector<std::string>& names);
     [[nodiscard]] static std::optional<std::map<std::string, QJsonValue>> ParseValuesResponse(
         const QByteArray& body, const std::vector<std::string>& names);
+    [[nodiscard]] static QByteArray BuildSettingsQuery();
+    [[nodiscard]] static std::optional<SettingsSnapshot> ParseSettingsResponse(
+        const QByteArray& body, const std::vector<std::string>& keys);
     [[nodiscard]] static QByteArray BuildWriteMutation(const std::string& operation,
                                                        const std::string& typeName,
                                                        const std::string& name,
@@ -46,15 +58,22 @@ private:
     QNetworkAccessManager& EnsureNetwork();
     void SendMutation(const std::string& operation, const std::string& typeName,
                       const std::string& name, const QJsonValue& value);
+    void PollSettings();
     void OnPollFinished();
+    void OnSettingsFinished();
     void RegisterPollResult(bool succeeded);
     void ReportWrite(const std::string& name, const QJsonValue& value);
 
     QString endpoint_;
     std::unique_ptr<QNetworkAccessManager> network_;
     QNetworkReply* pollReply_ = nullptr;
+    QNetworkReply* settingsReply_ = nullptr;
     std::vector<std::string> subscriptions_;
+    std::vector<std::string> settingSubscriptions_;
     std::map<std::string, QJsonValue> values_;
+    std::map<std::string, std::string> settings_;
+    std::optional<int> softwareMajorVersion_;
+    int pollsUntilSettings_ = 0;
     bool available_ = false;
     int consecutivePollFailures_ = 0;
     probe::WriteMemo writeMemo_;

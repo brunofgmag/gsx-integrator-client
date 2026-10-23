@@ -1,5 +1,7 @@
 #include "RemoveGroundEquipmentState.h"
 
+#include <optional>
+
 #include "../TurnaroundContext.h"
 #include "../../model/AutomationSettings.h"
 #include "../../ports/Aircraft.h"
@@ -46,12 +48,22 @@ std::optional<TurnaroundTransition> RemoveGroundEquipmentState::EvaluatePhase(Tu
         }
     }
 
+    const bool gpuDismissUnneeded = !manageGpu && !ctx.data.gpuDismissRequested;
+    const std::optional<GroundPowerStatus> aircraftGpu = ctx.aircraft->GetGroundPowerStatus();
+    if (!gpuDismissUnneeded && aircraftGpu == GroundPowerStatus::Unknown)
+    {
+        if (ctx.data.stateTickCount >= kRetryTicks)
+        {
+            return TurnaroundTransition{TurnaroundPhase::RequestPushback};
+        }
+
+        return std::nullopt;
+    }
+
     const bool connected =
-        ctx.aircraft->GetGroundPowerStatus().value_or(ctx.gsxGateway->GetGpuStatus())
-        == GroundPowerStatus::Connected;
+        aircraftGpu.value_or(ctx.gsxGateway->GetGpuStatus()) == GroundPowerStatus::Connected;
     const bool gpuBusy = ctx.gsxGateway->IsServiceInProgress(GroundService::Gpu);
     const bool gpuGone = !connected && !gpuBusy;
-    const bool gpuDismissUnneeded = !manageGpu && !ctx.data.gpuDismissRequested;
 
     if (gpuDismissUnneeded || gpuGone)
     {
