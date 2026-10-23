@@ -1052,6 +1052,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.plannedZfwKg = status_.plannedZfwKg;
     snapshot.plannedPax = status_.plannedPassengers;
     snapshot.boardedPax = status_.boardedPassengers;
+    snapshot.deboardedPax = status_.deboardedPassengers;
     snapshot.targetFuelKg = status_.targetFuelKg;
     snapshot.targetZfwKg = status_.targetZfwKg;
     snapshot.emptyZfwKg = status_.emptyZfwKg;
