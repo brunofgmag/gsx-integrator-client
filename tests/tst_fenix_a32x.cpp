@@ -39,6 +39,9 @@ namespace
     constexpr auto kGroundPowerDataref = "groundservice.groundpower";
 
     constexpr auto kWeightUnitDataref = "system.config.Units.Weight";
+    constexpr auto kWeightUnitSetting = "weight_unit";
+    constexpr int kFenix2MajorVersion = 2;
+    constexpr int kFenix3MajorVersion = 3;
     constexpr auto kFuelDataref = "aircraft.fuel.total.amount.kg";
     constexpr auto kFuelTargetDataref = "aircraft.refuel.fuelTarget.kg";
     constexpr auto kCargoTargetDataref = "fenix.efb.plannedCargoKg";
@@ -99,6 +102,18 @@ namespace
             gateway.avars[kSimEmptyWeight] = kEmptyWeightKg;
             SeedBookedSeats();
             efb.numbers[kCargoTargetDataref] = kPlannedCargoKg;
+        }
+
+        void ObserveOnce()
+        {
+            gateway.MarkTick();
+            aircraft.Observe();
+        }
+
+        void SeedThirdGeneration()
+        {
+            efb.softwareMajorVersion = kFenix3MajorVersion;
+            ObserveOnce();
         }
 
         void SeedFlightPlanLoaded()
@@ -206,6 +221,7 @@ private slots:
     static void subscribesEveryDoorDatarefSoItCanRead();
     static void registersSmartSwitchForFastRefresh();
     static void subscribesEfbPlanDatarefs();
+    static void subscribesTheWeightUnitSetting();
     static void pollsEfbEveryTick();
     static void disablesEfbAutomationOnceAvailable();
     static void reinitializesEfbAutomationAfterOutage();
@@ -215,6 +231,9 @@ private slots:
     static void currentZfwDoesNotDropBelowEmptyWeight();
     static void emptyZfwReadsSimEmptyWeight();
     static void readsNativeWeightUnitFromEfb();
+    static void readsNativeWeightUnitFromTheWeightUnitSetting();
+    static void anUnknownWeightUnitSettingDoesNotFallBackToTheDataref();
+    static void theWeightUnitSettingWinsOverTheDataref();
     static void plannedValuesComeFromEfb();
     static void flightPlanNeedsEfbImportAndFuelTarget();
     static void loadingStartArmsThirdPartyRefueling();
@@ -233,6 +252,13 @@ private slots:
     static void preliminaryLoadsheetSkippedWhileEfbUnavailable();
     static void finalLoadsheetRequestedOnceAtPlannedZfw();
     static void finalLoadsheetWaitsForLoadingStart();
+    static void boardMethodIsClientUntilTheMajorVersionIsThree();
+    static void onTheFenix3BoardingNeverWritesSeatsHoldsOrALoadsheet();
+    static void onTheFenix3DeboardingNeverWritesSeatsOrHolds();
+    static void onTheFenix3LoadingStartRequestsNoPreliminaryLoadsheet();
+    static void onTheFenix3FuelIsStillWrittenOncePerValue();
+    static void theFenix3DetectionSurvivesTheVersionGoingAway();
+    static void theFenix3DetectionIsLoggedOnce();
     static void cargoDoorsFollowBaggageLoaders();
     static void paxDoorOpensForJetwayOrFrontStairs();
     static void midPaxDoorDrivenOnlyOnA321();
@@ -306,6 +332,14 @@ void FenixA32xTest::registersSmartSwitchForFastRefresh()
 
     QVERIFY(std::ranges::find(fixture.gateway.fastRefreshNames, std::string(kSmartSwitch))
         != fixture.gateway.fastRefreshNames.end());
+}
+
+void FenixA32xTest::subscribesTheWeightUnitSetting()
+{
+    const FenixFixture fixture;
+
+    QVERIFY(std::ranges::find(fixture.efb.subscribedSettings, std::string(kWeightUnitSetting))
+        != fixture.efb.subscribedSettings.end());
 }
 
 void FenixA32xTest::subscribesEfbPlanDatarefs()
@@ -436,6 +470,41 @@ void FenixA32xTest::readsNativeWeightUnitFromEfb()
 
     fixture.efb.stringValues[kWeightUnitDataref] = "tonnes";
     QVERIFY(!fixture.aircraft.GetNativeWeightUnit().has_value());
+}
+
+void FenixA32xTest::readsNativeWeightUnitFromTheWeightUnitSetting()
+{
+    const FenixFixture fixture;
+
+    fixture.efb.settings[kWeightUnitSetting] = "Pounds";
+    QVERIFY(fixture.aircraft.GetNativeWeightUnit() == WeightUnit::Lb);
+
+    fixture.efb.settings[kWeightUnitSetting] = "Kilograms";
+    QVERIFY(fixture.aircraft.GetNativeWeightUnit() == WeightUnit::Kg);
+}
+
+void FenixA32xTest::anUnknownWeightUnitSettingDoesNotFallBackToTheDataref()
+{
+    const FenixFixture fixture;
+
+    fixture.efb.stringValues[kWeightUnitDataref] = "KG";
+    fixture.efb.settings[kWeightUnitSetting] = "Stone";
+
+    QVERIFY(!fixture.aircraft.GetNativeWeightUnit().has_value());
+}
+
+void FenixA32xTest::theWeightUnitSettingWinsOverTheDataref()
+{
+    const FenixFixture fixture;
+
+    fixture.efb.stringValues[kWeightUnitDataref] = "LBS";
+    fixture.efb.settings[kWeightUnitSetting] = "Kilograms";
+
+    QVERIFY(fixture.aircraft.GetNativeWeightUnit() == WeightUnit::Kg);
+
+    fixture.efb.settings.erase(kWeightUnitSetting);
+
+    QVERIFY(fixture.aircraft.GetNativeWeightUnit() == WeightUnit::Lb);
 }
 
 void FenixA32xTest::plannedValuesComeFromEfb()
@@ -699,6 +768,122 @@ void FenixA32xTest::finalLoadsheetWaitsForLoadingStart()
     fixture.aircraft.SetCurrentZfwKg(kPlannedZfwKg);
 
     QVERIFY(fixture.efb.loadsheetRequests.empty());
+}
+
+void FenixA32xTest::boardMethodIsClientUntilTheMajorVersionIsThree()
+{
+    FenixFixture fixture;
+
+    QVERIFY(fixture.aircraft.GetBoardMethod() == BoardBy::Client);
+
+    fixture.ObserveOnce();
+
+    QVERIFY(fixture.aircraft.GetBoardMethod() == BoardBy::Client);
+
+    fixture.efb.softwareMajorVersion = kFenix2MajorVersion;
+    fixture.ObserveOnce();
+
+    QVERIFY(fixture.aircraft.GetBoardMethod() == BoardBy::Client);
+
+    fixture.SeedThirdGeneration();
+
+    QVERIFY(fixture.aircraft.GetBoardMethod() == BoardBy::Self);
+}
+
+void FenixA32xTest::onTheFenix3BoardingNeverWritesSeatsHoldsOrALoadsheet()
+{
+    FenixFixture fixture;
+
+    fixture.SeedPlannedLoad();
+    fixture.SeedThirdGeneration();
+    fixture.aircraft.OnTurnaroundResumed(ResumedFacts(true, true, false), MemoryBag{});
+
+    fixture.aircraft.SetCurrentZfwKg(kPlannedZfwKg);
+    fixture.aircraft.SetCurrentZfwKg(kEmptyWeightKg + 5000.0);
+    fixture.aircraft.SetCurrentZfwKg(50000.0);
+    fixture.aircraft.SetCurrentZfwKg(kPlannedZfwKg);
+
+    QCOMPARE(fixture.efb.setStringCalls, 0);
+    QCOMPARE(fixture.efb.setFloatCalls, 0);
+    QVERIFY(fixture.efb.loadsheetRequests.empty());
+}
+
+void FenixA32xTest::onTheFenix3DeboardingNeverWritesSeatsOrHolds()
+{
+    FenixFixture fixture;
+
+    fixture.SeedPlannedLoad();
+    fixture.SeedThirdGeneration();
+
+    fixture.aircraft.SetCurrentZfwKg(kEmptyWeightKg);
+    fixture.aircraft.SetCurrentZfwKg(kPlannedZfwKg);
+
+    QCOMPARE(fixture.efb.setStringCalls, 0);
+    QCOMPARE(fixture.efb.setFloatCalls, 0);
+}
+
+void FenixA32xTest::onTheFenix3LoadingStartRequestsNoPreliminaryLoadsheet()
+{
+    FenixFixture fixture;
+
+    fixture.SeedThirdGeneration();
+
+    fixture.aircraft.OnLoadingStarted();
+
+    QVERIFY(fixture.efb.loadsheetRequests.empty());
+}
+
+void FenixA32xTest::onTheFenix3FuelIsStillWrittenOncePerValue()
+{
+    FenixFixture fixture;
+
+    fixture.SeedThirdGeneration();
+
+    fixture.aircraft.SetCurrentFuelKg(5000.0);
+    fixture.aircraft.SetCurrentFuelKg(5000.0);
+
+    QCOMPARE(fixture.efb.setFloatCalls, 1);
+    QCOMPARE(fixture.efb.WrittenFloat(kFuelDataref), 5000.0);
+
+    fixture.aircraft.SetCurrentFuelKg(5028.0);
+
+    QCOMPARE(fixture.efb.setFloatCalls, 2);
+    QCOMPARE(fixture.efb.WrittenFloat(kFuelDataref), 5028.0);
+}
+
+void FenixA32xTest::theFenix3DetectionSurvivesTheVersionGoingAway()
+{
+    FenixFixture fixture;
+
+    fixture.SeedPlannedLoad();
+    fixture.SeedThirdGeneration();
+
+    fixture.efb.softwareMajorVersion.reset();
+    fixture.ObserveOnce();
+
+    QVERIFY(fixture.aircraft.GetBoardMethod() == BoardBy::Self);
+
+    fixture.aircraft.SetCurrentZfwKg(50000.0);
+    fixture.aircraft.OnLoadingStarted();
+
+    QCOMPARE(fixture.efb.setStringCalls, 0);
+    QCOMPARE(fixture.efb.setFloatCalls, 0);
+    QVERIFY(fixture.efb.loadsheetRequests.empty());
+}
+
+void FenixA32xTest::theFenix3DetectionIsLoggedOnce()
+{
+    FenixFixture fixture;
+    const LogCapture log;
+
+    fixture.SeedThirdGeneration();
+
+    QCOMPARE(LogCapture::Total(), 1LL);
+
+    fixture.ObserveOnce();
+    fixture.ObserveOnce();
+
+    QCOMPARE(LogCapture::Total(), 1LL);
 }
 
 void FenixA32xTest::cargoDoorsFollowBaggageLoaders()

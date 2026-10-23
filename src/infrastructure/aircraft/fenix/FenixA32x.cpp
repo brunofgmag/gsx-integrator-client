@@ -53,6 +53,11 @@ namespace
 
     constexpr auto kWeightUnitDataref = "system.config.Units.Weight";
 
+    constexpr auto kWeightUnitSetting = "weight_unit";
+    constexpr auto kWeightUnitSettingKilograms = "Kilograms";
+    constexpr auto kWeightUnitSettingPounds = "Pounds";
+    constexpr int kThirdGenerationMajorVersion = 3;
+
     constexpr auto kFwdPaxDoorDataref = "doors.entry.d1l";
     constexpr auto kMidPaxDoorDataref = "doors.entry.d2l";
     constexpr auto kAftPaxDoorDataref = "doors.entry.d4l";
@@ -114,6 +119,42 @@ namespace
         MeasuredExit{.door = GsxDoor::FwdCatering, .exit = 4}
     };
 
+    std::optional<WeightUnit> WeightUnitOfSetting(const std::string& setting)
+    {
+        if (setting == kWeightUnitSettingKilograms)
+        {
+            return WeightUnit::Kg;
+        }
+        if (setting == kWeightUnitSettingPounds)
+        {
+            return WeightUnit::Lb;
+        }
+
+        return std::nullopt;
+    }
+
+    const char* WeightUnitLabel(const WeightUnit unit)
+    {
+        return unit == WeightUnit::Lb ? "lb" : "kg";
+    }
+
+    std::optional<WeightUnit> WeightUnitOfDataref(std::string unit)
+    {
+        std::ranges::transform(unit, unit.begin(),
+                               [](const unsigned char character) { return static_cast<char>(std::toupper(character)); });
+
+        if (unit == "KG")
+        {
+            return WeightUnit::Kg;
+        }
+        if (unit == "LBS" || unit == "LB")
+        {
+            return WeightUnit::Lb;
+        }
+
+        return std::nullopt;
+    }
+
     std::string BuildSeatString(const std::vector<bool>& bookedSeats, const int occupiedCount)
     {
         std::string seats;
@@ -156,6 +197,7 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
     efb_->Subscribe(kFuelTargetDataref);
     efb_->Subscribe(kCargoTargetDataref);
     efb_->Subscribe(kWeightUnitDataref);
+    efb_->SubscribeSetting(kWeightUnitSetting);
 
     for (const char* const dataref : kSharedDoorDatarefs)
     {
@@ -197,8 +239,38 @@ void FenixA32x::Observe()
 {
     doors_.Observe();
     efb_->Poll();
+    DetectThirdGeneration();
+    ReportWeightUnitChange();
     AdvanceDoorSettle();
     ReportProbe();
+}
+
+void FenixA32x::DetectThirdGeneration()
+{
+    if (thirdGenerationDetected_ || efb_->GetSoftwareMajorVersion().value_or(0) < kThirdGenerationMajorVersion)
+    {
+        return;
+    }
+
+    thirdGenerationDetected_ = true;
+    LOG_INFO("Fenix 3 detected: the aircraft loads passengers and cargo and issues the loadsheets itself");
+}
+
+void FenixA32x::ReportWeightUnitChange()
+{
+    const std::optional<WeightUnit> unit = GetNativeWeightUnit();
+    if (!unit.has_value() || unit == reportedWeightUnit_)
+    {
+        return;
+    }
+
+    reportedWeightUnit_ = unit;
+    LOG_INFO("Fenix weight unit: %s", WeightUnitLabel(*unit));
+}
+
+BoardBy FenixA32x::GetBoardMethod() const
+{
+    return thirdGenerationDetected_ ? BoardBy::Self : BoardBy::Client;
 }
 
 const std::vector<AircraftRule*>& FenixA32x::Rules() const
@@ -257,7 +329,7 @@ void FenixA32x::OnLoadingStarted()
 {
     finalLoadsheetRequested_ = false;
 
-    if (efb_->IsAvailable())
+    if (!thirdGenerationDetected_ && efb_->IsAvailable())
     {
         efb_->RequestLoadsheet(kLoadsheetPreliminary);
     }
@@ -418,20 +490,13 @@ double FenixA32x::GetEmptyZfwKg() const
 
 std::optional<WeightUnit> FenixA32x::GetNativeWeightUnit() const
 {
-    std::string unit = efb_->GetString(kWeightUnitDataref, "");
-    std::ranges::transform(unit, unit.begin(),
-                           [](const unsigned char character) { return static_cast<char>(std::toupper(character)); });
-
-    if (unit == "KG")
+    const std::string setting = efb_->GetSetting(kWeightUnitSetting, "");
+    if (!setting.empty())
     {
-        return WeightUnit::Kg;
-    }
-    if (unit == "LBS" || unit == "LB")
-    {
-        return WeightUnit::Lb;
+        return WeightUnitOfSetting(setting);
     }
 
-    return std::nullopt;
+    return WeightUnitOfDataref(efb_->GetString(kWeightUnitDataref, ""));
 }
 
 double FenixA32x::GetCurrentFuelKg() const
@@ -457,7 +522,8 @@ double FenixA32x::GetCurrentZfwKg() const
 
 void FenixA32x::SetCurrentZfwKg(const double zfwKg)
 {
-    if (!efb_->IsAvailable()
+    if (thirdGenerationDetected_
+        || !efb_->IsAvailable()
         || !variableGateway_->HasReceivedAVar(kSimEmptyWeight, kKgUnit)
         || zfwKg == lastZfwKg_)
     {

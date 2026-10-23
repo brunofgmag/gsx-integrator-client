@@ -20,6 +20,8 @@ namespace
     constexpr auto kLoadsheetUrlPrefix = "http://localhost:8083/fenix/loadsheet/generate?type=";
     constexpr int kTransferTimeoutMs = 2000;
     constexpr int kPollFailuresBeforeUnavailable = 2;
+    constexpr int kPollsBetweenSettingsRequests = 10;
+    constexpr auto kSettingsQuery = "{ settings { softwareVersion state { settings { key value } } } }";
 
     QString AliasFor(const std::string& name)
     {
@@ -41,6 +43,18 @@ namespace
         request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
 
         return request;
+    }
+
+    std::optional<int> MajorVersionOf(const QString& softwareVersion)
+    {
+        bool parsed = false;
+        const int major = softwareVersion.section(QLatin1Char('.'), 0, 0).toInt(&parsed);
+        if (!parsed)
+        {
+            return std::nullopt;
+        }
+
+        return major;
     }
 
     QString ShownValue(const QJsonValue& value)
@@ -94,6 +108,42 @@ std::optional<std::map<std::string, QJsonValue>> FenixEfbClient::ParseValuesResp
     return values;
 }
 
+QByteArray FenixEfbClient::BuildSettingsQuery()
+{
+    return WrapRequest(QString::fromLatin1(kSettingsQuery), {});
+}
+
+std::optional<FenixEfbClient::SettingsSnapshot> FenixEfbClient::ParseSettingsResponse(
+    const QByteArray& body, const std::vector<std::string>& keys)
+{
+    const QJsonObject settings = QJsonDocument::fromJson(body).object()
+                                                              .value(QStringLiteral("data")).toObject()
+                                                              .value(QStringLiteral("settings")).toObject();
+    const std::optional<int> major = MajorVersionOf(settings.value(QStringLiteral("softwareVersion")).toString());
+    if (!major.has_value())
+    {
+        return std::nullopt;
+    }
+
+    SettingsSnapshot snapshot;
+    snapshot.softwareMajorVersion = *major;
+
+    const QJsonArray entries = settings.value(QStringLiteral("state")).toObject()
+                                       .value(QStringLiteral("settings")).toArray();
+    for (const QJsonValue& entry : entries)
+    {
+        const QJsonObject setting = entry.toObject();
+        const std::string key = setting.value(QStringLiteral("key")).toString().toStdString();
+        const QJsonValue value = setting.value(QStringLiteral("value"));
+        if (value.isString() && std::ranges::find(keys, key) != keys.end())
+        {
+            snapshot.values[key] = value.toString().toStdString();
+        }
+    }
+
+    return snapshot;
+}
+
 QByteArray FenixEfbClient::BuildWriteMutation(const std::string& operation,
                                               const std::string& typeName,
                                               const std::string& name,
@@ -118,8 +168,18 @@ void FenixEfbClient::Subscribe(const std::string& name)
     }
 }
 
+void FenixEfbClient::SubscribeSetting(const std::string& key)
+{
+    if (std::ranges::find(settingSubscriptions_, key) == settingSubscriptions_.end())
+    {
+        settingSubscriptions_.push_back(key);
+    }
+}
+
 void FenixEfbClient::Poll()
 {
+    PollSettings();
+
     if (subscriptions_.empty() || pollReply_ != nullptr)
     {
         return;
@@ -135,6 +195,37 @@ void FenixEfbClient::Poll()
     }
 
     QObject::connect(pollReply_, &QNetworkReply::finished, &network, [this] { OnPollFinished(); });
+}
+
+void FenixEfbClient::PollSettings()
+{
+    if (settingSubscriptions_.empty())
+    {
+        return;
+    }
+
+    if (pollsUntilSettings_ > 0)
+    {
+        --pollsUntilSettings_;
+
+        return;
+    }
+
+    if (settingsReply_ != nullptr)
+    {
+        return;
+    }
+
+    pollsUntilSettings_ = kPollsBetweenSettingsRequests - 1;
+
+    QNetworkAccessManager& network = EnsureNetwork();
+    settingsReply_ = network.post(JsonRequest(endpoint_), BuildSettingsQuery());
+    if (settingsReply_ == nullptr)
+    {
+        return;
+    }
+
+    QObject::connect(settingsReply_, &QNetworkReply::finished, &network, [this] { OnSettingsFinished(); });
 }
 
 void FenixEfbClient::OnPollFinished()
@@ -160,6 +251,27 @@ void FenixEfbClient::OnPollFinished()
 
     values_ = *values;
     RegisterPollResult(true);
+}
+
+void FenixEfbClient::OnSettingsFinished()
+{
+    QNetworkReply* reply = settingsReply_;
+    settingsReply_ = nullptr;
+    reply->deleteLater();
+
+    if (reply->error() != QNetworkReply::NoError)
+    {
+        return;
+    }
+
+    const auto snapshot = ParseSettingsResponse(reply->readAll(), settingSubscriptions_);
+    if (!snapshot.has_value())
+    {
+        return;
+    }
+
+    softwareMajorVersion_ = snapshot->softwareMajorVersion;
+    settings_ = snapshot->values;
 }
 
 void FenixEfbClient::RegisterPollResult(const bool succeeded)
@@ -233,6 +345,18 @@ std::vector<bool> FenixEfbClient::GetBoolArray(const std::string& name) const
     }
 
     return array;
+}
+
+std::string FenixEfbClient::GetSetting(const std::string& key, const std::string& defaultValue) const
+{
+    const auto it = settings_.find(key);
+
+    return it != settings_.end() ? it->second : defaultValue;
+}
+
+std::optional<int> FenixEfbClient::GetSoftwareMajorVersion() const
+{
+    return softwareMajorVersion_;
 }
 
 void FenixEfbClient::SetFloat(const std::string& name, const double value)

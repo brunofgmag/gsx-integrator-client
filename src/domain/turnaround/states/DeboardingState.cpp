@@ -31,6 +31,8 @@ std::optional<TurnaroundTransition> DeboardingState::EvaluatePhase(TurnaroundCon
         return TurnaroundTransition{TurnaroundPhase::CabinServices};
     }
 
+    data.deboardedPassengers = ctx.gsxGateway->GetDeboardedPassengers();
+
     AdvanceDeboardingBar(ctx);
     if (ctx.aircraft->GetBoardMethod() == BoardBy::Client)
     {
@@ -63,6 +65,7 @@ void DeboardingState::EnsureBaseline(TurnaroundContext& ctx)
 void DeboardingState::FinishDeboarding(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
+    data.deboardedPassengers = data.plannedPassengers;
     data.loadedZfwKg = data.initialZfwKg;
     ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
     data.deboardingProgress = 100.0;

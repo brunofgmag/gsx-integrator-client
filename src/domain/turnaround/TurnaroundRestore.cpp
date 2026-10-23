@@ -59,6 +59,7 @@ namespace
         }
 
         data.deboardingProgress = kFullProgress;
+        data.deboardedPassengers = data.plannedPassengers;
         data.loadedZfwKg = data.initialZfwKg;
     }
 

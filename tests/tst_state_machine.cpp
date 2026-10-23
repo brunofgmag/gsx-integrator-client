@@ -1077,6 +1077,7 @@ private slots:
     static void aFinishedBoardingRebuildsTheBoardedPassengers();
     static void aFinishedBoardingRebuildsTheLoadedWeight();
     static void cabinServicesRebuildsTheDeboardingProgress();
+    static void cabinServicesRebuildsTheDeboardedPassengers();
     static void cabinServicesRebuildsTheEmptyWeightAsTheLoadedWeight();
     static void aSelfRefuelInProgressRebuildsTheLoadedFuelFromTheBaseline();
     static void aFinishedSelfOrClientRefuelRebuildsTheLoadedFuelFromThePlan();
@@ -2492,6 +2493,16 @@ void TurnaroundStateMachineTest::cabinServicesRebuildsTheDeboardingProgress()
 
     QCOMPARE(RestoredAt(saved, TurnaroundPhase::Deboarding, aircraft).deboardingProgress, 0.0);
     QCOMPARE(RestoredAt(saved, TurnaroundPhase::CabinServices, aircraft).deboardingProgress, 100.0);
+}
+
+void TurnaroundStateMachineTest::cabinServicesRebuildsTheDeboardedPassengers()
+{
+    TurnaroundData saved = SavedLoadingData();
+    saved.deboardedPassengers = 60;
+    const FakeAircraft aircraft;
+
+    QCOMPARE(RestoredAt(saved, TurnaroundPhase::Deboarding, aircraft).deboardedPassengers, 0);
+    QCOMPARE(RestoredAt(saved, TurnaroundPhase::CabinServices, aircraft).deboardedPassengers, 210);
 }
 
 void TurnaroundStateMachineTest::cabinServicesRebuildsTheEmptyWeightAsTheLoadedWeight()

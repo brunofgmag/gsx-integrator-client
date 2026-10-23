@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_TESTS_FAKEFENIXEFBGATEWAY_H
 #define GSX_INTEGRATOR_CLIENT_TESTS_FAKEFENIXEFBGATEWAY_H
 
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -15,6 +16,9 @@ public:
     int setBoolCalls = 0;
     int setStringCalls = 0;
     std::vector<std::string> subscribed;
+    std::vector<std::string> subscribedSettings;
+    std::optional<int> softwareMajorVersion;
+    std::unordered_map<std::string, std::string> settings;
     std::unordered_map<std::string, double> numbers;
     std::unordered_map<std::string, std::string> stringValues;
     std::unordered_map<std::string, std::vector<bool>> boolArrays;
@@ -26,6 +30,11 @@ public:
     void Subscribe(const std::string& name) override
     {
         subscribed.push_back(name);
+    }
+
+    void SubscribeSetting(const std::string& key) override
+    {
+        subscribedSettings.push_back(key);
     }
 
     void Poll() override
@@ -54,6 +63,17 @@ public:
     {
         const auto it = boolArrays.find(name);
         return it != boolArrays.end() ? it->second : std::vector<bool>{};
+    }
+
+    [[nodiscard]] std::string GetSetting(const std::string& key, const std::string& defaultValue) const override
+    {
+        const auto it = settings.find(key);
+        return it != settings.end() ? it->second : defaultValue;
+    }
+
+    [[nodiscard]] std::optional<int> GetSoftwareMajorVersion() const override
+    {
+        return softwareMajorVersion;
     }
 
     void SetFloat(const std::string& name, const double value) override

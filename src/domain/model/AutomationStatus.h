@@ -43,6 +43,7 @@ struct AutomationStatus
     double operatingEmptyWithCrewKg = 0.0;
     int plannedPassengers = 0;
     int boardedPassengers = 0;
+    int deboardedPassengers = 0;
     double targetFuelKg = 0.0;
     double targetZfwKg = 0.0;
     double emptyZfwKg = 0.0;
