@@ -13,6 +13,24 @@ namespace
             ctx.data.refuelFinished = true;
         }
     };
+
+    bool AdvanceWhileGsxBoards(RefueledFixture& f, const int passengers)
+    {
+        constexpr int kPassengersPerTick = 5;
+
+        for (int boarded = kPassengersPerTick; boarded <= passengers; boarded += kPassengersPerTick)
+        {
+            f.gsxService.boardedPassengers = boarded;
+            f.gsxService.cargoPercent = boarded * 100.0 / passengers;
+
+            if (BoardingTrack::Advance(f.ctx))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
 class BoardingTrackTest final : public QObject
@@ -64,6 +82,8 @@ private slots:
     static void doesNotHoldThePassengerDoorsWhileBoardingIsStillActive();
     static void neverHoldsThePassengerDoorsOfAFreighter();
     static void staysSilentAboutTheCargoFlagWhileALoaderIsAtAHold();
+    static void comparesTheBoardingToTheCountTheAircraftBoardsInsteadOfThePlan();
+    static void keepsThePlannedCountWhenTheAircraftNamesNone();
 };
 
 void BoardingTrackTest::holdsUntilGsxActive()
@@ -1096,6 +1116,69 @@ void BoardingTrackTest::staysSilentAboutTheCargoFlagWhileALoaderIsAtAHold()
     }
 
     QCOMPARE(CountCargoFlagMessages(f), 1);
+}
+
+void BoardingTrackTest::comparesTheBoardingToTheCountTheAircraftBoardsInsteadOfThePlan()
+{
+    RefueledFixture f;
+
+    f.aircraft.cargo = false;
+    f.aircraft.boardMethod = BoardBy::Self;
+    f.aircraft.emptyZfwKg = 40000.0;
+    f.aircraft.passengersItBoards = 105;
+    f.ctx.data.plannedZfwKg = 60000.0;
+    f.ctx.data.plannedPassengers = 110;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardedPassengers = 0;
+    f.gsxService.cargoPercent = 0.0;
+
+    QVERIFY(!BoardingTrack::Advance(f.ctx));
+
+    QCOMPARE(f.ctx.data.plannedPassengers, 105);
+    QCOMPARE(f.logger.messages.size(), 1U);
+    QVERIFY(f.logger.messages.front().find("110") != std::string::npos);
+    QVERIFY(f.logger.messages.front().find("105") != std::string::npos);
+
+    QVERIFY(AdvanceWhileGsxBoards(f, 105));
+
+    for (int tick = 0; tick < 89; ++tick)
+    {
+        QVERIFY(!BoardingTrack::Advance(f.ctx));
+    }
+
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 1);
+
+    f.gsxService.boardingState = GsxStateStatus::Completed;
+
+    QVERIFY(BoardingTrack::Advance(f.ctx));
+    QCOMPARE(f.ctx.data.boardedPassengers, 105);
+}
+
+void BoardingTrackTest::keepsThePlannedCountWhenTheAircraftNamesNone()
+{
+    RefueledFixture f;
+
+    f.aircraft.cargo = false;
+    f.aircraft.boardMethod = BoardBy::Self;
+    f.aircraft.emptyZfwKg = 40000.0;
+    f.ctx.data.plannedZfwKg = 60000.0;
+    f.ctx.data.plannedPassengers = 110;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardedPassengers = 0;
+    f.gsxService.cargoPercent = 0.0;
+
+    QVERIFY(!BoardingTrack::Advance(f.ctx));
+
+    QVERIFY(AdvanceWhileGsxBoards(f, 105));
+
+    for (int tick = 0; tick < 90; ++tick)
+    {
+        QVERIFY(!BoardingTrack::Advance(f.ctx));
+    }
+
+    QCOMPARE(f.ctx.data.plannedPassengers, 110);
+    QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
+    QVERIFY(f.logger.messages.empty());
 }
 
 QTEST_APPLESS_MAIN(BoardingTrackTest)

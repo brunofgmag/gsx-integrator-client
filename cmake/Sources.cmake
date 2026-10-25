@@ -187,6 +187,10 @@ set(APP_SOURCES
         src/infrastructure/aircraft/fenix/rules/FenixA32xInitializeEfbOnceRule.h
         src/infrastructure/aircraft/fenix/rules/FenixA32xDisarmRefuelWhenDoneRule.cpp
         src/infrastructure/aircraft/fenix/rules/FenixA32xDisarmRefuelWhenDoneRule.h
+        src/infrastructure/aircraft/fslabs/FslabsA321neo.cpp
+        src/infrastructure/aircraft/fslabs/FslabsA321neo.h
+        src/infrastructure/aircraft/fslabs/FslabsAoc.cpp
+        src/infrastructure/aircraft/fslabs/FslabsAoc.h
         src/infrastructure/aircraft/ifly/IFly737Max.cpp
         src/infrastructure/aircraft/ifly/IFly737Max.h
         src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorsFollowLoaderCycleRule.cpp
@@ -263,6 +267,9 @@ set(APP_SOURCES
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h
+        src/infrastructure/fslabs/FslabsMcduClient.cpp
+        src/infrastructure/fslabs/FslabsMcduClient.h
+        src/infrastructure/fslabs/FslabsMcduGateway.h
         src/infrastructure/gsx/GsxAircraftProfile.cpp
         src/infrastructure/gsx/GsxAircraftProfile.h
         src/infrastructure/gsx/GsxDoorSync.cpp

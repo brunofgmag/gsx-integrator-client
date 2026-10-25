@@ -885,6 +885,8 @@ void RuntimeIntegratorServiceTest::freshSnapshotHasDisconnectedDefaults()
     QVERIFY(!snapshot.cargoAircraft);
     QVERIFY(!snapshot.engineerPanelExternalPower);
     QVERIFY(!snapshot.efbFlightPlanOnDeparturePage);
+    QVERIFY(!snapshot.aocFlightPlan);
+    QVERIFY(!snapshot.rightMcdu);
     QCOMPARE(snapshot.aircraftName, std::string{});
     QCOMPARE(snapshot.aircraftProfileId, std::string{});
     QCOMPARE(snapshot.phase, TurnaroundPhase::WaitingSupportedAircraft);

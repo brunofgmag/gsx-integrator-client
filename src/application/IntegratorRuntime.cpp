@@ -1013,6 +1013,8 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.cargoAircraft = IsAircraftCargoVariant();
     snapshot.efbFlightPlan = AircraftRequiresEfbFlightPlan();
     snapshot.efbFlightPlanOnDeparturePage = AircraftAppliesTheEfbFlightPlanOnItsDeparturePage();
+    snapshot.aocFlightPlan = AircraftLoadsItsFlightPlanThroughTheAoc();
+    snapshot.rightMcdu = AircraftWorksThroughTheRightMcdu();
     snapshot.engineerPanelExternalPower = AircraftTakesExternalPowerAtTheEngineerPanel();
     snapshot.groundPowerByClient = settings_.callGpu || settings_.callGpuOnArrival;
     snapshot.gsxProfileConflict = HasGsxProfileConflict();
@@ -1206,6 +1208,16 @@ bool IntegratorRuntime::AircraftRequiresEfbFlightPlan() const
 bool IntegratorRuntime::AircraftAppliesTheEfbFlightPlanOnItsDeparturePage() const
 {
     return aircraft_ && aircraft_->AppliesTheEfbFlightPlanOnItsDeparturePage();
+}
+
+bool IntegratorRuntime::AircraftLoadsItsFlightPlanThroughTheAoc() const
+{
+    return aircraft_ && aircraft_->LoadsItsFlightPlanThroughTheAoc();
+}
+
+bool IntegratorRuntime::AircraftWorksThroughTheRightMcdu() const
+{
+    return aircraft_ && aircraft_->WorksThroughTheRightMcdu();
 }
 
 bool IntegratorRuntime::AircraftTakesExternalPowerAtTheEngineerPanel() const

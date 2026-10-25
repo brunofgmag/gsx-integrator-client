@@ -561,6 +561,45 @@ gsxi_add_qt_test(gsxi-fenix-a32x-tests fenix-a32x
         src/domain/model/AutomationStatus.h)
 target_link_libraries(gsxi-fenix-a32x-tests PRIVATE Qt6::Network)
 
+gsxi_add_qt_test(gsxi-fslabs-mcdu-client-tests fslabs-mcdu-client
+        tests/FslabsFixtures.h
+        tests/ProbeLines.h
+        tests/tst_fslabs_mcdu_client.cpp
+        src/infrastructure/fslabs/FslabsMcduClient.cpp
+        src/infrastructure/fslabs/FslabsMcduClient.h
+        src/infrastructure/fslabs/FslabsMcduGateway.h
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h)
+target_link_libraries(gsxi-fslabs-mcdu-client-tests PRIVATE Qt6::Network)
+target_compile_definitions(gsxi-fslabs-mcdu-client-tests PRIVATE
+        FSLABS_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures/fslabs\")
+
+gsxi_add_qt_test(gsxi-fslabs-a321neo-tests fslabs-a321neo
+        tests/TestDoubles.h
+        tests/AircraftTicks.h
+        tests/FslabsFixtures.h
+        tests/doubles/FakeVariableWriter.h
+        tests/tst_fslabs_a321neo.cpp
+        src/infrastructure/aircraft/AircraftIdentity.h
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/DoorReading.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
+        src/infrastructure/aircraft/fslabs/FslabsA321neo.cpp
+        src/infrastructure/aircraft/fslabs/FslabsA321neo.h
+        src/infrastructure/aircraft/fslabs/FslabsAoc.cpp
+        src/infrastructure/aircraft/fslabs/FslabsAoc.h
+        src/infrastructure/fslabs/FslabsMcduClient.cpp
+        src/infrastructure/fslabs/FslabsMcduClient.h
+        src/infrastructure/fslabs/FslabsMcduGateway.h
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h
+        src/domain/model/AutomationStatus.h)
+target_link_libraries(gsxi-fslabs-a321neo-tests PRIVATE Qt6::Network)
+target_compile_definitions(gsxi-fslabs-a321neo-tests PRIVATE
+        FSLABS_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures/fslabs\")
+
 gsxi_add_qt_test(gsxi-commbus-bridge-client-tests commbus-bridge-client
         tests/doubles/FakeVariableGateway.h
         tests/doubles/FakeSimConnectApi.h
@@ -873,6 +912,10 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/fenix/rules/FenixA32xInitializeEfbOnceRule.h
         src/infrastructure/aircraft/fenix/rules/FenixA32xDisarmRefuelWhenDoneRule.cpp
         src/infrastructure/aircraft/fenix/rules/FenixA32xDisarmRefuelWhenDoneRule.h
+        src/infrastructure/aircraft/fslabs/FslabsA321neo.cpp
+        src/infrastructure/aircraft/fslabs/FslabsA321neo.h
+        src/infrastructure/aircraft/fslabs/FslabsAoc.cpp
+        src/infrastructure/aircraft/fslabs/FslabsAoc.h
         src/infrastructure/aircraft/ifly/IFly737Max.cpp
         src/infrastructure/aircraft/ifly/IFly737Max.h
         src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorsFollowLoaderCycleRule.cpp
@@ -948,6 +991,9 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h
+        src/infrastructure/fslabs/FslabsMcduClient.cpp
+        src/infrastructure/fslabs/FslabsMcduClient.h
+        src/infrastructure/fslabs/FslabsMcduGateway.h
         src/infrastructure/gsx/GsxDoorSync.cpp
         src/infrastructure/gsx/GsxDoorSync.h
         src/domain/model/AutomationStatus.h
@@ -1156,6 +1202,10 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/fenix/rules/FenixA32xInitializeEfbOnceRule.h
         src/infrastructure/aircraft/fenix/rules/FenixA32xDisarmRefuelWhenDoneRule.cpp
         src/infrastructure/aircraft/fenix/rules/FenixA32xDisarmRefuelWhenDoneRule.h
+        src/infrastructure/aircraft/fslabs/FslabsA321neo.cpp
+        src/infrastructure/aircraft/fslabs/FslabsA321neo.h
+        src/infrastructure/aircraft/fslabs/FslabsAoc.cpp
+        src/infrastructure/aircraft/fslabs/FslabsAoc.h
         src/infrastructure/aircraft/ifly/IFly737Max.cpp
         src/infrastructure/aircraft/ifly/IFly737Max.h
         src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorsFollowLoaderCycleRule.cpp
@@ -1164,6 +1214,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/ifly/rules/IFly737MaxWatchPlanFileRule.h
         src/infrastructure/ifly/IFlyPlanFile.cpp
         src/infrastructure/ifly/IFlyPlanFile.h
+        src/infrastructure/aircraft/pmdg/Pmdg737.cpp
+        src/infrastructure/aircraft/pmdg/Pmdg737.h
         src/infrastructure/aircraft/pmdg/Pmdg777.cpp
         src/infrastructure/aircraft/pmdg/Pmdg777.h
         src/infrastructure/aircraft/pmdg/PmdgAircraft.cpp
@@ -1206,6 +1258,10 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/commbus/CommBusBridgeGateway.h
         src/infrastructure/commbus/CommBusPluginClient.cpp
         src/infrastructure/commbus/CommBusPluginClient.h
+        src/infrastructure/pmdg/Pmdg737DataClient.cpp
+        src/infrastructure/pmdg/Pmdg737DataClient.h
+        src/infrastructure/pmdg/Pmdg737DataGateway.h
+        src/infrastructure/pmdg/Pmdg737SdkData.h
         src/infrastructure/pmdg/Pmdg777DataClient.cpp
         src/infrastructure/pmdg/Pmdg777DataClient.h
         src/infrastructure/pmdg/PmdgClientDataChannel.h
@@ -1221,6 +1277,9 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h
+        src/infrastructure/fslabs/FslabsMcduClient.cpp
+        src/infrastructure/fslabs/FslabsMcduClient.h
+        src/infrastructure/fslabs/FslabsMcduGateway.h
         src/infrastructure/gsx/GsxAircraftProfile.cpp
         src/infrastructure/gsx/GsxAircraftProfile.h
         src/infrastructure/gsx/GsxDoorSync.cpp

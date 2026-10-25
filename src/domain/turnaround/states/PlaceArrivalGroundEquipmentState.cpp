@@ -3,8 +3,33 @@
 #include "../TurnaroundContext.h"
 #include "../../model/AutomationSettings.h"
 #include "../../ports/Aircraft.h"
+#include "../../ports/DomainLogger.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
+
+namespace
+{
+    constexpr auto kGpuAlreadyRequested = "The ground power was already requested; not asking for it again";
+
+    void RequestTheGroundPower(TurnaroundContext& ctx)
+    {
+        if (ctx.aircraft->SupportsGroundPowerControl())
+        {
+            ctx.aircraft->SetGroundPower(true);
+
+            return;
+        }
+
+        if (ctx.gsxGateway->IsServiceInProgress(GroundService::Gpu))
+        {
+            ctx.logger->LogInfo(kGpuAlreadyRequested);
+
+            return;
+        }
+
+        ctx.menuGateway->ToggleGpu();
+    }
+}
 
 std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::EvaluatePhase(TurnaroundContext& ctx)
 {
@@ -51,15 +76,7 @@ std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::EvaluatePh
         return std::nullopt;
     }
 
-    if (ctx.aircraft->SupportsGroundPowerControl())
-    {
-        ctx.aircraft->SetGroundPower(true);
-        ctx.data.arrivalGpuRequested = true;
-
-        return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
-    }
-
-    ctx.menuGateway->ToggleGpu();
+    RequestTheGroundPower(ctx);
     ctx.data.arrivalGpuRequested = true;
 
     return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};

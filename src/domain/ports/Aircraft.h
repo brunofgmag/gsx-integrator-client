@@ -40,6 +40,8 @@ public:
 
     [[nodiscard]] virtual bool RequiresEfbFlightPlan() const { return false; }
     [[nodiscard]] virtual bool AppliesTheEfbFlightPlanOnItsDeparturePage() const { return false; }
+    [[nodiscard]] virtual bool LoadsItsFlightPlanThroughTheAoc() const { return false; }
+    [[nodiscard]] virtual bool WorksThroughTheRightMcdu() const { return false; }
     [[nodiscard]] virtual bool IsFlightPlanLoaded() const = 0;
     [[nodiscard]] virtual bool FlightPlanDiffersFromTheOfp() const { return false; }
     [[nodiscard]] virtual double GetPlannedFuelKg() const = 0;
@@ -62,6 +64,11 @@ public:
     [[nodiscard]] virtual bool CompletesPushbackViaInterruptMenu() const = 0;
     [[nodiscard]] virtual RefuelBy GetRefuelMethod() const = 0;
     [[nodiscard]] virtual BoardBy GetBoardMethod() const = 0;
+    [[nodiscard]] virtual std::optional<int> GetPassengersItBoards() const { return std::nullopt; }
+
+    [[nodiscard]] virtual bool RequestRefuelingItself() { return false; }
+    [[nodiscard]] virtual bool RequestBoardingItself() { return false; }
+    [[nodiscard]] virtual bool RequestPushbackItself() { return false; }
 
     [[nodiscard]] virtual bool ConsumeSmartSwitch() = 0;
 

@@ -1,6 +1,7 @@
 #include "RequestPushbackState.h"
 
 #include "../TurnaroundContext.h"
+#include "../../ports/Aircraft.h"
 #include "../../ports/DomainLogger.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
@@ -41,7 +42,15 @@ std::optional<TurnaroundTransition> RequestPushbackState::EvaluatePhase(Turnarou
 
     if (departureState == GsxStateStatus::Callable && !data.pushbackRequested)
     {
-        ctx.menuGateway->RequestPushback();
+        if (ctx.aircraft->RequestPushbackItself())
+        {
+            ctx.logger->LogInfo("The aircraft took the pushback request itself; not asking GSX for it");
+        }
+        else
+        {
+            ctx.menuGateway->RequestPushback();
+        }
+
         data.pushbackRequested = true;
     }
 
