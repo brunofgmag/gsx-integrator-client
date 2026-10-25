@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.50.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.49.0...v1.50.0) (2026-10-25)
+
+
+* drive the FSLabs A321neo through its right MCDU ([#275](https://github.com/brunofgmag/gsx-integrator-client/issues/275)) ([d822fed](https://github.com/brunofgmag/gsx-integrator-client/commit/d822fed5a25b7ca8032d3c8da9c6dab197e8fb49))
+
+
+### Features
+
+* **fslabs:** drive the FSLabs A321neo through its right MCDU ([f932732](https://github.com/brunofgmag/gsx-integrator-client/commit/f9327320b30d2e3d58b50d1e78262e4705b70cb5)) ([d822fed](https://github.com/brunofgmag/gsx-integrator-client/commit/d822fed5a25b7ca8032d3c8da9c6dab197e8fb49))
+
 ## [1.49.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.48.5...v1.49.0) (2026-10-23)
 
 
