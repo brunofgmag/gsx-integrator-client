@@ -39,6 +39,9 @@ private slots:
     static void releasesTheDepartureDoorHoldOnANewTurnaround();
     static void clearsTheGroundEquipmentTheAircraftPlacedItself();
     static void clearsTheAircraftGroundEquipmentOnlyOnce();
+    static void doesNotToggleAGpuServiceThatIsAlreadyInProgress();
+    static void commandsTheAircraftGpuEvenWhileAGsxGpuServiceIsInProgress();
+    static void givesUpWaitingOnAGpuServiceInProgressThatNeverConnects();
 };
 
 void PlaceGroundEquipmentStateTest::skipsWhenCallGpuDisabled()
@@ -521,6 +524,70 @@ void PlaceGroundEquipmentStateTest::clearsTheAircraftGroundEquipmentOnlyOnce()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 
     QCOMPARE(f.aircraft.clearOwnGroundEquipmentCalls, 1);
+}
+
+void PlaceGroundEquipmentStateTest::doesNotToggleAGpuServiceThatIsAlreadyInProgress()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+    f.gsxService.gpuInProgress = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+    QVERIFY(f.ctx.data.gpuRequested);
+    QCOMPARE(f.logger.messages.size(), 1U);
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+    QCOMPARE(f.logger.messages.size(), 1U);
+
+    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+}
+
+void PlaceGroundEquipmentStateTest::commandsTheAircraftGpuEvenWhileAGsxGpuServiceIsInProgress()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.aircraft.supportsGroundPowerControl = true;
+    f.aircraft.groundPowerStatus = GroundPowerStatus::Disconnected;
+    f.gsxService.gpuInProgress = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 1);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+    QVERIFY(f.ctx.data.gpuRequested);
+    QCOMPARE(f.logger.messages.size(), 0U);
+}
+
+void PlaceGroundEquipmentStateTest::givesUpWaitingOnAGpuServiceInProgressThatNeverConnects()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+    f.gsxService.gpuInProgress = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    f.ctx.data.stateTickCount = 240;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
 }
 
 QTEST_APPLESS_MAIN(PlaceGroundEquipmentStateTest)

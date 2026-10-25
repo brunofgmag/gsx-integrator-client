@@ -72,6 +72,8 @@ struct IntegratorSnapshot
     bool cargoAircraft = false;
     bool efbFlightPlan = false;
     bool efbFlightPlanOnDeparturePage = false;
+    bool aocFlightPlan = false;
+    bool rightMcdu = false;
     bool engineerPanelExternalPower = false;
     bool groundPowerByClient = false;
 

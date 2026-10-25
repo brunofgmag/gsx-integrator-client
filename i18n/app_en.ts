@@ -1997,6 +1997,11 @@
         <translation>Check that SimBrief is loaded in GSX and in the client.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="212"/>
+        <source>Power the aircraft, switch on the right MCDU, and request INIT DATA on the AOC INIT page.</source>
+        <translation>Power the aircraft, switch on the right MCDU, and request INIT DATA on the AOC INIT page.</translation>
+    </message>
+    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="217"/>
         <source>Import your SimBrief flight plan on the aircraft EFB and open its DEPARTURE page.</source>
         <translation>Import your SimBrief flight plan on the aircraft EFB and open its DEPARTURE page.</translation>
@@ -2094,6 +2099,11 @@
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="248"/>
         <source>Connect the GPU and switch on the batteries so the aircraft has power.</source>
         <translation>Connect the GPU and switch on the batteries so the aircraft has power.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="234"/>
+        <source>Power the aircraft and switch on the right MCDU: the client calls the services through it.</source>
+        <translation>Power the aircraft and switch on the right MCDU: the client calls the services through it.</translation>
     </message>
     <message>
         <source>Remember to remove additional services (like the GPU).</source>

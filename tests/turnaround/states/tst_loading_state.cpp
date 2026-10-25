@@ -76,6 +76,9 @@ private slots:
     static void theRampNeverPausesFromTheFirstToTheLastFuelTick();
     static void logsTheRefuelEndingBeforeGsxConfirmedTheBoarding();
     static void staysQuietWhenGsxConfirmedTheBoardingBeforeTheRefuelEnded();
+    static void leavesTheBoardingRequestToTheAircraftThatTakesIt();
+    static void asksTheAircraftAgainEveryTenTicksUntilTheBoardingStarts();
+    static void sendsTheBoardingToGsxWhenTheAircraftDeclinesIt();
 };
 
 void LoadingStateTest::doesNotRequestBoardingBelowThreeQuartersOfTheFuel()
@@ -527,6 +530,52 @@ void LoadingStateTest::staysQuietWhenGsxConfirmedTheBoardingBeforeTheRefuelEnded
 
     QVERIFY(f.ctx.data.refuelFinished);
     QVERIFY(!Logged(f, "before GSX confirmed the boarding"));
+}
+
+void LoadingStateTest::leavesTheBoardingRequestToTheAircraftThatTakesIt()
+{
+    TurnaroundStateFixture f;
+    LoadingState state;
+
+    ArrangeClientRefuel(f, 15.0, 1000.0, 1900.0);
+    f.aircraft.takesBoardingRequest = true;
+
+    QVERIFY(!Tick(state, f).has_value());
+
+    QCOMPARE(f.aircraft.requestBoardingItselfCalls, 1);
+    QCOMPARE(f.menuGateway.boardingCalls, 0);
+    QVERIFY(f.ctx.data.boardingRequested);
+    QVERIFY(Logged(f, "the aircraft took the boarding request itself"));
+}
+
+void LoadingStateTest::asksTheAircraftAgainEveryTenTicksUntilTheBoardingStarts()
+{
+    TurnaroundStateFixture f;
+    LoadingState state;
+
+    ArrangeClientRefuel(f, 15.0, 1000.0, 1900.0);
+    f.aircraft.takesBoardingRequest = true;
+
+    for (int tick = 0; tick < 12; ++tick)
+    {
+        QVERIFY(!Tick(state, f).has_value());
+    }
+
+    QCOMPARE(f.aircraft.requestBoardingItselfCalls, 2);
+    QCOMPARE(f.menuGateway.boardingCalls, 0);
+}
+
+void LoadingStateTest::sendsTheBoardingToGsxWhenTheAircraftDeclinesIt()
+{
+    TurnaroundStateFixture f;
+    LoadingState state;
+
+    ArrangeClientRefuel(f, 15.0, 1000.0, 1900.0);
+
+    QVERIFY(!Tick(state, f).has_value());
+
+    QCOMPARE(f.aircraft.requestBoardingItselfCalls, 1);
+    QCOMPARE(f.menuGateway.boardingCalls, 1);
 }
 
 QTEST_APPLESS_MAIN(LoadingStateTest)

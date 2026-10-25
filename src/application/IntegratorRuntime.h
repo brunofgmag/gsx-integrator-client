@@ -145,6 +145,8 @@ private:
     [[nodiscard]] bool IsLoadingCargoPhase() const;
     [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
     [[nodiscard]] bool AircraftAppliesTheEfbFlightPlanOnItsDeparturePage() const;
+    [[nodiscard]] bool AircraftLoadsItsFlightPlanThroughTheAoc() const;
+    [[nodiscard]] bool AircraftWorksThroughTheRightMcdu() const;
     [[nodiscard]] bool AircraftTakesExternalPowerAtTheEngineerPanel() const;
     [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
     [[nodiscard]] bool CanFixGsxProfile() const;

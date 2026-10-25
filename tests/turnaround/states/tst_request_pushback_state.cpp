@@ -21,6 +21,10 @@ private slots:
     static void resumesAfterDeiceCompletes();
     static void asksForTheClearanceAndSkipsTheTugWhereGsxOffersNoPushback();
     static void theClearanceWaitsForDeiceToFinish();
+    static void leavesThePushbackRequestToTheAircraftThatTakesIt();
+    static void asksTheAircraftAgainWhenPushbackStaysCallable();
+    static void sendsThePushbackToGsxWhenTheAircraftDeclinesIt();
+    static void theClearanceDoesNotGoThroughTheAircraft();
 };
 
 void RequestPushbackStateTest::requestsPushbackWhenCallable()
@@ -232,6 +236,70 @@ void RequestPushbackStateTest::theClearanceWaitsForDeiceToFinish()
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::WaitingDeparture);
     QCOMPARE(f.menuGateway.departureClearanceCalls, 1);
+}
+
+void RequestPushbackStateTest::leavesThePushbackRequestToTheAircraftThatTakesIt()
+{
+    TurnaroundStateFixture f;
+    RequestPushbackState state;
+
+    f.aircraft.takesPushbackRequest = true;
+    f.gsxService.departureState = GsxStateStatus::Callable;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.aircraft.requestPushbackItselfCalls, 1);
+    QCOMPARE(f.menuGateway.pushbackCalls, 0);
+    QVERIFY(f.ctx.data.pushbackRequested);
+    QCOMPARE(f.logger.messages.size(), 1U);
+}
+
+void RequestPushbackStateTest::asksTheAircraftAgainWhenPushbackStaysCallable()
+{
+    TurnaroundStateFixture f;
+    RequestPushbackState state;
+
+    f.aircraft.takesPushbackRequest = true;
+    f.gsxService.departureState = GsxStateStatus::Callable;
+
+    for (int tick = 0; tick < 62; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.aircraft.requestPushbackItselfCalls, 2);
+    QCOMPARE(f.menuGateway.pushbackCalls, 0);
+}
+
+void RequestPushbackStateTest::sendsThePushbackToGsxWhenTheAircraftDeclinesIt()
+{
+    TurnaroundStateFixture f;
+    RequestPushbackState state;
+
+    f.gsxService.departureState = GsxStateStatus::Callable;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.aircraft.requestPushbackItselfCalls, 1);
+    QCOMPARE(f.menuGateway.pushbackCalls, 1);
+}
+
+void RequestPushbackStateTest::theClearanceDoesNotGoThroughTheAircraft()
+{
+    TurnaroundStateFixture f;
+    RequestPushbackState state;
+
+    f.aircraft.takesPushbackRequest = true;
+    f.gsxService.offersPushback = false;
+    f.gsxService.departureState = GsxStateStatus::Callable;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::WaitingDeparture);
+    QCOMPARE(f.menuGateway.departureClearanceCalls, 1);
+    QCOMPARE(f.aircraft.requestPushbackItselfCalls, 0);
 }
 
 QTEST_APPLESS_MAIN(RequestPushbackStateTest)

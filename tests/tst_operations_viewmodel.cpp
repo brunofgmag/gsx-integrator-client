@@ -54,6 +54,8 @@ private slots:
     static void flightPlanTipFollowsPlanSource();
     static void flightPlanTipNamesTheDeparturePageWhereTheEfbAppliesThePlanThere();
     static void powerOnTipNamesTheEngineerPanelWhereTheAircraftTakesExternalPowerThere();
+    static void flightPlanTipNamesTheAocInitPageWhereTheAircraftLoadsItsPlanThroughTheAoc();
+    static void powerOnTipNamesTheRightMcduWhereTheAircraftWorksThroughIt();
     static void theDeboardingTipWaitsForGsxOnceTheRequestIsOut();
     static void theBoardingTipNamesTheForwardLoaderWaitingForItsDoor();
     static void theBoardingTipNamesTheAftLoaderWaitingForItsDoor();
@@ -493,6 +495,44 @@ void OperationsViewModelTest::powerOnTipNamesTheEngineerPanelWhereTheAircraftTak
 
     QCOMPARE(viewModel.GetPhaseTip(),
              QStringLiteral("With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power."));
+}
+
+void OperationsViewModelTest::flightPlanTipNamesTheAocInitPageWhereTheAircraftLoadsItsPlanThroughTheAoc()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingFlightPlan;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Check that SimBrief is loaded in GSX and in the client."));
+
+    service.snapshot.aocFlightPlan = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Power the aircraft, switch on the right MCDU, and request INIT DATA on the AOC INIT page."));
+}
+
+void OperationsViewModelTest::powerOnTipNamesTheRightMcduWhereTheAircraftWorksThroughIt()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingPowerOn;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Connect the GPU and switch on the batteries so the aircraft has power."));
+
+    service.snapshot.rightMcdu = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Power the aircraft and switch on the right MCDU: the client calls the services through it."));
 }
 
 void OperationsViewModelTest::theDeboardingTipWaitsForGsxOnceTheRequestIsOut()

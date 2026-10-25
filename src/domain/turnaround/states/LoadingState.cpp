@@ -128,7 +128,15 @@ namespace
         }
 
         ctx.logger->LogInfo(std::format("Loading: requesting boarding because {}", trigger));
-        ctx.menuGateway->RequestBoarding();
+        if (ctx.aircraft->RequestBoardingItself())
+        {
+            ctx.logger->LogInfo("Loading: the aircraft took the boarding request itself; not asking GSX for it");
+        }
+        else
+        {
+            ctx.menuGateway->RequestBoarding();
+        }
+
         data.boardingRequested = true;
     }
 }

@@ -103,6 +103,9 @@ private slots:
     static void detectsFenixA320FromPresetTitle();
     static void detectsFenixA321FromPresetTitle();
     static void doesNotDetectFenixByGenericAirbusAtcModel();
+    static void detectsFslabsA321neoFromItsFourTitles();
+    static void doesNotDetectFslabsByTheSharedAtcModel();
+    static void detectionReportsFslabsGsxRefuelAndTheRightMcdu();
     static void detectsPmdg777300ErFromPresetTitle();
     static void detectsPmdg777FreighterFromPresetTitle();
     static void detectsPmdg777200LrFromPresetTitle();
@@ -858,6 +861,56 @@ void AircraftDetectionTest::doesNotDetectFenixByGenericAirbusAtcModel()
     gateway.atcModel = "A320";
 
     QVERIFY(DetectAircraft({.variableGateway = &gateway, .status = &status}) == nullptr);
+}
+
+void AircraftDetectionTest::detectsFslabsA321neoFromItsFourTitles()
+{
+    for (const char* const title : {"FSLabs A321-251N - FSL (SN-FSL)", "FSLabs A321-251NX - FSL (SN-FSL)",
+                                    "FSLabs A321-271N - FSL (SN-FSL)", "FSLabs A321-271NX - FSL (SN-FSL)"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+        gateway.atcModel = "A21N";
+
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft = DetectAircraft({.variableGateway = &gateway, .status = &status}, &descriptor);
+
+        QVERIFY2(aircraft != nullptr, title);
+        QCOMPARE(std::string(descriptor->id), std::string("fslabs-a321neo"));
+        QCOMPARE(std::string(descriptor->shortCode), std::string("A21N"));
+    }
+}
+
+void AircraftDetectionTest::doesNotDetectFslabsByTheSharedAtcModel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "IVAO MTL Airbus A321neo";
+    gateway.atcModel = "A21N";
+
+    QVERIFY(DetectAircraft({.variableGateway = &gateway, .status = &status}) == nullptr);
+}
+
+void AircraftDetectionTest::detectionReportsFslabsGsxRefuelAndTheRightMcdu()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "FSLabs A321-251N - FSL (SN-FSL)";
+    gateway.atcModel = "A21N";
+
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({.variableGateway = &gateway, .status = &status}, &descriptor);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(descriptor->refuelBy, RefuelBy::Gsx);
+    QCOMPARE(descriptor->fuelRateKgs, 0.0);
+    QCOMPARE(descriptor->smartSwitch, (SmartSwitchCue{"INT/RAD", "RAD", SmartSwitchMove::Flip}));
+    QVERIFY(aircraft->WorksThroughTheRightMcdu());
+    QVERIFY(aircraft->LoadsItsFlightPlanThroughTheAoc());
 }
 
 void AircraftDetectionTest::detectsPmdg777300ErFromPresetTitle()

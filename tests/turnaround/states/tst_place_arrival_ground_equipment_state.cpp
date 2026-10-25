@@ -25,6 +25,8 @@ private slots:
     static void closesAllDoorsEvenWhenOptionDisabled();
     static void closesAllDoorsOnlyOnce();
     static void releasesTheDepartureDoorHoldOnArrival();
+    static void doesNotToggleAGpuServiceThatIsAlreadyInProgress();
+    static void commandsTheAircraftGpuEvenWhileAGsxGpuServiceIsInProgress();
 };
 
 void PlaceArrivalGroundEquipmentStateTest::skipsWhenOptionDisabled()
@@ -323,6 +325,48 @@ void PlaceArrivalGroundEquipmentStateTest::closesAllDoorsOnlyOnce()
     QVERIFY(!state.Evaluate(f.ctx).has_value());
 
     QCOMPARE(f.aircraft.closeAllDoorsCalls, 1);
+}
+
+void PlaceArrivalGroundEquipmentStateTest::doesNotToggleAGpuServiceThatIsAlreadyInProgress()
+{
+    TurnaroundStateFixture f;
+    PlaceArrivalGroundEquipmentState state;
+
+    f.settings.callGpuOnArrival = true;
+    f.aircraft.engineRunning = false;
+    f.aircraft.parkingBrakeSet = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+    f.gsxService.gpuInProgress = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestDeboarding);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+    QVERIFY(f.ctx.data.arrivalGpuRequested);
+    QCOMPARE(f.logger.messages.size(), 1U);
+}
+
+void PlaceArrivalGroundEquipmentStateTest::commandsTheAircraftGpuEvenWhileAGsxGpuServiceIsInProgress()
+{
+    TurnaroundStateFixture f;
+    PlaceArrivalGroundEquipmentState state;
+
+    f.settings.callGpuOnArrival = true;
+    f.aircraft.engineRunning = false;
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.supportsGroundPowerControl = true;
+    f.aircraft.groundPowerStatus = GroundPowerStatus::Disconnected;
+    f.gsxService.gpuInProgress = true;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestDeboarding);
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 1);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+    QVERIFY(f.ctx.data.arrivalGpuRequested);
+    QCOMPARE(f.logger.messages.size(), 0U);
 }
 
 QTEST_APPLESS_MAIN(PlaceArrivalGroundEquipmentStateTest)

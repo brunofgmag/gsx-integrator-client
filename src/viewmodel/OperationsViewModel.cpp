@@ -206,6 +206,12 @@ namespace
 
     QString FlightPlanTip(const IntegratorSnapshot& snapshot)
     {
+        if (snapshot.aocFlightPlan)
+        {
+            return QCoreApplication::translate("Turnaround",
+                                               "Power the aircraft, switch on the right MCDU, and request INIT DATA on the AOC INIT page.");
+        }
+
         if (!snapshot.efbFlightPlan)
         {
             return QCoreApplication::translate("Turnaround", "Check that SimBrief is loaded in GSX and in the client.");
@@ -218,6 +224,19 @@ namespace
         }
 
         return QCoreApplication::translate("Turnaround", "Import your SimBrief flight plan on the aircraft EFB.");
+    }
+
+    QString PowerOnTip(const IntegratorSnapshot& snapshot)
+    {
+        if (snapshot.rightMcdu)
+        {
+            return QCoreApplication::translate("Turnaround",
+                                               "Power the aircraft and switch on the right MCDU: the client calls the services through it.");
+        }
+
+        return snapshot.engineerPanelExternalPower
+                   ? QCoreApplication::translate("Turnaround", "With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power.")
+                   : QCoreApplication::translate("Turnaround", "Connect the GPU and switch on the batteries so the aircraft has power.");
     }
 
     QString PushbackRequestTip(const IntegratorSnapshot& snapshot)
@@ -242,9 +261,7 @@ namespace
         case TurnaroundPhase::WaitingFlightPlan:
             return FlightPlanTip(snapshot);
         case TurnaroundPhase::WaitingPowerOn:
-            return snapshot.engineerPanelExternalPower
-                       ? QCoreApplication::translate("Turnaround", "With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power.")
-                       : QCoreApplication::translate("Turnaround", "Connect the GPU and switch on the batteries so the aircraft has power.");
+            return PowerOnTip(snapshot);
         case TurnaroundPhase::RequestPushback:
             return PushbackRequestTip(snapshot);
         case TurnaroundPhase::WaitingReadyToPush:
