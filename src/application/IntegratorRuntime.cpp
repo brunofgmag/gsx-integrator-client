@@ -1,5 +1,6 @@
 #include "IntegratorRuntime.h"
 
+#include <algorithm>
 #include <array>
 #include <utility>
 #include <QtCore/QCoreApplication>
@@ -320,9 +321,11 @@ void IntegratorRuntime::AdvanceResumption()
         return;
     }
 
-    const TurnaroundResumption::LiveFacts live{.key = LiveKey(),
-                                               .readingsArrived = HaveResumeReadingsArrived(),
-                                               .aircraftReachable = aircraft_ && aircraft_->IsReachable()};
+    const TurnaroundResumption::LiveFacts live{
+        .key = LiveKey(),
+        .readingsArrived = HaveResumeReadingsArrived(),
+        .aircraftReachable = aircraft_ && aircraft_->IsReachable(),
+    };
     const TurnaroundResumption::Advancement advancement = resumption_.Advance(live);
     if (advancement.repositioned)
     {
@@ -762,6 +765,14 @@ bool IntegratorRuntime::AreOwnStairsWaitingForPressure() const
         && aircraft_->AreOwnStairsWaitingForPressure();
 }
 
+bool IntegratorRuntime::IsOwnGroundEquipmentAttached() const
+{
+    return aircraft_
+        && ResolveTickMode() == TickMode::Driving
+        && GetPhase() == TurnaroundPhase::RemoveGroundEquipment
+        && aircraft_->IsOwnGroundEquipmentAttached();
+}
+
 bool IntegratorRuntime::IsFuelRequestStalled() const
 {
     return status_.fuelRequestStalled && GetPhase() == TurnaroundPhase::RequestFuel;
@@ -955,24 +966,79 @@ void IntegratorRuntime::ResolveAircraft()
         return;
     }
 
-    aircraft_ = DetectAircraft({.variableGateway = &varGateway_,
-                                .status = &status_,
-                                .commBusBridge = &bridgeClient_,
-                                .gsxGateway = &gsxService_},
-                               &aircraftDescriptor_);
+    aircraft_ = DetectAircraft(
+        {
+            .variableGateway = &varGateway_,
+            .status = &status_,
+            .commBusBridge = &bridgeClient_,
+            .gsxGateway = &gsxService_,
+        },
+        &aircraftDescriptor_);
     if (aircraft_)
     {
         probe::SetAircraft(QString::fromUtf8(aircraftDescriptor_->id));
         status_.aircraftSupported = true;
         gsxProfile_.roots = GsxAircraftProfile::ProfileRootsFor(aircraftDescriptor_->name);
+        gsxProfile_.recommendedRoots = GsxAircraftProfile::RecommendedProfileRootsFor(aircraftDescriptor_->name);
         pmdgOptions_.ini = PmdgOptions::PathFor(aircraftDescriptor_->name).value_or(std::filesystem::path{});
         CheckGsxProfile();
+        AnnounceRecommendedGsxProfile();
         CheckPmdgOptions();
         emit Updated();
     }
 }
 
 void IntegratorRuntime::CheckGsxProfile()
+{
+    CheckConflictingGsxProfile();
+    CheckRecommendedGsxProfile();
+}
+
+void IntegratorRuntime::CheckRecommendedGsxProfile()
+{
+    if (gsxProfile_.recommendedRoots.empty())
+    {
+        gsxProfile_.recommendedCfgs.clear();
+        gsxProfile_.refuelingRecommended = false;
+
+        return;
+    }
+
+    gsxProfile_.recommendedCfgs = GsxAircraftProfile::FindCfgs(gsxProfile_.recommendedRoots);
+    gsxProfile_.refuelingRecommended = gsxProfile_.recommendedCfgs.empty()
+        || std::ranges::any_of(gsxProfile_.recommendedCfgs, NeedsRefuelingFix);
+}
+
+void IntegratorRuntime::AnnounceRecommendedGsxProfile() const
+{
+    if (gsxProfile_.recommendedRoots.empty())
+    {
+        return;
+    }
+
+    if (gsxProfile_.recommendedCfgs.empty())
+    {
+        LOG_INFO("No GSX profile found for the %s under the Virtuali Airplanes folders; one with 'refueling = 0' is recommended.",
+                 aircraftDescriptor_->name);
+
+        return;
+    }
+
+    for (const auto& cfg : gsxProfile_.recommendedCfgs)
+    {
+        const std::optional<int> refueling = GsxAircraftProfile::ReadRefueling(cfg);
+        if (refueling.has_value())
+        {
+            LOG_INFO("GSX profile '%s': refueling = %d.", cfg.string().c_str(), *refueling);
+        }
+        else
+        {
+            LOG_INFO("GSX profile '%s': refueling not set.", cfg.string().c_str());
+        }
+    }
+}
+
+void IntegratorRuntime::CheckConflictingGsxProfile()
 {
     if (gsxProfile_.roots.empty())
     {
@@ -1040,10 +1106,12 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.groundPowerByClient = settings_.callGpu || settings_.callGpuOnArrival;
     snapshot.gsxProfileConflict = HasGsxProfileConflict();
     snapshot.gsxProfileFixable = CanFixGsxProfile();
+    snapshot.gsxProfileRefuelingRecommended = gsxProfile_.refuelingRecommended;
     snapshot.pmdgOptionsConflict = HasPmdgOptionsConflict();
     snapshot.pmdgOptionsFixable = CanFixPmdgOptions();
     snapshot.cargoDoorStuck = IsCargoDoorStuck();
     snapshot.ownStairsWaitingForPressure = AreOwnStairsWaitingForPressure();
+    snapshot.ownGroundEquipmentAttached = IsOwnGroundEquipmentAttached();
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
     snapshot.fuelPlanOverCapacity = IsFuelPlanOverCapacity();
     snapshot.fuelDidNotStay = DidFuelNotStay();

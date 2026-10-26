@@ -784,6 +784,12 @@ QString OperationsViewModel::GetGsxProfileActionLabel() const
                : QString();
 }
 
+QString OperationsViewModel::GetGsxProfileRecommendationAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "A GSX profile with 'refueling = 0' is recommended for this aircraft. The client fuels it either way; the setting keeps the GSX truck from writing to the tanks while it does.");
+}
+
 QString OperationsViewModel::GetPmdgOptionsAdvisoryText()
 {
     return QCoreApplication::translate("OperationsScreen",
@@ -807,6 +813,12 @@ QString OperationsViewModel::GetOwnStairsPressureAdvisoryText()
 {
     return QCoreApplication::translate("OperationsScreen",
                                        "The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back.");
+}
+
+QString OperationsViewModel::GetOwnGroundEquipmentAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "Remove the chocks and disconnect the ground power in the aircraft's EFB. Pushback waits until both are gone.");
 }
 
 QString OperationsViewModel::GetFuelRequestAdvisoryText()
@@ -904,6 +916,11 @@ bool OperationsViewModel::IsGsxProfileFixable() const
     return snapshot_.gsxProfileFixable;
 }
 
+bool OperationsViewModel::IsGsxProfileRefuelingRecommended() const
+{
+    return snapshot_.gsxProfileRefuelingRecommended;
+}
+
 bool OperationsViewModel::HasPmdgOptionsConflict() const
 {
     return snapshot_.pmdgOptionsConflict;
@@ -917,6 +934,11 @@ bool OperationsViewModel::IsCargoDoorStuck() const
 bool OperationsViewModel::AreOwnStairsWaitingForPressure() const
 {
     return snapshot_.ownStairsWaitingForPressure;
+}
+
+bool OperationsViewModel::IsOwnGroundEquipmentAttached() const
+{
+    return snapshot_.ownGroundEquipmentAttached;
 }
 
 bool OperationsViewModel::IsFuelRequestStalled() const

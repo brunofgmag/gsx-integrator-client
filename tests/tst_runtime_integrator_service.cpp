@@ -53,6 +53,13 @@ namespace
     constexpr auto kUnsupportedTitle = "Cessna Skyhawk G1000 Asobo";
     constexpr auto kUnsupportedAtcModel = "C172";
     constexpr auto kRj85AtcModel = "RJ85";
+    constexpr auto kBbs757Title = "BlueBird 757-200 PW";
+    constexpr auto kBbs757AtcModel = "B752";
+    constexpr auto kBbs757ProfileId = "bbs-757-200";
+    constexpr auto kBbs757ChocksLVar = "BBS757_vis_chocks";
+    constexpr auto kBbs757ScimitarFolder = "bbs-757-200-rr-scimitarw";
+    constexpr auto kBbs757BaseFolder = "bbs-757-200-base";
+    constexpr auto kBbs757GpuCartLVar = "BBS_757_GPU_CART_VISIBLE";
     constexpr auto kRj85ProfileId = "justflight-rj85";
     constexpr double kRj85RecommendedFuelRateKgs = 12.0;
     constexpr auto kMd11EfbZfw = "L:MD11_EFB_PAYLOAD_ZFW";
@@ -189,6 +196,14 @@ namespace
     bool WriteGsxCfg(const QString& appData, const QByteArray& content)
     {
         const QDir folder(QDir(appData).filePath(QStringLiteral("Virtuali/Airplanes/%1/common/config").arg(kA340ProfileFolder)));
+        QFile cfg(folder.filePath(QStringLiteral("gsx.cfg")));
+
+        return folder.mkpath(QStringLiteral(".")) && cfg.open(QIODevice::WriteOnly) && cfg.write(content) == content.size();
+    }
+
+    bool WriteBbs757GsxCfg(const QString& appData, const char* baseFolder, const QByteArray& content)
+    {
+        const QDir folder(QDir(appData).filePath(QStringLiteral("Virtuali/Airplanes/%1/200").arg(baseFolder)));
         QFile cfg(folder.filePath(QStringLiteral("gsx.cfg")));
 
         return folder.mkpath(QStringLiteral(".")) && cfg.open(QIODevice::WriteOnly) && cfg.write(content) == content.size();
@@ -724,6 +739,14 @@ private slots:
     static void runtimeGettersOnEmptyRuntime();
     static void anA340WithNoGsxProfileOnDiskRaisesNoProfileConflict();
     static void anA340ProfileThatKeepsRefuelingOnRaisesAFixableConflict();
+    static void aBbs757WithNoGsxProfileOnDiskRecommendsTheRefuelingProfileWithoutAConflict();
+    static void aBbs757ProfileThatKeepsRefuelingOnStillOnlyRecommendsTheFix();
+    static void aBbs757ProfileThatSetsRefuelingToZeroRecommendsNothing();
+    static void aBbs757WithOneProfileLeftOnRefuelingStillRecommendsIt();
+    static void anAircraftWithARequiredProfileNeverRecommendsOne();
+    static void theDetectionNamesEveryGsxProfileTheBbs757Finds();
+    static void theDetectionSaysWhenTheBbs757HasNoGsxProfile();
+    static void theSlowTickNoticesTheBbs757ProfileFixedOnDiskAndDoesNotAnnounceItAgain();
     static void setupConnectsThroughFakeSimConnect();
     static void setupStartsTheRemoteApiClientWithoutOpeningASocket();
     static void connectedCommandsFollowGuardOrder();
@@ -747,6 +770,7 @@ private slots:
     static void theSnapshotCarriesTheLoaderCountdownWhileTheLoaderHoldsBoarding();
     static void theSnapshotCarriesTheDeboardingWaitOnceTheGsxTakesTheRequest();
     static void theSnapshotCarriesTheAirstairPressureWaitOnlyWhileTheAutomationDrives();
+    static void theSnapshotCarriesTheOwnGroundEquipmentWaitOnlyInTheDepartureStepWhileTheAutomationDrives();
     static void theSlowTickWritesNothingWhileTheGsxIsDown();
     static void theSlowRulesAreObservedWhileTheAutomationIsOffAndTheProbeActs();
     static void theSlowTickLeavesTheTakeoversAloneWhileTheAutomationIsOff();
@@ -895,6 +919,7 @@ void RuntimeIntegratorServiceTest::freshSnapshotHasDisconnectedDefaults()
     QVERIFY(!snapshot.refuelBySelf);
     QVERIFY(!snapshot.gsxProfileConflict);
     QVERIFY(!snapshot.gsxProfileFixable);
+    QVERIFY(!snapshot.gsxProfileRefuelingRecommended);
     QVERIFY(!snapshot.pmdgOptionsConflict);
     QVERIFY(!snapshot.pmdgOptionsFixable);
     QVERIFY(!snapshot.cargoAircraft);
@@ -1092,6 +1117,7 @@ void RuntimeIntegratorServiceTest::runtimeGettersOnEmptyRuntime()
     QVERIFY(!snapshot.efbFlightPlanOnDeparturePage);
     QVERIFY(!snapshot.gsxProfileConflict);
     QVERIFY(!snapshot.gsxProfileFixable);
+    QVERIFY(!snapshot.gsxProfileRefuelingRecommended);
     QVERIFY(!snapshot.pmdgOptionsConflict);
     QVERIFY(!snapshot.pmdgOptionsFixable);
     QCOMPARE(runtime.GetAircraftProfileId(), std::string{});
@@ -1139,6 +1165,170 @@ void RuntimeIntegratorServiceTest::anA340ProfileThatKeepsRefuelingOnRaisesAFixab
     QVERIFY(runtime.HasGsxProfileConflict());
     QVERIFY(snapshot.gsxProfileConflict);
     QVERIFY(snapshot.gsxProfileFixable);
+}
+
+void RuntimeIntegratorServiceTest::aBbs757WithNoGsxProfileOnDiskRecommendsTheRefuelingProfileWithoutAConflict()
+{
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    const ScopedAppData scopedAppData(appData.path());
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kBbs757Title, kBbs757AtcModel, kBbs757ProfileId));
+
+    const IntegratorSnapshot snapshot = runtime.Snapshot();
+
+    QVERIFY(snapshot.gsxProfileRefuelingRecommended);
+    QVERIFY(!snapshot.gsxProfileConflict);
+    QVERIFY(!snapshot.gsxProfileFixable);
+    QVERIFY(!runtime.HasGsxProfileConflict());
+}
+
+void RuntimeIntegratorServiceTest::aBbs757ProfileThatKeepsRefuelingOnStillOnlyRecommendsTheFix()
+{
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    QVERIFY(WriteBbs757GsxCfg(appData.path(), kBbs757ScimitarFolder, "[aircraft]\nrefueling = 1\n"));
+    const ScopedAppData scopedAppData(appData.path());
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kBbs757Title, kBbs757AtcModel, kBbs757ProfileId));
+
+    const IntegratorSnapshot snapshot = runtime.Snapshot();
+
+    QVERIFY(snapshot.gsxProfileRefuelingRecommended);
+    QVERIFY(!snapshot.gsxProfileConflict);
+    QVERIFY(!snapshot.gsxProfileFixable);
+    QVERIFY(!runtime.FixGsxProfile());
+}
+
+void RuntimeIntegratorServiceTest::aBbs757ProfileThatSetsRefuelingToZeroRecommendsNothing()
+{
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    QVERIFY(WriteBbs757GsxCfg(appData.path(), kBbs757ScimitarFolder, "[aircraft]\nrefueling = 0\n"));
+    const ScopedAppData scopedAppData(appData.path());
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kBbs757Title, kBbs757AtcModel, kBbs757ProfileId));
+
+    QVERIFY(!runtime.Snapshot().gsxProfileRefuelingRecommended);
+}
+
+void RuntimeIntegratorServiceTest::aBbs757WithOneProfileLeftOnRefuelingStillRecommendsIt()
+{
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    QVERIFY(WriteBbs757GsxCfg(appData.path(), kBbs757ScimitarFolder, "[aircraft]\nrefueling = 0\n"));
+    QVERIFY(WriteBbs757GsxCfg(appData.path(), kBbs757BaseFolder, "[aircraft]\nicaotype = B752\n"));
+    const ScopedAppData scopedAppData(appData.path());
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kBbs757Title, kBbs757AtcModel, kBbs757ProfileId));
+
+    QVERIFY(runtime.Snapshot().gsxProfileRefuelingRecommended);
+}
+
+void RuntimeIntegratorServiceTest::anAircraftWithARequiredProfileNeverRecommendsOne()
+{
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    QVERIFY(WriteGsxCfg(appData.path(), "[aircraft]\nrefueling = 1\n"));
+    const ScopedAppData scopedAppData(appData.path());
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kA340Title, kA340AtcModel, kA340ProfileId));
+
+    const IntegratorSnapshot snapshot = runtime.Snapshot();
+
+    QVERIFY(snapshot.gsxProfileConflict);
+    QVERIFY(!snapshot.gsxProfileRefuelingRecommended);
+}
+
+void RuntimeIntegratorServiceTest::theDetectionNamesEveryGsxProfileTheBbs757Finds()
+{
+    const LogCapture log;
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    QVERIFY(WriteBbs757GsxCfg(appData.path(), kBbs757ScimitarFolder, "[aircraft]\nrefueling = 1\n"));
+    QVERIFY(WriteBbs757GsxCfg(appData.path(), kBbs757BaseFolder, "[aircraft]\nicaotype = B752\n"));
+    const ScopedAppData scopedAppData(appData.path());
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kBbs757Title, kBbs757AtcModel, kBbs757ProfileId));
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(TickAndWait(updated));
+
+    const QString scimitarCfg = QDir::toNativeSeparators(
+        QStringLiteral("%1/200/gsx.cfg").arg(QLatin1String(kBbs757ScimitarFolder)));
+    const QString baseCfg = QDir::toNativeSeparators(
+        QStringLiteral("%1/200/gsx.cfg").arg(QLatin1String(kBbs757BaseFolder)));
+
+    QCOMPARE(LogCapture::Count(scimitarCfg + QStringLiteral("': refueling = 1")), 1);
+    QCOMPARE(LogCapture::Count(baseCfg + QStringLiteral("': refueling not set")), 1);
+    QVERIFY(!LogCapture::Contains(QStringLiteral("No GSX profile found for the BlueBird 757")));
+}
+
+void RuntimeIntegratorServiceTest::theDetectionSaysWhenTheBbs757HasNoGsxProfile()
+{
+    const LogCapture log;
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    const ScopedAppData scopedAppData(appData.path());
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kBbs757Title, kBbs757AtcModel, kBbs757ProfileId));
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(LogCapture::Count(QStringLiteral("No GSX profile found for the BlueBird 757")), 1);
+}
+
+void RuntimeIntegratorServiceTest::theSlowTickNoticesTheBbs757ProfileFixedOnDiskAndDoesNotAnnounceItAgain()
+{
+    const LogCapture log;
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    QVERIFY(WriteBbs757GsxCfg(appData.path(), kBbs757ScimitarFolder, "[aircraft]\nrefueling = 1\n"));
+    const ScopedAppData scopedAppData(appData.path());
+
+    IntegratorRuntime runtime;
+    runtime.Setup();
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kBbs757Title, kBbs757AtcModel, kBbs757ProfileId));
+
+    QVERIFY(runtime.Snapshot().gsxProfileRefuelingRecommended);
+
+    QVERIFY(WriteBbs757GsxCfg(appData.path(), kBbs757ScimitarFolder, "[aircraft]\nrefueling = 0\n"));
+
+    PushFourSecondTick();
+    QVERIFY(DispatchPending());
+
+    QVERIFY(!runtime.Snapshot().gsxProfileRefuelingRecommended);
+    QCOMPARE(LogCapture::Count(QStringLiteral("refueling = 1.")), 1);
+    QCOMPARE(LogCapture::Count(QStringLiteral("refueling = 0.")), 0);
 }
 
 void RuntimeIntegratorServiceTest::setupConnectsThroughFakeSimConnect()
@@ -1641,6 +1831,55 @@ void RuntimeIntegratorServiceTest::theSnapshotCarriesTheAirstairPressureWaitOnly
     runtime.SetAutomationEnabled(false);
 
     QVERIFY(!runtime.Snapshot().ownStairsWaitingForPressure);
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
+}
+
+void RuntimeIntegratorServiceTest::theSnapshotCarriesTheOwnGroundEquipmentWaitOnlyInTheDepartureStepWhileTheAutomationDrives()
+{
+#ifndef NDEBUG
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kBbs757Title, kBbs757AtcModel, kBbs757ProfileId));
+
+    QVERIFY(!runtime.Snapshot().ownGroundEquipmentAttached);
+
+    runtime.DebugSkipPhase(
+        static_cast<int>(TurnaroundPhase::RemoveGroundEquipment) - static_cast<int>(runtime.GetPhase()));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::RemoveGroundEquipment);
+
+    QVERIFY(runtime.Snapshot().ownGroundEquipmentAttached);
+
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(PushLVar(kBbs757ChocksLVar, 0.0));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::RemoveGroundEquipment);
+    QVERIFY(runtime.Snapshot().ownGroundEquipmentAttached);
+
+    QVERIFY(PushLVar(kBbs757GpuCartLVar, 1.0));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::RemoveGroundEquipment);
+    QVERIFY(runtime.Snapshot().ownGroundEquipmentAttached);
+
+    runtime.SetAutomationEnabled(false);
+
+    QVERIFY(!runtime.Snapshot().ownGroundEquipmentAttached);
+
+    runtime.SetAutomationEnabled(true);
+
+    QVERIFY(runtime.Snapshot().ownGroundEquipmentAttached);
+
+    QVERIFY(PushLVar(kBbs757GpuCartLVar, 0.0));
+    QVERIFY(DispatchPending());
+
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::RemoveGroundEquipment);
+    QVERIFY(!runtime.Snapshot().ownGroundEquipmentAttached);
 #else
     QSKIP("DebugSkipPhase is compiled out of Release builds");
 #endif

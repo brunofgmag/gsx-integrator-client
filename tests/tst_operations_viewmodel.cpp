@@ -62,6 +62,7 @@ private slots:
     static void theBoardingTipNamesTheMainDeckLoaderWaitingForItsDoor();
     static void theBoardingTipStandsDownForThePmdgCargoDoorAdvisory();
     static void theOwnStairsPressureAdvisoryFollowsTheSnapshot();
+    static void theOwnGroundEquipmentAdvisoryFollowsTheSnapshot();
     static void theBoardingTipStillNamesAnotherHoldWhileTheMainDeckIsStuck();
     static void theBoardingTipCountsDownTheSecondsLeftToOpenTheDoor();
     static void theBoardingTipStaysQuietWhileNoLoaderWaits();
@@ -93,6 +94,7 @@ private slots:
     static void resumeSavedTurnaroundDelegatesToService();
     static void resumeSavedTurnaroundReportsRejectedCommands();
     static void exposesGsxProfileConflictFromSnapshot();
+    static void exposesTheGsxProfileRecommendationFromSnapshotWithoutRaisingTheConflict();
     static void fixGsxProfileDelegatesToService();
     static void fixGsxProfileReportsRejectedCommands();
     static void fixPmdgOptionsDelegatesToService();
@@ -644,6 +646,27 @@ void OperationsViewModelTest::theOwnStairsPressureAdvisoryFollowsTheSnapshot()
     QVERIFY(!viewModel.AreOwnStairsWaitingForPressure());
     QCOMPARE(viewModel.GetOwnStairsPressureAdvisoryText(),
              QStringLiteral("The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back."));
+}
+
+void OperationsViewModelTest::theOwnGroundEquipmentAdvisoryFollowsTheSnapshot()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.IsOwnGroundEquipmentAttached());
+
+    service.snapshot.ownGroundEquipmentAttached = true;
+    service.Notify();
+
+    QVERIFY(viewModel.IsOwnGroundEquipmentAttached());
+
+    service.snapshot.ownGroundEquipmentAttached = false;
+    service.Notify();
+
+    QVERIFY(!viewModel.IsOwnGroundEquipmentAttached());
+    QCOMPARE(viewModel.GetOwnGroundEquipmentAdvisoryText(),
+             QStringLiteral("Remove the chocks and disconnect the ground power in the aircraft's EFB. Pushback waits until both are gone."));
 }
 
 void OperationsViewModelTest::theBoardingTipStandsDownForThePmdgCargoDoorAdvisory()
@@ -1213,6 +1236,30 @@ void OperationsViewModelTest::exposesGsxProfileConflictFromSnapshot()
 
     QVERIFY(viewModel.HasGsxProfileConflict());
     QVERIFY(viewModel.IsGsxProfileFixable());
+}
+
+void OperationsViewModelTest::exposesTheGsxProfileRecommendationFromSnapshotWithoutRaisingTheConflict()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.IsGsxProfileRefuelingRecommended());
+
+    service.snapshot.gsxProfileRefuelingRecommended = true;
+    service.Notify();
+
+    QVERIFY(viewModel.IsGsxProfileRefuelingRecommended());
+    QVERIFY(!viewModel.HasGsxProfileConflict());
+    QVERIFY(!viewModel.IsGsxProfileFixable());
+    QCOMPARE(viewModel.GetGsxProfileActionLabel(), QString());
+
+    service.snapshot.gsxProfileRefuelingRecommended = false;
+    service.Notify();
+
+    QVERIFY(!viewModel.IsGsxProfileRefuelingRecommended());
+    QCOMPARE(viewModel.GetGsxProfileRecommendationAdvisoryText(),
+             QStringLiteral("A GSX profile with 'refueling = 0' is recommended for this aircraft. The client fuels it either way; the setting keeps the GSX truck from writing to the tanks while it does."));
 }
 
 void OperationsViewModelTest::fixGsxProfileDelegatesToService()

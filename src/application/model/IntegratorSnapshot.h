@@ -50,10 +50,12 @@ struct IntegratorSnapshot
     bool refuelBySelf = false;
     bool gsxProfileConflict = false;
     bool gsxProfileFixable = false;
+    bool gsxProfileRefuelingRecommended = false;
     bool pmdgOptionsConflict = false;
     bool pmdgOptionsFixable = false;
     bool cargoDoorStuck = false;
     bool ownStairsWaitingForPressure = false;
+    bool ownGroundEquipmentAttached = false;
     bool fuelRequestStalled = false;
     bool fuelPlanOverCapacity = false;
     bool fuelDidNotStay = false;

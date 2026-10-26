@@ -12,6 +12,21 @@
 
 namespace
 {
+    const AircraftDescriptor* DetectBbs757Descriptor()
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = "BlueBird 757-200 Condor D-ABNR";
+        gateway.atcModel = "ATCCOM.AC_MODEL B752.0.text";
+
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft =
+            DetectAircraft({.variableGateway = &gateway, .status = &status}, &descriptor);
+
+        return aircraft != nullptr ? descriptor : nullptr;
+    }
+
     struct FssEJetFreighterCase
     {
         const char* atcModel;
@@ -92,6 +107,13 @@ private slots:
     static void detectsFss727200fFromAThirdPartyLiveryByItsAtcModel();
     static void doesNotDetectFss727FromAGenericFreighterTitleWithoutItsAtcModel();
     static void detectionReportsFss727ClientRefuel();
+    static void detectsBbs757FromTheBaseTitle();
+    static void detectsBbs757FromLiveryTitlesWithoutTheEngineMarker();
+    static void doesNotDetectBbs757ByTheGenericAtcModel();
+    static void detectionReportsBbs757ClientRefuel();
+    static void detectionReportsBbs757ShortCode();
+    static void detectionReportsBbs757PushToTalkCue();
+    static void detectionReportsBbs757RecommendedFuelRate();
     static void detectsFssE190PassengerAndFreighterFromTheirTitles();
     static void detectsFssE195FreighterFromItsTitle();
     static void detectsFssEJetFreighterByItsAtcModelWhenTheTitleLacksTheWord();
@@ -690,6 +712,87 @@ void AircraftDetectionTest::detectionReportsFss727ClientRefuel()
         QVERIFY2(aircraft != nullptr, title);
         QCOMPARE(descriptor->refuelBy, RefuelBy::Client);
     }
+}
+
+void AircraftDetectionTest::detectsBbs757FromTheBaseTitle()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+
+    gateway.aircraftName = "BlueBird 757-200 RR Icelandair TF-FIN";
+    gateway.atcModel = "ATCCOM.AC_MODEL B752.0.text";
+
+    const AircraftDescriptor* descriptor = nullptr;
+    const std::unique_ptr<Aircraft> aircraft = DetectAircraft({.variableGateway = &gateway, .status = &status}, &descriptor);
+
+    QVERIFY(aircraft != nullptr);
+    QCOMPARE(std::string(descriptor->id), std::string("bbs-757-200"));
+    QVERIFY(!aircraft->IsCargoVariant());
+}
+
+void AircraftDetectionTest::detectsBbs757FromLiveryTitlesWithoutTheEngineMarker()
+{
+    for (const char* title : {"BlueBird 757-200 Condor D-ABNR", "BlueBird 757-200 Aer Lingus EI-LBS",
+                              "BlueBird 757-200 PW NO CABIN", "BlueBird 757-200 RR"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+        gateway.atcModel = "ATCCOM.AC_MODEL B752.0.text";
+
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft = DetectAircraft({.variableGateway = &gateway, .status = &status}, &descriptor);
+
+        QVERIFY2(aircraft != nullptr, title);
+        QCOMPARE(std::string(descriptor->id), std::string("bbs-757-200"));
+    }
+}
+
+void AircraftDetectionTest::doesNotDetectBbs757ByTheGenericAtcModel()
+{
+    for (const char* title : {"Rival Studio 757-200 Delta N6713Y", "Boeing 757-200 Generic"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+        gateway.atcModel = "ATCCOM.AC_MODEL B752.0.text";
+
+        QVERIFY2(DetectAircraft({.variableGateway = &gateway, .status = &status}) == nullptr, title);
+    }
+}
+
+void AircraftDetectionTest::detectionReportsBbs757ClientRefuel()
+{
+    const AircraftDescriptor* descriptor = DetectBbs757Descriptor();
+
+    QVERIFY(descriptor != nullptr);
+    QCOMPARE(descriptor->refuelBy, RefuelBy::Client);
+}
+
+void AircraftDetectionTest::detectionReportsBbs757ShortCode()
+{
+    const AircraftDescriptor* descriptor = DetectBbs757Descriptor();
+
+    QVERIFY(descriptor != nullptr);
+    QCOMPARE(std::string(descriptor->shortCode), std::string("B752"));
+}
+
+void AircraftDetectionTest::detectionReportsBbs757PushToTalkCue()
+{
+    const AircraftDescriptor* descriptor = DetectBbs757Descriptor();
+
+    QVERIFY(descriptor != nullptr);
+    QVERIFY((descriptor->smartSwitch == SmartSwitchCue{"PTT", "", SmartSwitchMove::Press}));
+}
+
+void AircraftDetectionTest::detectionReportsBbs757RecommendedFuelRate()
+{
+    const AircraftDescriptor* descriptor = DetectBbs757Descriptor();
+
+    QVERIFY(descriptor != nullptr);
+    QCOMPARE(descriptor->fuelRateKgs, 27.5);
 }
 
 void AircraftDetectionTest::detectsFssE190PassengerAndFreighterFromTheirTitles()

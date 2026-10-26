@@ -153,8 +153,9 @@ TestCase {
             "aircraftSupported", "canReloadSimbrief", "cargoAircraft", "cargoDoorStuck", "connected",
             "doorsHoldingPushback", "enabled", "engineConfirmationBlocked", "fuelDidNotStay",
             "fuelPlanOverCapacity", "fuelRequestStalled", "gsxAvailable", "gsxProfileConflict",
-            "inDeboardingPhase", "ownStairsWaitingForPressure", "pmdgOptionsConflict", "serviceInterrupted",
-            "servicesStalled", "simbriefError", "simbriefReady"
+            "gsxProfileRefuelingRecommended", "inDeboardingPhase", "ownGroundEquipmentAttached",
+            "ownStairsWaitingForPressure", "pmdgOptionsConflict", "serviceInterrupted", "servicesStalled",
+            "simbriefError", "simbriefReady"
         ];
         const numbers = ["boardingProgress", "deboardingProgress", "fuelProgress"];
         const texts = [
@@ -162,8 +163,9 @@ TestCase {
             "dismissAdvisoryLabel", "engineConfirmationAdvisoryText", "fuelCardLabel", "fuelPlanAdvisoryText",
             "fuelProgressText", "fuelRateLabel", "fuelRateText", "fuelRequestAdvisoryText",
             "fuelStayAdvisoryText", "gsxLabel", "gsxProfileActionLabel", "gsxProfileAdvisoryText",
-            "gsxStatusText", "holdCountdownText", "loadedFuelLabel", "loadedFuelText", "loadingModeLabel",
-            "loadingModeText", "nextPhaseText", "openDoorAdvisoryText", "ownStairsPressureAdvisoryText",
+            "gsxProfileRecommendationAdvisoryText", "gsxStatusText", "holdCountdownText", "loadedFuelLabel",
+            "loadedFuelText", "loadingModeLabel", "loadingModeText", "nextPhaseText", "openDoorAdvisoryText", "ownGroundEquipmentAdvisoryText",
+            "ownStairsPressureAdvisoryText",
             "paxCardLabel", "paxCountText", "paxLabel", "paxProgressText", "phaseCounterText", "phaseTip",
             "plannedFuelLabel", "plannedFuelText", "plannedPaxLabel", "plannedPaxText", "plannedZfwLabel",
             "plannedZfwText", "pmdgOptionsActionLabel", "pmdgOptionsAdvisoryText", "reloadSimbriefLabel",
@@ -218,6 +220,22 @@ TestCase {
             visibleButtons(kids[i]).forEach((button) => { found.push(button); });
 
         return found;
+    }
+
+    function findAdvisoryByText(item, text) {
+        if (item.text === text && item.actionText !== undefined)
+            return item;
+
+        const kids = item.children;
+
+        for (let i = 0; i < kids.length; i++) {
+            const hit = findAdvisoryByText(kids[i], text);
+
+            if (hit)
+                return hit;
+        }
+
+        return null;
     }
 
     function findRowByTitle(item, title) {
@@ -516,6 +534,61 @@ TestCase {
 
         verify(!shown.includes("Restart Flow"));
         verify(!shown.includes("Resume turnaround"));
+    }
+
+    function test_operationsScreenShowsTheGroundEquipmentAdvisoryOnlyWhileTheAircraftsOwnEquipmentIsAttached() {
+        const advisoryText = "Remove the chocks and disconnect the ground power in the aircraft's EFB.";
+        const attached = operationsVm({}, {
+            ownGroundEquipmentAttached: true,
+            ownGroundEquipmentAdvisoryText: advisoryText
+        });
+        const detached = operationsVm({}, {
+            ownGroundEquipmentAttached: false,
+            ownGroundEquipmentAdvisoryText: advisoryText
+        });
+        const shown = createTemporaryObject(operationsScreenComponent, testCase,
+                                            { integratorVm: attached, settingsVm: { autoStartLoading: false } });
+        const hidden = createTemporaryObject(operationsScreenComponent, testCase,
+                                             { integratorVm: detached, settingsVm: { autoStartLoading: false } });
+
+        verify(shown);
+        verify(hidden);
+
+        const shownAdvisory = findAdvisoryByText(shown, advisoryText);
+        const hiddenAdvisory = findAdvisoryByText(hidden, advisoryText);
+
+        verify(shownAdvisory);
+        verify(hiddenAdvisory);
+        verify(shownAdvisory.visible);
+        verify(!hiddenAdvisory.visible);
+    }
+
+    function test_operationsScreenShowsTheGsxProfileRecommendationWithoutAnActionButton() {
+        const advisoryText = "A GSX profile with 'refueling = 0' is recommended for this aircraft.";
+        const recommended = operationsVm({}, {
+            gsxProfileRefuelingRecommended: true,
+            gsxProfileRecommendationAdvisoryText: advisoryText
+        });
+        const other = operationsVm({}, {
+            gsxProfileRefuelingRecommended: false,
+            gsxProfileRecommendationAdvisoryText: advisoryText
+        });
+        const shown = createTemporaryObject(operationsScreenComponent, testCase,
+                                            { integratorVm: recommended, settingsVm: { autoStartLoading: false } });
+        const hidden = createTemporaryObject(operationsScreenComponent, testCase,
+                                             { integratorVm: other, settingsVm: { autoStartLoading: false } });
+
+        verify(shown);
+        verify(hidden);
+
+        const shownAdvisory = findAdvisoryByText(shown, advisoryText);
+        const hiddenAdvisory = findAdvisoryByText(hidden, advisoryText);
+
+        verify(shownAdvisory);
+        verify(hiddenAdvisory);
+        verify(shownAdvisory.visible);
+        verify(!hiddenAdvisory.visible);
+        compare(shownAdvisory.actionText, "");
     }
 
     function test_statusChipPaintsWithThemeTokens() {

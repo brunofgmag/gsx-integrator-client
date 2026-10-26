@@ -84,6 +84,7 @@ public:
     virtual void HoldDoorsClosed(bool) {}
     virtual void HoldPassengerDoorsClosed(bool) {}
     virtual void ClearOwnGroundEquipment() {}
+    [[nodiscard]] virtual bool IsOwnGroundEquipmentAttached() const { return false; }
     [[nodiscard]] virtual DoorStatus GetDoorStatus() const { return DoorStatus::Unknown; }
     [[nodiscard]] virtual bool IsMainDeckCargoDoorStuck() const { return false; }
     [[nodiscard]] virtual bool AreOwnStairsWaitingForPressure() const { return false; }
