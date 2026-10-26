@@ -14,7 +14,115 @@ private slots:
     static void deboardCargoProgressively();
     static void snapsToInitialWhenGsxCountersFallShort();
     static void theDeboardedPassengersFollowTheGsxCounter();
+    static void aDeboardingWithoutAPlanUnloadsTheLoadOnBoardProgressively();
+    static void aDeboardingWithoutAPlanLeavesTheSelfBoardingAircraftEmpty();
+    static void aDeboardingWithoutAPlanNeverWritesBelowTheLoadOnBoard();
+    static void aDeboardingWithoutPlannedPassengersFollowsTheCargoPercentAlone();
 };
+
+void DeboardingStateTest::aDeboardingWithoutAPlanUnloadsTheLoadOnBoardProgressively()
+{
+    TurnaroundStateFixture f;
+    DeboardingState state;
+
+    f.aircraft.cargo = false;
+    f.aircraft.boardMethod = BoardBy::Client;
+    f.aircraft.emptyZfwKg = 100000.0;
+    f.aircraft.currentZfwKg = 140000.0;
+    f.gsxService.plannedPassengers = 100;
+    f.gsxService.deboardingState = GsxStateStatus::Active;
+    f.gsxService.deboardedPassengers = 0;
+    f.gsxService.deboardingCargoPercent = 0.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.plannedZfwKg, 140000.0);
+    QCOMPARE(f.ctx.data.initialZfwKg, 100000.0);
+    QCOMPARE(f.ctx.data.plannedPassengers, 100);
+    QCOMPARE(f.aircraft.currentZfwKg, 140000.0);
+
+    f.gsxService.deboardedPassengers = 50;
+    f.gsxService.deboardingCargoPercent = 50.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.currentZfwKg, 120000.0);
+    QCOMPARE(f.ctx.data.deboardingProgress, 50.0);
+
+    f.gsxService.deboardingState = GsxStateStatus::Completed;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.currentZfwKg, 100000.0);
+}
+
+void DeboardingStateTest::aDeboardingWithoutAPlanLeavesTheSelfBoardingAircraftEmpty()
+{
+    TurnaroundStateFixture f;
+    DeboardingState state;
+
+    f.aircraft.cargo = false;
+    f.aircraft.boardMethod = BoardBy::Self;
+    f.aircraft.emptyZfwKg = 100000.0;
+    f.aircraft.currentZfwKg = 140000.0;
+    f.gsxService.deboardingState = GsxStateStatus::Active;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.currentZfwKg, 100000.0);
+    QCOMPARE(f.ctx.data.plannedZfwKg, 140000.0);
+}
+
+void DeboardingStateTest::aDeboardingWithoutAPlanNeverWritesBelowTheLoadOnBoard()
+{
+    TurnaroundStateFixture f;
+    DeboardingState state;
+
+    f.aircraft.cargo = false;
+    f.aircraft.boardMethod = BoardBy::Client;
+    f.aircraft.emptyZfwKg = 100000.0;
+    f.aircraft.currentZfwKg = 90000.0;
+    f.gsxService.plannedPassengers = 100;
+    f.gsxService.deboardingState = GsxStateStatus::Active;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.plannedZfwKg, 90000.0);
+    QCOMPARE(f.ctx.data.initialZfwKg, 90000.0);
+    QCOMPARE(f.aircraft.currentZfwKg, 90000.0);
+
+    f.gsxService.deboardedPassengers = 50;
+    f.gsxService.deboardingCargoPercent = 50.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.currentZfwKg, 90000.0);
+
+    f.gsxService.deboardingState = GsxStateStatus::Completed;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.currentZfwKg, 90000.0);
+}
+
+void DeboardingStateTest::aDeboardingWithoutPlannedPassengersFollowsTheCargoPercentAlone()
+{
+    TurnaroundStateFixture f;
+    DeboardingState state;
+
+    f.aircraft.cargo = false;
+    f.aircraft.boardMethod = BoardBy::Client;
+    f.aircraft.emptyZfwKg = 100000.0;
+    f.aircraft.currentZfwKg = 140000.0;
+    f.gsxService.plannedPassengers = 0;
+    f.gsxService.deboardingState = GsxStateStatus::Active;
+    f.gsxService.deboardedPassengers = 1;
+    f.gsxService.deboardingCargoPercent = 0.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.plannedPassengers, 0);
+    QCOMPARE(f.ctx.data.deboardingProgress, 0.0);
+    QCOMPARE(f.aircraft.currentZfwKg, 140000.0);
+
+    f.gsxService.deboardingCargoPercent = 50.0;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.ctx.data.deboardingProgress, 50.0);
+    QCOMPARE(f.aircraft.currentZfwKg, 120000.0);
+}
 
 void DeboardingStateTest::holdsUntilGsxActive()
 {

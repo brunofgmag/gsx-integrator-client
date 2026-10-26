@@ -64,6 +64,8 @@ private:
     void StandAt(TurnaroundPhase phase);
     void PublishStatus() const;
     void TransitionTo(TurnaroundPhase phase, TransitionOrigin origin);
+    [[nodiscard]] bool IsAirborneWithoutAnExitOfItsOwn() const;
+    [[nodiscard]] std::optional<TurnaroundTransition> CountTheAirborneTick();
     [[nodiscard]] std::optional<TurnaroundTransition> EvaluateCurrentPhase();
 
     [[nodiscard]] TurnaroundState* StateFor(const TurnaroundPhase phase) const
@@ -79,6 +81,7 @@ private:
     TransitionOrigin pendingOrigin_ = TransitionOrigin::Reading;
     TransitionOrigin lastTransitionOrigin_ = TransitionOrigin::Reading;
     int ticksRemaining_ = 0;
+    int airborneTicks_ = 0;
     bool appTouchPending_ = false;
 };
 
