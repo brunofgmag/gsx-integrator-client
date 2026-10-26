@@ -1,7 +1,18 @@
 #include <QtTest/QTest>
 
+#include <algorithm>
+#include <string>
+
 #include "../TurnaroundStateFixture.h"
 #include "../../../src/domain/turnaround/states/RemoveGroundEquipmentState.h"
+
+namespace
+{
+    constexpr auto kWaitingForThePilot =
+        "Waiting for the pilot to remove the aircraft's own chocks and ground power";
+
+    constexpr int kTicksPastEveryTimeout = 240;
+}
 
 class RemoveGroundEquipmentStateTest final : public QObject
 {
@@ -38,6 +49,10 @@ private slots:
     static void commandsAircraftGpuOffForTheGpuThisTurnaroundRequestedWhenBothOptionsAreOff();
     static void holdsWhileTheAircraftGpuReadingHasNotArrived();
     static void advancesWhenTheAircraftGpuReadingNeverArrives();
+    static void holdsWhileTheAircraftsOwnGroundEquipmentIsAttached();
+    static void holdsPastEveryTimeoutWhileTheAircraftsOwnGroundEquipmentIsAttached();
+    static void announcesTheOwnGroundEquipmentHoldOncePerHold();
+    static void leavesTheChocksAndTheGpuToThePilotWhileTheOwnGroundEquipmentIsAttached();
 };
 
 void RemoveGroundEquipmentStateTest::skipsWhenGpuManagementDisabled()
@@ -682,6 +697,105 @@ void RemoveGroundEquipmentStateTest::advancesWhenTheAircraftGpuReadingNeverArriv
     QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
     QCOMPARE(ticks, 60);
     QCOMPARE(f.aircraft.setGroundPowerCalls, 0);
+}
+
+void RemoveGroundEquipmentStateTest::holdsWhileTheAircraftsOwnGroundEquipmentIsAttached()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.ownGroundEquipmentAttached = true;
+    f.settings.callGpu = false;
+    f.settings.callGpuOnArrival = false;
+
+    ++f.ctx.data.stateTickCount;
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    f.aircraft.ownGroundEquipmentAttached = false;
+
+    ++f.ctx.data.stateTickCount;
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+}
+
+void RemoveGroundEquipmentStateTest::holdsPastEveryTimeoutWhileTheAircraftsOwnGroundEquipmentIsAttached()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.ownGroundEquipmentAttached = true;
+    f.settings.callGpu = true;
+    f.aircraft.supportsGroundPowerControl = true;
+    f.aircraft.groundPowerStatus = GroundPowerStatus::Unknown;
+
+    for (int tick = 0; tick < kTicksPastEveryTimeout; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.aircraft.setGroundPowerCalls, 0);
+
+    f.aircraft.ownGroundEquipmentAttached = false;
+
+    ++f.ctx.data.stateTickCount;
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::RequestPushback);
+}
+
+void RemoveGroundEquipmentStateTest::announcesTheOwnGroundEquipmentHoldOncePerHold()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.ownGroundEquipmentAttached = true;
+
+    for (int tick = 0; tick < 10; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(std::ranges::count(f.logger.messages, std::string(kWaitingForThePilot)), 1);
+
+    f.aircraft.ownGroundEquipmentAttached = false;
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+
+    f.aircraft.ownGroundEquipmentAttached = true;
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(std::ranges::count(f.logger.messages, std::string(kWaitingForThePilot)), 2);
+}
+
+void RemoveGroundEquipmentStateTest::leavesTheChocksAndTheGpuToThePilotWhileTheOwnGroundEquipmentIsAttached()
+{
+    TurnaroundStateFixture f;
+    RemoveGroundEquipmentState state;
+
+    f.aircraft.parkingBrakeSet = true;
+    f.aircraft.ownGroundEquipmentAttached = true;
+    f.aircraft.supportsChocksControl = true;
+    f.aircraft.chocksPlaced = true;
+    f.ctx.data.chocksPlaced = true;
+    f.settings.callGpu = true;
+    f.ctx.data.gpuRequested = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
+
+    ++f.ctx.data.stateTickCount;
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+    QVERIFY(!f.ctx.data.chocksRemoved);
+    QVERIFY(!f.ctx.data.gpuDismissRequested);
 }
 
 QTEST_APPLESS_MAIN(RemoveGroundEquipmentStateTest)

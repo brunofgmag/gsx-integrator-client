@@ -60,6 +60,7 @@ public:
     bool passengerDoorsHeldClosed = false;
     int holdPassengerDoorsClosedCalls = 0;
     int clearOwnGroundEquipmentCalls = 0;
+    bool ownGroundEquipmentAttached = false;
     RefuelBy refuelMethod = RefuelBy::Self;
     bool supportsFuelTopUp = false;
     bool takesItsFuelFromTheFlightPlanItself = false;
@@ -228,6 +229,8 @@ public:
         ++clearOwnGroundEquipmentCalls;
         callLog.emplace_back("ClearOwnGroundEquipment");
     }
+
+    [[nodiscard]] bool IsOwnGroundEquipmentAttached() const override { return ownGroundEquipmentAttached; }
 
     [[nodiscard]] DoorStatus GetDoorStatus() const override { return doorStatus; }
     [[nodiscard]] bool IsReadyToPush() const override { return readyToPush; }

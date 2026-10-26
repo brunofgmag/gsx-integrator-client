@@ -43,6 +43,8 @@ private slots:
     static void carriesTheDeparturePageTipTheWindowWrites();
     static void carriesTheEstimatedWeightThePaxCardTargetsWhileDeboarding();
     static void carriesTheOwnStairsPressureAdvisoryTheScreenShows();
+    static void carriesTheOwnGroundEquipmentAdvisoryTheScreenShows();
+    static void carriesTheGsxProfileRecommendationAdvisoryTheScreenShows();
     static void carriesTheResumeDecisionTheScreenAsks();
     static void carriesTheHoldReasonTheScreenShowsAsThePhaseTip();
     static void carriesTheSnapshotWaitOnALaterPhaseToo();
@@ -386,6 +388,61 @@ void EfbStatePublisherTest::carriesTheOwnStairsPressureAdvisoryTheScreenShows()
     publisher.Publish();
 
     QVERIFY(std::get<2>(bridge.calls.back()).find(R"("ownStairsWaitingForPressure":false)") != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesTheOwnGroundEquipmentAdvisoryTheScreenShows()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.ownGroundEquipmentAttached = true;
+    service.Notify();
+    publisher.Publish();
+
+    const std::string expectedText = R"("ownGroundEquipmentAdvisoryText":")"
+        + OperationsViewModel::GetOwnGroundEquipmentAdvisoryText().toStdString() + R"(")";
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("ownGroundEquipmentAttached":true)") != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(expectedText) != std::string::npos);
+
+    service.snapshot.ownGroundEquipmentAttached = false;
+    service.Notify();
+    publisher.Publish();
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("ownGroundEquipmentAttached":false)") != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesTheGsxProfileRecommendationAdvisoryTheScreenShows()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.snapshot.gsxProfileRefuelingRecommended = true;
+    service.Notify();
+    publisher.Publish();
+
+    const std::string expectedText = R"("gsxProfileRecommendationAdvisoryText":")"
+        + OperationsViewModel::GetGsxProfileRecommendationAdvisoryText().toStdString() + R"(")";
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("gsxProfileRefuelingRecommended":true)") != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("gsxProfileConflict":false)") != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(expectedText) != std::string::npos);
+
+    service.snapshot.gsxProfileRefuelingRecommended = false;
+    service.Notify();
+    publisher.Publish();
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("gsxProfileRefuelingRecommended":false)") != std::string::npos);
 }
 
 void EfbStatePublisherTest::carriesTheResumeDecisionTheScreenAsks()

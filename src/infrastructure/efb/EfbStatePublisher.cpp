@@ -131,10 +131,14 @@ std::string EfbStatePublisher::BuildPayload() const
 
     state.insert(QLatin1String("gsxProfileConflict"), view_->HasGsxProfileConflict());
     state.insert(QLatin1String("gsxProfileAdvisoryText"), OperationsViewModel::GetGsxProfileAdvisoryText());
+    state.insert(QLatin1String("gsxProfileRecommendationAdvisoryText"),
+                 OperationsViewModel::GetGsxProfileRecommendationAdvisoryText());
     state.insert(QLatin1String("pmdgOptionsAdvisoryText"), OperationsViewModel::GetPmdgOptionsAdvisoryText());
     state.insert(QLatin1String("cargoDoorAdvisoryText"), OperationsViewModel::GetCargoDoorAdvisoryText());
     state.insert(QLatin1String("ownStairsPressureAdvisoryText"),
                  OperationsViewModel::GetOwnStairsPressureAdvisoryText());
+    state.insert(QLatin1String("ownGroundEquipmentAdvisoryText"),
+                 OperationsViewModel::GetOwnGroundEquipmentAdvisoryText());
     state.insert(QLatin1String("fuelRequestAdvisoryText"), OperationsViewModel::GetFuelRequestAdvisoryText());
     state.insert(QLatin1String("fuelPlanAdvisoryText"), OperationsViewModel::GetFuelPlanAdvisoryText());
     state.insert(QLatin1String("fuelStayAdvisoryText"), view_->GetFuelStayAdvisoryText());
@@ -148,10 +152,12 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("resumeDecisionAdvisoryText"), view_->GetResumeDecisionAdvisoryText());
     state.insert(QLatin1String("resumeTurnaroundLabel"), view_->GetResumeTurnaroundLabel());
     state.insert(QLatin1String("gsxProfileFixable"), view_->IsGsxProfileFixable());
+    state.insert(QLatin1String("gsxProfileRefuelingRecommended"), view_->IsGsxProfileRefuelingRecommended());
     state.insert(QLatin1String("pmdgOptionsConflict"), view_->HasPmdgOptionsConflict());
     state.insert(QLatin1String("pmdgOptionsFixable"), view_->IsPmdgOptionsFixable());
     state.insert(QLatin1String("cargoDoorStuck"), view_->IsCargoDoorStuck());
     state.insert(QLatin1String("ownStairsWaitingForPressure"), view_->AreOwnStairsWaitingForPressure());
+    state.insert(QLatin1String("ownGroundEquipmentAttached"), view_->IsOwnGroundEquipmentAttached());
     state.insert(QLatin1String("fuelRequestStalled"), view_->IsFuelRequestStalled());
     state.insert(QLatin1String("fuelPlanOverCapacity"), view_->IsFuelPlanOverCapacity());
     state.insert(QLatin1String("fuelDidNotStay"), view_->DidFuelNotStay());

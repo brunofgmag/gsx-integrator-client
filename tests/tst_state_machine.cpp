@@ -34,6 +34,25 @@ namespace
     constexpr int kTicksPastTheInterruptionWarning = 5;
     constexpr int kWalkTickLimit = 400;
 
+    constexpr int kAirborneTicksToLeave = 30;
+    constexpr int kTicksOnTheGround = 40;
+
+    constexpr auto kPhasesWithoutAnAirborneExitOfTheirOwn = std::array{
+        TurnaroundPhase::WaitingAircraftReady,
+        TurnaroundPhase::RepositionAircraft,
+        TurnaroundPhase::PlaceGroundEquipment,
+        TurnaroundPhase::CallServices,
+        TurnaroundPhase::WaitingFlightPlan,
+        TurnaroundPhase::WaitingPowerOn,
+        TurnaroundPhase::CallCatering,
+        TurnaroundPhase::RequestFuel,
+        TurnaroundPhase::Loading,
+        TurnaroundPhase::WaitingReadyToPush,
+        TurnaroundPhase::WaitCatering,
+        TurnaroundPhase::RemoveGroundEquipment,
+        TurnaroundPhase::RequestPushback,
+    };
+
     constexpr auto kReachableWorkflowPhases = std::array{
         TurnaroundPhase::WaitingSupportedAircraft,
         TurnaroundPhase::WaitingAircraftReady,
@@ -250,6 +269,14 @@ namespace
         {
             Tick();
             QCOMPARE(machine.GetPhase(), expected);
+        }
+
+        void TickHoldingFor(const int ticks, const TurnaroundPhase expected)
+        {
+            for (int tick = 0; tick < ticks; ++tick)
+            {
+                TickHolding(expected);
+            }
         }
 
         void TickTo(const TurnaroundPhase expected)
@@ -856,6 +883,25 @@ namespace
         return workflow.machine.ResumeFrom(checkpoint, workflow.f.aircraft, false);
     }
 
+    void StandInTheDeparturePhase(TurnaroundWorkflow& workflow, const TurnaroundPhase phase)
+    {
+        if (phase == TurnaroundPhase::WaitingAircraftReady)
+        {
+            workflow.f.aircraft.engineRunning = true;
+            workflow.machine.AttachAircraft(&workflow.f.aircraft);
+            workflow.TickTo(TurnaroundPhase::WaitingAircraftReady);
+
+            return;
+        }
+
+        QCOMPARE(Resume(workflow, CheckpointAt(phase)), ResumeOutcome::Resumed);
+    }
+
+    std::string TheAirborneExitLog(const TurnaroundPhase phase)
+    {
+        return std::format("The aircraft is airborne in {}", TurnaroundPhaseToString(phase));
+    }
+
     TurnaroundCheckpoint PushbackPendingCheckpoint()
     {
         TurnaroundCheckpoint checkpoint = CheckpointAt(TurnaroundPhase::WaitingPushbackToStart);
@@ -1119,6 +1165,18 @@ private slots:
     static void thePlanRoundTripsThroughTheStatus();
     static void everyPhaseNameParsesBackAndAnUnknownNameDoesNot();
     static void theResumablePhasesRunFromRepositionToCabinServices();
+    static void thirtyConsecutiveAirborneTicksLeaveEveryPhaseWithoutAnAirborneExitOfItsOwnForTheFlight();
+    static void anAircraftOnTheGroundNeverTakesTheAirborneExit();
+    static void anAirborneAircraftWithoutASupportedAircraftStaysInTheFirstWait();
+    static void aSingleAirborneReadingDoesNotSkipTheDeparture();
+    static void aTickOnTheGroundStartsTheAirborneCountOver();
+    static void aResumeStartsTheAirborneCountOver();
+    static void changingThePhaseStartsTheAirborneCountOver();
+    static void noDepartureRequestIsSentWhileTheAirborneTicksAreCounted();
+    static void aClientStartedInFlightReachesTheFlightWithoutAnyDepartureRequest();
+    static void anAircraftAirborneInThePushbackWaitMovesOnToTheDepartureAndClosesThePushbackPanelOnce();
+    static void anAircraftAirborneInTheEngineWaitMovesOnToTheDeparture();
+    static void aFlowAirborneInTheLoadingStillRunsTheWholeArrival();
 };
 
 void TurnaroundStateMachineTest::publishesCurrentTankFuelBeforeRefuel()
@@ -3276,6 +3334,285 @@ void TurnaroundStateMachineTest::theResumablePhasesRunFromRepositionToCabinServi
     QVERIFY(!IsResumablePhase(TurnaroundPhase::Count));
     QVERIFY(!IsResumablePhase(static_cast<TurnaroundPhase>(99)));
     QVERIFY(!IsResumablePhase(static_cast<TurnaroundPhase>(-1)));
+}
+
+void TurnaroundStateMachineTest::thirtyConsecutiveAirborneTicksLeaveEveryPhaseWithoutAnAirborneExitOfItsOwnForTheFlight()
+{
+    for (const TurnaroundPhase phase : kPhasesWithoutAnAirborneExitOfTheirOwn)
+    {
+        TurnaroundWorkflow workflow;
+        StandInTheDeparturePhase(workflow, phase);
+
+        workflow.f.gsxService.onGround = false;
+
+        const char* const name = TurnaroundPhaseToString(phase);
+
+        for (int tick = 1; tick < kAirborneTicksToLeave; ++tick)
+        {
+            workflow.Tick();
+            QVERIFY2(workflow.machine.GetPhase() == phase, name);
+            QVERIFY2(workflow.machine.GetDelayTicksRemaining() == 0, name);
+        }
+
+        QVERIFY2(!Logged(workflow, "The aircraft is airborne"), name);
+
+        workflow.Tick();
+
+        QVERIFY2(workflow.machine.GetPhase() == TurnaroundPhase::OnFlight, name);
+        QVERIFY2(Logged(workflow, std::format("Transitioning: {} -> OnFlight", name)), name);
+
+        workflow.Tick();
+        workflow.Tick();
+
+        QVERIFY2(LoggedCount(workflow, TheAirborneExitLog(phase)) == 1, name);
+    }
+}
+
+void TurnaroundStateMachineTest::anAircraftOnTheGroundNeverTakesTheAirborneExit()
+{
+    for (const TurnaroundPhase phase : kPhasesWithoutAnAirborneExitOfTheirOwn)
+    {
+        TurnaroundWorkflow workflow;
+        StandInTheDeparturePhase(workflow, phase);
+
+        const char* const name = TurnaroundPhaseToString(phase);
+
+        for (int tick = 0; tick < kTicksOnTheGround; ++tick)
+        {
+            workflow.Tick();
+            QVERIFY2(workflow.machine.GetPhase() != TurnaroundPhase::OnFlight, name);
+        }
+
+        QVERIFY2(!Logged(workflow, "The aircraft is airborne"), name);
+    }
+}
+
+void TurnaroundStateMachineTest::anAirborneAircraftWithoutASupportedAircraftStaysInTheFirstWait()
+{
+    TurnaroundWorkflow workflow;
+    workflow.f.gsxService.onGround = false;
+
+    workflow.TickHoldingFor(kAirborneTicksToLeave * 2, TurnaroundPhase::WaitingSupportedAircraft);
+
+    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 0);
+    QVERIFY(!Logged(workflow, "The aircraft is airborne"));
+}
+
+void TurnaroundStateMachineTest::aSingleAirborneReadingDoesNotSkipTheDeparture()
+{
+    TurnaroundWorkflow workflow;
+    StandInTheDeparturePhase(workflow, TurnaroundPhase::WaitingAircraftReady);
+
+    workflow.f.gsxService.onGround = false;
+    workflow.TickHolding(TurnaroundPhase::WaitingAircraftReady);
+
+    workflow.f.gsxService.onGround = true;
+    workflow.TickHoldingFor(kTicksOnTheGround, TurnaroundPhase::WaitingAircraftReady);
+
+    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 0);
+    QVERIFY(!Logged(workflow, "The aircraft is airborne"));
+}
+
+void TurnaroundStateMachineTest::aTickOnTheGroundStartsTheAirborneCountOver()
+{
+    TurnaroundWorkflow workflow;
+    StandInTheDeparturePhase(workflow, TurnaroundPhase::WaitingAircraftReady);
+
+    workflow.f.gsxService.onGround = false;
+    workflow.TickHoldingFor(kAirborneTicksToLeave - 1, TurnaroundPhase::WaitingAircraftReady);
+
+    workflow.f.gsxService.onGround = true;
+    workflow.TickHolding(TurnaroundPhase::WaitingAircraftReady);
+
+    workflow.f.gsxService.onGround = false;
+    workflow.TickHoldingFor(kAirborneTicksToLeave - 1, TurnaroundPhase::WaitingAircraftReady);
+
+    QVERIFY(!Logged(workflow, "The aircraft is airborne"));
+
+    workflow.TickTo(TurnaroundPhase::OnFlight);
+
+    QCOMPARE(LoggedCount(workflow, "The aircraft is airborne"), 1);
+}
+
+void TurnaroundStateMachineTest::aResumeStartsTheAirborneCountOver()
+{
+    TurnaroundWorkflow workflow;
+    StandInTheDeparturePhase(workflow, TurnaroundPhase::RepositionAircraft);
+
+    workflow.f.gsxService.onGround = false;
+    workflow.TickHoldingFor(kAirborneTicksToLeave - 10, TurnaroundPhase::RepositionAircraft);
+
+    QCOMPARE(Resume(workflow, CheckpointAt(TurnaroundPhase::RepositionAircraft)), ResumeOutcome::Resumed);
+    workflow.TickHoldingFor(kAirborneTicksToLeave - 1, TurnaroundPhase::RepositionAircraft);
+
+    QVERIFY(!Logged(workflow, "The aircraft is airborne"));
+}
+
+void TurnaroundStateMachineTest::changingThePhaseStartsTheAirborneCountOver()
+{
+#ifndef NDEBUG
+    TurnaroundWorkflow workflow;
+    StandInTheDeparturePhase(workflow, TurnaroundPhase::RepositionAircraft);
+
+    workflow.f.gsxService.onGround = false;
+    workflow.TickHoldingFor(kAirborneTicksToLeave - 10, TurnaroundPhase::RepositionAircraft);
+
+    workflow.machine.DebugSkipPhase(1);
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::PlaceGroundEquipment);
+
+    workflow.TickHoldingFor(kAirborneTicksToLeave - 1, TurnaroundPhase::PlaceGroundEquipment);
+
+    QVERIFY(!Logged(workflow, "The aircraft is airborne"));
+#else
+    QSKIP("DebugSkipPhase is compiled out of Release builds");
+#endif
+}
+
+void TurnaroundStateMachineTest::noDepartureRequestIsSentWhileTheAirborneTicksAreCounted()
+{
+    TurnaroundWorkflow workflow;
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+
+    workflow.f.aircraft.readyToPush = true;
+    workflow.f.aircraft.parkingBrakeSet = true;
+    workflow.TickTo(TurnaroundPhase::WaitCatering);
+    workflow.TickTo(TurnaroundPhase::RemoveGroundEquipment);
+    workflow.TickTo(TurnaroundPhase::RequestPushback);
+
+    workflow.f.gsxService.departureState = GsxStateStatus::Callable;
+    workflow.f.gsxService.onGround = false;
+    workflow.TickHoldingFor(kAirborneTicksToLeave - 1, TurnaroundPhase::RequestPushback);
+
+    QCOMPARE(workflow.f.menuGateway.pushbackCalls, 0);
+
+    workflow.f.gsxService.onGround = true;
+    workflow.TickHolding(TurnaroundPhase::RequestPushback);
+
+    QCOMPARE(workflow.f.menuGateway.pushbackCalls, 1);
+}
+
+void TurnaroundStateMachineTest::aClientStartedInFlightReachesTheFlightWithoutAnyDepartureRequest()
+{
+    TurnaroundWorkflow workflow;
+    workflow.f.gsxService.onGround = false;
+    workflow.f.aircraft.engineRunning = true;
+    workflow.machine.AttachAircraft(&workflow.f.aircraft);
+
+    workflow.TickTo(TurnaroundPhase::WaitingAircraftReady);
+    workflow.TickHoldingFor(kAirborneTicksToLeave - 1, TurnaroundPhase::WaitingAircraftReady);
+    workflow.TickTo(TurnaroundPhase::OnFlight);
+
+    workflow.TickHolding(TurnaroundPhase::OnFlight);
+
+    QVERIFY(workflow.f.menuGateway.requestLog.empty());
+    QCOMPARE(workflow.f.aircraft.setChocksCalls, 0);
+    QCOMPARE(workflow.f.aircraft.closeAllDoorsCalls, 0);
+
+    workflow.f.aircraft.cargo = false;
+    workflow.f.aircraft.boardMethod = BoardBy::Client;
+    workflow.f.aircraft.emptyZfwKg = 100000.0;
+    workflow.f.aircraft.currentZfwKg = 150000.0;
+    workflow.f.gsxService.plannedPassengers = 120;
+
+    workflow.Land();
+    workflow.RequestDeboarding();
+    workflow.StartDeboarding();
+
+    QCOMPARE(workflow.f.menuGateway.deboardingCalls, 1);
+
+    workflow.TickHolding(TurnaroundPhase::Deboarding);
+
+    QCOMPARE(workflow.f.status.targetZfwKg, 150000.0);
+    QCOMPARE(workflow.f.status.emptyZfwKg, 100000.0);
+    QCOMPARE(workflow.f.status.targetPassengers, 120);
+}
+
+void TurnaroundStateMachineTest::anAircraftAirborneInThePushbackWaitMovesOnToTheDepartureAndClosesThePushbackPanelOnce()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+
+    workflow.TickHolding(TurnaroundPhase::WaitingPushbackToStart);
+
+    QCOMPARE(workflow.f.menuGateway.closePushbackPanelCalls, 0);
+
+    workflow.f.gsxService.onGround = false;
+    workflow.TickTo(TurnaroundPhase::WaitingDeparture);
+
+    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 0);
+    QCOMPARE(workflow.f.menuGateway.closePushbackPanelCalls, 1);
+    QCOMPARE(workflow.f.menuGateway.pushbackStartedCalls, 0);
+
+    workflow.TickHolding(TurnaroundPhase::WaitingDeparture);
+    workflow.FinishDelay(30, TurnaroundPhase::OnFlight);
+
+    QCOMPARE(workflow.f.menuGateway.closePushbackPanelCalls, 1);
+}
+
+void TurnaroundStateMachineTest::anAircraftAirborneInTheEngineWaitMovesOnToTheDeparture()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+    workflow.StartPushbackMovement();
+
+    workflow.f.gsxService.onGround = false;
+    workflow.TickTo(TurnaroundPhase::WaitingDeparture);
+
+    QCOMPARE(workflow.machine.GetDelayTicksRemaining(), 0);
+    QVERIFY(!Logged(workflow, "The aircraft is airborne"));
+}
+
+void TurnaroundStateMachineTest::aFlowAirborneInTheLoadingStillRunsTheWholeArrival()
+{
+    TurnaroundWorkflow workflow;
+    ReachBoarding(workflow);
+
+    workflow.f.gsxService.onGround = false;
+    workflow.f.aircraft.engineRunning = true;
+    workflow.TickHoldingFor(kAirborneTicksToLeave - 1, TurnaroundPhase::Loading);
+    workflow.TickTo(TurnaroundPhase::OnFlight);
+
+    workflow.Land();
+    workflow.RequestDeboarding();
+    workflow.StartDeboarding();
+    workflow.CompleteDeboarding();
+    workflow.StartNewFlightCycle();
+
+    const std::vector<TurnaroundPhase> expected{
+        TurnaroundPhase::WaitingSupportedAircraft,
+        TurnaroundPhase::WaitingAircraftReady,
+        TurnaroundPhase::RepositionAircraft,
+        TurnaroundPhase::PlaceGroundEquipment,
+        TurnaroundPhase::CallServices,
+        TurnaroundPhase::WaitingFlightPlan,
+        TurnaroundPhase::WaitingPowerOn,
+        TurnaroundPhase::CallCatering,
+        TurnaroundPhase::RequestFuel,
+        TurnaroundPhase::Loading,
+        TurnaroundPhase::OnFlight,
+        TurnaroundPhase::WaitingEngineShutdown,
+        TurnaroundPhase::PlaceArrivalGroundEquipment,
+        TurnaroundPhase::RequestDeboarding,
+        TurnaroundPhase::Deboarding,
+        TurnaroundPhase::CabinServices,
+        TurnaroundPhase::WaitingNewFlight,
+        TurnaroundPhase::WaitingSupportedAircraft,
+    };
+
+    QVERIFY(workflow.visitedPhases == expected);
+    QCOMPARE(workflow.f.menuGateway.pushbackCalls, 0);
+    QCOMPARE(workflow.f.menuGateway.deboardingCalls, 1);
+    QVERIFY(workflow.f.aircraft.closeAllDoorsCalls > 0);
 }
 
 QTEST_APPLESS_MAIN(TurnaroundStateMachineTest)

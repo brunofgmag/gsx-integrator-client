@@ -909,6 +909,11 @@
         <translation>O perfil do GSX desta aeronave não define &apos;refueling = 0&apos;, então o caminhão de combustível nunca conecta a mangueira. Aplique a correção e depois reinicie o GSX ou recarregue o voo.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="789"/>
+        <source>A GSX profile with &apos;refueling = 0&apos; is recommended for this aircraft. The client fuels it either way; the setting keeps the GSX truck from writing to the tanks while it does.</source>
+        <translation>Recomenda-se um perfil do GSX com &apos;refueling = 0&apos; para esta aeronave. O cliente abastece de qualquer jeito; a opção impede o caminhão do GSX de escrever nos tanques enquanto isso.</translation>
+    </message>
+    <message>
         <source>No GSX profile with &apos;refueling = 0&apos; was found for this aircraft. Install an aircraft profile and set &apos;refueling = 0&apos; in its gsx.cfg.</source>
         <translation type="vanished">Nenhum perfil do GSX com &apos;refueling = 0&apos; foi encontrado para esta aeronave. Instale um perfil de aeronave e defina &apos;refueling = 0&apos; no gsx.cfg dele.</translation>
     </message>
@@ -1105,6 +1110,11 @@
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="792"/>
         <source>The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back.</source>
         <translation>A escada da aeronave está sem pressão no acumulador. Ligue a bomba AC para recarregar, e o cliente move a escada assim que a pressão voltar.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="820"/>
+        <source>Remove the chocks and disconnect the ground power in the aircraft&apos;s EFB. Pushback waits until both are gone.</source>
+        <translation>Remova os calços e desconecte a energia externa no EFB da aeronave. O pushback espera até os dois saírem.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="820"/>

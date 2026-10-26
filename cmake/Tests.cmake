@@ -449,6 +449,24 @@ gsxi_add_qt_test(gsxi-avro-rj-tests avro-rj
         src/infrastructure/gsx/GsxDoorSync.cpp
         src/infrastructure/gsx/GsxDoorSync.h)
 
+gsxi_add_qt_test(gsxi-bbs-757-tests bbs-757
+        tests/AircraftTicks.h
+        tests/doubles/FakeVariableGateway.h
+        tests/tst_bbs_757.cpp
+        src/infrastructure/aircraft/AircraftIdentity.h
+        src/infrastructure/aircraft/AircraftRegistry.cpp
+        src/infrastructure/aircraft/AircraftRegistry.h
+        src/infrastructure/aircraft/bbs/Bbs757.cpp
+        src/infrastructure/aircraft/bbs/Bbs757.h
+        src/infrastructure/aircraft/bbs/rules/Bbs757DoorsFollowGsxRule.cpp
+        src/infrastructure/aircraft/bbs/rules/Bbs757DoorsFollowGsxRule.h
+        src/infrastructure/aircraft/SmartSwitch.cpp
+        src/infrastructure/aircraft/SmartSwitch.h
+        src/infrastructure/gsx/GsxDoorSync.cpp
+        src/infrastructure/gsx/GsxDoorSync.h
+        src/domain/model/AutomationStatus.h
+        src/domain/support/Weight.h)
+
 gsxi_add_qt_test(gsxi-fss-727-tests fss-727
         tests/TestDoubles.h
         tests/AircraftTicks.h
@@ -882,6 +900,10 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldsFollowTheirLoaderRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldsFollowTheirLoaderRule.h
+        src/infrastructure/aircraft/bbs/Bbs757.cpp
+        src/infrastructure/aircraft/bbs/Bbs757.h
+        src/infrastructure/aircraft/bbs/rules/Bbs757DoorsFollowGsxRule.cpp
+        src/infrastructure/aircraft/bbs/rules/Bbs757DoorsFollowGsxRule.h
         src/infrastructure/aircraft/fss/Fss727.cpp
         src/infrastructure/aircraft/fss/Fss727.h
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.cpp
@@ -1172,6 +1194,10 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldForOwnAirstairRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldsFollowTheirLoaderRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjHoldsFollowTheirLoaderRule.h
+        src/infrastructure/aircraft/bbs/Bbs757.cpp
+        src/infrastructure/aircraft/bbs/Bbs757.h
+        src/infrastructure/aircraft/bbs/rules/Bbs757DoorsFollowGsxRule.cpp
+        src/infrastructure/aircraft/bbs/rules/Bbs757DoorsFollowGsxRule.h
         src/infrastructure/aircraft/fss/Fss727.cpp
         src/infrastructure/aircraft/fss/Fss727.h
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.cpp

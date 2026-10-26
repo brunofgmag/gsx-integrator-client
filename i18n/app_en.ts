@@ -909,6 +909,11 @@
         <translation>The GSX profile for this aircraft does not set &apos;refueling = 0&apos;, so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="789"/>
+        <source>A GSX profile with &apos;refueling = 0&apos; is recommended for this aircraft. The client fuels it either way; the setting keeps the GSX truck from writing to the tanks while it does.</source>
+        <translation>A GSX profile with &apos;refueling = 0&apos; is recommended for this aircraft. The client fuels it either way; the setting keeps the GSX truck from writing to the tanks while it does.</translation>
+    </message>
+    <message>
         <source>No GSX profile with &apos;refueling = 0&apos; was found for this aircraft. Install an aircraft profile and set &apos;refueling = 0&apos; in its gsx.cfg.</source>
         <translation type="vanished">No GSX profile with &apos;refueling = 0&apos; was found for this aircraft. Install an aircraft profile and set &apos;refueling = 0&apos; in its gsx.cfg.</translation>
     </message>
@@ -1105,6 +1110,11 @@
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="792"/>
         <source>The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back.</source>
         <translation>The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="820"/>
+        <source>Remove the chocks and disconnect the ground power in the aircraft&apos;s EFB. Pushback waits until both are gone.</source>
+        <translation>Remove the chocks and disconnect the ground power in the aircraft&apos;s EFB. Pushback waits until both are gone.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="820"/>

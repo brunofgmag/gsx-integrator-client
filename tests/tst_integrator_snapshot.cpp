@@ -98,6 +98,16 @@ void IntegratorSnapshotTest::boolFieldDifferenceBreaksEquivalence()
     b.ownStairsWaitingForPressure = true;
 
     QVERIFY(!AreEquivalent(a, b));
+
+    b.ownStairsWaitingForPressure = false;
+    b.ownGroundEquipmentAttached = true;
+
+    QVERIFY(!AreEquivalent(a, b));
+
+    b.ownGroundEquipmentAttached = false;
+    b.gsxProfileRefuelingRecommended = true;
+
+    QVERIFY(!AreEquivalent(a, b));
 }
 
 void IntegratorSnapshotTest::aircraftNameDifferenceBreaksEquivalence()

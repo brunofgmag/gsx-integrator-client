@@ -13,6 +13,8 @@ namespace
 {
     constexpr int kRetryTicks = 60;
 
+    constexpr auto kWaitingForThePilot = "Waiting for the pilot to remove the aircraft's own chocks and ground power";
+
     bool ManagesGpu(const TurnaroundContext& ctx)
     {
         const bool manageGpu =
@@ -31,8 +33,27 @@ namespace
     }
 }
 
+bool RemoveGroundEquipmentState::IsHeldByTheOwnGroundEquipment(TurnaroundContext& ctx)
+{
+    const bool attached = ctx.aircraft->IsOwnGroundEquipmentAttached();
+
+    if (attached && !ownGroundEquipmentHoldAnnounced_)
+    {
+        ctx.logger->LogInfo(kWaitingForThePilot);
+    }
+
+    ownGroundEquipmentHoldAnnounced_ = attached;
+
+    return attached;
+}
+
 std::optional<TurnaroundTransition> RemoveGroundEquipmentState::EvaluatePhase(TurnaroundContext& ctx)
 {
+    if (IsHeldByTheOwnGroundEquipment(ctx))
+    {
+        return std::nullopt;
+    }
+
     const bool manageGpu = ManagesGpu(ctx);
 
     if (ShouldRemoveChocks(ctx) && !ctx.data.chocksRemoved)

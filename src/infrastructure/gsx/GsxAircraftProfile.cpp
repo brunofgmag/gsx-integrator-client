@@ -4,7 +4,9 @@
 #include <array>
 #include <cctype>
 #include <fstream>
+#include <span>
 #include <sstream>
+#include "../aircraft/bbs/Bbs757.h"
 #include "../aircraft/fenix/FenixA32x.h"
 #include "../aircraft/pmdg/Pmdg737.h"
 #include "../aircraft/pmdg/Pmdg777.h"
@@ -37,7 +39,21 @@ namespace
         ProfileFolder{Pmdg737::kNamePax800, "PMDG 737-800"},
         ProfileFolder{Pmdg737::kNameBcf800, "PMDG 737-800"},
         ProfileFolder{Pmdg737::kNameBdsf800, "PMDG 737-800"},
-        ProfileFolder{Pmdg737::kNameBbj2, "PMDG 737-800"}
+        ProfileFolder{Pmdg737::kNameBbj2, "PMDG 737-800"},
+    };
+
+    constexpr std::array kRecommendedProfileFolders = {
+        ProfileFolder{Bbs757::kName, "bbs-757-200-base"},
+        ProfileFolder{Bbs757::kName, "bbs-757-200-pw"},
+        ProfileFolder{Bbs757::kName, "bbs-757-200-pw-AWE"},
+        ProfileFolder{Bbs757::kName, "bbs-757-200-pw-NC"},
+        ProfileFolder{Bbs757::kName, "bbs-757-200-pw-nw"},
+        ProfileFolder{Bbs757::kName, "bbs-757-200-pw-nw-AWE"},
+        ProfileFolder{Bbs757::kName, "bbs-757-200-rr"},
+        ProfileFolder{Bbs757::kName, "bbs-757-200-rr-AWE"},
+        ProfileFolder{Bbs757::kName, "bbs-757-200-rr-nw"},
+        ProfileFolder{Bbs757::kName, "bbs-757-200-rr-nw-AWE"},
+        ProfileFolder{Bbs757::kName, "bbs-757-200-rr-scimitarw"},
     };
 
     std::string Trim(const std::string& text)
@@ -122,28 +138,39 @@ namespace
 
         return output.good();
     }
+
+    std::vector<std::filesystem::path> RootsIn(const std::span<const ProfileFolder> table,
+                                               const std::string& aircraftName)
+    {
+        const std::optional<std::filesystem::path> appData = SimulatorRoamingAppData();
+        if (!appData.has_value())
+        {
+            return {};
+        }
+
+        const std::filesystem::path airplanes = *appData / "Virtuali" / "Airplanes";
+
+        std::vector<std::filesystem::path> roots;
+        for (const auto& [name, folder] : table)
+        {
+            if (aircraftName == name)
+            {
+                roots.push_back(airplanes / folder);
+            }
+        }
+
+        return roots;
+    }
 }
 
 std::vector<std::filesystem::path> GsxAircraftProfile::ProfileRootsFor(const std::string& aircraftName)
 {
-    const std::optional<std::filesystem::path> appData = SimulatorRoamingAppData();
-    if (!appData.has_value())
-    {
-        return {};
-    }
+    return RootsIn(kProfileFolders, aircraftName);
+}
 
-    const std::filesystem::path airplanes = *appData / "Virtuali" / "Airplanes";
-
-    std::vector<std::filesystem::path> roots;
-    for (const auto& [name, folder] : kProfileFolders)
-    {
-        if (aircraftName == name)
-        {
-            roots.push_back(airplanes / folder);
-        }
-    }
-
-    return roots;
+std::vector<std::filesystem::path> GsxAircraftProfile::RecommendedProfileRootsFor(const std::string& aircraftName)
+{
+    return RootsIn(kRecommendedProfileFolders, aircraftName);
 }
 
 std::vector<std::filesystem::path> GsxAircraftProfile::FindCfgs(const std::vector<std::filesystem::path>& roots)

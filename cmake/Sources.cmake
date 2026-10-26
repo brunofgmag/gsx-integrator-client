@@ -159,6 +159,10 @@ set(APP_SOURCES
         src/infrastructure/aircraft/avrorj/rules/AvroRjPaxDoorsServeTheAirstairRule.h
         src/infrastructure/aircraft/avrorj/rules/AvroRjWatchModuleFuelMirrorRule.cpp
         src/infrastructure/aircraft/avrorj/rules/AvroRjWatchModuleFuelMirrorRule.h
+        src/infrastructure/aircraft/bbs/Bbs757.cpp
+        src/infrastructure/aircraft/bbs/Bbs757.h
+        src/infrastructure/aircraft/bbs/rules/Bbs757DoorsFollowGsxRule.cpp
+        src/infrastructure/aircraft/bbs/rules/Bbs757DoorsFollowGsxRule.h
         src/infrastructure/aircraft/fss/Fss727.cpp
         src/infrastructure/aircraft/fss/Fss727.h
         src/infrastructure/aircraft/fss/rules/Fss727KeepVendorGsxAutomodeOffRule.cpp

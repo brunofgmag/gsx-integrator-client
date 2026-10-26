@@ -17,6 +17,7 @@ protected:
 
 private:
     static void EnsureBaseline(TurnaroundContext& ctx);
+    static void AdoptTheLoadOnBoardWithoutAPlan(TurnaroundContext& ctx);
     static void FinishDeboarding(TurnaroundContext& ctx);
     static void AdvanceDeboardingBar(TurnaroundContext& ctx);
 };
