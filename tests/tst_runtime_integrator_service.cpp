@@ -67,6 +67,7 @@ namespace
     constexpr std::chrono::milliseconds kFastReconnectInterval{50};
     constexpr std::chrono::milliseconds kObservableReconnectInterval{300};
     constexpr int kPersonalPilotId = 4815162;
+    constexpr int kOwnershipWindowLapseMs = 3050;
     constexpr auto kOpeningSimConnect = "Opening SimConnect...";
     constexpr auto kNotAnswered = "has not answered yet";
     constexpr auto kLostConnection = "Lost connection to the simulator.";
@@ -558,6 +559,11 @@ namespace
         return AMenuTheNavigatorAnswersAlone("Do you want de-icing?", "Yes", "No");
     }
 
+    QJsonObject TheServicesMenu()
+    {
+        return AMenuTheNavigatorAnswersAlone("Activate Services at ZZZZ/Test Airport", "Request Refueling", "Cancel");
+    }
+
     void ReceiveAMenuPatch(const QJsonObject& menu)
     {
         FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/menu"), menu));
@@ -842,6 +848,15 @@ private slots:
     static void aStandThatGoesEmptyAndComesBackKeepsTheTurnaroundUnderWay();
     static void aStandChangedAfterThePushbackWasAskedKeepsTheTurnaround();
     static void enteringWaitingNewFlightWritesTheKeyAndTheMarkAndARelaunchKeepsIt();
+    static void anUnsupportedAircraftIsNotAnsweredOnTheGsxMenuOfAPatch();
+    static void anUnsupportedAircraftIsNotAnsweredOnTheGsxMenuOfASnapshot();
+    static void aSupportedAircraftIsAnsweredOnTheGsxMenuOfAPatch();
+    static void theSimbriefReloadAsksTheGsxForNothingWithoutAnAircraft();
+    static void theSimbriefReloadAsksTheGsxToReloadItsPlanWithAnAircraft();
+    static void changingAnotherSettingKeepsTheAutomationThePilotStopped();
+    static void turningTheAutoStartOnEnablesTheAutomationOfAConnectedClient();
+    static void aMenuTheClientOpenedIsForgottenWhenItHidesWhileTheAutomationIsStopped_data();
+    static void aMenuTheClientOpenedIsForgottenWhenItHidesWhileTheAutomationIsStopped();
 
 private:
     QTemporaryDir probeDirectory_;
@@ -3195,17 +3210,16 @@ void RuntimeIntegratorServiceTest::anUnstartedFlowLeavesTheGsxMenuOfASnapshotAlo
 {
     const LogCapture log;
     IntegratorRuntime runtime;
-    StartTheFlowWithoutTheReposition(runtime, false);
+    StartTheFlowWithoutTheReposition(runtime);
     runtime.Setup();
 
     QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
 
-    PushUnpaused();
-    QVERIFY(TickAndWait(updated));
-    QVERIFY(PushLVar(gsx::lvars::kCouatlStarted, 1.0));
-    QVERIFY(TickAndWait(updated));
-    QVERIFY(!runtime.Snapshot().automationEnabled);
-    QVERIFY(runtime.Snapshot().gsxAvailable);
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(runtime.Snapshot().automationEnabled);
+
+    runtime.SetAutomationEnabled(false);
+    FakeGsxRemoteApi::commandVerbs.clear();
 
     QJsonObject snapshot = GsxWire(kSavedCouatl, kSavedStand);
     snapshot.insert("menu", TheAirstairsQuestion());
@@ -3224,17 +3238,18 @@ void RuntimeIntegratorServiceTest::anUnstartedFlowLeavesTheGsxMenuOfAPatchAlone(
 {
     const LogCapture log;
     IntegratorRuntime runtime;
-    StartTheFlowWithoutTheReposition(runtime, false);
+    StartTheFlowWithoutTheReposition(runtime);
     runtime.Setup();
 
     QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
 
-    PushUnpaused();
-    QVERIFY(TickAndWait(updated));
-    QVERIFY(PushLVar(gsx::lvars::kCouatlStarted, 1.0));
-    QVERIFY(TickAndWait(updated));
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(runtime.Snapshot().automationEnabled);
 
+    runtime.SetAutomationEnabled(false);
     FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+    FakeGsxRemoteApi::commandVerbs.clear();
+
     ReceiveAMenuPatch(TheAirstairsQuestion());
 
     QVERIFY(FakeGsxRemoteApi::commandVerbs.empty());
@@ -3446,7 +3461,7 @@ void RuntimeIntegratorServiceTest::aSimulatorQuitWithoutASessionLeavesTheAutomat
     options.reconnectInterval = kFastReconnectInterval;
     IntegratorRuntime runtime(options);
     runtime.Setup();
-    runtime.ApplySettings(AutomationSettings{});
+    runtime.SetAutomationEnabled(true);
 
     QVERIFY(runtime.Snapshot().automationEnabled);
     QVERIFY(!runtime.IsSessionActive());
@@ -4174,6 +4189,204 @@ void RuntimeIntegratorServiceTest::aStandChangedAfterThePushbackWasAskedKeepsThe
 
     QCOMPARE(store.eraseCalls, erasesBefore);
     QVERIFY(runtime.GetPhase() >= TurnaroundPhase::RequestPushback);
+}
+
+void RuntimeIntegratorServiceTest::anUnsupportedAircraftIsNotAnsweredOnTheGsxMenuOfAPatch()
+{
+    IntegratorRuntime runtime;
+
+    AutomationSettings settings;
+    settings.autoDeice = true;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kUnsupportedTitle, kUnsupportedAtcModel, ""));
+    QVERIFY(runtime.Snapshot().automationEnabled);
+    QVERIFY(runtime.Snapshot().gsxAvailable);
+
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+    ReceiveAMenuPatch(TheDeIceQuestion());
+
+    QVERIFY(FakeGsxRemoteApi::commandVerbs.empty());
+}
+
+void RuntimeIntegratorServiceTest::anUnsupportedAircraftIsNotAnsweredOnTheGsxMenuOfASnapshot()
+{
+    IntegratorRuntime runtime;
+
+    AutomationSettings settings;
+    settings.autoDeice = true;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kUnsupportedTitle, kUnsupportedAtcModel, ""));
+    QVERIFY(runtime.Snapshot().automationEnabled);
+
+    QJsonObject snapshot = GsxWire(kSavedCouatl, kSavedStand);
+    snapshot.insert("menu", TheDeIceQuestion());
+    snapshot.insert("menuShown", true);
+    FakeGsxRemoteApi::Receive(snapshot);
+
+    QVERIFY(FakeGsxRemoteApi::commandVerbs.empty());
+}
+
+void RuntimeIntegratorServiceTest::aSupportedAircraftIsAnsweredOnTheGsxMenuOfAPatch()
+{
+    IntegratorRuntime runtime;
+
+    AutomationSettings settings;
+    settings.skipReposition = true;
+    settings.autoDeice = true;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(runtime.Snapshot().automationEnabled);
+
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+    FakeGsxRemoteApi::commandVerbs.clear();
+    ReceiveAMenuPatch(TheDeIceQuestion());
+
+    QCOMPARE(FakeGsxRemoteApi::commandVerbs, std::vector<std::string>{kMenuPickVerb});
+}
+
+void RuntimeIntegratorServiceTest::theSimbriefReloadAsksTheGsxForNothingWithoutAnAircraft()
+{
+    IntegratorRuntime runtime;
+
+    AutomationSettings settings;
+    settings.simbriefPilotId = kPersonalPilotId;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectWithTheGsxUp(runtime, updated, kUnsupportedTitle, kUnsupportedAtcModel, ""));
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+    FakeGsxRemoteApi::commandVerbs.clear();
+
+    QVERIFY(runtime.ReloadSimbrief());
+
+    QVERIFY(FakeGsxRemoteApi::commandVerbs.empty());
+}
+
+void RuntimeIntegratorServiceTest::theSimbriefReloadAsksTheGsxToReloadItsPlanWithAnAircraft()
+{
+    IntegratorRuntime runtime;
+
+    AutomationSettings settings;
+    settings.simbriefPilotId = kPersonalPilotId;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+    FakeGsxRemoteApi::commandVerbs.clear();
+
+    QVERIFY(runtime.ReloadSimbrief());
+
+    QCOMPARE(FakeGsxRemoteApi::commandVerbs, std::vector<std::string>{"command.run"});
+}
+
+void RuntimeIntegratorServiceTest::changingAnotherSettingKeepsTheAutomationThePilotStopped()
+{
+    IntegratorRuntime runtime;
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    QVERIFY(runtime.IsConnected());
+    QVERIFY(runtime.Snapshot().automationEnabled);
+
+    runtime.SetAutomationEnabled(false);
+
+    AutomationSettings settings;
+    QVERIFY(settings.autoStartFlow);
+    settings.autoDeice = true;
+    runtime.ApplySettings(settings);
+
+    QVERIFY(!runtime.Snapshot().automationEnabled);
+}
+
+void RuntimeIntegratorServiceTest::turningTheAutoStartOnEnablesTheAutomationOfAConnectedClient()
+{
+    IntegratorRuntime runtime;
+
+    AutomationSettings settings;
+    settings.autoStartFlow = false;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    PushUnpaused();
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(runtime.IsConnected());
+    QVERIFY(!runtime.Snapshot().automationEnabled);
+
+    settings.autoStartFlow = true;
+    runtime.ApplySettings(settings);
+
+    QVERIFY(runtime.Snapshot().automationEnabled);
+}
+
+void RuntimeIntegratorServiceTest::aMenuTheClientOpenedIsForgottenWhenItHidesWhileTheAutomationIsStopped_data()
+{
+    QTest::addColumn<bool>("hidesByPatch");
+
+    QTest::newRow("hidden by a patch") << true;
+    QTest::newRow("hidden by a snapshot") << false;
+}
+
+void RuntimeIntegratorServiceTest::aMenuTheClientOpenedIsForgottenWhenItHidesWhileTheAutomationIsStopped()
+{
+    QFETCH(bool, hidesByPatch);
+
+    IntegratorRuntime runtime;
+
+    AutomationSettings settings;
+    settings.simbriefPilotId = kPersonalPilotId;
+    runtime.ApplySettings(settings);
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithTheGsxUp(runtime, updated));
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+
+    QVERIFY(runtime.ReloadSimbrief());
+    ReceiveAMenuPatch(TheServicesMenu());
+
+    runtime.SetAutomationEnabled(false);
+    if (hidesByPatch)
+    {
+        FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/menuShown"), false));
+    }
+    else
+    {
+        QJsonObject snapshot = GsxWire(kSavedCouatl, kSavedStand);
+        snapshot.insert("menuShown", false);
+        FakeGsxRemoteApi::Receive(snapshot);
+    }
+
+    QTest::qWait(kOwnershipWindowLapseMs);
+    ReceiveAMenuPatch(TheServicesMenu());
+
+    runtime.SetAutomationEnabled(true);
+    FakeGsxRemoteApi::commandVerbs.clear();
+
+    QVERIFY(runtime.ReloadSimbrief());
+
+    QVERIFY(FakeGsxRemoteApi::commandVerbs.empty());
 }
 
 QTEST_GUILESS_MAIN(RuntimeIntegratorServiceTest)

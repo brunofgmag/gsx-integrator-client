@@ -189,6 +189,10 @@ void IntegratorRuntime::Setup()
                     gsxMenu_.OnSnapshot();
                     SaveTurnaround();
                 }
+                else
+                {
+                    gsxMenu_.ObserveMenuOwner();
+                }
             });
 
     connect(&gsxRemoteClient_, &GsxRemoteApiClient::PatchReceived,
@@ -201,10 +205,19 @@ void IntegratorRuntime::Setup()
                     LOG_WARN("GSX published an unknown path: %s", path.c_str());
                 }
                 AnnounceWireFacts();
-                if ((path == "/menu" || path == "/menuShown") && IsDrivingTheGsx())
+                if (path != "/menu" && path != "/menuShown")
+                {
+                    return;
+                }
+
+                if (IsDrivingTheGsx())
                 {
                     gsxMenu_.OnMenuChanged();
                     SaveTurnaround();
+                }
+                else
+                {
+                    gsxMenu_.ObserveMenuOwner();
                 }
             });
 
@@ -325,6 +338,14 @@ void IntegratorRuntime::AdvanceResumption()
 void IntegratorRuntime::RestoreSavedTurnaround(const TurnaroundResumption::Restoration& restoration)
 {
     const TurnaroundDocument& document = *restoration.document;
+    if (!document.checkpoint)
+    {
+        LOG_WARN("The saved turnaround has no checkpoint to resume. Discarding it.");
+        resumption_.Discard();
+
+        return;
+    }
+
     const bool gsxRestarted = restoration.gsxRestartedSinceSave;
 
     if (document.plan)
@@ -737,7 +758,7 @@ bool IntegratorRuntime::IsCargoDoorStuck() const
 bool IntegratorRuntime::AreOwnStairsWaitingForPressure() const
 {
     return aircraft_
-        && ResolveTickMode() == TickMode::Driving
+        && IsDrivingTheGsx()
         && aircraft_->AreOwnStairsWaitingForPressure();
 }
 
@@ -788,7 +809,7 @@ bool IntegratorRuntime::AreDoorsHoldingPushback() const
 
 bool IntegratorRuntime::IsDrivingTheGsx() const
 {
-    return ResolveTickMode() == TickMode::Driving && !resumption_.IsHolding();
+    return aircraft_ && ResolveTickMode() == TickMode::Driving && !resumption_.IsHolding();
 }
 
 TurnaroundHold IntegratorRuntime::CurrentHold() const
@@ -1303,9 +1324,14 @@ void IntegratorRuntime::RestartFlow()
 
 void IntegratorRuntime::ApplySettings(const AutomationSettings& settings)
 {
+    const bool autoStartTurnedOn = !settings_.autoStartFlow && settings.autoStartFlow;
+
     settings_ = settings;
 
-    MaybeAutoStart();
+    if (autoStartTurnedOn)
+    {
+        MaybeAutoStart();
+    }
 
     emit Updated();
 }
@@ -1320,7 +1346,11 @@ bool IntegratorRuntime::ReloadSimbrief()
     const bool started = simbriefClient_.Reload();
     if (started)
     {
-        gsxMenu_.RequestSimbriefLoad();
+        if (aircraft_)
+        {
+            gsxMenu_.RequestSimbriefLoad();
+        }
+
         SaveTurnaround();
     }
 
