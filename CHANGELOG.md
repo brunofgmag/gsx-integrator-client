@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.51.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.50.0...v1.51.0) (2026-10-26)
+
+
+* drive the BlueBird 757-200 through its EFB interface ([#277](https://github.com/brunofgmag/gsx-integrator-client/issues/277)) ([de13dc2](https://github.com/brunofgmag/gsx-integrator-client/commit/de13dc289e5b8f76699189f3e37131502d6b670f))
+
+
+### Features
+
+* **bbs:** drive the BlueBird 757-200 through its EFB interface ([0752a8d](https://github.com/brunofgmag/gsx-integrator-client/commit/0752a8d5266029df887725137fd92da687364f93)) ([de13dc2](https://github.com/brunofgmag/gsx-integrator-client/commit/de13dc289e5b8f76699189f3e37131502d6b670f))
+
+
+### Bug Fixes
+
+* **gsx:** only close the GSX menus the client opened and hold a request until GSX takes a toggled service ([38b4442](https://github.com/brunofgmag/gsx-integrator-client/commit/38b4442c744e45ac302ad962889cda4b24917fb4)) ([de13dc2](https://github.com/brunofgmag/gsx-integrator-client/commit/de13dc289e5b8f76699189f3e37131502d6b670f))
+* **turnaround:** leave the departure for the flight when the aircraft is airborne ([7fbe8ac](https://github.com/brunofgmag/gsx-integrator-client/commit/7fbe8ac5c354a96456ae9108940f605e03ebd600)) ([de13dc2](https://github.com/brunofgmag/gsx-integrator-client/commit/de13dc289e5b8f76699189f3e37131502d6b670f))
+
 ## [1.50.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.49.0...v1.50.0) (2026-10-25)
 
 
