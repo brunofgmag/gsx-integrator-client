@@ -128,6 +128,7 @@ void TurnaroundStateMachine::RegisterStates()
 void TurnaroundStateMachine::Tick()
 {
     context_.gsxGateway->Observe();
+    context_.menuGateway->HoldRequests(context_.aircraft != nullptr && context_.aircraft->IsDrivingTheGsxMenu());
     Step();
     PublishStatus();
 }

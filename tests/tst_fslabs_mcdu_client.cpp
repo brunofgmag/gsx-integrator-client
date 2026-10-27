@@ -21,7 +21,9 @@ namespace
     constexpr auto kHeaderEnd = "\r\n\r\n";
     constexpr auto kDisplayPrefix = "/MCDU/Display/";
     constexpr auto kDisplayPath = "/MCDU/Display/3CA2";
+    constexpr auto kLeftDisplayPath = "/MCDU/Display/3CA1";
     constexpr auto kKeyPath = "/MCDU/Key/3CA2?Key=114";
+    constexpr auto kLeftKeyPath = "/MCDU/Key/3CA1?Key=114";
     constexpr auto kCaptainsMcdu = "3CA1";
     constexpr int kKeyPressed = 114;
     constexpr int kFlightNumberRow = 2;
@@ -154,7 +156,9 @@ private slots:
     static void rejectsAFrameWithTheWrongCellCount();
     static void rejectsACellThatIsNotAGlyph();
     static void pollsTheRightMcduDisplay();
+    static void eachSideReadsItsOwnDisplay();
     static void aKeyGoesToTheRightMcduOnly();
+    static void aLeftKeyCarriesTheLeftId();
     static void aKeyPressLandsInTheWritesLog();
     static void onlyOneDisplayRequestIsInFlight();
     static void aScreenPolledBeforeAKeyIsNotFresh();
@@ -177,7 +181,7 @@ void FslabsMcduClientTest::initTestCase()
 
 void FslabsMcduClientTest::startsUnavailableWithABlankScreen()
 {
-    const FslabsMcduClient client;
+    const FslabsMcduClient client{FslabsMcduSide::Right};
 
     QVERIFY(!client.IsAvailable());
     QVERIFY(client.Screen().IsBlank());
@@ -237,7 +241,7 @@ void FslabsMcduClientTest::pollsTheRightMcduDisplay()
 {
     FakeMcduServer server;
     QVERIFY(server.Listen());
-    FslabsMcduClient client;
+    FslabsMcduClient client{FslabsMcduSide::Right};
     client.SetEndpointForTest(server.Endpoint());
 
     client.Poll();
@@ -248,11 +252,28 @@ void FslabsMcduClientTest::pollsTheRightMcduDisplay()
     QCOMPARE(client.ScreenSerial(), std::uint64_t{1});
 }
 
+void FslabsMcduClientTest::eachSideReadsItsOwnDisplay()
+{
+    FakeMcduServer server;
+    QVERIFY(server.Listen());
+    FslabsMcduClient left{FslabsMcduSide::Left};
+    left.SetEndpointForTest(server.Endpoint());
+    FslabsMcduClient right{FslabsMcduSide::Right};
+    right.SetEndpointForTest(server.Endpoint());
+
+    left.Poll();
+    QTRY_VERIFY(left.IsAvailable());
+    right.Poll();
+    QTRY_VERIFY(right.IsAvailable());
+
+    QCOMPARE(server.Paths(), (QStringList{QString::fromLatin1(kLeftDisplayPath), QString::fromLatin1(kDisplayPath)}));
+}
+
 void FslabsMcduClientTest::aKeyGoesToTheRightMcduOnly()
 {
     FakeMcduServer server;
     QVERIFY(server.Listen());
-    FslabsMcduClient client;
+    FslabsMcduClient client{FslabsMcduSide::Right};
     client.SetEndpointForTest(server.Endpoint());
     client.Poll();
     QTRY_VERIFY(client.IsAvailable());
@@ -267,11 +288,26 @@ void FslabsMcduClientTest::aKeyGoesToTheRightMcduOnly()
     }
 }
 
+void FslabsMcduClientTest::aLeftKeyCarriesTheLeftId()
+{
+    FakeMcduServer server;
+    QVERIFY(server.Listen());
+    FslabsMcduClient client{FslabsMcduSide::Left};
+    client.SetEndpointForTest(server.Endpoint());
+    const qsizetype before = ProbeLines(kWritesLog).size();
+
+    client.Press(kKeyPressed);
+
+    QTRY_COMPARE(server.Requests(), 1);
+    QCOMPARE(server.Paths().last(), QString::fromLatin1(kLeftKeyPath));
+    QCOMPARE(ProbeLines(kWritesLog).mid(before), QStringList{QStringLiteral("mcdu 3CA1 key=114")});
+}
+
 void FslabsMcduClientTest::aKeyPressLandsInTheWritesLog()
 {
     FakeMcduServer server;
     QVERIFY(server.Listen());
-    FslabsMcduClient client;
+    FslabsMcduClient client{FslabsMcduSide::Right};
     client.SetEndpointForTest(server.Endpoint());
     const qsizetype before = ProbeLines(kWritesLog).size();
 
@@ -288,7 +324,7 @@ void FslabsMcduClientTest::onlyOneDisplayRequestIsInFlight()
     FakeMcduServer server;
     QVERIFY(server.Listen());
     server.HoldDisplayReplies();
-    FslabsMcduClient client;
+    FslabsMcduClient client{FslabsMcduSide::Right};
     client.SetEndpointForTest(server.Endpoint());
 
     client.Poll();
@@ -312,7 +348,7 @@ void FslabsMcduClientTest::aScreenPolledBeforeAKeyIsNotFresh()
     FakeMcduServer server;
     QVERIFY(server.Listen());
     server.HoldDisplayReplies();
-    FslabsMcduClient client;
+    FslabsMcduClient client{FslabsMcduSide::Right};
     client.SetEndpointForTest(server.Endpoint());
     client.Poll();
     QTRY_COMPARE(server.Requests(), 1);
@@ -331,7 +367,7 @@ void FslabsMcduClientTest::aScreenPolledAfterAKeyIsFresh()
 {
     FakeMcduServer server;
     QVERIFY(server.Listen());
-    FslabsMcduClient client;
+    FslabsMcduClient client{FslabsMcduSide::Right};
     client.SetEndpointForTest(server.Endpoint());
 
     client.Press(kKeyPressed);
@@ -346,7 +382,7 @@ void FslabsMcduClientTest::oneFailureKeepsTheClientAvailableAndTwoDropIt()
 {
     FakeMcduServer server;
     QVERIFY(server.Listen());
-    FslabsMcduClient client;
+    FslabsMcduClient client{FslabsMcduSide::Right};
     client.SetEndpointForTest(server.Endpoint());
     client.Poll();
     QTRY_VERIFY(client.IsAvailable());
@@ -368,7 +404,7 @@ void FslabsMcduClientTest::aSuccessBetweenTwoFailuresKeepsTheClientAvailable()
 {
     FakeMcduServer server;
     QVERIFY(server.Listen());
-    FslabsMcduClient client;
+    FslabsMcduClient client{FslabsMcduSide::Right};
     client.SetEndpointForTest(server.Endpoint());
     client.Poll();
     QTRY_VERIFY(client.IsAvailable());
@@ -395,7 +431,7 @@ void FslabsMcduClientTest::aClosedServerMakesTheClientUnavailable()
 {
     FakeMcduServer server;
     QVERIFY(server.Listen());
-    FslabsMcduClient client;
+    FslabsMcduClient client{FslabsMcduSide::Right};
     client.SetEndpointForTest(server.Endpoint());
     client.Poll();
     QTRY_VERIFY(client.IsAvailable());
@@ -408,7 +444,7 @@ void FslabsMcduClientTest::aGarbledAnswerCountsAsAFailure()
 {
     FakeMcduServer server;
     QVERIFY(server.Listen());
-    FslabsMcduClient client;
+    FslabsMcduClient client{FslabsMcduSide::Right};
     client.SetEndpointForTest(server.Endpoint());
     client.Poll();
     QTRY_VERIFY(client.IsAvailable());

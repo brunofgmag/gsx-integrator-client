@@ -54,6 +54,7 @@ public:
     [[nodiscard]] bool WereStairsKeptInPlace() const override;
 
     [[nodiscard]] bool IsMenuSettled() const;
+    [[nodiscard]] bool IsWaitingForThePilotsMenu() const;
 
     void OpenMenu() const;
     void OpenPushbackPanel() override;
@@ -65,6 +66,7 @@ public:
     void OnSnapshot();
     void ObserveMenuOwner();
     void DisableGsxMenu() override;
+    void HoldRequests(bool held) override { requestsHeld_ = held; }
 
     void Reset();
 
@@ -92,6 +94,8 @@ private:
         bool firesWhileUnderway = false;
         bool heldBehindThePilotsMenu = false;
         bool heldBehindAToggle = false;
+        bool refused = false;
+        int messagesAtSend = -1;
 
         [[nodiscard]] bool WasSent() const { return attempts > 0; }
         [[nodiscard]] bool UndoneByASecondSend() const;
@@ -111,23 +115,19 @@ private:
         {
             return !WasSent() && now - armedMs >= kToggleGiveUpMs;
         }
-        [[nodiscard]] bool HeldBehindThePilotsMenuForTooLong(const long long now) const
-        {
-            return heldBehindThePilotsMenu && WasSent() && GiveUpWindowElapsed(now);
-        }
         [[nodiscard]] bool IsAToggleAwaitingGsx(const long long now) const
         {
-            return WasSent() && UndoneByASecondSend() && !RetryWindowElapsed(now);
+            return WasSent() && UndoneByASecondSend() && !refused && !RetryWindowElapsed(now);
         }
         [[nodiscard]] bool IsDueToSend(const long long now) const
         {
-            return !WasSent() || (!UndoneByASecondSend() && RetryWindowElapsed(now));
+            return !WasSent() || refused || (!UndoneByASecondSend() && RetryWindowElapsed(now));
         }
     };
 
     enum class DropReason : std::uint8_t
     {
-        None, Taken, AlreadyUnderway, ToggleGaveUp, NeverTaken, NeverLeft, HeldBehindThePilotsMenu,
+        None, Taken, AlreadyUnderway, ToggleGaveUp, NeverTaken, NeverLeft,
     };
 
     enum class MenuOwner : std::uint8_t { None, Pilot, Client };
@@ -160,6 +160,9 @@ private:
     void HoldBehindTheToggle(PendingRequest& request, const PendingRequest& toggle) const;
     [[nodiscard]] bool IsHoldingARequestBehindAToggle() const;
     [[nodiscard]] bool WasTaken(const PendingRequest& request) const;
+    [[nodiscard]] bool WasRefused(const PendingRequest& request, long long now) const;
+    void MarkTheRefusedToggles(long long now);
+    void RestartTheUnsentClocksWhileThePilotsMenuIsUp(long long now);
     void TrackMenuOwner();
     void ReleaseTheMenuOwner();
     [[nodiscard]] bool AnswersAClientRequest() const;
@@ -233,6 +236,7 @@ private:
     bool panelOpenSpent_ = false;
     bool panelCloseSpent_ = false;
     bool panelOpenedByUs_ = false;
+    bool requestsHeld_ = false;
     bool stairsKeptInPlace_ = false;
     bool deIceYesSpent_ = false;
     long long panelOpenSentMs_ = 0;
@@ -245,6 +249,7 @@ private:
     static constexpr long long kMenuOwnershipWindowMs = 3000;
     static constexpr long long kTriggerRetryMs = 20000;
     static constexpr long long kToggleGiveUpMs = 90000;
+    static constexpr long long kRefusalSettleMs = 3000;
     static constexpr int kMaxTriggerAttempts = 3;
     static constexpr long long kPanelOpenWaitMs = 8000;
 };

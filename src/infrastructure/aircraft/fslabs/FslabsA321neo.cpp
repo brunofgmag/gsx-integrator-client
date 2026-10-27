@@ -6,6 +6,7 @@
 #include <optional>
 #include "../AircraftRegistry.h"
 #include "../DoorReading.h"
+#include "../../fslabs/FslabsGroundClient.h"
 #include "../../fslabs/FslabsMcduClient.h"
 #include "../../gsx/GsxLVars.h"
 #include "../../logging/LogMacros.h"
@@ -36,14 +37,19 @@ namespace
     constexpr double kEngineRunningDefault = 1.0;
     constexpr int kShutdownTicksBeforeTheAircraftDeboards = 75;
     constexpr int kTicksAPowerAskCounts = 5;
+    constexpr double kRemoteControlOn = 1.0;
 }
 
 FslabsA321neo::FslabsA321neo(VariableGateway* variableGateway, const AutomationStatus* status,
-                             std::unique_ptr<FslabsMcduGateway> mcdu)
+                             std::unique_ptr<FslabsMcduGateway> rightMcdu, std::unique_ptr<FslabsMcduDisplay> leftMcdu,
+                             std::unique_ptr<FslabsGroundGateway> ground)
     : variableGateway_(variableGateway),
       status_(status),
-      mcdu_(std::move(mcdu)),
-      aoc_(*mcdu_),
+      rightMcdu_(std::move(rightMcdu)),
+      leftMcdu_(std::move(leftMcdu)),
+      ground_(std::move(ground)),
+      aoc_(*rightMcdu_, *leftMcdu_),
+      holds_(*variableGateway, *ground_),
       smartSwitch_(*variableGateway, {kSmartSwitchLVar},
                    [](const double min, double) { return min <= kSmartSwitchRadio; })
 {
@@ -60,8 +66,12 @@ bool FslabsA321neo::IsCargoVariant() const
 void FslabsA321neo::Observe()
 {
     ++observeTicks_;
-    mcdu_->Poll();
+    rightMcdu_->Poll();
+    leftMcdu_->Poll();
+    ground_->Poll();
+    WatchThePassengerCount();
     aoc_.Advance(AwaitsTheInit(), PowerIsAsked());
+    holds_.Advance();
     CountTheShutdownTicks();
 }
 
@@ -73,11 +83,18 @@ void FslabsA321neo::OnLoadingStarted()
 void FslabsA321neo::OnTurnaroundStarted()
 {
     aoc_.ResetForNewTurnaround();
+    holds_.ResetForNewTurnaround();
+}
+
+bool FslabsA321neo::IsDrivingTheGsxMenu() const
+{
+    return variableGateway_->HasReceivedLVar(gsx::lvars::kSetRemoteControl)
+        && variableGateway_->GetLVar(gsx::lvars::kSetRemoteControl, 0.0) >= kRemoteControlOn;
 }
 
 bool FslabsA321neo::IsReachable() const
 {
-    return mcdu_->IsAvailable();
+    return rightMcdu_->IsAvailable();
 }
 
 bool FslabsA321neo::AwaitsTheInit() const
@@ -130,8 +147,18 @@ double FslabsA321neo::GetCurrentZfwKg() const
     return CurrentZfwKg(*variableGateway_);
 }
 
+void FslabsA321neo::WatchThePassengerCount() const
+{
+    static_cast<void>(variableGateway_->HasReceivedLVar(gsx::lvars::kNumPassengers));
+}
+
 std::optional<int> FslabsA321neo::GetPassengersItBoards() const
 {
+    if (!variableGateway_->HasReceivedLVar(gsx::lvars::kNumPassengers))
+    {
+        return std::nullopt;
+    }
+
     const double passengers = variableGateway_->GetLVar(gsx::lvars::kNumPassengers, 0.0);
     if (passengers <= 0.0)
     {
@@ -226,7 +253,9 @@ namespace
     std::unique_ptr<Aircraft> CreateFslabsA321neo(const AircraftContext& context, const AircraftIdentity&)
     {
         return std::make_unique<FslabsA321neo>(context.variableGateway, context.status,
-                                               std::make_unique<FslabsMcduClient>());
+                                               std::make_unique<FslabsMcduClient>(FslabsMcduSide::Right),
+                                               std::make_unique<FslabsMcduClient>(FslabsMcduSide::Left),
+                                               std::make_unique<FslabsGroundClient>());
     }
 
     const AircraftDescriptor kFslabsA321neoDescriptor{

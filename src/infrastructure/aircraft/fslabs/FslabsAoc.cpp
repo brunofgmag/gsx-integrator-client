@@ -9,11 +9,14 @@ namespace
 {
     enum class ScriptKind : std::uint8_t { Probe, InitCheck, Request };
 
+    enum class CellRule : std::uint8_t { Shows, DoesNotShow };
+
     struct Cell
     {
         int row;
         int column;
         int glyph;
+        CellRule rule = CellRule::Shows;
     };
 
     struct Step
@@ -49,16 +52,18 @@ namespace
     constexpr auto kPushbackPageTitle = "GSX PUSH BACK";
 
     constexpr int kTitleRow = 0;
-    constexpr int kFlightNumberRow = 2;
-    constexpr int kFlightNumberFirstColumn = 0;
-    constexpr int kFlightNumberLastColumn = 9;
-    constexpr Cell kBoardNowChecked{6, 0, 30};
+    constexpr int kDepartureRow = 4;
+    constexpr int kDepartureFirstColumn = 0;
+    constexpr int kDepartureLastColumn = 3;
+    constexpr int kEmptySquareGlyph = 31;
+    constexpr Cell kBoardNowChecked{6, 0, kEmptySquareGlyph, CellRule::DoesNotShow};
 
-    constexpr int kProbeAfterTicks = 10;
+    constexpr auto kSentBackToTheMenu = "was sent back to the MCDU MENU";
+    constexpr auto kLeftOnItsPage = "was left on that page";
+
     constexpr int kProbeIntervalTicks = 10;
-    constexpr int kAliveForTicks = 19;
-    constexpr int kInitCheckIntervalTicks = 10;
     constexpr int kRepeatHoldTicks = 60;
+    constexpr int kStopsBeforeGivingUp = 3;
 
     std::vector<Step> ThroughTheAocMenu(const std::initializer_list<Step> tail)
     {
@@ -71,14 +76,27 @@ namespace
         return steps;
     }
 
+    bool TitleContains(const std::string& title, const char* expected)
+    {
+        return expected == nullptr || title.find(expected) != std::string::npos;
+    }
+
     bool TitleMatches(const char* expected, const FslabsMcduScreen& screen)
     {
-        return expected == nullptr || screen.Row(kTitleRow).find(expected) != std::string::npos;
+        return TitleContains(screen.Row(kTitleRow), expected);
     }
 
     bool CellMatches(const std::optional<Cell>& cell, const FslabsMcduScreen& screen)
     {
-        return !cell.has_value() || screen.GlyphAt(cell->row, cell->column) == cell->glyph;
+        if (!cell.has_value())
+        {
+            return true;
+        }
+
+        const bool showsTheGlyph = screen.GlyphAt(cell->row, cell->column) == cell->glyph;
+        const bool wantsTheGlyph = cell->rule == CellRule::Shows;
+
+        return showsTheGlyph == wantsTheGlyph;
     }
 
     bool Matches(const Step& step, const FslabsMcduScreen& screen)
@@ -96,9 +114,29 @@ namespace
         return step.title != nullptr && screen.Row(kTitleRow) != titleBeforePress;
     }
 
-    bool FlightNumberIsFilled(const FslabsMcduScreen& screen)
+    bool ReturnsToTheMenuWhenAborted(const ScriptKind kind)
     {
-        return !screen.IsBlankBetween(kFlightNumberRow, kFlightNumberFirstColumn, kFlightNumberLastColumn);
+        return kind == ScriptKind::Request;
+    }
+
+    bool KeyChangedNothing(const Step& step, const std::string& titleBeforePress, const FslabsMcduScreen& screen)
+    {
+        return !TitleContains(titleBeforePress, step.title) && screen.Row(kTitleRow) == titleBeforePress;
+    }
+
+    bool ReportsTheAbort(const ScriptKind kind, const bool keyChangedNothing)
+    {
+        return kind == ScriptKind::Request || (kind == ScriptKind::InitCheck && !keyChangedNothing);
+    }
+
+    bool DepartureIsFilled(const FslabsMcduScreen& screen)
+    {
+        return screen.IsFilledBetween(kDepartureRow, kDepartureFirstColumn, kDepartureLastColumn);
+    }
+
+    bool ShowsTheInit(const FslabsMcduDisplay& mcdu)
+    {
+        return mcdu.IsAvailable() && TitleMatches(kInitReviewTitle, mcdu.Screen()) && DepartureIsFilled(mcdu.Screen());
     }
 
     std::string Trimmed(const std::string& text)
@@ -161,17 +199,20 @@ namespace
     }
 }
 
-FslabsAoc::FslabsAoc(FslabsMcduGateway& mcdu)
-    : mcdu_(mcdu)
+FslabsAoc::FslabsAoc(FslabsMcduGateway& rightMcdu, const FslabsMcduDisplay& leftMcdu)
+    : rightMcdu_(rightMcdu),
+      leftMcdu_(leftMcdu)
 {
 }
 
 void FslabsAoc::Advance(const bool initIsAwaited, const bool powerIsAsked)
 {
     ++ticks_;
+    ReadTheInit();
 
     if (!McduShowsAScreen())
     {
+        aliveIsProved_ = false;
         EndRun();
     }
     else if (run_.has_value())
@@ -188,7 +229,7 @@ void FslabsAoc::Advance(const bool initIsAwaited, const bool powerIsAsked)
 
 bool FslabsAoc::IsAlive() const
 {
-    return McduShowsAScreen() && ProvedAliveWithin(kAliveForTicks);
+    return McduShowsAScreen() && aliveIsProved_;
 }
 
 bool FslabsAoc::IsInitDone() const
@@ -199,7 +240,7 @@ bool FslabsAoc::IsInitDone() const
 bool FslabsAoc::Request(const AocRequest request)
 {
     const AocScript& script = ScriptFor(request);
-    if (IsRunningOrQueued(script) || HoldsBackTheRepeat(script))
+    if (IsRunningOrQueued(script) || HasGivenUp(script) || HoldsBackTheRepeat(script))
     {
         return false;
     }
@@ -212,9 +253,10 @@ bool FslabsAoc::Request(const AocRequest request)
 void FslabsAoc::ResetForNewTurnaround()
 {
     initDone_ = false;
-    nextInitCheckTick_ = 0;
+    initCheckRan_ = false;
     queue_.clear();
     completions_.clear();
+    stops_.clear();
 
     if (run_.has_value())
     {
@@ -224,12 +266,7 @@ void FslabsAoc::ResetForNewTurnaround()
 
 bool FslabsAoc::McduShowsAScreen() const
 {
-    return mcdu_.IsAvailable() && !mcdu_.Screen().IsBlank();
-}
-
-bool FslabsAoc::ProvedAliveWithin(const int ticks) const
-{
-    return lastProofTick_.has_value() && ticks_ - *lastProofTick_ <= ticks;
+    return rightMcdu_.IsAvailable() && !rightMcdu_.Screen().IsBlank();
 }
 
 bool FslabsAoc::InitIsPending(const bool initIsAwaited) const
@@ -237,11 +274,19 @@ bool FslabsAoc::InitIsPending(const bool initIsAwaited) const
     return initIsAwaited && !initDone_;
 }
 
+bool FslabsAoc::InitCheckIsDue(const bool initIsAwaited) const
+{
+    return InitIsPending(initIsAwaited) && !initCheckRan_;
+}
+
+bool FslabsAoc::LifeIsWanted(const bool initIsAwaited, const bool powerIsAsked) const
+{
+    return powerIsAsked || !queue_.empty() || InitIsPending(initIsAwaited);
+}
+
 bool FslabsAoc::ProbeIsDue(const bool initIsAwaited, const bool powerIsAsked) const
 {
-    const bool livenessIsWanted = powerIsAsked || !queue_.empty() || InitIsPending(initIsAwaited);
-
-    return livenessIsWanted && !ProvedAliveWithin(kProbeAfterTicks) && ticks_ >= nextProbeTick_;
+    return LifeIsWanted(initIsAwaited, powerIsAsked) && !aliveIsProved_ && ticks_ >= nextProbeTick_;
 }
 
 bool FslabsAoc::IsRunningOrQueued(const AocScript& script) const
@@ -250,6 +295,13 @@ bool FslabsAoc::IsRunningOrQueued(const AocScript& script) const
     const bool isQueued = std::ranges::find(queue_, &script) != queue_.end();
 
     return isRunning || isQueued;
+}
+
+bool FslabsAoc::HasGivenUp(const AocScript& script) const
+{
+    const auto stops = stops_.find(&script);
+
+    return stops != stops_.end() && stops->second >= kStopsBeforeGivingUp;
 }
 
 bool FslabsAoc::HoldsBackTheRepeat(const AocScript& script)
@@ -274,7 +326,7 @@ void FslabsAoc::StartNext(const bool initIsAwaited, const bool powerIsAsked)
     if (ProbeIsDue(initIsAwaited, powerIsAsked))
     {
         nextProbeTick_ = ticks_ + kProbeIntervalTicks;
-        Start(kProbeScript);
+        Start(InitCheckIsDue(initIsAwaited) ? kInitCheckScript : kProbeScript);
 
         return;
     }
@@ -293,7 +345,7 @@ void FslabsAoc::StartNext(const bool initIsAwaited, const bool powerIsAsked)
         return;
     }
 
-    if (InitIsPending(initIsAwaited) && ticks_ >= nextInitCheckTick_)
+    if (InitCheckIsDue(initIsAwaited))
     {
         Start(kInitCheckScript);
     }
@@ -312,12 +364,12 @@ void FslabsAoc::Start(const AocScript& script)
 
 void FslabsAoc::ContinueRun()
 {
-    if (mcdu_.ScreenSerial() <= run_->serialAtPress)
+    if (rightMcdu_.ScreenSerial() <= run_->serialAtPress)
     {
         return;
     }
 
-    const FslabsMcduScreen& screen = mcdu_.Screen();
+    const FslabsMcduScreen& screen = rightMcdu_.Screen();
     const Step& step = run_->script->steps[run_->step];
     if (!Matches(step, screen))
     {
@@ -326,7 +378,11 @@ void FslabsAoc::ContinueRun()
         return;
     }
 
-    RecordArrival(ChangedThePage(step, run_->titleBeforePress, screen), screen);
+    if (ChangedThePage(step, run_->titleBeforePress, screen))
+    {
+        aliveIsProved_ = true;
+    }
+
     ++run_->step;
     PressNext();
 }
@@ -334,7 +390,7 @@ void FslabsAoc::ContinueRun()
 void FslabsAoc::PressNext()
 {
     const std::vector<Step>& steps = run_->script->steps;
-    const FslabsMcduScreen& screen = mcdu_.Screen();
+    const FslabsMcduScreen& screen = rightMcdu_.Screen();
     while (run_->step < steps.size() && AlreadyDone(steps[run_->step], screen))
     {
         ++run_->step;
@@ -344,14 +400,15 @@ void FslabsAoc::PressNext()
     {
         lastAbortReport_.clear();
         RememberTheCompletion();
+        RememberTheInitCheck();
         EndRun();
 
         return;
     }
 
     run_->titleBeforePress = screen.Row(kTitleRow);
-    mcdu_.Press(steps[run_->step].key);
-    run_->serialAtPress = mcdu_.ScreenSerial();
+    rightMcdu_.Press(steps[run_->step].key);
+    run_->serialAtPress = rightMcdu_.ScreenSerial();
 }
 
 void FslabsAoc::RememberTheCompletion()
@@ -359,17 +416,36 @@ void FslabsAoc::RememberTheCompletion()
     if (run_->script->kind == ScriptKind::Request)
     {
         completions_[run_->script] = Completion{.tick = ticks_};
+        stops_.erase(run_->script);
     }
 }
 
-void FslabsAoc::RecordArrival(const bool pageChanged, const FslabsMcduScreen& screen)
+void FslabsAoc::RememberTheStop()
 {
-    if (pageChanged)
+    if (run_->script->kind != ScriptKind::Request)
     {
-        lastProofTick_ = ticks_;
+        return;
     }
 
-    if (TitleMatches(kInitReviewTitle, screen) && FlightNumberIsFilled(screen))
+    const int stops = ++stops_[run_->script];
+    if (stops == kStopsBeforeGivingUp)
+    {
+        LOG_WARN("FSLabs AOC: the %s stopped three times in a row; ask for it on the AOC yourself",
+                 run_->script->name);
+    }
+}
+
+void FslabsAoc::RememberTheInitCheck()
+{
+    if (run_->script->kind == ScriptKind::InitCheck && aliveIsProved_)
+    {
+        initCheckRan_ = true;
+    }
+}
+
+void FslabsAoc::ReadTheInit()
+{
+    if (ShowsTheInit(rightMcdu_) || ShowsTheInit(leftMcdu_))
     {
         initDone_ = true;
     }
@@ -377,12 +453,29 @@ void FslabsAoc::RecordArrival(const bool pageChanged, const FslabsMcduScreen& sc
 
 void FslabsAoc::Abort(const FslabsMcduScreen& screen)
 {
-    if (run_->script->kind != ScriptKind::Probe)
+    const bool keyChangedNothing = KeyChangedNothing(run_->script->steps[run_->step], run_->titleBeforePress, screen);
+    if (keyChangedNothing)
+    {
+        aliveIsProved_ = false;
+    }
+
+    const ScriptKind kind = run_->script->kind;
+    if (ReportsTheAbort(kind, keyChangedNothing))
     {
         ReportAbort(screen);
     }
 
-    LeaveTheMenu();
+    RememberTheStop();
+    RememberTheInitCheck();
+
+    if (ReturnsToTheMenuWhenAborted(kind))
+    {
+        LeaveTheMenu();
+
+        return;
+    }
+
+    EndRun();
 }
 
 void FslabsAoc::ReportAbort(const FslabsMcduScreen& screen)
@@ -396,28 +489,20 @@ void FslabsAoc::ReportAbort(const FslabsMcduScreen& screen)
 
     lastAbortReport_ = report;
 
-    LOG_WARN("FSLabs AOC: the %s stopped at step %d, the right MCDU shows '%s' and was sent back to the MCDU MENU",
-             run_->script->name, static_cast<int>(run_->step), shown.c_str());
+    const char* const outcome = ReturnsToTheMenuWhenAborted(run_->script->kind) ? kSentBackToTheMenu : kLeftOnItsPage;
+
+    LOG_WARN("FSLabs AOC: the %s stopped at step %d, the right MCDU shows '%s' and %s",
+             run_->script->name, static_cast<int>(run_->step), shown.c_str(), outcome);
 }
 
 void FslabsAoc::LeaveTheMenu()
 {
-    mcdu_.Press(kMenuKey);
+    rightMcdu_.Press(kMenuKey);
     EndRun();
 }
 
 void FslabsAoc::EndRun()
 {
-    if (!run_.has_value())
-    {
-        return;
-    }
-
-    if (run_->script->kind == ScriptKind::InitCheck)
-    {
-        nextInitCheckTick_ = ticks_ + kInitCheckIntervalTicks;
-    }
-
     run_.reset();
 }
 

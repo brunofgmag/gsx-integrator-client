@@ -31,6 +31,7 @@ QtObject {
     readonly property bool engineConfirmationBlocked: false
     readonly property bool doorsHoldingPushback: false
     readonly property bool serviceInterrupted: false
+    readonly property bool gsxMenuHeldByPilot: false
     readonly property bool cargoDoorStuck: root.longPhase
     readonly property bool ownStairsWaitingForPressure: root.longPhase
     readonly property bool ownGroundEquipmentAttached: root.longPhase
@@ -107,6 +108,7 @@ QtObject {
     readonly property string engineConfirmationAdvisoryText: ""
     readonly property string openDoorAdvisoryText: ""
     readonly property string serviceInterruptedAdvisoryText: ""
+    readonly property string gsxMenuHeldByPilotAdvisoryText: ""
 
     function debugSkipPhase(delta) {
         root.skipCalls++

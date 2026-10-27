@@ -74,6 +74,7 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(QString servicesAdvisoryText READ GetServicesAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString openDoorAdvisoryText READ GetOpenDoorAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString serviceInterruptedAdvisoryText READ GetServiceInterruptedAdvisoryText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString gsxMenuHeldByPilotAdvisoryText READ GetGsxMenuHeldByPilotAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString resumeDecisionAdvisoryText READ GetResumeDecisionAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString resumeTurnaroundLabel READ GetResumeTurnaroundLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(QString commandErrorLabel READ GetCommandErrorLabel NOTIFY SnapshotChanged)
@@ -87,6 +88,7 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(bool engineConfirmationBlocked READ IsEngineConfirmationBlocked NOTIFY SnapshotChanged)
     Q_PROPERTY(bool servicesStalled READ AreServicesStalled NOTIFY SnapshotChanged)
     Q_PROPERTY(bool serviceInterrupted READ IsServiceInterrupted NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool gsxMenuHeldByPilot READ IsGsxMenuHeldByPilot NOTIFY SnapshotChanged)
     Q_PROPERTY(bool doorsHoldingPushback READ AreDoorsHoldingPushback NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoAircraft READ IsCargoAircraft NOTIFY SnapshotChanged)
     Q_PROPERTY(QString simbriefStatusText READ GetSimbriefStatusText NOTIFY SnapshotChanged)
@@ -184,6 +186,7 @@ public:
     [[nodiscard]] QString GetOpenDoorAdvisoryText() const;
     [[nodiscard]] static QString GetAdvisoryLabel();
     [[nodiscard]] static QString GetServiceInterruptedAdvisoryText();
+    [[nodiscard]] static QString GetGsxMenuHeldByPilotAdvisoryText();
     [[nodiscard]] QString GetResumeDecisionAdvisoryText() const;
     [[nodiscard]] QString GetResumeTurnaroundLabel() const;
     [[nodiscard]] static QString GetCommandErrorLabel();
@@ -199,6 +202,7 @@ public:
     [[nodiscard]] bool IsEngineConfirmationBlocked() const;
     [[nodiscard]] bool AreServicesStalled() const;
     [[nodiscard]] bool IsServiceInterrupted() const;
+    [[nodiscard]] bool IsGsxMenuHeldByPilot() const;
     [[nodiscard]] int GetServicesWaitSeconds() const;
     [[nodiscard]] bool AreDoorsHoldingPushback() const;
     [[nodiscard]] bool IsPmdgOptionsFixable() const;

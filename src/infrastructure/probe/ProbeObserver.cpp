@@ -170,7 +170,10 @@ namespace
         gsx::lvars::kGpuConnected,
         gsx::lvars::kGpuState,
         gsx::lvars::kJetway,
-        gsx::lvars::kStairs
+        gsx::lvars::kStairs,
+        gsx::lvars::kBaggageLoaderFrontState,
+        gsx::lvars::kBaggageLoaderRearState,
+        gsx::lvars::kBaggageLoaderMainState
     };
 
     struct ProbeProfile

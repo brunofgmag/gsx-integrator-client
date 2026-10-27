@@ -34,6 +34,8 @@ struct GsxRemoteState
     std::vector<std::string> apronVerdict;
     GsxRemoteMenu menu;
     std::vector<GsxRemoteService> services;
+    int messagesShown = 0;
+    std::string lastMessage;
 };
 
 [[nodiscard]] inline const GsxRemoteService* FindService(const GsxRemoteState& state, const std::string& id)

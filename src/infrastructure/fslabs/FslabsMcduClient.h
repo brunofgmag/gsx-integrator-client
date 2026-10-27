@@ -11,10 +11,12 @@
 class QNetworkAccessManager;
 class QNetworkReply;
 
+enum class FslabsMcduSide : std::uint8_t { Left, Right };
+
 class FslabsMcduClient final : public FslabsMcduGateway
 {
 public:
-    FslabsMcduClient();
+    explicit FslabsMcduClient(FslabsMcduSide side);
     ~FslabsMcduClient() override;
 
     void Poll() override;
@@ -33,6 +35,7 @@ private:
     void RegisterPollResult(bool succeeded);
     void ReportPress(int key) const;
 
+    FslabsMcduSide side_;
     QString baseUrl_;
     std::unique_ptr<QNetworkAccessManager> network_;
     QNetworkReply* displayReply_ = nullptr;

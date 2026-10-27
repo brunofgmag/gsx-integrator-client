@@ -55,12 +55,21 @@ The iFly needs SP1 because older versions lack the GSX integration the client re
 
 ### The FSLabs A321neo
 
-The FSLabs talks to GSX on its own. It calls the jetway or stairs and the GPU when it loads, opens and closes its doors, confirms the engine start and asks for deboarding when you turn off the beacon. The client lets it do all of that. Refueling, boarding and pushback only happen when someone asks for them on the AOC pages of the MCDU, and a request sent to GSX from outside does not load the aircraft. So the client asks for them on the AOC, the same way you would. If you already asked, it sees the service under way and moves on.
+The FSLabs talks to GSX on its own. It calls the jetway or stairs and the GPU when it loads, opens and closes its doors, confirms the engine start and asks for deboarding when you turn off the beacon. The client lets it do all of that and only steps in where the aircraft falls short. When a GSX baggage loader drives away, the client closes that cargo hold, because the aircraft can leave it open for six minutes after boarding. If the aircraft did not call the GSX GPU, the client calls it once the parking brake or the chocks are set, since GSX turns down ground services before that. The FSLabs shows the GSX GPU as external power available while the truck is connected. And while the aircraft is working the GSX menu itself, the client holds its own requests until it is done. Refueling, boarding and pushback only happen when someone asks for them on the AOC pages of the MCDU, and a request sent to GSX from outside does not load the aircraft. So the client asks for them on the AOC, the same way you would. If you already asked, it sees the service under way and moves on.
 
 Two things are yours:
 
-- Request the flight plan: AOC MENU, `<INIT`, `INIT DATA REQ`. The client waits for it and never does it for you.
-- Switch on the right MCDU and leave it to the client. It presses keys only on that one, so you can keep programming the left one. The right MCDU comes back off every time the aircraft loses power, and the client waits until you switch it on again.
+- Request the flight plan: AOC MENU, `<INIT`, `INIT DATA REQ`, on either MCDU. The client waits for it and never does it for you. It opens the AOC INIT page once and after that only watches both screens. The plan counts as loaded when that page shows the departure airport.
+- Switch on the right MCDU. The client presses keys only on that one: a few to see that it answers, the trip to the AOC INIT page, and after that only to ask for the OFP, boarding or pushback. The rest of the time you can use it too. It comes back off every time the aircraft loses power, and the client waits until you switch it on again.
+
+Leave the right MCDU alone at four moments, each about 15 seconds of key presses:
+
+- once, early in the turnaround, while the client checks that the MCDU answers and opens the AOC INIT page;
+- right after your RAD flick in the refueling phase, to send the OFP;
+- when loading starts, to ask for boarding;
+- when the aircraft is ready to push, to ask for the pushback.
+
+If you are on another page when one of them starts, the client takes the MCDU back to MCDU MENU and asks again later. After three interrupted tries in a row it stops asking for that service until the next turnaround.
 
 Refueling starts when the client sends the OFP DATA page (it resets the STD first, because the aircraft refuses a SEND when the STD is more than an hour from the sim time). As on the other aircraft, that waits for automatic loading or for the smart switch. If you press SEND yourself, the client follows along. The aircraft boards its plan minus a few random no-shows, and the client counts boarding against the number the aircraft gives GSX, not against the plan.
 
@@ -181,6 +190,8 @@ Other aircraft work without it. The one thing you then do by hand is the pushbac
 5. Follow the phases in the main window. The client requests refueling and boarding with your OFP figures and moves on as the aircraft gets ready.
 
 Planned fuel and ZFW come from the OFP, so dispatch before boarding, not after. Let the client drive the GSX menu: clicking through it yourself mid-turnaround puts the two of you in a fight.
+
+If you open a GSX menu yourself, for an invoice or the options for example, the client never closes it. It holds its next request until you close the menu, and shows the advisory "A GSX menu you opened is on screen. Close it so the client can send its next request." while it waits. The turnaround stays where it is until then, so close the menu when you are done.
 
 Aircraft notes:
 

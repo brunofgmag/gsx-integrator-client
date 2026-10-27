@@ -62,6 +62,7 @@ struct IntegratorSnapshot
     bool planOmitsCrew = false;
     bool servicesStalled = false;
     bool serviceInterrupted = false;
+    bool gsxMenuHeldByPilot = false;
     bool deboardingAwaitsGsx = false;
     bool doorsHoldingPushback = false;
     CargoLoader loaderHoldingBoarding = CargoLoader::None;

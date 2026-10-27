@@ -43,6 +43,11 @@ namespace
         return false;
     }
 
+    bool WaitsForTheAircraftToBeHeldBeforeAskingGsx(const TurnaroundContext& ctx)
+    {
+        return !ctx.aircraft->SupportsGroundPowerControl() && !ctx.aircraft->IsHeldInPlace();
+    }
+
     void RequestTheGroundPower(TurnaroundContext& ctx)
     {
         if (ctx.aircraft->SupportsGroundPowerControl())
@@ -103,6 +108,11 @@ std::optional<TurnaroundTransition> PlaceGroundEquipmentState::EvaluatePhase(Tur
     }
 
     if (gpu == GroundPowerStatus::Unknown || ctx.data.gpuRequested)
+    {
+        return std::nullopt;
+    }
+
+    if (WaitsForTheAircraftToBeHeldBeforeAskingGsx(ctx))
     {
         return std::nullopt;
     }

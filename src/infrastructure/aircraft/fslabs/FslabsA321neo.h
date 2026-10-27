@@ -4,7 +4,9 @@
 #include <memory>
 #include <optional>
 #include "FslabsAoc.h"
+#include "FslabsHolds.h"
 #include "../SmartSwitch.h"
+#include "../../fslabs/FslabsGroundGateway.h"
 #include "../../fslabs/FslabsMcduGateway.h"
 #include "../../../domain/ports/Aircraft.h"
 
@@ -17,7 +19,8 @@ public:
     static constexpr auto kName = "FSLabs A321neo";
 
     FslabsA321neo(VariableGateway* variableGateway, const AutomationStatus* status,
-                  std::unique_ptr<FslabsMcduGateway> mcdu);
+                  std::unique_ptr<FslabsMcduGateway> rightMcdu, std::unique_ptr<FslabsMcduDisplay> leftMcdu,
+                  std::unique_ptr<FslabsGroundGateway> ground);
 
     [[nodiscard]] bool IsCargoVariant() const override;
 
@@ -28,6 +31,7 @@ public:
 
     [[nodiscard]] bool LoadsItsFlightPlanThroughTheAoc() const override { return true; }
     [[nodiscard]] bool WorksThroughTheRightMcdu() const override { return true; }
+    [[nodiscard]] bool IsDrivingTheGsxMenu() const override;
     [[nodiscard]] bool IsFlightPlanLoaded() const override;
     [[nodiscard]] double GetPlannedFuelKg() const override;
     [[nodiscard]] double GetPlannedZfwKg() const override;
@@ -60,12 +64,16 @@ private:
     [[nodiscard]] bool IsBeaconOn() const;
     [[nodiscard]] bool AwaitsTheInit() const;
     [[nodiscard]] bool PowerIsAsked() const;
+    void WatchThePassengerCount() const;
     void CountTheShutdownTicks();
 
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;
-    std::unique_ptr<FslabsMcduGateway> mcdu_;
+    std::unique_ptr<FslabsMcduGateway> rightMcdu_;
+    std::unique_ptr<FslabsMcduDisplay> leftMcdu_;
+    std::unique_ptr<FslabsGroundGateway> ground_;
     FslabsAoc aoc_;
+    FslabsHolds holds_;
     SmartSwitch smartSwitch_;
     int shutdownTicks_ = 0;
     long long observeTicks_ = 0;

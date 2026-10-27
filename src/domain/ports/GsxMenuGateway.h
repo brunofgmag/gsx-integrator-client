@@ -30,6 +30,7 @@ public:
     [[nodiscard]] virtual bool WereStairsKeptInPlace() const = 0;
 
     virtual void DisableGsxMenu() = 0;
+    virtual void HoldRequests(bool held) = 0;
 
     virtual void OnTurnaroundTurned() = 0;
     virtual void OnPushbackStarted() = 0;

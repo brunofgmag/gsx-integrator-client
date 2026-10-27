@@ -198,6 +198,12 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            visible: root.integratorVm.gsxMenuHeldByPilot
+            text: root.integratorVm.gsxMenuHeldByPilotAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             text: root.integratorVm.resumeDecisionAdvisoryText
             actionText: root.integratorVm.resumeTurnaroundLabel
             secondActionText: root.integratorVm.restartFlowLabel

@@ -986,6 +986,11 @@
         <translation>O GSX interrompeu um serviço que já tinha começado. Peça o serviço de novo no menu do GSX e o cliente retoma o turnaround.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="888"/>
+        <source>A GSX menu you opened is on screen. Close it so the client can send its next request.</source>
+        <translation>Um menu do GSX que você abriu está na tela. Feche-o para o cliente enviar o próximo pedido.</translation>
+    </message>
+    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="865"/>
         <source>GSX restarted since this turnaround was saved. Resume it if the aircraft is still as you left it, or restart the flow to start over.</source>
         <translation>O GSX reiniciou depois que este turnaround foi salvo. Retome se a aeronave ainda está como você deixou, ou reinicie o fluxo para começar de novo.</translation>

@@ -965,6 +965,8 @@ void GsxMenuNavigator::ArmRequest(QString verb, QJsonObject args, std::string la
     {
         request.lastSentMs = same->lastSentMs;
         request.attempts = same->attempts;
+        request.refused = same->refused;
+        request.messagesAtSend = same->messagesAtSend;
         pending_.erase(same);
     }
 
@@ -1000,11 +1002,6 @@ GsxMenuNavigator::DropReason GsxMenuNavigator::DropReasonFor(const PendingReques
         return DropReason::NeverLeft;
     }
 
-    if (request.HeldBehindThePilotsMenuForTooLong(now))
-    {
-        return DropReason::HeldBehindThePilotsMenu;
-    }
-
     return DropReason::None;
 }
 
@@ -1032,11 +1029,6 @@ void GsxMenuNavigator::LogDrop(const PendingRequest& request, const DropReason r
             "RemoteAPI stopped waiting for '{}'; the request never left the client, so it is dropped",
             request.label));
         break;
-    case DropReason::HeldBehindThePilotsMenu:
-        logger_->LogInfo(std::format(
-            "RemoteAPI stopped waiting for '{}'; the pilot's GSX menu stayed open past the retry window, so the request is dropped",
-            request.label));
-        break;
     }
 }
 
@@ -1046,6 +1038,8 @@ void GsxMenuNavigator::PumpRequests()
 
     const long long now = nowMs_();
 
+    RestartTheUnsentClocksWhileThePilotsMenuIsUp(now);
+
     std::erase_if(pending_, [this, now](const PendingRequest& request)
     {
         const DropReason reason = DropReasonFor(request, now);
@@ -1054,7 +1048,9 @@ void GsxMenuNavigator::PumpRequests()
         return reason != DropReason::None;
     });
 
-    if (IsWaitingForThePanel() || !IsMenuSettled())
+    MarkTheRefusedToggles(now);
+
+    if (requestsHeld_ || IsWaitingForThePanel() || !IsMenuSettled())
     {
         return;
     }
@@ -1105,6 +1101,8 @@ void GsxMenuNavigator::SendRequest(PendingRequest& request)
 
     lastActionMs_ = nowMs_();
     request.lastSentMs = lastActionMs_;
+    request.messagesAtSend = state_->messagesShown;
+    request.refused = false;
     request.heldBehindThePilotsMenu = false;
     ++request.attempts;
 
@@ -1277,6 +1275,59 @@ bool GsxMenuNavigator::WasTaken(const PendingRequest& request) const
     return service->stateRaw != static_cast<int>(GsxStateStatus::Callable) || !service->canTrigger;
 }
 
+bool GsxMenuNavigator::WasRefused(const PendingRequest& request, const long long now) const
+{
+    const bool awaitsAnAnswer = request.WasSent() && request.UndoneByASecondSend() && !request.refused
+        && request.attempts < kMaxTriggerAttempts;
+    const bool gsxAnsweredAfterTheSend =
+        request.messagesAtSend >= 0 && state_->messagesShown > request.messagesAtSend;
+    if (!awaitsAnAnswer || !gsxAnsweredAfterTheSend || now - request.lastSentMs < kRefusalSettleMs)
+    {
+        return false;
+    }
+
+    return FindService(*state_, request.confirmId) != nullptr;
+}
+
+void GsxMenuNavigator::RestartTheUnsentClocksWhileThePilotsMenuIsUp(const long long now)
+{
+    if (!IsShowingThePilotsMenu())
+    {
+        return;
+    }
+
+    for (PendingRequest& request : pending_)
+    {
+        if (!request.WasSent())
+        {
+            request.armedMs = now;
+        }
+    }
+}
+
+bool GsxMenuNavigator::IsWaitingForThePilotsMenu() const
+{
+    return IsShowingThePilotsMenu() && std::ranges::any_of(pending_, [](const PendingRequest& request)
+    {
+        return request.heldBehindThePilotsMenu;
+    });
+}
+
+void GsxMenuNavigator::MarkTheRefusedToggles(const long long now)
+{
+    for (PendingRequest& request : pending_)
+    {
+        if (!WasRefused(request, now))
+        {
+            continue;
+        }
+
+        request.refused = true;
+        logger_->LogInfo(std::format("RemoteAPI '{}' not taken by GSX after it showed \"{}\"; asking again",
+                                     request.label, state_->lastMessage));
+    }
+}
+
 GsxPanelMode GsxMenuNavigator::PanelMode() const
 {
     return settings_->gsxPanelMode;
@@ -1400,6 +1451,11 @@ void GsxMenuNavigator::OnPushbackStarted()
 
 void GsxMenuNavigator::OpenMenu() const
 {
+    if (requestsHeld_)
+    {
+        return;
+    }
+
     const PassScope pass(*this);
 
     SyncGsxToolbar();
@@ -1438,6 +1494,11 @@ bool GsxMenuNavigator::IsMenuSettled() const
 
 bool GsxMenuNavigator::PickFirstMatching(const std::function<bool(const std::string&)>& matches)
 {
+    if (requestsHeld_)
+    {
+        return false;
+    }
+
     const auto& entries = state_->menu.entries;
     const auto& disabled = state_->menu.disabled;
     for (std::size_t i = 0; i < entries.size(); ++i)

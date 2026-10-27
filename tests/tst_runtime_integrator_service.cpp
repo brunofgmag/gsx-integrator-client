@@ -826,6 +826,7 @@ private slots:
     static void theSimbriefReloadIsRefusedWhileTheSavedTurnaroundHolds();
     static void aRestoredPlanLeavesTheStatusReadyAndComesBackInTheNextWrite();
     static void theServiceAndMenuMemoryComeBackOnlyAfterTheServiceListArrives();
+    static void aRequestWaitingBehindTheMenuThePilotOpenedReachesTheSnapshot();
     static void nothingIsWrittenBeforeTheCouatlIdIsKnown();
     static void nothingIsWrittenInTheFirstTwoPhases();
     static void sixtyTicksWithoutAnEventDoNotWriteAgain();
@@ -3218,6 +3219,40 @@ void RuntimeIntegratorServiceTest::theServiceAndMenuMemoryComeBackOnlyAfterTheSe
 
     QVERIFY(store.stored->memoryByOwner.at("gsxService").Flag("gsx.service.refueling.completed", false));
     QVERIFY(store.stored->memoryByOwner.at("gsxMenu").Flag("deIceYesSpent", false));
+}
+
+void RuntimeIntegratorServiceTest::aRequestWaitingBehindTheMenuThePilotOpenedReachesTheSnapshot()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::WaitingReadyToPush);
+    MemoryBag menu;
+    menu.PutText("pendingRequests",
+                 R"([{"verb":"service.trigger","args":{"service":"Catering"},"label":"Catering","confirmId":"Catering","lastSentMs":0,"armedMs":0,"attempts":0,"firesWhileUnderway":false}])");
+    store.stored->memoryByOwner["gsxMenu"] = menu;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(DetectTheMd11WithoutTheGsx(runtime, updated));
+
+    FakeGsxRemoteApi::Receive(GsxWire(kSavedCouatl, kSavedStand));
+    FakeGsxRemoteApi::commandVerbs.clear();
+    ReceiveAMenu();
+
+    QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(TickAndWait(updated));
+
+    QVERIFY(runtime.Snapshot().gsxMenuHeldByPilot);
+    QVERIFY(std::ranges::find(FakeGsxRemoteApi::commandVerbs, std::string("service.trigger"))
+            == FakeGsxRemoteApi::commandVerbs.end());
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/menuShown"), false));
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(TickAndWait(updated));
+
+    QVERIFY(!runtime.Snapshot().gsxMenuHeldByPilot);
 }
 
 void RuntimeIntegratorServiceTest::nothingIsWrittenBeforeTheCouatlIdIsKnown()

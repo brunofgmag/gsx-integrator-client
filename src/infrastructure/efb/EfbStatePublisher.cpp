@@ -149,6 +149,8 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("advisoryLabel"), OperationsViewModel::GetAdvisoryLabel());
     state.insert(QLatin1String("serviceInterruptedAdvisoryText"),
                  OperationsViewModel::GetServiceInterruptedAdvisoryText());
+    state.insert(QLatin1String("gsxMenuHeldByPilotAdvisoryText"),
+                 OperationsViewModel::GetGsxMenuHeldByPilotAdvisoryText());
     state.insert(QLatin1String("resumeDecisionAdvisoryText"), view_->GetResumeDecisionAdvisoryText());
     state.insert(QLatin1String("resumeTurnaroundLabel"), view_->GetResumeTurnaroundLabel());
     state.insert(QLatin1String("gsxProfileFixable"), view_->IsGsxProfileFixable());
@@ -164,6 +166,7 @@ std::string EfbStatePublisher::BuildPayload() const
     state.insert(QLatin1String("engineConfirmationBlocked"), view_->IsEngineConfirmationBlocked());
     state.insert(QLatin1String("servicesStalled"), view_->AreServicesStalled());
     state.insert(QLatin1String("serviceInterrupted"), view_->IsServiceInterrupted());
+    state.insert(QLatin1String("gsxMenuHeldByPilot"), view_->IsGsxMenuHeldByPilot());
     state.insert(QLatin1String("doorsHoldingPushback"), view_->AreDoorsHoldingPushback());
 
     state.insert(QLatin1String("canStartFlow"), view_->CanStartFlow());

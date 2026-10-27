@@ -22,6 +22,11 @@ struct FslabsMcduScreen
         return glyph == kBlankGlyph || glyph == kFirstPrintableGlyph;
     }
 
+    [[nodiscard]] static bool IsFilledGlyph(const int glyph)
+    {
+        return glyph > kFirstPrintableGlyph && glyph <= kLastPrintableGlyph;
+    }
+
     [[nodiscard]] int GlyphAt(const int row, const int column) const
     {
         return glyphs[static_cast<std::size_t>(row * kColumns + column)];
@@ -32,11 +37,11 @@ struct FslabsMcduScreen
         return std::ranges::all_of(glyphs, [](const std::uint8_t glyph) { return IsBlankGlyph(glyph); });
     }
 
-    [[nodiscard]] bool IsBlankBetween(const int row, const int firstColumn, const int lastColumn) const
+    [[nodiscard]] bool IsFilledBetween(const int row, const int firstColumn, const int lastColumn) const
     {
         for (int column = firstColumn; column <= lastColumn; ++column)
         {
-            if (!IsBlankGlyph(GlyphAt(row, column)))
+            if (!IsFilledGlyph(GlyphAt(row, column)))
             {
                 return false;
             }
@@ -59,15 +64,20 @@ struct FslabsMcduScreen
     }
 };
 
-class FslabsMcduGateway
+class FslabsMcduDisplay
 {
 public:
-    virtual ~FslabsMcduGateway() = default;
+    virtual ~FslabsMcduDisplay() = default;
 
     virtual void Poll() = 0;
     [[nodiscard]] virtual bool IsAvailable() const = 0;
     [[nodiscard]] virtual const FslabsMcduScreen& Screen() const = 0;
     [[nodiscard]] virtual std::uint64_t ScreenSerial() const = 0;
+};
+
+class FslabsMcduGateway : public FslabsMcduDisplay
+{
+public:
     virtual void Press(int key) = 0;
 };
 

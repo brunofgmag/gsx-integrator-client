@@ -616,6 +616,7 @@ namespace
 
         FakeAircraft& aircraft = workflow.f.aircraft;
         aircraft.supportsChocksControl = true;
+        aircraft.heldInPlace = true;
         aircraft.completesPushbackViaInterruptMenu = stand.pushbackViaInterruptMenu;
 
         FakeGsxService& gsx = workflow.f.gsxService;
@@ -1131,6 +1132,8 @@ private slots:
     static void theVisitorNamesEveryLeafOnceWithAClass();
     static void aSavedPointRestoresRawFieldsAndRestartsTheCounters();
     static void theTickCountersRestartAndTheAttemptCountsReturnRaw();
+    static void theRequestsAreHeldWhileTheAircraftDrivesTheGsxMenu();
+    static void theRequestsAreNeverHeldWithoutAnAircraft();
     static void aFinishedRefuelRebuildsTheFuelProgress();
     static void aFinishedBoardingRebuildsTheBoardingProgress();
     static void aFinishedBoardingRebuildsTheBoardedPassengers();
@@ -2460,6 +2463,37 @@ void TurnaroundStateMachineTest::aSavedPointRestoresRawFieldsAndRestartsTheCount
     const FakeAircraft aircraft;
 
     VerifyTheRestoreByClass(saved, RestoredAt(saved, TurnaroundPhase::Loading, aircraft));
+}
+
+void TurnaroundStateMachineTest::theRequestsAreHeldWhileTheAircraftDrivesTheGsxMenu()
+{
+    TurnaroundWorkflow workflow;
+    workflow.machine.AttachAircraft(&workflow.f.aircraft);
+
+    workflow.machine.Tick();
+
+    QVERIFY(!workflow.f.menuGateway.requestsHeld);
+
+    workflow.f.aircraft.drivingTheGsxMenu = true;
+    workflow.machine.Tick();
+
+    QVERIFY(workflow.f.menuGateway.requestsHeld);
+
+    workflow.f.aircraft.drivingTheGsxMenu = false;
+    workflow.machine.Tick();
+
+    QVERIFY(!workflow.f.menuGateway.requestsHeld);
+    QCOMPARE(workflow.f.menuGateway.holdRequestsCalls, 3);
+}
+
+void TurnaroundStateMachineTest::theRequestsAreNeverHeldWithoutAnAircraft()
+{
+    TurnaroundWorkflow workflow;
+
+    workflow.machine.Tick();
+
+    QVERIFY(!workflow.f.menuGateway.requestsHeld);
+    QCOMPARE(workflow.f.menuGateway.holdRequestsCalls, 1);
 }
 
 void TurnaroundStateMachineTest::theTickCountersRestartAndTheAttemptCountsReturnRaw()
