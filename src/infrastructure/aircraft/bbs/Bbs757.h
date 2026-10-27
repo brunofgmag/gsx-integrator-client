@@ -83,6 +83,7 @@ private:
         double passengerShare;
     };
 
+    void ReportProbe() const;
     [[nodiscard]] bool IsBeaconOn() const;
     [[nodiscard]] bool AreChocksSet() const;
     [[nodiscard]] PlannedLoad PlanAboard() const;

@@ -4,7 +4,11 @@
 #include <cmath>
 #include <cstddef>
 #include <string>
+#include <QtCore/QFile>
+#include <QtCore/QStringList>
+#include <QtCore/QTemporaryDir>
 #include "AircraftTicks.h"
+#include "ProbeLines.h"
 #include "doubles/FakeVariableGateway.h"
 #include "../src/domain/model/AutomationStatus.h"
 #include "../src/domain/model/FlightPlan.h"
@@ -13,6 +17,7 @@
 #include "../src/domain/turnaround/TurnaroundFacts.h"
 #include "../src/infrastructure/aircraft/bbs/Bbs757.h"
 #include "../src/infrastructure/gsx/GsxLVars.h"
+#include "../src/infrastructure/probe/ProbeLog.h"
 
 namespace
 {
@@ -164,6 +169,25 @@ namespace
     constexpr auto kEng2Combustion = "ENG COMBUSTION:2";
     constexpr auto kEng3Combustion = "ENG COMBUSTION:3";
 
+    constexpr auto kMasterBattery = "ELECTRICAL MASTER BATTERY:1";
+    constexpr auto kExternalPowerOn = "EXTERNAL POWER ON:1";
+    constexpr auto kExternalPowerAvailable = "EXTERNAL POWER AVAILABLE:1";
+    constexpr auto kGpuAcConnected = "BBS_757_GPU_AC_PWR_CONNECTED";
+    constexpr std::array kProbedPowerAVars = {
+        kBusNine, kBusEleven, kMasterBattery, kExternalPowerOn, kExternalPowerAvailable
+    };
+    constexpr std::array kProbedPowerLVars = {kGpuCart, kGpuAcConnected, kChocks};
+    constexpr int kPastTheChangeFloorMs = 2100;
+
+    constexpr auto kPowerLineNothingReceived =
+        "power bbs-757-200 ELECTRICAL MAIN BUS VOLTAGE:9=-1.000 ELECTRICAL MAIN BUS VOLTAGE:11=-1.000 "
+        "ELECTRICAL MASTER BATTERY:1=-1.000 EXTERNAL POWER ON:1=-1.000 EXTERNAL POWER AVAILABLE:1=-1.000 "
+        "BBS_757_GPU_CART_VISIBLE=-1.000 BBS_757_GPU_AC_PWR_CONNECTED=-1.000 BBS757_vis_chocks=-1.000";
+    constexpr auto kPowerLineEveryFieldDistinct =
+        "power bbs-757-200 ELECTRICAL MAIN BUS VOLTAGE:9=27.457 ELECTRICAL MAIN BUS VOLTAGE:11=28.250 "
+        "ELECTRICAL MASTER BATTERY:1=3.000 EXTERNAL POWER ON:1=4.000 EXTERNAL POWER AVAILABLE:1=5.000 "
+        "BBS_757_GPU_CART_VISIBLE=6.000 BBS_757_GPU_AC_PWR_CONNECTED=7.000 BBS757_vis_chocks=8.000";
+
     constexpr double kPoundTolerance = 1e-3;
     constexpr double kKgTolerance = 1e-6;
 
@@ -279,6 +303,26 @@ namespace
         return gateway.Written(kSetCargoForward) + gateway.Written(kSetCargoAft);
     }
 
+    QStringList PowerLines()
+    {
+        return ProbeLines(probe::detail::ChannelFileName(probe::Channel::AircraftAVars));
+    }
+
+    void TurnTheProbeOn()
+    {
+        probe::SetEnabled(true);
+        probe::ResetForTest();
+        probe::ResetChangeMemoForTest();
+        QFile::remove(probe::RunLocation() + QLatin1Char('/')
+                      + probe::detail::ChannelFileName(probe::Channel::AircraftAVars));
+    }
+
+    void SeatTheBusVoltages(FakeVariableGateway& gateway, const double nine, const double eleven)
+    {
+        gateway.avars[kBusNine] = nine;
+        gateway.avars[kBusEleven] = eleven;
+    }
+
     TurnaroundFacts ResumedPlanFacts()
     {
         TurnaroundFacts facts;
@@ -340,6 +384,10 @@ class Bbs757Test final : public QObject
     Q_OBJECT
 
 private slots:
+    void initTestCase();
+    static void init();
+    static void cleanup();
+
     static void isAPassengerAircraft();
     static void refuelsByTheClient();
     static void boardsByTheClient();
@@ -458,7 +506,34 @@ private slots:
     static void readyToDeboardNeedsHoldingInPlace();
     static void readyToDeboardNeedsTheBeaconOff();
     static void readyToDeboardHoldsUntilTheBeaconLVarArrives();
+
+    static void observeReadsNoPowerVariableWithTheProbeOff();
+    static void theProbeWritesOneLineWithEveryUnreceivedPowerFieldAsMinusOne();
+    static void theProbeReadsEachPowerFieldFromItsOwnVariable();
+    static void aChangeOfAWholeVoltWritesASecondProbeLine();
+    static void aJitterOfTwoTenthsOfAVoltWritesNoSecondProbeLine();
+
+private:
+    QTemporaryDir directory_;
 };
+
+void Bbs757Test::initTestCase()
+{
+    qunsetenv("GSXI_PROBE");
+
+    QVERIFY(directory_.isValid());
+    qputenv("GSXI_PROBE_DIR", directory_.path().toUtf8());
+}
+
+void Bbs757Test::init()
+{
+    probe::SetEnabled(false);
+}
+
+void Bbs757Test::cleanup()
+{
+    probe::SetEnabled(false);
+}
 
 void Bbs757Test::isAPassengerAircraft()
 {
@@ -1795,6 +1870,87 @@ void Bbs757Test::readyToDeboardHoldsUntilTheBeaconLVarArrives()
     rig.gateway.lvars[kBeaconSwitch] = 1.0;
 
     QVERIFY(!rig.aircraft.IsReadyToDeboard());
+}
+
+void Bbs757Test::observeReadsNoPowerVariableWithTheProbeOff()
+{
+    Rig rig;
+
+    rig.aircraft.Observe();
+
+    for (const char* name : kProbedPowerAVars)
+    {
+        QVERIFY2(!rig.gateway.requestedAVars.contains(name), name);
+    }
+
+    for (const char* name : kProbedPowerLVars)
+    {
+        QVERIFY2(!rig.gateway.requestedLVars.contains(name), name);
+    }
+}
+
+void Bbs757Test::theProbeWritesOneLineWithEveryUnreceivedPowerFieldAsMinusOne()
+{
+    Rig rig;
+    TurnTheProbeOn();
+
+    rig.aircraft.Observe();
+    rig.aircraft.Observe();
+
+    QCOMPARE(PowerLines(), QStringList{QString::fromLatin1(kPowerLineNothingReceived)});
+}
+
+void Bbs757Test::theProbeReadsEachPowerFieldFromItsOwnVariable()
+{
+    Rig rig;
+    TurnTheProbeOn();
+    rig.gateway.avars[kBusNine] = 27.4567;
+    rig.gateway.avars[kBusEleven] = 28.25;
+    rig.gateway.avars[kMasterBattery] = 3.0;
+    rig.gateway.avars[kExternalPowerOn] = 4.0;
+    rig.gateway.avars[kExternalPowerAvailable] = 5.0;
+    rig.gateway.lvars[kGpuCart] = 6.0;
+    rig.gateway.lvars[kGpuAcConnected] = 7.0;
+    rig.gateway.lvars[kChocks] = 8.0;
+
+    rig.aircraft.Observe();
+
+    QCOMPARE(PowerLines(), QStringList{QString::fromLatin1(kPowerLineEveryFieldDistinct)});
+}
+
+void Bbs757Test::aChangeOfAWholeVoltWritesASecondProbeLine()
+{
+    Rig rig;
+    TurnTheProbeOn();
+    SeatTheBusVoltages(rig.gateway, 27.4, 0.0);
+    rig.aircraft.Observe();
+
+    SeatTheBusVoltages(rig.gateway, 28.4, 0.0);
+    QTest::qSleep(kPastTheChangeFloorMs);
+    rig.aircraft.Observe();
+
+    const QStringList lines = PowerLines();
+
+    QCOMPARE(lines.size(), 2);
+    QVERIFY(lines.at(0).contains(QStringLiteral("ELECTRICAL MAIN BUS VOLTAGE:9=27.400")));
+    QVERIFY(lines.at(1).contains(QStringLiteral("ELECTRICAL MAIN BUS VOLTAGE:9=28.400")));
+}
+
+void Bbs757Test::aJitterOfTwoTenthsOfAVoltWritesNoSecondProbeLine()
+{
+    Rig rig;
+    TurnTheProbeOn();
+    SeatTheBusVoltages(rig.gateway, 27.1, 28.1);
+    rig.aircraft.Observe();
+
+    SeatTheBusVoltages(rig.gateway, 27.3, 28.3);
+    QTest::qSleep(kPastTheChangeFloorMs);
+    rig.aircraft.Observe();
+
+    const QStringList lines = PowerLines();
+
+    QCOMPARE(lines.size(), 1);
+    QVERIFY(lines.at(0).contains(QStringLiteral("ELECTRICAL MAIN BUS VOLTAGE:9=27.100")));
 }
 
 QTEST_APPLESS_MAIN(Bbs757Test)
