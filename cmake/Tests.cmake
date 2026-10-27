@@ -451,6 +451,7 @@ gsxi_add_qt_test(gsxi-avro-rj-tests avro-rj
 
 gsxi_add_qt_test(gsxi-bbs-757-tests bbs-757
         tests/AircraftTicks.h
+        tests/ProbeLines.h
         tests/doubles/FakeVariableGateway.h
         tests/tst_bbs_757.cpp
         src/infrastructure/aircraft/AircraftIdentity.h
@@ -464,6 +465,8 @@ gsxi_add_qt_test(gsxi-bbs-757-tests bbs-757
         src/infrastructure/aircraft/SmartSwitch.h
         src/infrastructure/gsx/GsxDoorSync.cpp
         src/infrastructure/gsx/GsxDoorSync.h
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h
         src/domain/model/AutomationStatus.h
         src/domain/support/Weight.h)
 

@@ -4,11 +4,15 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <span>
 #include <string>
+#include <vector>
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 #include "../AircraftRegistry.h"
 #include "../DoorReading.h"
 #include "../../logging/LogMacros.h"
@@ -77,6 +81,13 @@ namespace
     constexpr auto kBeaconLVar = "B757_OVHD_BEACON_LIGHT";
     constexpr std::array kPilotOnlyGroundEquipmentLVars = {kChocksLVar, kGpuCartLVar};
 
+    constexpr auto kMasterBatteryAVar = "ELECTRICAL MASTER BATTERY:1";
+    constexpr auto kExternalPowerOnAVar = "EXTERNAL POWER ON:1";
+    constexpr auto kExternalPowerAvailableAVar = "EXTERNAL POWER AVAILABLE:1";
+    constexpr auto kGpuAcPowerConnectedLVar = "BBS_757_GPU_AC_PWR_CONNECTED";
+    constexpr std::array kProbedPowerFlagAVars = {kMasterBatteryAVar, kExternalPowerOnAVar, kExternalPowerAvailableAVar};
+    constexpr std::array kProbedPowerLVars = {kGpuCartLVar, kGpuAcPowerConnectedLVar, kChocksLVar};
+
     constexpr int kEngineCount = 2;
     constexpr double kEngineRunningDefault = 1.0;
 
@@ -86,6 +97,23 @@ namespace
     constexpr double kPttAtRest = 0.0;
 
     constexpr int kProbeDecimals = 2;
+    constexpr int kProbePowerDecimals = 3;
+    constexpr double kProbePowerUnreceived = -1.0;
+    constexpr auto kProbePowerKey = "bbs757.power";
+    constexpr auto kProbePowerPrefix = "power bbs-757-200 ";
+
+    enum class VoltsShown : std::uint8_t
+    {
+        Rounded,
+        Exact,
+    };
+
+    struct PowerReading
+    {
+        const char* name;
+        double value;
+        bool isVolts;
+    };
 
     struct FuelCapacity
     {
@@ -185,6 +213,55 @@ namespace
 
         return StationsLb(variables, kCrewStations);
     }
+
+    std::vector<PowerReading> ReadThePower(VariableGateway& variables)
+    {
+        std::vector<PowerReading> readings;
+        readings.reserve(kPowerBusVoltages.size() + kProbedPowerFlagAVars.size() + kProbedPowerLVars.size());
+
+        for (const char* bus : kPowerBusVoltages)
+        {
+            readings.push_back({
+                .name = bus,
+                .value = variables.GetAVar(bus, kVoltsUnit, kProbePowerUnreceived),
+                .isVolts = true,
+            });
+        }
+
+        for (const char* flag : kProbedPowerFlagAVars)
+        {
+            readings.push_back({
+                .name = flag,
+                .value = variables.GetAVar(flag, kBoolUnit, kProbePowerUnreceived),
+                .isVolts = false,
+            });
+        }
+
+        for (const char* lVar : kProbedPowerLVars)
+        {
+            readings.push_back({
+                .name = lVar,
+                .value = variables.GetLVar(lVar, kProbePowerUnreceived),
+                .isVolts = false,
+            });
+        }
+
+        return readings;
+    }
+
+    QString PowerText(const std::vector<PowerReading>& readings, const VoltsShown voltsShown)
+    {
+        QStringList fields;
+        for (const PowerReading& reading : readings)
+        {
+            const double shown =
+                voltsShown == VoltsShown::Rounded && reading.isVolts ? std::round(reading.value) : reading.value;
+            fields.append(QStringLiteral("%1=%2").arg(QLatin1String(reading.name),
+                                                      QString::number(shown, 'f', kProbePowerDecimals)));
+        }
+
+        return QLatin1String(kProbePowerPrefix) + fields.join(QLatin1Char(' '));
+    }
 }
 
 Bbs757::Bbs757(VariableGateway* variableGateway, const AutomationStatus* status)
@@ -212,6 +289,20 @@ bool Bbs757::IsCargoVariant() const
 void Bbs757::Observe()
 {
     doors_.Observe();
+    ReportProbe();
+}
+
+void Bbs757::ReportProbe() const
+{
+    if (!probe::IsOn())
+    {
+        return;
+    }
+
+    const std::vector<PowerReading> readings = ReadThePower(*variableGateway_);
+
+    probe::Change(probe::Channel::AircraftAVars, kProbePowerKey,
+                  PowerText(readings, VoltsShown::Rounded), PowerText(readings, VoltsShown::Exact));
 }
 
 const std::vector<AircraftRule*>& Bbs757::Rules() const
