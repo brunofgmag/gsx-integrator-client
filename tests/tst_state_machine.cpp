@@ -459,7 +459,15 @@ namespace
         {
             f.aircraft.readyToDeboard = true;
 
-            TickTo(TurnaroundPhase::RequestDeboarding);
+            Tick();
+            if (machine.GetPhase() == TurnaroundPhase::PlaceArrivalGroundEquipment)
+            {
+                f.gsxService.gpuInProgress = true;
+                Tick();
+            }
+
+            QCOMPARE(machine.GetPhase(), TurnaroundPhase::RequestDeboarding);
+            RecordCurrentPhase();
 
             f.gsxService.deboardingState = GsxStateStatus::Callable;
             TickHolding(TurnaroundPhase::RequestDeboarding);
@@ -640,6 +648,11 @@ namespace
         {
             gsx.refuelingState = GsxStateStatus::Active;
             gsx.hoseConnected = true;
+        }
+
+        if (phase == TurnaroundPhase::PlaceArrivalGroundEquipment)
+        {
+            gsx.gpuInProgress = true;
         }
     }
 
