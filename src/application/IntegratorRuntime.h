@@ -80,6 +80,7 @@ public:
     [[nodiscard]] EngineConfirmationBlock GetEngineConfirmationBlock() const;
     [[nodiscard]] bool AreServicesStalled() const;
     [[nodiscard]] bool IsServiceInterrupted() const;
+    [[nodiscard]] bool IsGsxMenuHeldByPilot() const;
     [[nodiscard]] bool AreDoorsHoldingPushback() const;
     void SetAutomationEnabled(bool enabled);
     void RestartFlow();

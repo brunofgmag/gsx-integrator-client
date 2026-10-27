@@ -811,6 +811,11 @@ bool IntegratorRuntime::IsServiceInterrupted() const
     return status_.serviceInterrupted;
 }
 
+bool IntegratorRuntime::IsGsxMenuHeldByPilot() const
+{
+    return gsxMenu_.IsWaitingForThePilotsMenu();
+}
+
 bool IntegratorRuntime::AreDoorsHoldingPushback() const
 {
     return aircraft_
@@ -1123,6 +1128,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.servicesStalled = AreServicesStalled();
     snapshot.deboardingAwaitsGsx = status_.deboardingAwaitsGsx;
     snapshot.serviceInterrupted = IsServiceInterrupted();
+    snapshot.gsxMenuHeldByPilot = IsGsxMenuHeldByPilot();
     snapshot.loaderHoldingBoarding = status_.loaderHoldingBoarding;
     snapshot.loaderDoorWaitSeconds = status_.loaderDoorWaitSeconds;
     snapshot.servicesWaitSeconds = status_.servicesWaitSeconds;

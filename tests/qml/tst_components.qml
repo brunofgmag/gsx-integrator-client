@@ -154,7 +154,7 @@ TestCase {
             "doorsHoldingPushback", "enabled", "engineConfirmationBlocked", "fuelDidNotStay",
             "fuelPlanOverCapacity", "fuelRequestStalled", "gsxAvailable", "gsxProfileConflict",
             "gsxProfileRefuelingRecommended", "inDeboardingPhase", "ownGroundEquipmentAttached",
-            "ownStairsWaitingForPressure", "pmdgOptionsConflict", "serviceInterrupted", "servicesStalled",
+            "ownStairsWaitingForPressure", "pmdgOptionsConflict", "gsxMenuHeldByPilot", "serviceInterrupted", "servicesStalled",
             "simbriefError", "simbriefReady"
         ];
         const numbers = ["boardingProgress", "deboardingProgress", "fuelProgress"];
@@ -162,7 +162,7 @@ TestCase {
             "aircraftLabel", "aircraftNameText", "cargoDoorAdvisoryText", "commandError", "commandErrorLabel",
             "dismissAdvisoryLabel", "engineConfirmationAdvisoryText", "fuelCardLabel", "fuelPlanAdvisoryText",
             "fuelProgressText", "fuelRateLabel", "fuelRateText", "fuelRequestAdvisoryText",
-            "fuelStayAdvisoryText", "gsxLabel", "gsxProfileActionLabel", "gsxProfileAdvisoryText",
+            "fuelStayAdvisoryText", "gsxLabel", "gsxMenuHeldByPilotAdvisoryText", "gsxProfileActionLabel", "gsxProfileAdvisoryText",
             "gsxProfileRecommendationAdvisoryText", "gsxStatusText", "holdCountdownText", "loadedFuelLabel",
             "loadedFuelText", "loadingModeLabel", "loadingModeText", "nextPhaseText", "openDoorAdvisoryText", "ownGroundEquipmentAdvisoryText",
             "ownStairsPressureAdvisoryText",
@@ -550,6 +550,33 @@ TestCase {
                                             { integratorVm: attached, settingsVm: { autoStartLoading: false } });
         const hidden = createTemporaryObject(operationsScreenComponent, testCase,
                                              { integratorVm: detached, settingsVm: { autoStartLoading: false } });
+
+        verify(shown);
+        verify(hidden);
+
+        const shownAdvisory = findAdvisoryByText(shown, advisoryText);
+        const hiddenAdvisory = findAdvisoryByText(hidden, advisoryText);
+
+        verify(shownAdvisory);
+        verify(hiddenAdvisory);
+        verify(shownAdvisory.visible);
+        verify(!hiddenAdvisory.visible);
+    }
+
+    function test_operationsScreenShowsTheHeldMenuAdvisoryOnlyWhileAMenuTheClientWaitsOnIsOpen() {
+        const advisoryText = "A GSX menu you opened is on screen. Close it so the client can send its next request.";
+        const held = operationsVm({}, {
+            gsxMenuHeldByPilot: true,
+            gsxMenuHeldByPilotAdvisoryText: advisoryText
+        });
+        const free = operationsVm({}, {
+            gsxMenuHeldByPilot: false,
+            gsxMenuHeldByPilotAdvisoryText: advisoryText
+        });
+        const shown = createTemporaryObject(operationsScreenComponent, testCase,
+                                            { integratorVm: held, settingsVm: { autoStartLoading: false } });
+        const hidden = createTemporaryObject(operationsScreenComponent, testCase,
+                                             { integratorVm: free, settingsVm: { autoStartLoading: false } });
 
         verify(shown);
         verify(hidden);

@@ -883,6 +883,12 @@ QString OperationsViewModel::GetServiceInterruptedAdvisoryText()
                                        "GSX stopped a service it had already started. Request it again from the GSX menu and the client will resume the turnaround.");
 }
 
+QString OperationsViewModel::GetGsxMenuHeldByPilotAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "A GSX menu you opened is on screen. Close it so the client can send its next request.");
+}
+
 QString OperationsViewModel::GetResumeDecisionAdvisoryText() const
 {
     if (!IsAwaitingResumeDecision())
@@ -974,6 +980,11 @@ int OperationsViewModel::GetServicesWaitSeconds() const
 bool OperationsViewModel::IsServiceInterrupted() const
 {
     return snapshot_.serviceInterrupted;
+}
+
+bool OperationsViewModel::IsGsxMenuHeldByPilot() const
+{
+    return snapshot_.gsxMenuHeldByPilot;
 }
 
 bool OperationsViewModel::AreDoorsHoldingPushback() const

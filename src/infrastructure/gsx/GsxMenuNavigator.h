@@ -54,6 +54,7 @@ public:
     [[nodiscard]] bool WereStairsKeptInPlace() const override;
 
     [[nodiscard]] bool IsMenuSettled() const;
+    [[nodiscard]] bool IsWaitingForThePilotsMenu() const;
 
     void OpenMenu() const;
     void OpenPushbackPanel() override;
@@ -114,10 +115,6 @@ private:
         {
             return !WasSent() && now - armedMs >= kToggleGiveUpMs;
         }
-        [[nodiscard]] bool HeldBehindThePilotsMenuForTooLong(const long long now) const
-        {
-            return heldBehindThePilotsMenu && WasSent() && GiveUpWindowElapsed(now);
-        }
         [[nodiscard]] bool IsAToggleAwaitingGsx(const long long now) const
         {
             return WasSent() && UndoneByASecondSend() && !refused && !RetryWindowElapsed(now);
@@ -130,7 +127,7 @@ private:
 
     enum class DropReason : std::uint8_t
     {
-        None, Taken, AlreadyUnderway, ToggleGaveUp, NeverTaken, NeverLeft, HeldBehindThePilotsMenu,
+        None, Taken, AlreadyUnderway, ToggleGaveUp, NeverTaken, NeverLeft,
     };
 
     enum class MenuOwner : std::uint8_t { None, Pilot, Client };
@@ -165,6 +162,7 @@ private:
     [[nodiscard]] bool WasTaken(const PendingRequest& request) const;
     [[nodiscard]] bool WasRefused(const PendingRequest& request, long long now) const;
     void MarkTheRefusedToggles(long long now);
+    void RestartTheUnsentClocksWhileThePilotsMenuIsUp(long long now);
     void TrackMenuOwner();
     void ReleaseTheMenuOwner();
     [[nodiscard]] bool AnswersAClientRequest() const;

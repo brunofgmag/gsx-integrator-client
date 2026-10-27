@@ -310,8 +310,14 @@ private slots:
     static void aStaleParkingMenuTheClientOpenedIsStillClosed();
     static void aRequestWaitsBehindAMenuThePilotOpened();
     static void aRetryHeldBehindAPilotMenuIsNotCounted();
-    static void aSentRequestHeldBehindAPilotMenuDropsAfterTheGiveUpWindow();
-    static void aRequestHeldBehindAPilotMenuStillDropsAsNeverLeft();
+    static void aSentRequestHeldBehindAPilotMenuIsNeverDroppedForTheWait();
+    static void aRequestHeldBehindAPilotMenuIsNeverDroppedAsNeverLeft();
+    static void theNeverLeftWindowStartsAgainWhenThePilotsMenuCloses();
+    static void theClientWaitsForThePilotsMenuOnlyWhileARequestIsHeldBehindIt();
+    static void theClientStopsWaitingTheMomentThePilotsMenuCloses();
+    static void theClientIsNotWaitingForTheMenuWhileTheAircraftHoldsTheRequests();
+    static void theClientIsNotWaitingForTheMenuItOpenedItself();
+    static void theClientIsNotWaitingWhenNothingIsPending();
     static void aRequestClosesTheMenuTheClientOpenedFirst();
     static void aSentToggleHoldsTheNextRequestUntilGsxTakesIt();
     static void aToggleGsxNeverTakesHoldsTheNextRequestForTwentySeconds();
@@ -4844,7 +4850,6 @@ namespace
     constexpr auto kHeldBehindThePilotLine = "is waiting: the GSX menu on screen is the pilot's";
     constexpr auto kLeftOpenLine = "leaving the menu open";
     constexpr auto kNeverLeftLine = "the request never left the client";
-    constexpr auto kHeldTooLongLine = "the pilot's GSX menu stayed open past the retry window";
 
     void HideTheMenu(GsxRemoteState& state)
     {
@@ -5024,7 +5029,7 @@ void GsxMenuNavigatorTest::aRetryHeldBehindAPilotMenuIsNotCounted()
     QVERIFY(Logged(rig.logger, "(attempt 2 of 3)"));
 }
 
-void GsxMenuNavigatorTest::aSentRequestHeldBehindAPilotMenuDropsAfterTheGiveUpWindow()
+void GsxMenuNavigatorTest::aSentRequestHeldBehindAPilotMenuIsNeverDroppedForTheWait()
 {
     NavigatorRig rig;
     OfferService(rig.state, "Catering");
@@ -5036,30 +5041,26 @@ void GsxMenuNavigatorTest::aSentRequestHeldBehindAPilotMenuDropsAfterTheGiveUpWi
 
     rig.now += 10000;
     ShowThePilotsMenu(rig);
-    while (rig.now < sentMs + 89000)
+    while (rig.now < sentMs + 600000)
     {
         rig.now += 1000;
         rig.nav.OnSnapshot();
     }
 
-    QVERIFY(!Logged(rig.logger, kHeldTooLongLine));
+    QVERIFY(!Logged(rig.logger, "stopped waiting"));
     QVERIFY(!EntryFor(rig.nav, "Catering").isEmpty());
-
-    rig.now = sentMs + 90000;
-    rig.nav.OnSnapshot();
-
-    QCOMPARE(Occurrences(rig.logger, kHeldTooLongLine), 1);
-    QVERIFY(EntryFor(rig.nav, "Catering").isEmpty());
+    QCOMPARE(TriggersFor(rig.client, "Catering"), 1);
+    QCOMPARE(rig.client.Count("menu.close"), 0);
 
     HideTheMenu(rig.state);
     rig.now += 2000;
     rig.nav.OnSnapshot();
 
-    QCOMPARE(TriggersFor(rig.client, "Catering"), 1);
-    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(TriggersFor(rig.client, "Catering"), 2);
+    QVERIFY(Logged(rig.logger, "(attempt 2 of 3)"));
 }
 
-void GsxMenuNavigatorTest::aRequestHeldBehindAPilotMenuStillDropsAsNeverLeft()
+void GsxMenuNavigatorTest::aRequestHeldBehindAPilotMenuIsNeverDroppedAsNeverLeft()
 {
     NavigatorRig rig;
     ShowThePilotsMenu(rig);
@@ -5069,22 +5070,130 @@ void GsxMenuNavigatorTest::aRequestHeldBehindAPilotMenuStillDropsAsNeverLeft()
 
     QCOMPARE(Occurrences(rig.logger, kHeldBehindThePilotLine), 1);
 
-    rig.now += 89999;
-    rig.nav.OnMenuChanged();
+    for (int tick = 0; tick < 300; ++tick)
+    {
+        rig.now += 2000;
+        rig.nav.OnMenuChanged();
+    }
 
     QVERIFY(!Logged(rig.logger, kNeverLeftLine));
-
-    rig.now += 1;
-    rig.nav.OnMenuChanged();
-
-    QVERIFY(Logged(rig.logger, kNeverLeftLine));
+    QVERIFY(!EntryFor(rig.nav, "Catering").isEmpty());
     QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(rig.client.Count("service.trigger"), 0);
 
     HideTheMenu(rig.state);
     rig.now += 2000;
     rig.nav.OnSnapshot();
 
-    QCOMPARE(rig.client.Count("service.trigger"), 0);
+    QCOMPARE(TriggersFor(rig.client, "Catering"), 1);
+}
+
+void GsxMenuNavigatorTest::theNeverLeftWindowStartsAgainWhenThePilotsMenuCloses()
+{
+    NavigatorRig rig;
+    ShowThePilotsMenu(rig);
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    for (int tick = 0; tick < 200; ++tick)
+    {
+        rig.now += 1000;
+        rig.nav.OnMenuChanged();
+    }
+
+    HideTheMenu(rig.state);
+    rig.client.refusing = true;
+    rig.nav.OnMenuChanged();
+    const long long closedMs = rig.now;
+
+    while (rig.now < closedMs + 89000)
+    {
+        rig.now += 1000;
+        rig.nav.OnMenuChanged();
+    }
+
+    QVERIFY(!Logged(rig.logger, kNeverLeftLine));
+
+    rig.now = closedMs + 91000;
+    rig.nav.OnMenuChanged();
+
+    QVERIFY(Logged(rig.logger, kNeverLeftLine));
+}
+
+void GsxMenuNavigatorTest::theClientWaitsForThePilotsMenuOnlyWhileARequestIsHeldBehindIt()
+{
+    NavigatorRig rig;
+
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+
+    ShowThePilotsMenu(rig);
+
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    QVERIFY(rig.nav.IsWaitingForThePilotsMenu());
+
+    HideTheMenu(rig.state);
+    rig.now += 2000;
+    rig.nav.OnSnapshot();
+
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+}
+
+void GsxMenuNavigatorTest::theClientStopsWaitingTheMomentThePilotsMenuCloses()
+{
+    NavigatorRig rig;
+    ShowThePilotsMenu(rig);
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    QVERIFY(rig.nav.IsWaitingForThePilotsMenu());
+
+    HideTheMenu(rig.state);
+    rig.client.refusing = true;
+    rig.now += 2000;
+    rig.nav.OnSnapshot();
+
+    QVERIFY(!EntryFor(rig.nav, "Catering").isEmpty());
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+}
+
+void GsxMenuNavigatorTest::theClientIsNotWaitingForTheMenuWhileTheAircraftHoldsTheRequests()
+{
+    NavigatorRig rig;
+    rig.nav.HoldRequests(true);
+    ShowThePilotsMenu(rig);
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+    LetTheMenuSit(rig, 3);
+
+    QVERIFY(!EntryFor(rig.nav, "Catering").isEmpty());
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+}
+
+void GsxMenuNavigatorTest::theClientIsNotWaitingForTheMenuItOpenedItself()
+{
+    NavigatorRig rig;
+    TheClientOpensAMenu(rig);
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+}
+
+void GsxMenuNavigatorTest::theClientIsNotWaitingWhenNothingIsPending()
+{
+    NavigatorRig rig;
+    ShowThePilotsMenu(rig);
+    LetTheMenuSit(rig, 3);
+
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
 }
 
 void GsxMenuNavigatorTest::aRequestClosesTheMenuTheClientOpenedFirst()

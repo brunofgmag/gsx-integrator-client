@@ -30,6 +30,7 @@ class OperationsViewModelTest final : public QObject
 
 private slots:
     static void exposesUpdatedSnapshot();
+    static void aMenuTheClientWaitsOnReachesTheScreenWithItsSentence();
     static void aSimulatorToRestartIsExplainedOnTheConnectingScreen();
     static void emitsOneSignalForSnapshotChanges();
     static void doesNotEmitWhenSnapshotIsUnchanged();
@@ -184,6 +185,24 @@ void OperationsViewModelTest::exposesUpdatedSnapshot()
 
     QVERIFY(viewModel.IsConnected());
     QCOMPARE(viewModel.GetStateText(), QStringLiteral("Waiting for aircraft ready"));
+}
+
+void OperationsViewModelTest::aMenuTheClientWaitsOnReachesTheScreenWithItsSentence()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    const QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
+
+    QVERIFY(!viewModel.IsGsxMenuHeldByPilot());
+
+    service.snapshot.gsxMenuHeldByPilot = true;
+    service.Notify();
+
+    QVERIFY(viewModel.IsGsxMenuHeldByPilot());
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(OperationsViewModel::GetGsxMenuHeldByPilotAdvisoryText(),
+             QStringLiteral("A GSX menu you opened is on screen. Close it so the client can send its next request."));
 }
 
 void OperationsViewModelTest::aSimulatorToRestartIsExplainedOnTheConnectingScreen()

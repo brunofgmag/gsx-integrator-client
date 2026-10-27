@@ -1002,11 +1002,6 @@ GsxMenuNavigator::DropReason GsxMenuNavigator::DropReasonFor(const PendingReques
         return DropReason::NeverLeft;
     }
 
-    if (request.HeldBehindThePilotsMenuForTooLong(now))
-    {
-        return DropReason::HeldBehindThePilotsMenu;
-    }
-
     return DropReason::None;
 }
 
@@ -1034,11 +1029,6 @@ void GsxMenuNavigator::LogDrop(const PendingRequest& request, const DropReason r
             "RemoteAPI stopped waiting for '{}'; the request never left the client, so it is dropped",
             request.label));
         break;
-    case DropReason::HeldBehindThePilotsMenu:
-        logger_->LogInfo(std::format(
-            "RemoteAPI stopped waiting for '{}'; the pilot's GSX menu stayed open past the retry window, so the request is dropped",
-            request.label));
-        break;
     }
 }
 
@@ -1047,6 +1037,8 @@ void GsxMenuNavigator::PumpRequests()
     TrackMenuOwner();
 
     const long long now = nowMs_();
+
+    RestartTheUnsentClocksWhileThePilotsMenuIsUp(now);
 
     std::erase_if(pending_, [this, now](const PendingRequest& request)
     {
@@ -1295,6 +1287,30 @@ bool GsxMenuNavigator::WasRefused(const PendingRequest& request, const long long
     }
 
     return FindService(*state_, request.confirmId) != nullptr;
+}
+
+void GsxMenuNavigator::RestartTheUnsentClocksWhileThePilotsMenuIsUp(const long long now)
+{
+    if (!IsShowingThePilotsMenu())
+    {
+        return;
+    }
+
+    for (PendingRequest& request : pending_)
+    {
+        if (!request.WasSent())
+        {
+            request.armedMs = now;
+        }
+    }
+}
+
+bool GsxMenuNavigator::IsWaitingForThePilotsMenu() const
+{
+    return IsShowingThePilotsMenu() && std::ranges::any_of(pending_, [](const PendingRequest& request)
+    {
+        return request.heldBehindThePilotsMenu;
+    });
 }
 
 void GsxMenuNavigator::MarkTheRefusedToggles(const long long now)

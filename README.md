@@ -191,7 +191,7 @@ Other aircraft work without it. The one thing you then do by hand is the pushbac
 
 Planned fuel and ZFW come from the OFP, so dispatch before boarding, not after. Let the client drive the GSX menu: clicking through it yourself mid-turnaround puts the two of you in a fight.
 
-If you open a GSX menu yourself, for an invoice or the options for example, the client never closes it. It holds its next request until you close the menu, and drops a request that has waited 90 seconds, so a GSX menu left open can stall the turnaround. Close it when you are done.
+If you open a GSX menu yourself, for an invoice or the options for example, the client never closes it. It holds its next request until you close the menu, and shows the advisory "A GSX menu you opened is on screen. Close it so the client can send its next request." while it waits. The turnaround stays where it is until then, so close the menu when you are done.
 
 Aircraft notes:
 
