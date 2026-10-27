@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.52.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.52.0...v1.52.1) (2026-10-27)
+
+
+* read the INIT on the DEP, close the cargo holds and wait for the aircraft before asking GSX ([#281](https://github.com/brunofgmag/gsx-integrator-client/issues/281)) ([961d245](https://github.com/brunofgmag/gsx-integrator-client/commit/961d245e6b8b43633773474a988f5b8f30ad1dfb))
+
+
+### Bug Fixes
+
+* **fslabs:** close the cargo holds and wait for the aircraft before asking GSX ([c6826a2](https://github.com/brunofgmag/gsx-integrator-client/commit/c6826a2bf410f0067a1ebed673961854cd0212db)) ([961d245](https://github.com/brunofgmag/gsx-integrator-client/commit/961d245e6b8b43633773474a988f5b8f30ad1dfb))
+* **fslabs:** read the INIT on the DEP and only watch the MCDUs ([7827687](https://github.com/brunofgmag/gsx-integrator-client/commit/7827687fc8ec57a54a98019a8074d1db3cd0677b)) ([961d245](https://github.com/brunofgmag/gsx-integrator-client/commit/961d245e6b8b43633773474a988f5b8f30ad1dfb))
+* **gsx:** keep a request waiting behind a GSX menu the pilot opened and say so on screen ([d08cac5](https://github.com/brunofgmag/gsx-integrator-client/commit/d08cac5901839635ac6787c13c369bfe7fbac88f)) ([961d245](https://github.com/brunofgmag/gsx-integrator-client/commit/961d245e6b8b43633773474a988f5b8f30ad1dfb))
+
 ## [1.52.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.51.0...v1.52.0) (2026-10-27)
 
 
