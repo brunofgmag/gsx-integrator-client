@@ -595,6 +595,19 @@ target_link_libraries(gsxi-fslabs-mcdu-client-tests PRIVATE Qt6::Network)
 target_compile_definitions(gsxi-fslabs-mcdu-client-tests PRIVATE
         FSLABS_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures/fslabs\")
 
+gsxi_add_qt_test(gsxi-fslabs-ground-client-tests fslabs-ground-client
+        tests/FslabsFixtures.h
+        tests/ProbeLines.h
+        tests/tst_fslabs_ground_client.cpp
+        src/infrastructure/fslabs/FslabsGroundClient.cpp
+        src/infrastructure/fslabs/FslabsGroundClient.h
+        src/infrastructure/fslabs/FslabsGroundGateway.h
+        src/infrastructure/probe/ProbeChannels.h
+        src/infrastructure/probe/ProbeLog.h)
+target_link_libraries(gsxi-fslabs-ground-client-tests PRIVATE Qt6::Network)
+target_compile_definitions(gsxi-fslabs-ground-client-tests PRIVATE
+        FSLABS_FIXTURES_DIR=\"${CMAKE_SOURCE_DIR}/tests/fixtures/fslabs\")
+
 gsxi_add_qt_test(gsxi-fslabs-a321neo-tests fslabs-a321neo
         tests/TestDoubles.h
         tests/AircraftTicks.h
@@ -611,6 +624,11 @@ gsxi_add_qt_test(gsxi-fslabs-a321neo-tests fslabs-a321neo
         src/infrastructure/aircraft/fslabs/FslabsA321neo.h
         src/infrastructure/aircraft/fslabs/FslabsAoc.cpp
         src/infrastructure/aircraft/fslabs/FslabsAoc.h
+        src/infrastructure/aircraft/fslabs/FslabsHolds.cpp
+        src/infrastructure/aircraft/fslabs/FslabsHolds.h
+        src/infrastructure/fslabs/FslabsGroundClient.cpp
+        src/infrastructure/fslabs/FslabsGroundClient.h
+        src/infrastructure/fslabs/FslabsGroundGateway.h
         src/infrastructure/fslabs/FslabsMcduClient.cpp
         src/infrastructure/fslabs/FslabsMcduClient.h
         src/infrastructure/fslabs/FslabsMcduGateway.h
@@ -941,6 +959,8 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/aircraft/fslabs/FslabsA321neo.h
         src/infrastructure/aircraft/fslabs/FslabsAoc.cpp
         src/infrastructure/aircraft/fslabs/FslabsAoc.h
+        src/infrastructure/aircraft/fslabs/FslabsHolds.cpp
+        src/infrastructure/aircraft/fslabs/FslabsHolds.h
         src/infrastructure/aircraft/ifly/IFly737Max.cpp
         src/infrastructure/aircraft/ifly/IFly737Max.h
         src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorsFollowLoaderCycleRule.cpp
@@ -1016,6 +1036,9 @@ gsxi_add_qt_test(gsxi-aircraft-detection-tests aircraft-detection
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h
+        src/infrastructure/fslabs/FslabsGroundClient.cpp
+        src/infrastructure/fslabs/FslabsGroundClient.h
+        src/infrastructure/fslabs/FslabsGroundGateway.h
         src/infrastructure/fslabs/FslabsMcduClient.cpp
         src/infrastructure/fslabs/FslabsMcduClient.h
         src/infrastructure/fslabs/FslabsMcduGateway.h
@@ -1235,6 +1258,8 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/aircraft/fslabs/FslabsA321neo.h
         src/infrastructure/aircraft/fslabs/FslabsAoc.cpp
         src/infrastructure/aircraft/fslabs/FslabsAoc.h
+        src/infrastructure/aircraft/fslabs/FslabsHolds.cpp
+        src/infrastructure/aircraft/fslabs/FslabsHolds.h
         src/infrastructure/aircraft/ifly/IFly737Max.cpp
         src/infrastructure/aircraft/ifly/IFly737Max.h
         src/infrastructure/aircraft/ifly/rules/IFly737MaxDoorsFollowLoaderCycleRule.cpp
@@ -1306,6 +1331,9 @@ gsxi_add_qt_test(gsxi-runtime-integrator-service-tests runtime-integrator-servic
         src/infrastructure/fenix/FenixEfbClient.cpp
         src/infrastructure/fenix/FenixEfbClient.h
         src/infrastructure/fenix/FenixEfbGateway.h
+        src/infrastructure/fslabs/FslabsGroundClient.cpp
+        src/infrastructure/fslabs/FslabsGroundClient.h
+        src/infrastructure/fslabs/FslabsGroundGateway.h
         src/infrastructure/fslabs/FslabsMcduClient.cpp
         src/infrastructure/fslabs/FslabsMcduClient.h
         src/infrastructure/fslabs/FslabsMcduGateway.h

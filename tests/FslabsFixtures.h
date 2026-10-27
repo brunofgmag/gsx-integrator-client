@@ -13,6 +13,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QString>
 #include <QtCore/QtLogging>
+#include "../src/infrastructure/fslabs/FslabsGroundGateway.h"
 #include "../src/infrastructure/fslabs/FslabsMcduClient.h"
 #include "../src/infrastructure/fslabs/FslabsMcduGateway.h"
 
@@ -201,6 +202,31 @@ private:
     std::optional<Reply> reply_;
     std::map<std::string, FslabsMcduScreen> pages_;
     std::map<std::pair<std::string, int>, std::string> routes_;
+};
+
+class FakeFslabsGround final : public FslabsGroundGateway
+{
+public:
+    void Poll() override { ++polls; }
+    [[nodiscard]] bool IsAvailable() const override { return available; }
+
+    [[nodiscard]] std::optional<FslabsHoldState> HoldState(const FslabsHold hold) const override
+    {
+        return hold == FslabsHold::Forward ? forwardHold : aftHold;
+    }
+
+    void ToggleHold(const FslabsHold hold) override { toggles.push_back(hold); }
+
+    [[nodiscard]] int TogglesOf(const FslabsHold hold) const
+    {
+        return static_cast<int>(std::count(toggles.begin(), toggles.end(), hold));
+    }
+
+    int polls = 0;
+    bool available = true;
+    std::optional<FslabsHoldState> forwardHold;
+    std::optional<FslabsHoldState> aftHold;
+    std::vector<FslabsHold> toggles;
 };
 
 #endif // GSX_INTEGRATOR_CLIENT_TESTS_FSLABSFIXTURES_H

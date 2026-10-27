@@ -965,6 +965,8 @@ void GsxMenuNavigator::ArmRequest(QString verb, QJsonObject args, std::string la
     {
         request.lastSentMs = same->lastSentMs;
         request.attempts = same->attempts;
+        request.refused = same->refused;
+        request.messagesAtSend = same->messagesAtSend;
         pending_.erase(same);
     }
 
@@ -1054,7 +1056,9 @@ void GsxMenuNavigator::PumpRequests()
         return reason != DropReason::None;
     });
 
-    if (IsWaitingForThePanel() || !IsMenuSettled())
+    MarkTheRefusedToggles(now);
+
+    if (requestsHeld_ || IsWaitingForThePanel() || !IsMenuSettled())
     {
         return;
     }
@@ -1105,6 +1109,8 @@ void GsxMenuNavigator::SendRequest(PendingRequest& request)
 
     lastActionMs_ = nowMs_();
     request.lastSentMs = lastActionMs_;
+    request.messagesAtSend = state_->messagesShown;
+    request.refused = false;
     request.heldBehindThePilotsMenu = false;
     ++request.attempts;
 
@@ -1277,6 +1283,35 @@ bool GsxMenuNavigator::WasTaken(const PendingRequest& request) const
     return service->stateRaw != static_cast<int>(GsxStateStatus::Callable) || !service->canTrigger;
 }
 
+bool GsxMenuNavigator::WasRefused(const PendingRequest& request, const long long now) const
+{
+    const bool awaitsAnAnswer = request.WasSent() && request.UndoneByASecondSend() && !request.refused
+        && request.attempts < kMaxTriggerAttempts;
+    const bool gsxAnsweredAfterTheSend =
+        request.messagesAtSend >= 0 && state_->messagesShown > request.messagesAtSend;
+    if (!awaitsAnAnswer || !gsxAnsweredAfterTheSend || now - request.lastSentMs < kRefusalSettleMs)
+    {
+        return false;
+    }
+
+    return FindService(*state_, request.confirmId) != nullptr;
+}
+
+void GsxMenuNavigator::MarkTheRefusedToggles(const long long now)
+{
+    for (PendingRequest& request : pending_)
+    {
+        if (!WasRefused(request, now))
+        {
+            continue;
+        }
+
+        request.refused = true;
+        logger_->LogInfo(std::format("RemoteAPI '{}' not taken by GSX after it showed \"{}\"; asking again",
+                                     request.label, state_->lastMessage));
+    }
+}
+
 GsxPanelMode GsxMenuNavigator::PanelMode() const
 {
     return settings_->gsxPanelMode;
@@ -1400,6 +1435,11 @@ void GsxMenuNavigator::OnPushbackStarted()
 
 void GsxMenuNavigator::OpenMenu() const
 {
+    if (requestsHeld_)
+    {
+        return;
+    }
+
     const PassScope pass(*this);
 
     SyncGsxToolbar();
@@ -1438,6 +1478,11 @@ bool GsxMenuNavigator::IsMenuSettled() const
 
 bool GsxMenuNavigator::PickFirstMatching(const std::function<bool(const std::string&)>& matches)
 {
+    if (requestsHeld_)
+    {
+        return false;
+    }
+
     const auto& entries = state_->menu.entries;
     const auto& disabled = state_->menu.disabled;
     for (std::size_t i = 0; i < entries.size(); ++i)

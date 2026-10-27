@@ -45,6 +45,7 @@ public:
     bool requiresEfbFlightPlan = false;
     bool loadsItsFlightPlanThroughTheAoc = false;
     bool worksThroughTheRightMcdu = false;
+    bool drivingTheGsxMenu = false;
     std::optional<int> passengersItBoards = std::nullopt;
     bool takesRefuelingRequest = false;
     bool takesBoardingRequest = false;
@@ -105,6 +106,7 @@ public:
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return requiresEfbFlightPlan; }
     [[nodiscard]] bool LoadsItsFlightPlanThroughTheAoc() const override { return loadsItsFlightPlanThroughTheAoc; }
     [[nodiscard]] bool WorksThroughTheRightMcdu() const override { return worksThroughTheRightMcdu; }
+    [[nodiscard]] bool IsDrivingTheGsxMenu() const override { return drivingTheGsxMenu; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override { return flightPlanLoaded; }
     [[nodiscard]] bool FlightPlanDiffersFromTheOfp() const override { return flightPlanDiffersFromTheOfp; }
     [[nodiscard]] double GetPlannedFuelKg() const override { return plannedFuelKg; }

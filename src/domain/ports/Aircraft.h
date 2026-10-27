@@ -42,6 +42,7 @@ public:
     [[nodiscard]] virtual bool AppliesTheEfbFlightPlanOnItsDeparturePage() const { return false; }
     [[nodiscard]] virtual bool LoadsItsFlightPlanThroughTheAoc() const { return false; }
     [[nodiscard]] virtual bool WorksThroughTheRightMcdu() const { return false; }
+    [[nodiscard]] virtual bool IsDrivingTheGsxMenu() const { return false; }
     [[nodiscard]] virtual bool IsFlightPlanLoaded() const = 0;
     [[nodiscard]] virtual bool FlightPlanDiffersFromTheOfp() const { return false; }
     [[nodiscard]] virtual double GetPlannedFuelKg() const = 0;

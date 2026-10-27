@@ -233,7 +233,9 @@ void ProbeObserverTest::theGsxStateLandsInTheGsxLog()
         {gsx::lvars::kGpuConnected, 1.0},
         {gsx::lvars::kGpuState, 5.0},
         {gsx::lvars::kJetway, 5.0},
-        {gsx::lvars::kStairs, 1.0}
+        {gsx::lvars::kStairs, 1.0},
+        {gsx::lvars::kBaggageLoaderFrontState, 9.0},
+        {gsx::lvars::kBaggageLoaderRearState, 4.0}
     };
     const FakeAircraft aircraft;
     ProbeObserver observer;
@@ -257,7 +259,10 @@ void ProbeObserverTest::theGsxStateLandsInTheGsxLog()
                  QStringLiteral("gsx   FSDT_GSX_GPU_CONNECTED=1"),
                  QStringLiteral("gsx   FSDT_GSX_GPU_STATE=5"),
                  QStringLiteral("gsx   FSDT_GSX_JETWAY=5"),
-                 QStringLiteral("gsx   FSDT_GSX_STAIRS=1")
+                 QStringLiteral("gsx   FSDT_GSX_STAIRS=1"),
+                 QStringLiteral("gsx   FSDT_GSX_VEHICLE_BAGGAGELOADERFRONT_STATE=9"),
+                 QStringLiteral("gsx   FSDT_GSX_VEHICLE_BAGGAGELOADERREAR_STATE=4"),
+                 QStringLiteral("gsx   FSDT_GSX_VEHICLE_BAGGAGELOADERMAIN_STATE=pending")
              }));
 }
 

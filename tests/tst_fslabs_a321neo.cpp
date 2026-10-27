@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -44,6 +45,8 @@ namespace
     constexpr int kTicksARepeatIsHeldBack = 60;
     constexpr int kTicksAnAskCounts = 5;
     constexpr int kStopsBeforeGivingUp = 3;
+    constexpr int kTicksAToggleGetsToShowUp = 20;
+    constexpr int kTogglesBeforeGivingUp = 3;
     constexpr double kEmptyWeightKg = 45000.0;
     constexpr double kFuelKg = 6100.0;
     constexpr double kPayloadKg = 9300.0;
@@ -157,7 +160,7 @@ namespace
     struct FslabsFixture
     {
         FslabsFixture()
-            : aircraft{&gateway, &status, std::move(mcduOwner), std::move(leftMcduOwner)}
+            : aircraft{&gateway, &status, std::move(mcduOwner), std::move(leftMcduOwner), std::move(groundOwner)}
         {
         }
 
@@ -167,6 +170,8 @@ namespace
         FakeFslabsMcdu& mcdu = *mcduOwner;
         std::unique_ptr<FakeFslabsMcdu> leftMcduOwner = std::make_unique<FakeFslabsMcdu>();
         FakeFslabsMcdu& leftMcdu = *leftMcduOwner;
+        std::unique_ptr<FakeFslabsGround> groundOwner = std::make_unique<FakeFslabsGround>();
+        FakeFslabsGround& ground = *groundOwner;
         FslabsA321neo aircraft;
 
         void Tick(const int ticks = 1)
@@ -175,6 +180,12 @@ namespace
             {
                 TickAircraft(aircraft, gateway);
             }
+        }
+
+        void SetLoaders(const double front, const double rear)
+        {
+            gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = front;
+            gateway.lvars[gsx::lvars::kBaggageLoaderRearState] = rear;
         }
 
         void PowerUp()
@@ -271,6 +282,8 @@ private slots:
     static void aFlightPlanThatIsNotReadyNeverAsksForTheInit();
     static void plannedValuesComeFromTheSimbriefStatus();
     static void passengersItBoardsComeFromTheGsxLVar();
+    static void thePassengerCountIsWatchedFromTheFirstTick();
+    static void noPassengerCountIsReportedBeforeTheLVarArrives();
     static void deboardReadinessNeedsSeventyFiveQuietTicks();
     static void readyToPushNeedsPowerEnginesOffAndBeacon();
     static void theAircraftIsHeldByBrakeOrChocks();
@@ -279,6 +292,25 @@ private slots:
     static void theAdapterNeverWritesFuelOrPayload();
     static void aTouchOnTheRadSideIsTheSmartSwitch();
     static void aNewTurnaroundClearsTheInit();
+
+    static void observePollsTheGroundGatewayEveryTick();
+    static void theGsxMenuIsDrivenOnlyWhileTheRemoteControlIsOn();
+    static void theForwardHoldClosesWhenTheFrontLoaderLeaves();
+    static void aHoldStaysOpenWhileItsLoaderLowersTheBelt();
+    static void theAftHoldClosesWhenTheRearLoaderLeaves();
+    static void aHoldIsLeftAloneWhileItsLoaderServes();
+    static void aHoldIsOnlyToggledWhileItReadsOpen();
+    static void aHoldStillOpeningWhenTheLoaderLeavesIsClosedOnceItIsOpen();
+    static void aLoaderThatNeverServedClosesNothing();
+    static void aLoaderStateThatHasNotArrivedClosesNothing();
+    static void aHoldThatNeverReadClosesNothing();
+    static void aHoldStillOpenAfterTheWaitIsToggledAgain();
+    static void aHoldThatStaysOpenGivesUpAfterThreeTogglesAndLogsOnce();
+    static void aHoldThatClosesIsNotToggledAgain();
+    static void aLoaderThatComesBackCancelsTheClose();
+    static void anUnreachableGroundEndpointTogglesNothing();
+    static void aNewTurnaroundForgetsTheServingLoader();
+    static void aNewTurnaroundDropsTheCloseThatIsDue();
 };
 
 void FslabsA321neoTest::theProbeProvesLifeWithTwoPageChanges()
@@ -1325,6 +1357,31 @@ void FslabsA321neoTest::passengersItBoardsComeFromTheGsxLVar()
     QCOMPARE(fixture.aircraft.GetPassengersItBoards().value_or(-1), 105);
 }
 
+void FslabsA321neoTest::thePassengerCountIsWatchedFromTheFirstTick()
+{
+    FslabsFixture fixture;
+    fixture.gateway.arrivesATickAfterItIsAsked = true;
+    fixture.gateway.lvars[gsx::lvars::kNumPassengers] = 105.0;
+
+    fixture.Tick();
+    fixture.gateway.DeliverWhatWasAsked();
+
+    QCOMPARE(fixture.aircraft.GetPassengersItBoards().value_or(-1), 105);
+}
+
+void FslabsA321neoTest::noPassengerCountIsReportedBeforeTheLVarArrives()
+{
+    FslabsFixture fixture;
+    fixture.gateway.arrivesATickAfterItIsAsked = true;
+    fixture.gateway.lvars[gsx::lvars::kNumPassengers] = 105.0;
+
+    QVERIFY(!fixture.aircraft.GetPassengersItBoards().has_value());
+
+    fixture.gateway.DeliverWhatWasAsked();
+
+    QCOMPARE(fixture.aircraft.GetPassengersItBoards().value_or(-1), 105);
+}
+
 void FslabsA321neoTest::deboardReadinessNeedsSeventyFiveQuietTicks()
 {
     FslabsFixture fixture;
@@ -1489,6 +1546,312 @@ void FslabsA321neoTest::aNewTurnaroundClearsTheInit()
     fixture.aircraft.OnTurnaroundStarted();
 
     QVERIFY(!fixture.aircraft.IsFlightPlanLoaded());
+}
+
+void FslabsA321neoTest::theGsxMenuIsDrivenOnlyWhileTheRemoteControlIsOn()
+{
+    FslabsFixture fixture;
+
+    QVERIFY(!fixture.aircraft.IsDrivingTheGsxMenu());
+
+    fixture.gateway.lvars[gsx::lvars::kSetRemoteControl] = 0.0;
+
+    QVERIFY(!fixture.aircraft.IsDrivingTheGsxMenu());
+
+    fixture.gateway.lvars[gsx::lvars::kSetRemoteControl] = 1.0;
+
+    QVERIFY(fixture.aircraft.IsDrivingTheGsxMenu());
+
+    fixture.gateway.lvars[gsx::lvars::kSetRemoteControl] = 0.0;
+
+    QVERIFY(!fixture.aircraft.IsDrivingTheGsxMenu());
+}
+
+void FslabsA321neoTest::observePollsTheGroundGatewayEveryTick()
+{
+    FslabsFixture fixture;
+
+    fixture.Tick(3);
+
+    QCOMPARE(fixture.ground.polls, 3);
+}
+
+void FslabsA321neoTest::theForwardHoldClosesWhenTheFrontLoaderLeaves()
+{
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.ground.aftHold = FslabsHoldState::Open;
+    fixture.SetLoaders(gsx::states::kLoaderLoading, 0.0);
+    fixture.Tick(3);
+
+    QVERIFY(fixture.ground.toggles.empty());
+
+    fixture.SetLoaders(gsx::states::kLoaderRemoving, 0.0);
+    fixture.Tick();
+
+    QCOMPARE(fixture.ground.toggles, std::vector{FslabsHold::Forward});
+}
+
+void FslabsA321neoTest::aHoldStaysOpenWhileItsLoaderLowersTheBelt()
+{
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.ground.aftHold = FslabsHoldState::Open;
+    fixture.SetLoaders(gsx::states::kLoaderLoading, gsx::states::kLoaderLoading);
+    fixture.Tick(3);
+    fixture.SetLoaders(gsx::states::kLoaderFinishing, gsx::states::kLoaderFinishing);
+    fixture.Tick(3);
+    fixture.SetLoaders(gsx::states::kLoaderRetracting, gsx::states::kLoaderRetracting);
+    fixture.Tick(3);
+
+    QVERIFY(fixture.ground.toggles.empty());
+
+    fixture.SetLoaders(gsx::states::kLoaderRemoving, gsx::states::kLoaderRetracting);
+    fixture.Tick();
+
+    QCOMPARE(fixture.ground.toggles, std::vector{FslabsHold::Forward});
+}
+
+void FslabsA321neoTest::theAftHoldClosesWhenTheRearLoaderLeaves()
+{
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.ground.aftHold = FslabsHoldState::Open;
+    fixture.SetLoaders(0.0, gsx::states::kLoaderLoading);
+    fixture.Tick(3);
+
+    QVERIFY(fixture.ground.toggles.empty());
+
+    fixture.SetLoaders(0.0, gsx::states::kLoaderRemoving);
+    fixture.Tick();
+
+    QCOMPARE(fixture.ground.toggles, std::vector{FslabsHold::Aft});
+}
+
+void FslabsA321neoTest::aHoldIsLeftAloneWhileItsLoaderServes()
+{
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.ground.aftHold = FslabsHoldState::Open;
+
+    for (const double serving : {gsx::states::kLoaderWaitingForDoor, gsx::states::kLoaderUnloading,
+                                 gsx::states::kLoaderInPosition, gsx::states::kLoaderLoading})
+    {
+        fixture.SetLoaders(serving, serving);
+        fixture.Tick(5);
+    }
+
+    QVERIFY(fixture.ground.toggles.empty());
+}
+
+void FslabsA321neoTest::aHoldIsOnlyToggledWhileItReadsOpen()
+{
+    for (const FslabsHoldState state : {FslabsHoldState::Closed, FslabsHoldState::Opening, FslabsHoldState::Closing})
+    {
+        FslabsFixture fixture;
+        fixture.ground.forwardHold = state;
+        fixture.ground.aftHold = state;
+        fixture.SetLoaders(gsx::states::kLoaderLoading, gsx::states::kLoaderLoading);
+        fixture.Tick(3);
+        fixture.SetLoaders(gsx::states::kLoaderRemoving, gsx::states::kLoaderRemoving);
+        fixture.Tick(kTicksAToggleGetsToShowUp * 2);
+
+        QVERIFY2(fixture.ground.toggles.empty(), qPrintable(QString::number(static_cast<int>(state))));
+    }
+}
+
+void FslabsA321neoTest::aHoldStillOpeningWhenTheLoaderLeavesIsClosedOnceItIsOpen()
+{
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Opening;
+    fixture.SetLoaders(gsx::states::kLoaderLoading, 0.0);
+    fixture.Tick(3);
+    fixture.SetLoaders(gsx::states::kLoaderRemoving, 0.0);
+    fixture.Tick(5);
+
+    QVERIFY(fixture.ground.toggles.empty());
+
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.Tick();
+
+    QCOMPARE(fixture.ground.toggles, std::vector{FslabsHold::Forward});
+}
+
+void FslabsA321neoTest::aLoaderThatNeverServedClosesNothing()
+{
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.ground.aftHold = FslabsHoldState::Open;
+
+    for (const double state : {0.0, gsx::states::kVehicleApproaching, gsx::states::kLoaderFinishing,
+                               gsx::states::kLoaderRetracting, gsx::states::kLoaderRemoving})
+    {
+        fixture.SetLoaders(state, state);
+        fixture.Tick(5);
+    }
+
+    QVERIFY(fixture.ground.toggles.empty());
+}
+
+void FslabsA321neoTest::aLoaderStateThatHasNotArrivedClosesNothing()
+{
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.ground.aftHold = FslabsHoldState::Open;
+
+    fixture.Tick(kTicksAToggleGetsToShowUp);
+
+    QVERIFY(fixture.ground.toggles.empty());
+}
+
+void FslabsA321neoTest::aHoldThatNeverReadClosesNothing()
+{
+    FslabsFixture fixture;
+    fixture.SetLoaders(gsx::states::kLoaderLoading, gsx::states::kLoaderLoading);
+    fixture.Tick(3);
+    fixture.SetLoaders(gsx::states::kLoaderRemoving, gsx::states::kLoaderRemoving);
+    fixture.Tick(kTicksAToggleGetsToShowUp);
+
+    QVERIFY(fixture.ground.toggles.empty());
+}
+
+void FslabsA321neoTest::aHoldStillOpenAfterTheWaitIsToggledAgain()
+{
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.SetLoaders(gsx::states::kLoaderLoading, 0.0);
+    fixture.Tick(3);
+    fixture.SetLoaders(gsx::states::kLoaderRemoving, 0.0);
+    fixture.Tick();
+
+    QCOMPARE(fixture.ground.TogglesOf(FslabsHold::Forward), 1);
+
+    fixture.Tick(kTicksAToggleGetsToShowUp - 1);
+
+    QCOMPARE(fixture.ground.TogglesOf(FslabsHold::Forward), 1);
+
+    fixture.Tick();
+
+    QCOMPARE(fixture.ground.TogglesOf(FslabsHold::Forward), 2);
+    QCOMPARE(fixture.ground.TogglesOf(FslabsHold::Aft), 0);
+}
+
+void FslabsA321neoTest::aHoldThatStaysOpenGivesUpAfterThreeTogglesAndLogsOnce()
+{
+    const LogCapture log;
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.SetLoaders(gsx::states::kLoaderLoading, 0.0);
+    fixture.Tick(3);
+    fixture.SetLoaders(gsx::states::kLoaderRemoving, 0.0);
+    fixture.Tick(kTicksAToggleGetsToShowUp * (kTogglesBeforeGivingUp - 1) + 1);
+
+    QCOMPARE(fixture.ground.TogglesOf(FslabsHold::Forward), kTogglesBeforeGivingUp);
+    QCOMPARE(LogCapture::CountContaining(QStringLiteral("still open after")), 0);
+
+    fixture.Tick(kTicksAToggleGetsToShowUp - 1);
+
+    QCOMPARE(LogCapture::CountContaining(QStringLiteral("still open after")), 0);
+
+    fixture.Tick();
+
+    QCOMPARE(LogCapture::CountContaining(QStringLiteral("still open after")), 1);
+
+    fixture.Tick(kTicksAToggleGetsToShowUp * 5);
+
+    QCOMPARE(fixture.ground.TogglesOf(FslabsHold::Forward), kTogglesBeforeGivingUp);
+    QCOMPARE(LogCapture::CountContaining(QStringLiteral("still open after")), 1);
+}
+
+void FslabsA321neoTest::aHoldThatClosesIsNotToggledAgain()
+{
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.SetLoaders(gsx::states::kLoaderLoading, 0.0);
+    fixture.Tick(3);
+    fixture.SetLoaders(gsx::states::kLoaderRemoving, 0.0);
+    fixture.Tick();
+
+    fixture.ground.forwardHold = FslabsHoldState::Closing;
+    fixture.Tick(5);
+    fixture.ground.forwardHold = FslabsHoldState::Closed;
+    fixture.Tick(kTicksAToggleGetsToShowUp * 3);
+
+    QCOMPARE(fixture.ground.TogglesOf(FslabsHold::Forward), 1);
+
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.Tick(kTicksAToggleGetsToShowUp * 3);
+
+    QCOMPARE(fixture.ground.TogglesOf(FslabsHold::Forward), 1);
+}
+
+void FslabsA321neoTest::aLoaderThatComesBackCancelsTheClose()
+{
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Opening;
+    fixture.SetLoaders(gsx::states::kLoaderLoading, 0.0);
+    fixture.Tick(3);
+    fixture.SetLoaders(gsx::states::kLoaderRemoving, 0.0);
+    fixture.Tick(3);
+    fixture.SetLoaders(gsx::states::kLoaderLoading, 0.0);
+    fixture.Tick(3);
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.Tick(kTicksAToggleGetsToShowUp);
+
+    QVERIFY(fixture.ground.toggles.empty());
+
+    fixture.SetLoaders(gsx::states::kLoaderRemoving, 0.0);
+    fixture.Tick();
+
+    QCOMPARE(fixture.ground.TogglesOf(FslabsHold::Forward), 1);
+}
+
+void FslabsA321neoTest::anUnreachableGroundEndpointTogglesNothing()
+{
+    FslabsFixture fixture;
+    fixture.ground.available = false;
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.SetLoaders(gsx::states::kLoaderLoading, 0.0);
+    fixture.Tick(3);
+    fixture.SetLoaders(gsx::states::kLoaderRemoving, 0.0);
+    fixture.Tick(kTicksAToggleGetsToShowUp);
+
+    QVERIFY(fixture.ground.toggles.empty());
+
+    fixture.ground.available = true;
+    fixture.Tick();
+
+    QCOMPARE(fixture.ground.TogglesOf(FslabsHold::Forward), 1);
+}
+
+void FslabsA321neoTest::aNewTurnaroundForgetsTheServingLoader()
+{
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.SetLoaders(gsx::states::kLoaderLoading, 0.0);
+    fixture.Tick(3);
+
+    fixture.aircraft.OnTurnaroundStarted();
+    fixture.SetLoaders(gsx::states::kLoaderRemoving, 0.0);
+    fixture.Tick(kTicksAToggleGetsToShowUp);
+
+    QVERIFY(fixture.ground.toggles.empty());
+}
+
+void FslabsA321neoTest::aNewTurnaroundDropsTheCloseThatIsDue()
+{
+    FslabsFixture fixture;
+    fixture.ground.forwardHold = FslabsHoldState::Opening;
+    fixture.SetLoaders(gsx::states::kLoaderLoading, 0.0);
+    fixture.Tick(3);
+    fixture.SetLoaders(gsx::states::kLoaderRemoving, 0.0);
+    fixture.Tick(3);
+
+    fixture.aircraft.OnTurnaroundStarted();
+    fixture.ground.forwardHold = FslabsHoldState::Open;
+    fixture.Tick(kTicksAToggleGetsToShowUp);
+
+    QVERIFY(fixture.ground.toggles.empty());
 }
 
 QTEST_APPLESS_MAIN(FslabsA321neoTest)

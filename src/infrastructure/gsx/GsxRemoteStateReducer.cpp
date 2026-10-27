@@ -12,9 +12,11 @@
 
 namespace
 {
-    constexpr std::array<std::string_view, 4> kDiscardedPaths = {
-        "/billing", "/message", "/state", "/stateText"
+    constexpr std::array<std::string_view, 3> kDiscardedPaths = {
+        "/billing", "/state", "/stateText"
     };
+
+    constexpr std::string_view kMessagePath = "/message";
 
     std::string Str(const QJsonValue& value) { return value.toString().toStdString(); }
 
@@ -74,6 +76,19 @@ namespace
         {
             state.apronVerdict.push_back(Str(verdict));
         }
+    }
+
+    void ShowMessage(GsxRemoteState& state, const QJsonValue& value)
+    {
+        const QJsonObject& object = value.toObject();
+        const std::string text = Str(object.value("text"));
+        if (!object.value("visible").toBool() || text.empty())
+        {
+            return;
+        }
+
+        state.lastMessage = text;
+        ++state.messagesShown;
     }
 
     void SetMenuShown(GsxRemoteState& state, const QJsonValue& value)
@@ -181,6 +196,13 @@ GsxPatchOutcome GsxRemoteStateReducer::ApplyPatch(GsxRemoteState& state, const s
 
             return GsxPatchOutcome::Applied;
         }
+    }
+
+    if (path == kMessagePath)
+    {
+        ShowMessage(state, value);
+
+        return GsxPatchOutcome::Applied;
     }
 
     if (std::ranges::find(kDiscardedPaths, path) != kDiscardedPaths.end())

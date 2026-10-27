@@ -51,6 +51,8 @@ public:
     int completeRefuelCalls = 0;
     int completeBoardingCalls = 0;
     int toggleGpuCalls = 0;
+    int holdRequestsCalls = 0;
+    bool requestsHeld = false;
     int requestCateringCalls = 0;
     int requestLavatoryCalls = 0;
     int requestWaterCalls = 0;
@@ -177,6 +179,11 @@ public:
     [[nodiscard]] bool WereStairsKeptInPlace() const override { return stairsKeptInPlace; }
 
     void DisableGsxMenu() override {}
+    void HoldRequests(const bool held) override
+    {
+        requestsHeld = held;
+        ++holdRequestsCalls;
+    }
 
     void OnTurnaroundTurned() override { ++turnaroundTurnedCalls; }
     void OnPushbackStarted() override { ++pushbackStartedCalls; }

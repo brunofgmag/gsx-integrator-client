@@ -55,7 +55,7 @@ The iFly needs SP1 because older versions lack the GSX integration the client re
 
 ### The FSLabs A321neo
 
-The FSLabs talks to GSX on its own. It calls the jetway or stairs and the GPU when it loads, opens and closes its doors, confirms the engine start and asks for deboarding when you turn off the beacon. The client lets it do all of that. Refueling, boarding and pushback only happen when someone asks for them on the AOC pages of the MCDU, and a request sent to GSX from outside does not load the aircraft. So the client asks for them on the AOC, the same way you would. If you already asked, it sees the service under way and moves on.
+The FSLabs talks to GSX on its own. It calls the jetway or stairs and the GPU when it loads, opens and closes its doors, confirms the engine start and asks for deboarding when you turn off the beacon. The client lets it do all of that and only steps in where the aircraft falls short. When a GSX baggage loader drives away, the client closes that cargo hold, because the aircraft can leave it open for six minutes after boarding. If the aircraft did not call the GSX GPU, the client calls it once the parking brake or the chocks are set, since GSX turns down ground services before that. The FSLabs shows the GSX GPU as external power available while the truck is connected. And while the aircraft is working the GSX menu itself, the client holds its own requests until it is done. Refueling, boarding and pushback only happen when someone asks for them on the AOC pages of the MCDU, and a request sent to GSX from outside does not load the aircraft. So the client asks for them on the AOC, the same way you would. If you already asked, it sees the service under way and moves on.
 
 Two things are yours:
 

@@ -243,6 +243,21 @@ private slots:
     static void aRequestForAServiceAlreadyUnderwayIsDroppedBeforeSending();
     static void theGpuToggleStillFiresWhileTheServiceRuns();
     static void aServiceThatTogglesIsNeverSentTwice();
+    static void aToggleGsxRefusedIsAskedAgainOnceTheRefusalSettles();
+    static void requestsWaitWhileTheAircraftDrivesTheMenu();
+    static void aRefusalIsLoggedOnceWhileTheRequestsAreHeld();
+    static void aHeldRequestStillExpires();
+    static void theDeIcePromptIsLeftAloneWhileTheAircraftDrivesTheMenu();
+    static void theAirstairsPromptIsLeftAloneWhileTheAircraftDrivesTheMenu();
+    static void theEngineConfirmationIsLeftAloneWhileTheAircraftDrivesTheMenu();
+    static void noMenuIsOpenedWhileTheAircraftDrivesIt();
+    static void aMessageBeforeTheSendIsNoRefusal();
+    static void aToggleGsxTookIsNeverAskedAgainAfterAMessage();
+    static void aToggleGsxIsWorkingOnIsNeverAskedAgainAfterAMessage();
+    static void aToggleForAServiceGsxDoesNotListIsNeverAskedAgainAfterAMessage();
+    static void aRefusedToggleIsAskedAgainOnlyWithinTheAttemptLimit();
+    static void aServiceThatDoesNotToggleIsNotAskedAgainByTheRefusalRule();
+    static void aRefusedToggleIsNotHeldBehindItself();
     static void theStairsAreNeverAskedForASecondTime();
     static void aServiceThatTogglesAndWasSentIsNotSentAgainAfterTheRestore_data();
     static void aServiceThatTogglesAndWasSentIsNotSentAgainAfterTheRestore();
@@ -3081,6 +3096,360 @@ void GsxMenuNavigatorTest::aServiceThatTogglesIsNeverSentTwice()
     QVERIFY(Logged(logger, "stopped waiting"));
 }
 
+void GsxMenuNavigatorTest::aToggleGsxRefusedIsAskedAgainOnceTheRefusalSettles()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+
+    nav.ToggleGpu();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    ++state.messagesShown;
+    state.lastMessage = "You need to set Parking Brakes or Wheel Chocks to request ground services";
+    fakeNow += 2900;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    fakeNow += 200;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 2);
+    QVERIFY(Logged(logger, "not taken by GSX after it showed"));
+    QVERIFY(Logged(logger, "after it showed \"You need to set Parking Brakes"));
+    QVERIFY(!Logged(logger, "stopped waiting"));
+
+    fakeNow += 60000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 2);
+}
+
+void GsxMenuNavigatorTest::requestsWaitWhileTheAircraftDrivesTheMenu()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+    nav.HoldRequests(true);
+
+    nav.ToggleGpu();
+
+    QCOMPARE(client.Count("service.trigger"), 0);
+
+    fakeNow += 30000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 0);
+
+    nav.HoldRequests(false);
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+}
+
+void GsxMenuNavigatorTest::aRefusalIsLoggedOnceWhileTheRequestsAreHeld()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+
+    nav.ToggleGpu();
+    nav.HoldRequests(true);
+    ++state.messagesShown;
+    fakeNow += 4000;
+
+    for (int pump = 0; pump < 3; ++pump)
+    {
+        nav.OnMenuChanged();
+    }
+
+    const long long refusals = std::ranges::count_if(logger.messages, [](const std::string& line)
+    {
+        return line.find("not taken by GSX after it showed") != std::string::npos;
+    });
+
+    QCOMPARE(refusals, 1LL);
+    QCOMPARE(client.Count("service.trigger"), 1);
+}
+
+void GsxMenuNavigatorTest::theDeIcePromptIsLeftAloneWhileTheAircraftDrivesTheMenu()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.autoDeice = true;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.HoldRequests(true);
+    ShowMenu(state, "Ice warning: do you request the de-icing treatment?", {"Yes", "No [GSX choice]"});
+    nav.OnMenuChanged();
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 0);
+
+    nav.HoldRequests(false);
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 1);
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 0);
+}
+
+void GsxMenuNavigatorTest::theAirstairsPromptIsLeftAloneWhileTheAircraftDrivesTheMenu()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.HoldRequests(true);
+    ShowMenu(state, "Use airplane's own airstairs?",
+             {"Yes - Use airplane stairs", "No - Use airport stairs", "Both - Airplane stairs + airport stairs"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 0);
+
+    nav.HoldRequests(false);
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 1);
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::theEngineConfirmationIsLeftAloneWhileTheAircraftDrivesTheMenu()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.HoldRequests(true);
+    ShowMenu(state, "Confirm good engine start", {"Confirm good engine start", "Cancel"});
+
+    QVERIFY(!nav.ConfirmGoodEngines());
+    QCOMPARE(client.Count("menu.pick"), 0);
+
+    nav.HoldRequests(false);
+
+    QVERIFY(nav.ConfirmGoodEngines());
+    QCOMPARE(client.Count("menu.pick"), 1);
+}
+
+void GsxMenuNavigatorTest::noMenuIsOpenedWhileTheAircraftDrivesIt()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.HoldRequests(true);
+
+    QVERIFY(!nav.ConfirmGoodEngines());
+    nav.CompleteRefuel();
+    nav.CompleteBoarding();
+    nav.RepositionAircraft();
+
+    QCOMPARE(client.Count("menu.toggle"), 0);
+
+    nav.HoldRequests(false);
+
+    QVERIFY(!nav.ConfirmGoodEngines());
+    QCOMPARE(client.Count("menu.toggle"), 1);
+}
+
+void GsxMenuNavigatorTest::aHeldRequestStillExpires()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+    nav.HoldRequests(true);
+
+    nav.ToggleGpu();
+    fakeNow += 91000;
+    nav.OnMenuChanged();
+
+    QVERIFY(Logged(logger, "the request never left the client"));
+
+    nav.HoldRequests(false);
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 0);
+}
+
+void GsxMenuNavigatorTest::aMessageBeforeTheSendIsNoRefusal()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+    state.messagesShown = 4;
+
+    nav.ToggleGpu();
+    fakeNow += 10000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "not taken by GSX after it showed"));
+}
+
+void GsxMenuNavigatorTest::aToggleGsxTookIsNeverAskedAgainAfterAMessage()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+
+    nav.ToggleGpu();
+    MarkServiceTaken(state, "GPU");
+    ++state.messagesShown;
+    fakeNow += 10000;
+    nav.OnMenuChanged();
+    fakeNow += 10000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "not taken by GSX after it showed"));
+}
+
+void GsxMenuNavigatorTest::aToggleGsxIsWorkingOnIsNeverAskedAgainAfterAMessage()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+
+    nav.ToggleGpu();
+    state.services.front().stateRaw = 4;
+    state.services.front().canTrigger = true;
+    ++state.messagesShown;
+    fakeNow += 10000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "not taken by GSX after it showed"));
+}
+
+void GsxMenuNavigatorTest::aToggleForAServiceGsxDoesNotListIsNeverAskedAgainAfterAMessage()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    nav.ToggleGpu();
+    ++state.messagesShown;
+    fakeNow += 10000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "not taken by GSX after it showed"));
+}
+
+void GsxMenuNavigatorTest::aRefusedToggleIsAskedAgainOnlyWithinTheAttemptLimit()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+
+    nav.ToggleGpu();
+
+    for (int refusal = 0; refusal < 5; ++refusal)
+    {
+        ++state.messagesShown;
+        fakeNow += 3100;
+        nav.OnMenuChanged();
+    }
+
+    QCOMPARE(client.Count("service.trigger"), 3);
+}
+
+void GsxMenuNavigatorTest::aServiceThatDoesNotToggleIsNotAskedAgainByTheRefusalRule()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Catering");
+
+    nav.RequestCatering();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    ++state.messagesShown;
+    fakeNow += 4000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "not taken by GSX after it showed"));
+}
+
 void GsxMenuNavigatorTest::theStairsAreNeverAskedForASecondTime()
 {
     FakeRemoteClient client;
@@ -4753,6 +5122,20 @@ namespace
                  {"Request GPU", "Cancel"});
         rig.nav.OnSnapshot();
     }
+}
+
+void GsxMenuNavigatorTest::aRefusedToggleIsNotHeldBehindItself()
+{
+    NavigatorRig rig;
+    const long long sentMs = rig.now;
+    TheGpuToggleOpensItsMenu(rig);
+
+    ++rig.state.messagesShown;
+    rig.now = sentMs + 3100;
+    RedrawTheMenu(rig, 1);
+
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("GPU")), 2);
+    QVERIFY(Logged(rig.logger, "not taken by GSX after it showed"));
 }
 
 void GsxMenuNavigatorTest::aSentToggleHoldsTheNextRequestUntilGsxTakesIt()
