@@ -50,7 +50,7 @@ class IntegratorRuntime final : public QObject
     Q_OBJECT
 
 public:
-    explicit IntegratorRuntime(IntegratorRuntimeOptions options = {}, QObject* parent = nullptr);
+    explicit IntegratorRuntime(IntegratorRuntimeOptions options = IntegratorRuntimeOptions(), QObject* parent = nullptr);
     ~IntegratorRuntime() override;
 
     void Setup();
@@ -72,6 +72,7 @@ public:
     bool FixPmdgOptions();
     [[nodiscard]] bool IsCargoDoorStuck() const;
     [[nodiscard]] bool AreOwnStairsWaitingForPressure() const;
+    [[nodiscard]] bool IsOwnGroundEquipmentAttached() const;
     [[nodiscard]] bool IsFuelRequestStalled() const;
     [[nodiscard]] bool IsFuelPlanOverCapacity() const;
     [[nodiscard]] bool DidFuelNotStay() const;
@@ -79,6 +80,7 @@ public:
     [[nodiscard]] EngineConfirmationBlock GetEngineConfirmationBlock() const;
     [[nodiscard]] bool AreServicesStalled() const;
     [[nodiscard]] bool IsServiceInterrupted() const;
+    [[nodiscard]] bool IsGsxMenuHeldByPilot() const;
     [[nodiscard]] bool AreDoorsHoldingPushback() const;
     void SetAutomationEnabled(bool enabled);
     void RestartFlow();
@@ -104,12 +106,18 @@ private:
         std::vector<std::filesystem::path> roots;
         std::vector<std::filesystem::path> cfgs;
         bool conflict = false;
+        std::vector<std::filesystem::path> recommendedRoots;
+        std::vector<std::filesystem::path> recommendedCfgs;
+        bool refuelingRecommended = false;
 
         void Reset()
         {
             roots.clear();
             cfgs.clear();
             conflict = false;
+            recommendedRoots.clear();
+            recommendedCfgs.clear();
+            refuelingRecommended = false;
         }
     };
 
@@ -145,6 +153,8 @@ private:
     [[nodiscard]] bool IsLoadingCargoPhase() const;
     [[nodiscard]] bool AircraftRequiresEfbFlightPlan() const;
     [[nodiscard]] bool AircraftAppliesTheEfbFlightPlanOnItsDeparturePage() const;
+    [[nodiscard]] bool AircraftLoadsItsFlightPlanThroughTheAoc() const;
+    [[nodiscard]] bool AircraftWorksThroughTheRightMcdu() const;
     [[nodiscard]] bool AircraftTakesExternalPowerAtTheEngineerPanel() const;
     [[nodiscard]] WeightUnit GetAutoWeightUnit() const;
     [[nodiscard]] bool CanFixGsxProfile() const;
@@ -169,6 +179,9 @@ private:
     void OnSessionEnd();
     void ResolveAircraft();
     void CheckGsxProfile();
+    void CheckConflictingGsxProfile();
+    void CheckRecommendedGsxProfile();
+    void AnnounceRecommendedGsxProfile() const;
     void CheckPmdgOptions();
     void AnnounceWireFacts();
     void OnRemoteConnectionChanged(bool connected);

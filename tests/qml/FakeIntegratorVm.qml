@@ -23,6 +23,7 @@ QtObject {
     readonly property bool simbriefReady: true
     readonly property bool simbriefError: false
     readonly property bool gsxProfileConflict: false
+    readonly property bool gsxProfileRefuelingRecommended: root.longPhase
     readonly property bool pmdgOptionsConflict: false
     readonly property bool fuelRequestStalled: root.longPhase
     readonly property bool fuelPlanOverCapacity: false
@@ -30,8 +31,10 @@ QtObject {
     readonly property bool engineConfirmationBlocked: false
     readonly property bool doorsHoldingPushback: false
     readonly property bool serviceInterrupted: false
+    readonly property bool gsxMenuHeldByPilot: false
     readonly property bool cargoDoorStuck: root.longPhase
     readonly property bool ownStairsWaitingForPressure: root.longPhase
+    readonly property bool ownGroundEquipmentAttached: root.longPhase
     readonly property bool servicesStalled: root.longPhase
 
     readonly property double fuelProgress: 0.5
@@ -52,6 +55,7 @@ QtObject {
         : "Boarding."
     readonly property string cargoDoorAdvisoryText: "The cargo door is stuck open."
     readonly property string ownStairsPressureAdvisoryText: "The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back."
+    readonly property string ownGroundEquipmentAdvisoryText: "Remove the chocks and disconnect the ground power in the aircraft's EFB. Pushback waits until both are gone."
     readonly property string servicesAdvisoryText: "A service has not answered in a while."
 
     readonly property string simLabel: "Sim"
@@ -95,6 +99,7 @@ QtObject {
     readonly property string dismissAdvisoryLabel: "Dismiss"
     readonly property string gsxProfileAdvisoryText: ""
     readonly property string gsxProfileActionLabel: ""
+    readonly property string gsxProfileRecommendationAdvisoryText: "A GSX profile with 'refueling = 0' is recommended for this aircraft. The client fuels it either way; the setting keeps the GSX truck from writing to the tanks while it does."
     readonly property string pmdgOptionsAdvisoryText: ""
     readonly property string pmdgOptionsActionLabel: ""
     readonly property string fuelRequestAdvisoryText: "The fuel request has not been answered yet."
@@ -103,6 +108,7 @@ QtObject {
     readonly property string engineConfirmationAdvisoryText: ""
     readonly property string openDoorAdvisoryText: ""
     readonly property string serviceInterruptedAdvisoryText: ""
+    readonly property string gsxMenuHeldByPilotAdvisoryText: ""
 
     function debugSkipPhase(delta) {
         root.skipCalls++

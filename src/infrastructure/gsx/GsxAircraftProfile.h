@@ -10,6 +10,7 @@ class GsxAircraftProfile
 {
 public:
     static std::vector<std::filesystem::path> ProfileRootsFor(const std::string& aircraftName);
+    static std::vector<std::filesystem::path> RecommendedProfileRootsFor(const std::string& aircraftName);
     static std::vector<std::filesystem::path> FindCfgs(const std::vector<std::filesystem::path>& roots);
     static std::optional<int> ReadRefueling(const std::filesystem::path& cfgPath);
     static bool WriteRefueling(const std::filesystem::path& cfgPath, int value);

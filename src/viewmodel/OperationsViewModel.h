@@ -59,10 +59,13 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(bool gsxProfileConflict READ HasGsxProfileConflict NOTIFY SnapshotChanged)
     Q_PROPERTY(QString gsxProfileAdvisoryText READ GetGsxProfileAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString gsxProfileActionLabel READ GetGsxProfileActionLabel NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool gsxProfileRefuelingRecommended READ IsGsxProfileRefuelingRecommended NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString gsxProfileRecommendationAdvisoryText READ GetGsxProfileRecommendationAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString pmdgOptionsAdvisoryText READ GetPmdgOptionsAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString pmdgOptionsActionLabel READ GetPmdgOptionsActionLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(QString cargoDoorAdvisoryText READ GetCargoDoorAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString ownStairsPressureAdvisoryText READ GetOwnStairsPressureAdvisoryText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString ownGroundEquipmentAdvisoryText READ GetOwnGroundEquipmentAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString fuelRequestAdvisoryText READ GetFuelRequestAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString fuelPlanAdvisoryText READ GetFuelPlanAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString fuelStayAdvisoryText READ GetFuelStayAdvisoryText NOTIFY SnapshotChanged)
@@ -71,18 +74,21 @@ class OperationsViewModel final : public QObject, public IntegratorServiceObserv
     Q_PROPERTY(QString servicesAdvisoryText READ GetServicesAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString openDoorAdvisoryText READ GetOpenDoorAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString serviceInterruptedAdvisoryText READ GetServiceInterruptedAdvisoryText NOTIFY SnapshotChanged)
+    Q_PROPERTY(QString gsxMenuHeldByPilotAdvisoryText READ GetGsxMenuHeldByPilotAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString resumeDecisionAdvisoryText READ GetResumeDecisionAdvisoryText NOTIFY SnapshotChanged)
     Q_PROPERTY(QString resumeTurnaroundLabel READ GetResumeTurnaroundLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(QString commandErrorLabel READ GetCommandErrorLabel NOTIFY SnapshotChanged)
     Q_PROPERTY(bool pmdgOptionsConflict READ HasPmdgOptionsConflict NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoDoorStuck READ IsCargoDoorStuck NOTIFY SnapshotChanged)
     Q_PROPERTY(bool ownStairsWaitingForPressure READ AreOwnStairsWaitingForPressure NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool ownGroundEquipmentAttached READ IsOwnGroundEquipmentAttached NOTIFY SnapshotChanged)
     Q_PROPERTY(bool fuelRequestStalled READ IsFuelRequestStalled NOTIFY SnapshotChanged)
     Q_PROPERTY(bool fuelPlanOverCapacity READ IsFuelPlanOverCapacity NOTIFY SnapshotChanged)
     Q_PROPERTY(bool fuelDidNotStay READ DidFuelNotStay NOTIFY SnapshotChanged)
     Q_PROPERTY(bool engineConfirmationBlocked READ IsEngineConfirmationBlocked NOTIFY SnapshotChanged)
     Q_PROPERTY(bool servicesStalled READ AreServicesStalled NOTIFY SnapshotChanged)
     Q_PROPERTY(bool serviceInterrupted READ IsServiceInterrupted NOTIFY SnapshotChanged)
+    Q_PROPERTY(bool gsxMenuHeldByPilot READ IsGsxMenuHeldByPilot NOTIFY SnapshotChanged)
     Q_PROPERTY(bool doorsHoldingPushback READ AreDoorsHoldingPushback NOTIFY SnapshotChanged)
     Q_PROPERTY(bool cargoAircraft READ IsCargoAircraft NOTIFY SnapshotChanged)
     Q_PROPERTY(QString simbriefStatusText READ GetSimbriefStatusText NOTIFY SnapshotChanged)
@@ -165,10 +171,12 @@ public:
     [[nodiscard]] bool HasGsxProfileConflict() const;
     [[nodiscard]] static QString GetGsxProfileAdvisoryText();
     [[nodiscard]] QString GetGsxProfileActionLabel() const;
+    [[nodiscard]] static QString GetGsxProfileRecommendationAdvisoryText();
     [[nodiscard]] static QString GetPmdgOptionsAdvisoryText();
     [[nodiscard]] QString GetPmdgOptionsActionLabel() const;
     [[nodiscard]] static QString GetCargoDoorAdvisoryText();
     [[nodiscard]] static QString GetOwnStairsPressureAdvisoryText();
+    [[nodiscard]] static QString GetOwnGroundEquipmentAdvisoryText();
     [[nodiscard]] static QString GetFuelRequestAdvisoryText();
     [[nodiscard]] static QString GetFuelPlanAdvisoryText();
     [[nodiscard]] QString GetFuelStayAdvisoryText() const;
@@ -178,19 +186,23 @@ public:
     [[nodiscard]] QString GetOpenDoorAdvisoryText() const;
     [[nodiscard]] static QString GetAdvisoryLabel();
     [[nodiscard]] static QString GetServiceInterruptedAdvisoryText();
+    [[nodiscard]] static QString GetGsxMenuHeldByPilotAdvisoryText();
     [[nodiscard]] QString GetResumeDecisionAdvisoryText() const;
     [[nodiscard]] QString GetResumeTurnaroundLabel() const;
     [[nodiscard]] static QString GetCommandErrorLabel();
     [[nodiscard]] bool IsGsxProfileFixable() const;
+    [[nodiscard]] bool IsGsxProfileRefuelingRecommended() const;
     [[nodiscard]] bool HasPmdgOptionsConflict() const;
     [[nodiscard]] bool IsCargoDoorStuck() const;
     [[nodiscard]] bool AreOwnStairsWaitingForPressure() const;
+    [[nodiscard]] bool IsOwnGroundEquipmentAttached() const;
     [[nodiscard]] bool IsFuelRequestStalled() const;
     [[nodiscard]] bool IsFuelPlanOverCapacity() const;
     [[nodiscard]] bool DidFuelNotStay() const;
     [[nodiscard]] bool IsEngineConfirmationBlocked() const;
     [[nodiscard]] bool AreServicesStalled() const;
     [[nodiscard]] bool IsServiceInterrupted() const;
+    [[nodiscard]] bool IsGsxMenuHeldByPilot() const;
     [[nodiscard]] int GetServicesWaitSeconds() const;
     [[nodiscard]] bool AreDoorsHoldingPushback() const;
     [[nodiscard]] bool IsPmdgOptionsFixable() const;

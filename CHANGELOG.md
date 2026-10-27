@@ -1,5 +1,58 @@
 # Changelog
 
+## [1.52.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.52.0...v1.52.1) (2026-10-27)
+
+
+* read the INIT on the DEP, close the cargo holds and wait for the aircraft before asking GSX ([#281](https://github.com/brunofgmag/gsx-integrator-client/issues/281)) ([961d245](https://github.com/brunofgmag/gsx-integrator-client/commit/961d245e6b8b43633773474a988f5b8f30ad1dfb))
+
+
+### Bug Fixes
+
+* **fslabs:** close the cargo holds and wait for the aircraft before asking GSX ([c6826a2](https://github.com/brunofgmag/gsx-integrator-client/commit/c6826a2bf410f0067a1ebed673961854cd0212db)) ([961d245](https://github.com/brunofgmag/gsx-integrator-client/commit/961d245e6b8b43633773474a988f5b8f30ad1dfb))
+* **fslabs:** read the INIT on the DEP and only watch the MCDUs ([7827687](https://github.com/brunofgmag/gsx-integrator-client/commit/7827687fc8ec57a54a98019a8074d1db3cd0677b)) ([961d245](https://github.com/brunofgmag/gsx-integrator-client/commit/961d245e6b8b43633773474a988f5b8f30ad1dfb))
+* **gsx:** keep a request waiting behind a GSX menu the pilot opened and say so on screen ([d08cac5](https://github.com/brunofgmag/gsx-integrator-client/commit/d08cac5901839635ac6787c13c369bfe7fbac88f)) ([961d245](https://github.com/brunofgmag/gsx-integrator-client/commit/961d245e6b8b43633773474a988f5b8f30ad1dfb))
+
+## [1.52.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.51.0...v1.52.0) (2026-10-27)
+
+
+* wait for GSX to confirm the arrival ground power ([#279](https://github.com/brunofgmag/gsx-integrator-client/issues/279)) ([540f8c5](https://github.com/brunofgmag/gsx-integrator-client/commit/540f8c53d807f9e2faafccf9c4db444ba3fbd559))
+
+
+### Features
+
+* **bbs:** record the 757 power state in the probe ([41fb626](https://github.com/brunofgmag/gsx-integrator-client/commit/41fb6260edb170ba5770293ce0c8aa78f7624bb6)) ([540f8c5](https://github.com/brunofgmag/gsx-integrator-client/commit/540f8c53d807f9e2faafccf9c4db444ba3fbd559))
+
+
+### Bug Fixes
+
+* **turnaround:** wait for GSX to confirm the arrival ground power ([a80b956](https://github.com/brunofgmag/gsx-integrator-client/commit/a80b9567e0421063fffad9c0b654090e726340f4)) ([540f8c5](https://github.com/brunofgmag/gsx-integrator-client/commit/540f8c53d807f9e2faafccf9c4db444ba3fbd559))
+
+## [1.51.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.50.0...v1.51.0) (2026-10-26)
+
+
+* drive the BlueBird 757-200 through its EFB interface ([#277](https://github.com/brunofgmag/gsx-integrator-client/issues/277)) ([de13dc2](https://github.com/brunofgmag/gsx-integrator-client/commit/de13dc289e5b8f76699189f3e37131502d6b670f))
+
+
+### Features
+
+* **bbs:** drive the BlueBird 757-200 through its EFB interface ([0752a8d](https://github.com/brunofgmag/gsx-integrator-client/commit/0752a8d5266029df887725137fd92da687364f93)) ([de13dc2](https://github.com/brunofgmag/gsx-integrator-client/commit/de13dc289e5b8f76699189f3e37131502d6b670f))
+
+
+### Bug Fixes
+
+* **gsx:** only close the GSX menus the client opened and hold a request until GSX takes a toggled service ([38b4442](https://github.com/brunofgmag/gsx-integrator-client/commit/38b4442c744e45ac302ad962889cda4b24917fb4)) ([de13dc2](https://github.com/brunofgmag/gsx-integrator-client/commit/de13dc289e5b8f76699189f3e37131502d6b670f))
+* **turnaround:** leave the departure for the flight when the aircraft is airborne ([7fbe8ac](https://github.com/brunofgmag/gsx-integrator-client/commit/7fbe8ac5c354a96456ae9108940f605e03ebd600)) ([de13dc2](https://github.com/brunofgmag/gsx-integrator-client/commit/de13dc289e5b8f76699189f3e37131502d6b670f))
+
+## [1.50.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.49.0...v1.50.0) (2026-10-25)
+
+
+* drive the FSLabs A321neo through its right MCDU ([#275](https://github.com/brunofgmag/gsx-integrator-client/issues/275)) ([d822fed](https://github.com/brunofgmag/gsx-integrator-client/commit/d822fed5a25b7ca8032d3c8da9c6dab197e8fb49))
+
+
+### Features
+
+* **fslabs:** drive the FSLabs A321neo through its right MCDU ([f932732](https://github.com/brunofgmag/gsx-integrator-client/commit/f9327320b30d2e3d58b50d1e78262e4705b70cb5)) ([d822fed](https://github.com/brunofgmag/gsx-integrator-client/commit/d822fed5a25b7ca8032d3c8da9c6dab197e8fb49))
+
 ## [1.49.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.48.5...v1.49.0) (2026-10-23)
 
 

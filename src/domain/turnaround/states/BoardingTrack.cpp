@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
+#include <optional>
 #include "../TurnaroundMath.h"
 #include "../TurnaroundContext.h"
 #include "../../ports/Aircraft.h"
@@ -205,6 +207,19 @@ namespace
         ctx.aircraft->HoldPassengerDoorsClosed(true);
     }
 
+    void AdoptThePassengerCountTheAircraftBoards(TurnaroundContext& ctx)
+    {
+        const std::optional<int> boarded = ctx.aircraft->GetPassengersItBoards();
+        if (!boarded.has_value())
+        {
+            return;
+        }
+
+        ctx.logger->LogInfo(std::format("Boarding: the aircraft boards {} passengers instead of the {} planned",
+                                        *boarded, ctx.data.plannedPassengers));
+        ctx.data.plannedPassengers = *boarded;
+    }
+
     void EnsureBaseline(TurnaroundContext& ctx)
     {
         auto& data = ctx.data;
@@ -214,6 +229,7 @@ namespace
         }
 
         data.boardingBaselined = true;
+        AdoptThePassengerCountTheAircraftBoards(ctx);
         data.initialZfwKg = std::min(ctx.aircraft->GetEmptyZfwKg(), data.plannedZfwKg);
         if (ctx.aircraft->GetBoardMethod() == BoardBy::Self)
         {

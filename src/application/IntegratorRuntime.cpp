@@ -1,5 +1,6 @@
 #include "IntegratorRuntime.h"
 
+#include <algorithm>
 #include <array>
 #include <utility>
 #include <QtCore/QCoreApplication>
@@ -189,6 +190,10 @@ void IntegratorRuntime::Setup()
                     gsxMenu_.OnSnapshot();
                     SaveTurnaround();
                 }
+                else
+                {
+                    gsxMenu_.ObserveMenuOwner();
+                }
             });
 
     connect(&gsxRemoteClient_, &GsxRemoteApiClient::PatchReceived,
@@ -201,10 +206,19 @@ void IntegratorRuntime::Setup()
                     LOG_WARN("GSX published an unknown path: %s", path.c_str());
                 }
                 AnnounceWireFacts();
-                if ((path == "/menu" || path == "/menuShown") && IsDrivingTheGsx())
+                if (path != "/menu" && path != "/menuShown")
+                {
+                    return;
+                }
+
+                if (IsDrivingTheGsx())
                 {
                     gsxMenu_.OnMenuChanged();
                     SaveTurnaround();
+                }
+                else
+                {
+                    gsxMenu_.ObserveMenuOwner();
                 }
             });
 
@@ -307,9 +321,11 @@ void IntegratorRuntime::AdvanceResumption()
         return;
     }
 
-    const TurnaroundResumption::LiveFacts live{.key = LiveKey(),
-                                               .readingsArrived = HaveResumeReadingsArrived(),
-                                               .aircraftReachable = aircraft_ && aircraft_->IsReachable()};
+    const TurnaroundResumption::LiveFacts live{
+        .key = LiveKey(),
+        .readingsArrived = HaveResumeReadingsArrived(),
+        .aircraftReachable = aircraft_ && aircraft_->IsReachable(),
+    };
     const TurnaroundResumption::Advancement advancement = resumption_.Advance(live);
     if (advancement.repositioned)
     {
@@ -325,6 +341,14 @@ void IntegratorRuntime::AdvanceResumption()
 void IntegratorRuntime::RestoreSavedTurnaround(const TurnaroundResumption::Restoration& restoration)
 {
     const TurnaroundDocument& document = *restoration.document;
+    if (!document.checkpoint)
+    {
+        LOG_WARN("The saved turnaround has no checkpoint to resume. Discarding it.");
+        resumption_.Discard();
+
+        return;
+    }
+
     const bool gsxRestarted = restoration.gsxRestartedSinceSave;
 
     if (document.plan)
@@ -737,8 +761,16 @@ bool IntegratorRuntime::IsCargoDoorStuck() const
 bool IntegratorRuntime::AreOwnStairsWaitingForPressure() const
 {
     return aircraft_
-        && ResolveTickMode() == TickMode::Driving
+        && IsDrivingTheGsx()
         && aircraft_->AreOwnStairsWaitingForPressure();
+}
+
+bool IntegratorRuntime::IsOwnGroundEquipmentAttached() const
+{
+    return aircraft_
+        && ResolveTickMode() == TickMode::Driving
+        && GetPhase() == TurnaroundPhase::RemoveGroundEquipment
+        && aircraft_->IsOwnGroundEquipmentAttached();
 }
 
 bool IntegratorRuntime::IsFuelRequestStalled() const
@@ -779,6 +811,11 @@ bool IntegratorRuntime::IsServiceInterrupted() const
     return status_.serviceInterrupted;
 }
 
+bool IntegratorRuntime::IsGsxMenuHeldByPilot() const
+{
+    return gsxMenu_.IsWaitingForThePilotsMenu();
+}
+
 bool IntegratorRuntime::AreDoorsHoldingPushback() const
 {
     return aircraft_
@@ -788,7 +825,7 @@ bool IntegratorRuntime::AreDoorsHoldingPushback() const
 
 bool IntegratorRuntime::IsDrivingTheGsx() const
 {
-    return ResolveTickMode() == TickMode::Driving && !resumption_.IsHolding();
+    return aircraft_ && ResolveTickMode() == TickMode::Driving && !resumption_.IsHolding();
 }
 
 TurnaroundHold IntegratorRuntime::CurrentHold() const
@@ -934,24 +971,79 @@ void IntegratorRuntime::ResolveAircraft()
         return;
     }
 
-    aircraft_ = DetectAircraft({.variableGateway = &varGateway_,
-                                .status = &status_,
-                                .commBusBridge = &bridgeClient_,
-                                .gsxGateway = &gsxService_},
-                               &aircraftDescriptor_);
+    aircraft_ = DetectAircraft(
+        {
+            .variableGateway = &varGateway_,
+            .status = &status_,
+            .commBusBridge = &bridgeClient_,
+            .gsxGateway = &gsxService_,
+        },
+        &aircraftDescriptor_);
     if (aircraft_)
     {
         probe::SetAircraft(QString::fromUtf8(aircraftDescriptor_->id));
         status_.aircraftSupported = true;
         gsxProfile_.roots = GsxAircraftProfile::ProfileRootsFor(aircraftDescriptor_->name);
+        gsxProfile_.recommendedRoots = GsxAircraftProfile::RecommendedProfileRootsFor(aircraftDescriptor_->name);
         pmdgOptions_.ini = PmdgOptions::PathFor(aircraftDescriptor_->name).value_or(std::filesystem::path{});
         CheckGsxProfile();
+        AnnounceRecommendedGsxProfile();
         CheckPmdgOptions();
         emit Updated();
     }
 }
 
 void IntegratorRuntime::CheckGsxProfile()
+{
+    CheckConflictingGsxProfile();
+    CheckRecommendedGsxProfile();
+}
+
+void IntegratorRuntime::CheckRecommendedGsxProfile()
+{
+    if (gsxProfile_.recommendedRoots.empty())
+    {
+        gsxProfile_.recommendedCfgs.clear();
+        gsxProfile_.refuelingRecommended = false;
+
+        return;
+    }
+
+    gsxProfile_.recommendedCfgs = GsxAircraftProfile::FindCfgs(gsxProfile_.recommendedRoots);
+    gsxProfile_.refuelingRecommended = gsxProfile_.recommendedCfgs.empty()
+        || std::ranges::any_of(gsxProfile_.recommendedCfgs, NeedsRefuelingFix);
+}
+
+void IntegratorRuntime::AnnounceRecommendedGsxProfile() const
+{
+    if (gsxProfile_.recommendedRoots.empty())
+    {
+        return;
+    }
+
+    if (gsxProfile_.recommendedCfgs.empty())
+    {
+        LOG_INFO("No GSX profile found for the %s under the Virtuali Airplanes folders; one with 'refueling = 0' is recommended.",
+                 aircraftDescriptor_->name);
+
+        return;
+    }
+
+    for (const auto& cfg : gsxProfile_.recommendedCfgs)
+    {
+        const std::optional<int> refueling = GsxAircraftProfile::ReadRefueling(cfg);
+        if (refueling.has_value())
+        {
+            LOG_INFO("GSX profile '%s': refueling = %d.", cfg.string().c_str(), *refueling);
+        }
+        else
+        {
+            LOG_INFO("GSX profile '%s': refueling not set.", cfg.string().c_str());
+        }
+    }
+}
+
+void IntegratorRuntime::CheckConflictingGsxProfile()
 {
     if (gsxProfile_.roots.empty())
     {
@@ -1013,14 +1105,18 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.cargoAircraft = IsAircraftCargoVariant();
     snapshot.efbFlightPlan = AircraftRequiresEfbFlightPlan();
     snapshot.efbFlightPlanOnDeparturePage = AircraftAppliesTheEfbFlightPlanOnItsDeparturePage();
+    snapshot.aocFlightPlan = AircraftLoadsItsFlightPlanThroughTheAoc();
+    snapshot.rightMcdu = AircraftWorksThroughTheRightMcdu();
     snapshot.engineerPanelExternalPower = AircraftTakesExternalPowerAtTheEngineerPanel();
     snapshot.groundPowerByClient = settings_.callGpu || settings_.callGpuOnArrival;
     snapshot.gsxProfileConflict = HasGsxProfileConflict();
     snapshot.gsxProfileFixable = CanFixGsxProfile();
+    snapshot.gsxProfileRefuelingRecommended = gsxProfile_.refuelingRecommended;
     snapshot.pmdgOptionsConflict = HasPmdgOptionsConflict();
     snapshot.pmdgOptionsFixable = CanFixPmdgOptions();
     snapshot.cargoDoorStuck = IsCargoDoorStuck();
     snapshot.ownStairsWaitingForPressure = AreOwnStairsWaitingForPressure();
+    snapshot.ownGroundEquipmentAttached = IsOwnGroundEquipmentAttached();
     snapshot.fuelRequestStalled = IsFuelRequestStalled();
     snapshot.fuelPlanOverCapacity = IsFuelPlanOverCapacity();
     snapshot.fuelDidNotStay = DidFuelNotStay();
@@ -1032,6 +1128,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.servicesStalled = AreServicesStalled();
     snapshot.deboardingAwaitsGsx = status_.deboardingAwaitsGsx;
     snapshot.serviceInterrupted = IsServiceInterrupted();
+    snapshot.gsxMenuHeldByPilot = IsGsxMenuHeldByPilot();
     snapshot.loaderHoldingBoarding = status_.loaderHoldingBoarding;
     snapshot.loaderDoorWaitSeconds = status_.loaderDoorWaitSeconds;
     snapshot.servicesWaitSeconds = status_.servicesWaitSeconds;
@@ -1208,6 +1305,16 @@ bool IntegratorRuntime::AircraftAppliesTheEfbFlightPlanOnItsDeparturePage() cons
     return aircraft_ && aircraft_->AppliesTheEfbFlightPlanOnItsDeparturePage();
 }
 
+bool IntegratorRuntime::AircraftLoadsItsFlightPlanThroughTheAoc() const
+{
+    return aircraft_ && aircraft_->LoadsItsFlightPlanThroughTheAoc();
+}
+
+bool IntegratorRuntime::AircraftWorksThroughTheRightMcdu() const
+{
+    return aircraft_ && aircraft_->WorksThroughTheRightMcdu();
+}
+
 bool IntegratorRuntime::AircraftTakesExternalPowerAtTheEngineerPanel() const
 {
     return aircraft_ && aircraft_->TakesExternalPowerAtTheEngineerPanel();
@@ -1291,9 +1398,14 @@ void IntegratorRuntime::RestartFlow()
 
 void IntegratorRuntime::ApplySettings(const AutomationSettings& settings)
 {
+    const bool autoStartTurnedOn = !settings_.autoStartFlow && settings.autoStartFlow;
+
     settings_ = settings;
 
-    MaybeAutoStart();
+    if (autoStartTurnedOn)
+    {
+        MaybeAutoStart();
+    }
 
     emit Updated();
 }
@@ -1308,7 +1420,11 @@ bool IntegratorRuntime::ReloadSimbrief()
     const bool started = simbriefClient_.Reload();
     if (started)
     {
-        gsxMenu_.RequestSimbriefLoad();
+        if (aircraft_)
+        {
+            gsxMenu_.RequestSimbriefLoad();
+        }
+
         SaveTurnaround();
     }
 

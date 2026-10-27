@@ -253,6 +253,9 @@ private slots:
     static void aSidOfZeroOrBelowStaysAnIdentifier_data();
     static void aSidOfZeroOrBelowStaysAnIdentifier();
     static void aDropOnlyLowersTheConnectedFlag();
+    static void aVisibleMessageIsCountedAndRemembered();
+    static void aClearedOrInvisibleMessageIsNotCounted();
+    static void aSnapshotNeverCountsAMessage();
     static void theHandshakeAfterADropEmptiesEveryField();
     static void aSnapshotSyncsTheState_data();
     static void aSnapshotSyncsTheState();
@@ -325,7 +328,7 @@ void RemoteStateTest::discardedPathsAreNamedAndNotSilent()
     QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/billing", QJsonValue()),
              GsxPatchOutcome::Discarded);
     QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/message", QJsonValue()),
-             GsxPatchOutcome::Discarded);
+             GsxPatchOutcome::Applied);
     QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/menuShown", QJsonValue(true)),
              GsxPatchOutcome::Applied);
     QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/somethingNobodyHasSeen", QJsonValue()),
@@ -586,6 +589,60 @@ void RemoteStateTest::aSidOfZeroOrBelowStaysAnIdentifier()
     GsxRemoteStateReducer::ApplyPatch(state, "/startup", startup);
 
     QCOMPARE(QString::fromStdString(state.couatlId), expected);
+}
+
+void RemoteStateTest::aVisibleMessageIsCountedAndRemembered()
+{
+    GsxRemoteState state;
+    QJsonObject message;
+    message.insert(QStringLiteral("text"), QStringLiteral("You need to set Parking Brakes"));
+    message.insert(QStringLiteral("visible"), true);
+
+    GsxRemoteStateReducer::ApplyPatch(state, "/message", message);
+
+    QCOMPARE(state.messagesShown, 1);
+    QCOMPARE(state.lastMessage, std::string{"You need to set Parking Brakes"});
+
+    GsxRemoteStateReducer::ApplyPatch(state, "/message", message);
+
+    QCOMPARE(state.messagesShown, 2);
+}
+
+void RemoteStateTest::aClearedOrInvisibleMessageIsNotCounted()
+{
+    GsxRemoteState state;
+    QJsonObject cleared;
+    cleared.insert(QStringLiteral("text"), QString());
+    cleared.insert(QStringLiteral("visible"), false);
+    QJsonObject hidden;
+    hidden.insert(QStringLiteral("text"), QStringLiteral("left over"));
+    hidden.insert(QStringLiteral("visible"), false);
+    QJsonObject blank;
+    blank.insert(QStringLiteral("text"), QString());
+    blank.insert(QStringLiteral("visible"), true);
+
+    GsxRemoteStateReducer::ApplyPatch(state, "/message", cleared);
+    GsxRemoteStateReducer::ApplyPatch(state, "/message", hidden);
+    GsxRemoteStateReducer::ApplyPatch(state, "/message", blank);
+    GsxRemoteStateReducer::ApplyPatch(state, "/message", QJsonValue());
+
+    QCOMPARE(state.messagesShown, 0);
+    QVERIFY(state.lastMessage.empty());
+}
+
+void RemoteStateTest::aSnapshotNeverCountsAMessage()
+{
+    GsxRemoteState state;
+    QJsonObject message;
+    message.insert(QStringLiteral("text"), QStringLiteral("You need to set Parking Brakes"));
+    message.insert(QStringLiteral("visible"), true);
+    QJsonObject snapshot;
+    snapshot.insert(QStringLiteral("message"), message);
+
+    GsxRemoteStateReducer::ApplySnapshot(state, snapshot);
+    GsxRemoteStateReducer::ApplySnapshot(state, snapshot);
+
+    QCOMPARE(state.messagesShown, 0);
 }
 
 void RemoteStateTest::aDropOnlyLowersTheConnectedFlag()

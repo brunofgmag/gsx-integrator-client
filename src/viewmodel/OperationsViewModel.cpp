@@ -206,6 +206,12 @@ namespace
 
     QString FlightPlanTip(const IntegratorSnapshot& snapshot)
     {
+        if (snapshot.aocFlightPlan)
+        {
+            return QCoreApplication::translate("Turnaround",
+                                               "Power the aircraft, switch on the right MCDU, and request INIT DATA on the AOC INIT page.");
+        }
+
         if (!snapshot.efbFlightPlan)
         {
             return QCoreApplication::translate("Turnaround", "Check that SimBrief is loaded in GSX and in the client.");
@@ -218,6 +224,19 @@ namespace
         }
 
         return QCoreApplication::translate("Turnaround", "Import your SimBrief flight plan on the aircraft EFB.");
+    }
+
+    QString PowerOnTip(const IntegratorSnapshot& snapshot)
+    {
+        if (snapshot.rightMcdu)
+        {
+            return QCoreApplication::translate("Turnaround",
+                                               "Power the aircraft and switch on the right MCDU: the client calls the services through it.");
+        }
+
+        return snapshot.engineerPanelExternalPower
+                   ? QCoreApplication::translate("Turnaround", "With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power.")
+                   : QCoreApplication::translate("Turnaround", "Connect the GPU and switch on the batteries so the aircraft has power.");
     }
 
     QString PushbackRequestTip(const IntegratorSnapshot& snapshot)
@@ -242,9 +261,7 @@ namespace
         case TurnaroundPhase::WaitingFlightPlan:
             return FlightPlanTip(snapshot);
         case TurnaroundPhase::WaitingPowerOn:
-            return snapshot.engineerPanelExternalPower
-                       ? QCoreApplication::translate("Turnaround", "With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power.")
-                       : QCoreApplication::translate("Turnaround", "Connect the GPU and switch on the batteries so the aircraft has power.");
+            return PowerOnTip(snapshot);
         case TurnaroundPhase::RequestPushback:
             return PushbackRequestTip(snapshot);
         case TurnaroundPhase::WaitingReadyToPush:
@@ -767,6 +784,12 @@ QString OperationsViewModel::GetGsxProfileActionLabel() const
                : QString();
 }
 
+QString OperationsViewModel::GetGsxProfileRecommendationAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "A GSX profile with 'refueling = 0' is recommended for this aircraft. The client fuels it either way; the setting keeps the GSX truck from writing to the tanks while it does.");
+}
+
 QString OperationsViewModel::GetPmdgOptionsAdvisoryText()
 {
     return QCoreApplication::translate("OperationsScreen",
@@ -790,6 +813,12 @@ QString OperationsViewModel::GetOwnStairsPressureAdvisoryText()
 {
     return QCoreApplication::translate("OperationsScreen",
                                        "The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back.");
+}
+
+QString OperationsViewModel::GetOwnGroundEquipmentAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "Remove the chocks and disconnect the ground power in the aircraft's EFB. Pushback waits until both are gone.");
 }
 
 QString OperationsViewModel::GetFuelRequestAdvisoryText()
@@ -854,6 +883,12 @@ QString OperationsViewModel::GetServiceInterruptedAdvisoryText()
                                        "GSX stopped a service it had already started. Request it again from the GSX menu and the client will resume the turnaround.");
 }
 
+QString OperationsViewModel::GetGsxMenuHeldByPilotAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "A GSX menu you opened is on screen. Close it so the client can send its next request.");
+}
+
 QString OperationsViewModel::GetResumeDecisionAdvisoryText() const
 {
     if (!IsAwaitingResumeDecision())
@@ -887,6 +922,11 @@ bool OperationsViewModel::IsGsxProfileFixable() const
     return snapshot_.gsxProfileFixable;
 }
 
+bool OperationsViewModel::IsGsxProfileRefuelingRecommended() const
+{
+    return snapshot_.gsxProfileRefuelingRecommended;
+}
+
 bool OperationsViewModel::HasPmdgOptionsConflict() const
 {
     return snapshot_.pmdgOptionsConflict;
@@ -900,6 +940,11 @@ bool OperationsViewModel::IsCargoDoorStuck() const
 bool OperationsViewModel::AreOwnStairsWaitingForPressure() const
 {
     return snapshot_.ownStairsWaitingForPressure;
+}
+
+bool OperationsViewModel::IsOwnGroundEquipmentAttached() const
+{
+    return snapshot_.ownGroundEquipmentAttached;
 }
 
 bool OperationsViewModel::IsFuelRequestStalled() const
@@ -935,6 +980,11 @@ int OperationsViewModel::GetServicesWaitSeconds() const
 bool OperationsViewModel::IsServiceInterrupted() const
 {
     return snapshot_.serviceInterrupted;
+}
+
+bool OperationsViewModel::IsGsxMenuHeldByPilot() const
+{
+    return snapshot_.gsxMenuHeldByPilot;
 }
 
 bool OperationsViewModel::AreDoorsHoldingPushback() const

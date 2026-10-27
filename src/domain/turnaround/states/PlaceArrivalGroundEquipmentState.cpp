@@ -3,8 +3,52 @@
 #include "../TurnaroundContext.h"
 #include "../../model/AutomationSettings.h"
 #include "../../ports/Aircraft.h"
+#include "../../ports/DomainLogger.h"
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
+
+namespace
+{
+    constexpr int kConfirmationGiveUpTicks = 30;
+    constexpr auto kGpuAlreadyRequested = "The ground power was already requested; not asking for it again";
+    constexpr auto kGsxNeverConfirmed = "GSX never confirmed the ground power; moving on to the deboarding";
+
+    void RequestTheGroundPower(TurnaroundContext& ctx)
+    {
+        if (ctx.aircraft->SupportsGroundPowerControl())
+        {
+            ctx.aircraft->SetGroundPower(true);
+
+            return;
+        }
+
+        if (ctx.gsxGateway->IsServiceInProgress(GroundService::Gpu))
+        {
+            ctx.logger->LogInfo(kGpuAlreadyRequested);
+
+            return;
+        }
+
+        ctx.menuGateway->ToggleGpu();
+    }
+
+    bool StopsWaitingForTheGroundPower(TurnaroundContext& ctx)
+    {
+        if (ctx.aircraft->SupportsGroundPowerControl() || ctx.gsxGateway->IsServiceInProgress(GroundService::Gpu))
+        {
+            return true;
+        }
+
+        if (ctx.data.arrivalGpuConfirmationTicks++ < kConfirmationGiveUpTicks)
+        {
+            return false;
+        }
+
+        ctx.logger->LogInfo(kGsxNeverConfirmed);
+
+        return true;
+    }
+}
 
 std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::EvaluatePhase(TurnaroundContext& ctx)
 {
@@ -41,26 +85,26 @@ std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::EvaluatePh
     const GroundPowerStatus gpu =
         ctx.aircraft->GetGroundPowerStatus().value_or(ctx.gsxGateway->GetGpuStatus());
 
-    if (gpu == GroundPowerStatus::Connected || ctx.data.arrivalGpuRequested)
+    if (gpu == GroundPowerStatus::Connected)
     {
         return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
     }
 
-    if (gpu == GroundPowerStatus::Unknown)
+    if (!ctx.data.arrivalGpuRequested)
     {
-        return std::nullopt;
-    }
+        if (gpu == GroundPowerStatus::Unknown)
+        {
+            return std::nullopt;
+        }
 
-    if (ctx.aircraft->SupportsGroundPowerControl())
-    {
-        ctx.aircraft->SetGroundPower(true);
+        RequestTheGroundPower(ctx);
         ctx.data.arrivalGpuRequested = true;
+    }
 
+    if (StopsWaitingForTheGroundPower(ctx))
+    {
         return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
     }
 
-    ctx.menuGateway->ToggleGpu();
-    ctx.data.arrivalGpuRequested = true;
-
-    return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
+    return std::nullopt;
 }

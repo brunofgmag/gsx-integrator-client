@@ -10,6 +10,7 @@
 namespace
 {
     constexpr int kGiveUpTicks = 240;
+    constexpr auto kGpuAlreadyRequested = "The ground power was already requested; waiting for it instead of asking again";
     constexpr auto kLeavingDoorsOverService =
         "A GSX service is underway: leaving the doors as they are because closing them would interrupt it";
 
@@ -40,6 +41,30 @@ namespace
         ctx.data.doorsClosed = true;
 
         return false;
+    }
+
+    bool WaitsForTheAircraftToBeHeldBeforeAskingGsx(const TurnaroundContext& ctx)
+    {
+        return !ctx.aircraft->SupportsGroundPowerControl() && !ctx.aircraft->IsHeldInPlace();
+    }
+
+    void RequestTheGroundPower(TurnaroundContext& ctx)
+    {
+        if (ctx.aircraft->SupportsGroundPowerControl())
+        {
+            ctx.aircraft->SetGroundPower(true);
+
+            return;
+        }
+
+        if (ctx.gsxGateway->IsServiceInProgress(GroundService::Gpu))
+        {
+            ctx.logger->LogInfo(kGpuAlreadyRequested);
+
+            return;
+        }
+
+        ctx.menuGateway->ToggleGpu();
     }
 }
 
@@ -87,15 +112,12 @@ std::optional<TurnaroundTransition> PlaceGroundEquipmentState::EvaluatePhase(Tur
         return std::nullopt;
     }
 
-    if (ctx.aircraft->SupportsGroundPowerControl())
+    if (WaitsForTheAircraftToBeHeldBeforeAskingGsx(ctx))
     {
-        ctx.aircraft->SetGroundPower(true);
-        ctx.data.gpuRequested = true;
-
         return std::nullopt;
     }
 
-    ctx.menuGateway->ToggleGpu();
+    RequestTheGroundPower(ctx);
     ctx.data.gpuRequested = true;
 
     return std::nullopt;

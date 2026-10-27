@@ -243,6 +243,21 @@ private slots:
     static void aRequestForAServiceAlreadyUnderwayIsDroppedBeforeSending();
     static void theGpuToggleStillFiresWhileTheServiceRuns();
     static void aServiceThatTogglesIsNeverSentTwice();
+    static void aToggleGsxRefusedIsAskedAgainOnceTheRefusalSettles();
+    static void requestsWaitWhileTheAircraftDrivesTheMenu();
+    static void aRefusalIsLoggedOnceWhileTheRequestsAreHeld();
+    static void aHeldRequestStillExpires();
+    static void theDeIcePromptIsLeftAloneWhileTheAircraftDrivesTheMenu();
+    static void theAirstairsPromptIsLeftAloneWhileTheAircraftDrivesTheMenu();
+    static void theEngineConfirmationIsLeftAloneWhileTheAircraftDrivesTheMenu();
+    static void noMenuIsOpenedWhileTheAircraftDrivesIt();
+    static void aMessageBeforeTheSendIsNoRefusal();
+    static void aToggleGsxTookIsNeverAskedAgainAfterAMessage();
+    static void aToggleGsxIsWorkingOnIsNeverAskedAgainAfterAMessage();
+    static void aToggleForAServiceGsxDoesNotListIsNeverAskedAgainAfterAMessage();
+    static void aRefusedToggleIsAskedAgainOnlyWithinTheAttemptLimit();
+    static void aServiceThatDoesNotToggleIsNotAskedAgainByTheRefusalRule();
+    static void aRefusedToggleIsNotHeldBehindItself();
     static void theStairsAreNeverAskedForASecondTime();
     static void aServiceThatTogglesAndWasSentIsNotSentAgainAfterTheRestore_data();
     static void aServiceThatTogglesAndWasSentIsNotSentAgainAfterTheRestore();
@@ -289,6 +304,45 @@ private slots:
     static void aRefusedDisableGsxMenuKeepsTheIntent();
     static void theToolbarIsNotOpenedBeforeTheBridgeReportsItsState();
     static void theToolbarIsNotClosedBeforeTheBridgeReportsItsState();
+    static void aStuckMenuThePilotOpenedIsLeftOpen();
+    static void aStuckMenuTheClientOpenedIsStillClosed();
+    static void theParkingMenuThePilotOpenedIsLeftOpenUnderAServiceIntent();
+    static void aStaleParkingMenuTheClientOpenedIsStillClosed();
+    static void aRequestWaitsBehindAMenuThePilotOpened();
+    static void aRetryHeldBehindAPilotMenuIsNotCounted();
+    static void aSentRequestHeldBehindAPilotMenuIsNeverDroppedForTheWait();
+    static void aRequestHeldBehindAPilotMenuIsNeverDroppedAsNeverLeft();
+    static void theNeverLeftWindowStartsAgainWhenThePilotsMenuCloses();
+    static void theClientWaitsForThePilotsMenuOnlyWhileARequestIsHeldBehindIt();
+    static void theClientStopsWaitingTheMomentThePilotsMenuCloses();
+    static void theClientIsNotWaitingForTheMenuWhileTheAircraftHoldsTheRequests();
+    static void theClientIsNotWaitingForTheMenuItOpenedItself();
+    static void theClientIsNotWaitingWhenNothingIsPending();
+    static void aRequestClosesTheMenuTheClientOpenedFirst();
+    static void aSentToggleHoldsTheNextRequestUntilGsxTakesIt();
+    static void aToggleGsxNeverTakesHoldsTheNextRequestForTwentySeconds();
+    static void aSentTriggerThatDoesNotToggleDoesNotHoldTheNextRequest();
+    static void theHoldLogsItsLineOncePerHeldRequest();
+    static void aToggleBehindThePilotsMenuLeavesTheRequestOnThePilotPath();
+    static void aStuckToggleMenuStaysOpenWhileTheHoldLasts();
+    static void disableGsxMenuLeavesAMenuThePilotOpened();
+    static void disableGsxMenuStillClosesAParkedChain();
+    static void aChainedMenuKeepsItsOwner();
+    static void theOwnershipEndsWhenTheMenuIsHidden();
+    static void aMenuAlreadyShownAtFirstSightIsNotOwned();
+    static void aResetForgetsWhoOpenedTheMenu();
+    static void theOwnershipWindowIsThreeSeconds_data();
+    static void theOwnershipWindowIsThreeSeconds();
+    static void eachVerbThatAsksGsxForAMenuGrantsOwnership_data();
+    static void eachVerbThatAsksGsxForAMenuGrantsOwnership();
+    static void anAutoPickDoesNotGrantOwnership();
+    static void aMenuThatComesBackRightAfterTheClientsHidesIsStillTheClients();
+    static void aMenuThatComesBackRightAfterThePilotsHidesStaysThePilots();
+    static void theAfterglowOfAHiddenClientMenuLastsThreeSeconds_data();
+    static void theAfterglowOfAHiddenClientMenuLastsThreeSeconds();
+    static void observingTheMenuWhileNotDrivenStillSeesTheHide();
+    static void aMenuTheClientOpenedWithoutAnIntentIsLeftOpen();
+    static void aRefusedMenuToggleGrantsNoOwnership();
 };
 
 void GsxMenuNavigatorTest::serviceTriggersUseCanonicalVerbs()
@@ -700,11 +754,19 @@ void GsxMenuNavigatorTest::triggerServiceDoesNotToggleOpenMenu()
     FakeDomainLogger logger;
     GsxMenuNavigator nav(&client, &state, &settings, &logger);
 
-    ShowMenu(state, "Activate Services at ZZZZ/Test Airport", {"Request Refueling"});
+    long long fakeNow = 0;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
 
+    nav.OpenMenu();
+
+    fakeNow = 1000;
+    ShowMenu(state, "Activate Services at ZZZZ/Test Airport", {"Request Refueling"});
+    nav.OnMenuChanged();
+
+    fakeNow = 3000;
     nav.RequestRefueling();
 
-    QCOMPARE(client.Count("menu.toggle"), 0);
+    QCOMPARE(client.Count("menu.toggle"), 1);
     QCOMPARE(client.Count("menu.close"), 1);
     QCOMPARE(client.Count("service.trigger"), 1);
 }
@@ -2092,6 +2154,7 @@ void GsxMenuNavigatorTest::staleSelectPositionMenuClosedAfterReposition()
     nav.OnMenuChanged();
 
     fakeNow = 5000;
+    nav.OpenMenu();
     ShowMenu(state, "Select Position at ZZZZ/Test Airport",
              {"Reposition here [Gate 1]", "Cancel"});
     nav.OnMenuChanged();
@@ -2140,6 +2203,7 @@ void GsxMenuNavigatorTest::staleSelectPositionMenuClosedAfterServiceIntentReplac
     nav.OnMenuChanged();
 
     fakeNow = 5000;
+    nav.OpenMenu();
     ShowMenu(state, "Select Position at ZZZZ/Test Airport",
              {"Reposition here [Gate 1]", "Cancel"});
     nav.OnMenuChanged();
@@ -2178,6 +2242,7 @@ void GsxMenuNavigatorTest::staleSelectPositionMenuIgnoredAfterIntentTtl()
     nav.OnMenuChanged();
 
     fakeNow = 61000;
+    nav.OpenMenu();
     ShowMenu(state, "Select Position at ZZZZ/Test Airport",
              {"Reposition here [Gate 1]", "Cancel"});
     nav.OnMenuChanged();
@@ -3035,6 +3100,360 @@ void GsxMenuNavigatorTest::aServiceThatTogglesIsNeverSentTwice()
 
     QCOMPARE(client.Count("service.trigger"), 1);
     QVERIFY(Logged(logger, "stopped waiting"));
+}
+
+void GsxMenuNavigatorTest::aToggleGsxRefusedIsAskedAgainOnceTheRefusalSettles()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+
+    nav.ToggleGpu();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    ++state.messagesShown;
+    state.lastMessage = "You need to set Parking Brakes or Wheel Chocks to request ground services";
+    fakeNow += 2900;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    fakeNow += 200;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 2);
+    QVERIFY(Logged(logger, "not taken by GSX after it showed"));
+    QVERIFY(Logged(logger, "after it showed \"You need to set Parking Brakes"));
+    QVERIFY(!Logged(logger, "stopped waiting"));
+
+    fakeNow += 60000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 2);
+}
+
+void GsxMenuNavigatorTest::requestsWaitWhileTheAircraftDrivesTheMenu()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+    nav.HoldRequests(true);
+
+    nav.ToggleGpu();
+
+    QCOMPARE(client.Count("service.trigger"), 0);
+
+    fakeNow += 30000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 0);
+
+    nav.HoldRequests(false);
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+}
+
+void GsxMenuNavigatorTest::aRefusalIsLoggedOnceWhileTheRequestsAreHeld()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+
+    nav.ToggleGpu();
+    nav.HoldRequests(true);
+    ++state.messagesShown;
+    fakeNow += 4000;
+
+    for (int pump = 0; pump < 3; ++pump)
+    {
+        nav.OnMenuChanged();
+    }
+
+    const long long refusals = std::ranges::count_if(logger.messages, [](const std::string& line)
+    {
+        return line.find("not taken by GSX after it showed") != std::string::npos;
+    });
+
+    QCOMPARE(refusals, 1LL);
+    QCOMPARE(client.Count("service.trigger"), 1);
+}
+
+void GsxMenuNavigatorTest::theDeIcePromptIsLeftAloneWhileTheAircraftDrivesTheMenu()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    settings.autoDeice = true;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.HoldRequests(true);
+    ShowMenu(state, "Ice warning: do you request the de-icing treatment?", {"Yes", "No [GSX choice]"});
+    nav.OnMenuChanged();
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 0);
+
+    nav.HoldRequests(false);
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 1);
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 0);
+}
+
+void GsxMenuNavigatorTest::theAirstairsPromptIsLeftAloneWhileTheAircraftDrivesTheMenu()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.HoldRequests(true);
+    ShowMenu(state, "Use airplane's own airstairs?",
+             {"Yes - Use airplane stairs", "No - Use airport stairs", "Both - Airplane stairs + airport stairs"});
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 0);
+
+    nav.HoldRequests(false);
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("menu.pick"), 1);
+    QCOMPARE(client.Last("menu.pick")->args.value("index").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::theEngineConfirmationIsLeftAloneWhileTheAircraftDrivesTheMenu()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.HoldRequests(true);
+    ShowMenu(state, "Confirm good engine start", {"Confirm good engine start", "Cancel"});
+
+    QVERIFY(!nav.ConfirmGoodEngines());
+    QCOMPARE(client.Count("menu.pick"), 0);
+
+    nav.HoldRequests(false);
+
+    QVERIFY(nav.ConfirmGoodEngines());
+    QCOMPARE(client.Count("menu.pick"), 1);
+}
+
+void GsxMenuNavigatorTest::noMenuIsOpenedWhileTheAircraftDrivesIt()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    constexpr AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    nav.HoldRequests(true);
+
+    QVERIFY(!nav.ConfirmGoodEngines());
+    nav.CompleteRefuel();
+    nav.CompleteBoarding();
+    nav.RepositionAircraft();
+
+    QCOMPARE(client.Count("menu.toggle"), 0);
+
+    nav.HoldRequests(false);
+
+    QVERIFY(!nav.ConfirmGoodEngines());
+    QCOMPARE(client.Count("menu.toggle"), 1);
+}
+
+void GsxMenuNavigatorTest::aHeldRequestStillExpires()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+    nav.HoldRequests(true);
+
+    nav.ToggleGpu();
+    fakeNow += 91000;
+    nav.OnMenuChanged();
+
+    QVERIFY(Logged(logger, "the request never left the client"));
+
+    nav.HoldRequests(false);
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 0);
+}
+
+void GsxMenuNavigatorTest::aMessageBeforeTheSendIsNoRefusal()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+    state.messagesShown = 4;
+
+    nav.ToggleGpu();
+    fakeNow += 10000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "not taken by GSX after it showed"));
+}
+
+void GsxMenuNavigatorTest::aToggleGsxTookIsNeverAskedAgainAfterAMessage()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+
+    nav.ToggleGpu();
+    MarkServiceTaken(state, "GPU");
+    ++state.messagesShown;
+    fakeNow += 10000;
+    nav.OnMenuChanged();
+    fakeNow += 10000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "not taken by GSX after it showed"));
+}
+
+void GsxMenuNavigatorTest::aToggleGsxIsWorkingOnIsNeverAskedAgainAfterAMessage()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+
+    nav.ToggleGpu();
+    state.services.front().stateRaw = 4;
+    state.services.front().canTrigger = true;
+    ++state.messagesShown;
+    fakeNow += 10000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "not taken by GSX after it showed"));
+}
+
+void GsxMenuNavigatorTest::aToggleForAServiceGsxDoesNotListIsNeverAskedAgainAfterAMessage()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    nav.ToggleGpu();
+    ++state.messagesShown;
+    fakeNow += 10000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "not taken by GSX after it showed"));
+}
+
+void GsxMenuNavigatorTest::aRefusedToggleIsAskedAgainOnlyWithinTheAttemptLimit()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "GPU");
+
+    nav.ToggleGpu();
+
+    for (int refusal = 0; refusal < 5; ++refusal)
+    {
+        ++state.messagesShown;
+        fakeNow += 3100;
+        nav.OnMenuChanged();
+    }
+
+    QCOMPARE(client.Count("service.trigger"), 3);
+}
+
+void GsxMenuNavigatorTest::aServiceThatDoesNotToggleIsNotAskedAgainByTheRefusalRule()
+{
+    FakeRemoteClient client;
+    GsxRemoteState state;
+    AutomationSettings settings;
+    FakeDomainLogger logger;
+    GsxMenuNavigator nav(&client, &state, &settings, &logger);
+
+    long long fakeNow = 5000;
+    nav.SetClockForTest([&fakeNow] { return fakeNow; });
+
+    OfferService(state, "Catering");
+
+    nav.RequestCatering();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+
+    ++state.messagesShown;
+    fakeNow += 4000;
+    nav.OnMenuChanged();
+
+    QCOMPARE(client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(logger, "not taken by GSX after it showed"));
 }
 
 void GsxMenuNavigatorTest::theStairsAreNeverAskedForASecondTime()
@@ -3900,8 +4319,10 @@ void GsxMenuNavigatorTest::aRefusedResyncIsNotCounted()
 void GsxMenuNavigatorTest::aRefusedSendEndsThePass()
 {
     NavigatorRig rig;
-    rig.client.refusing = true;
+    rig.nav.OpenMenu();
     ShowMenu(rig.state, "Some menu", {"Option"});
+    rig.now += 2000;
+    rig.client.refusing = true;
 
     rig.nav.RequestCatering();
 
@@ -4268,8 +4689,10 @@ void GsxMenuNavigatorTest::aRequestDeliveredLateStillOpensTheServiceIntent()
 void GsxMenuNavigatorTest::aRefusedCloseKeepsTheMenuTracking()
 {
     NavigatorRig rig;
-    rig.client.refusing = true;
+    rig.nav.OpenMenu();
     ShowMenu(rig.state, "Some menu", {"Option"});
+    rig.now += 2000;
+    rig.client.refusing = true;
 
     rig.nav.RequestCatering();
 
@@ -4328,6 +4751,7 @@ void GsxMenuNavigatorTest::aRefusedCloseOfAStaleMenuDoesNotSpendTheSettleWindow(
     rig.nav.OnMenuChanged();
 
     rig.now = 5000;
+    rig.nav.OpenMenu();
     ShowMenu(rig.state, kPositionTitle, {"Reposition here [Gate 1]", "Cancel"});
     rig.nav.OnMenuChanged();
 
@@ -4418,6 +4842,846 @@ void GsxMenuNavigatorTest::theToolbarIsNotClosedBeforeTheBridgeReportsItsState()
 
     QCOMPARE(after.PanelCommands(), 1);
     QCOMPARE(after.LastPanelPayload(), QString(IntegratorPluginCommBus::kCommandClose));
+}
+
+namespace
+{
+    constexpr auto kPilotMenuTitle = "Activate Services at ZZZZ/Test Airport";
+    constexpr auto kHeldBehindThePilotLine = "is waiting: the GSX menu on screen is the pilot's";
+    constexpr auto kLeftOpenLine = "leaving the menu open";
+    constexpr auto kNeverLeftLine = "the request never left the client";
+
+    void HideTheMenu(GsxRemoteState& state)
+    {
+        state.menu.shown = false;
+        state.menu.title.clear();
+        state.menu.entries.clear();
+    }
+
+    int Occurrences(const FakeDomainLogger& logger, const std::string& needle)
+    {
+        return static_cast<int>(std::ranges::count_if(logger.messages, [&needle](const std::string& message)
+        {
+            return message.find(needle) != std::string::npos;
+        }));
+    }
+
+    void LetTheMenuSit(NavigatorRig& rig, const int ticks)
+    {
+        for (int tick = 0; tick < ticks; ++tick)
+        {
+            rig.now += 2000;
+            rig.nav.OnSnapshot();
+        }
+    }
+
+    void ShowThePilotsMenu(NavigatorRig& rig)
+    {
+        ShowMenu(rig.state, kPilotMenuTitle, {"Request Refueling", "Cancel"});
+        rig.nav.OnMenuChanged();
+    }
+
+    void TheClientOpensAMenu(NavigatorRig& rig)
+    {
+        rig.nav.OpenMenu();
+        rig.now += 1000;
+        ShowThePilotsMenu(rig);
+    }
+
+    void TheBoardingMenuStalls(NavigatorRig& rig)
+    {
+        ShowMenu(rig.state, "Service in progress", {"Complete now", "Abort service", "Back"});
+        rig.nav.OnMenuChanged();
+        LetTheMenuSit(rig, 8);
+    }
+}
+
+void GsxMenuNavigatorTest::aStuckMenuThePilotOpenedIsLeftOpen()
+{
+    NavigatorRig rig;
+    OfferService(rig.state, "Boarding");
+
+    rig.nav.RequestBoarding();
+    MarkServiceTaken(rig.state, "Boarding");
+    rig.nav.OnMenuChanged();
+
+    rig.now += 10000;
+    TheBoardingMenuStalls(rig);
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QVERIFY(!Logged(rig.logger, "the resyncs could not move"));
+    QCOMPARE(Occurrences(rig.logger, kLeftOpenLine), 1);
+}
+
+void GsxMenuNavigatorTest::aStuckMenuTheClientOpenedIsStillClosed()
+{
+    NavigatorRig rig;
+    OfferService(rig.state, "Boarding");
+
+    rig.nav.RequestBoarding();
+    MarkServiceTaken(rig.state, "Boarding");
+    rig.nav.OnMenuChanged();
+
+    rig.now += 2000;
+    TheBoardingMenuStalls(rig);
+
+    QCOMPARE(rig.client.Count("menu.close"), 1);
+    QVERIFY(Logged(rig.logger, "the resyncs could not move"));
+}
+
+void GsxMenuNavigatorTest::theParkingMenuThePilotOpenedIsLeftOpenUnderAServiceIntent()
+{
+    NavigatorRig rig;
+    OfferService(rig.state, "Boarding");
+
+    rig.nav.RequestBoarding();
+    MarkServiceTaken(rig.state, "Boarding");
+    rig.nav.OnMenuChanged();
+
+    rig.now += 10000;
+    ShowMenu(rig.state, kPositionTitle, {"Reposition here [Gate 1]", "Cancel"});
+    rig.nav.OnMenuChanged();
+    LetTheMenuSit(rig, 8);
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QVERIFY(!Logged(rig.logger, "closing stale menu"));
+    QCOMPARE(Occurrences(rig.logger, kLeftOpenLine), 1);
+}
+
+void GsxMenuNavigatorTest::aStaleParkingMenuTheClientOpenedIsStillClosed()
+{
+    NavigatorRig rig;
+    rig.now = 0;
+
+    rig.nav.RepositionAircraft();
+
+    QCOMPARE(rig.client.Count("menu.toggle"), 1);
+
+    rig.now = 1000;
+    ShowMenu(rig.state, kPositionTitle, {"Reposition here [Gate 1]", "Cancel"});
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 1);
+
+    rig.now = 3000;
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.close"), 1);
+    QVERIFY(Logged(rig.logger, "closing stale menu"));
+}
+
+void GsxMenuNavigatorTest::aRequestWaitsBehindAMenuThePilotOpened()
+{
+    NavigatorRig rig;
+    ShowThePilotsMenu(rig);
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(rig.client.Count("service.trigger"), 0);
+    QCOMPARE(Occurrences(rig.logger, kHeldBehindThePilotLine), 1);
+
+    LetTheMenuSit(rig, 5);
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(rig.client.Count("service.trigger"), 0);
+    QCOMPARE(Occurrences(rig.logger, kHeldBehindThePilotLine), 1);
+    QCOMPARE(EntryFor(rig.nav, "Catering").value("attempts").toInt(), 0);
+
+    HideTheMenu(rig.state);
+    rig.now += 2000;
+    rig.nav.OnSnapshot();
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(rig.client.Count("service.trigger"), 1);
+    QVERIFY(!Logged(rig.logger, "attempt"));
+    QCOMPARE(EntryFor(rig.nav, "Catering").value("attempts").toInt(), 1);
+}
+
+void GsxMenuNavigatorTest::aRetryHeldBehindAPilotMenuIsNotCounted()
+{
+    NavigatorRig rig;
+    OfferService(rig.state, "Catering");
+
+    rig.nav.RequestCatering();
+
+    QCOMPARE(TriggersFor(rig.client, "Catering"), 1);
+
+    rig.now += 10000;
+    ShowThePilotsMenu(rig);
+    for (int tick = 0; tick < 6; ++tick)
+    {
+        rig.now += 2000;
+        rig.nav.OnSnapshot();
+    }
+
+    QCOMPARE(TriggersFor(rig.client, "Catering"), 1);
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(Occurrences(rig.logger, kHeldBehindThePilotLine), 1);
+    QCOMPARE(EntryFor(rig.nav, "Catering").value("attempts").toInt(), 1);
+
+    HideTheMenu(rig.state);
+    rig.now += 2000;
+    rig.nav.OnSnapshot();
+
+    QCOMPARE(TriggersFor(rig.client, "Catering"), 2);
+    QVERIFY(Logged(rig.logger, "(attempt 2 of 3)"));
+}
+
+void GsxMenuNavigatorTest::aSentRequestHeldBehindAPilotMenuIsNeverDroppedForTheWait()
+{
+    NavigatorRig rig;
+    OfferService(rig.state, "Catering");
+
+    const long long sentMs = rig.now;
+    rig.nav.RequestCatering();
+
+    QCOMPARE(TriggersFor(rig.client, "Catering"), 1);
+
+    rig.now += 10000;
+    ShowThePilotsMenu(rig);
+    while (rig.now < sentMs + 600000)
+    {
+        rig.now += 1000;
+        rig.nav.OnSnapshot();
+    }
+
+    QVERIFY(!Logged(rig.logger, "stopped waiting"));
+    QVERIFY(!EntryFor(rig.nav, "Catering").isEmpty());
+    QCOMPARE(TriggersFor(rig.client, "Catering"), 1);
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+
+    HideTheMenu(rig.state);
+    rig.now += 2000;
+    rig.nav.OnSnapshot();
+
+    QCOMPARE(TriggersFor(rig.client, "Catering"), 2);
+    QVERIFY(Logged(rig.logger, "(attempt 2 of 3)"));
+}
+
+void GsxMenuNavigatorTest::aRequestHeldBehindAPilotMenuIsNeverDroppedAsNeverLeft()
+{
+    NavigatorRig rig;
+    ShowThePilotsMenu(rig);
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    QCOMPARE(Occurrences(rig.logger, kHeldBehindThePilotLine), 1);
+
+    for (int tick = 0; tick < 300; ++tick)
+    {
+        rig.now += 2000;
+        rig.nav.OnMenuChanged();
+    }
+
+    QVERIFY(!Logged(rig.logger, kNeverLeftLine));
+    QVERIFY(!EntryFor(rig.nav, "Catering").isEmpty());
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(rig.client.Count("service.trigger"), 0);
+
+    HideTheMenu(rig.state);
+    rig.now += 2000;
+    rig.nav.OnSnapshot();
+
+    QCOMPARE(TriggersFor(rig.client, "Catering"), 1);
+}
+
+void GsxMenuNavigatorTest::theNeverLeftWindowStartsAgainWhenThePilotsMenuCloses()
+{
+    NavigatorRig rig;
+    ShowThePilotsMenu(rig);
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    for (int tick = 0; tick < 200; ++tick)
+    {
+        rig.now += 1000;
+        rig.nav.OnMenuChanged();
+    }
+
+    HideTheMenu(rig.state);
+    rig.client.refusing = true;
+    rig.nav.OnMenuChanged();
+    const long long closedMs = rig.now;
+
+    while (rig.now < closedMs + 89000)
+    {
+        rig.now += 1000;
+        rig.nav.OnMenuChanged();
+    }
+
+    QVERIFY(!Logged(rig.logger, kNeverLeftLine));
+
+    rig.now = closedMs + 91000;
+    rig.nav.OnMenuChanged();
+
+    QVERIFY(Logged(rig.logger, kNeverLeftLine));
+}
+
+void GsxMenuNavigatorTest::theClientWaitsForThePilotsMenuOnlyWhileARequestIsHeldBehindIt()
+{
+    NavigatorRig rig;
+
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+
+    ShowThePilotsMenu(rig);
+
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    QVERIFY(rig.nav.IsWaitingForThePilotsMenu());
+
+    HideTheMenu(rig.state);
+    rig.now += 2000;
+    rig.nav.OnSnapshot();
+
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+}
+
+void GsxMenuNavigatorTest::theClientStopsWaitingTheMomentThePilotsMenuCloses()
+{
+    NavigatorRig rig;
+    ShowThePilotsMenu(rig);
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    QVERIFY(rig.nav.IsWaitingForThePilotsMenu());
+
+    HideTheMenu(rig.state);
+    rig.client.refusing = true;
+    rig.now += 2000;
+    rig.nav.OnSnapshot();
+
+    QVERIFY(!EntryFor(rig.nav, "Catering").isEmpty());
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+}
+
+void GsxMenuNavigatorTest::theClientIsNotWaitingForTheMenuWhileTheAircraftHoldsTheRequests()
+{
+    NavigatorRig rig;
+    rig.nav.HoldRequests(true);
+    ShowThePilotsMenu(rig);
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+    LetTheMenuSit(rig, 3);
+
+    QVERIFY(!EntryFor(rig.nav, "Catering").isEmpty());
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+}
+
+void GsxMenuNavigatorTest::theClientIsNotWaitingForTheMenuItOpenedItself()
+{
+    NavigatorRig rig;
+    TheClientOpensAMenu(rig);
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+}
+
+void GsxMenuNavigatorTest::theClientIsNotWaitingWhenNothingIsPending()
+{
+    NavigatorRig rig;
+    ShowThePilotsMenu(rig);
+    LetTheMenuSit(rig, 3);
+
+    QVERIFY(!rig.nav.IsWaitingForThePilotsMenu());
+}
+
+void GsxMenuNavigatorTest::aRequestClosesTheMenuTheClientOpenedFirst()
+{
+    NavigatorRig rig;
+    TheClientOpensAMenu(rig);
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    QCOMPARE(rig.client.Count("menu.close"), 1);
+    QCOMPARE(rig.client.Count("service.trigger"), 1);
+    QVERIFY(Logged(rig.logger, "closed open menu first"));
+    QCOMPARE(Occurrences(rig.logger, kHeldBehindThePilotLine), 0);
+}
+
+namespace
+{
+    constexpr auto kAdditionalServicesTitle = "Additional Services";
+    constexpr auto kHoldingLine = "RemoteAPI holding 'Deboarding' until GSX takes 'GPU'";
+
+    void TheGpuToggleOpensItsMenu(NavigatorRig& rig)
+    {
+        OfferService(rig.state, "GPU");
+        rig.nav.ToggleGpu();
+
+        rig.now += 1600;
+        ShowMenu(rig.state, kAdditionalServicesTitle, {"Request GPU", "Cancel"});
+        rig.nav.OnMenuChanged();
+    }
+
+    void RedrawTheMenu(NavigatorRig& rig, const int step)
+    {
+        ShowMenu(rig.state, std::string(kAdditionalServicesTitle) + " " + std::to_string(step),
+                 {"Request GPU", "Cancel"});
+        rig.nav.OnSnapshot();
+    }
+}
+
+void GsxMenuNavigatorTest::aRefusedToggleIsNotHeldBehindItself()
+{
+    NavigatorRig rig;
+    const long long sentMs = rig.now;
+    TheGpuToggleOpensItsMenu(rig);
+
+    ++rig.state.messagesShown;
+    rig.now = sentMs + 3100;
+    RedrawTheMenu(rig, 1);
+
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("GPU")), 2);
+    QVERIFY(Logged(rig.logger, "not taken by GSX after it showed"));
+}
+
+void GsxMenuNavigatorTest::aSentToggleHoldsTheNextRequestUntilGsxTakesIt()
+{
+    NavigatorRig rig;
+    TheGpuToggleOpensItsMenu(rig);
+
+    rig.nav.RequestDeboarding();
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        rig.now += 300;
+        rig.nav.OnSnapshot();
+    }
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("Deboarding")), 0);
+
+    MarkServiceTaken(rig.state, "GPU");
+    rig.now += 300;
+    rig.nav.OnSnapshot();
+
+    QCOMPARE(rig.client.Count("menu.close"), 1);
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("Deboarding")), 1);
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("GPU")), 1);
+    QVERIFY(Logged(rig.logger, "closed open menu first"));
+}
+
+void GsxMenuNavigatorTest::aToggleGsxNeverTakesHoldsTheNextRequestForTwentySeconds()
+{
+    NavigatorRig rig;
+    const long long sentMs = rig.now;
+    TheGpuToggleOpensItsMenu(rig);
+
+    rig.nav.RequestDeboarding();
+
+    int step = 0;
+    for (const long long elapsedMs : {7000LL, 13000LL, 19999LL})
+    {
+        rig.now = sentMs + elapsedMs;
+        RedrawTheMenu(rig, ++step);
+
+        QCOMPARE(rig.client.Count("menu.close"), 0);
+        QCOMPARE(TriggersFor(rig.client, QStringLiteral("Deboarding")), 0);
+    }
+
+    rig.now = sentMs + 20000;
+    RedrawTheMenu(rig, ++step);
+
+    QCOMPARE(rig.client.Count("menu.close"), 1);
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("Deboarding")), 1);
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("GPU")), 1);
+    QVERIFY(Logged(rig.logger, "closed open menu first"));
+}
+
+void GsxMenuNavigatorTest::aSentTriggerThatDoesNotToggleDoesNotHoldTheNextRequest()
+{
+    NavigatorRig rig;
+    OfferService(rig.state, "Catering");
+    rig.nav.RequestCatering();
+
+    rig.now += 1600;
+    ShowMenu(rig.state, kAdditionalServicesTitle, {"Request Catering", "Cancel"});
+    rig.nav.OnMenuChanged();
+
+    rig.nav.RequestDeboarding();
+
+    QCOMPARE(rig.client.Count("menu.close"), 1);
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("Deboarding")), 1);
+    QVERIFY(Logged(rig.logger, "closed open menu first"));
+    QVERIFY(!Logged(rig.logger, "RemoteAPI holding"));
+}
+
+void GsxMenuNavigatorTest::theHoldLogsItsLineOncePerHeldRequest()
+{
+    NavigatorRig rig;
+    TheGpuToggleOpensItsMenu(rig);
+
+    rig.nav.RequestDeboarding();
+    for (int tick = 0; tick < 4; ++tick)
+    {
+        rig.now += 300;
+        rig.nav.OnSnapshot();
+    }
+
+    QCOMPARE(Occurrences(rig.logger, kHoldingLine), 1);
+}
+
+void GsxMenuNavigatorTest::aToggleBehindThePilotsMenuLeavesTheRequestOnThePilotPath()
+{
+    NavigatorRig rig;
+    OfferService(rig.state, "GPU");
+    rig.nav.ToggleGpu();
+
+    rig.now += 4000;
+    ShowThePilotsMenu(rig);
+
+    rig.nav.RequestDeboarding();
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("Deboarding")), 0);
+    QCOMPARE(Occurrences(rig.logger, kHeldBehindThePilotLine), 1);
+    QVERIFY(!Logged(rig.logger, "RemoteAPI holding"));
+}
+
+void GsxMenuNavigatorTest::aStuckToggleMenuStaysOpenWhileTheHoldLasts()
+{
+    NavigatorRig rig;
+    const long long sentMs = rig.now;
+    TheGpuToggleOpensItsMenu(rig);
+
+    rig.nav.RequestDeboarding();
+
+    for (long long elapsedMs = 2000; elapsedMs < 20000; elapsedMs += 2000)
+    {
+        rig.now = sentMs + elapsedMs;
+        rig.nav.OnSnapshot();
+    }
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("Deboarding")), 0);
+    QVERIFY(!Logged(rig.logger, "closing the menu the resyncs could not move"));
+
+    rig.now = sentMs + 22000;
+    rig.nav.OnSnapshot();
+    rig.now = sentMs + 24000;
+    rig.nav.OnSnapshot();
+
+    QVERIFY(rig.client.Count("menu.close") >= 1);
+    QCOMPARE(TriggersFor(rig.client, QStringLiteral("Deboarding")), 1);
+}
+
+void GsxMenuNavigatorTest::disableGsxMenuLeavesAMenuThePilotOpened()
+{
+    NavigatorRig rig;
+    OfferService(rig.state, "Departure");
+
+    rig.nav.RequestPushback();
+    MarkServiceTaken(rig.state, "Departure");
+    rig.nav.OnMenuChanged();
+
+    rig.now += 20000;
+    ShowThePilotsMenu(rig);
+    rig.nav.DisableGsxMenu();
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+
+    HideTheMenu(rig.state);
+    rig.now += 100;
+    ShowMenu(rig.state, kTugTitle, {"Yes", "No"});
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 0);
+}
+
+void GsxMenuNavigatorTest::disableGsxMenuStillClosesAParkedChain()
+{
+    NavigatorRig rig;
+
+    rig.nav.DisableGsxMenu();
+
+    QCOMPARE(rig.client.Count("menu.close"), 1);
+}
+
+void GsxMenuNavigatorTest::aChainedMenuKeepsItsOwner()
+{
+    NavigatorRig rig;
+    TheClientOpensAMenu(rig);
+
+    rig.now += 20000;
+    ShowMenu(rig.state, "Service in progress", {"Complete now", "Back"});
+    rig.nav.OnMenuChanged();
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    QCOMPARE(rig.client.Count("menu.close"), 1);
+    QCOMPARE(rig.client.Count("service.trigger"), 1);
+}
+
+void GsxMenuNavigatorTest::theOwnershipEndsWhenTheMenuIsHidden()
+{
+    NavigatorRig rig;
+    TheClientOpensAMenu(rig);
+
+    rig.now += 1000;
+    HideTheMenu(rig.state);
+    rig.nav.OnMenuChanged();
+
+    rig.now += 20000;
+    ShowThePilotsMenu(rig);
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(rig.client.Count("service.trigger"), 0);
+    QCOMPARE(Occurrences(rig.logger, kHeldBehindThePilotLine), 1);
+}
+
+void GsxMenuNavigatorTest::aMenuAlreadyShownAtFirstSightIsNotOwned()
+{
+    NavigatorRig rig;
+    ShowMenu(rig.state, kPilotMenuTitle, {"Request Refueling", "Cancel"});
+    rig.nav.OnSnapshot();
+
+    rig.now += 2000;
+    rig.nav.RequestCatering();
+    rig.nav.DisableGsxMenu();
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(rig.client.Count("service.trigger"), 0);
+    QCOMPARE(Occurrences(rig.logger, kHeldBehindThePilotLine), 1);
+}
+
+void GsxMenuNavigatorTest::aResetForgetsWhoOpenedTheMenu()
+{
+    NavigatorRig rig;
+    TheClientOpensAMenu(rig);
+
+    rig.nav.Reset();
+    rig.now += 500;
+    rig.nav.OnSnapshot();
+    rig.nav.RequestCatering();
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(rig.client.Count("service.trigger"), 0);
+    QCOMPARE(Occurrences(rig.logger, kHeldBehindThePilotLine), 1);
+}
+
+void GsxMenuNavigatorTest::theOwnershipWindowIsThreeSeconds_data()
+{
+    QTest::addColumn<int>("delayMs");
+    QTest::addColumn<int>("closes");
+
+    QTest::newRow("one millisecond inside") << 2999 << 1;
+    QTest::newRow("at the edge") << 3000 << 0;
+}
+
+void GsxMenuNavigatorTest::theOwnershipWindowIsThreeSeconds()
+{
+    QFETCH(int, delayMs);
+    QFETCH(int, closes);
+
+    NavigatorRig rig;
+    rig.nav.OpenMenu();
+
+    rig.now += delayMs;
+    ShowThePilotsMenu(rig);
+    rig.nav.DisableGsxMenu();
+
+    QCOMPARE(rig.client.Count("menu.close"), closes);
+}
+
+void GsxMenuNavigatorTest::eachVerbThatAsksGsxForAMenuGrantsOwnership_data()
+{
+    QTest::addColumn<QString>("verb");
+
+    QTest::newRow("a menu toggle") << QStringLiteral("menu.toggle");
+    QTest::newRow("a service trigger") << QStringLiteral("service.trigger");
+    QTest::newRow("a command run") << QStringLiteral("command.run");
+}
+
+void GsxMenuNavigatorTest::eachVerbThatAsksGsxForAMenuGrantsOwnership()
+{
+    QFETCH(QString, verb);
+
+    NavigatorRig rig;
+    if (verb == "menu.toggle")
+    {
+        rig.nav.OpenMenu();
+    }
+    else if (verb == "service.trigger")
+    {
+        rig.nav.RequestCatering();
+    }
+    else
+    {
+        rig.nav.RequestSimbriefLoad();
+    }
+
+    QCOMPARE(rig.client.Count(verb), 1);
+
+    rig.now += 1000;
+    ShowThePilotsMenu(rig);
+    rig.nav.DisableGsxMenu();
+
+    QCOMPARE(rig.client.Count("menu.close"), 1);
+}
+
+void GsxMenuNavigatorTest::anAutoPickDoesNotGrantOwnership()
+{
+    NavigatorRig rig;
+    ShowMenu(rig.state, "Do you want de-icing?", {"Yes", "No"});
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 1);
+
+    rig.now += 1000;
+    HideTheMenu(rig.state);
+    rig.nav.OnMenuChanged();
+
+    rig.now += 500;
+    ShowThePilotsMenu(rig);
+
+    rig.now += 1500;
+    rig.nav.RequestCatering();
+    rig.nav.DisableGsxMenu();
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(rig.client.Count("service.trigger"), 0);
+    QCOMPARE(Occurrences(rig.logger, kHeldBehindThePilotLine), 1);
+}
+
+void GsxMenuNavigatorTest::aMenuThatComesBackRightAfterTheClientsHidesIsStillTheClients()
+{
+    NavigatorRig rig;
+    OfferService(rig.state, "Boarding");
+
+    const long long requestedMs = rig.now;
+    rig.nav.RequestBoarding();
+    MarkServiceTaken(rig.state, "Boarding");
+
+    rig.now = requestedMs + 500;
+    ShowMenu(rig.state, kTugTitle, {"Yes", "No"});
+    rig.nav.OnMenuChanged();
+
+    QCOMPARE(rig.client.Count("menu.pick"), 1);
+
+    rig.now += 100;
+    HideTheMenu(rig.state);
+    rig.nav.OnMenuChanged();
+
+    rig.now = requestedMs + 3500;
+    TheBoardingMenuStalls(rig);
+
+    QCOMPARE(rig.client.Count("menu.close"), 1);
+    QVERIFY(Logged(rig.logger, "the resyncs could not move"));
+}
+
+void GsxMenuNavigatorTest::aMenuThatComesBackRightAfterThePilotsHidesStaysThePilots()
+{
+    NavigatorRig rig;
+    OfferService(rig.state, "Boarding");
+
+    rig.nav.RequestBoarding();
+    MarkServiceTaken(rig.state, "Boarding");
+    rig.nav.OnMenuChanged();
+
+    rig.now += 10000;
+    ShowThePilotsMenu(rig);
+
+    rig.now += 500;
+    HideTheMenu(rig.state);
+    rig.nav.OnMenuChanged();
+
+    rig.now += 500;
+    TheBoardingMenuStalls(rig);
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QCOMPARE(Occurrences(rig.logger, kLeftOpenLine), 1);
+}
+
+void GsxMenuNavigatorTest::theAfterglowOfAHiddenClientMenuLastsThreeSeconds_data()
+{
+    QTest::addColumn<int>("delayMs");
+    QTest::addColumn<int>("closes");
+
+    QTest::newRow("one millisecond inside") << 2999 << 1;
+    QTest::newRow("at the edge") << 3000 << 0;
+}
+
+void GsxMenuNavigatorTest::theAfterglowOfAHiddenClientMenuLastsThreeSeconds()
+{
+    QFETCH(int, delayMs);
+    QFETCH(int, closes);
+
+    NavigatorRig rig;
+    TheClientOpensAMenu(rig);
+
+    rig.now += 1500;
+    HideTheMenu(rig.state);
+    rig.nav.OnMenuChanged();
+
+    rig.now += delayMs;
+    ShowThePilotsMenu(rig);
+    rig.nav.DisableGsxMenu();
+
+    QCOMPARE(rig.client.Count("menu.close"), closes);
+}
+
+void GsxMenuNavigatorTest::observingTheMenuWhileNotDrivenStillSeesTheHide()
+{
+    NavigatorRig rig;
+    TheClientOpensAMenu(rig);
+
+    rig.now += 1000;
+    HideTheMenu(rig.state);
+    rig.nav.ObserveMenuOwner();
+
+    rig.now += 5000;
+    ShowMenu(rig.state, kPilotMenuTitle, {"Request Refueling", "Cancel"});
+    rig.nav.ObserveMenuOwner();
+
+    QCOMPARE(static_cast<int>(rig.client.sent.size()), 1);
+
+    rig.nav.DisableGsxMenu();
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+}
+
+void GsxMenuNavigatorTest::aMenuTheClientOpenedWithoutAnIntentIsLeftOpen()
+{
+    NavigatorRig rig;
+    TheClientOpensAMenu(rig);
+    LetTheMenuSit(rig, 8);
+
+    QCOMPARE(rig.client.Count("state.get"), 3);
+    QCOMPARE(rig.client.Count("menu.close"), 0);
+    QVERIFY(!Logged(rig.logger, "the resyncs could not move"));
+    QCOMPARE(Occurrences(rig.logger, kLeftOpenLine), 1);
+}
+
+void GsxMenuNavigatorTest::aRefusedMenuToggleGrantsNoOwnership()
+{
+    NavigatorRig rig;
+    rig.client.refusing = true;
+
+    rig.nav.OpenMenu();
+
+    QCOMPARE(rig.client.Refused("menu.toggle"), 1);
+
+    rig.client.refusing = false;
+    rig.now += 1000;
+    ShowThePilotsMenu(rig);
+    rig.nav.DisableGsxMenu();
+
+    QCOMPARE(rig.client.Count("menu.close"), 0);
 }
 
 QTEST_GUILESS_MAIN(GsxMenuNavigatorTest)

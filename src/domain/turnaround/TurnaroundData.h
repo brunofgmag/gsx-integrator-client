@@ -89,6 +89,7 @@ struct TurnaroundData
     bool doorsClosed = false;
     bool ownGroundEquipmentCleared = false;
     bool arrivalGpuRequested = false;
+    int arrivalGpuConfirmationTicks = 0;
     bool arrivalChocksPlaced = false;
     bool arrivalDoorsClosed = false;
     bool cateringAsked = false;
@@ -210,6 +211,7 @@ namespace turnaround
         visit("doorsClosed", Field(&TurnaroundData::doorsClosed), FieldRestore::Raw);
         visit("ownGroundEquipmentCleared", Field(&TurnaroundData::ownGroundEquipmentCleared), FieldRestore::Raw);
         visit("arrivalGpuRequested", Field(&TurnaroundData::arrivalGpuRequested), FieldRestore::Raw);
+        visit("arrivalGpuConfirmationTicks", Field(&TurnaroundData::arrivalGpuConfirmationTicks), FieldRestore::Restart);
         visit("arrivalChocksPlaced", Field(&TurnaroundData::arrivalChocksPlaced), FieldRestore::Raw);
         visit("arrivalDoorsClosed", Field(&TurnaroundData::arrivalDoorsClosed), FieldRestore::Raw);
         visit("cateringAsked", Field(&TurnaroundData::cateringAsked), FieldRestore::Raw);

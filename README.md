@@ -47,10 +47,31 @@ There is a native Linux build for MSFS 2024 and 2020 on the Steam of your distri
 | JustFlight Avro RJ70 / RJ85 / RJ100 (incl. QT) | Any | GSX, progressive | GSX, progressive | R/T-INT | Chocks + GPU | Beta |
 | FSS Boeing 727-200F / 200RE Freighter | Any | Client, progressive | Client, progressive | SERV INT | Chocks + GPU | Beta |
 | FSS Embraer E190 / E195 (incl. Freighter) | Any | EFB, progressive | EFB, at once | Call RAMP | Chocks + GPU | Beta |
+| FSLabs A321neo (LEAP and PW) | Any | GSX, progressive | Aircraft, progressive | INT/RAD | GPU only | Beta |
 
 Any other aircraft connects but gets no automation.
 
-The iFly needs SP1 because older versions lack the GSX integration the client relies on. The A340 is in beta because the aircraft itself is unstable enough to get in the way of testing. The Avro RJ and the FSS aircraft are in beta because they are new and need more flights.
+The iFly needs SP1 because older versions lack the GSX integration the client relies on. The A340 is in beta because the aircraft itself is unstable enough to get in the way of testing. The Avro RJ, the FSS aircraft and the FSLabs are in beta because they are new and need more flights.
+
+### The FSLabs A321neo
+
+The FSLabs talks to GSX on its own. It calls the jetway or stairs and the GPU when it loads, opens and closes its doors, confirms the engine start and asks for deboarding when you turn off the beacon. The client lets it do all of that and only steps in where the aircraft falls short. When a GSX baggage loader drives away, the client closes that cargo hold, because the aircraft can leave it open for six minutes after boarding. If the aircraft did not call the GSX GPU, the client calls it once the parking brake or the chocks are set, since GSX turns down ground services before that. The FSLabs shows the GSX GPU as external power available while the truck is connected. And while the aircraft is working the GSX menu itself, the client holds its own requests until it is done. Refueling, boarding and pushback only happen when someone asks for them on the AOC pages of the MCDU, and a request sent to GSX from outside does not load the aircraft. So the client asks for them on the AOC, the same way you would. If you already asked, it sees the service under way and moves on.
+
+Two things are yours:
+
+- Request the flight plan: AOC MENU, `<INIT`, `INIT DATA REQ`, on either MCDU. The client waits for it and never does it for you. It opens the AOC INIT page once and after that only watches both screens. The plan counts as loaded when that page shows the departure airport.
+- Switch on the right MCDU. The client presses keys only on that one: a few to see that it answers, the trip to the AOC INIT page, and after that only to ask for the OFP, boarding or pushback. The rest of the time you can use it too. It comes back off every time the aircraft loses power, and the client waits until you switch it on again.
+
+Leave the right MCDU alone at four moments, each about 15 seconds of key presses:
+
+- once, early in the turnaround, while the client checks that the MCDU answers and opens the AOC INIT page;
+- right after your RAD flick in the refueling phase, to send the OFP;
+- when loading starts, to ask for boarding;
+- when the aircraft is ready to push, to ask for the pushback.
+
+If you are on another page when one of them starts, the client takes the MCDU back to MCDU MENU and asks again later. After three interrupted tries in a row it stops asking for that service until the next turnaround.
+
+Refueling starts when the client sends the OFP DATA page (it resets the STD first, because the aircraft refuses a SEND when the STD is more than an hour from the sim time). As on the other aircraft, that waits for automatic loading or for the smart switch. If you press SEND yourself, the client follows along. The aircraft boards its plan minus a few random no-shows, and the client counts boarding against the number the aircraft gives GSX, not against the plan.
 
 ### How each aircraft loads
 
@@ -59,7 +80,7 @@ The progress bars look the same everywhere. What differs is who moves the fuel a
 - Client, progressive: fuel flows while the GSX hose is connected, and passengers and cargo follow GSX boarding. Each aircraft comes with a recommended fuel rate taken from its manufacturer's airport planning figures. You can set your own rate in the settings, for every aircraft at once or in an aircraft profile. Freighters take the whole payload as cargo, spread over the main deck and the holds.
 - GSX, progressive: the GSX truck fills the tanks at its own pace, so the fuel card rate reads Auto. If it feels slow, GSX has a Fuel Time Acceleration option.
 - EFB, progressive: the E-Jet's own EFB pumps the fuel from the flight plan imported into it, at its own pace, and puts the whole payload on board once GSX boarding starts. The client watches the tanks, so the fuel card rate reads Auto, and the boarding bar still follows GSX.
-- Aircraft, progressive: from version 3, the Fenix seats each passenger and loads the holds itself as GSX boards and deboards, and it sends its own loadsheets. The client leaves the payload to it and still handles the fuel.
+- Aircraft, progressive: from version 3, the Fenix seats each passenger and loads the holds itself as GSX boards and deboards, and it sends its own loadsheets. The client leaves the payload to it and still handles the fuel. The FSLabs does the same with its payload, and fills its tanks from the GSX truck.
 - At once: the MD-11 and the A340 load fuel and payload in one step, and the bars follow GSX.
 
 Refueling and boarding run together, as they often do at a real gate. The client asks GSX for boarding once refueling reaches 75%, or right away when there is little fuel to load. Turn on "Call boarding early on refuel" in the Services settings, or in an aircraft profile, to ask for boarding as soon as refueling starts.
@@ -92,12 +113,15 @@ When the client asks for it, the tip on screen names the control and the side to
 | TFDi MD-11 | INT/RAD switch, captain's audio panel, center pedestal | Flip it |
 | iFly 737 MAX 8 | R/T-I/C push-to-talk switch, captain's audio panel, lower left of the pedestal | Flick to either side and let go |
 | ToLiss A340-600 | INT/RAD switch, captain's audio panel, center pedestal | Flick to either side. RAD springs back; the client returns INT to center |
-| Fenix A319/A320/A321 | INT/RAD switch, captain's audio panel, center pedestal | Flip down to INT; the client returns it to center |
+| Fenix A319/A320/A321 | INT/RAD switch, captain's audio panel, center pedestal | Flip up to INT; the client returns it to center |
 | PMDG 777 | MIC/INT switch, either pilot's audio panel, center pedestal | Push down to INT; it springs back. Up is radio transmit and is ignored |
 | PMDG 737 | R/T-I/C switch, captain's audio panel, center pedestal | Flick to R/T and let go. I/C latches and is ignored |
 | JustFlight Avro RJ | R/T-INT rocker, captain's audio panel | Flick to INT. R/T is radio transmit and is ignored |
 | FSS 727 | SERV INT switch, shared by the captain's, first officer's and flight engineer's audio panels | Flip it on; the client turns it back off |
 | FSS E190/E195 | Call RAMP button, audio panel | Press and let go; the client clears the call |
+| FSLabs A321neo | INT/RAD switch, captain's audio panel, center pedestal | Flick down to RAD; it springs back. INT, up, latches and is ignored |
+
+On the FSLabs, INT is not free: with the beacon on, the aircraft takes INT as a request for pushback, so use RAD for the client.
 
 On the PMDG 737, R/T is also radio transmit. If you talk on VATSIM with that switch instead of a joystick button, every transmission counts as a go-ahead.
 
@@ -166,6 +190,8 @@ Other aircraft work without it. The one thing you then do by hand is the pushbac
 5. Follow the phases in the main window. The client requests refueling and boarding with your OFP figures and moves on as the aircraft gets ready.
 
 Planned fuel and ZFW come from the OFP, so dispatch before boarding, not after. Let the client drive the GSX menu: clicking through it yourself mid-turnaround puts the two of you in a fight.
+
+If you open a GSX menu yourself, for an invoice or the options for example, the client never closes it. It holds its next request until you close the menu, and shows the advisory "A GSX menu you opened is on screen. Close it so the client can send its next request." while it waits. The turnaround stays where it is until then, so close the menu when you are done.
 
 Aircraft notes:
 

@@ -1,6 +1,7 @@
 #ifndef GSX_INTEGRATOR_CLIENT_TESTS_FAKEAIRCRAFT_H
 #define GSX_INTEGRATOR_CLIENT_TESTS_FAKEAIRCRAFT_H
 
+#include <optional>
 #include <string>
 #include <vector>
 #include "../../src/domain/model/MemoryBag.h"
@@ -42,6 +43,16 @@ public:
     int setChocksCalls = 0;
     bool supportsGroundPowerControl = false;
     bool requiresEfbFlightPlan = false;
+    bool loadsItsFlightPlanThroughTheAoc = false;
+    bool worksThroughTheRightMcdu = false;
+    bool drivingTheGsxMenu = false;
+    std::optional<int> passengersItBoards = std::nullopt;
+    bool takesRefuelingRequest = false;
+    bool takesBoardingRequest = false;
+    bool takesPushbackRequest = false;
+    int requestRefuelingItselfCalls = 0;
+    int requestBoardingItselfCalls = 0;
+    int requestPushbackItselfCalls = 0;
     bool groundPowerOn = false;
     int setGroundPowerCalls = 0;
     int closeAllDoorsCalls = 0;
@@ -50,6 +61,7 @@ public:
     bool passengerDoorsHeldClosed = false;
     int holdPassengerDoorsClosedCalls = 0;
     int clearOwnGroundEquipmentCalls = 0;
+    bool ownGroundEquipmentAttached = false;
     RefuelBy refuelMethod = RefuelBy::Self;
     bool supportsFuelTopUp = false;
     bool takesItsFuelFromTheFlightPlanItself = false;
@@ -92,6 +104,9 @@ public:
     }
 
     [[nodiscard]] bool RequiresEfbFlightPlan() const override { return requiresEfbFlightPlan; }
+    [[nodiscard]] bool LoadsItsFlightPlanThroughTheAoc() const override { return loadsItsFlightPlanThroughTheAoc; }
+    [[nodiscard]] bool WorksThroughTheRightMcdu() const override { return worksThroughTheRightMcdu; }
+    [[nodiscard]] bool IsDrivingTheGsxMenu() const override { return drivingTheGsxMenu; }
     [[nodiscard]] bool IsFlightPlanLoaded() const override { return flightPlanLoaded; }
     [[nodiscard]] bool FlightPlanDiffersFromTheOfp() const override { return flightPlanDiffersFromTheOfp; }
     [[nodiscard]] double GetPlannedFuelKg() const override { return plannedFuelKg; }
@@ -133,6 +148,25 @@ public:
     [[nodiscard]] bool CompletesPushbackViaInterruptMenu() const override { return completesPushbackViaInterruptMenu; }
     [[nodiscard]] RefuelBy GetRefuelMethod() const override { return refuelMethod; }
     [[nodiscard]] BoardBy GetBoardMethod() const override { return boardMethod; }
+    [[nodiscard]] std::optional<int> GetPassengersItBoards() const override { return passengersItBoards; }
+
+    [[nodiscard]] bool RequestRefuelingItself() override
+    {
+        ++requestRefuelingItselfCalls;
+        return takesRefuelingRequest;
+    }
+
+    [[nodiscard]] bool RequestBoardingItself() override
+    {
+        ++requestBoardingItselfCalls;
+        return takesBoardingRequest;
+    }
+
+    [[nodiscard]] bool RequestPushbackItself() override
+    {
+        ++requestPushbackItselfCalls;
+        return takesPushbackRequest;
+    }
 
     [[nodiscard]] bool ConsumeSmartSwitch() override
     {
@@ -197,6 +231,8 @@ public:
         ++clearOwnGroundEquipmentCalls;
         callLog.emplace_back("ClearOwnGroundEquipment");
     }
+
+    [[nodiscard]] bool IsOwnGroundEquipmentAttached() const override { return ownGroundEquipmentAttached; }
 
     [[nodiscard]] DoorStatus GetDoorStatus() const override { return doorStatus; }
     [[nodiscard]] bool IsReadyToPush() const override { return readyToPush; }

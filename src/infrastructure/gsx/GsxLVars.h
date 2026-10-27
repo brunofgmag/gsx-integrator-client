@@ -86,6 +86,7 @@ namespace gsx::lvars
     inline constexpr auto kJetwayPower = "FSDT_GSX_JETWAY_POWER";
     inline constexpr auto kSetLoadersStayUntilDeparture = "FSDT_GSX_SET_LOADERS_STAY_UNTIL_DEPARTURE";
     inline constexpr auto kSetAutoStairs = "FSDT_GSX_SET_AUTO_STAIRS";
+    inline constexpr auto kSetRemoteControl = "FSDT_GSX_SET_REMOTECONTROL";
     inline constexpr auto kSetDisableRearStairs = "FSDT_GSX_SET_DISABLE_REAR_STAIRS";
 
     inline constexpr auto kGoodEngineStart = "FSDT_GSX_SETTINGS_GOOD_ENGINE_START";

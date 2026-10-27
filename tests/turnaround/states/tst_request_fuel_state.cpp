@@ -27,6 +27,9 @@ private slots:
     static void flagsThePlanOnceTheCapacityArrivesAfterTheRequest();
     static void warnsOnlyOnceWhileItKeepsWatchingTheCapacity();
     static void doesNotAskAgainForTheRefuelingItSawFinish();
+    static void leavesTheRequestToTheAircraftThatTakesIt();
+    static void asksTheAircraftAgainWhenGsxStillOffersTheService();
+    static void sendsTheRequestToGsxWhenTheAircraftDeclinesIt();
 };
 
 void RequestFuelStateTest::doesNotRequestFuelWhenServiceIsUnavailable()
@@ -354,6 +357,56 @@ void RequestFuelStateTest::doesNotAskAgainForTheRefuelingItSawFinish()
     QCOMPARE(f.menuGateway.refuelingCalls, 0);
     QCOMPARE(f.gsxService.takeOverCalls, 0);
     QVERIFY(!f.ctx.data.refuelingRequested);
+}
+
+void RequestFuelStateTest::leavesTheRequestToTheAircraftThatTakesIt()
+{
+    TurnaroundStateFixture f;
+    RequestFuelState state;
+
+    f.aircraft.takesRefuelingRequest = true;
+    f.gsxService.refuelingState = GsxStateStatus::Callable;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.aircraft.requestRefuelingItselfCalls, 1);
+    QCOMPARE(f.gsxService.takeOverCalls, 0);
+    QCOMPARE(f.menuGateway.refuelingCalls, 0);
+    QVERIFY(f.ctx.data.refuelingRequested);
+    QCOMPARE(f.logger.messages.size(), 1U);
+}
+
+void RequestFuelStateTest::asksTheAircraftAgainWhenGsxStillOffersTheService()
+{
+    TurnaroundStateFixture f;
+    RequestFuelState state;
+
+    f.aircraft.takesRefuelingRequest = true;
+    f.gsxService.refuelingState = GsxStateStatus::Callable;
+
+    for (int tick = 0; tick < 65; ++tick)
+    {
+        ++f.ctx.data.stateTickCount;
+        QVERIFY(!state.Evaluate(f.ctx).has_value());
+    }
+
+    QCOMPARE(f.aircraft.requestRefuelingItselfCalls, 2);
+    QCOMPARE(f.gsxService.takeOverCalls, 0);
+    QCOMPARE(f.menuGateway.refuelingCalls, 0);
+}
+
+void RequestFuelStateTest::sendsTheRequestToGsxWhenTheAircraftDeclinesIt()
+{
+    TurnaroundStateFixture f;
+    RequestFuelState state;
+
+    f.gsxService.refuelingState = GsxStateStatus::Callable;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    QCOMPARE(f.aircraft.requestRefuelingItselfCalls, 1);
+    QCOMPARE(f.gsxService.takeOverCalls, 1);
+    QCOMPARE(f.menuGateway.refuelingCalls, 1);
 }
 
 QTEST_APPLESS_MAIN(RequestFuelStateTest)

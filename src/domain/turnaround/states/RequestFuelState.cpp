@@ -36,8 +36,16 @@ std::optional<TurnaroundTransition> RequestFuelState::EvaluatePhase(TurnaroundCo
 
     if (loadingAllowed && refuelingState == GsxStateStatus::Callable && !data.refuelingRequested)
     {
-        ctx.gsxGateway->TakeOverFuelAndPayload();
-        ctx.menuGateway->RequestRefueling();
+        if (ctx.aircraft->RequestRefuelingItself())
+        {
+            ctx.logger->LogInfo("The aircraft took the refueling request itself; not asking GSX for it");
+        }
+        else
+        {
+            ctx.gsxGateway->TakeOverFuelAndPayload();
+            ctx.menuGateway->RequestRefueling();
+        }
+
         data.refuelingRequested = true;
     }
 

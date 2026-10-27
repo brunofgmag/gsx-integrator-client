@@ -30,6 +30,7 @@ class OperationsViewModelTest final : public QObject
 
 private slots:
     static void exposesUpdatedSnapshot();
+    static void aMenuTheClientWaitsOnReachesTheScreenWithItsSentence();
     static void aSimulatorToRestartIsExplainedOnTheConnectingScreen();
     static void emitsOneSignalForSnapshotChanges();
     static void doesNotEmitWhenSnapshotIsUnchanged();
@@ -54,12 +55,15 @@ private slots:
     static void flightPlanTipFollowsPlanSource();
     static void flightPlanTipNamesTheDeparturePageWhereTheEfbAppliesThePlanThere();
     static void powerOnTipNamesTheEngineerPanelWhereTheAircraftTakesExternalPowerThere();
+    static void flightPlanTipNamesTheAocInitPageWhereTheAircraftLoadsItsPlanThroughTheAoc();
+    static void powerOnTipNamesTheRightMcduWhereTheAircraftWorksThroughIt();
     static void theDeboardingTipWaitsForGsxOnceTheRequestIsOut();
     static void theBoardingTipNamesTheForwardLoaderWaitingForItsDoor();
     static void theBoardingTipNamesTheAftLoaderWaitingForItsDoor();
     static void theBoardingTipNamesTheMainDeckLoaderWaitingForItsDoor();
     static void theBoardingTipStandsDownForThePmdgCargoDoorAdvisory();
     static void theOwnStairsPressureAdvisoryFollowsTheSnapshot();
+    static void theOwnGroundEquipmentAdvisoryFollowsTheSnapshot();
     static void theBoardingTipStillNamesAnotherHoldWhileTheMainDeckIsStuck();
     static void theBoardingTipCountsDownTheSecondsLeftToOpenTheDoor();
     static void theBoardingTipStaysQuietWhileNoLoaderWaits();
@@ -91,6 +95,7 @@ private slots:
     static void resumeSavedTurnaroundDelegatesToService();
     static void resumeSavedTurnaroundReportsRejectedCommands();
     static void exposesGsxProfileConflictFromSnapshot();
+    static void exposesTheGsxProfileRecommendationFromSnapshotWithoutRaisingTheConflict();
     static void fixGsxProfileDelegatesToService();
     static void fixGsxProfileReportsRejectedCommands();
     static void fixPmdgOptionsDelegatesToService();
@@ -180,6 +185,24 @@ void OperationsViewModelTest::exposesUpdatedSnapshot()
 
     QVERIFY(viewModel.IsConnected());
     QCOMPARE(viewModel.GetStateText(), QStringLiteral("Waiting for aircraft ready"));
+}
+
+void OperationsViewModelTest::aMenuTheClientWaitsOnReachesTheScreenWithItsSentence()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    const QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
+
+    QVERIFY(!viewModel.IsGsxMenuHeldByPilot());
+
+    service.snapshot.gsxMenuHeldByPilot = true;
+    service.Notify();
+
+    QVERIFY(viewModel.IsGsxMenuHeldByPilot());
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(OperationsViewModel::GetGsxMenuHeldByPilotAdvisoryText(),
+             QStringLiteral("A GSX menu you opened is on screen. Close it so the client can send its next request."));
 }
 
 void OperationsViewModelTest::aSimulatorToRestartIsExplainedOnTheConnectingScreen()
@@ -495,6 +518,44 @@ void OperationsViewModelTest::powerOnTipNamesTheEngineerPanelWhereTheAircraftTak
              QStringLiteral("With the GPU connected, switch on EXT POWER at the flight engineer panel so the aircraft has power."));
 }
 
+void OperationsViewModelTest::flightPlanTipNamesTheAocInitPageWhereTheAircraftLoadsItsPlanThroughTheAoc()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingFlightPlan;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Check that SimBrief is loaded in GSX and in the client."));
+
+    service.snapshot.aocFlightPlan = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Power the aircraft, switch on the right MCDU, and request INIT DATA on the AOC INIT page."));
+}
+
+void OperationsViewModelTest::powerOnTipNamesTheRightMcduWhereTheAircraftWorksThroughIt()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    service.snapshot.phase = TurnaroundPhase::WaitingPowerOn;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Connect the GPU and switch on the batteries so the aircraft has power."));
+
+    service.snapshot.rightMcdu = true;
+    service.Notify();
+
+    QCOMPARE(viewModel.GetPhaseTip(),
+             QStringLiteral("Power the aircraft and switch on the right MCDU: the client calls the services through it."));
+}
+
 void OperationsViewModelTest::theDeboardingTipWaitsForGsxOnceTheRequestIsOut()
 {
     FakeIntegratorService service;
@@ -604,6 +665,27 @@ void OperationsViewModelTest::theOwnStairsPressureAdvisoryFollowsTheSnapshot()
     QVERIFY(!viewModel.AreOwnStairsWaitingForPressure());
     QCOMPARE(viewModel.GetOwnStairsPressureAdvisoryText(),
              QStringLiteral("The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back."));
+}
+
+void OperationsViewModelTest::theOwnGroundEquipmentAdvisoryFollowsTheSnapshot()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.IsOwnGroundEquipmentAttached());
+
+    service.snapshot.ownGroundEquipmentAttached = true;
+    service.Notify();
+
+    QVERIFY(viewModel.IsOwnGroundEquipmentAttached());
+
+    service.snapshot.ownGroundEquipmentAttached = false;
+    service.Notify();
+
+    QVERIFY(!viewModel.IsOwnGroundEquipmentAttached());
+    QCOMPARE(viewModel.GetOwnGroundEquipmentAdvisoryText(),
+             QStringLiteral("Remove the chocks and disconnect the ground power in the aircraft's EFB. Pushback waits until both are gone."));
 }
 
 void OperationsViewModelTest::theBoardingTipStandsDownForThePmdgCargoDoorAdvisory()
@@ -1173,6 +1255,30 @@ void OperationsViewModelTest::exposesGsxProfileConflictFromSnapshot()
 
     QVERIFY(viewModel.HasGsxProfileConflict());
     QVERIFY(viewModel.IsGsxProfileFixable());
+}
+
+void OperationsViewModelTest::exposesTheGsxProfileRecommendationFromSnapshotWithoutRaisingTheConflict()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+
+    QVERIFY(!viewModel.IsGsxProfileRefuelingRecommended());
+
+    service.snapshot.gsxProfileRefuelingRecommended = true;
+    service.Notify();
+
+    QVERIFY(viewModel.IsGsxProfileRefuelingRecommended());
+    QVERIFY(!viewModel.HasGsxProfileConflict());
+    QVERIFY(!viewModel.IsGsxProfileFixable());
+    QCOMPARE(viewModel.GetGsxProfileActionLabel(), QString());
+
+    service.snapshot.gsxProfileRefuelingRecommended = false;
+    service.Notify();
+
+    QVERIFY(!viewModel.IsGsxProfileRefuelingRecommended());
+    QCOMPARE(viewModel.GetGsxProfileRecommendationAdvisoryText(),
+             QStringLiteral("A GSX profile with 'refueling = 0' is recommended for this aircraft. The client fuels it either way; the setting keeps the GSX truck from writing to the tanks while it does."));
 }
 
 void OperationsViewModelTest::fixGsxProfileDelegatesToService()

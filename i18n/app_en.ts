@@ -909,6 +909,11 @@
         <translation>The GSX profile for this aircraft does not set &apos;refueling = 0&apos;, so the fuel truck never connects the hose. Apply the fix, then restart GSX or reload the flight.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="789"/>
+        <source>A GSX profile with &apos;refueling = 0&apos; is recommended for this aircraft. The client fuels it either way; the setting keeps the GSX truck from writing to the tanks while it does.</source>
+        <translation>A GSX profile with &apos;refueling = 0&apos; is recommended for this aircraft. The client fuels it either way; the setting keeps the GSX truck from writing to the tanks while it does.</translation>
+    </message>
+    <message>
         <source>No GSX profile with &apos;refueling = 0&apos; was found for this aircraft. Install an aircraft profile and set &apos;refueling = 0&apos; in its gsx.cfg.</source>
         <translation type="vanished">No GSX profile with &apos;refueling = 0&apos; was found for this aircraft. Install an aircraft profile and set &apos;refueling = 0&apos; in its gsx.cfg.</translation>
     </message>
@@ -979,6 +984,11 @@
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="854"/>
         <source>GSX stopped a service it had already started. Request it again from the GSX menu and the client will resume the turnaround.</source>
         <translation>GSX stopped a service it had already started. Request it again from the GSX menu and the client will resume the turnaround.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="888"/>
+        <source>A GSX menu you opened is on screen. Close it so the client can send its next request.</source>
+        <translation>A GSX menu you opened is on screen. Close it so the client can send its next request.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="865"/>
@@ -1105,6 +1115,11 @@
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="792"/>
         <source>The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back.</source>
         <translation>The airstair has no accumulator pressure. Switch the AC pump on to recharge it, and the client will move the airstair once the pressure is back.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="820"/>
+        <source>Remove the chocks and disconnect the ground power in the aircraft&apos;s EFB. Pushback waits until both are gone.</source>
+        <translation>Remove the chocks and disconnect the ground power in the aircraft&apos;s EFB. Pushback waits until both are gone.</translation>
     </message>
     <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="820"/>
@@ -1997,6 +2012,11 @@
         <translation>Check that SimBrief is loaded in GSX and in the client.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="212"/>
+        <source>Power the aircraft, switch on the right MCDU, and request INIT DATA on the AOC INIT page.</source>
+        <translation>Power the aircraft, switch on the right MCDU, and request INIT DATA on the AOC INIT page.</translation>
+    </message>
+    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="217"/>
         <source>Import your SimBrief flight plan on the aircraft EFB and open its DEPARTURE page.</source>
         <translation>Import your SimBrief flight plan on the aircraft EFB and open its DEPARTURE page.</translation>
@@ -2094,6 +2114,11 @@
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="248"/>
         <source>Connect the GPU and switch on the batteries so the aircraft has power.</source>
         <translation>Connect the GPU and switch on the batteries so the aircraft has power.</translation>
+    </message>
+    <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="234"/>
+        <source>Power the aircraft and switch on the right MCDU: the client calls the services through it.</source>
+        <translation>Power the aircraft and switch on the right MCDU: the client calls the services through it.</translation>
     </message>
     <message>
         <source>Remember to remove additional services (like the GPU).</source>

@@ -54,6 +54,7 @@ public:
     [[nodiscard]] bool WereStairsKeptInPlace() const override;
 
     [[nodiscard]] bool IsMenuSettled() const;
+    [[nodiscard]] bool IsWaitingForThePilotsMenu() const;
 
     void OpenMenu() const;
     void OpenPushbackPanel() override;
@@ -63,7 +64,9 @@ public:
 
     void OnMenuChanged();
     void OnSnapshot();
+    void ObserveMenuOwner();
     void DisableGsxMenu() override;
+    void HoldRequests(bool held) override { requestsHeld_ = held; }
 
     void Reset();
 
@@ -89,6 +92,10 @@ private:
         long long armedMs = 0;
         int attempts = 0;
         bool firesWhileUnderway = false;
+        bool heldBehindThePilotsMenu = false;
+        bool heldBehindAToggle = false;
+        bool refused = false;
+        int messagesAtSend = -1;
 
         [[nodiscard]] bool WasSent() const { return attempts > 0; }
         [[nodiscard]] bool UndoneByASecondSend() const;
@@ -108,13 +115,22 @@ private:
         {
             return !WasSent() && now - armedMs >= kToggleGiveUpMs;
         }
+        [[nodiscard]] bool IsAToggleAwaitingGsx(const long long now) const
+        {
+            return WasSent() && UndoneByASecondSend() && !refused && !RetryWindowElapsed(now);
+        }
         [[nodiscard]] bool IsDueToSend(const long long now) const
         {
-            return !WasSent() || (!UndoneByASecondSend() && RetryWindowElapsed(now));
+            return !WasSent() || refused || (!UndoneByASecondSend() && RetryWindowElapsed(now));
         }
     };
 
-    enum class DropReason : std::uint8_t { None, Taken, AlreadyUnderway, ToggleGaveUp, NeverTaken, NeverLeft };
+    enum class DropReason : std::uint8_t
+    {
+        None, Taken, AlreadyUnderway, ToggleGaveUp, NeverTaken, NeverLeft,
+    };
+
+    enum class MenuOwner : std::uint8_t { None, Pilot, Client };
 
     class PassScope;
 
@@ -139,7 +155,19 @@ private:
     void LogDrop(const PendingRequest& request, DropReason reason) const;
     void PumpRequests();
     void SendRequest(PendingRequest& request);
+    void HoldBehindThePilotsMenu(PendingRequest& request) const;
+    [[nodiscard]] const PendingRequest* HoldsForAnUntakenToggle(long long now) const;
+    void HoldBehindTheToggle(PendingRequest& request, const PendingRequest& toggle) const;
+    [[nodiscard]] bool IsHoldingARequestBehindAToggle() const;
     [[nodiscard]] bool WasTaken(const PendingRequest& request) const;
+    [[nodiscard]] bool WasRefused(const PendingRequest& request, long long now) const;
+    void MarkTheRefusedToggles(long long now);
+    void RestartTheUnsentClocksWhileThePilotsMenuIsUp(long long now);
+    void TrackMenuOwner();
+    void ReleaseTheMenuOwner();
+    [[nodiscard]] bool AnswersAClientRequest() const;
+    [[nodiscard]] bool OwnsTheShownMenu() const;
+    [[nodiscard]] bool IsShowingThePilotsMenu() const;
     void HandleMenu();
     bool PickFirstMatching(const std::function<bool(const std::string&)>& matches);
     bool PickByContains(const std::string& needle);
@@ -200,12 +228,15 @@ private:
     std::string resyncSig_;
     std::string discardedSig_;
     std::string leftOpenSig_;
+    MenuOwner menuOwner_ = MenuOwner::None;
+    mutable std::optional<long long> menuRequestedMs_;
     mutable long long lastActionMs_ = 0;
     mutable int passDepth_ = 0;
     mutable bool sendRefused_ = false;
     bool panelOpenSpent_ = false;
     bool panelCloseSpent_ = false;
     bool panelOpenedByUs_ = false;
+    bool requestsHeld_ = false;
     bool stairsKeptInPlace_ = false;
     bool deIceYesSpent_ = false;
     long long panelOpenSentMs_ = 0;
@@ -215,8 +246,10 @@ private:
     static constexpr long long kResyncDelayMs = 1500;
     static constexpr int kMaxResyncs = 3;
     static constexpr long long kMenuSettleMs = 1500;
+    static constexpr long long kMenuOwnershipWindowMs = 3000;
     static constexpr long long kTriggerRetryMs = 20000;
     static constexpr long long kToggleGiveUpMs = 90000;
+    static constexpr long long kRefusalSettleMs = 3000;
     static constexpr int kMaxTriggerAttempts = 3;
     static constexpr long long kPanelOpenWaitMs = 8000;
 };

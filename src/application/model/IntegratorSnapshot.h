@@ -50,16 +50,19 @@ struct IntegratorSnapshot
     bool refuelBySelf = false;
     bool gsxProfileConflict = false;
     bool gsxProfileFixable = false;
+    bool gsxProfileRefuelingRecommended = false;
     bool pmdgOptionsConflict = false;
     bool pmdgOptionsFixable = false;
     bool cargoDoorStuck = false;
     bool ownStairsWaitingForPressure = false;
+    bool ownGroundEquipmentAttached = false;
     bool fuelRequestStalled = false;
     bool fuelPlanOverCapacity = false;
     bool fuelDidNotStay = false;
     bool planOmitsCrew = false;
     bool servicesStalled = false;
     bool serviceInterrupted = false;
+    bool gsxMenuHeldByPilot = false;
     bool deboardingAwaitsGsx = false;
     bool doorsHoldingPushback = false;
     CargoLoader loaderHoldingBoarding = CargoLoader::None;
@@ -72,6 +75,8 @@ struct IntegratorSnapshot
     bool cargoAircraft = false;
     bool efbFlightPlan = false;
     bool efbFlightPlanOnDeparturePage = false;
+    bool aocFlightPlan = false;
+    bool rightMcdu = false;
     bool engineerPanelExternalPower = false;
     bool groundPowerByClient = false;
 

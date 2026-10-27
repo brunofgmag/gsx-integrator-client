@@ -9,6 +9,14 @@
 #include "../../ports/GsxGateway.h"
 #include "../../ports/GsxMenuGateway.h"
 
+namespace
+{
+    double DeboardedPassengersPercent(const TurnaroundContext& ctx)
+    {
+        return ctx.gsxGateway->GetDeboardedPassengers() / static_cast<double>(ctx.data.plannedPassengers) * 100.0;
+    }
+}
+
 std::optional<TurnaroundTransition> DeboardingState::EvaluatePhase(TurnaroundContext& ctx)
 {
     auto& data = ctx.data;
@@ -56,10 +64,24 @@ void DeboardingState::EnsureBaseline(TurnaroundContext& ctx)
     }
 
     data.deboardingBaselined = true;
+    AdoptTheLoadOnBoardWithoutAPlan(ctx);
     if (ctx.aircraft->GetBoardMethod() == BoardBy::Self)
     {
         ctx.aircraft->SetCurrentZfwKg(data.initialZfwKg);
     }
+}
+
+void DeboardingState::AdoptTheLoadOnBoardWithoutAPlan(TurnaroundContext& ctx)
+{
+    auto& data = ctx.data;
+    if (data.plannedZfwKg > 0.0)
+    {
+        return;
+    }
+
+    data.plannedZfwKg = ctx.aircraft->GetCurrentZfwKg();
+    data.initialZfwKg = std::min(ctx.aircraft->GetEmptyZfwKg(), data.plannedZfwKg);
+    data.plannedPassengers = ctx.gsxGateway->GetPlannedPassengers();
 }
 
 void DeboardingState::FinishDeboarding(TurnaroundContext& ctx)
@@ -76,15 +98,14 @@ void DeboardingState::AdvanceDeboardingBar(TurnaroundContext& ctx)
     auto& data = ctx.data;
 
     const double cargoPercent = ctx.gsxGateway->GetDeboardingCargoPercent();
-    const double safePassengers = data.plannedPassengers <= 0 ? 1.0 : static_cast<double>(data.plannedPassengers);
-    const double passengerPercent = ctx.gsxGateway->GetDeboardedPassengers() / safePassengers * 100.0;
+    const bool countsPassengers = !ctx.aircraft->IsCargoVariant() && data.plannedPassengers > 0;
 
-    const double progress = ctx.aircraft->IsCargoVariant()
-                                ? cargoPercent
-                                : std::abs((cargoPercent + passengerPercent) / 2.0);
+    const double progress = countsPassengers
+                                ? std::abs((cargoPercent + DeboardedPassengersPercent(ctx)) / 2.0)
+                                : cargoPercent;
 
     data.loadedZfwKg = std::clamp(
-        data.plannedZfwKg - (data.plannedZfwKg - data.initialZfwKg) * (progress / 100.0),
+        data.plannedZfwKg - ((data.plannedZfwKg - data.initialZfwKg) * (progress / 100.0)),
         data.initialZfwKg,
         data.plannedZfwKg);
 }

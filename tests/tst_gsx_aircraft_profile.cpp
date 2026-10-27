@@ -1,15 +1,45 @@
 #include <QtTest/QTest>
 
+#include <QByteArray>
 #include <QTemporaryDir>
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <utility>
+#include "../src/infrastructure/aircraft/bbs/Bbs757.h"
 #include "../src/infrastructure/gsx/GsxAircraftProfile.h"
 
 namespace
 {
+    constexpr std::array kBbs757ProfileFolders = {
+        "bbs-757-200-base", "bbs-757-200-pw", "bbs-757-200-pw-AWE", "bbs-757-200-pw-NC",
+        "bbs-757-200-pw-nw", "bbs-757-200-pw-nw-AWE", "bbs-757-200-rr", "bbs-757-200-rr-AWE",
+        "bbs-757-200-rr-nw", "bbs-757-200-rr-nw-AWE", "bbs-757-200-rr-scimitarw"
+    };
+
+    class ScopedAppData
+    {
+    public:
+        explicit ScopedAppData(const QString& path)
+            : previous_(qgetenv("APPDATA"))
+        {
+            qputenv("APPDATA", path.toUtf8());
+        }
+
+        ScopedAppData(const ScopedAppData&) = delete;
+        ScopedAppData& operator=(const ScopedAppData&) = delete;
+
+        ~ScopedAppData()
+        {
+            qputenv("APPDATA", previous_);
+        }
+
+    private:
+        QByteArray previous_;
+    };
+
     constexpr auto kSampleCfg =
         "[aircraft]\n"
         "icaotype = A346\n"
@@ -59,6 +89,9 @@ private slots:
     static void profileRootsKnownForPmdg777();
     static void profileRootsShareOneFolderAcrossPmdg737Variants();
     static void profileRootsEmptyForUnknownAircraft();
+    static void recommendedProfileRootsCoverEveryFolderOfTheBbs757Package();
+    static void recommendedProfileRootsEmptyForAircraftWithoutARecommendation();
+    static void theBbs757HasNoRequiredProfileRoots();
     static void findCfgsScansRootsRecursively();
     static void findCfgsIgnoresMissingRoots();
 };
@@ -233,6 +266,37 @@ void GsxAircraftProfileTest::profileRootsShareOneFolderAcrossPmdg737Variants()
 void GsxAircraftProfileTest::profileRootsEmptyForUnknownAircraft()
 {
     QVERIFY(GsxAircraftProfile::ProfileRootsFor("Unknown Aircraft").empty());
+}
+
+void GsxAircraftProfileTest::recommendedProfileRootsCoverEveryFolderOfTheBbs757Package()
+{
+    const QTemporaryDir appData;
+    QVERIFY(appData.isValid());
+    const ScopedAppData scopedAppData(appData.path());
+
+    const std::filesystem::path airplanes =
+        std::filesystem::path(appData.path().toStdString()) / "Virtuali" / "Airplanes";
+
+    const auto roots = GsxAircraftProfile::RecommendedProfileRootsFor(Bbs757::kName);
+
+    QCOMPARE(roots.size(), kBbs757ProfileFolders.size());
+
+    for (std::size_t index = 0; index < kBbs757ProfileFolders.size(); ++index)
+    {
+        QCOMPARE(roots[index].string(), (airplanes / kBbs757ProfileFolders[index]).string());
+    }
+}
+
+void GsxAircraftProfileTest::recommendedProfileRootsEmptyForAircraftWithoutARecommendation()
+{
+    QVERIFY(GsxAircraftProfile::RecommendedProfileRootsFor("ToLiss A340-600").empty());
+    QVERIFY(GsxAircraftProfile::RecommendedProfileRootsFor("PMDG 737-800").empty());
+    QVERIFY(GsxAircraftProfile::RecommendedProfileRootsFor("Unknown Aircraft").empty());
+}
+
+void GsxAircraftProfileTest::theBbs757HasNoRequiredProfileRoots()
+{
+    QVERIFY(GsxAircraftProfile::ProfileRootsFor(Bbs757::kName).empty());
 }
 
 void GsxAircraftProfileTest::findCfgsScansRootsRecursively()

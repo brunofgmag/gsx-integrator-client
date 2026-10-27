@@ -122,6 +122,12 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            visible: root.integratorVm.gsxProfileRefuelingRecommended
+            text: root.integratorVm.gsxProfileRecommendationAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             visible: root.integratorVm.pmdgOptionsConflict
             text: root.integratorVm.pmdgOptionsAdvisoryText
             actionText: root.integratorVm.pmdgOptionsActionLabel
@@ -138,6 +144,12 @@ ColumnLayout {
             Layout.fillWidth: true
             visible: root.integratorVm.ownStairsWaitingForPressure
             text: root.integratorVm.ownStairsPressureAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
+            visible: root.integratorVm.ownGroundEquipmentAttached
+            text: root.integratorVm.ownGroundEquipmentAdvisoryText
         }
 
         Advisory {
@@ -182,6 +194,12 @@ ColumnLayout {
             Layout.fillWidth: true
             visible: root.integratorVm.serviceInterrupted
             text: root.integratorVm.serviceInterruptedAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
+            visible: root.integratorVm.gsxMenuHeldByPilot
+            text: root.integratorVm.gsxMenuHeldByPilotAdvisoryText
         }
 
         Advisory {

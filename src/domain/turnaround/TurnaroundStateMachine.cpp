@@ -36,6 +36,13 @@
 
 namespace
 {
+    constexpr int kAirborneTicksToLeaveForTheFlight = 30;
+
+    constexpr bool HasNoAirborneExitOfItsOwn(const TurnaroundPhase phase)
+    {
+        return phase >= TurnaroundPhase::WaitingAircraftReady && phase <= TurnaroundPhase::RequestPushback;
+    }
+
     constexpr const char* TouchSurface(const bool fromSwitch, const bool fromApp)
     {
         if (fromSwitch && fromApp)
@@ -121,6 +128,7 @@ void TurnaroundStateMachine::RegisterStates()
 void TurnaroundStateMachine::Tick()
 {
     context_.gsxGateway->Observe();
+    context_.menuGateway->HoldRequests(context_.aircraft != nullptr && context_.aircraft->IsDrivingTheGsxMenu());
     Step();
     PublishStatus();
 }
@@ -238,6 +246,7 @@ void TurnaroundStateMachine::StandAt(const TurnaroundPhase phase)
     context_.pilotTouched = false;
     appTouchPending_ = false;
     phase_ = phase;
+    airborneTicks_ = 0;
     pendingPhase_ = phase;
     pendingOrigin_ = TransitionOrigin::Reading;
     lastTransitionOrigin_ = TransitionOrigin::Reading;
@@ -325,8 +334,39 @@ void TurnaroundStateMachine::DebugSkipPhase(const int delta)
 }
 #endif
 
+bool TurnaroundStateMachine::IsAirborneWithoutAnExitOfItsOwn() const
+{
+    return HasNoAirborneExitOfItsOwn(phase_) && !context_.gsxGateway->IsAircraftOnGround();
+}
+
+std::optional<TurnaroundTransition> TurnaroundStateMachine::CountTheAirborneTick()
+{
+    ++airborneTicks_;
+    if (airborneTicks_ < kAirborneTicksToLeaveForTheFlight)
+    {
+        return std::nullopt;
+    }
+
+    if (context_.logger != nullptr)
+    {
+        context_.logger->LogInfo(
+            std::format("The aircraft is airborne in {}; the flow skips the rest of the departure and moves on to the flight",
+                        TurnaroundPhaseToString(phase_))
+        );
+    }
+
+    return TurnaroundTransition{.next = TurnaroundPhase::OnFlight};
+}
+
 std::optional<TurnaroundTransition> TurnaroundStateMachine::EvaluateCurrentPhase()
 {
+    if (IsAirborneWithoutAnExitOfItsOwn())
+    {
+        return CountTheAirborneTick();
+    }
+
+    airborneTicks_ = 0;
+
     TurnaroundState* state = StateFor(phase_);
     if (state == nullptr)
     {
@@ -396,6 +436,7 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
     }
 
     phase_ = phase;
+    airborneTicks_ = 0;
     context_.data.stateTickCount = 0;
     context_.data.ruleHoldTicks = 0;
     context_.data.expiredRuleHolds.clear();
