@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.52.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.51.0...v1.52.0) (2026-10-27)
+
+
+* wait for GSX to confirm the arrival ground power ([#279](https://github.com/brunofgmag/gsx-integrator-client/issues/279)) ([540f8c5](https://github.com/brunofgmag/gsx-integrator-client/commit/540f8c53d807f9e2faafccf9c4db444ba3fbd559))
+
+
+### Features
+
+* **bbs:** record the 757 power state in the probe ([41fb626](https://github.com/brunofgmag/gsx-integrator-client/commit/41fb6260edb170ba5770293ce0c8aa78f7624bb6)) ([540f8c5](https://github.com/brunofgmag/gsx-integrator-client/commit/540f8c53d807f9e2faafccf9c4db444ba3fbd559))
+
+
+### Bug Fixes
+
+* **turnaround:** wait for GSX to confirm the arrival ground power ([a80b956](https://github.com/brunofgmag/gsx-integrator-client/commit/a80b9567e0421063fffad9c0b654090e726340f4)) ([540f8c5](https://github.com/brunofgmag/gsx-integrator-client/commit/540f8c53d807f9e2faafccf9c4db444ba3fbd559))
+
 ## [1.51.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.50.0...v1.51.0) (2026-10-26)
 
 
