@@ -59,8 +59,8 @@ The FSLabs talks to GSX on its own. It calls the jetway or stairs and the GPU wh
 
 Two things are yours:
 
-- Request the flight plan: AOC MENU, `<INIT`, `INIT DATA REQ`. The client waits for it and never does it for you.
-- Switch on the right MCDU and leave it to the client. It presses keys only on that one, so you can keep programming the left one. The right MCDU comes back off every time the aircraft loses power, and the client waits until you switch it on again.
+- Request the flight plan: AOC MENU, `<INIT`, `INIT DATA REQ`, on either MCDU. The client waits for it and never does it for you. It opens the AOC INIT page once and after that only watches both screens. The plan counts as loaded when that page shows the departure airport.
+- Switch on the right MCDU. The client presses keys only on that one: a few to see that it answers, the trip to the AOC INIT page, and after that only to ask for the OFP, boarding or pushback. The rest of the time you can use it too. It comes back off every time the aircraft loses power, and the client waits until you switch it on again.
 
 Refueling starts when the client sends the OFP DATA page (it resets the STD first, because the aircraft refuses a SEND when the STD is more than an hour from the sim time). As on the other aircraft, that waits for automatic loading or for the smart switch. If you press SEND yourself, the client follows along. The aircraft boards its plan minus a few random no-shows, and the client counts boarding against the number the aircraft gives GSX, not against the plan.
 

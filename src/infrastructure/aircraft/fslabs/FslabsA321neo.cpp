@@ -39,11 +39,12 @@ namespace
 }
 
 FslabsA321neo::FslabsA321neo(VariableGateway* variableGateway, const AutomationStatus* status,
-                             std::unique_ptr<FslabsMcduGateway> mcdu)
+                             std::unique_ptr<FslabsMcduGateway> rightMcdu, std::unique_ptr<FslabsMcduDisplay> leftMcdu)
     : variableGateway_(variableGateway),
       status_(status),
-      mcdu_(std::move(mcdu)),
-      aoc_(*mcdu_),
+      rightMcdu_(std::move(rightMcdu)),
+      leftMcdu_(std::move(leftMcdu)),
+      aoc_(*rightMcdu_, *leftMcdu_),
       smartSwitch_(*variableGateway, {kSmartSwitchLVar},
                    [](const double min, double) { return min <= kSmartSwitchRadio; })
 {
@@ -60,7 +61,8 @@ bool FslabsA321neo::IsCargoVariant() const
 void FslabsA321neo::Observe()
 {
     ++observeTicks_;
-    mcdu_->Poll();
+    rightMcdu_->Poll();
+    leftMcdu_->Poll();
     aoc_.Advance(AwaitsTheInit(), PowerIsAsked());
     CountTheShutdownTicks();
 }
@@ -77,7 +79,7 @@ void FslabsA321neo::OnTurnaroundStarted()
 
 bool FslabsA321neo::IsReachable() const
 {
-    return mcdu_->IsAvailable();
+    return rightMcdu_->IsAvailable();
 }
 
 bool FslabsA321neo::AwaitsTheInit() const
@@ -226,7 +228,8 @@ namespace
     std::unique_ptr<Aircraft> CreateFslabsA321neo(const AircraftContext& context, const AircraftIdentity&)
     {
         return std::make_unique<FslabsA321neo>(context.variableGateway, context.status,
-                                               std::make_unique<FslabsMcduClient>());
+                                               std::make_unique<FslabsMcduClient>(FslabsMcduSide::Right),
+                                               std::make_unique<FslabsMcduClient>(FslabsMcduSide::Left));
     }
 
     const AircraftDescriptor kFslabsA321neoDescriptor{

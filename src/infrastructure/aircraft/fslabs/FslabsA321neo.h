@@ -17,7 +17,7 @@ public:
     static constexpr auto kName = "FSLabs A321neo";
 
     FslabsA321neo(VariableGateway* variableGateway, const AutomationStatus* status,
-                  std::unique_ptr<FslabsMcduGateway> mcdu);
+                  std::unique_ptr<FslabsMcduGateway> rightMcdu, std::unique_ptr<FslabsMcduDisplay> leftMcdu);
 
     [[nodiscard]] bool IsCargoVariant() const override;
 
@@ -64,7 +64,8 @@ private:
 
     VariableGateway* variableGateway_;
     const AutomationStatus* status_;
-    std::unique_ptr<FslabsMcduGateway> mcdu_;
+    std::unique_ptr<FslabsMcduGateway> rightMcdu_;
+    std::unique_ptr<FslabsMcduDisplay> leftMcdu_;
     FslabsAoc aoc_;
     SmartSwitch smartSwitch_;
     int shutdownTicks_ = 0;

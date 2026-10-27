@@ -16,7 +16,7 @@ enum class AocRequest : std::uint8_t { SendOfp, Board, Pushback };
 class FslabsAoc
 {
 public:
-    explicit FslabsAoc(FslabsMcduGateway& mcdu);
+    FslabsAoc(FslabsMcduGateway& rightMcdu, const FslabsMcduDisplay& leftMcdu);
 
     void Advance(bool initIsAwaited, bool powerIsAsked);
     [[nodiscard]] bool IsAlive() const;
@@ -44,7 +44,9 @@ private:
     void ContinueRun();
     void PressNext();
     void RememberTheCompletion();
-    void RecordArrival(bool pageChanged, const FslabsMcduScreen& screen);
+    void RememberTheStop();
+    void RememberTheInitCheck();
+    void ReadTheInit();
     void Abort(const FslabsMcduScreen& screen);
     void ReportAbort(const FslabsMcduScreen& screen);
     void LeaveTheMenu();
@@ -52,20 +54,24 @@ private:
     void ReportLifeChange();
     [[nodiscard]] bool McduShowsAScreen() const;
     [[nodiscard]] bool InitIsPending(bool initIsAwaited) const;
+    [[nodiscard]] bool InitCheckIsDue(bool initIsAwaited) const;
+    [[nodiscard]] bool LifeIsWanted(bool initIsAwaited, bool powerIsAsked) const;
     [[nodiscard]] bool ProbeIsDue(bool initIsAwaited, bool powerIsAsked) const;
     [[nodiscard]] bool IsRunningOrQueued(const AocScript& script) const;
+    [[nodiscard]] bool HasGivenUp(const AocScript& script) const;
     [[nodiscard]] bool HoldsBackTheRepeat(const AocScript& script);
-    [[nodiscard]] bool ProvedAliveWithin(int ticks) const;
 
-    FslabsMcduGateway& mcdu_;
+    FslabsMcduGateway& rightMcdu_;
+    const FslabsMcduDisplay& leftMcdu_;
     std::deque<const AocScript*> queue_;
     std::map<const AocScript*, Completion> completions_;
+    std::map<const AocScript*, int> stops_;
     std::optional<Run> run_;
-    std::optional<long long> lastProofTick_;
     std::string lastAbortReport_;
     long long ticks_ = 0;
     long long nextProbeTick_ = 0;
-    long long nextInitCheckTick_ = 0;
+    bool aliveIsProved_ = false;
+    bool initCheckRan_ = false;
     bool initDone_ = false;
     bool wasAlive_ = false;
 };
