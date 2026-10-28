@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.53.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.52.1...v1.53.0) (2026-10-28)
+
+
+* wait for the ground power and chocks, and read every door before commanding it ([#284](https://github.com/brunofgmag/gsx-integrator-client/issues/284)) ([5b13e26](https://github.com/brunofgmag/gsx-integrator-client/commit/5b13e2610251fbf7280a3dd8bfe7681518caad93))
+
+
+### Features
+
+* **turnaround:** wait for the ground power and chocks, and read every door before commanding it ([57c13b3](https://github.com/brunofgmag/gsx-integrator-client/commit/57c13b39e56e7b7c6c0b90cd2f26ebcdc26b2eb8)) ([5b13e26](https://github.com/brunofgmag/gsx-integrator-client/commit/5b13e2610251fbf7280a3dd8bfe7681518caad93))
+
 ## [1.52.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.52.0...v1.52.1) (2026-10-27)
 
 
