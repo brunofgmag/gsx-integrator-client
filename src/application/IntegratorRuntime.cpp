@@ -66,6 +66,16 @@ namespace
         return value.empty() ? "no " + label : label + " " + value;
     }
 
+    const char* DescribeRefueling(const std::optional<bool>& refueling)
+    {
+        if (!refueling.has_value())
+        {
+            return "unknown";
+        }
+
+        return *refueling ? "on" : "off";
+    }
+
     int Flag(const bool value)
     {
         return value ? 1 : 0;
@@ -185,6 +195,7 @@ void IntegratorRuntime::Setup()
             {
                 GsxRemoteStateReducer::ApplySnapshot(gsxRemoteState_, snapshot);
                 AnnounceWireFacts();
+                ObserveGsxLoadedProfile();
                 if (IsDrivingTheGsx())
                 {
                     gsxMenu_.OnSnapshot();
@@ -206,6 +217,7 @@ void IntegratorRuntime::Setup()
                     LOG_WARN("GSX published an unknown path: %s", path.c_str());
                 }
                 AnnounceWireFacts();
+                ObserveGsxLoadedProfile();
                 if (path != "/menu" && path != "/menuShown")
                 {
                     return;
@@ -271,6 +283,27 @@ void IntegratorRuntime::AnnounceWireFacts()
     }
 }
 
+void IntegratorRuntime::ObserveGsxLoadedProfile()
+{
+    const std::string& source = gsxRemoteState_.loadedProfileSource;
+    const std::optional<bool>& refueling = gsxRemoteState_.loadedProfileRefueling;
+    if (source == announcedProfileSource_ && refueling == announcedProfileRefueling_)
+    {
+        return;
+    }
+
+    announcedProfileSource_ = source;
+    announcedProfileRefueling_ = refueling;
+    if (!source.empty())
+    {
+        LOG_INFO("GSX loaded the aircraft profile from '%s': refueling %s.",
+                 source.c_str(), DescribeRefueling(refueling));
+    }
+
+    CheckRecommendedGsxProfile();
+    emit Updated();
+}
+
 void IntegratorRuntime::OnRemoteConnectionChanged(const bool connected)
 {
     GsxRemoteStateReducer::ApplyConnection(gsxRemoteState_, connected);
@@ -280,6 +313,8 @@ void IntegratorRuntime::OnRemoteConnectionChanged(const bool connected)
         announcedSimbriefGeneration_ = 0;
         LOG_INFO("GSX Remote API handshake received. Waiting for its first snapshot.");
     }
+
+    ObserveGsxLoadedProfile();
 }
 
 TurnaroundKey IntegratorRuntime::LiveKey()
@@ -1010,6 +1045,13 @@ void IntegratorRuntime::CheckRecommendedGsxProfile()
     }
 
     gsxProfile_.recommendedCfgs = GsxAircraftProfile::FindCfgs(gsxProfile_.recommendedRoots);
+    if (const std::optional<bool>& loaded = gsxRemoteState_.loadedProfileRefueling; loaded.has_value())
+    {
+        gsxProfile_.refuelingRecommended = *loaded;
+
+        return;
+    }
+
     gsxProfile_.refuelingRecommended = gsxProfile_.recommendedCfgs.empty()
         || std::ranges::any_of(gsxProfile_.recommendedCfgs, NeedsRefuelingFix);
 }
@@ -1127,6 +1169,7 @@ IntegratorSnapshot IntegratorRuntime::Snapshot() const
     snapshot.engineConfirmationBlock = GetEngineConfirmationBlock();
     snapshot.servicesStalled = AreServicesStalled();
     snapshot.deboardingAwaitsGsx = status_.deboardingAwaitsGsx;
+    snapshot.groundEquipmentTimedOut = status_.groundEquipmentTimedOut;
     snapshot.serviceInterrupted = IsServiceInterrupted();
     snapshot.gsxMenuHeldByPilot = IsGsxMenuHeldByPilot();
     snapshot.loaderHoldingBoarding = status_.loaderHoldingBoarding;

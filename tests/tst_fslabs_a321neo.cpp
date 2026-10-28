@@ -287,6 +287,7 @@ private slots:
     static void deboardReadinessNeedsSeventyFiveQuietTicks();
     static void readyToPushNeedsPowerEnginesOffAndBeacon();
     static void theAircraftIsHeldByBrakeOrChocks();
+    static void chocksStatusIsUnknownUntilTheLVarArrives();
     static void doorsAreUnknownUntilDataArrivesThenFollowTheLVars();
     static void fuelAndZfwComeFromTheSimulatorWeights();
     static void theAdapterNeverWritesFuelOrPayload();
@@ -1458,6 +1459,21 @@ void FslabsA321neoTest::theAircraftIsHeldByBrakeOrChocks()
 
     QVERIFY(fixture.aircraft.IsHeldInPlace());
     QVERIFY(fixture.aircraft.IsParkingBrakeSet());
+}
+
+void FslabsA321neoTest::chocksStatusIsUnknownUntilTheLVarArrives()
+{
+    FslabsFixture fixture;
+
+    QCOMPARE(fixture.aircraft.GetChocksStatus(), std::optional(ChocksStatus::Unknown));
+
+    fixture.gateway.lvars[kChocks] = 0.0;
+
+    QCOMPARE(fixture.aircraft.GetChocksStatus(), std::optional(ChocksStatus::Removed));
+
+    fixture.gateway.lvars[kChocks] = 1.0;
+
+    QCOMPARE(fixture.aircraft.GetChocksStatus(), std::optional(ChocksStatus::Placed));
 }
 
 void FslabsA321neoTest::doorsAreUnknownUntilDataArrivesThenFollowTheLVars()

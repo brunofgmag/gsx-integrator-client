@@ -1,0 +1,16 @@
+{
+ "v": 1,
+ "type": "patch",
+ "ts": 1793142411,
+ "path": "/handlerData",
+ "value": {
+  "aircraft": {
+   "atcType": "BBS752RR",
+   "dataSourceUsed": "User customization in %APPDATA%\\Virtuali\\Airplanes",
+   "dataSourcesAvailable": [
+    "User customization in %APPDATA%\\Virtuali\\Airplanes"
+   ],
+   "refueling": false
+  }
+ }
+}

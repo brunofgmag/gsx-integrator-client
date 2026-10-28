@@ -77,6 +77,7 @@ struct TurnaroundData
     bool boardingFinished = false;
     bool deboardingRequested = false;
     bool deboardingAwaitsGsx = false;
+    bool groundEquipmentTimedOut = false;
     bool pushbackRequested = false;
     bool pushbackPending = false;
     bool pushbackLostToGsxRestart = false;
@@ -90,6 +91,7 @@ struct TurnaroundData
     bool ownGroundEquipmentCleared = false;
     bool arrivalGpuRequested = false;
     int arrivalGpuConfirmationTicks = 0;
+    int arrivalEquipmentTicks = 0;
     bool arrivalChocksPlaced = false;
     bool arrivalDoorsClosed = false;
     bool cateringAsked = false;
@@ -199,6 +201,7 @@ namespace turnaround
         visit("boardingFinished", Field(&TurnaroundData::boardingFinished), FieldRestore::Raw);
         visit("deboardingRequested", Field(&TurnaroundData::deboardingRequested), FieldRestore::Raw);
         visit("deboardingAwaitsGsx", Field(&TurnaroundData::deboardingAwaitsGsx), FieldRestore::NotSaved);
+        visit("groundEquipmentTimedOut", Field(&TurnaroundData::groundEquipmentTimedOut), FieldRestore::NotSaved);
         visit("pushbackRequested", Field(&TurnaroundData::pushbackRequested), FieldRestore::Raw);
         visit("pushbackPending", Field(&TurnaroundData::pushbackPending), FieldRestore::Raw);
         visit("pushbackLostToGsxRestart", Field(&TurnaroundData::pushbackLostToGsxRestart), FieldRestore::Raw);
@@ -212,6 +215,7 @@ namespace turnaround
         visit("ownGroundEquipmentCleared", Field(&TurnaroundData::ownGroundEquipmentCleared), FieldRestore::Raw);
         visit("arrivalGpuRequested", Field(&TurnaroundData::arrivalGpuRequested), FieldRestore::Raw);
         visit("arrivalGpuConfirmationTicks", Field(&TurnaroundData::arrivalGpuConfirmationTicks), FieldRestore::Restart);
+        visit("arrivalEquipmentTicks", Field(&TurnaroundData::arrivalEquipmentTicks), FieldRestore::Restart);
         visit("arrivalChocksPlaced", Field(&TurnaroundData::arrivalChocksPlaced), FieldRestore::Raw);
         visit("arrivalDoorsClosed", Field(&TurnaroundData::arrivalDoorsClosed), FieldRestore::Raw);
         visit("cateringAsked", Field(&TurnaroundData::cateringAsked), FieldRestore::Raw);

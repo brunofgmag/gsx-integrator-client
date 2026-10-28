@@ -1,6 +1,7 @@
 #include "TfdiMd11PaxDoorsFollowStairsRule.h"
 
 #include "../TfdiMd11.h"
+#include "../../DoorReading.h"
 #include "../../../gsx/GsxLVars.h"
 #include "../../../simvars/VariableGateway.h"
 
@@ -11,6 +12,10 @@ namespace
     constexpr auto kPaxDoor1LLVar = "MD11_EXT_DOOR_CMD_PAX_1L";
     constexpr auto kPaxDoor2LLVar = "MD11_EXT_DOOR_CMD_PAX_2L";
     constexpr auto kPaxDoor4LLVar = "MD11_EXT_DOOR_CMD_PAX_4L";
+
+    constexpr auto kPaxDoor1LReadingLVar = "MD11_EXT_DOOR_PAX_1L";
+    constexpr auto kPaxDoor2LReadingLVar = "MD11_EXT_DOOR_PAX_2L";
+    constexpr auto kPaxDoor4LReadingLVar = "MD11_EXT_DOOR_PAX_4L";
 
     constexpr double kDoorOpen = 100.0;
     constexpr double kDoorClosed = 0.0;
@@ -39,9 +44,9 @@ void TfdiMd11PaxDoorsFollowStairsRule::Act(const RuleContext&, VariableWriter& w
         return;
     }
 
-    FollowStairs(writer, {.stairsState = gsx::lvars::kPassengerStairsFrontState, .command = kPaxDoor1LLVar}, targets_.fwd);
-    FollowStairs(writer, {.stairsState = gsx::lvars::kPassengerStairsMiddleState, .command = kPaxDoor2LLVar}, targets_.mid);
-    FollowStairs(writer, {.stairsState = gsx::lvars::kPassengerStairsRearState, .command = kPaxDoor4LLVar}, targets_.aft);
+    FollowStairs(writer, {.stairsState = gsx::lvars::kPassengerStairsFrontState, .command = kPaxDoor1LLVar, .reading = kPaxDoor1LReadingLVar}, targets_.fwd);
+    FollowStairs(writer, {.stairsState = gsx::lvars::kPassengerStairsMiddleState, .command = kPaxDoor2LLVar, .reading = kPaxDoor2LReadingLVar}, targets_.mid);
+    FollowStairs(writer, {.stairsState = gsx::lvars::kPassengerStairsRearState, .command = kPaxDoor4LLVar, .reading = kPaxDoor4LReadingLVar}, targets_.aft);
 }
 
 TfdiMd11PaxDoorsFollowStairsRule::DoorTargets TfdiMd11PaxDoorsFollowStairsRule::Targets() const
@@ -71,25 +76,45 @@ void TfdiMd11PaxDoorsFollowStairsRule::FollowStairs(VariableWriter& writer, cons
 
     if (gsx::states::AreStairsArriving(variables_->GetLVar(door.stairsState, 0.0)))
     {
-        if (lastDoorTarget != kDoorOpen)
-        {
-            writer.SetLVar(door.command, kDoorOpen);
-            lastDoorTarget = kDoorOpen;
-        }
+        CommandWhenTheDoorDiffers(writer, door, kDoorOpen, lastDoorTarget);
     }
     else if (lastDoorTarget == kDoorOpen)
     {
-        writer.SetLVar(door.command, kDoorClosed);
-        lastDoorTarget = kDoorClosed;
+        CommandWhenTheDoorDiffers(writer, door, kDoorClosed, lastDoorTarget);
     }
 }
 
 void TfdiMd11PaxDoorsFollowStairsRule::CloseWhileHeld(VariableWriter& writer, const DoorLVars& door,
-                                                      std::optional<double>& lastDoorTarget)
+                                                      std::optional<double>& lastDoorTarget) const
 {
     if (lastDoorTarget == kDoorOpen)
     {
-        writer.SetLVar(door.command, kDoorClosed);
-        lastDoorTarget = kDoorClosed;
+        CommandWhenTheDoorDiffers(writer, door, kDoorClosed, lastDoorTarget);
     }
+}
+
+void TfdiMd11PaxDoorsFollowStairsRule::CommandWhenTheDoorDiffers(VariableWriter& writer, const DoorLVars& door,
+                                                                 const double target,
+                                                                 std::optional<double>& lastDoorTarget) const
+{
+    if (lastDoorTarget == target)
+    {
+        return;
+    }
+
+    const std::optional<bool> isOpen = doors::OpenAboveZero(*variables_, door.reading);
+
+    if (!isOpen.has_value())
+    {
+        return;
+    }
+
+    const bool wantsOpen = target == kDoorOpen;
+
+    if (*isOpen != wantsOpen)
+    {
+        writer.SetLVar(door.command, target);
+    }
+
+    lastDoorTarget = target;
 }

@@ -39,6 +39,7 @@ private slots:
     static void carriesThePilotTouchTheCurrentPhaseAnswersFor();
     static void carriesTheDroppedServiceSentenceTheWindowWrites();
     static void carriesTheHeldMenuFlagAndTheSentenceTheScreenShows();
+    static void carriesTheGroundEquipmentGiveUpFlagAndTheSentenceTheScreenShows();
     static void carriesTheLoaderCountdownTheWindowWrites();
     static void carriesTheEffectiveFuelRateTheFuelCardShows();
     static void carriesTheDeparturePageTipTheWindowWrites();
@@ -389,6 +390,34 @@ void EfbStatePublisherTest::carriesTheHeldMenuFlagAndTheSentenceTheScreenShows()
     publisher.Publish();
 
     QVERIFY(std::get<2>(bridge.calls.back()).find(R"("gsxMenuHeldByPilot":true)") != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(expectedSentence) != std::string::npos);
+}
+
+void EfbStatePublisherTest::carriesTheGroundEquipmentGiveUpFlagAndTheSentenceTheScreenShows()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    FakeCommBusBridgeGateway bridge;
+
+    EfbStatePublisher publisher(&bridge, &viewModel, [] { return SimVersion::Msfs2024; });
+
+    service.snapshot.connected = true;
+    service.Notify();
+    publisher.Publish();
+
+    const std::string sentence = OperationsViewModel::GetGroundEquipmentTimedOutAdvisoryText().toStdString();
+    const std::string expectedSentence = R"("groundEquipmentTimedOutAdvisoryText":")" + sentence + R"(")";
+
+    QVERIFY(!sentence.empty());
+    QVERIFY(std::get<2>(bridge.calls.back()).find(expectedSentence) != std::string::npos);
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("groundEquipmentTimedOut":false)") != std::string::npos);
+
+    service.snapshot.groundEquipmentTimedOut = true;
+    service.Notify();
+    publisher.Publish();
+
+    QVERIFY(std::get<2>(bridge.calls.back()).find(R"("groundEquipmentTimedOut":true)") != std::string::npos);
     QVERIFY(std::get<2>(bridge.calls.back()).find(expectedSentence) != std::string::npos);
 }
 

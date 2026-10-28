@@ -1,6 +1,7 @@
 #include <QtTest/QTest>
 
 #include <algorithm>
+#include <vector>
 #include "doubles/FakePmdgTabletGateway.h"
 #include "../src/infrastructure/pmdg/PmdgGroundConnReconciler.h"
 #include "../src/infrastructure/pmdg/PmdgGroundSource.h"
@@ -35,6 +36,49 @@ namespace
     {
         return static_cast<int>(std::ranges::count(tablet.groundVehicleRequests, key));
     }
+
+    constexpr auto kLateReadingMessage = "chocks reading did not arrive";
+
+    std::vector<QString>& CapturedMessages()
+    {
+        static std::vector<QString> messages;
+
+        return messages;
+    }
+
+    void CaptureMessage(QtMsgType, const QMessageLogContext&, const QString& message)
+    {
+        CapturedMessages().push_back(message);
+    }
+
+    class MessageCapture
+    {
+    public:
+        MessageCapture()
+        {
+            CapturedMessages().clear();
+            previous_ = qInstallMessageHandler(&CaptureMessage);
+        }
+
+        ~MessageCapture()
+        {
+            qInstallMessageHandler(previous_);
+        }
+
+        MessageCapture(const MessageCapture&) = delete;
+        MessageCapture& operator=(const MessageCapture&) = delete;
+
+        [[nodiscard]] static int Count(const char* fragment)
+        {
+            return static_cast<int>(std::ranges::count_if(CapturedMessages(), [fragment](const QString& message)
+            {
+                return message.contains(QLatin1String(fragment));
+            }));
+        }
+
+    private:
+        QtMessageHandler previous_ = nullptr;
+    };
 }
 
 class PmdgGroundConnReconcilerTest final : public QObject
@@ -66,7 +110,10 @@ private slots:
     static void aRestoredPassengerEntryKeepsPressingTheButton();
     static void aRestoredPlaceRequestWaitsForTheChocksReadingAndFindsThemSet();
     static void aRestoredRemoveRequestIsNotSatisfiedByTheDefaultReading();
-    static void anOrdinaryChocksRequestDoesNotWaitForTheReading();
+    static void aFreshChocksRequestWaitsForTheReadingToo();
+    static void aFreshChocksRequestStillStopsAtTheAttemptCapOnceTheReadingArrives();
+    static void aFreshChocksRequestFoundSatisfiedWhenTheReadingArrivesSendsNothing();
+    static void aChocksReadingThatNeverArrivesSendsNothingAndIsLoggedOnce();
     static void aSavedValueThatIsNotAFlagIsNotRestored();
 };
 
@@ -566,7 +613,7 @@ void PmdgGroundConnReconcilerTest::aRestoredRemoveRequestIsNotSatisfiedByTheDefa
     QCOMPARE(RequestCount(tablet, kChocksRequest), 1);
 }
 
-void PmdgGroundConnReconcilerTest::anOrdinaryChocksRequestDoesNotWaitForTheReading()
+void PmdgGroundConnReconcilerTest::aFreshChocksRequestWaitsForTheReadingToo()
 {
     FakeGroundSource source;
     source.chocksArrived = false;
@@ -576,7 +623,87 @@ void PmdgGroundConnReconcilerTest::anOrdinaryChocksRequestDoesNotWaitForTheReadi
     reconciler.SetChocks(true);
     reconciler.Reconcile();
 
+    QCOMPARE(RequestCount(tablet, kChocksRequest), 0);
+
+    source.chocksArrived = true;
+    reconciler.Reconcile();
+
     QCOMPARE(RequestCount(tablet, kChocksRequest), 1);
+}
+
+void PmdgGroundConnReconcilerTest::aFreshChocksRequestStillStopsAtTheAttemptCapOnceTheReadingArrives()
+{
+    FakeGroundSource source;
+    source.chocksArrived = false;
+    FakePmdgTabletGateway tablet;
+    PmdgGroundConnReconciler reconciler(source, tablet);
+
+    reconciler.SetChocks(true);
+    for (int tick = 0; tick < 50; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QCOMPARE(RequestCount(tablet, kChocksRequest), 0);
+
+    source.chocksArrived = true;
+    for (int tick = 0; tick < 200; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QCOMPARE(RequestCount(tablet, kChocksRequest), 10);
+}
+
+void PmdgGroundConnReconcilerTest::aFreshChocksRequestFoundSatisfiedWhenTheReadingArrivesSendsNothing()
+{
+    FakeGroundSource source;
+    source.chocksSet = true;
+    source.chocksArrived = false;
+    FakePmdgTabletGateway tablet;
+    PmdgGroundConnReconciler reconciler(source, tablet);
+
+    reconciler.SetChocks(true);
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    source.chocksArrived = true;
+    for (int tick = 0; tick < 20; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+    MemoryBag after;
+    reconciler.AppendMemory(after);
+
+    QCOMPARE(RequestCount(tablet, kChocksRequest), 0);
+    QVERIFY(after.Entries().empty());
+}
+
+void PmdgGroundConnReconcilerTest::aChocksReadingThatNeverArrivesSendsNothingAndIsLoggedOnce()
+{
+    const MessageCapture capture;
+    FakeGroundSource source;
+    source.chocksArrived = false;
+    FakePmdgTabletGateway tablet;
+    PmdgGroundConnReconciler reconciler(source, tablet);
+
+    reconciler.SetChocks(true);
+    for (int tick = 0; tick < 9; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QCOMPARE(MessageCapture::Count(kLateReadingMessage), 0);
+
+    for (int tick = 0; tick < 500; ++tick)
+    {
+        reconciler.Reconcile();
+    }
+
+    QCOMPARE(MessageCapture::Count(kLateReadingMessage), 1);
+    QCOMPARE(RequestCount(tablet, kChocksRequest), 0);
 }
 
 void PmdgGroundConnReconcilerTest::aSavedValueThatIsNotAFlagIsNotRestored()

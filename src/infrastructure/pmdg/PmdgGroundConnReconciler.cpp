@@ -2,12 +2,14 @@
 
 #include "PmdgGroundSource.h"
 #include "PmdgTabletGateway.h"
+#include "../logging/LogMacros.h"
 
 namespace
 {
     constexpr int kGroundConnRetryTicks = 5;
     constexpr int kChocksRetryTicks = 10;
     constexpr int kGroundConnMaxAttempts = 10;
+    constexpr int kChocksReadingBudgetTicks = 10;
 
     constexpr auto kChocksRequest = "wheel_chocks";
     constexpr auto kGroundPowerRequest = "ground_power";
@@ -40,6 +42,8 @@ void PmdgGroundConnReconciler::SetChocks(const bool placed)
         desiredChocks_ = placed;
         chocksAttempts_ = 0;
         ticksSinceChocksRequest_ = kChocksRetryTicks;
+        chocksAwaitTheReading_ = true;
+        ticksAwaitingTheChocksReading_ = 0;
     }
 }
 
@@ -95,7 +99,6 @@ void PmdgGroundConnReconciler::RestoreMemory(const MemoryBag& memory)
     if (const std::optional<bool> chocks = SavedFlag(memory, kPendingChocksKey); chocks.has_value())
     {
         SetChocks(*chocks);
-        chocksAwaitTheReading_ = true;
     }
 
     if (const std::optional<bool> groundPower = SavedFlag(memory, kPendingGroundPowerKey); groundPower.has_value())
@@ -120,6 +123,8 @@ void PmdgGroundConnReconciler::ReconcileChocks()
     {
         if (!source_.ChocksReadingArrived())
         {
+            NoteTheChocksReadingIsLate();
+
             return;
         }
 
@@ -140,6 +145,15 @@ void PmdgGroundConnReconciler::ReconcileChocks()
         ticksSinceChocksRequest_ = 0;
         ++chocksAttempts_;
         tablet_.RequestGroundConn(kChocksRequest);
+    }
+}
+
+void PmdgGroundConnReconciler::NoteTheChocksReadingIsLate()
+{
+    if (++ticksAwaitingTheChocksReading_ == kChocksReadingBudgetTicks)
+    {
+        LOG_INFO("PMDG chocks reading did not arrive in %d ticks; the chocks request sends nothing until it does.",
+                 kChocksReadingBudgetTicks);
     }
 }
 

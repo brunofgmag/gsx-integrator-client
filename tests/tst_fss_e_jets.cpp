@@ -155,6 +155,7 @@ namespace
     constexpr double kGpuStopping = 4.0;
     constexpr double kGpuFeeding = 5.0;
 
+    constexpr int kThreeTicks = 3;
     constexpr int kFiftyTicks = 50;
     constexpr int kTwentyTicks = 20;
     constexpr int kTicksToWaitForTheEcho = 5;
@@ -187,10 +188,13 @@ namespace
     constexpr auto kL1Open = "FSS_EXX_DOOR_FWD_L_OPEN";
     constexpr auto kL1Moving = "FSS_EXX_DOOR_FWD_L_MOVING";
     constexpr auto kL2Req = "FSS_GNDSVC_MAINDOOR_AFT_L_REQ";
+    constexpr auto kL2Ack = "FSS_FLTCREW_MAINDOOR_AFT_L_REQ";
     constexpr auto kL2Open = "FSS_EXX_DOOR_AFT_L_OPEN";
     constexpr auto kR1Req = "FSS_GNDSVC_MAINDOOR_FWD_R_REQ";
+    constexpr auto kR1Ack = "FSS_FLTCREW_MAINDOOR_FWD_R_REQ";
     constexpr auto kR1Open = "FSS_EXX_DOOR_FWD_R_OPEN";
     constexpr auto kR2Req = "FSS_GNDSVC_MAINDOOR_AFT_R_REQ";
+    constexpr auto kR2Ack = "FSS_FLTCREW_MAINDOOR_AFT_R_REQ";
     constexpr auto kR2Open = "FSS_EXX_DOOR_AFT_R_OPEN";
     constexpr auto kCargoFwdReq = "FSS_GNDSVC_CARGO_FWD_REQ";
     constexpr auto kCargoFwdOpen = "FSS_EXX_DOOR_CARGO_FWD_OPEN";
@@ -200,6 +204,28 @@ namespace
     constexpr auto kMainDeckOpen = "FSS_EXX_DOOR_CARGO_MAIN_OPEN";
 
     constexpr int kFourteenTicks = 14;
+    constexpr int kTransitBoundTicks = 30;
+
+    struct DoorWire
+    {
+        const char* request;
+        const char* ack;
+        const char* open;
+    };
+
+    constexpr std::array kDoorWires = {
+        DoorWire{.request = kL1Req, .ack = kL1Ack, .open = kL1Open},
+        DoorWire{.request = kL2Req, .ack = kL2Ack, .open = kL2Open},
+        DoorWire{.request = kR1Req, .ack = kR1Ack, .open = kR1Open},
+        DoorWire{.request = kR2Req, .ack = kR2Ack, .open = kR2Open},
+        DoorWire{.request = kCargoFwdReq, .ack = nullptr, .open = kCargoFwdOpen},
+        DoorWire{.request = kCargoAftReq, .ack = nullptr, .open = kCargoAftOpen},
+        DoorWire{.request = kMainDeckReq, .ack = nullptr, .open = kMainDeckOpen},
+    };
+
+    constexpr double kAckClosedSettled = 20.0;
+    constexpr double kAckOpenSettled = 21.0;
+    constexpr double kAckOpening = 11.0;
 
     class LogCapture
     {
@@ -246,6 +272,53 @@ namespace
         for (int tick = 0; tick < ticks; ++tick)
         {
             TickAircraft(aircraft, gateway);
+        }
+    }
+
+    void DoorsAtRest(FakeVariableGateway& gateway)
+    {
+        for (const DoorWire& wire : kDoorWires)
+        {
+            if (wire.ack != nullptr)
+            {
+                gateway.lvars[wire.ack] = kAckClosedSettled;
+            }
+
+            gateway.lvars[wire.open] = 0.0;
+        }
+    }
+
+    void LetTheDoorsObeyTheirRequests(FakeVariableGateway& gateway)
+    {
+        for (const DoorWire& wire : kDoorWires)
+        {
+            const auto request = gateway.lvars.find(wire.request);
+            if (request == gateway.lvars.end())
+            {
+                continue;
+            }
+
+            const bool open = request->second > 0.0;
+            if (wire.ack != nullptr)
+            {
+                gateway.lvars[wire.ack] = open ? kAckOpenSettled : kAckClosedSettled;
+            }
+
+            gateway.lvars[wire.open] = open ? 1.0 : 0.0;
+        }
+    }
+
+    void TickWithObedientDoors(Aircraft& aircraft, FakeVariableGateway& gateway)
+    {
+        TickAircraft(aircraft, gateway);
+        LetTheDoorsObeyTheirRequests(gateway);
+    }
+
+    void TickTimesWithObedientDoors(Aircraft& aircraft, FakeVariableGateway& gateway, const int ticks)
+    {
+        for (int tick = 0; tick < ticks; ++tick)
+        {
+            TickWithObedientDoors(aircraft, gateway);
         }
     }
 
@@ -304,6 +377,7 @@ private slots:
     static void readyToDeboardFollowsSafetyState();
     static void chocksWriteTheSameValueToTheThree();
     static void chocksReadIsAnyOfTheThree();
+    static void hasNoChocksReadingOfItsOwnBesidesTheEchoOfItsWrite();
     static void clearsTheNineteenOwnGroundEquipmentLVarsOnce();
     static void smartSwitchFiresOnceAndClearsTheCallByWritingActive();
     static void theRightCallRampAlsoFiresOnceAndClearsTheCallByWritingActive();
@@ -329,6 +403,19 @@ private slots:
     static void vendorAutomationNeverTouchesEnableGsxSupport();
     static void vendorAutomationRuleNeverHoldsThePhase();
     static void doorsFollowTheGsxVehicleThatServesEach();
+    static void aPassengerDoorAlreadyAtTheTargetIsNotRequestedAndTheNextChangeIsJudgedFromIt();
+    static void aPassengerDoorAckedOpeningCountsAsOpenForTheFirstRequest();
+    static void aPassengerDoorWhoseAckHasNotArrivedHoldsItsFirstRequest();
+    static void aCargoDoorAlreadyOpenIsNotRequested();
+    static void aCargoDoorWhoseOpenLVarHasNotArrivedHoldsItsFirstRequest();
+    static void aMainDeckAlreadyOpenIsNotRequestedWhenTheLoaderWaits();
+    static void closeAllDoesNotRequestADoorThatReadsClosed();
+    static void closeAllStillRequestsADoorWhoseReadingHasNotArrived();
+    static void aCargoDoorStillReadingOpenAfterCloseAllIsInTransitAndTheLoaderReopensItOnceItReadsClosed();
+    static void aPassengerDoorStillAckingClosedWhenItsVehicleLeavesIsInTransitAndTheCloseFollowsOnceItAcksOpen();
+    static void aCargoDoorThatNeverObeysIsBelievedAfterTheBoundAndLoggedOnce();
+    static void aPassengerDoorWhoseAckDigitIsUnknownIsRequestedAsIfItHadNoReading();
+    static void closeAllStillRequestsTheMainDeckWhoseReadingHasNotArrived();
     static void theFreighterNeverWritesToL2NorR2();
     static void holdingThePassengerDoorsClosedLeavesTheCargoDoorToGsx();
     static void aPassengerDoorHeardWithinTheWaitIsNeverReaffirmed();
@@ -864,6 +951,19 @@ void FssEJetTest::chocksWriteTheSameValueToTheThree()
     {
         QCOMPARE(gateway.Written(lVar), 0.0);
     }
+}
+
+void FssEJetTest::hasNoChocksReadingOfItsOwnBesidesTheEchoOfItsWrite()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    QVERIFY(!aircraft.GetChocksStatus().has_value());
+
+    static_cast<void>(aircraft.SetChocks(true));
+
+    QVERIFY(!aircraft.GetChocksStatus().has_value());
 }
 
 void FssEJetTest::chocksReadIsAnyOfTheThree()
@@ -1403,7 +1503,8 @@ void FssEJetTest::doorsFollowTheGsxVehicleThatServesEach()
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
-    TickAircraft(aircraft, gateway);
+    DoorsAtRest(gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.WriteCount(kL1Req), 0);
     QCOMPARE(gateway.WriteCount(kL2Req), 0);
@@ -1418,7 +1519,7 @@ void FssEJetTest::doorsFollowTheGsxVehicleThatServesEach()
     gateway.lvars[kRearCateringState] = kVehicleApproaching;
     gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
     gateway.lvars[kRearLoaderState] = kLoaderWaitingForDoor;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kL1Req), 1.0);
     QCOMPARE(gateway.Written(kL2Req), 1.0);
@@ -1433,7 +1534,7 @@ void FssEJetTest::doorsFollowTheGsxVehicleThatServesEach()
     gateway.lvars[kRearCateringState] = kVehicleGone;
     gateway.lvars[kFrontLoaderState] = kVehicleGone;
     gateway.lvars[kRearLoaderState] = kVehicleGone;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kL1Req), 0.0);
     QCOMPARE(gateway.Written(kL2Req), 0.0);
@@ -1444,9 +1545,279 @@ void FssEJetTest::doorsFollowTheGsxVehicleThatServesEach()
 
     gateway.lvars[kFrontStairsState] = kVehicleGone;
     gateway.lvars[kJetway] = kJetwayDocked;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kL1Req), 1.0);
+}
+
+void FssEJetTest::aPassengerDoorAlreadyAtTheTargetIsNotRequestedAndTheNextChangeIsJudgedFromIt()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
+    gateway.lvars[kL1Ack] = kAckOpenSettled;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    TickTimes(aircraft, gateway, kThreeTicks);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 0);
+
+    gateway.lvars[kJetway] = kVehicleGone;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 1);
+    QCOMPARE(gateway.Written(kL1Req), 0.0);
+}
+
+void FssEJetTest::aPassengerDoorAckedOpeningCountsAsOpenForTheFirstRequest()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
+    gateway.lvars[kL1Ack] = kAckOpening;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    TickTimes(aircraft, gateway, kFourteenTicks + kThreeTicks);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 0);
+}
+
+void FssEJetTest::aPassengerDoorWhoseAckHasNotArrivedHoldsItsFirstRequest()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 0);
+
+    gateway.lvars[kL1Ack] = kAckClosedSettled;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 1);
+    QCOMPARE(gateway.Written(kL1Req), 1.0);
+}
+
+void FssEJetTest::aCargoDoorAlreadyOpenIsNotRequested()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
+    gateway.lvars[kCargoFwdOpen] = 1.0;
+    gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 0);
+
+    gateway.lvars[kFrontLoaderState] = kLoaderFinishing;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 1);
+    QCOMPARE(gateway.Written(kCargoFwdReq), 0.0);
+}
+
+void FssEJetTest::aCargoDoorWhoseOpenLVarHasNotArrivedHoldsItsFirstRequest()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 0);
+
+    gateway.lvars[kCargoFwdOpen] = 0.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 1);
+    QCOMPARE(gateway.Written(kCargoFwdReq), 1.0);
+}
+
+void FssEJetTest::aMainDeckAlreadyOpenIsNotRequestedWhenTheLoaderWaits()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, true);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
+    gateway.lvars[kMainDeckOpen] = 1.0;
+    gateway.lvars[kMainLoaderState] = kLoaderWaitingForDoor;
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.WriteCount(kMainDeckReq), 0);
+}
+
+void FssEJetTest::closeAllDoesNotRequestADoorThatReadsClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
+    gateway.lvars[kJetway] = kJetwayDocked;
+    gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
+    TickTimesWithObedientDoors(aircraft, gateway, kThreeTicks);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 1);
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 1);
+
+    DoorsAtRest(gateway);
+    gateway.lvars[kCargoFwdOpen] = 1.0;
+    aircraft.CloseAllDoors();
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 1);
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 2);
+    QCOMPARE(gateway.Written(kCargoFwdReq), 0.0);
+}
+
+void FssEJetTest::closeAllStillRequestsADoorWhoseReadingHasNotArrived()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    aircraft.CloseAllDoors();
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 1);
+    QCOMPARE(gateway.Written(kL1Req), 0.0);
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 1);
+    QCOMPARE(gateway.Written(kCargoFwdReq), 0.0);
+}
+
+void FssEJetTest::aCargoDoorStillReadingOpenAfterCloseAllIsInTransitAndTheLoaderReopensItOnceItReadsClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
+    gateway.lvars[kCargoFwdOpen] = 1.0;
+    aircraft.CloseAllDoors();
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 1);
+    QCOMPARE(gateway.Written(kCargoFwdReq), 0.0);
+
+    gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 1);
+
+    gateway.lvars[kCargoFwdOpen] = 0.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 2);
+    QCOMPARE(gateway.Written(kCargoFwdReq), 1.0);
+}
+
+void FssEJetTest::aPassengerDoorStillAckingClosedWhenItsVehicleLeavesIsInTransitAndTheCloseFollowsOnceItAcksOpen()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
+    gateway.lvars[kJetway] = kJetwayDocked;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 1);
+    QCOMPARE(gateway.Written(kL1Req), 1.0);
+
+    gateway.lvars[kJetway] = kVehicleGone;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 1);
+
+    gateway.lvars[kL1Ack] = kAckOpenSettled;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kL1Req), 2);
+    QCOMPARE(gateway.Written(kL1Req), 0.0);
+}
+
+void FssEJetTest::aCargoDoorThatNeverObeysIsBelievedAfterTheBoundAndLoggedOnce()
+{
+    const LogCapture log;
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
+    gateway.lvars[kCargoFwdOpen] = 1.0;
+    aircraft.CloseAllDoors();
+    TickAircraft(aircraft, gateway);
+    gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
+    TickTimes(aircraft, gateway, kTransitBoundTicks);
+
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 1);
+    QCOMPARE(LogCapture::Count("believed from now on"), 0LL);
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 1);
+    QCOMPARE(LogCapture::Count("believed from now on"), 1LL);
+
+    TickTimes(aircraft, gateway, kFiftyTicks);
+
+    QCOMPARE(gateway.WriteCount(kCargoFwdReq), 1);
+    QCOMPARE(LogCapture::Count("believed from now on"), 1LL);
+}
+
+void FssEJetTest::aPassengerDoorWhoseAckDigitIsUnknownIsRequestedAsIfItHadNoReading()
+{
+    for (const double ack : {2.0, 5.0, 9.0, 12.0, 25.0})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
+
+        gateway.lvars[kCouatlStarted] = 1.0;
+        DoorsAtRest(gateway);
+        gateway.lvars[kL1Ack] = ack;
+        gateway.lvars[kJetway] = kJetwayDocked;
+        TickAircraft(aircraft, gateway);
+
+        QCOMPARE(gateway.WriteCount(kL1Req), 1);
+        QCOMPARE(gateway.Written(kL1Req), 1.0);
+    }
+}
+
+void FssEJetTest::closeAllStillRequestsTheMainDeckWhoseReadingHasNotArrived()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, true);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kMainLoaderState] = kLoaderWaitingForDoor;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kMainDeckReq), 0);
+
+    aircraft.CloseAllDoors();
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kMainDeckReq), 1);
+    QCOMPARE(gateway.Written(kMainDeckReq), 0.0);
 }
 
 void FssEJetTest::holdingThePassengerDoorsClosedLeavesTheCargoDoorToGsx()
@@ -1456,15 +1827,16 @@ void FssEJetTest::holdingThePassengerDoorsClosedLeavesTheCargoDoorToGsx()
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
     gateway.lvars[kJetway] = kJetwayDocked;
     gateway.lvars[kRearLoaderState] = kLoaderWaitingForDoor;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kL1Req), 1.0);
     QCOMPARE(gateway.Written(kCargoAftReq), 1.0);
 
     aircraft.HoldPassengerDoorsClosed(true);
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kL1Req), 0.0);
     QCOMPARE(gateway.Written(kCargoAftReq), 1.0);
@@ -1496,6 +1868,7 @@ void FssEJetTest::aPassengerDoorHeardWithinTheWaitIsNeverReaffirmed()
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
     gateway.lvars[kFrontStairsState] = kStairsDocked;
     TickAircraft(aircraft, gateway);
 
@@ -1514,6 +1887,7 @@ void FssEJetTest::aPassengerDoorWithNoAckIsReaffirmedTwiceAtMost()
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
     gateway.lvars[kFrontStairsState] = kStairsDocked;
     TickAircraft(aircraft, gateway);
 
@@ -1542,6 +1916,7 @@ void FssEJetTest::aCargoBayWithoutAckReaffirmsAfterTwoTicks()
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
     gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
     TickAircraft(aircraft, gateway);
 
@@ -1566,6 +1941,7 @@ void FssEJetTest::aDoorRequestSaysSoOnceWhenItIsReaffirmedForTheLastTime()
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
     gateway.lvars[kFrontStairsState] = kStairsDocked;
     TickAircraft(aircraft, gateway);
     TickTimes(aircraft, gateway, kFourteenTicks);
@@ -1592,6 +1968,7 @@ void FssEJetTest::aDoorRequestSaysNothingWhenTheAircraftConfirmsInTime()
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
     gateway.lvars[kFrontStairsState] = kStairsDocked;
     TickAircraft(aircraft, gateway);
     TickTimes(aircraft, gateway, kFourteenTicks);
@@ -1630,6 +2007,7 @@ void FssEJetTest::theMainDeckReaffirmsLogThroughTheCommonDoorLine()
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, true);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
     gateway.lvars[kMainLoaderState] = kLoaderWaitingForDoor;
 
     TickTimes(aircraft, gateway, kTwentyTicks);
@@ -1648,6 +2026,7 @@ void FssEJetTest::theMainDeckRequestGoesOutOnTheFirstTickWithTheAircraftCold()
 
     gateway.lvars[kAcPowerAvailable] = 0.0;
     gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
     gateway.lvars[kMainLoaderState] = kLoaderWaitingForDoor;
     TickAircraft(aircraft, gateway);
 
@@ -1663,6 +2042,7 @@ void FssEJetTest::theMainDeckStaysOpenWhenAircraftPowerFallsWhileTheLoaderWaits(
 
     gateway.lvars[kAcPowerAvailable] = 1.0;
     gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
     gateway.lvars[kMainLoaderState] = kLoaderWaitingForDoor;
     TickAircraft(aircraft, gateway);
 
@@ -1682,13 +2062,14 @@ void FssEJetTest::theMainDeckRequestGoesToClosedOnceTheLoaderStartsFinishing()
 
     gateway.lvars[kAcPowerAvailable] = 1.0;
     gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
     gateway.lvars[kMainLoaderState] = kLoaderLoading;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kMainDeckReq), 1.0);
 
     gateway.lvars[kMainLoaderState] = kLoaderFinishing;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kMainDeckReq), 0.0);
 }
@@ -1719,6 +2100,7 @@ void FssEJetTest::closeAllDoorsWritesZeroEverywhereItManages()
         FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, cargo);
 
         gateway.lvars[kCouatlStarted] = 1.0;
+        DoorsAtRest(gateway);
         gateway.lvars[kFrontStairsState] = kStairsDocked;
         gateway.lvars[kFrontCateringState] = kVehicleApproaching;
         gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
@@ -1734,7 +2116,7 @@ void FssEJetTest::closeAllDoorsWritesZeroEverywhereItManages()
             gateway.lvars[kMainLoaderState] = kLoaderWaitingForDoor;
         }
 
-        TickTimes(aircraft, gateway, 3);
+        TickTimesWithObedientDoors(aircraft, gateway, 3);
 
         QCOMPARE(gateway.Written(kL1Req), 1.0);
         QCOMPARE(gateway.Written(kCargoFwdReq), 1.0);
@@ -1751,7 +2133,7 @@ void FssEJetTest::closeAllDoorsWritesZeroEverywhereItManages()
         }
 
         aircraft.CloseAllDoors();
-        TickAircraft(aircraft, gateway);
+        TickWithObedientDoors(aircraft, gateway);
 
         QCOMPARE(gateway.Written(kL1Req), 0.0);
         QCOMPARE(gateway.Written(kCargoFwdReq), 0.0);
@@ -2583,7 +2965,7 @@ void FssEJetTest::aResumedFreighterKeepsAMainDeckTheLoaderIsWaitingFor()
 
     TickAircraft(aircraft, gateway);
 
-    QCOMPARE(gateway.Written(kMainDeckReq), 1.0);
+    QCOMPARE(gateway.WriteCount(kMainDeckReq), 0);
 }
 
 void FssEJetTest::aResumedFreighterWaitsForTheLoaderReadingBeforeJudgingTheOpenMainDeck()
@@ -2609,8 +2991,8 @@ void FssEJetTest::aResumedFreighterWaitsForTheLoaderReadingBeforeJudgingTheOpenM
         gateway.deliveredLVars.insert(kMainLoaderState);
         TickAircraft(aircraft, gateway);
 
-        QCOMPARE(gateway.WriteCount(kMainDeckReq), 1);
-        QCOMPARE(gateway.Written(kMainDeckReq), loaderWaits ? 1.0 : 0.0);
+        QCOMPARE(gateway.WriteCount(kMainDeckReq), loaderWaits ? 0 : 1);
+        QCOMPARE(gateway.Written(kMainDeckReq), loaderWaits ? -1.0 : 0.0);
     }
 }
 
@@ -2832,6 +3214,7 @@ void FssEJetTest::releasingTheDeparturesAlsoReleasesThePassengerDoors()
     FssEJet aircraft(&gateway, &status, FssEJet::kNameE190, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
     gateway.lvars[kJetway] = kJetwayDocked;
 
     aircraft.HoldPassengerDoorsClosed(true);
@@ -2852,9 +3235,10 @@ void FssEJetTest::aResumedAircraftClosesTheDoorWhoseVehicleLeftWhileTheClientWas
     FssEJet before(&gateway, &status, FssEJet::kNameE190, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    DoorsAtRest(gateway);
     gateway.lvars[kFrontStairsState] = kVehicleGone;
     gateway.lvars[kJetway] = kJetwayDocked;
-    TickAircraft(before, gateway);
+    TickWithObedientDoors(before, gateway);
 
     QCOMPARE(gateway.Written(kL1Req), 1.0);
 
@@ -2880,7 +3264,7 @@ void FssEJetTest::aResumedFreighterKeepsTheMainDeckItsPredecessorOpenedUntilTheL
 
     before.lvars[kCouatlStarted] = 1.0;
     before.lvars[kMainLoaderState] = kLoaderWaitingForDoor;
-    before.lvars[kMainDeckOpen] = 1.0;
+    before.lvars[kMainDeckOpen] = 0.0;
     TickAircraft(predecessor, before);
 
     QCOMPARE(before.Written(kMainDeckReq), 1.0);

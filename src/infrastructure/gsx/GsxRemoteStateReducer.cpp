@@ -13,7 +13,7 @@
 namespace
 {
     constexpr std::array<std::string_view, 3> kDiscardedPaths = {
-        "/billing", "/state", "/stateText"
+        "/billing", "/state", "/stateText",
     };
 
     constexpr std::string_view kMessagePath = "/message";
@@ -145,24 +145,36 @@ namespace
         state.parkingName = Str(value);
     }
 
+    void SetLoadedProfile(GsxRemoteState& state, const QJsonValue& value)
+    {
+        const QJsonObject& aircraft = value.toObject().value("aircraft").toObject();
+        const QJsonValue refueling = aircraft.value("refueling");
+
+        state.loadedProfileSource = Str(aircraft.value("dataSourceUsed"));
+        state.loadedProfileRefueling = refueling.isBool() ? std::optional<bool>(refueling.toBool()) : std::nullopt;
+    }
+
     struct StateField
     {
         std::string_view key;
         void (*apply)(GsxRemoteState&, const QJsonValue&);
     };
 
-    constexpr std::array<StateField, 10> kStateFields = {{
-        {.key = "services", .apply = SetServices},
-        {.key = "menu", .apply = SetMenu},
-        {.key = "menuShown", .apply = SetMenuShown},
-        {.key = "simbrief", .apply = SetSimBrief},
-        {.key = "operators", .apply = SetOperators},
-        {.key = "gateProperties", .apply = SetApronVerdict},
-        {.key = "aircraft", .apply = SetMatchedAircraft},
-        {.key = "startup", .apply = SetCouatlId},
-        {.key = "airport", .apply = SetAirportIcao},
-        {.key = "parking", .apply = SetParkingName}
-    }};
+    constexpr std::array<StateField, 11> kStateFields = {
+        {
+            {.key = "services", .apply = SetServices},
+            {.key = "menu", .apply = SetMenu},
+            {.key = "menuShown", .apply = SetMenuShown},
+            {.key = "simbrief", .apply = SetSimBrief},
+            {.key = "operators", .apply = SetOperators},
+            {.key = "gateProperties", .apply = SetApronVerdict},
+            {.key = "aircraft", .apply = SetMatchedAircraft},
+            {.key = "startup", .apply = SetCouatlId},
+            {.key = "airport", .apply = SetAirportIcao},
+            {.key = "parking", .apply = SetParkingName},
+            {.key = "handlerData", .apply = SetLoadedProfile},
+        },
+    };
 
     QLatin1StringView JsonKey(const std::string_view key)
     {
@@ -189,7 +201,7 @@ GsxPatchOutcome GsxRemoteStateReducer::ApplyPatch(GsxRemoteState& state, const s
     if (path.starts_with('/'))
     {
         const std::string_view key = std::string_view(path).substr(1);
-        const auto field = std::ranges::find(kStateFields, key, &StateField::key);
+        const auto* const field = std::ranges::find(kStateFields, key, &StateField::key);
         if (field != kStateFields.end())
         {
             field->apply(state, value);

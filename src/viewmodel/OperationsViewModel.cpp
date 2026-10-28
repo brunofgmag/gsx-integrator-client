@@ -889,6 +889,12 @@ QString OperationsViewModel::GetGsxMenuHeldByPilotAdvisoryText()
                                        "A GSX menu you opened is on screen. Close it so the client can send its next request.");
 }
 
+QString OperationsViewModel::GetGroundEquipmentTimedOutAdvisoryText()
+{
+    return QCoreApplication::translate("OperationsScreen",
+                                       "The ground power or the chocks were not in place after 4 minutes, so the turnaround went on without them.");
+}
+
 QString OperationsViewModel::GetResumeDecisionAdvisoryText() const
 {
     if (!IsAwaitingResumeDecision())
@@ -985,6 +991,11 @@ bool OperationsViewModel::IsServiceInterrupted() const
 bool OperationsViewModel::IsGsxMenuHeldByPilot() const
 {
     return snapshot_.gsxMenuHeldByPilot;
+}
+
+bool OperationsViewModel::IsGroundEquipmentTimedOut() const
+{
+    return snapshot_.groundEquipmentTimedOut;
 }
 
 bool OperationsViewModel::AreDoorsHoldingPushback() const

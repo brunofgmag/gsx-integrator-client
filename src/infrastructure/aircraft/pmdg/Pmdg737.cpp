@@ -61,7 +61,7 @@ namespace
             .cargoVariant = IsCargo(variant),
             .doorBaseline = DoorBaseline::Closed,
             .smartSwitchLVars = {kSmartSwitchLVar},
-            .smartSwitchPressed = [](const double min, double) { return min < kSmartSwitchNeutral; }
+            .smartSwitchPressed = [](const double min, double) { return min < kSmartSwitchNeutral; },
         };
     }
 }
@@ -206,7 +206,7 @@ void Pmdg737::WaitForTheAnswer()
 {
     if (++ticksSinceFirstQuestion_ == kDoorReadingBudgetTicks)
     {
-        LOG_INFO("PMDG tablet gave no door reading in %d ticks after the first question; doors follow the closed baseline from now on.",
+        LOG_INFO("PMDG tablet gave no door reading in %d ticks after the first question; doors with no reading stay as they are from now on.",
                  kDoorReadingBudgetTicks);
     }
 }
@@ -215,7 +215,7 @@ void Pmdg737::WaitForTheBridge()
 {
     if (++ticksWithoutQuestion_ == kBridgeCeilingTicks)
     {
-        LOG_INFO("PMDG tablet bridge never came up in %d ticks; doors follow the closed baseline from now on.",
+        LOG_INFO("PMDG tablet bridge never came up in %d ticks; doors with no reading stay as they are from now on.",
                  kBridgeCeilingTicks);
     }
 }
@@ -281,34 +281,34 @@ namespace
     const AircraftDescriptor kPmdg737Pax800Descriptor{
         Pmdg737::kNamePax800,
         {
-            {MatchField::Title, MatchOp::StartsWith, kTitlePax800}
+            {MatchField::Title, MatchOp::StartsWith, kTitlePax800},
         },
-        &CreatePmdg737, "pmdg-737-800", "73H", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreatePmdg737, "pmdg-737-800", "73H", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     const AircraftDescriptor kPmdg737Bcf800Descriptor{
         Pmdg737::kNameBcf800,
         {
-            {MatchField::Title, MatchOp::StartsWith, kTitleBcf800}
+            {MatchField::Title, MatchOp::StartsWith, kTitleBcf800},
         },
-        &CreatePmdg737, "pmdg-737-800bcf", "73BCF", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreatePmdg737, "pmdg-737-800bcf", "73BCF", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     const AircraftDescriptor kPmdg737Bdsf800Descriptor{
         Pmdg737::kNameBdsf800,
         {
-            {MatchField::Title, MatchOp::StartsWith, kTitleBdsf800}
+            {MatchField::Title, MatchOp::StartsWith, kTitleBdsf800},
         },
-        &CreatePmdg737, "pmdg-737-800bdsf", "73SF", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreatePmdg737, "pmdg-737-800bdsf", "73SF", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     const AircraftDescriptor kPmdg737Bbj2Descriptor{
         Pmdg737::kNameBbj2,
         {
             {MatchField::Title, MatchOp::StartsWith, kTitleBbj2Short},
-            {MatchField::Title, MatchOp::StartsWith, kTitleBbj2}
+            {MatchField::Title, MatchOp::StartsWith, kTitleBbj2},
         },
-        &CreatePmdg737, "pmdg-737-bbj2", "73BBJ", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreatePmdg737, "pmdg-737-bbj2", "73BBJ", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     [[maybe_unused]] const AircraftRegistration kPmdg737Pax800Registration{kPmdg737Pax800Descriptor};

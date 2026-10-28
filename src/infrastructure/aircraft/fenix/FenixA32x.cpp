@@ -69,14 +69,14 @@ namespace
     constexpr auto kThirdLeftDoorCandidate = "doors.entry.d3l";
     constexpr auto kSecondRightDoorCandidate = "doors.entry.d2r";
     constexpr auto kThirdRightDoorCandidate = "doors.entry.d3r";
-    constexpr auto kBulkCargoDoorCandidate = "doors.cargo.bulk";
+    constexpr auto kBulkCargoDoorDataref = "doors.cargo.bulk";
 
     constexpr std::array kSharedDoorDatarefs = {
         kFwdPaxDoorDataref, kAftPaxDoorDataref,
         kFwdCateringDoorDataref, kAftCateringDoorDataref,
         kFwdCargoDoorDataref, kAftCargoDoorDataref,
         kThirdLeftDoorCandidate, kSecondRightDoorCandidate,
-        kThirdRightDoorCandidate, kBulkCargoDoorCandidate
+        kThirdRightDoorCandidate, kBulkCargoDoorDataref,
     };
 
     constexpr std::array kProbeDoorDatarefs = {
@@ -84,7 +84,7 @@ namespace
         kFwdCateringDoorDataref, kAftCateringDoorDataref,
         kFwdCargoDoorDataref, kAftCargoDoorDataref,
         kThirdLeftDoorCandidate, kSecondRightDoorCandidate,
-        kThirdRightDoorCandidate, kBulkCargoDoorCandidate
+        kThirdRightDoorCandidate, kBulkCargoDoorDataref,
     };
 
     constexpr double kDoorUnanswered = -1.0;
@@ -116,7 +116,7 @@ namespace
     constexpr std::array kMeasuredExits = {
         MeasuredExit{.door = GsxDoor::FwdPax, .exit = 0},
         MeasuredExit{.door = GsxDoor::AftPax, .exit = 3},
-        MeasuredExit{.door = GsxDoor::FwdCatering, .exit = 4}
+        MeasuredExit{.door = GsxDoor::FwdCatering, .exit = 4},
     };
 
     std::optional<WeightUnit> WeightUnitOfSetting(const std::string& setting)
@@ -192,6 +192,7 @@ FenixA32x::FenixA32x(VariableGateway* variableGateway, const FenixVariant varian
       rules_{&efbSetupRule_, &doorRule_, &refuelSystemRule_}
 {
     smartSwitch_.Subscribe();
+    doors_.ReadPositionsWith([this](const GsxDoor door) { return DoorPositionOf(door); });
     efb_->Subscribe(kSimbriefImportedDataref);
     efb_->Subscribe(kBookedSeatsDataref);
     efb_->Subscribe(kFuelTargetDataref);
@@ -242,7 +243,67 @@ void FenixA32x::Observe()
     DetectThirdGeneration();
     ReportWeightUnitChange();
     AdvanceDoorSettle();
+    ApplyWhatWaitedForTheEfb();
     ReportProbe();
+}
+
+void FenixA32x::ApplyWhatWaitedForTheEfb()
+{
+    if (!efb_->IsAvailable())
+    {
+        return;
+    }
+
+    ApplyThePendingGroundPower();
+    ApplyThePendingCloseAll();
+    CloseTheBulkDoorWhenItReadsOpen();
+}
+
+void FenixA32x::ApplyThePendingGroundPower()
+{
+    if (!pendingGroundPower_.has_value())
+    {
+        return;
+    }
+
+    const bool on = *pendingGroundPower_;
+    pendingGroundPower_.reset();
+    efb_->SetBool(kGroundPowerDataref, on);
+
+    LOG_INFO("Ground power %s applied late: the Fenix EFB was unavailable when it was asked", on ? "on" : "off");
+}
+
+void FenixA32x::ApplyThePendingCloseAll()
+{
+    if (!closeAllPending_)
+    {
+        return;
+    }
+
+    LOG_INFO("Close-all applied late: the Fenix EFB was unavailable when it was asked");
+    CloseAllDoors();
+}
+
+void FenixA32x::CloseTheBulkDoorWhenItReadsOpen()
+{
+    if (!bulkCloseArmed_ || !efb_->IsAvailable())
+    {
+        return;
+    }
+
+    const double reading = efb_->GetNumber(kBulkCargoDoorDataref, kDoorUnanswered);
+    if (reading < 0.0)
+    {
+        return;
+    }
+
+    bulkCloseArmed_ = false;
+    if (reading > 0.0)
+    {
+        efb_->SetBool(kBulkCargoDoorDataref, false);
+
+        LOG_INFO("Bulk cargo door commanded closed: the door lock armed with it open");
+    }
 }
 
 void FenixA32x::DetectThirdGeneration()
@@ -384,6 +445,14 @@ const char* FenixA32x::DoorDataref(const GsxDoor door)
 
 void FenixA32x::CloseAllDoors()
 {
+    if (!efb_->IsAvailable())
+    {
+        closeAllPending_ = true;
+
+        return;
+    }
+
+    closeAllPending_ = false;
     doors_.CloseAll([this](const GsxDoor door, bool)
     {
         if (door == GsxDoor::MidPax && variant_ != FenixVariant::A321)
@@ -427,11 +496,41 @@ std::optional<bool> FenixA32x::DoorOpen(const char* dataref) const
         return true;
     }
 
+    return IsDoorSettling(dataref) ? std::optional{true} : std::optional{false};
+}
+
+bool FenixA32x::IsDoorSettling(const char* dataref) const
+{
     const auto settling = doorSettleTicks_.find(dataref);
 
-    return settling != doorSettleTicks_.end() && settling->second > 0
-               ? std::optional{true}
-               : std::optional{false};
+    return settling != doorSettleTicks_.end() && settling->second > 0;
+}
+
+DoorPosition FenixA32x::DoorPositionOf(const GsxDoor door) const
+{
+    if (door == GsxDoor::MidPax && variant_ != FenixVariant::A321)
+    {
+        return DoorPosition::NotRead;
+    }
+
+    if (!efb_->IsAvailable())
+    {
+        return DoorPosition::Pending;
+    }
+
+    const char* const dataref = DoorDataref(door);
+    const double reading = efb_->GetNumber(dataref, kDoorUnanswered);
+    if (reading < 0.0)
+    {
+        return DoorPosition::Pending;
+    }
+
+    if (reading > 0.0)
+    {
+        return DoorPosition::Open;
+    }
+
+    return IsDoorSettling(dataref) ? DoorPosition::Pending : DoorPosition::Closed;
 }
 
 void FenixA32x::AdvanceDoorSettle()
@@ -619,6 +718,16 @@ bool FenixA32x::IsPowered() const
     return true;
 }
 
+std::optional<ChocksStatus> FenixA32x::GetChocksStatus() const
+{
+    if (!variableGateway_->HasReceivedLVar(kChocksLVar))
+    {
+        return ChocksStatus::Unknown;
+    }
+
+    return variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0 ? ChocksStatus::Placed : ChocksStatus::Removed;
+}
+
 std::optional<GroundPowerStatus> FenixA32x::GetGroundPowerStatus() const
 {
     if (!variableGateway_->HasReceivedLVar(kGpuPlacedLVar))
@@ -654,6 +763,14 @@ bool FenixA32x::SetChocks(const bool placed)
 
 void FenixA32x::SetGroundPower(const bool on)
 {
+    if (!efb_->IsAvailable())
+    {
+        pendingGroundPower_ = on;
+
+        return;
+    }
+
+    pendingGroundPower_.reset();
     efb_->SetBool(kGroundPowerDataref, on);
 }
 
@@ -714,25 +831,25 @@ namespace
     const AircraftDescriptor kFenixA319Descriptor{
         FenixA32x::kNameA319,
         {
-            {MatchField::Title, MatchOp::StartsWith, "FenixA319"}
+            {MatchField::Title, MatchOp::StartsWith, "FenixA319"},
         },
-        &CreateFenixA32x, "fenix-a319", "A319", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreateFenixA32x, "fenix-a319", "A319", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     const AircraftDescriptor kFenixA320Descriptor{
         FenixA32x::kNameA320,
         {
-            {MatchField::Title, MatchOp::StartsWith, "FenixA320"}
+            {MatchField::Title, MatchOp::StartsWith, "FenixA320"},
         },
-        &CreateFenixA32x, "fenix-a320", "A320", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreateFenixA32x, "fenix-a320", "A320", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     const AircraftDescriptor kFenixA321Descriptor{
         FenixA32x::kNameA321,
         {
-            {MatchField::Title, MatchOp::StartsWith, "FenixA321"}
+            {MatchField::Title, MatchOp::StartsWith, "FenixA321"},
         },
-        &CreateFenixA32x, "fenix-a321", "A321", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreateFenixA32x, "fenix-a321", "A321", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     [[maybe_unused]] const AircraftRegistration kFenixA319Registration{kFenixA319Descriptor};
@@ -743,6 +860,8 @@ namespace
 void FenixA32x::HoldDoorsClosed(const bool hold)
 {
     doors_.HoldClosedForDeparture(hold);
+    bulkCloseArmed_ = hold;
+    CloseTheBulkDoorWhenItReadsOpen();
 }
 
 void FenixA32x::HoldPassengerDoorsClosed(const bool hold)

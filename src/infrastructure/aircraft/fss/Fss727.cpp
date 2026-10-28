@@ -30,17 +30,17 @@ namespace
 
     constexpr auto kSimFuelWeightPerGallon = "FUEL WEIGHT PER GALLON";
     constexpr std::array kTankCapacities = {
-        "FUELSYSTEM TANK CAPACITY:1", "FUELSYSTEM TANK CAPACITY:2", "FUELSYSTEM TANK CAPACITY:3"
+        "FUELSYSTEM TANK CAPACITY:1", "FUELSYSTEM TANK CAPACITY:2", "FUELSYSTEM TANK CAPACITY:3",
     };
     constexpr std::array kTankLevels = {
-        "FUELSYSTEM TANK LEVEL:1", "FUELSYSTEM TANK LEVEL:2", "FUELSYSTEM TANK LEVEL:3"
+        "FUELSYSTEM TANK LEVEL:1", "FUELSYSTEM TANK LEVEL:2", "FUELSYSTEM TANK LEVEL:3",
     };
 
     constexpr auto kSimPayloadStationPrefix = "PAYLOAD STATION WEIGHT:";
     constexpr int kFirstCargoStation = 4;
     constexpr std::array kCargoStationCapacitiesLb = {
         0.0, 0.0, 5671.5, 5671.5, 6301.5, 6301.5, 7500.0, 7500.0, 8327.0,
-        7769.0, 7769.0, 4000.0, 2335.55, 3805.0, 4557.0, 3653.0, 3649.0, 4026.0
+        7769.0, 7769.0, 4000.0, 2335.55, 3805.0, 4557.0, 3653.0, 3649.0, 4026.0,
     };
     constexpr std::array kCrewStations = {1, 2, 3};
 
@@ -63,7 +63,7 @@ namespace
     constexpr auto kBoardingStairLVar = "FSS_B727_EFB_BOARDING_STAIR";
 
     constexpr std::array kOwnGroundEquipmentLVars = {
-        kChocksLVar, kConesLVar, kEngineCoversLVar, kBoardingStairLVar
+        kConesLVar, kEngineCoversLVar, kBoardingStairLVar,
     };
 
     constexpr double kEquipmentStowed = 0.0;
@@ -85,7 +85,10 @@ namespace
     static_assert(kHoldClosePendingKeys.size() == Fss727HoldsFollowTheirLoaderRule::kHoldCount);
 
     constexpr auto kPercentOver100Unit = "percent over 100";
+    constexpr std::size_t kFrontEntryPoint = 0;
     constexpr std::size_t kMainDeckPoint = 1;
+    constexpr std::size_t kForwardHoldPoint = 2;
+    constexpr std::size_t kAftHoldPoint = 3;
     constexpr double kDoorPointClosedAtMost = 0.05;
     constexpr double kDoorPointOpenAtLeast = 0.95;
 
@@ -94,8 +97,23 @@ namespace
         Fss727DoorPoint{.position = "INTERACTIVE POINT OPEN:1", .movingLimitTicks = doors::kMainDeckDoorMovingLimitTicks},
         Fss727DoorPoint{.position = "INTERACTIVE POINT OPEN:2", .movingLimitTicks = doors::kCargoDoorMovingLimitTicks},
         Fss727DoorPoint{.position = "INTERACTIVE POINT OPEN:3", .movingLimitTicks = doors::kCargoDoorMovingLimitTicks},
-        Fss727DoorPoint{.position = "INTERACTIVE POINT OPEN:4", .movingLimitTicks = doors::kPaxDoorMovingLimitTicks}
+        Fss727DoorPoint{.position = "INTERACTIVE POINT OPEN:4", .movingLimitTicks = doors::kPaxDoorMovingLimitTicks},
     };
+
+    std::optional<std::size_t> ReadablePointOf(const GsxDoor door)
+    {
+        switch (door)
+        {
+        case GsxDoor::FwdPax:
+            return kFrontEntryPoint;
+        case GsxDoor::FwdCargo:
+            return kForwardHoldPoint;
+        case GsxDoor::AftCargo:
+            return kAftHoldPoint;
+        default:
+            return std::nullopt;
+        }
+    }
 
     bool IsTravelling(const double position)
     {
@@ -182,6 +200,7 @@ Fss727::Fss727(VariableGateway* variableGateway, const AutomationStatus* status,
       rules_{&automodeRule_, &frontEntryRule_, &doorAutomationRule_, &holdsRule_, &mainDeckRule_}
 {
     smartSwitch_.Subscribe();
+    doors_.ReadPositionsWith([this](const GsxDoor door) { return DoorPositionOf(door); });
 
     LOG_INFO("Profile loaded: %s", name);
 }
@@ -567,6 +586,23 @@ std::optional<double> Fss727::DoorPointPosition(const std::size_t point) const
     return variableGateway_->GetAVar(position, kPercentOver100Unit, 0.0);
 }
 
+DoorPosition Fss727::DoorPositionOf(const GsxDoor door) const
+{
+    const std::optional<std::size_t> point = ReadablePointOf(door);
+    if (!point.has_value())
+    {
+        return DoorPosition::NotRead;
+    }
+
+    const std::optional<bool> open = DoorOpenAt(*point);
+    if (!open.has_value())
+    {
+        return DoorPosition::Pending;
+    }
+
+    return *open ? DoorPosition::Open : DoorPosition::Closed;
+}
+
 std::optional<bool> Fss727::DoorOpenAt(const std::size_t point) const
 {
     const std::optional<double> position = DoorPointPosition(point);
@@ -642,9 +678,9 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200F"},
             {MatchField::Title, MatchOp::StartsWith, "Boeing B727-200 Freighter"},
-            {MatchField::AtcModel, MatchOp::Equals, "B727"}
+            {MatchField::AtcModel, MatchOp::Equals, "B727"},
         },
-        &CreateFss727200F, "fss-727-200f", "722F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}, kRecommendedFuelRateKgs
+        &CreateFss727200F, "fss-727-200f", "722F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}, kRecommendedFuelRateKgs,
     };
 
     const AircraftDescriptor kFss727200ReFreighterDescriptor{
@@ -652,9 +688,9 @@ namespace
         {
             {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200RE Freighter"},
             {MatchField::Title, MatchOp::StartsWith, "Boeing 727-200RE Super 27 Freighter"},
-            {MatchField::AtcModel, MatchOp::Equals, "B727RE"}
+            {MatchField::AtcModel, MatchOp::Equals, "B727RE"},
         },
-        &CreateFss727200ReFreighter, "fss-727-200re", "R72F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}, kRecommendedFuelRateKgs
+        &CreateFss727200ReFreighter, "fss-727-200re", "R72F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::TurnOn}, kRecommendedFuelRateKgs,
     };
 
     [[maybe_unused]] const AircraftRegistration kFss727200FRegistration{kFss727200FDescriptor};

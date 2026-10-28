@@ -31,6 +31,7 @@ class OperationsViewModelTest final : public QObject
 private slots:
     static void exposesUpdatedSnapshot();
     static void aMenuTheClientWaitsOnReachesTheScreenWithItsSentence();
+    static void aGroundEquipmentGiveUpReachesTheScreenWithItsSentence();
     static void aSimulatorToRestartIsExplainedOnTheConnectingScreen();
     static void emitsOneSignalForSnapshotChanges();
     static void doesNotEmitWhenSnapshotIsUnchanged();
@@ -203,6 +204,24 @@ void OperationsViewModelTest::aMenuTheClientWaitsOnReachesTheScreenWithItsSenten
     QCOMPARE(spy.count(), 1);
     QCOMPARE(OperationsViewModel::GetGsxMenuHeldByPilotAdvisoryText(),
              QStringLiteral("A GSX menu you opened is on screen. Close it so the client can send its next request."));
+}
+
+void OperationsViewModelTest::aGroundEquipmentGiveUpReachesTheScreenWithItsSentence()
+{
+    FakeIntegratorService service;
+    FakeOperationsDisplaySettings display;
+    const OperationsViewModel viewModel(&service, &display);
+    const QSignalSpy spy(&viewModel, &OperationsViewModel::SnapshotChanged);
+
+    QVERIFY(!viewModel.IsGroundEquipmentTimedOut());
+
+    service.snapshot.groundEquipmentTimedOut = true;
+    service.Notify();
+
+    QVERIFY(viewModel.IsGroundEquipmentTimedOut());
+    QCOMPARE(spy.count(), 1);
+    QCOMPARE(OperationsViewModel::GetGroundEquipmentTimedOutAdvisoryText(),
+             QStringLiteral("The ground power or the chocks were not in place after 4 minutes, so the turnaround went on without them."));
 }
 
 void OperationsViewModelTest::aSimulatorToRestartIsExplainedOnTheConnectingScreen()

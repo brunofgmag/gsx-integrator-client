@@ -25,10 +25,12 @@ namespace
 PmdgDoorReconciler::PmdgDoorReconciler(PmdgDoorSource& source, const int doorSlots,
                                        const DoorBaseline baseline)
     : source_(source),
+      untouchedCommand_(baseline == DoorBaseline::Closed ? 0 : -1),
       desired_(static_cast<std::size_t>(doorSlots), -1),
-      commanded_(static_cast<std::size_t>(doorSlots), baseline == DoorBaseline::Closed ? 0 : -1),
+      commanded_(static_cast<std::size_t>(doorSlots), untouchedCommand_),
       ticksSinceCommand_(static_cast<std::size_t>(doorSlots), 0),
-      attempts_(static_cast<std::size_t>(doorSlots), 0)
+      attempts_(static_cast<std::size_t>(doorSlots), 0),
+      unreadLogged_(static_cast<std::size_t>(doorSlots), false)
 {
     openedSlot_.fill(-1);
 }
@@ -48,12 +50,27 @@ void PmdgDoorReconciler::SetDesired(const GsxDoor door, const bool open)
 
 void PmdgDoorReconciler::SetSlotDesired(const int slot, const bool open)
 {
-    if (slot < 0 || static_cast<std::size_t>(slot) >= desired_.size())
+    if (!HasSlot(slot))
     {
         return;
     }
 
     desired_[static_cast<std::size_t>(slot)] = open ? 1 : 0;
+}
+
+void PmdgDoorReconciler::ClearSlotDesired(const int slot)
+{
+    if (!HasSlot(slot))
+    {
+        return;
+    }
+
+    const auto index = static_cast<std::size_t>(slot);
+
+    desired_[index] = -1;
+    commanded_[index] = untouchedCommand_;
+    ticksSinceCommand_[index] = 0;
+    attempts_[index] = 0;
 }
 
 void PmdgDoorReconciler::Reconcile()
@@ -62,6 +79,11 @@ void PmdgDoorReconciler::Reconcile()
     {
         ReconcileSlot(slot);
     }
+}
+
+bool PmdgDoorReconciler::HasSlot(const int slot) const
+{
+    return slot >= 0 && static_cast<std::size_t>(slot) < desired_.size();
 }
 
 void PmdgDoorReconciler::ReconcileSlot(const std::size_t slot)
@@ -77,14 +99,15 @@ void PmdgDoorReconciler::ReconcileSlot(const std::size_t slot)
         return;
     }
 
-    if (observation == DoorObservation::Unknown && source_.AreDoorReadingsPending())
+    if (observation == DoorObservation::Unknown)
     {
+        NoteUnreadDoor(slot);
+
         return;
     }
 
     const bool wantOpen = desired_[slot] == 1;
-    const bool known = observation != DoorObservation::Unknown;
-    const bool isOpen = known ? observation == DoorObservation::Open : commanded_[slot] == 1;
+    const bool isOpen = observation == DoorObservation::Open;
 
     if (commanded_[slot] != desired_[slot])
     {
@@ -100,7 +123,7 @@ void PmdgDoorReconciler::ReconcileSlot(const std::size_t slot)
         return;
     }
 
-    if (!known || isOpen == wantOpen)
+    if (isOpen == wantOpen)
     {
         attempts_[slot] = 0;
 
@@ -116,6 +139,17 @@ void PmdgDoorReconciler::ReconcileSlot(const std::size_t slot)
     }
 }
 
+void PmdgDoorReconciler::NoteUnreadDoor(const std::size_t slot)
+{
+    if (source_.AreDoorReadingsPending() || unreadLogged_[slot])
+    {
+        return;
+    }
+
+    unreadLogged_[slot] = true;
+    LOG_INFO("Door slot %d: no reading from the aircraft, so it stays as it is.", static_cast<int>(slot));
+}
+
 void PmdgDoorReconciler::CommandDoor(const std::size_t slot, const bool open, const int attempt)
 {
     LOG_INFO("Door slot %d: commanding %s%s.",
@@ -128,7 +162,7 @@ void PmdgDoorReconciler::CommandDoor(const std::size_t slot, const bool open, co
 
 bool PmdgDoorReconciler::IsStuck(const int slot) const
 {
-    if (slot < 0 || static_cast<std::size_t>(slot) >= desired_.size())
+    if (!HasSlot(slot))
     {
         return false;
     }

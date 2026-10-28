@@ -45,11 +45,15 @@ namespace
 
     constexpr std::array kDoorStateLVars =
         {"MD11_EXT_DOOR_PAX_1L", "MD11_EXT_DOOR_PAX_2L", "MD11_EXT_DOOR_PAX_4L",
-         "MD11_EXT_DOOR_CARGO_1R", "MD11_EXT_DOOR_CARGO_2R", "MD11_EXT_DOOR_CARGO_MAIN"};
+         "MD11_EXT_DOOR_CARGO_1R", "MD11_EXT_DOOR_CARGO_2R", "MD11_EXT_DOOR_CARGO_MAIN",
+        };
 
     constexpr auto kFwdPaxDoorMemory = "tfdi.paxDoorFwd";
     constexpr auto kMidPaxDoorMemory = "tfdi.paxDoorMid";
     constexpr auto kAftPaxDoorMemory = "tfdi.paxDoorAft";
+    constexpr auto kFwdCargoDoorMemory = "tfdi.cargoDoorFwd";
+    constexpr auto kAftCargoDoorMemory = "tfdi.cargoDoorAft";
+    constexpr auto kMainCargoDoorMemory = "tfdi.cargoDoorMain";
     constexpr auto kStagedZfwMemory = "tfdi.stagedZfw";
 
     void PutNumberIfPresent(MemoryBag& memory, const char* name, const std::optional<double>& value)
@@ -118,7 +122,12 @@ void TfdiMd11::OnTurnaroundResumed(const TurnaroundFacts& facts, const MemoryBag
     paxDoorRule_.RestoreTargets({
         .fwd = RestoredNumber(memory, kFwdPaxDoorMemory),
         .mid = RestoredNumber(memory, kMidPaxDoorMemory),
-        .aft = RestoredNumber(memory, kAftPaxDoorMemory)
+        .aft = RestoredNumber(memory, kAftPaxDoorMemory),
+    });
+    cargoDoorRule_.RestoreTargets({
+        .fwd = RestoredNumber(memory, kFwdCargoDoorMemory),
+        .aft = RestoredNumber(memory, kAftCargoDoorMemory),
+        .main = RestoredNumber(memory, kMainCargoDoorMemory),
     });
     stagedZfwKg_ = RestoredNumber(memory, kStagedZfwMemory);
 
@@ -137,6 +146,11 @@ MemoryBag TfdiMd11::TurnaroundMemory() const
     PutNumberIfPresent(memory, kFwdPaxDoorMemory, targets.fwd);
     PutNumberIfPresent(memory, kMidPaxDoorMemory, targets.mid);
     PutNumberIfPresent(memory, kAftPaxDoorMemory, targets.aft);
+
+    const TfdiMd11CargoDoorsFollowLoaderRule::DoorTargets cargoTargets = cargoDoorRule_.Targets();
+    PutNumberIfPresent(memory, kFwdCargoDoorMemory, cargoTargets.fwd);
+    PutNumberIfPresent(memory, kAftCargoDoorMemory, cargoTargets.aft);
+    PutNumberIfPresent(memory, kMainCargoDoorMemory, cargoTargets.main);
     PutNumberIfPresent(memory, kStagedZfwMemory, stagedZfwKg_);
 
     return memory;
@@ -323,9 +337,9 @@ namespace
         {
             {MatchField::Title, MatchOp::Contains, "TFDi Design MD-11"},
             {MatchField::AtcModel, MatchOp::Equals, "MD11"},
-            {MatchField::AtcModel, MatchOp::Equals, "MD11F"}
+            {MatchField::AtcModel, MatchOp::Equals, "MD11F"},
         },
-        &CreateTfdiMd11, "tfdi-md11", "MD11", RefuelBy::Self, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreateTfdiMd11, "tfdi-md11", "MD11", RefuelBy::Self, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     [[maybe_unused]] const AircraftRegistration kTfdiMd11Registration{kTfdiMd11Descriptor};

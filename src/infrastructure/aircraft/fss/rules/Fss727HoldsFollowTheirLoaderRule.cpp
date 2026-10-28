@@ -30,9 +30,11 @@ namespace
 
     constexpr std::array kHolds = {
         Hold{.door = GsxDoor::FwdCargo, .name = "forward", .goal = "INTERACTIVE POINT GOAL:2",
-             .loaderLVar = gsx::lvars::kBaggageLoaderFrontState},
+             .loaderLVar = gsx::lvars::kBaggageLoaderFrontState,
+        },
         Hold{.door = GsxDoor::AftCargo, .name = "aft", .goal = "INTERACTIVE POINT GOAL:3",
-             .loaderLVar = gsx::lvars::kBaggageLoaderRearState}
+             .loaderLVar = gsx::lvars::kBaggageLoaderRearState,
+        },
     };
 
     static_assert(kHolds.size() == Fss727HoldsFollowTheirLoaderRule::kHoldCount);
@@ -62,7 +64,7 @@ void Fss727HoldsFollowTheirLoaderRule::Act(const RuleContext&, VariableWriter& w
 
 void Fss727HoldsFollowTheirLoaderRule::MoveTheHold(VariableWriter& writer, const GsxDoor door, const bool open)
 {
-    const auto hold = std::ranges::find(kHolds, door, &Hold::door);
+    const auto* const hold = std::ranges::find(kHolds, door, &Hold::door);
     if (hold == kHolds.end())
     {
         return;
@@ -90,9 +92,17 @@ void Fss727HoldsFollowTheirLoaderRule::CloseTheHoldsOnRequest(VariableWriter& wr
             continue;
         }
 
+        served = requests;
+
+        if (doors_->PositionOf(hold.door) == DoorPosition::Closed)
+        {
+            probe::Line(probe::Channel::Writes, QStringLiteral("skip  hold %1 %2 already closed").arg(QLatin1String(hold.name), QLatin1String(hold.goal)));
+
+            continue;
+        }
+
         probe::Line(probe::Channel::Writes, QStringLiteral("write hold %1 %2=0").arg(QLatin1String(hold.name), QLatin1String(hold.goal)));
         writer.SetAVar(hold.goal, kPercentOver100Unit, kHoldGoalClosed);
-        served = requests;
 
         LOG_INFO("FSS 727 %s hold commanded closed: its loader has left", hold.name);
     }

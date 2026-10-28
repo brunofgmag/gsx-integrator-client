@@ -991,6 +991,11 @@
         <translation>A GSX menu you opened is on screen. Close it so the client can send its next request.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="895"/>
+        <source>The ground power or the chocks were not in place after 4 minutes, so the turnaround went on without them.</source>
+        <translation>The ground power or the chocks were not in place after 4 minutes, so the turnaround went on without them.</translation>
+    </message>
+    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="865"/>
         <source>GSX restarted since this turnaround was saved. Resume it if the aircraft is still as you left it, or restart the flow to start over.</source>
         <translation>GSX restarted since this turnaround was saved. Resume it if the aircraft is still as you left it, or restart the flow to start over.</translation>
