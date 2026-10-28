@@ -125,7 +125,7 @@ void FssEJetDoorsFollowGsxRule::SetDesired(const GsxDoor door, const bool open, 
         return;
     }
 
-    const auto* const match = std::ranges::find(kDoorSlots, std::optional<GsxDoor>{door}, &FssEJetDoorSlot::door);
+    const auto match = std::ranges::find(kDoorSlots, std::optional<GsxDoor>{door}, &FssEJetDoorSlot::door);
     if (match == kDoorSlots.end())
     {
         return;

@@ -201,7 +201,7 @@ GsxPatchOutcome GsxRemoteStateReducer::ApplyPatch(GsxRemoteState& state, const s
     if (path.starts_with('/'))
     {
         const std::string_view key = std::string_view(path).substr(1);
-        const auto* const field = std::ranges::find(kStateFields, key, &StateField::key);
+        const auto field = std::ranges::find(kStateFields, key, &StateField::key);
         if (field != kStateFields.end())
         {
             field->apply(state, value);
