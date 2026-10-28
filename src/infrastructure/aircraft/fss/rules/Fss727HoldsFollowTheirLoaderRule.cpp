@@ -64,7 +64,7 @@ void Fss727HoldsFollowTheirLoaderRule::Act(const RuleContext&, VariableWriter& w
 
 void Fss727HoldsFollowTheirLoaderRule::MoveTheHold(VariableWriter& writer, const GsxDoor door, const bool open)
 {
-    const auto* const hold = std::ranges::find(kHolds, door, &Hold::door);
+    const auto hold = std::ranges::find(kHolds, door, &Hold::door);
     if (hold == kHolds.end())
     {
         return;
