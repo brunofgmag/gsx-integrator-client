@@ -150,7 +150,12 @@ namespace
     constexpr std::size_t kPaxDoorCount = 6;
     constexpr double kPaxDoorFullyOpen = 100.0;
     constexpr double kCargoDoorFullyOpen = 200.0;
+    constexpr double kCargoDoorStoppedShort = 194.0;
     constexpr double kDoorShut = 0.0;
+    constexpr auto kForwardCargoMoving = "B757_DOORS_CARGO_FWD_MOVING";
+    constexpr auto kAftCargoMoving = "B757_DOORS_CARGO_AFT_MOVING";
+    constexpr double kCargoDoorMoving = 1.0;
+    constexpr double kCargoDoorAtRest = 0.0;
 
     constexpr auto kCaptainPtt = "B757_PED_AUDIO_1_PTT_SWITCH";
     constexpr auto kFirstOfficerPtt = "B757_PED_AUDIO_2_PTT_SWITCH";
@@ -263,11 +268,32 @@ namespace
         {
             gateway.lvars[door] = position;
         }
+
+        gateway.lvars[kForwardCargoMoving] = kCargoDoorAtRest;
+        gateway.lvars[kAftCargoMoving] = kCargoDoorAtRest;
     }
 
     void StartGsx(FakeVariableGateway& gateway)
     {
         gateway.lvars[gsx::lvars::kCouatlStarted] = kCouatlUp;
+        AllDoorsAt(gateway, kDoorShut);
+    }
+
+    void LetTheDoorsObeyTheirSwitches(FakeVariableGateway& gateway)
+    {
+        for (std::size_t door = 0; door < kDoorSwitches.size(); ++door)
+        {
+            const double fullyOpen = door < kPaxDoorCount ? kPaxDoorFullyOpen : kCargoDoorFullyOpen;
+            const bool commandedOpen = gateway.Written(kDoorSwitches[door], kSwitchClosed) > kSwitchClosed;
+
+            gateway.lvars[kDoorPositions[door]] = commandedOpen ? fullyOpen : kDoorShut;
+        }
+    }
+
+    void TickWithObedientDoors(Rig& rig)
+    {
+        TickAircraft(rig.aircraft, rig.gateway);
+        LetTheDoorsObeyTheirSwitches(rig.gateway);
     }
 
     void DockTheJetway(FakeVariableGateway& gateway)
@@ -467,6 +493,16 @@ private slots:
     static void doorStatusIgnoresTheInteractivePointsAndExits();
     static void closeAllDoorsCommandsTheEightSwitchesToZero();
     static void closeAllDoorsTellsTheSyncSoItDoesNotCloseThemAgain();
+    static void aDoorAlreadyOpenIsNotWrittenAndTheNextChangeIsJudgedFromIt();
+    static void aDoorInTheMiddleOfItsTravelHoldsTheWrite();
+    static void aDoorThatHasNotReportedHoldsTheWrite();
+    static void aCargoDoorStillMovingIsJudgedOnceItStops();
+    static void aCargoDoorThatStopsShortOfItsTravelCountsAsOpen();
+    static void closeAllDoorsSkipsTheSecondRightDoorWhenItReadsShut();
+    static void closeAllDoorsWritesTheSecondRightDoorWhenItReadsOpenOrNotYetRead();
+    static void closeAllDoorsSkipsEveryDoorThatReadsShut();
+    static void theChocksStatusIsUnknownUntilTheLVarArrives();
+    static void theChocksStatusFollowsTheChocksLVar();
     static void registersTheDoorsFollowGsxRule();
     static void theJetwayDockingOpensTheForwardPassengerSwitch();
     static void theJetwayLeavingClosesTheForwardPassengerSwitch();
@@ -1398,17 +1434,166 @@ void Bbs757Test::closeAllDoorsTellsTheSyncSoItDoesNotCloseThemAgain()
 {
     Rig rig;
     DockTheJetway(rig.gateway);
-    TickAircraft(rig.aircraft, rig.gateway);
+    TickWithObedientDoors(rig);
 
     QCOMPARE(rig.gateway.Written(kL1Switch), kSwitchOpen);
 
     rig.aircraft.CloseAllDoors();
     rig.gateway.lvars[gsx::lvars::kJetway] = kJetwayAway;
-    TickAircraft(rig.aircraft, rig.gateway);
-    TickAircraft(rig.aircraft, rig.gateway);
+    TickWithObedientDoors(rig);
+    TickWithObedientDoors(rig);
 
     QCOMPARE(rig.gateway.Written(kL1Switch), kSwitchClosed);
     QCOMPARE(rig.gateway.WriteCount(kL1Switch), 2);
+}
+
+void Bbs757Test::aDoorAlreadyOpenIsNotWrittenAndTheNextChangeIsJudgedFromIt()
+{
+    Rig rig;
+    DockTheJetway(rig.gateway);
+    rig.gateway.lvars[kDoorPositions[0]] = kPaxDoorFullyOpen;
+
+    TickAircraft(rig.aircraft, rig.gateway);
+    TickAircraft(rig.aircraft, rig.gateway);
+
+    QCOMPARE(rig.gateway.WriteCount(kL1Switch), 0);
+
+    rig.gateway.lvars[gsx::lvars::kJetway] = kJetwayAway;
+    TickAircraft(rig.aircraft, rig.gateway);
+
+    QCOMPARE(rig.gateway.Written(kL1Switch), kSwitchClosed);
+    QCOMPARE(rig.gateway.WriteCount(kL1Switch), 1);
+}
+
+void Bbs757Test::aDoorInTheMiddleOfItsTravelHoldsTheWrite()
+{
+    Rig rig;
+    DockTheJetway(rig.gateway);
+    rig.gateway.lvars[kDoorPositions[0]] = kPaxDoorFullyOpen / 2.0;
+
+    TickAircraft(rig.aircraft, rig.gateway);
+    TickAircraft(rig.aircraft, rig.gateway);
+
+    QCOMPARE(rig.gateway.WriteCount(kL1Switch), 0);
+
+    rig.gateway.lvars[kDoorPositions[0]] = kDoorShut;
+    TickAircraft(rig.aircraft, rig.gateway);
+
+    QCOMPARE(rig.gateway.Written(kL1Switch), kSwitchOpen);
+    QCOMPARE(rig.gateway.WriteCount(kL1Switch), 1);
+}
+
+void Bbs757Test::aDoorThatHasNotReportedHoldsTheWrite()
+{
+    Rig rig;
+    DockTheJetway(rig.gateway);
+    rig.gateway.lvars.erase(kDoorPositions[0]);
+
+    TickAircraft(rig.aircraft, rig.gateway);
+    TickAircraft(rig.aircraft, rig.gateway);
+
+    QCOMPARE(rig.gateway.WriteCount(kL1Switch), 0);
+
+    rig.gateway.lvars[kDoorPositions[0]] = kDoorShut;
+    TickAircraft(rig.aircraft, rig.gateway);
+
+    QCOMPARE(rig.gateway.Written(kL1Switch), kSwitchOpen);
+}
+
+void Bbs757Test::aCargoDoorStillMovingIsJudgedOnceItStops()
+{
+    Rig rig;
+    StartGsx(rig.gateway);
+    rig.gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderLoading;
+    rig.gateway.lvars[kDoorPositions[kPaxDoorCount]] = kPaxDoorFullyOpen;
+    rig.gateway.lvars[kForwardCargoMoving] = kCargoDoorMoving;
+
+    TickAircraft(rig.aircraft, rig.gateway);
+
+    QCOMPARE(rig.gateway.WriteCount(kForwardCargoSwitch), 0);
+
+    rig.gateway.lvars[kDoorPositions[kPaxDoorCount]] = kDoorShut;
+    rig.gateway.lvars[kForwardCargoMoving] = kCargoDoorAtRest;
+    TickAircraft(rig.aircraft, rig.gateway);
+
+    QCOMPARE(rig.gateway.Written(kForwardCargoSwitch), kSwitchOpen);
+    QCOMPARE(rig.gateway.WriteCount(kForwardCargoSwitch), 1);
+}
+
+void Bbs757Test::aCargoDoorThatStopsShortOfItsTravelCountsAsOpen()
+{
+    Rig rig;
+    StartGsx(rig.gateway);
+    rig.gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderLoading;
+    rig.gateway.lvars[kDoorPositions[kPaxDoorCount]] = kCargoDoorStoppedShort;
+
+    TickAircraft(rig.aircraft, rig.gateway);
+
+    QCOMPARE(rig.gateway.WriteCount(kForwardCargoSwitch), 0);
+
+    rig.gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = gsx::states::kLoaderFinishing;
+    TickAircraft(rig.aircraft, rig.gateway);
+
+    QCOMPARE(rig.gateway.Written(kForwardCargoSwitch), kSwitchClosed);
+    QCOMPARE(rig.gateway.WriteCount(kForwardCargoSwitch), 1);
+}
+
+void Bbs757Test::closeAllDoorsSkipsTheSecondRightDoorWhenItReadsShut()
+{
+    Rig rig;
+    AllDoorsAt(rig.gateway, kPaxDoorFullyOpen);
+    rig.gateway.lvars[kDoorPositions[4]] = kDoorShut;
+    rig.gateway.lvars[kR2Switch] = kSwitchOpen;
+
+    rig.aircraft.CloseAllDoors();
+
+    QCOMPARE(rig.gateway.WriteCount(kR2Switch), 0);
+    QCOMPARE(rig.gateway.WriteCount(kL1Switch), 1);
+}
+
+void Bbs757Test::closeAllDoorsWritesTheSecondRightDoorWhenItReadsOpenOrNotYetRead()
+{
+    Rig open;
+    open.gateway.lvars[kDoorPositions[4]] = kPaxDoorFullyOpen;
+    open.aircraft.CloseAllDoors();
+
+    QCOMPARE(open.gateway.WriteCount(kR2Switch), 1);
+    QCOMPARE(open.gateway.Written(kR2Switch), kSwitchClosed);
+
+    Rig unread;
+    unread.aircraft.CloseAllDoors();
+
+    QCOMPARE(unread.gateway.WriteCount(kR2Switch), 1);
+    QCOMPARE(unread.gateway.Written(kR2Switch), kSwitchClosed);
+}
+
+void Bbs757Test::closeAllDoorsSkipsEveryDoorThatReadsShut()
+{
+    Rig rig;
+    AllDoorsAt(rig.gateway, kDoorShut);
+
+    rig.aircraft.CloseAllDoors();
+
+    QCOMPARE(rig.gateway.setLVarCalls, 0);
+}
+
+void Bbs757Test::theChocksStatusIsUnknownUntilTheLVarArrives()
+{
+    Rig rig;
+
+    QVERIFY(rig.aircraft.GetChocksStatus() == ChocksStatus::Unknown);
+}
+
+void Bbs757Test::theChocksStatusFollowsTheChocksLVar()
+{
+    Rig rig;
+    rig.gateway.lvars[kChocks] = 0.0;
+
+    QVERIFY(rig.aircraft.GetChocksStatus() == ChocksStatus::Removed);
+
+    rig.gateway.lvars[kChocks] = 1.0;
+
+    QVERIFY(rig.aircraft.GetChocksStatus() == ChocksStatus::Placed);
 }
 
 void Bbs757Test::registersTheDoorsFollowGsxRule()
@@ -1433,10 +1618,10 @@ void Bbs757Test::theJetwayLeavingClosesTheForwardPassengerSwitch()
 {
     Rig rig;
     DockTheJetway(rig.gateway);
-    TickAircraft(rig.aircraft, rig.gateway);
+    TickWithObedientDoors(rig);
 
     rig.gateway.lvars[gsx::lvars::kJetway] = kJetwayAway;
-    TickAircraft(rig.aircraft, rig.gateway);
+    TickWithObedientDoors(rig);
 
     QCOMPARE(rig.gateway.Written(kL1Switch), kSwitchClosed);
     QCOMPARE(rig.gateway.WriteCount(kL1Switch), 2);
@@ -1520,14 +1705,14 @@ void Bbs757Test::aGsxRestartDistrustsTheVehicleStatesItLeftBehind()
     Rig rig;
     StartGsx(rig.gateway);
     rig.gateway.lvars[gsx::lvars::kPassengerStairsRearState] = gsx::states::kStairsFinalPosition;
-    TickAircraft(rig.aircraft, rig.gateway);
+    TickWithObedientDoors(rig);
 
     QCOMPARE(rig.gateway.Written(kL3Switch), kSwitchOpen);
 
     rig.gateway.lvars[gsx::lvars::kCouatlStarted] = kCouatlDown;
-    TickAircraft(rig.aircraft, rig.gateway);
+    TickWithObedientDoors(rig);
     rig.gateway.lvars[gsx::lvars::kCouatlStarted] = kCouatlUp;
-    TickAircraft(rig.aircraft, rig.gateway);
+    TickWithObedientDoors(rig);
 
     QCOMPARE(rig.gateway.Written(kL3Switch), kSwitchClosed);
 }
@@ -1544,6 +1729,7 @@ void Bbs757Test::aResumedAircraftClosesTheDoorWhoseVehicleLeftWhileTheClientWasG
 
     Rig after;
     StartGsx(after.gateway);
+    AllDoorsAt(after.gateway, kPaxDoorFullyOpen);
     after.gateway.lvars[gsx::lvars::kJetway] = kJetwayAway;
     after.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = kVehicleAway;
     after.aircraft.OnTurnaroundResumed(TurnaroundFacts{}, memory);

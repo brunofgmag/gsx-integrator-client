@@ -991,6 +991,11 @@
         <translation>Um menu do GSX que você abriu está na tela. Feche-o para o cliente enviar o próximo pedido.</translation>
     </message>
     <message>
+        <location filename="../src/viewmodel/OperationsViewModel.cpp" line="895"/>
+        <source>The ground power or the chocks were not in place after 4 minutes, so the turnaround went on without them.</source>
+        <translation>A GPU ou os calços não estavam no lugar depois de 4 minutos, e o turnaround seguiu sem eles.</translation>
+    </message>
+    <message>
         <location filename="../src/viewmodel/OperationsViewModel.cpp" line="865"/>
         <source>GSX restarted since this turnaround was saved. Resume it if the aircraft is still as you left it, or restart the flow to start over.</source>
         <translation>O GSX reiniciou depois que este turnaround foi salvo. Retome se a aeronave ainda está como você deixou, ou reinicie o fluxo para começar de novo.</translation>

@@ -108,6 +108,11 @@ void IntegratorSnapshotTest::boolFieldDifferenceBreaksEquivalence()
     b.gsxProfileRefuelingRecommended = true;
 
     QVERIFY(!AreEquivalent(a, b));
+
+    b.gsxProfileRefuelingRecommended = false;
+    b.groundEquipmentTimedOut = true;
+
+    QVERIFY(!AreEquivalent(a, b));
 }
 
 void IntegratorSnapshotTest::aircraftNameDifferenceBreaksEquivalence()

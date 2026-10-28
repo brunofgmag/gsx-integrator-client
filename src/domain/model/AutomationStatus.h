@@ -1,11 +1,12 @@
 #ifndef GSX_INTEGRATOR_CLIENT_DOMAIN_AUTOMATIONSTATUS_H
 #define GSX_INTEGRATOR_CLIENT_DOMAIN_AUTOMATIONSTATUS_H
 
+#include <cstdint>
 #include <string>
 #include "CargoLoader.h"
 #include "FlightPlan.h"
 
-enum class EngineConfirmationBlock : int
+enum class EngineConfirmationBlock : std::uint8_t
 {
     None = 0,
     EnginesStopped,
@@ -25,6 +26,7 @@ struct AutomationStatus
     bool servicesStalled = false;
     bool serviceInterrupted = false;
     bool deboardingAwaitsGsx = false;
+    bool groundEquipmentTimedOut = false;
     CargoLoader loaderHoldingBoarding = CargoLoader::None;
     int servicesWaitSeconds = 0;
     int loaderDoorWaitSeconds = 0;

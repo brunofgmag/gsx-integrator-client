@@ -48,7 +48,7 @@ namespace
         "ANIMATION_FWD_ENTRY_VAL", "ANIMATION_FWD_SERVICE_VAL",
         "ANIMATION_AFT_ENTRY_VAL", "ANIMATION_AFT_SERVICE_VAL",
         "ANIMATION_L_FWD_OVERWING_VAL", "ANIMATION_R_FWD_OVERWING_VAL",
-        "ANIMATION_L_AFT_OVERWING_VAL", "ANIMATION_R_AFT_OVERWING_VAL"
+        "ANIMATION_L_AFT_OVERWING_VAL", "ANIMATION_R_AFT_OVERWING_VAL",
     };
 }
 
@@ -254,6 +254,16 @@ bool IFly737Max::IsHeldInPlace() const
     return IsParkingBrakeSet() || variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
 }
 
+std::optional<ChocksStatus> IFly737Max::GetChocksStatus() const
+{
+    if (!variableGateway_->HasReceivedLVar(kChocksLVar))
+    {
+        return ChocksStatus::Unknown;
+    }
+
+    return variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0 ? ChocksStatus::Placed : ChocksStatus::Removed;
+}
+
 bool IFly737Max::IsEngineRunning() const
 {
     return AnyEngineCombusting(*variableGateway_, kEngineRunningDefault, kEngineCount);
@@ -279,9 +289,9 @@ namespace
     const AircraftDescriptor kIFly737MaxDescriptor{
         "iFly 737 MAX 8",
         {
-            {MatchField::Title, MatchOp::Contains, "iFly 737-MAX"}
+            {MatchField::Title, MatchOp::Contains, "iFly 737-MAX"},
         },
-        &CreateIFly737Max, "ifly-737max8", "B38M", RefuelBy::Gsx, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::FlickEitherSide}, kRecommendedFuelRateKgs
+        &CreateIFly737Max, "ifly-737max8", "B38M", RefuelBy::Gsx, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::FlickEitherSide}, kRecommendedFuelRateKgs,
     };
 
     [[maybe_unused]] const AircraftRegistration kIFly737MaxRegistration{kIFly737MaxDescriptor};

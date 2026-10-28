@@ -30,7 +30,7 @@ namespace
 
     constexpr std::array kDoorLVars = {
         "FSLA320_pax_door1", "FSLA320_pax_door2", "FSLA320_pax_door3", "FSLA320_pax_door4",
-        "FSLA320_upper_cargo_door", "FSLA320_lower_cargo_door"
+        "FSLA320_upper_cargo_door", "FSLA320_lower_cargo_door",
     };
 
     constexpr int kEngineCount = 2;
@@ -233,6 +233,16 @@ bool FslabsA321neo::IsHeldInPlace() const
     return IsParkingBrakeSet() || variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0;
 }
 
+std::optional<ChocksStatus> FslabsA321neo::GetChocksStatus() const
+{
+    if (!variableGateway_->HasReceivedLVar(kChocksLVar))
+    {
+        return ChocksStatus::Unknown;
+    }
+
+    return variableGateway_->GetLVar(kChocksLVar, 0.0) > 0.0 ? ChocksStatus::Placed : ChocksStatus::Removed;
+}
+
 bool FslabsA321neo::IsParkingBrakeSet() const
 {
     return variableGateway_->GetLVar(kParkingBrakeLVar, 0.0) > 0.0;
@@ -261,9 +271,9 @@ namespace
     const AircraftDescriptor kFslabsA321neoDescriptor{
         FslabsA321neo::kName,
         {
-            {MatchField::Title, MatchOp::StartsWith, "FSLabs A321-"}
+            {MatchField::Title, MatchOp::StartsWith, "FSLabs A321-"},
         },
-        &CreateFslabsA321neo, "fslabs-a321neo", "A21N", RefuelBy::Gsx, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreateFslabsA321neo, "fslabs-a321neo", "A21N", RefuelBy::Gsx, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     [[maybe_unused]] const AircraftRegistration kFslabsA321neoRegistration{kFslabsA321neoDescriptor};

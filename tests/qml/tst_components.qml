@@ -153,7 +153,7 @@ TestCase {
             "aircraftSupported", "canReloadSimbrief", "cargoAircraft", "cargoDoorStuck", "connected",
             "doorsHoldingPushback", "enabled", "engineConfirmationBlocked", "fuelDidNotStay",
             "fuelPlanOverCapacity", "fuelRequestStalled", "gsxAvailable", "gsxProfileConflict",
-            "gsxProfileRefuelingRecommended", "inDeboardingPhase", "ownGroundEquipmentAttached",
+            "groundEquipmentTimedOut", "gsxProfileRefuelingRecommended", "inDeboardingPhase", "ownGroundEquipmentAttached",
             "ownStairsWaitingForPressure", "pmdgOptionsConflict", "gsxMenuHeldByPilot", "serviceInterrupted", "servicesStalled",
             "simbriefError", "simbriefReady"
         ];
@@ -162,7 +162,7 @@ TestCase {
             "aircraftLabel", "aircraftNameText", "cargoDoorAdvisoryText", "commandError", "commandErrorLabel",
             "dismissAdvisoryLabel", "engineConfirmationAdvisoryText", "fuelCardLabel", "fuelPlanAdvisoryText",
             "fuelProgressText", "fuelRateLabel", "fuelRateText", "fuelRequestAdvisoryText",
-            "fuelStayAdvisoryText", "gsxLabel", "gsxMenuHeldByPilotAdvisoryText", "gsxProfileActionLabel", "gsxProfileAdvisoryText",
+            "fuelStayAdvisoryText", "groundEquipmentTimedOutAdvisoryText", "gsxLabel", "gsxMenuHeldByPilotAdvisoryText", "gsxProfileActionLabel", "gsxProfileAdvisoryText",
             "gsxProfileRecommendationAdvisoryText", "gsxStatusText", "holdCountdownText", "loadedFuelLabel",
             "loadedFuelText", "loadingModeLabel", "loadingModeText", "nextPhaseText", "openDoorAdvisoryText", "ownGroundEquipmentAdvisoryText",
             "ownStairsPressureAdvisoryText",
@@ -577,6 +577,33 @@ TestCase {
                                             { integratorVm: held, settingsVm: { autoStartLoading: false } });
         const hidden = createTemporaryObject(operationsScreenComponent, testCase,
                                              { integratorVm: free, settingsVm: { autoStartLoading: false } });
+
+        verify(shown);
+        verify(hidden);
+
+        const shownAdvisory = findAdvisoryByText(shown, advisoryText);
+        const hiddenAdvisory = findAdvisoryByText(hidden, advisoryText);
+
+        verify(shownAdvisory);
+        verify(hiddenAdvisory);
+        verify(shownAdvisory.visible);
+        verify(!hiddenAdvisory.visible);
+    }
+
+    function test_operationsScreenShowsTheGroundEquipmentGiveUpAdvisoryOnlyAfterTheCeilingPassed() {
+        const advisoryText = "The ground power or the chocks were not in place after 4 minutes, so the turnaround went on without them.";
+        const gaveUp = operationsVm({}, {
+            groundEquipmentTimedOut: true,
+            groundEquipmentTimedOutAdvisoryText: advisoryText
+        });
+        const inTime = operationsVm({}, {
+            groundEquipmentTimedOut: false,
+            groundEquipmentTimedOutAdvisoryText: advisoryText
+        });
+        const shown = createTemporaryObject(operationsScreenComponent, testCase,
+                                            { integratorVm: gaveUp, settingsVm: { autoStartLoading: false } });
+        const hidden = createTemporaryObject(operationsScreenComponent, testCase,
+                                             { integratorVm: inTime, settingsVm: { autoStartLoading: false } });
 
         verify(shown);
         verify(hidden);

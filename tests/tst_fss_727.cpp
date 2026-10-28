@@ -34,7 +34,7 @@ namespace
     constexpr auto kCones = "FSS_B727_EFB_CONES_VISIBLE";
     constexpr auto kEngineCovers = "FSS_B727_EFB_COVER_ENGINE_VISIBLE";
     constexpr auto kBoardingStair = "FSS_B727_EFB_BOARDING_STAIR";
-    constexpr std::array kOwnGroundEquipment = {kChocks, kCones, kEngineCovers, kBoardingStair};
+    constexpr std::array kOwnGroundEquipment = {kCones, kEngineCovers, kBoardingStair};
     constexpr auto kGpuAvailable = "FSS_B727_GPU_AVAIL";
     constexpr auto kExtPowerSwitch = "FSS_B727_FE_ELEC_EXT_POWER_SWITCH";
     constexpr auto kAftStairLever = "FSS_B727_CD_AFT_STAIR_LEVER";
@@ -77,6 +77,7 @@ namespace
     constexpr auto kEntryDoorPoint = "INTERACTIVE POINT OPEN:0";
     constexpr auto kMainDeckDoorPoint = "INTERACTIVE POINT OPEN:1";
     constexpr auto kForwardHoldPoint = "INTERACTIVE POINT OPEN:2";
+    constexpr auto kAftHoldPoint = "INTERACTIVE POINT OPEN:3";
     constexpr std::array kDoorPoints = {
         kEntryDoorPoint, kMainDeckDoorPoint, kForwardHoldPoint,
         "INTERACTIVE POINT OPEN:3", "INTERACTIVE POINT OPEN:4"
@@ -306,6 +307,47 @@ namespace
         gateway.lvars[kRearLoaderState] = kLoaderIdle;
     }
 
+    void HoldsOpen(FakeVariableGateway& gateway)
+    {
+        gateway.avars[kForwardHoldPoint] = kMeasuredOpenSettle;
+        gateway.avars[kAftHoldPoint] = kMeasuredOpenSettle;
+    }
+
+    void LetTheEntryAndTheHoldsObeyTheirGoals(FakeVariableGateway& gateway)
+    {
+        struct Follow
+        {
+            const char* goal;
+            const char* point;
+        };
+
+        for (const Follow follow : {Follow{.goal = kEntryDoorGoal, .point = kEntryDoorPoint},
+                                    Follow{.goal = kForwardHoldGoal, .point = kForwardHoldPoint},
+                                    Follow{.goal = kAftHoldGoal, .point = kAftHoldPoint},
+                                   })
+        {
+            const auto goal = gateway.avars.find(follow.goal);
+            if (goal != gateway.avars.end())
+            {
+                gateway.avars[follow.point] = goal->second > 0.0 ? kMeasuredOpenSettle : kMeasuredClosedSettle;
+            }
+        }
+    }
+
+    void TickWithObedientDoors(Aircraft& aircraft, FakeVariableGateway& gateway)
+    {
+        TickAircraft(aircraft, gateway);
+        LetTheEntryAndTheHoldsObeyTheirGoals(gateway);
+    }
+
+    void TickTimesWithObedientDoors(Aircraft& aircraft, FakeVariableGateway& gateway, const int ticks)
+    {
+        for (int tick = 0; tick < ticks; ++tick)
+        {
+            TickWithObedientDoors(aircraft, gateway);
+        }
+    }
+
     int PanelWrites(const FakeVariableGateway& gateway)
     {
         return gateway.WriteCount(kPanelCover) + gateway.WriteCount(kPanelMaster)
@@ -375,6 +417,7 @@ namespace
         AutomationStatus status;
         Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+        AllDoorPointsAt(gateway, kMeasuredClosedSettle);
         gateway.lvars[kCouatlStarted] = 1.0;
         gateway.lvars[kJetway] = kJetwayDocked;
         TickAircraft(aircraft, gateway);
@@ -474,7 +517,7 @@ private slots:
     static void logsTheProfileNameItWasBuiltWith();
     static void readyToPushFollowsPowerBeaconAndEngines();
     static void readyToDeboardFollowsSafetyState();
-    static void clearsTheFourOwnGroundEquipmentObjectsOnce();
+    static void clearsTheOwnGroundEquipmentObjectsOnceButNotTheChocks();
     static void placesAndRemovesTheChocksByTheEfbLVar();
     static void groundPowerStatusFollowsTheAircraftOwnGpu();
     static void commandsItsOwnGroundPowerUnitThroughThePort();
@@ -485,6 +528,20 @@ private slots:
     static void theFrontEntryStaysClosedOnceHeldForDeparture();
     static void closingEveryDoorLeavesTheFrontEntryOpenWhileTheGroundAccessServesIt();
     static void closesTheFrontEntryOnEveryRequestEvenWhenItLastCommandedItClosed();
+    static void leavesTheChocksTheAircraftSpawnedWithWhenTheOwnEquipmentIsCleared();
+    static void hasNoChocksReadingOfItsOwnBesidesTheEchoOfItsWrite();
+    static void theFrontEntryHoldsEverythingWhileCouatlIsDown();
+    static void theFrontEntryClosesForTheDepartureHoldEvenWithCouatlDown();
+    static void theFrontEntryReadsItsDoorBeforeWriting();
+    static void theFrontEntryWaitsForItsDoorReadingBeforeWriting();
+    static void theFrontEntryHoldsWhileItsDoorIsInTheMiddleOfItsTravel();
+    static void closingEveryDoorSkipsAFrontEntryThatReadsClosedAndStillServesTheRequest();
+    static void closingEveryDoorWritesTheFrontEntryWhoseDoorHasNotReported();
+    static void aHoldAlreadyOpenIsNotWrittenAndTheNextChangeIsJudgedFromIt();
+    static void aHoldWaitsForItsDoorReadingBeforeWriting();
+    static void aHoldInTheMiddleOfItsTravelHoldsTheWrite();
+    static void closingEveryDoorSkipsAHoldThatReadsClosedAndStillServesTheRequest();
+    static void closingEveryDoorWritesAHoldWhoseDoorHasNotReported();
     static void neverCommandsTheAftAirstair();
     static void closingEveryDoorLeavesTheEntryTheHoldsAndTheDeckToTheirRules();
     static void closesEachHoldOnlyOnceItsLoaderLeaves();
@@ -1543,7 +1600,7 @@ void Fss727Test::automodeRuleNeverHoldsThePhase()
     }
 }
 
-void Fss727Test::clearsTheFourOwnGroundEquipmentObjectsOnce()
+void Fss727Test::clearsTheOwnGroundEquipmentObjectsOnceButNotTheChocks()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -1563,6 +1620,8 @@ void Fss727Test::clearsTheFourOwnGroundEquipmentObjectsOnce()
     {
         QCOMPARE(gateway.WriteCount(lVar), 1);
     }
+
+    QCOMPARE(gateway.WriteCount(kChocks), 0);
 }
 
 void Fss727Test::placesAndRemovesTheChocksByTheEfbLVar()
@@ -1658,19 +1717,20 @@ void Fss727Test::theFrontEntryFollowsTheGsxStairs()
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+    AllDoorPointsAt(gateway, kMeasuredClosedSettle);
     gateway.lvars[kCouatlStarted] = 1.0;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 0);
 
     gateway.lvars[kFrontStairsState] = kStairsDocked;
-    TickTimes(aircraft, gateway, kThreeTicks);
+    TickTimesWithObedientDoors(aircraft, gateway, kThreeTicks);
 
     QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 1);
     QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 1.0);
 
     gateway.lvars[kFrontStairsState] = kVehicleGone;
-    TickTimes(aircraft, gateway, kThreeTicks);
+    TickTimesWithObedientDoors(aircraft, gateway, kThreeTicks);
 
     QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 2);
     QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 0.0);
@@ -1682,9 +1742,10 @@ void Fss727Test::theFrontEntryFollowsTheJetway()
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+    AllDoorPointsAt(gateway, kMeasuredClosedSettle);
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kJetway] = kJetwayDocked;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 1);
     QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 1.0);
@@ -1696,18 +1757,19 @@ void Fss727Test::theFrontEntryStaysClosedOnceHeldForDeparture()
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+    AllDoorPointsAt(gateway, kMeasuredClosedSettle);
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kJetway] = kJetwayDocked;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 1.0);
 
     aircraft.HoldDoorsClosed(true);
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 0.0);
 
-    TickTimes(aircraft, gateway, kTwentyTicks);
+    TickTimesWithObedientDoors(aircraft, gateway, kTwentyTicks);
 
     QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 2);
 }
@@ -1732,21 +1794,21 @@ void Fss727Test::closingEveryDoorLeavesTheFrontEntryOpenWhileTheGroundAccessServ
         HoldLoadersIdle(gateway);
         gateway.lvars[kCouatlStarted] = 1.0;
         gateway.lvars[access.lVar] = access.docked;
-        TickAircraft(aircraft, gateway);
+        TickWithObedientDoors(aircraft, gateway);
 
         QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 1);
         QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 1.0);
 
-        TickTimes(aircraft, gateway, kMeasuredTicksFromTheEntryOpenToEveryDoorClosing);
+        TickTimesWithObedientDoors(aircraft, gateway, kMeasuredTicksFromTheEntryOpenToEveryDoorClosing);
         aircraft.HoldDoorsClosed(false);
         aircraft.CloseAllDoors();
-        TickTimes(aircraft, gateway, kTwentyTicks);
+        TickTimesWithObedientDoors(aircraft, gateway, kTwentyTicks);
 
         QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 1);
         QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 1.0);
 
         gateway.lvars[access.lVar] = kVehicleGone;
-        TickTimes(aircraft, gateway, kTwentyTicks);
+        TickTimesWithObedientDoors(aircraft, gateway, kTwentyTicks);
 
         QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 2);
         QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 0.0);
@@ -1763,13 +1825,14 @@ void Fss727Test::closesTheFrontEntryOnEveryRequestEvenWhenItLastCommandedItClose
     HoldLoadersIdle(gateway);
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kFrontStairsState] = kStairsDocked;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
     gateway.lvars[kFrontStairsState] = kVehicleGone;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 2);
     QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 0.0);
 
+    gateway.avars[kEntryDoorPoint] = kMeasuredOpenSettle;
     aircraft.CloseAllDoors();
     TickTimes(aircraft, gateway, kTwentyTicks);
 
@@ -1780,6 +1843,284 @@ void Fss727Test::closesTheFrontEntryOnEveryRequestEvenWhenItLastCommandedItClose
     TickTimes(aircraft, gateway, kTwentyTicks);
 
     QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 4);
+}
+
+void Fss727Test::leavesTheChocksTheAircraftSpawnedWithWhenTheOwnEquipmentIsCleared()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    gateway.lvars[kChocks] = 1.0;
+    aircraft.ClearOwnGroundEquipment();
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.WriteCount(kChocks), 0);
+    QCOMPARE(gateway.Written(kChocks), 1.0);
+}
+
+void Fss727Test::hasNoChocksReadingOfItsOwnBesidesTheEchoOfItsWrite()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    QVERIFY(!aircraft.GetChocksStatus().has_value());
+
+    static_cast<void>(aircraft.SetChocks(true));
+
+    QVERIFY(!aircraft.GetChocksStatus().has_value());
+}
+
+void Fss727Test::theFrontEntryHoldsEverythingWhileCouatlIsDown()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    AllDoorPointsAt(gateway, kMeasuredClosedSettle);
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    TickWithObedientDoors(aircraft, gateway);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 1);
+    QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 1.0);
+
+    gateway.lvars[kCouatlStarted] = 0.0;
+    gateway.lvars[kJetway] = 2.0;
+    gateway.lvars[kFrontStairsState] = kVehicleGone;
+    TickTimesWithObedientDoors(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 1);
+    QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 1.0);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    TickTimesWithObedientDoors(aircraft, gateway, kThreeTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 2);
+    QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 0.0);
+}
+
+void Fss727Test::theFrontEntryClosesForTheDepartureHoldEvenWithCouatlDown()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    AllDoorPointsAt(gateway, kMeasuredClosedSettle);
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    TickWithObedientDoors(aircraft, gateway);
+
+    gateway.lvars[kCouatlStarted] = 0.0;
+    aircraft.HoldDoorsClosed(true);
+    TickTimesWithObedientDoors(aircraft, gateway, kThreeTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 2);
+    QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 0.0);
+}
+
+void Fss727Test::theFrontEntryReadsItsDoorBeforeWriting()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    AllDoorPointsAt(gateway, kMeasuredClosedSettle);
+    gateway.avars[kEntryDoorPoint] = kMeasuredOpenSettle;
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    TickTimes(aircraft, gateway, kThreeTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 0);
+
+    gateway.lvars[kJetway] = 2.0;
+    TickTimes(aircraft, gateway, kThreeTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 1);
+    QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 0.0);
+}
+
+void Fss727Test::theFrontEntryWaitsForItsDoorReadingBeforeWriting()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 0);
+
+    gateway.avars[kEntryDoorPoint] = kMeasuredClosedSettle;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 1);
+    QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 1.0);
+}
+
+void Fss727Test::theFrontEntryHoldsWhileItsDoorIsInTheMiddleOfItsTravel()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    AllDoorPointsAt(gateway, kMeasuredClosedSettle);
+    gateway.avars[kEntryDoorPoint] = kPointHalfway;
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    TickTimes(aircraft, gateway, kThreeTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 0);
+
+    gateway.avars[kEntryDoorPoint] = kMeasuredClosedSettle;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 1);
+    QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 1.0);
+}
+
+void Fss727Test::closingEveryDoorSkipsAFrontEntryThatReadsClosedAndStillServesTheRequest()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    MainDeckClosed(gateway);
+    HoldLoadersIdle(gateway);
+    gateway.lvars[kCouatlStarted] = 1.0;
+    TickAircraft(aircraft, gateway);
+
+    aircraft.CloseAllDoors();
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 0);
+
+    gateway.lvars[kJetway] = kJetwayDocked;
+    TickWithObedientDoors(aircraft, gateway);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 1);
+    QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 1.0);
+
+    gateway.lvars[kJetway] = 2.0;
+    TickWithObedientDoors(aircraft, gateway);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 2);
+    QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 0.0);
+}
+
+void Fss727Test::closingEveryDoorWritesTheFrontEntryWhoseDoorHasNotReported()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    aircraft.CloseAllDoors();
+    TickTimes(aircraft, gateway, kThreeTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kEntryDoorGoal), 1);
+    QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 0.0);
+}
+
+void Fss727Test::aHoldAlreadyOpenIsNotWrittenAndTheNextChangeIsJudgedFromIt()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    MainDeckClosed(gateway);
+    gateway.avars[kForwardHoldPoint] = kMeasuredOpenSettle;
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
+    gateway.lvars[kRearLoaderState] = kLoaderIdle;
+    TickTimes(aircraft, gateway, kThreeTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 0);
+
+    gateway.lvars[kFrontLoaderState] = 11.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 1);
+    QCOMPARE(gateway.WrittenAVar(kForwardHoldGoal), 0.0);
+}
+
+void Fss727Test::aHoldWaitsForItsDoorReadingBeforeWriting()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
+    gateway.lvars[kRearLoaderState] = kLoaderIdle;
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 0);
+
+    gateway.avars[kForwardHoldPoint] = kMeasuredClosedSettle;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 1);
+    QCOMPARE(gateway.WrittenAVar(kForwardHoldGoal), 1.0);
+}
+
+void Fss727Test::aHoldInTheMiddleOfItsTravelHoldsTheWrite()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    MainDeckClosed(gateway);
+    gateway.avars[kForwardHoldPoint] = kPointHalfway;
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
+    gateway.lvars[kRearLoaderState] = kLoaderIdle;
+    TickTimes(aircraft, gateway, kThreeTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 0);
+
+    gateway.avars[kForwardHoldPoint] = kMeasuredClosedSettle;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 1);
+    QCOMPARE(gateway.WrittenAVar(kForwardHoldGoal), 1.0);
+}
+
+void Fss727Test::closingEveryDoorSkipsAHoldThatReadsClosedAndStillServesTheRequest()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    MainDeckClosed(gateway);
+    HoldLoadersIdle(gateway);
+    aircraft.CloseAllDoors();
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 0);
+    QCOMPARE(gateway.AVarWriteCount(kAftHoldGoal), 0);
+
+    HoldsOpen(gateway);
+    TickTimes(aircraft, gateway, kTwentyTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 0);
+    QCOMPARE(gateway.AVarWriteCount(kAftHoldGoal), 0);
+}
+
+void Fss727Test::closingEveryDoorWritesAHoldWhoseDoorHasNotReported()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    Fss727 aircraft(&gateway, &status, Fss727::kName200F);
+
+    HoldLoadersIdle(gateway);
+    aircraft.CloseAllDoors();
+    TickTimes(aircraft, gateway, kThreeTicks);
+
+    QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 1);
+    QCOMPARE(gateway.AVarWriteCount(kAftHoldGoal), 1);
 }
 
 void Fss727Test::neverCommandsTheAftAirstair()
@@ -1816,6 +2157,8 @@ void Fss727Test::closingEveryDoorLeavesTheEntryTheHoldsAndTheDeckToTheirRules()
     Fss727 aircraft(&gateway, &status, Fss727::kName200F, &gsx);
 
     MainDeckOpen(gateway);
+    HoldsOpen(gateway);
+    gateway.avars[kEntryDoorPoint] = kMeasuredOpenSettle;
     HoldLoadersIdle(gateway);
     gateway.lvars[kMainLoaderState] = kLoaderIdle;
     TickAircraft(aircraft, gateway);
@@ -1854,6 +2197,7 @@ void Fss727Test::closesEachHoldOnlyOnceItsLoaderLeaves()
         Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
         MainDeckClosed(gateway);
+    HoldsOpen(gateway);
         gateway.lvars[kFrontLoaderState] = busy;
         gateway.lvars[kRearLoaderState] = kLoaderIdle;
         TickAircraft(aircraft, gateway);
@@ -1885,6 +2229,7 @@ void Fss727Test::waitsForTheHoldLoaderStatesToArriveBeforeClosing()
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
     MainDeckClosed(gateway);
+    HoldsOpen(gateway);
     aircraft.CloseAllDoors();
     TickTimes(aircraft, gateway, kTwentyTicks);
 
@@ -1913,7 +2258,7 @@ void Fss727Test::closesAHoldWhoseLoaderStateOutlivedACouatlRestart()
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kFrontLoaderState] = kLoaderLoading;
     gateway.lvars[kRearLoaderState] = kLoaderIdle;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     gateway.lvars[kCouatlStarted] = 0.0;
     TickAircraft(aircraft, gateway);
@@ -1935,6 +2280,7 @@ void Fss727Test::closesTheHoldsAgainOnASecondRequest()
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
     MainDeckClosed(gateway);
+    HoldsOpen(gateway);
     HoldLoadersIdle(gateway);
 
     aircraft.CloseAllDoors();
@@ -2038,14 +2384,14 @@ void Fss727Test::closesAHoldWhenItsLoaderLeavesTheDoorTheWayTheFleetDoes()
     for (const double atTheDoor : {kLoaderWaitingForDoor, kLoaderInPosition, kLoaderLoading})
     {
         gateway.lvars[kFrontLoaderState] = atTheDoor;
-        TickTimes(aircraft, gateway, kThreeTicks);
+        TickTimesWithObedientDoors(aircraft, gateway, kThreeTicks);
     }
 
     QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 1);
     QCOMPARE(gateway.WrittenAVar(kForwardHoldGoal), 1.0);
 
     gateway.lvars[kFrontLoaderState] = 11.0;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 2);
     QCOMPARE(gateway.WrittenAVar(kForwardHoldGoal), 0.0);
@@ -2053,7 +2399,7 @@ void Fss727Test::closesAHoldWhenItsLoaderLeavesTheDoorTheWayTheFleetDoes()
     for (const double leaving : {4.0, kLoaderIdle})
     {
         gateway.lvars[kFrontLoaderState] = leaving;
-        TickTimes(aircraft, gateway, kThreeTicks);
+        TickTimesWithObedientDoors(aircraft, gateway, kThreeTicks);
     }
 
     QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 2);
@@ -2092,13 +2438,13 @@ void Fss727Test::keepsTheHoldsClosedWhileHeldForDeparture()
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
     gateway.lvars[kRearLoaderState] = kLoaderIdle;
-    TickAircraft(aircraft, gateway);
+    TickWithObedientDoors(aircraft, gateway);
 
     QCOMPARE(gateway.WrittenAVar(kForwardHoldGoal), 1.0);
 
     aircraft.HoldDoorsClosed(true);
     gateway.lvars[kRearLoaderState] = kLoaderWaitingForDoor;
-    TickTimes(aircraft, gateway, kTwentyTicks);
+    TickTimesWithObedientDoors(aircraft, gateway, kTwentyTicks);
 
     QCOMPARE(gateway.AVarWriteCount(kForwardHoldGoal), 2);
     QCOMPARE(gateway.WrittenAVar(kForwardHoldGoal), 0.0);
@@ -2114,6 +2460,7 @@ void Fss727Test::countsAHoldLoaderAtTenElevenOrFourAsGoneFromTheHold()
         Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
         MainDeckClosed(gateway);
+    HoldsOpen(gateway);
         gateway.lvars[kFrontLoaderState] = kLoaderLoading;
         gateway.lvars[kRearLoaderState] = kLoaderLoading;
         TickAircraft(aircraft, gateway);
@@ -3703,6 +4050,7 @@ void Fss727Test::resumedFrontEntryOpenedByTheLastProcessIsClosedOnceHeldForDepar
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+    gateway.avars[kEntryDoorPoint] = kMeasuredOpenSettle;
     aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::WaitingReadyToPush), memory);
     aircraft.HoldDoorsClosed(true);
     gateway.lvars[kCouatlStarted] = 1.0;
@@ -3722,6 +4070,7 @@ void Fss727Test::resumedFrontEntryHeldForDepartureClosesWithoutWaitingForTheVehi
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+    gateway.avars[kEntryDoorPoint] = kMeasuredOpenSettle;
     aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::WaitingReadyToPush), memory);
     aircraft.HoldDoorsClosed(true);
     TickTimes(aircraft, gateway, kThreeTicks);
@@ -3738,6 +4087,7 @@ void Fss727Test::resumedFrontEntryOpenWaitsForTheVehicleReadingsBeforeClosing()
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+    gateway.avars[kEntryDoorPoint] = kMeasuredOpenSettle;
     aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::Loading), memory);
     TickTimes(aircraft, gateway, kTwentyTicks);
 
@@ -3769,11 +4119,12 @@ void Fss727Test::resumedFrontEntryWithAPendingCloseWaitsForTheVehicleReadingsToo
         AutomationStatus status;
         Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+        AllDoorPointsAt(gateway, kMeasuredClosedSettle);
         gateway.lvars[kCouatlStarted] = 1.0;
         gateway.lvars[kJetway] = kJetwayDocked;
-        TickAircraft(aircraft, gateway);
+        TickWithObedientDoors(aircraft, gateway);
         aircraft.CloseAllDoors();
-        TickTimes(aircraft, gateway, kThreeTicks);
+        TickTimesWithObedientDoors(aircraft, gateway, kThreeTicks);
 
         QCOMPARE(gateway.WrittenAVar(kEntryDoorGoal), 1.0);
 
@@ -3784,6 +4135,7 @@ void Fss727Test::resumedFrontEntryWithAPendingCloseWaitsForTheVehicleReadingsToo
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+    gateway.avars[kEntryDoorPoint] = kMeasuredOpenSettle;
     aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::Loading), memory);
     TickTimes(aircraft, gateway, kTwentyTicks);
 
@@ -3860,6 +4212,7 @@ void Fss727Test::resumedHoldsCloseOnlyTheOnesTheLastProcessLeftPending()
         Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
         MainDeckClosed(gateway);
+        HoldsOpen(gateway);
         gateway.lvars[kFrontLoaderState] = kLoaderLoading;
         gateway.lvars[kRearLoaderState] = kLoaderIdle;
         TickAircraft(aircraft, gateway);
@@ -3877,6 +4230,7 @@ void Fss727Test::resumedHoldsCloseOnlyTheOnesTheLastProcessLeftPending()
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
     MainDeckClosed(gateway);
+    HoldsOpen(gateway);
     HoldLoadersIdle(gateway);
     aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::Loading), memory);
     TickTimes(aircraft, gateway, kTwentyTicks);
@@ -4312,9 +4666,10 @@ void Fss727Test::resumedHoldFollowsTheDoorSyncMemory()
         AutomationStatus status;
         Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+        AllDoorPointsAt(gateway, kMeasuredClosedSettle);
         gateway.lvars[kCouatlStarted] = 1.0;
         gateway.lvars[kFrontLoaderState] = kLoaderWaitingForDoor;
-        TickAircraft(aircraft, gateway);
+        TickWithObedientDoors(aircraft, gateway);
 
         QCOMPARE(gateway.WrittenAVar(kForwardHoldGoal), 1.0);
 
@@ -4327,6 +4682,7 @@ void Fss727Test::resumedHoldFollowsTheDoorSyncMemory()
     AutomationStatus status;
     Fss727 aircraft(&gateway, &status, Fss727::kName200F);
 
+    gateway.avars[kForwardHoldPoint] = kMeasuredOpenSettle;
     aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::Loading), memory);
     gateway.lvars[kCouatlStarted] = 1.0;
     TickTimes(aircraft, gateway, kTwentyTicks);

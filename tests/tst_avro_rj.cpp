@@ -293,6 +293,8 @@ private slots:
     static void theAirstairRuleHoldsTheFlowUntilTheJetwayReadingSaysAJetwayServesTheDoor();
     static void theAirstairRequestIsForgottenWhenTheNextTurnaroundStarts();
     static void aRestoredOpenFrontDoorIsNotClosedBeforeTheVehicleStatesArrive();
+    static void aRestoredOpenFrontDoorIsNotClosedBeforeTheCouatlArrives();
+    static void theFrontDoorIsNotClosedWhileTheCouatlIsDown();
     static void aRestoredOpenFrontDoorStaysOpenUnderTheJetwayOnceTheStatesArrive();
     static void aRestoredOpenFrontDoorClosesOnceTheStatesArriveWithNothingServingIt();
     static void theFrontDoorTargetIsOnlyRememberedOnceTheAircraftHasCommandedIt();
@@ -2240,6 +2242,61 @@ void AvroRjTest::aRestoredOpenFrontDoorIsNotClosedBeforeTheVehicleStatesArrive()
     TickHolds(aircraft, gateway, 10);
 
     QCOMPARE(gateway.WriteCount(kFwdPaxDoor), 0);
+}
+
+void AvroRjTest::aRestoredOpenFrontDoorIsNotClosedBeforeTheCouatlArrives()
+{
+    const MemoryBag memory = MemoryOfAnOpenFrontDoor();
+
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kFwdPaxDoor] = 1.0;
+    gateway.lvars[kStairPosition] = kStairStowedPosition;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+    gateway.lvars[kStairsFrontState] = 0.0;
+
+    aircraft.OnTurnaroundResumed(ResumedAt(TurnaroundPhase::PlaceGroundEquipment), memory);
+
+    TickHolds(aircraft, gateway, 10);
+
+    QCOMPARE(gateway.WriteCount(kFwdPaxDoor), 0);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+
+    TickHolds(aircraft, gateway, 3);
+
+    QCOMPARE(gateway.WriteCount(kFwdPaxDoor), 1);
+    QCOMPARE(gateway.Written(kFwdPaxDoor), 0.0);
+}
+
+void AvroRjTest::theFrontDoorIsNotClosedWhileTheCouatlIsDown()
+{
+    FakeVariableGateway gateway;
+    AvroRj aircraft(&gateway, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kJetway] = kJetwayDocked;
+    gateway.lvars[kStairPosition] = kStairStowedPosition;
+
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kFwdPaxDoor), 1);
+    QCOMPARE(gateway.Written(kFwdPaxDoor), 1.0);
+
+    gateway.lvars[kCouatlStarted] = 0.0;
+    gateway.lvars[kJetway] = kJetwayUnavailable;
+
+    TickHolds(aircraft, gateway, 5);
+
+    QCOMPARE(gateway.WriteCount(kFwdPaxDoor), 1);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+
+    TickHolds(aircraft, gateway, 3);
+
+    QCOMPARE(gateway.WriteCount(kFwdPaxDoor), 2);
+    QCOMPARE(gateway.Written(kFwdPaxDoor), 0.0);
 }
 
 void AvroRjTest::aRestoredOpenFrontDoorStaysOpenUnderTheJetwayOnceTheStatesArrive()

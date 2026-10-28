@@ -2,6 +2,7 @@
 
 #include <QtCore/QString>
 
+#include "../../DoorReading.h"
 #include "../../../gsx/GsxDoorSync.h"
 #include "../../../gsx/GsxLVars.h"
 #include "../../../probe/ProbeLog.h"
@@ -14,6 +15,10 @@ namespace
     constexpr auto kCargoDoor1RLVar = "MD11_EXT_DOOR_CMD_CARGO_1R";
     constexpr auto kCargoDoor2RLVar = "MD11_EXT_DOOR_CMD_CARGO_2R";
     constexpr auto kCargoDoorMainLVar = "MD11_EXT_DOOR_CMD_CARGO_MAIN";
+
+    constexpr auto kCargoDoor1RReadingLVar = "MD11_EXT_DOOR_CARGO_1R";
+    constexpr auto kCargoDoor2RReadingLVar = "MD11_EXT_DOOR_CARGO_2R";
+    constexpr auto kCargoDoorMainReadingLVar = "MD11_EXT_DOOR_CARGO_MAIN";
 
     constexpr double kDoorOpen = 100.0;
     constexpr double kDoorClosed = 0.0;
@@ -43,35 +48,62 @@ void TfdiMd11CargoDoorsFollowLoaderRule::Act(const RuleContext&, VariableWriter&
         return;
     }
 
-    FollowLoader(writer, gsx::lvars::kBaggageLoaderFrontState, kCargoDoor1RLVar, fwdDoorTarget_);
-    FollowLoader(writer, gsx::lvars::kBaggageLoaderRearState, kCargoDoor2RLVar, aftDoorTarget_);
+    FollowLoader(writer, {.loaderState = gsx::lvars::kBaggageLoaderFrontState, .command = kCargoDoor1RLVar, .reading = kCargoDoor1RReadingLVar}, targets_.fwd);
+    FollowLoader(writer, {.loaderState = gsx::lvars::kBaggageLoaderRearState, .command = kCargoDoor2RLVar, .reading = kCargoDoor2RReadingLVar}, targets_.aft);
 
     if (cargoVariant_)
     {
-        FollowLoader(writer, gsx::lvars::kBaggageLoaderMainState, kCargoDoorMainLVar, mainDoorTarget_);
+        FollowLoader(writer, {.loaderState = gsx::lvars::kBaggageLoaderMainState, .command = kCargoDoorMainLVar, .reading = kCargoDoorMainReadingLVar}, targets_.main);
     }
 }
 
-void TfdiMd11CargoDoorsFollowLoaderRule::FollowLoader(VariableWriter& writer, const char* loaderStateLVar,
-                                                      const char* doorCmdLVar, double& lastDoorTarget) const
+TfdiMd11CargoDoorsFollowLoaderRule::DoorTargets TfdiMd11CargoDoorsFollowLoaderRule::Targets() const
 {
-    if (!variables_->HasReceivedLVar(loaderStateLVar))
+    return targets_;
+}
+
+void TfdiMd11CargoDoorsFollowLoaderRule::RestoreTargets(const DoorTargets& targets)
+{
+    targets_ = targets;
+}
+
+void TfdiMd11CargoDoorsFollowLoaderRule::FollowLoader(VariableWriter& writer, const DoorLVars& door,
+                                                      std::optional<double>& lastDoorTarget) const
+{
+    if (!variables_->HasReceivedLVar(door.loaderState))
     {
         return;
     }
 
-    const double loaderState = doors_->VehicleState(loaderStateLVar, 0.0);
+    const double loaderState = doors_->VehicleState(door.loaderState, 0.0);
     const double doorTarget = gsx::states::IsLoaderServingTheDoor(loaderState) ? kDoorOpen : kDoorClosed;
+    const bool wantsOpen = doorTarget == kDoorOpen;
+    const bool isAlreadyTheTarget = lastDoorTarget == doorTarget;
+    const bool hasNothingOfItsOwnToClose = !lastDoorTarget.has_value() && !wantsOpen;
 
-    if (doorTarget != lastDoorTarget)
+    if (isAlreadyTheTarget || hasNothingOfItsOwnToClose)
     {
-        probe::Line(probe::Channel::Writes, QStringLiteral("write cargo %1=%2 %3=%4 received=%5")
-                        .arg(QLatin1String(doorCmdLVar))
-                        .arg(doorTarget)
-                        .arg(QLatin1String(loaderStateLVar))
-                        .arg(loaderState)
-                        .arg(variables_->HasReceivedLVar(loaderStateLVar) ? 1 : 0));
-        writer.SetLVar(doorCmdLVar, doorTarget);
-        lastDoorTarget = doorTarget;
+        return;
     }
+
+    const std::optional<bool> isOpen = doors::OpenAboveZero(*variables_, door.reading);
+
+    if (!isOpen.has_value())
+    {
+        return;
+    }
+
+    if (*isOpen != wantsOpen)
+    {
+        probe::Line(probe::Channel::Writes, QStringLiteral("write cargo %1=%2 %3=%4 %5=%6")
+                        .arg(QLatin1String(door.command))
+                        .arg(doorTarget)
+                        .arg(QLatin1String(door.loaderState))
+                        .arg(loaderState)
+                        .arg(QLatin1String(door.reading))
+                        .arg(*isOpen ? 1 : 0));
+        writer.SetLVar(door.command, doorTarget);
+    }
+
+    lastDoorTarget = doorTarget;
 }

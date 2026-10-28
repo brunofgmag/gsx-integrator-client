@@ -10,7 +10,7 @@
 enum class DoorBaseline : std::uint8_t
 {
     Unknown,
-    Closed
+    Closed,
 };
 
 class PmdgDoorReconciler
@@ -20,20 +20,25 @@ public:
 
     void SetDesired(GsxDoor door, bool open);
     void SetSlotDesired(int slot, bool open);
+    void ClearSlotDesired(int slot);
     void Reconcile();
     [[nodiscard]] bool IsStuck(int slot) const;
     void AppendMemory(MemoryBag& memory) const;
     void RestoreMemory(const MemoryBag& memory);
 
 private:
+    [[nodiscard]] bool HasSlot(int slot) const;
     void ReconcileSlot(std::size_t slot);
+    void NoteUnreadDoor(std::size_t slot);
     void CommandDoor(std::size_t slot, bool open, int attempt);
 
     PmdgDoorSource& source_;
+    int untouchedCommand_;
     std::vector<int> desired_;
     std::vector<int> commanded_;
     std::vector<int> ticksSinceCommand_;
     std::vector<int> attempts_;
+    std::vector<bool> unreadLogged_;
     std::array<int, static_cast<std::size_t>(GsxDoor::Count)> openedSlot_{};
 };
 
