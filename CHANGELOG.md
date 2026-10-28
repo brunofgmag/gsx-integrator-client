@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.53.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.0...v1.53.1) (2026-10-28)
+
+
+* keep the array iterators of std::ranges::find as auto so MSVC compiles them ([#286](https://github.com/brunofgmag/gsx-integrator-client/issues/286)) ([83aa03b](https://github.com/brunofgmag/gsx-integrator-client/commit/83aa03bdf11c3ec7f30f749f01c8176bfd52c138))
+
+
+### Bug Fixes
+
+* **build:** keep the array iterators of std::ranges::find as auto so MSVC compiles them ([44abab0](https://github.com/brunofgmag/gsx-integrator-client/commit/44abab053b1ad5ca44147370dcd0629a31d5e30c)) ([83aa03b](https://github.com/brunofgmag/gsx-integrator-client/commit/83aa03bdf11c3ec7f30f749f01c8176bfd52c138))
+
 ## [1.53.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.52.1...v1.53.0) (2026-10-28)
 
 
