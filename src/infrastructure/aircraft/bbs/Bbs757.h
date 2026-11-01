@@ -57,6 +57,7 @@ public:
     [[nodiscard]] bool ConsumeSmartSwitch() override;
 
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override;
+    [[nodiscard]] std::optional<ChocksStatus> GetChocksStatus() const override;
     [[nodiscard]] bool IsOwnGroundEquipmentAttached() const override;
     void CloseAllDoors() override;
     void HoldDoorsClosed(bool hold) override;
@@ -86,6 +87,7 @@ private:
     void ReportProbe() const;
     [[nodiscard]] bool IsBeaconOn() const;
     [[nodiscard]] bool AreChocksSet() const;
+    [[nodiscard]] DoorPosition DoorPositionOf(GsxDoor door) const;
     [[nodiscard]] PlannedLoad PlanAboard() const;
     [[nodiscard]] PlannedLoad PlanFromLoadOnBoard() const;
     void WriteWhenChanged(const char* lVar, double value);

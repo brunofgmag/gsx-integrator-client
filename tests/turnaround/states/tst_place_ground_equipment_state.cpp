@@ -47,6 +47,21 @@ private slots:
     static void givesUpAtTheCeilingWhileTheAircraftIsNeverHeld();
     static void commandsTheAircraftGpuWithoutWaitingForTheHold();
     static void leavesOnConnectedPowerWithoutWaitingForTheHold();
+    static void leavesAtOnceWithNeitherChocksControlNorReading();
+    static void leavesOnTheFirstTickWhenTheGpuIsConnectedAndNoChocksAreWanted();
+    static void waitsWhileTheChocksReadUnknown();
+    static void waitsWhileTheChocksReadRemoved();
+    static void leavesWhenTheChocksReadPlaced();
+    static void waitsUntilTheChocksCommandIsAcceptedWhenTheAircraftHasNoReading();
+    static void trustsTheChocksReadingOverTheAcceptedCommand();
+    static void doesNotWaitForTheChocksWhenTheSettingIsOffEvenIfTheAircraftReadsThemRemoved();
+    static void doesNotWaitForTheChocksWhenTheSettingIsOffOnAnAircraftThatOnlyReadsThem();
+    static void waitsForTheChocksReadingWhenTheSettingIsOnAndTheAircraftOnlyReadsThem();
+    static void waitsForTheChocksWhileTheGpuIsAlreadyConnected();
+    static void stillAsksForTheGpuWhileWaitingForTheChocks();
+    static void givesUpAtTheCeilingWhenOnlyTheChocksAreMissing();
+    static void givesUpAtTheCeilingWhenOnlyTheGpuIsMissing();
+    static void doesNotFlagTheCeilingWhenTheEquipmentIsInPlace();
 };
 
 void PlaceGroundEquipmentStateTest::skipsWhenCallGpuDisabled()
@@ -690,6 +705,297 @@ void PlaceGroundEquipmentStateTest::leavesOnConnectedPowerWithoutWaitingForTheHo
     QVERIFY(transition.has_value());
     QCOMPARE(transition->next, TurnaroundPhase::CallServices);
     QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+}
+
+void PlaceGroundEquipmentStateTest::leavesAtOnceWithNeitherChocksControlNorReading()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.settings.placeChocks = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
+}
+
+void PlaceGroundEquipmentStateTest::leavesOnTheFirstTickWhenTheGpuIsConnectedAndNoChocksAreWanted()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.settings.placeChocks = false;
+    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+}
+
+void PlaceGroundEquipmentStateTest::waitsWhileTheChocksReadUnknown()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.settings.placeChocks = true;
+    f.aircraft.chocksStatus = ChocksStatus::Unknown;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
+}
+
+void PlaceGroundEquipmentStateTest::waitsWhileTheChocksReadRemoved()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.settings.placeChocks = true;
+    f.aircraft.chocksStatus = ChocksStatus::Removed;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+}
+
+void PlaceGroundEquipmentStateTest::leavesWhenTheChocksReadPlaced()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.settings.placeChocks = true;
+    f.aircraft.chocksStatus = ChocksStatus::Removed;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+
+    f.aircraft.chocksStatus = ChocksStatus::Placed;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+}
+
+void PlaceGroundEquipmentStateTest::waitsUntilTheChocksCommandIsAcceptedWhenTheAircraftHasNoReading()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.settings.placeChocks = true;
+    f.aircraft.supportsChocksControl = true;
+    f.aircraft.refusesChocks = true;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.ctx.data.chocksPlaced);
+
+    f.aircraft.refusesChocks = false;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QVERIFY(f.ctx.data.chocksPlaced);
+}
+
+void PlaceGroundEquipmentStateTest::trustsTheChocksReadingOverTheAcceptedCommand()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.settings.placeChocks = true;
+    f.aircraft.supportsChocksControl = true;
+    f.aircraft.chocksStatus = ChocksStatus::Removed;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(f.ctx.data.chocksPlaced);
+
+    f.aircraft.chocksStatus = ChocksStatus::Placed;
+
+    QVERIFY(state.Evaluate(f.ctx).has_value());
+}
+
+void PlaceGroundEquipmentStateTest::doesNotWaitForTheChocksWhenTheSettingIsOffEvenIfTheAircraftReadsThemRemoved()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.settings.placeChocks = false;
+    f.aircraft.supportsChocksControl = true;
+    f.aircraft.chocksStatus = ChocksStatus::Removed;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
+}
+
+void PlaceGroundEquipmentStateTest::doesNotWaitForTheChocksWhenTheSettingIsOffOnAnAircraftThatOnlyReadsThem()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.settings.placeChocks = false;
+    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
+    f.aircraft.chocksStatus = ChocksStatus::Removed;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QVERIFY(!f.ctx.data.groundEquipmentTimedOut);
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
+}
+
+void PlaceGroundEquipmentStateTest::waitsForTheChocksReadingWhenTheSettingIsOnAndTheAircraftOnlyReadsThem()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = false;
+    f.settings.placeChocks = true;
+    f.aircraft.chocksStatus = ChocksStatus::Removed;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
+    QVERIFY(!f.ctx.data.chocksPlaced);
+
+    f.aircraft.chocksStatus = ChocksStatus::Placed;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QCOMPARE(f.aircraft.setChocksCalls, 0);
+}
+
+void PlaceGroundEquipmentStateTest::waitsForTheChocksWhileTheGpuIsAlreadyConnected()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.aircraft.heldInPlace = true;
+    f.settings.callGpu = true;
+    f.settings.placeChocks = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
+    f.aircraft.chocksStatus = ChocksStatus::Removed;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 0);
+    QVERIFY(!f.ctx.data.gpuRequested);
+}
+
+void PlaceGroundEquipmentStateTest::stillAsksForTheGpuWhileWaitingForTheChocks()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.aircraft.heldInPlace = true;
+    f.settings.callGpu = true;
+    f.settings.placeChocks = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+    f.aircraft.chocksStatus = ChocksStatus::Removed;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
+
+    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QCOMPARE(f.menuGateway.toggleGpuCalls, 1);
+
+    f.aircraft.chocksStatus = ChocksStatus::Placed;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+}
+
+void PlaceGroundEquipmentStateTest::givesUpAtTheCeilingWhenOnlyTheChocksAreMissing()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.settings.placeChocks = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
+    f.aircraft.chocksStatus = ChocksStatus::Removed;
+
+    f.ctx.data.stateTickCount = 239;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.ctx.data.groundEquipmentTimedOut);
+    QCOMPARE(f.logger.messages.size(), 0U);
+
+    f.ctx.data.stateTickCount = 240;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QVERIFY(f.ctx.data.groundEquipmentTimedOut);
+    QCOMPARE(f.logger.messages.size(), 1U);
+    QCOMPARE(f.logger.messages.front(),
+             std::string("The ground power or the chocks were not in place after 4 minutes; "
+                         "moving on to the services"));
+}
+
+void PlaceGroundEquipmentStateTest::givesUpAtTheCeilingWhenOnlyTheGpuIsMissing()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.settings.placeChocks = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Disconnected;
+    f.aircraft.chocksStatus = ChocksStatus::Placed;
+
+    f.ctx.data.stateTickCount = 239;
+
+    QVERIFY(!state.Evaluate(f.ctx).has_value());
+    QVERIFY(!f.ctx.data.groundEquipmentTimedOut);
+
+    f.ctx.data.stateTickCount = 240;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QCOMPARE(transition->next, TurnaroundPhase::CallServices);
+    QVERIFY(f.ctx.data.groundEquipmentTimedOut);
+    QCOMPARE(f.logger.messages.size(), 1U);
+}
+
+void PlaceGroundEquipmentStateTest::doesNotFlagTheCeilingWhenTheEquipmentIsInPlace()
+{
+    TurnaroundStateFixture f;
+    PlaceGroundEquipmentState state;
+
+    f.settings.callGpu = true;
+    f.settings.placeChocks = true;
+    f.gsxService.gpuStatus = GroundPowerStatus::Connected;
+    f.aircraft.chocksStatus = ChocksStatus::Placed;
+    f.ctx.data.stateTickCount = 240;
+
+    const auto transition = state.Evaluate(f.ctx);
+
+    QVERIFY(transition.has_value());
+    QVERIFY(!f.ctx.data.groundEquipmentTimedOut);
+    QCOMPARE(f.logger.messages.size(), 0U);
 }
 
 QTEST_APPLESS_MAIN(PlaceGroundEquipmentStateTest)

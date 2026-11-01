@@ -1,6 +1,7 @@
 ﻿#ifndef GSX_INTEGRATOR_CLIENT_GSXREMOTESTATE_H
 #define GSX_INTEGRATOR_CLIENT_GSXREMOTESTATE_H
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -36,6 +37,8 @@ struct GsxRemoteState
     std::vector<GsxRemoteService> services;
     int messagesShown = 0;
     std::string lastMessage;
+    std::string loadedProfileSource;
+    std::optional<bool> loadedProfileRefueling;
 };
 
 [[nodiscard]] inline const GsxRemoteService* FindService(const GsxRemoteState& state, const std::string& id)

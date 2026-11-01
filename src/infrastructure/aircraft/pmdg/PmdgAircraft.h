@@ -33,6 +33,7 @@ struct PmdgAircraftSpec
     DoorBaseline doorBaseline = DoorBaseline::Unknown;
     std::vector<std::string> smartSwitchLVars;
     SmartSwitch::Predicate smartSwitchPressed;
+    int bulkDoorSlot = -1;
 };
 
 class PmdgAircraft : public Aircraft, protected PmdgDoorSource, protected PmdgGroundSource
@@ -81,6 +82,7 @@ public:
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override;
+    [[nodiscard]] std::optional<ChocksStatus> GetChocksStatus() const override;
     [[nodiscard]] bool SupportsChocksControl() const override { return true; }
     bool SetChocks(bool placed) override;
     [[nodiscard]] bool SupportsGroundPowerControl() const override { return true; }
@@ -109,10 +111,13 @@ private:
     void AdvanceMovingDoors();
     [[nodiscard]] int MovingDoorLimitTicks(int slot) const;
     [[nodiscard]] std::optional<bool> DoorOpenAt(int slot) const;
+    void CloseTheBulkDoorWhenItReadsOpen();
 
     bool cargoVariant_;
     int doorSlots_;
     int mainDeckDoorSlot_;
+    int bulkDoorSlot_;
+    bool bulkCloseArmed_ = false;
     std::vector<int> movingTicks_;
     int ticksSinceStateQuery_ = kStateQueryTicks - 1;
     bool stateQuestionSent_ = false;

@@ -81,11 +81,6 @@ bool AvroRjPaxDoorsServeTheAirstairRule::IsFrontDoorWanted() const
         return false;
     }
 
-    if (variables_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
-    {
-        return false;
-    }
-
     if (doors_->VehicleState(gsx::lvars::kJetway, kJetwayUnavailable) == kJetwayDocked)
     {
         return true;
@@ -114,6 +109,11 @@ const char* AvroRjPaxDoorsServeTheAirstairRule::WhatServesTheFrontDoor() const
 void AvroRjPaxDoorsServeTheAirstairRule::DriveFrontDoor(VariableWriter& writer)
 {
     doors_->Report();
+
+    if (variables_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
+    {
+        return;
+    }
 
     if (IsFrontDoorWanted())
     {

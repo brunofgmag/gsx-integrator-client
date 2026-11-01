@@ -64,6 +64,7 @@ struct IntegratorSnapshot
     bool serviceInterrupted = false;
     bool gsxMenuHeldByPilot = false;
     bool deboardingAwaitsGsx = false;
+    bool groundEquipmentTimedOut = false;
     bool doorsHoldingPushback = false;
     CargoLoader loaderHoldingBoarding = CargoLoader::None;
     int servicesWaitSeconds = 0;

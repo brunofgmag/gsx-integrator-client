@@ -23,6 +23,8 @@ namespace
     constexpr auto kSnapshotNewbornCouatl = "2026-10-02T18:46:08.901";
     constexpr auto kSnapshotCdk2Flight = "2026-10-03T09:40:26.093";
     constexpr qint64 kSidAboveInt32 = 3000000001;
+    constexpr auto kRecordedHandlerData = "handlerdata-bbs757-20261027.json";
+    constexpr auto kRecordedProfileSource = "User customization in %APPDATA%\\Virtuali\\Airplanes";
 
     QJsonArray LoadFixtures()
     {
@@ -33,6 +35,29 @@ namespace
         }
 
         return QJsonDocument::fromJson(file.readAll()).array();
+    }
+
+    QJsonObject LoadRecordedHandlerData()
+    {
+        QFile file(QStringLiteral(GSX_FIXTURES_DIR) + QLatin1Char('/') + QLatin1String(kRecordedHandlerData));
+        if (!file.open(QIODevice::ReadOnly))
+        {
+            return {};
+        }
+
+        return QJsonDocument::fromJson(file.readAll()).object().value("value").toObject();
+    }
+
+    QJsonObject HandlerDataOf(const QJsonObject& aircraft)
+    {
+        return QJsonObject{{"aircraft", aircraft}};
+    }
+
+    void VerifyTheRecordedProfileIsHeld(const GsxRemoteState& state)
+    {
+        QCOMPARE(state.loadedProfileSource, std::string{kRecordedProfileSource});
+        QVERIFY(state.loadedProfileRefueling.has_value());
+        QVERIFY(!*state.loadedProfileRefueling);
     }
 
     QJsonObject MessageFromEvent(const QJsonValue& event)
@@ -261,6 +286,11 @@ private slots:
     static void aSnapshotSyncsTheState();
     static void aPatchBeforeTheSnapshotDoesNotSyncTheState();
     static void aRecordedLineEndingInCarriageReturnAndLineFeedIsParsed();
+    static void theRecordedHandlerDataPatchSetsTheLoadedProfile();
+    static void aSnapshotCarryingHandlerDataSetsTheLoadedProfile();
+    static void aHandlerDataWithoutRefuelingLeavesItUnknown();
+    static void aHandlerDataWithoutAnAircraftClearsTheLoadedProfile();
+    static void aDropHoldsTheLoadedProfileAndTheHandshakeEmptiesIt();
 };
 
 void RemoteStateTest::snapshotPopulatesServicesAndMenu()
@@ -733,6 +763,86 @@ void RemoteStateTest::aRecordedLineEndingInCarriageReturnAndLineFeedIsParsed()
     QCOMPARE(wire[0].Type(), QStringLiteral("hello"));
     QCOMPARE(wire[1].stamp, QStringLiteral("2026-10-03T09:40:26.093"));
     QCOMPARE(wire[1].Type(), QStringLiteral("snapshot"));
+}
+
+void RemoteStateTest::theRecordedHandlerDataPatchSetsTheLoadedProfile()
+{
+    const QJsonObject handlerData = LoadRecordedHandlerData();
+
+    QVERIFY(!handlerData.isEmpty());
+
+    GsxRemoteState state;
+
+    QCOMPARE(GsxRemoteStateReducer::ApplyPatch(state, "/handlerData", handlerData), GsxPatchOutcome::Applied);
+    VerifyTheRecordedProfileIsHeld(state);
+}
+
+void RemoteStateTest::aSnapshotCarryingHandlerDataSetsTheLoadedProfile()
+{
+    const QJsonObject handlerData = LoadRecordedHandlerData();
+
+    QVERIFY(!handlerData.isEmpty());
+
+    GsxRemoteState state;
+    GsxRemoteStateReducer::ApplySnapshot(state, QJsonObject{{"handlerData", handlerData}});
+
+    VerifyTheRecordedProfileIsHeld(state);
+}
+
+void RemoteStateTest::aHandlerDataWithoutRefuelingLeavesItUnknown()
+{
+    const QJsonObject handlerData = LoadRecordedHandlerData();
+
+    QVERIFY(!handlerData.isEmpty());
+
+    GsxRemoteState state;
+    GsxRemoteStateReducer::ApplyPatch(state, "/handlerData", handlerData);
+
+    VerifyTheRecordedProfileIsHeld(state);
+
+    QJsonObject aircraft = handlerData.value("aircraft").toObject();
+    aircraft.remove("refueling");
+    GsxRemoteStateReducer::ApplyPatch(state, "/handlerData", HandlerDataOf(aircraft));
+
+    QCOMPARE(state.loadedProfileSource, std::string{kRecordedProfileSource});
+    QVERIFY(!state.loadedProfileRefueling.has_value());
+}
+
+void RemoteStateTest::aHandlerDataWithoutAnAircraftClearsTheLoadedProfile()
+{
+    const QJsonObject handlerData = LoadRecordedHandlerData();
+
+    QVERIFY(!handlerData.isEmpty());
+
+    GsxRemoteState state;
+    GsxRemoteStateReducer::ApplyPatch(state, "/handlerData", handlerData);
+
+    VerifyTheRecordedProfileIsHeld(state);
+
+    GsxRemoteStateReducer::ApplyPatch(state, "/handlerData", QJsonObject{});
+
+    QVERIFY(state.loadedProfileSource.empty());
+    QVERIFY(!state.loadedProfileRefueling.has_value());
+}
+
+void RemoteStateTest::aDropHoldsTheLoadedProfileAndTheHandshakeEmptiesIt()
+{
+    const QJsonObject handlerData = LoadRecordedHandlerData();
+
+    QVERIFY(!handlerData.isEmpty());
+
+    GsxRemoteState state;
+    GsxRemoteStateReducer::ApplyConnection(state, true);
+    GsxRemoteStateReducer::ApplyPatch(state, "/handlerData", handlerData);
+
+    GsxRemoteStateReducer::ApplyConnection(state, false);
+
+    VerifyTheRecordedProfileIsHeld(state);
+
+    GsxRemoteStateReducer::ApplyConnection(state, true);
+
+    QVERIFY(state.loadedProfileSource.empty());
+    QVERIFY(!state.loadedProfileRefueling.has_value());
 }
 
 QTEST_APPLESS_MAIN(RemoteStateTest)

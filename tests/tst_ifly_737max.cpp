@@ -117,6 +117,7 @@ private slots:
     static void zfwSetterSkipsRepeatedValue();
     static void parkingBrakeReadsTheSwitchAndIgnoresTheSimVar();
     static void heldInPlaceAcceptsChocksWithoutTheSwitch();
+    static void chocksStatusIsUnknownUntilTheLVarArrives();
     static void readyToDeboardFollowsSafetyState();
     static void aircraftPowerFollowsAvionicsBus();
     static void readyToPushFollowsPowerBeaconAndEngines();
@@ -475,6 +476,23 @@ void IFly737MaxTest::heldInPlaceAcceptsChocksWithoutTheSwitch()
 
         QVERIFY2(aircraft.IsHeldInPlace() == testCase.expected, testCase.name);
     }
+}
+
+void IFly737MaxTest::chocksStatusIsUnknownUntilTheLVarArrives()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    IFly737Max aircraft(&gateway, &status);
+
+    QCOMPARE(aircraft.GetChocksStatus(), std::optional(ChocksStatus::Unknown));
+
+    gateway.lvars[kChocks] = 0.0;
+
+    QCOMPARE(aircraft.GetChocksStatus(), std::optional(ChocksStatus::Removed));
+
+    gateway.lvars[kChocks] = 1.0;
+
+    QCOMPARE(aircraft.GetChocksStatus(), std::optional(ChocksStatus::Placed));
 }
 
 void IFly737MaxTest::readyToDeboardFollowsSafetyState()

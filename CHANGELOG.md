@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.53.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.0...v1.53.1) (2026-10-28)
+
+
+* keep the array iterators of std::ranges::find as auto so MSVC compiles them ([#286](https://github.com/brunofgmag/gsx-integrator-client/issues/286)) ([83aa03b](https://github.com/brunofgmag/gsx-integrator-client/commit/83aa03bdf11c3ec7f30f749f01c8176bfd52c138))
+
+
+### Bug Fixes
+
+* **build:** keep the array iterators of std::ranges::find as auto so MSVC compiles them ([44abab0](https://github.com/brunofgmag/gsx-integrator-client/commit/44abab053b1ad5ca44147370dcd0629a31d5e30c)) ([83aa03b](https://github.com/brunofgmag/gsx-integrator-client/commit/83aa03bdf11c3ec7f30f749f01c8176bfd52c138))
+
+## [1.53.0](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.52.1...v1.53.0) (2026-10-28)
+
+
+* wait for the ground power and chocks, and read every door before commanding it ([#284](https://github.com/brunofgmag/gsx-integrator-client/issues/284)) ([5b13e26](https://github.com/brunofgmag/gsx-integrator-client/commit/5b13e2610251fbf7280a3dd8bfe7681518caad93))
+
+
+### Features
+
+* **turnaround:** wait for the ground power and chocks, and read every door before commanding it ([57c13b3](https://github.com/brunofgmag/gsx-integrator-client/commit/57c13b39e56e7b7c6c0b90cd2f26ebcdc26b2eb8)) ([5b13e26](https://github.com/brunofgmag/gsx-integrator-client/commit/5b13e2610251fbf7280a3dd8bfe7681518caad93))
+
 ## [1.52.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.52.0...v1.52.1) (2026-10-27)
 
 

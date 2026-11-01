@@ -111,6 +111,7 @@ private slots:
     static void parkingBrakeRequiresClientData();
     static void parkingBrakeIgnoresTheSimVariable();
     static void heldInPlaceAcceptsChocksWithoutTheBrake();
+    static void chocksStatusIsUnknownUntilTheSdkBlockArrives();
     static void doorStatusUnknownUntilClientDataArrives();
     static void doorStatusOpenWhenASdkDoorReadsOpen();
     static void doorStatusUnknownWhileADoorIsMoving();
@@ -168,6 +169,15 @@ private slots:
     static void theDoorMemoryCrossesTheRestart();
     static void theMainDeckDoorTakenCrossesTheRestart();
     static void aNewTurnaroundForgetsTheMainDeckDoor();
+    static void theBulkDoorClosesWhenTheDepartureHoldArmsAndItReadsOpen();
+    static void theBulkDoorGetsTheSameTwoRetriesAsTheOtherDoors();
+    static void theBulkDoorIsLeftAloneWhenItReadsClosedAtTheHold();
+    static void theBulkDoorClosesOnceItsReadingArrivesWhenTheHoldArmedBeforeTheBlock();
+    static void theBulkDoorMovingWhenTheHoldArmsClosesOnceItReadsOpen();
+    static void theBulkDoorUnreadWhenTheHoldArmsIsLeftAloneOnceItReadsClosed();
+    static void releasingTheDepartureHoldDisarmsTheBulkDoorStillMoving();
+    static void theBulkDoorIsNeverCommandedDuringTheServices();
+    static void releasingTheDepartureHoldStopsClosingTheBulkDoor();
     static void pendingGroundRequestsCrossTheRestartAndMeetTheLiveReading();
     static void thePlanImportSeenCrossesTheRestart();
     static void loadingStartForgetsThePlanImport();
@@ -179,6 +189,23 @@ void Pmdg777Test::groundPowerUnknownUntilData()
     Pmdg777Fixture fixture;
 
     QCOMPARE(fixture.aircraft->GetGroundPowerStatus().value(), GroundPowerStatus::Unknown);
+}
+
+void Pmdg777Test::chocksStatusIsUnknownUntilTheSdkBlockArrives()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.data->wheelChocksSet = true;
+
+    QCOMPARE(fixture.aircraft->GetChocksStatus(), std::optional(ChocksStatus::Unknown));
+
+    fixture.data->hasData = true;
+
+    QCOMPARE(fixture.aircraft->GetChocksStatus(), std::optional(ChocksStatus::Placed));
+
+    fixture.data->wheelChocksSet = false;
+
+    QCOMPARE(fixture.aircraft->GetChocksStatus(), std::optional(ChocksStatus::Removed));
 }
 
 void Pmdg777Test::groundPowerFollowsExtPowerAnnunciator()
@@ -1284,6 +1311,7 @@ namespace
     constexpr double kPlannedKg = 200000.0;
     constexpr int kPlannedPax = 300;
     constexpr int kMainDeckSlot = 12;
+    constexpr int kBulkDoorSlot = 13;
 
     void LetEverythingArrive(Pmdg777Fixture& fixture)
     {
@@ -1645,6 +1673,159 @@ void Pmdg777Test::aPlanImportedBeforeTheTurnaroundStartedSurvivesItsStart()
     fixture.aircraft->OnTurnaroundStarted();
 
     QVERIFY(fixture.aircraft->IsFlightPlanLoaded());
+}
+
+void Pmdg777Test::theBulkDoorClosesWhenTheDepartureHoldArmsAndItReadsOpen()
+{
+    for (const Pmdg777Variant variant : {Pmdg777Variant::Er300, Pmdg777Variant::Freighter})
+    {
+        Pmdg777Fixture fixture(variant);
+        LetEverythingArrive(fixture);
+        fixture.data->doorStates[kBulkDoorSlot] = kDoorStateOpen;
+
+        fixture.aircraft->HoldDoorsClosed(true);
+        Tick(fixture, 1);
+
+        QCOMPARE(Toggles(fixture, kBulkDoorSlot), 1);
+
+        fixture.data->doorStates[kBulkDoorSlot] = kDoorStateClosed;
+        Tick(fixture, 30);
+
+        QCOMPARE(Toggles(fixture, kBulkDoorSlot), 1);
+    }
+}
+
+void Pmdg777Test::theBulkDoorGetsTheSameTwoRetriesAsTheOtherDoors()
+{
+    Pmdg777Fixture fixture;
+    LetEverythingArrive(fixture);
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateOpen;
+
+    fixture.aircraft->HoldDoorsClosed(true);
+    Tick(fixture, 60);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 3);
+}
+
+void Pmdg777Test::theBulkDoorIsLeftAloneWhenItReadsClosedAtTheHold()
+{
+    Pmdg777Fixture fixture;
+    LetEverythingArrive(fixture);
+
+    fixture.aircraft->HoldDoorsClosed(true);
+    Tick(fixture, 5);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 0);
+
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateOpen;
+    Tick(fixture, 30);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 0);
+}
+
+void Pmdg777Test::theBulkDoorClosesOnceItsReadingArrivesWhenTheHoldArmedBeforeTheBlock()
+{
+    Pmdg777Fixture fixture;
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateOpen;
+
+    fixture.aircraft->HoldDoorsClosed(true);
+    Tick(fixture, 5);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 0);
+
+    LetEverythingArrive(fixture);
+    Tick(fixture, 1);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 1);
+}
+
+void Pmdg777Test::theBulkDoorMovingWhenTheHoldArmsClosesOnceItReadsOpen()
+{
+    Pmdg777Fixture fixture;
+    LetEverythingArrive(fixture);
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateClosing;
+
+    fixture.aircraft->HoldDoorsClosed(true);
+    Tick(fixture, 5);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 0);
+
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateOpen;
+    Tick(fixture, 1);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 1);
+}
+
+void Pmdg777Test::theBulkDoorUnreadWhenTheHoldArmsIsLeftAloneOnceItReadsClosed()
+{
+    Pmdg777Fixture fixture;
+
+    fixture.aircraft->HoldDoorsClosed(true);
+    Tick(fixture, 5);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 0);
+
+    LetEverythingArrive(fixture);
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateClosed;
+    Tick(fixture, 5);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 0);
+
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateOpen;
+    Tick(fixture, 30);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 0);
+}
+
+void Pmdg777Test::releasingTheDepartureHoldDisarmsTheBulkDoorStillMoving()
+{
+    Pmdg777Fixture fixture;
+    LetEverythingArrive(fixture);
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateClosing;
+
+    fixture.aircraft->HoldDoorsClosed(true);
+    Tick(fixture, 5);
+    fixture.aircraft->HoldDoorsClosed(false);
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateOpen;
+    Tick(fixture, 30);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 0);
+}
+
+void Pmdg777Test::theBulkDoorIsNeverCommandedDuringTheServices()
+{
+    Pmdg777Fixture fixture(Pmdg777Variant::Freighter);
+    LetEverythingArrive(fixture);
+    fixture.gateway.lvars[kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[kMainLoaderLVar] = kLoaderInPosition;
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateOpen;
+
+    fixture.aircraft->CloseAllDoors();
+    Tick(fixture, 30);
+
+    QVERIFY(Toggles(fixture, kMainDeckSlot) > 0);
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 0);
+}
+
+void Pmdg777Test::releasingTheDepartureHoldStopsClosingTheBulkDoor()
+{
+    Pmdg777Fixture fixture;
+    LetEverythingArrive(fixture);
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateOpen;
+
+    fixture.aircraft->HoldDoorsClosed(true);
+    Tick(fixture, 1);
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateClosed;
+    Tick(fixture, 1);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 1);
+
+    fixture.aircraft->HoldDoorsClosed(false);
+    fixture.data->doorStates[kBulkDoorSlot] = kDoorStateOpen;
+    fixture.aircraft->CloseAllDoors();
+    Tick(fixture, 30);
+
+    QCOMPARE(Toggles(fixture, kBulkDoorSlot), 1);
 }
 
 QTEST_APPLESS_MAIN(Pmdg777Test)

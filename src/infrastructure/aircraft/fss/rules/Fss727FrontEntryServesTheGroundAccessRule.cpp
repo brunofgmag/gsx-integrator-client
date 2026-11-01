@@ -44,10 +44,11 @@ void Fss727FrontEntryServesTheGroundAccessRule::Act(const RuleContext&, Variable
 
     targetRestoredOpen_ = targetRestoredOpen_ && !HaveTheInputsArrived();
 
+    const bool held = aircraft_->IsHeldForDeparture();
     const double target = IsFrontEntryWanted() ? kDoorOpen : kDoorClosed;
     const int closeRequests = aircraft_->FrontEntryCloseRequests();
 
-    if (target == kDoorClosed && targetRestoredOpen_ && !aircraft_->IsHeldForDeparture())
+    if (target == kDoorClosed && targetRestoredOpen_ && !held)
     {
         return;
     }
@@ -55,8 +56,13 @@ void Fss727FrontEntryServesTheGroundAccessRule::Act(const RuleContext&, Variable
     if (target == kDoorClosed && closeRequests != servedCloseRequests_)
     {
         servedCloseRequests_ = closeRequests;
-        Command(writer, kDoorClosed);
+        CloseOnRequest(writer);
 
+        return;
+    }
+
+    if (!held && !IsGsxRunning())
+    {
         return;
     }
 
@@ -67,7 +73,46 @@ void Fss727FrontEntryServesTheGroundAccessRule::Act(const RuleContext&, Variable
         return;
     }
 
+    FollowTheGroundAccess(writer, target);
+}
+
+void Fss727FrontEntryServesTheGroundAccessRule::CloseOnRequest(VariableWriter& writer)
+{
+    if (doors_->PositionOf(GsxDoor::FwdPax) == DoorPosition::Closed)
+    {
+        Record(kDoorClosed);
+
+        return;
+    }
+
+    Command(writer, kDoorClosed);
+}
+
+void Fss727FrontEntryServesTheGroundAccessRule::FollowTheGroundAccess(VariableWriter& writer, const double target)
+{
+    const DoorPosition position = doors_->PositionOf(GsxDoor::FwdPax);
+    if (position == DoorPosition::Pending)
+    {
+        return;
+    }
+
+    if (position == (target == kDoorOpen ? DoorPosition::Open : DoorPosition::Closed))
+    {
+        Record(target);
+
+        return;
+    }
+
     Command(writer, target);
+}
+
+void Fss727FrontEntryServesTheGroundAccessRule::Record(const double target)
+{
+    lastTarget_ = target;
+    targetRestoredOpen_ = false;
+
+    probe::Line(probe::Channel::Writes,
+                QStringLiteral("skip  front FwdPax open=%1 already there").arg(target == kDoorOpen ? 1 : 0));
 }
 
 void Fss727FrontEntryServesTheGroundAccessRule::Command(VariableWriter& writer, const double target)
@@ -114,14 +159,14 @@ bool Fss727FrontEntryServesTheGroundAccessRule::HaveTheInputsArrived() const
         && variables_->HasReceivedLVar(gsx::lvars::kPassengerStairsFrontState);
 }
 
+bool Fss727FrontEntryServesTheGroundAccessRule::IsGsxRunning() const
+{
+    return variables_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) >= 1.0;
+}
+
 bool Fss727FrontEntryServesTheGroundAccessRule::IsFrontEntryWanted() const
 {
     if (aircraft_->IsHeldForDeparture())
-    {
-        return false;
-    }
-
-    if (variables_->GetLVar(gsx::lvars::kCouatlStarted, 0.0) < 1.0)
     {
         return false;
     }

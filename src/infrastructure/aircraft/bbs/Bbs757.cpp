@@ -60,11 +60,23 @@ namespace
 
     constexpr std::array kPowerBusVoltages = {"ELECTRICAL MAIN BUS VOLTAGE:9", "ELECTRICAL MAIN BUS VOLTAGE:11"};
 
+    constexpr auto kL1DoorPositionLVar = "B757_DOORS_PAX_L1";
+    constexpr auto kL2DoorPositionLVar = "B757_DOORS_PAX_L2";
+    constexpr auto kL3DoorPositionLVar = "B757_DOORS_PAX_L3";
+    constexpr auto kR1DoorPositionLVar = "B757_DOORS_PAX_R1";
+    constexpr auto kR2DoorPositionLVar = "B757_DOORS_PAX_R2";
+    constexpr auto kR3DoorPositionLVar = "B757_DOORS_PAX_R3";
+    constexpr auto kForwardCargoDoorPositionLVar = "B757_DOORS_CARGO_FWD";
+    constexpr auto kAftCargoDoorPositionLVar = "B757_DOORS_CARGO_AFT";
     constexpr std::array kDoorPositionLVars = {
-        "B757_DOORS_PAX_L1", "B757_DOORS_PAX_L2", "B757_DOORS_PAX_L3",
-        "B757_DOORS_PAX_R1", "B757_DOORS_PAX_R2", "B757_DOORS_PAX_R3",
-        "B757_DOORS_CARGO_FWD", "B757_DOORS_CARGO_AFT",
+        kL1DoorPositionLVar, kL2DoorPositionLVar, kL3DoorPositionLVar,
+        kR1DoorPositionLVar, kR2DoorPositionLVar, kR3DoorPositionLVar,
+        kForwardCargoDoorPositionLVar, kAftCargoDoorPositionLVar,
     };
+    constexpr auto kForwardCargoDoorMovingLVar = "B757_DOORS_CARGO_FWD_MOVING";
+    constexpr auto kAftCargoDoorMovingLVar = "B757_DOORS_CARGO_AFT_MOVING";
+    constexpr double kDoorPositionShut = 0.0;
+    constexpr double kPaxDoorOpenFrom = 99.0;
     constexpr auto kL1DoorSwitchLVar = "L1_PAX_DOOR_STATE_SWITCH";
     constexpr auto kL2DoorSwitchLVar = "L2_PAX_DOOR_STATE_SWITCH";
     constexpr auto kL3DoorSwitchLVar = "L3_PAX_DOOR_STATE_SWITCH";
@@ -74,6 +86,52 @@ namespace
     constexpr auto kForwardCargoDoorSwitchLVar = "FWD_CARGO_DOOR_STATE_SWITCH";
     constexpr auto kAftCargoDoorSwitchLVar = "AFT_CARGO_DOOR_STATE_SWITCH";
     constexpr double kDoorSwitchClosed = 0.0;
+
+    const char* DoorPositionLVar(const GsxDoor door)
+    {
+        switch (door)
+        {
+        case GsxDoor::FwdPax:
+            return kL1DoorPositionLVar;
+        case GsxDoor::MidPax:
+            return kL2DoorPositionLVar;
+        case GsxDoor::AftPax:
+            return kL3DoorPositionLVar;
+        case GsxDoor::FwdCatering:
+            return kR1DoorPositionLVar;
+        default:
+            return kR3DoorPositionLVar;
+        }
+    }
+
+    DoorPosition ReadDoorPosition(VariableGateway& variables, const char* positionLVar, const double openFrom)
+    {
+        if (!variables.HasReceivedLVar(positionLVar))
+        {
+            return DoorPosition::Pending;
+        }
+
+        const double position = variables.GetLVar(positionLVar, kDoorPositionShut);
+        if (position <= kDoorPositionShut)
+        {
+            return DoorPosition::Closed;
+        }
+
+        return position >= openFrom ? DoorPosition::Open : DoorPosition::Pending;
+    }
+
+    DoorPosition ReadCargoDoorPosition(VariableGateway& variables, const char* positionLVar, const char* movingLVar)
+    {
+        if (!variables.HasReceivedLVar(positionLVar) || !variables.HasReceivedLVar(movingLVar)
+            || variables.GetLVar(movingLVar, 1.0) > 0.0)
+        {
+            return DoorPosition::Pending;
+        }
+
+        return variables.GetLVar(positionLVar, kDoorPositionShut) > kDoorPositionShut
+            ? DoorPosition::Open
+            : DoorPosition::Closed;
+    }
 
     constexpr auto kGpuCartLVar = "BBS_757_GPU_CART_VISIBLE";
     constexpr auto kParkBrakeLVar = "B757_FC_PARK_BRAKE";
@@ -277,6 +335,7 @@ Bbs757::Bbs757(VariableGateway* variableGateway, const AutomationStatus* status)
       rules_{&doorRule_}
 {
     smartSwitch_.Subscribe();
+    doors_.ReadPositionsWith([this](const GsxDoor door) { return DoorPositionOf(door); });
 
     LOG_INFO("Profile loaded: %s", kName);
 }
@@ -337,6 +396,21 @@ const char* Bbs757::DoorSwitch(const GsxDoor door)
     default:
         return kAftCargoDoorSwitchLVar;
     }
+}
+
+DoorPosition Bbs757::DoorPositionOf(const GsxDoor door) const
+{
+    if (door == GsxDoor::FwdCargo)
+    {
+        return ReadCargoDoorPosition(*variableGateway_, kForwardCargoDoorPositionLVar, kForwardCargoDoorMovingLVar);
+    }
+
+    if (door == GsxDoor::AftCargo)
+    {
+        return ReadCargoDoorPosition(*variableGateway_, kAftCargoDoorPositionLVar, kAftCargoDoorMovingLVar);
+    }
+
+    return ReadDoorPosition(*variableGateway_, DoorPositionLVar(door), kPaxDoorOpenFrom);
 }
 
 bool Bbs757::IsReachable() const
@@ -543,6 +617,16 @@ std::optional<GroundPowerStatus> Bbs757::GetGroundPowerStatus() const
     return std::nullopt;
 }
 
+std::optional<ChocksStatus> Bbs757::GetChocksStatus() const
+{
+    if (!variableGateway_->HasReceivedLVar(kChocksLVar))
+    {
+        return ChocksStatus::Unknown;
+    }
+
+    return AreChocksSet() ? ChocksStatus::Placed : ChocksStatus::Removed;
+}
+
 bool Bbs757::IsOwnGroundEquipmentAttached() const
 {
     return std::ranges::any_of(kPilotOnlyGroundEquipmentLVars, [this](const char* lVar)
@@ -560,7 +644,10 @@ void Bbs757::CloseAllDoors()
         variableGateway_->SetLVar(DoorSwitch(door), kDoorSwitchClosed);
     });
 
-    variableGateway_->SetLVar(kR2DoorSwitchLVar, kDoorSwitchClosed);
+    if (ReadDoorPosition(*variableGateway_, kR2DoorPositionLVar, kPaxDoorOpenFrom) != DoorPosition::Closed)
+    {
+        variableGateway_->SetLVar(kR2DoorSwitchLVar, kDoorSwitchClosed);
+    }
 }
 
 void Bbs757::HoldDoorsClosed(const bool hold)

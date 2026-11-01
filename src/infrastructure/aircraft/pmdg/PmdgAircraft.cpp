@@ -33,6 +33,7 @@ PmdgAircraft::PmdgAircraft(VariableGateway* variableGateway, const AutomationSta
       cargoVariant_(spec.cargoVariant),
       doorSlots_(spec.doorSlots),
       mainDeckDoorSlot_(spec.mainDeckDoorSlot),
+      bulkDoorSlot_(spec.bulkDoorSlot),
       movingTicks_(static_cast<std::size_t>(spec.doorSlots), 0),
       doors_(variableGateway),
       doorReconciler_(*this, spec.doorSlots, spec.doorBaseline),
@@ -63,6 +64,7 @@ void PmdgAircraft::Observe()
     QueryTabletState();
     RefreshDoors();
     AdvanceMovingDoors();
+    CloseTheBulkDoorWhenItReadsOpen();
 
     if (status_->flightPlanStatus == FlightPlanStatus::Ready)
     {
@@ -251,6 +253,16 @@ std::optional<GroundPowerStatus> PmdgAircraft::GetGroundPowerStatus() const
     return GroundPowerPresent() ? GroundPowerStatus::Connected : GroundPowerStatus::Disconnected;
 }
 
+std::optional<ChocksStatus> PmdgAircraft::GetChocksStatus() const
+{
+    if (!ChocksReadingArrived())
+    {
+        return ChocksStatus::Unknown;
+    }
+
+    return ChocksSet() ? ChocksStatus::Placed : ChocksStatus::Removed;
+}
+
 bool PmdgAircraft::SetChocks(const bool placed)
 {
     groundConn_.SetChocks(placed);
@@ -332,6 +344,32 @@ std::optional<bool> PmdgAircraft::DoorOpenAt(const int slot) const
 void PmdgAircraft::HoldDoorsClosed(const bool hold)
 {
     doors_.HoldClosedForDeparture(hold);
+    bulkCloseArmed_ = hold && bulkDoorSlot_ >= 0;
+
+    if (!hold)
+    {
+        doorReconciler_.ClearSlotDesired(bulkDoorSlot_);
+    }
+}
+
+void PmdgAircraft::CloseTheBulkDoorWhenItReadsOpen()
+{
+    if (!bulkCloseArmed_)
+    {
+        return;
+    }
+
+    const DoorObservation observation = ObserveDoor(bulkDoorSlot_);
+    if (observation != DoorObservation::Open && observation != DoorObservation::Closed)
+    {
+        return;
+    }
+
+    bulkCloseArmed_ = false;
+    if (observation == DoorObservation::Open)
+    {
+        doorReconciler_.SetSlotDesired(bulkDoorSlot_, false);
+    }
 }
 
 void PmdgAircraft::HoldPassengerDoorsClosed(const bool hold)

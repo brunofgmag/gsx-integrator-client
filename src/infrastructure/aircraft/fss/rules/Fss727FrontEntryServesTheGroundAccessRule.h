@@ -25,7 +25,11 @@ public:
     void ForgetTheRestoredTarget();
 
 private:
+    void CloseOnRequest(VariableWriter& writer);
+    void FollowTheGroundAccess(VariableWriter& writer, double target);
+    void Record(double target);
     void Command(VariableWriter& writer, double target);
+    [[nodiscard]] bool IsGsxRunning() const;
     [[nodiscard]] bool IsFrontEntryWanted() const;
     [[nodiscard]] bool HaveTheInputsArrived() const;
 

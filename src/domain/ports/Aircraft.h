@@ -5,6 +5,7 @@
 #include <optional>
 #include <vector>
 
+#include "../model/ChocksStatus.h"
 #include "../model/DoorStatus.h"
 #include "../model/GroundPowerStatus.h"
 #include "../model/MemoryBag.h"
@@ -76,6 +77,7 @@ public:
     [[nodiscard]] virtual bool IsPowered() const = 0;
     [[nodiscard]] virtual bool TakesExternalPowerAtTheEngineerPanel() const { return false; }
     [[nodiscard]] virtual std::optional<GroundPowerStatus> GetGroundPowerStatus() const { return std::nullopt; }
+    [[nodiscard]] virtual std::optional<ChocksStatus> GetChocksStatus() const { return std::nullopt; }
     [[nodiscard]] virtual bool SupportsChocksControl() const { return false; }
     virtual bool SetChocks(bool) { return false; }
     [[nodiscard]] virtual bool SupportsGroundPowerControl() const { return false; }

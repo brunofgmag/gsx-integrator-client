@@ -217,6 +217,7 @@ void TurnaroundStateMachine::PublishStatus() const
     context_.status->servicesStalled = context_.data.servicesStalled;
     context_.status->serviceInterrupted = context_.data.serviceInterrupted;
     context_.status->deboardingAwaitsGsx = context_.data.deboardingAwaitsGsx;
+    context_.status->groundEquipmentTimedOut = context_.data.groundEquipmentTimedOut;
     context_.status->loaderHoldingBoarding = context_.data.loaderHoldingBoarding;
     context_.status->loaderDoorWaitSeconds = context_.data.loaderDoorWaitSeconds;
     context_.status->servicesWaitSeconds = context_.data.servicesWaitSeconds;
@@ -406,6 +407,11 @@ void TurnaroundStateMachine::TransitionTo(const TurnaroundPhase phase, const Tra
         {
             context_.gsxGateway->OnTurnaroundTurned();
         }
+    }
+
+    if (phase == TurnaroundPhase::RemoveGroundEquipment)
+    {
+        context_.data.groundEquipmentTimedOut = false;
     }
 
     if (phase == TurnaroundPhase::WaitingForEngines && context_.menuGateway != nullptr)

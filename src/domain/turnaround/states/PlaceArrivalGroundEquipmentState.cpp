@@ -1,5 +1,6 @@
 #include "PlaceArrivalGroundEquipmentState.h"
 
+#include "GroundEquipment.h"
 #include "../TurnaroundContext.h"
 #include "../../model/AutomationSettings.h"
 #include "../../ports/Aircraft.h"
@@ -12,6 +13,8 @@ namespace
     constexpr int kConfirmationGiveUpTicks = 30;
     constexpr auto kGpuAlreadyRequested = "The ground power was already requested; not asking for it again";
     constexpr auto kGsxNeverConfirmed = "GSX never confirmed the ground power; moving on to the deboarding";
+    constexpr auto kGaveUpOnTheEquipment =
+        "The ground power or the chocks were not in place after 4 minutes; moving on to the deboarding";
 
     void RequestTheGroundPower(TurnaroundContext& ctx)
     {
@@ -32,6 +35,24 @@ namespace
         ctx.menuGateway->ToggleGpu();
     }
 
+    bool WaitsForTheGroundPowerReadingBeforeAskingGsx(TurnaroundContext& ctx)
+    {
+        if (ctx.data.arrivalGpuRequested)
+        {
+            return false;
+        }
+
+        if (turnaround::CurrentGroundPower(ctx) == GroundPowerStatus::Unknown)
+        {
+            return true;
+        }
+
+        RequestTheGroundPower(ctx);
+        ctx.data.arrivalGpuRequested = true;
+
+        return false;
+    }
+
     bool StopsWaitingForTheGroundPower(TurnaroundContext& ctx)
     {
         if (ctx.aircraft->SupportsGroundPowerControl() || ctx.gsxGateway->IsServiceInProgress(GroundService::Gpu))
@@ -45,6 +66,19 @@ namespace
         }
 
         ctx.logger->LogInfo(kGsxNeverConfirmed);
+
+        return true;
+    }
+
+    bool GivesUpOnTheGroundEquipment(TurnaroundContext& ctx)
+    {
+        if (++ctx.data.arrivalEquipmentTicks < turnaround::kGroundEquipmentGiveUpTicks)
+        {
+            return false;
+        }
+
+        ctx.logger->LogInfo(kGaveUpOnTheEquipment);
+        ctx.data.groundEquipmentTimedOut = true;
 
         return true;
     }
@@ -77,28 +111,26 @@ std::optional<TurnaroundTransition> PlaceArrivalGroundEquipmentState::EvaluatePh
         ctx.data.arrivalChocksPlaced = true;
     }
 
-    if (!callGpu)
+    const turnaround::GroundEquipmentWish wish{.placeChocks = placeChocks, .chocksCommanded = ctx.data.arrivalChocksPlaced, .callGpu = callGpu};
+
+    if (turnaround::IsGroundEquipmentInPlace(ctx, wish))
     {
         return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
     }
 
-    const GroundPowerStatus gpu =
-        ctx.aircraft->GetGroundPowerStatus().value_or(ctx.gsxGateway->GetGpuStatus());
-
-    if (gpu == GroundPowerStatus::Connected)
+    if (GivesUpOnTheGroundEquipment(ctx))
     {
         return TurnaroundTransition{TurnaroundPhase::RequestDeboarding};
     }
 
-    if (!ctx.data.arrivalGpuRequested)
+    if (turnaround::IsGroundPowerInPlace(ctx, wish))
     {
-        if (gpu == GroundPowerStatus::Unknown)
-        {
-            return std::nullopt;
-        }
+        return std::nullopt;
+    }
 
-        RequestTheGroundPower(ctx);
-        ctx.data.arrivalGpuRequested = true;
+    if (WaitsForTheGroundPowerReadingBeforeAskingGsx(ctx) || !turnaround::AreChocksInPlace(ctx, wish))
+    {
+        return std::nullopt;
     }
 
     if (StopsWaitingForTheGroundPower(ctx))

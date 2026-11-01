@@ -38,7 +38,9 @@ public:
     std::vector<AircraftRule*> rules;
     bool completesPushbackViaInterruptMenu = false;
     std::optional<GroundPowerStatus> groundPowerStatus = std::nullopt;
+    std::optional<ChocksStatus> chocksStatus = std::nullopt;
     bool supportsChocksControl = false;
+    bool refusesChocks = false;
     bool chocksPlaced = false;
     int setChocksCalls = 0;
     bool supportsGroundPowerControl = false;
@@ -176,12 +178,13 @@ public:
 
     [[nodiscard]] bool IsPowered() const override { return powered; }
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override { return groundPowerStatus; }
+    [[nodiscard]] std::optional<ChocksStatus> GetChocksStatus() const override { return chocksStatus; }
 
     [[nodiscard]] bool SupportsChocksControl() const override { return supportsChocksControl; }
 
     bool SetChocks(const bool placed) override
     {
-        if (!supportsChocksControl)
+        if (!supportsChocksControl || refusesChocks)
         {
             return false;
         }

@@ -32,10 +32,13 @@ private:
     {
         const char* stairsState;
         const char* command;
+        const char* reading;
     };
 
     void FollowStairs(VariableWriter& writer, const DoorLVars& door, std::optional<double>& lastDoorTarget) const;
-    static void CloseWhileHeld(VariableWriter& writer, const DoorLVars& door, std::optional<double>& lastDoorTarget);
+    void CloseWhileHeld(VariableWriter& writer, const DoorLVars& door, std::optional<double>& lastDoorTarget) const;
+    void CommandWhenTheDoorDiffers(VariableWriter& writer, const DoorLVars& door, double target,
+                                   std::optional<double>& lastDoorTarget) const;
 
     VariableReader* variables_;
     const TfdiMd11* aircraft_;

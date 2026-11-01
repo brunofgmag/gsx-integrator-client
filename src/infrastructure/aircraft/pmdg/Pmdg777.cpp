@@ -21,11 +21,21 @@ namespace
     constexpr auto kSmartSwitchCaptLVar = "switch_554_a";
     constexpr auto kSmartSwitchFoLVar = "switch_773_a";
     constexpr double kSmartSwitchNeutral = 50.0;
+
+    constexpr double kJetwayUnavailable = 2.0;
+    constexpr double kJetwayDocked = 5.0;
     constexpr auto kSmartSwitchControl = "MIC/INT";
     constexpr auto kSmartSwitchSide = "INT";
 
     constexpr int kDoorSlots = 16;
     constexpr int kMainDeckCargoDoor = 12;
+    constexpr int kBulkCargoDoor = 13;
+    constexpr int kFwdCargoDoor = 10;
+    constexpr int kAftCargoDoor = 11;
+    constexpr int kAftPaxDoor200 = 6;
+    constexpr int kAftCateringDoor200 = 7;
+    constexpr int kAftPaxDoor300 = 8;
+    constexpr int kAftCateringDoor300 = 9;
     constexpr int kDoorStateOpen = 0;
     constexpr int kDoorStateClosing = 3;
     constexpr int kDoorStateOpening = 4;
@@ -43,12 +53,13 @@ namespace
     PmdgAircraftSpec SpecFor(const Pmdg777Variant variant)
     {
         return {
-            kDoorSlots,
-            kMainDeckCargoDoor,
-            IsCargo(variant),
-            DoorBaseline::Unknown,
-            {kSmartSwitchCaptLVar, kSmartSwitchFoLVar},
-            [](double, const double max) { return max > kSmartSwitchNeutral; }
+            .doorSlots = kDoorSlots,
+            .mainDeckDoorSlot = kMainDeckCargoDoor,
+            .cargoVariant = IsCargo(variant),
+            .doorBaseline = DoorBaseline::Unknown,
+            .smartSwitchLVars = {kSmartSwitchCaptLVar, kSmartSwitchFoLVar},
+            .smartSwitchPressed = [](double, const double max) { return max > kSmartSwitchNeutral; },
+            .bulkDoorSlot = kBulkCargoDoor,
         };
     }
 }
@@ -90,8 +101,8 @@ int Pmdg777::DoorSlotFor(const GsxDoor door) const
         {
         case GsxDoor::FwdPax: return 0;
         case GsxDoor::FwdCatering: return 1;
-        case GsxDoor::FwdCargo: return 10;
-        case GsxDoor::AftCargo: return 11;
+        case GsxDoor::FwdCargo: return kFwdCargoDoor;
+        case GsxDoor::AftCargo: return kAftCargoDoor;
         default: return -1;
         }
     }
@@ -100,13 +111,13 @@ int Pmdg777::DoorSlotFor(const GsxDoor door) const
     switch (door)
     {
     case GsxDoor::FwdPax:
-        return variableGateway_->GetLVar(gsx::lvars::kJetway, 2.0) == 5.0 ? 2 : 0;
+        return variableGateway_->GetLVar(gsx::lvars::kJetway, kJetwayUnavailable) == kJetwayDocked ? 2 : 0;
     case GsxDoor::MidPax: return 2;
-    case GsxDoor::AftPax: return is300 ? 8 : 6;
+    case GsxDoor::AftPax: return is300 ? kAftPaxDoor300 : kAftPaxDoor200;
     case GsxDoor::FwdCatering: return is300 ? 3 : 1;
-    case GsxDoor::AftCatering: return is300 ? 9 : 7;
-    case GsxDoor::FwdCargo: return 10;
-    case GsxDoor::AftCargo: return 11;
+    case GsxDoor::AftCatering: return is300 ? kAftCateringDoor300 : kAftCateringDoor200;
+    case GsxDoor::FwdCargo: return kFwdCargoDoor;
+    case GsxDoor::AftCargo: return kAftCargoDoor;
     default: return -1;
     }
 }
@@ -151,6 +162,11 @@ bool Pmdg777::ChocksSet() const
     return ownedData_->WheelChocksSet();
 }
 
+bool Pmdg777::ChocksReadingArrived() const
+{
+    return ownedData_->HasData();
+}
+
 bool Pmdg777::HasVendorFlightPlan() const
 {
     return ownedData_->HasFmcFlightPlan();
@@ -189,33 +205,33 @@ namespace
     const AircraftDescriptor kPmdg777300ErDescriptor{
         Pmdg777::kName300Er,
         {
-            {MatchField::Title, MatchOp::StartsWith, kTitle300Er}
+            {MatchField::Title, MatchOp::StartsWith, kTitle300Er},
         },
-        &CreatePmdg777, "pmdg-777-300er", "77W", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreatePmdg777, "pmdg-777-300er", "77W", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     const AircraftDescriptor kPmdg777FreighterDescriptor{
         Pmdg777::kNameFreighter,
         {
-            {MatchField::Title, MatchOp::StartsWith, kTitleFreighter}
+            {MatchField::Title, MatchOp::StartsWith, kTitleFreighter},
         },
-        &CreatePmdg777, "pmdg-777f", "77F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreatePmdg777, "pmdg-777f", "77F", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     const AircraftDescriptor kPmdg777200LrDescriptor{
         Pmdg777::kName200Lr,
         {
-            {MatchField::Title, MatchOp::StartsWith, kTitle200Lr}
+            {MatchField::Title, MatchOp::StartsWith, kTitle200Lr},
         },
-        &CreatePmdg777, "pmdg-777-200lr", "77L", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreatePmdg777, "pmdg-777-200lr", "77L", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     const AircraftDescriptor kPmdg777200ErDescriptor{
         Pmdg777::kName200Er,
         {
-            {MatchField::Title, MatchOp::StartsWith, kTitle200Er}
+            {MatchField::Title, MatchOp::StartsWith, kTitle200Er},
         },
-        &CreatePmdg777, "pmdg-777-200er", "77ER", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs
+        &CreatePmdg777, "pmdg-777-200er", "77ER", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, kSmartSwitchSide, SmartSwitchMove::Flip}, kRecommendedFuelRateKgs,
     };
 
     [[maybe_unused]] const AircraftRegistration kPmdg777300ErRegistration{kPmdg777300ErDescriptor};

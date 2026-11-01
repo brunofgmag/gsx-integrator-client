@@ -38,16 +38,41 @@ namespace
     constexpr std::array kDoorModeLVars =
         {kCargoDoorModeFwdLVar, kCargoDoorModeAftLVar,
          kPaxDoorMode1LLVar, kPaxDoorMode2LLVar, kPaxDoorMode3LLVar, kPaxDoorMode4LLVar,
-         kPaxDoorMode1RLVar, kPaxDoorMode2RLVar, kPaxDoorMode3RLVar, kPaxDoorMode4RLVar};
+         kPaxDoorMode1RLVar, kPaxDoorMode2RLVar, kPaxDoorMode3RLVar, kPaxDoorMode4RLVar,
+        };
+
+    constexpr auto kCargoDoorRatioFwdLVar = "TLS_CARGO_DOOR_OPEN_RATIO_FWD";
+    constexpr auto kCargoDoorRatioAftLVar = "TLS_CARGO_DOOR_OPEN_RATIO_AFT";
+
+    constexpr auto kPaxDoorRatio1LLVar = "TLS_PAX_DOOR_OPEN_RATIO_1L";
+    constexpr auto kPaxDoorRatio2LLVar = "TLS_PAX_DOOR_OPEN_RATIO_2L";
+    constexpr auto kPaxDoorRatio3LLVar = "TLS_PAX_DOOR_OPEN_RATIO_3L";
+    constexpr auto kPaxDoorRatio4LLVar = "TLS_PAX_DOOR_OPEN_RATIO_4L";
+    constexpr auto kPaxDoorRatio1RLVar = "TLS_PAX_DOOR_OPEN_RATIO_1R";
+    constexpr auto kPaxDoorRatio2RLVar = "TLS_PAX_DOOR_OPEN_RATIO_2R";
+    constexpr auto kPaxDoorRatio3RLVar = "TLS_PAX_DOOR_OPEN_RATIO_3R";
+    constexpr auto kPaxDoorRatio4RLVar = "TLS_PAX_DOOR_OPEN_RATIO_4R";
 
     constexpr std::array kDoorOpenRatioLVars =
-        {"TLS_CARGO_DOOR_OPEN_RATIO_FWD", "TLS_CARGO_DOOR_OPEN_RATIO_AFT",
-         "TLS_PAX_DOOR_OPEN_RATIO_1L", "TLS_PAX_DOOR_OPEN_RATIO_2L",
-         "TLS_PAX_DOOR_OPEN_RATIO_3L", "TLS_PAX_DOOR_OPEN_RATIO_4L",
-         "TLS_PAX_DOOR_OPEN_RATIO_1R", "TLS_PAX_DOOR_OPEN_RATIO_2R",
-         "TLS_PAX_DOOR_OPEN_RATIO_3R", "TLS_PAX_DOOR_OPEN_RATIO_4R"};
+        {kCargoDoorRatioFwdLVar, kCargoDoorRatioAftLVar,
+         kPaxDoorRatio1LLVar, kPaxDoorRatio2LLVar, kPaxDoorRatio3LLVar, kPaxDoorRatio4LLVar,
+         kPaxDoorRatio1RLVar, kPaxDoorRatio2RLVar, kPaxDoorRatio3RLVar, kPaxDoorRatio4RLVar,
+        };
 
     constexpr double kDoorSeatedRatio = 0.0;
+    constexpr double kDoorOpenFromRatio = 0.99;
+
+    struct DoorBeyondTheSync
+    {
+        const char* modeLVar;
+        const char* ratioLVar;
+    };
+
+    constexpr std::array kDoorsBeyondTheSync = {
+        DoorBeyondTheSync{.modeLVar = kPaxDoorMode3LLVar, .ratioLVar = kPaxDoorRatio3LLVar},
+        DoorBeyondTheSync{.modeLVar = kPaxDoorMode2RLVar, .ratioLVar = kPaxDoorRatio2RLVar},
+        DoorBeyondTheSync{.modeLVar = kPaxDoorMode3RLVar, .ratioLVar = kPaxDoorRatio3RLVar},
+    };
 
     std::optional<bool> DoorOpenByMode(VariableGateway& variables, const char* modeLVar)
     {
@@ -75,8 +100,45 @@ namespace
         return DoorOpenByMode(variables, modeLVar);
     }
 
+    DoorPosition ReadDoorPosition(VariableGateway& variables, const char* ratioLVar)
+    {
+        if (!variables.HasReceivedLVar(ratioLVar))
+        {
+            return DoorPosition::NotRead;
+        }
+
+        const double ratio = variables.GetLVar(ratioLVar, kDoorSeatedRatio);
+        if (ratio <= kDoorSeatedRatio)
+        {
+            return DoorPosition::Closed;
+        }
+
+        return ratio >= kDoorOpenFromRatio ? DoorPosition::Open : DoorPosition::Pending;
+    }
+
+    const char* DoorRatioLVar(const GsxDoor door)
+    {
+        switch (door)
+        {
+        case GsxDoor::FwdPax:
+            return kPaxDoorRatio1LLVar;
+        case GsxDoor::MidPax:
+            return kPaxDoorRatio2LLVar;
+        case GsxDoor::AftPax:
+            return kPaxDoorRatio4LLVar;
+        case GsxDoor::FwdCatering:
+            return kPaxDoorRatio1RLVar;
+        case GsxDoor::AftCatering:
+            return kPaxDoorRatio4RLVar;
+        case GsxDoor::FwdCargo:
+            return kCargoDoorRatioFwdLVar;
+        default:
+            return kCargoDoorRatioAftLVar;
+        }
+    }
+
     constexpr std::array kEngineFuelFlowLvars = {
-        "TLS_ENG1_FUEL_FLOW", "TLS_ENG2_FUEL_FLOW", "TLS_ENG3_FUEL_FLOW", "TLS_ENG4_FUEL_FLOW"
+        "TLS_ENG1_FUEL_FLOW", "TLS_ENG2_FUEL_FLOW", "TLS_ENG3_FUEL_FLOW", "TLS_ENG4_FUEL_FLOW",
     };
 
     constexpr auto kSmartSwitchLVar = "AB_ACP_CPT_RTU_Switch";
@@ -123,6 +185,10 @@ TolissA340::TolissA340(VariableGateway* variableGateway, const AutomationStatus*
       rules_{&doorRule_, &uplinkRule_}
 {
     smartSwitch_.Subscribe();
+    doors_.ReadPositionsWith([this](const GsxDoor door)
+    {
+        return ReadDoorPosition(*variableGateway_, DoorRatioLVar(door));
+    });
 
     LOG_INFO("Profile loaded: Toliss A340-600");
 }
@@ -183,9 +249,13 @@ void TolissA340::CloseAllDoors()
         variableGateway_->SetLVar(DoorModeLVar(door), kDoorClosed);
     });
 
-    variableGateway_->SetLVar(kPaxDoorMode3LLVar, kDoorClosed);
-    variableGateway_->SetLVar(kPaxDoorMode2RLVar, kDoorClosed);
-    variableGateway_->SetLVar(kPaxDoorMode3RLVar, kDoorClosed);
+    for (const DoorBeyondTheSync& door : kDoorsBeyondTheSync)
+    {
+        if (ReadDoorPosition(*variableGateway_, door.ratioLVar) != DoorPosition::Closed)
+        {
+            variableGateway_->SetLVar(door.modeLVar, kDoorClosed);
+        }
+    }
 
     LOG_INFO("All doors commanded closed: door control is now manual");
 }
@@ -316,9 +386,9 @@ namespace
         {
             {MatchField::Title, MatchOp::Contains, "ToLiss A346"},
             {MatchField::Title, MatchOp::Contains, "Aerosoft A346"},
-            {MatchField::AtcModel, MatchOp::Equals, "A346"}
+            {MatchField::AtcModel, MatchOp::Equals, "A346"},
         },
-        &CreateTolissA340, "toliss-a340", "A346", RefuelBy::Self, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::FlickEitherSide}, kRecommendedFuelRateKgs
+        &CreateTolissA340, "toliss-a340", "A346", RefuelBy::Self, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::FlickEitherSide}, kRecommendedFuelRateKgs,
     };
 
     [[maybe_unused]] const AircraftRegistration kTolissA340Registration{kTolissA340Descriptor};

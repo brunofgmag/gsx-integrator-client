@@ -59,12 +59,21 @@ namespace
     constexpr auto kAftCateringDoor = "doors.entry.d4r";
     constexpr auto kFwdCargoDoor = "doors.cargo.forward";
     constexpr auto kAftCargoDoor = "doors.cargo.aft";
+    constexpr auto kBulkDoor = "doors.cargo.bulk";
 
     constexpr std::array kA320DoorDatarefs = {
         kFwdPaxDoor, kAftPaxDoor, kFwdCateringDoor, kAftCateringDoor,
         kFwdCargoDoor, kAftCargoDoor,
         "doors.entry.d3l", "doors.entry.d2r", "doors.entry.d3r", "doors.cargo.bulk"
     };
+
+    constexpr std::array kAllDoorDatarefs = {
+        kFwdPaxDoor, kMidPaxDoor, kAftPaxDoor, kFwdCateringDoor, kAftCateringDoor,
+        kFwdCargoDoor, kAftCargoDoor,
+        "doors.entry.d3l", "doors.entry.d2r", "doors.entry.d3r", "doors.cargo.bulk",
+    };
+
+    constexpr int kTicksUntilAClosedDoorSettles = 10;
 
     constexpr double kEmptyWeightKg = 40000.0;
     constexpr double kPlannedZfwKg = 60000.0;
@@ -108,6 +117,35 @@ namespace
         {
             gateway.MarkTick();
             aircraft.Observe();
+        }
+
+        void DoorsAtRest()
+        {
+            for (const char* dataref : kAllDoorDatarefs)
+            {
+                efb.numbers[dataref] = 0.0;
+            }
+        }
+
+        void LetTheDoorsObeyTheEfb()
+        {
+            for (const char* dataref : kAllDoorDatarefs)
+            {
+                const auto written = efb.bools.find(dataref);
+                if (written != efb.bools.end())
+                {
+                    efb.numbers[dataref] = written->second ? 1.0 : 0.0;
+                }
+            }
+        }
+
+        void TickDoors(const int ticks = 1)
+        {
+            for (int tick = 0; tick < ticks; ++tick)
+            {
+                TickAircraft(aircraft, gateway);
+                LetTheDoorsObeyTheEfb();
+            }
         }
 
         void SeedThirdGeneration()
@@ -268,6 +306,23 @@ private slots:
     static void closeAllDoorsForcesEveryDoorClosed();
     static void closeAllDoorsLeavesTheMidPaxDoorAloneOutsideTheA321();
     static void stairsReopenDoorAfterCloseAllDoors();
+    static void aDoorAlreadyOpenIsNotWrittenAndTheNextChangeIsJudgedFromIt();
+    static void aDoorTheEfbHasNotAnsweredHoldsTheWrite();
+    static void aDoorStillSettlingAfterClosingHoldsTheReopen();
+    static void closeAllDoorsSkipsTheDoorsThatReadClosed();
+    static void closeAllDoorsStillClosesADoorTheEfbHasNotAnswered();
+    static void groundPowerAskedWhileTheEfbIsDownIsAppliedOnceWhenItIsBack();
+    static void theLastGroundPowerAskedWhileTheEfbIsDownIsTheOneApplied();
+    static void groundPowerAskedWhileTheEfbIsUpLeavesNothingPending();
+    static void closeAllAskedWhileTheEfbIsDownIsAppliedOnceWhenItIsBack();
+    static void closeAllAskedWhileTheEfbIsUpLeavesNothingPending();
+    static void theBulkDoorIsClosedWhenTheDoorLockArmsWithItReadOpen();
+    static void theBulkDoorIsLeftAloneWhenItReadsClosedAtTheLock();
+    static void theBulkDoorWaitsForItsReadingBeforeTheLockClosesIt();
+    static void releasingTheLockBeforeTheBulkReadingDisarmsIt();
+    static void theBulkDoorIsNeverCommandedDuringTheServices();
+    static void theChocksStatusIsUnknownUntilTheLVarArrives();
+    static void theChocksStatusFollowsTheChocksLVar();
     static void holdsTheAftPaxDoorWhileItsExitIsStillMoving();
     static void groundPowerWritesEfbDataref();
     static void groundPowerStatusFollowsGpuAndExtPower();
@@ -889,18 +944,19 @@ void FenixA32xTest::theFenix3DetectionIsLoggedOnce()
 void FenixA32xTest::cargoDoorsFollowBaggageLoaders()
 {
     FenixFixture fixture;
+    fixture.DoorsAtRest();
 
     fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     fixture.gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = 6.0;
     fixture.gateway.lvars[gsx::lvars::kBaggageLoaderRearState] = 9.0;
 
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    fixture.TickDoors();
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdCargoDoor), 1);
     QCOMPARE(fixture.efb.WrittenBool(kAftCargoDoor), 1);
 
     fixture.gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = 1.0;
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    fixture.TickDoors();
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdCargoDoor), 0);
     QCOMPARE(fixture.efb.WrittenBool(kAftCargoDoor), 1);
@@ -909,22 +965,23 @@ void FenixA32xTest::cargoDoorsFollowBaggageLoaders()
 void FenixA32xTest::paxDoorOpensForJetwayOrFrontStairs()
 {
     FenixFixture fixture;
+    fixture.DoorsAtRest();
 
     fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     fixture.gateway.lvars[gsx::lvars::kJetway] = 5.0;
 
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    fixture.TickDoors();
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 1);
 
     fixture.gateway.lvars[gsx::lvars::kJetway] = 2.0;
     fixture.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = 3.0;
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    fixture.TickDoors();
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 1);
 
     fixture.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = 4.0;
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    fixture.TickDoors();
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 0);
 }
@@ -941,6 +998,7 @@ void FenixA32xTest::midPaxDoorDrivenOnlyOnA321()
     QCOMPARE(a320.efb.WrittenBool(kMidPaxDoor), -1);
 
     FenixFixture a321{FenixVariant::A321};
+    a321.DoorsAtRest();
     a321.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     a321.gateway.lvars[gsx::lvars::kPassengerStairsMiddleState] = 3.0;
 
@@ -952,18 +1010,19 @@ void FenixA32xTest::midPaxDoorDrivenOnlyOnA321()
 void FenixA32xTest::cateringDoorsFollowCateringVehicles()
 {
     FenixFixture fixture;
+    fixture.DoorsAtRest();
 
     fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     fixture.gateway.lvars[gsx::lvars::kCateringFrontState] = 6.0;
     fixture.gateway.lvars[gsx::lvars::kCateringRearState] = 7.0;
 
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    fixture.TickDoors();
 
     QCOMPARE(fixture.efb.WrittenBool(kFwdCateringDoor), 1);
     QCOMPARE(fixture.efb.WrittenBool(kAftCateringDoor), 1);
 
     fixture.gateway.lvars[gsx::lvars::kCateringRearState] = 8.0;
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    fixture.TickDoors();
 
     QCOMPARE(fixture.efb.WrittenBool(kAftCateringDoor), 0);
 }
@@ -1026,15 +1085,302 @@ void FenixA32xTest::closeAllDoorsLeavesTheMidPaxDoorAloneOutsideTheA321()
 void FenixA32xTest::stairsReopenDoorAfterCloseAllDoors()
 {
     FenixFixture fixture;
+    fixture.DoorsAtRest();
 
     fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     fixture.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = 3.0;
 
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    fixture.TickDoors();
     fixture.aircraft.CloseAllDoors();
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 0);
+
     TickAircraft(fixture.aircraft, fixture.gateway);
 
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 0);
+
+    fixture.LetTheDoorsObeyTheEfb();
+    fixture.TickDoors(kTicksUntilAClosedDoorSettles);
+
     QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 1);
+}
+
+void FenixA32xTest::aDoorAlreadyOpenIsNotWrittenAndTheNextChangeIsJudgedFromIt()
+{
+    FenixFixture fixture;
+    fixture.DoorsAtRest();
+    fixture.efb.numbers[kFwdPaxDoor] = 1.0;
+
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kJetway] = 5.0;
+    fixture.TickDoors(3);
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), -1);
+
+    fixture.gateway.lvars[gsx::lvars::kJetway] = 2.0;
+    fixture.TickDoors();
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 0);
+}
+
+void FenixA32xTest::aDoorTheEfbHasNotAnsweredHoldsTheWrite()
+{
+    FenixFixture fixture;
+
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kJetway] = 5.0;
+    fixture.TickDoors(3);
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), -1);
+
+    fixture.efb.numbers[kFwdPaxDoor] = 0.0;
+    fixture.TickDoors();
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 1);
+}
+
+void FenixA32xTest::aDoorStillSettlingAfterClosingHoldsTheReopen()
+{
+    FenixFixture fixture;
+    fixture.DoorsAtRest();
+
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kJetway] = 5.0;
+    fixture.TickDoors();
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 1);
+
+    fixture.gateway.lvars[gsx::lvars::kJetway] = 2.0;
+    fixture.TickDoors();
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 0);
+
+    fixture.gateway.lvars[gsx::lvars::kJetway] = 5.0;
+    fixture.TickDoors(3);
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 0);
+
+    fixture.TickDoors(kTicksUntilAClosedDoorSettles);
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 1);
+}
+
+void FenixA32xTest::closeAllDoorsSkipsTheDoorsThatReadClosed()
+{
+    FenixFixture fixture{FenixVariant::A321};
+    fixture.DoorsAtRest();
+    fixture.efb.numbers[kAftCargoDoor] = 1.0;
+
+    fixture.aircraft.CloseAllDoors();
+
+    QCOMPARE(fixture.efb.setBoolCalls, 1);
+    QCOMPARE(fixture.efb.WrittenBool(kAftCargoDoor), 0);
+}
+
+void FenixA32xTest::closeAllDoorsStillClosesADoorTheEfbHasNotAnswered()
+{
+    FenixFixture fixture;
+    fixture.DoorsAtRest();
+    fixture.efb.numbers.erase(kFwdCateringDoor);
+
+    fixture.aircraft.CloseAllDoors();
+
+    QCOMPARE(fixture.efb.setBoolCalls, 1);
+    QCOMPARE(fixture.efb.WrittenBool(kFwdCateringDoor), 0);
+}
+
+void FenixA32xTest::groundPowerAskedWhileTheEfbIsDownIsAppliedOnceWhenItIsBack()
+{
+    FenixFixture fixture;
+    const LogCapture log;
+
+    fixture.efb.available = false;
+    fixture.aircraft.SetGroundPower(true);
+    fixture.ObserveOnce();
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.setBoolCalls, 0);
+    QCOMPARE(LogCapture::Total(), 0LL);
+
+    fixture.efb.available = true;
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.WrittenBool(kGroundPowerDataref), 1);
+    QCOMPARE(fixture.efb.setBoolCalls, 1);
+    QCOMPARE(LogCapture::Total(), 1LL);
+
+    fixture.ObserveOnce();
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.setBoolCalls, 1);
+    QCOMPARE(LogCapture::Total(), 1LL);
+}
+
+void FenixA32xTest::theLastGroundPowerAskedWhileTheEfbIsDownIsTheOneApplied()
+{
+    FenixFixture fixture;
+
+    fixture.efb.available = false;
+    fixture.aircraft.SetGroundPower(true);
+    fixture.aircraft.SetGroundPower(false);
+    fixture.efb.available = true;
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.WrittenBool(kGroundPowerDataref), 0);
+    QCOMPARE(fixture.efb.setBoolCalls, 1);
+}
+
+void FenixA32xTest::groundPowerAskedWhileTheEfbIsUpLeavesNothingPending()
+{
+    FenixFixture fixture;
+
+    fixture.aircraft.SetGroundPower(true);
+    fixture.ObserveOnce();
+    fixture.efb.available = false;
+    fixture.ObserveOnce();
+    fixture.efb.available = true;
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.setBoolCalls, 1);
+}
+
+void FenixA32xTest::closeAllAskedWhileTheEfbIsDownIsAppliedOnceWhenItIsBack()
+{
+    FenixFixture fixture{FenixVariant::A321};
+    const LogCapture log;
+
+    fixture.efb.available = false;
+    fixture.aircraft.CloseAllDoors();
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.setBoolCalls, 0);
+    QCOMPARE(LogCapture::Total(), 0LL);
+
+    fixture.efb.available = true;
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.WrittenBool(kFwdPaxDoor), 0);
+    QCOMPARE(fixture.efb.WrittenBool(kMidPaxDoor), 0);
+    QCOMPARE(fixture.efb.WrittenBool(kAftCargoDoor), 0);
+    QCOMPARE(fixture.efb.setBoolCalls, 7);
+    QVERIFY(LogCapture::Total() > 0LL);
+
+    fixture.ObserveOnce();
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.setBoolCalls, 7);
+}
+
+void FenixA32xTest::closeAllAskedWhileTheEfbIsUpLeavesNothingPending()
+{
+    FenixFixture fixture;
+
+    fixture.aircraft.CloseAllDoors();
+    const int writes = fixture.efb.setBoolCalls;
+    fixture.efb.available = false;
+    fixture.ObserveOnce();
+    fixture.efb.available = true;
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.setBoolCalls, writes);
+}
+
+void FenixA32xTest::theBulkDoorIsClosedWhenTheDoorLockArmsWithItReadOpen()
+{
+    FenixFixture fixture;
+    fixture.DoorsAtRest();
+    fixture.efb.numbers[kBulkDoor] = 1.0;
+
+    fixture.aircraft.HoldDoorsClosed(true);
+
+    QCOMPARE(fixture.efb.WrittenBool(kBulkDoor), 0);
+    QCOMPARE(fixture.efb.setBoolCalls, 1);
+
+    fixture.ObserveOnce();
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.setBoolCalls, 1);
+}
+
+void FenixA32xTest::theBulkDoorIsLeftAloneWhenItReadsClosedAtTheLock()
+{
+    FenixFixture fixture;
+    fixture.DoorsAtRest();
+
+    fixture.aircraft.HoldDoorsClosed(true);
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.setBoolCalls, 0);
+
+    fixture.efb.numbers[kBulkDoor] = 1.0;
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.setBoolCalls, 0);
+}
+
+void FenixA32xTest::theBulkDoorWaitsForItsReadingBeforeTheLockClosesIt()
+{
+    FenixFixture fixture;
+
+    fixture.aircraft.HoldDoorsClosed(true);
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.setBoolCalls, 0);
+
+    fixture.efb.numbers[kBulkDoor] = 1.0;
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.WrittenBool(kBulkDoor), 0);
+    QCOMPARE(fixture.efb.setBoolCalls, 1);
+}
+
+void FenixA32xTest::releasingTheLockBeforeTheBulkReadingDisarmsIt()
+{
+    FenixFixture fixture;
+
+    fixture.aircraft.HoldDoorsClosed(true);
+    fixture.aircraft.HoldDoorsClosed(false);
+    fixture.efb.numbers[kBulkDoor] = 1.0;
+    fixture.ObserveOnce();
+
+    QCOMPARE(fixture.efb.setBoolCalls, 0);
+}
+
+void FenixA32xTest::theBulkDoorIsNeverCommandedDuringTheServices()
+{
+    FenixFixture fixture{FenixVariant::A321};
+    fixture.DoorsAtRest();
+    fixture.efb.numbers[kBulkDoor] = 1.0;
+
+    fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
+    fixture.gateway.lvars[gsx::lvars::kJetway] = 5.0;
+    fixture.gateway.lvars[gsx::lvars::kCateringFrontState] = 6.0;
+    fixture.gateway.lvars[gsx::lvars::kBaggageLoaderFrontState] = 9.0;
+    fixture.gateway.lvars[gsx::lvars::kBaggageLoaderRearState] = 9.0;
+    fixture.TickDoors(3);
+    fixture.aircraft.CloseAllDoors();
+    fixture.TickDoors(3);
+
+    QCOMPARE(fixture.efb.WrittenBool(kBulkDoor), -1);
+}
+
+void FenixA32xTest::theChocksStatusIsUnknownUntilTheLVarArrives()
+{
+    FenixFixture fixture;
+
+    QVERIFY(fixture.aircraft.GetChocksStatus() == ChocksStatus::Unknown);
+}
+
+void FenixA32xTest::theChocksStatusFollowsTheChocksLVar()
+{
+    FenixFixture fixture;
+    fixture.gateway.lvars[kChocks] = 0.0;
+
+    QVERIFY(fixture.aircraft.GetChocksStatus() == ChocksStatus::Removed);
+
+    fixture.gateway.lvars[kChocks] = 1.0;
+
+    QVERIFY(fixture.aircraft.GetChocksStatus() == ChocksStatus::Placed);
 }
 
 void FenixA32xTest::groundPowerWritesEfbDataref()
@@ -1420,6 +1766,7 @@ void FenixA32xTest::evaluatingTheEfbSetupRuleWritesNothing()
 void FenixA32xTest::evaluatingTheDoorRuleWritesNothing()
 {
     FenixFixture fixture;
+    fixture.DoorsAtRest();
     FakeVariableWriter writer;
 
     fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
@@ -1481,27 +1828,28 @@ void FenixA32xTest::evaluatingTheRefuelSystemRuleWritesNothing()
 void FenixA32xTest::holdsTheAftPaxDoorWhileItsExitIsStillMoving()
 {
     FenixFixture fixture;
+    fixture.DoorsAtRest();
 
     fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     fixture.gateway.lvars[gsx::lvars::kPassengerStairsRearState] = 3.0;
     fixture.gateway.avars["EXIT OPEN:3"] = 0.0;
 
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    fixture.TickDoors();
 
     QCOMPARE(fixture.efb.WrittenBool(kAftPaxDoor), 1);
 
     fixture.gateway.avars["EXIT OPEN:3"] = 40.0;
     fixture.gateway.lvars[gsx::lvars::kPassengerStairsRearState] = 1.0;
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    fixture.TickDoors();
 
     QCOMPARE(fixture.efb.WrittenBool(kAftPaxDoor), 1);
 
     fixture.gateway.avars["EXIT OPEN:3"] = 100.0;
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    fixture.TickDoors();
 
     QCOMPARE(fixture.efb.WrittenBool(kAftPaxDoor), 1);
 
-    TickAircraft(fixture.aircraft, fixture.gateway);
+    fixture.TickDoors();
 
     QCOMPARE(fixture.efb.WrittenBool(kAftPaxDoor), 0);
 }
@@ -1759,16 +2107,19 @@ void FenixA32xTest::chocksAreRefusedWhileTheEfbIsUnavailableAndSayWhyOncePerDrop
 void FenixA32xTest::aResumedAircraftClosesTheDoorWhoseVehicleLeftWhileTheClientWasGone()
 {
     FenixFixture before;
+    before.DoorsAtRest();
 
     before.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     before.gateway.lvars[gsx::lvars::kPassengerStairsFrontState] = 3.0;
-    TickAircraft(before.aircraft, before.gateway);
+    before.TickDoors();
 
     QCOMPARE(before.efb.WrittenBool(kFwdPaxDoor), 1);
 
     const MemoryBag memory = before.aircraft.TurnaroundMemory();
 
     FenixFixture after;
+    after.DoorsAtRest();
+    after.efb.numbers[kFwdPaxDoor] = 1.0;
 
     after.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     after.gateway.lvars[gsx::lvars::kJetway] = 2.0;
@@ -1804,6 +2155,7 @@ void FenixA32xTest::resumingNeverClosesEverythingByItself()
 void FenixA32xTest::releasingTheDeparturesAlsoReleasesThePassengerDoors()
 {
     FenixFixture fixture;
+    fixture.DoorsAtRest();
 
     fixture.gateway.lvars[gsx::lvars::kCouatlStarted] = 1.0;
     fixture.gateway.lvars[gsx::lvars::kJetway] = 5.0;

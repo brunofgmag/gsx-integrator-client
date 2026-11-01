@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -184,6 +185,7 @@ private:
     void AnnounceRecommendedGsxProfile() const;
     void CheckPmdgOptions();
     void AnnounceWireFacts();
+    void ObserveGsxLoadedProfile();
     void OnRemoteConnectionChanged(bool connected);
     [[nodiscard]] TurnaroundKey LiveKey();
     [[nodiscard]] bool HaveResumeReadingsArrived();
@@ -207,6 +209,8 @@ private:
     std::string announcedCouatlId_;
     std::string announcedAirportIcao_;
     std::string announcedParkingName_;
+    std::string announcedProfileSource_;
+    std::optional<bool> announcedProfileRefueling_;
     std::string watchedParkingName_;
     int announcedSimbriefGeneration_ = 0;
     AutomationStatus status_;

@@ -99,6 +99,7 @@ private:
     [[nodiscard]] bool AreChocksSet() const;
     [[nodiscard]] std::optional<double> DoorPointPosition(std::size_t point) const;
     [[nodiscard]] std::optional<bool> DoorOpenAt(std::size_t point) const;
+    [[nodiscard]] DoorPosition DoorPositionOf(GsxDoor door) const;
     [[nodiscard]] double CargoLineKg() const;
     void RestoreThePendingCloses(const MemoryBag& memory);
 

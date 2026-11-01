@@ -64,6 +64,7 @@ public:
     [[nodiscard]] bool ConsumeSmartSwitch() override;
     [[nodiscard]] bool IsPowered() const override;
     [[nodiscard]] std::optional<GroundPowerStatus> GetGroundPowerStatus() const override;
+    [[nodiscard]] std::optional<ChocksStatus> GetChocksStatus() const override;
     [[nodiscard]] bool SupportsChocksControl() const override { return true; }
     bool SetChocks(bool placed) override;
     [[nodiscard]] bool SupportsGroundPowerControl() const override { return true; }
@@ -77,6 +78,12 @@ public:
 private:
     [[nodiscard]] bool IsBeaconOn() const;
     [[nodiscard]] std::optional<bool> DoorOpen(const char* dataref) const;
+    [[nodiscard]] bool IsDoorSettling(const char* dataref) const;
+    [[nodiscard]] DoorPosition DoorPositionOf(GsxDoor door) const;
+    void ApplyWhatWaitedForTheEfb();
+    void ApplyThePendingGroundPower();
+    void ApplyThePendingCloseAll();
+    void CloseTheBulkDoorWhenItReadsOpen();
     void AdvanceDoorSettle();
     void ReportProbe() const;
     void DetectThirdGeneration();
@@ -100,6 +107,9 @@ private:
     bool finalLoadsheetRequested_ = true;
     bool chocksRefusalReported_ = false;
     bool thirdGenerationDetected_ = false;
+    bool closeAllPending_ = false;
+    bool bulkCloseArmed_ = false;
+    std::optional<bool> pendingGroundPower_;
     std::optional<WeightUnit> reportedWeightUnit_;
     double lastFuelKg_ = -1.0;
     double lastZfwKg_ = -1.0;

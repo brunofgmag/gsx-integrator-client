@@ -67,6 +67,10 @@ namespace
 
     constexpr auto kCargoDoorRatioFwd = "TLS_CARGO_DOOR_OPEN_RATIO_FWD";
     constexpr auto kCargoDoorRatioAft = "TLS_CARGO_DOOR_OPEN_RATIO_AFT";
+    constexpr auto kPaxDoorRatio1L = "TLS_PAX_DOOR_OPEN_RATIO_1L";
+    constexpr auto kPaxDoorRatio3L = "TLS_PAX_DOOR_OPEN_RATIO_3L";
+    constexpr auto kPaxDoorRatio2R = "TLS_PAX_DOOR_OPEN_RATIO_2R";
+    constexpr auto kPaxDoorRatio3R = "TLS_PAX_DOOR_OPEN_RATIO_3R";
 
     constexpr std::array kDoorRatioLVars =
         {kCargoDoorRatioFwd, kCargoDoorRatioAft,
@@ -163,6 +167,15 @@ private slots:
     static void jetwayAndStairsEitherHoldsDoor1LOpen();
     static void closeAllDoorsForcesEveryDoorClosed();
     static void stairsReopenDoorAfterCloseAllDoors();
+    static void aDoorTheRatioReadsFullyOpenIsNotWritten();
+    static void aDoorTheRatioReadsInTheMiddleOfItsTravelHoldsTheWrite();
+    static void aDoorWithNoRatioIsWrittenWhateverItsModeSays();
+    static void aDoorWhoseModeIsAutomaticAndWithNoRatioIsWritten();
+    static void aDoorThatHasNotReportedIsWrittenAsWithoutAReader();
+    static void closeAllDoorsSkipsTheDoorsTheRatioReadsClosed();
+    static void closeAllDoorsClosesTheBeyondTheSyncDoorsOnlyWhenTheyAreNotReadClosed();
+    static void closeAllDoorsClosesTheBeyondTheSyncDoorsWhoseRatioHasNotArrived();
+    static void hasNoChocksReading();
     static void paxDoorsUntouchedWithoutGsx();
     static void cateringDoorsOpenWhenVehicleWaitsAndCloseWhenFinished();
     static void cateringDoorsOpenOnceTheTruckIsApproaching();
@@ -790,6 +803,7 @@ void TolissA340Test::holdForDepartureClosesPaxAndCargoButNotCatering()
     TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
     gateway.lvars[kGsxJetway] = 5.0;
     gateway.lvars[kGsxLoaderFront] = 8.0;
     gateway.lvars[kGsxCateringFront] = 7.0;
@@ -833,11 +847,12 @@ void TolissA340Test::cargoDoorsOpenPerLoaderAndCloseWhenDone()
     TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
     gateway.lvars[kGsxLoaderFront] = 6.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kCargoDoorModeFwd), 2.0);
-    QCOMPARE(gateway.Written(kCargoDoorModeAft), -1.0);
+    QCOMPARE(gateway.WriteCount(kCargoDoorModeAft), 0);
 
     gateway.lvars[kGsxLoaderRear] = 8.0;
     TickAircraft(aircraft, gateway);
@@ -881,13 +896,14 @@ void TolissA340Test::paxDoorsOpenPerStairsAndCloseWhenGone()
     TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
 
     gateway.lvars[kStairsFront] = 3.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoorMode1L), 2.0);
-    QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode2L));
-    QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode4L));
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode2L), 0);
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode4L), 0);
 
     gateway.lvars[kStairsMiddle] = 3.0;
     gateway.lvars[kStairsRear] = 3.0;
@@ -909,11 +925,12 @@ void TolissA340Test::paxDoorsOpenOnceTheStairsAreApproaching()
     TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
 
     gateway.lvars[kStairsFront] = 2.0;
     TickAircraft(aircraft, gateway);
 
-    QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode1L));
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1L), 0);
 
     gateway.lvars[kStairsFront] = 5.0;
     TickAircraft(aircraft, gateway);
@@ -938,13 +955,14 @@ void TolissA340Test::jetwayOpensOnlyDoor1L()
     TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
 
     gateway.lvars[kGsxJetway] = 5.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoorMode1L), 2.0);
-    QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode2L));
-    QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode4L));
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode2L), 0);
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode4L), 0);
 
     gateway.lvars[kGsxJetway] = 4.0;
     TickAircraft(aircraft, gateway);
@@ -959,6 +977,7 @@ void TolissA340Test::jetwayAndStairsEitherHoldsDoor1LOpen()
     TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
 
     gateway.lvars[kGsxJetway] = 5.0;
     gateway.lvars[kStairsFront] = 3.0;
@@ -980,6 +999,161 @@ void TolissA340Test::jetwayAndStairsEitherHoldsDoor1LOpen()
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoorMode1L), 0.0);
+}
+
+void TolissA340Test::aDoorTheRatioReadsFullyOpenIsNotWritten()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
+    AllDoorRatiosClosed(gateway);
+    gateway.lvars[kPaxDoorRatio1L] = 1.0;
+    gateway.lvars[kGsxJetway] = 5.0;
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1L), 0);
+
+    gateway.lvars[kGsxJetway] = 4.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeClosed);
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1L), 1);
+}
+
+void TolissA340Test::aDoorTheRatioReadsInTheMiddleOfItsTravelHoldsTheWrite()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
+    AllDoorRatiosClosed(gateway);
+    gateway.lvars[kPaxDoorRatio1L] = 0.4;
+    gateway.lvars[kGsxJetway] = 5.0;
+    TickAircraft(aircraft, gateway);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1L), 0);
+
+    gateway.lvars[kPaxDoorRatio1L] = 0.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeOpen);
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1L), 1);
+}
+
+void TolissA340Test::aDoorWithNoRatioIsWrittenWhateverItsModeSays()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
+    gateway.lvars[kPaxDoorMode1L] = kDoorModeOpen;
+    gateway.lvars[kGsxJetway] = 5.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1L), 1);
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeOpen);
+}
+
+void TolissA340Test::aDoorWhoseModeIsAutomaticAndWithNoRatioIsWritten()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
+    gateway.lvars[kPaxDoorMode1L] = kDoorModeAuto;
+    gateway.lvars[kGsxJetway] = 5.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1L), 1);
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeOpen);
+}
+
+void TolissA340Test::aDoorThatHasNotReportedIsWrittenAsWithoutAReader()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kGsxJetway] = 5.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1L), 1);
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeOpen);
+}
+
+void TolissA340Test::closeAllDoorsSkipsTheDoorsTheRatioReadsClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    AllDoorRatiosClosed(gateway);
+    gateway.lvars[kPaxDoorRatio1L] = 1.0;
+    gateway.lvars[kCargoDoorRatioFwd] = 0.5;
+
+    aircraft.CloseAllDoors();
+
+    QCOMPARE(gateway.setLVarCalls, 2);
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), kDoorModeClosed);
+    QCOMPARE(gateway.Written(kCargoDoorModeFwd), kDoorModeClosed);
+}
+
+void TolissA340Test::closeAllDoorsClosesTheBeyondTheSyncDoorsOnlyWhenTheyAreNotReadClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    AllDoorRatiosClosed(gateway);
+    gateway.lvars[kPaxDoorRatio2R] = 1.0;
+    gateway.lvars[kPaxDoorRatio3R] = 0.3;
+    gateway.lvars.erase(kPaxDoorRatio3L);
+
+    aircraft.CloseAllDoors();
+
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode2R), 1);
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode3R), 1);
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode3L), 1);
+    QCOMPARE(gateway.Written(kPaxDoorMode3L), kDoorModeClosed);
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1L), 0);
+}
+
+void TolissA340Test::closeAllDoorsClosesTheBeyondTheSyncDoorsWhoseRatioHasNotArrived()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    AllDoorModesClosed(gateway);
+    gateway.lvars[kPaxDoorMode2R] = kDoorModeOpen;
+
+    aircraft.CloseAllDoors();
+
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode2R), 1);
+    QCOMPARE(gateway.Written(kPaxDoorMode2R), kDoorModeClosed);
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode3L), 1);
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode3R), 1);
+}
+
+void TolissA340Test::hasNoChocksReading()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TolissA340 aircraft(&gateway, &status);
+
+    QVERIFY(!aircraft.GetChocksStatus().has_value());
 }
 
 void TolissA340Test::closeAllDoorsForcesEveryDoorClosed()
@@ -1005,16 +1179,24 @@ void TolissA340Test::stairsReopenDoorAfterCloseAllDoors()
     TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
+    AllDoorRatiosClosed(gateway);
 
     gateway.lvars[kStairsFront] = 3.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoorMode1L), 2.0);
 
+    gateway.lvars[kPaxDoorRatio1L] = 1.0;
     aircraft.CloseAllDoors();
 
     QCOMPARE(gateway.Written(kPaxDoorMode1L), 0.0);
 
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kPaxDoorMode1L), 0.0);
+
+    gateway.lvars[kPaxDoorRatio1L] = 0.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoorMode1L), 2.0);
@@ -1043,12 +1225,13 @@ void TolissA340Test::cateringDoorsOpenWhenVehicleWaitsAndCloseWhenFinished()
     TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
 
     gateway.lvars[kGsxCateringFront] = 6.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoorMode1R), 2.0);
-    QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode4R));
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode4R), 0);
 
     const int callsAfterOpen = gateway.setLVarCalls;
     gateway.lvars[kGsxCateringFront] = 7.0;
@@ -1080,17 +1263,18 @@ void TolissA340Test::cateringDoorsOpenOnceTheTruckIsApproaching()
     TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
 
     gateway.lvars[kGsxCateringFront] = 2.0;
     TickAircraft(aircraft, gateway);
 
-    QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode1R));
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode1R), 0);
 
     gateway.lvars[kGsxCateringFront] = 5.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoorMode1R), 2.0);
-    QVERIFY(!gateway.HasReceivedLVar(kPaxDoorMode4R));
+    QCOMPARE(gateway.WriteCount(kPaxDoorMode4R), 0);
 }
 
 void TolissA340Test::cateringDoorsUntouchedWithoutGsx()
@@ -1219,6 +1403,7 @@ void TolissA340Test::evaluatingTheDoorRuleWritesNoVariable()
     FakeVariableWriter writer;
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
     gateway.lvars[kGsxLoaderFront] = 6.0;
     aircraft.Observe();
 
@@ -1391,6 +1576,7 @@ void TolissA340Test::releasingTheDepartureHoldOnAResumedAdapterReleasesThePassen
     TolissA340 aircraft(&gateway, &status);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
     gateway.lvars[kStairsFront] = 3.0;
     aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::Loading, true), MemoryBag{});
     aircraft.HoldPassengerDoorsClosed(true);
@@ -1413,6 +1599,7 @@ void TolissA340Test::resumedDoorsFollowTheDoorSyncMemory()
         TolissA340 aircraft(&gateway, &status);
 
         gateway.lvars[kCouatlStarted] = 1.0;
+        AllDoorModesClosed(gateway);
         gateway.lvars[kStairsFront] = 3.0;
         TickAircraft(aircraft, gateway);
 
@@ -1429,6 +1616,8 @@ void TolissA340Test::resumedDoorsFollowTheDoorSyncMemory()
 
     aircraft.OnTurnaroundResumed(ResumedFacts(TurnaroundPhase::Loading, true), memory);
     gateway.lvars[kCouatlStarted] = 1.0;
+    AllDoorModesClosed(gateway);
+    gateway.lvars[kPaxDoorMode1L] = kDoorModeOpen;
 
     for (int tick = 0; tick < 10; ++tick)
     {

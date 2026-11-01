@@ -66,6 +66,10 @@ namespace
     constexpr double kEmptyOperatingZfwKg = 130000.0;
     constexpr double kMtowKg = 283730.0;
 
+    constexpr double kDoorReadsOpen = 100.0;
+    constexpr double kDoorReadsClosed = 0.0;
+    constexpr double kNothingWritten = -1.0;
+
     double LoadPercent(const double payloadKg, const double emptyZfwKg)
     {
         return payloadKg / (kMtowKg - emptyZfwKg) * 100.0;
@@ -86,6 +90,20 @@ namespace
         gateway.lvars[kStairsRear] = state;
     }
 
+    void GiveEveryPassengerDoorAReading(FakeVariableGateway& gateway, const double position)
+    {
+        gateway.lvars[kPaxDoor1LState] = position;
+        gateway.lvars[kPaxDoor2LState] = position;
+        gateway.lvars[kPaxDoor4LState] = position;
+    }
+
+    void GiveEveryCargoDoorAReading(FakeVariableGateway& gateway, const double position)
+    {
+        gateway.lvars[kCargoDoor1RState] = position;
+        gateway.lvars[kCargoDoor2RState] = position;
+        gateway.lvars[kCargoDoorMainState] = position;
+    }
+
     MemoryBag MemoryOfThreeOpenPassengerDoors()
     {
         FakeVariableGateway gateway;
@@ -93,7 +111,23 @@ namespace
         TfdiMd11 dead(&gateway, &status, false);
 
         gateway.lvars[kCouatlStarted] = 1.0;
+        GiveEveryPassengerDoorAReading(gateway, kDoorReadsClosed);
         GiveEveryStairsAReading(gateway, 3.0);
+
+        TickAircraft(dead, gateway);
+
+        return dead.TurnaroundMemory();
+    }
+
+    MemoryBag MemoryOfAnOpenCargoDoor()
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+        TfdiMd11 dead(&gateway, &status, false);
+
+        gateway.lvars[kCouatlStarted] = 1.0;
+        GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
+        gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderWaitingForDoor;
 
         TickAircraft(dead, gateway);
 
@@ -140,9 +174,18 @@ private slots:
     static void readyToPushFollowsPowerBeaconAndEngines();
     static void engineRunningDetectsAnyCombustion();
     static void engineAssumedRunningUntilCombustionDataArrives();
-    static void cargoDoorsClosedByDefaultWhenGsxAvailable();
+    static void aCargoDoorTheClientNeverOpenedIsNeverClosedBlind();
     static void cargoDoorsAreNotCommandedBeforeTheLoaderReadingArrives();
     static void aLoaderAlreadyAtTheDoorOnTheFirstReadingIsNeverCommandedClosed();
+    static void aServingLoaderOpensTheCargoDoorThatReadsClosed();
+    static void theCargoDoorClosesWhenTheLoaderLeavesAndItReadsOpen();
+    static void aCargoDoorWaitsForItsOwnReadingBeforeAnyWrite();
+    static void aCargoDoorAlreadyOpenWhenTheLoaderArrivesIsNotCommanded();
+    static void aCargoDoorTheAircraftClosedItselfIsNotClosedAgainWhenTheLoaderLeaves();
+    static void aCargoDoorTheAircraftClosedWhileTheLoaderIsLoadingIsNotReopened();
+    static void theCargoDoorTargetsSurviveAResume();
+    static void aRestoredOpenCargoDoorClosesOnceTheLoaderIsGone();
+    static void aRestoredOpenCargoDoorClosesWhenAGsxRestartDistrustsTheLoader();
     static void cargoDoorsOpenPerLoaderAndCloseWhenDone();
     static void cargoDoorCommandGoesToClosedOnceTheLoaderStartsFinishing();
     static void mainCargoDoorOpensOnlyOnFreighter();
@@ -150,6 +193,9 @@ private slots:
     static void cargoDoorFollowsALoaderStateOnlyOnceItChangesAfterACouatlRestart();
     static void paxDoorsOpenPerStairsAndCloseWhenGone();
     static void paxDoorsOpenOnceTheStairsAreApproaching();
+    static void aPassengerDoorWaitsForItsOwnReadingBeforeAnyWrite();
+    static void aPassengerDoorAlreadyOpenWhenTheStairsArriveIsNotCommanded();
+    static void aPassengerDoorTheAircraftClosedItselfIsNotClosedAgainWhenTheStairsLeave();
     static void paxDoorsUntouchedWithoutGsx();
     static void doorStatusReadsStateFamilyAndNotTheCommandEcho();
     static void doorStatusUnknownUntilDoorDataArrives();
@@ -783,7 +829,7 @@ void TfdiMd11Test::engineAssumedRunningUntilCombustionDataArrives()
     QVERIFY(aircraft.IsEngineRunning());
 }
 
-void TfdiMd11Test::cargoDoorsClosedByDefaultWhenGsxAvailable()
+void TfdiMd11Test::aCargoDoorTheClientNeverOpenedIsNeverClosedBlind()
 {
     FakeVariableGateway gateway;
     AutomationStatus status;
@@ -792,10 +838,15 @@ void TfdiMd11Test::cargoDoorsClosedByDefaultWhenGsxAvailable()
     gateway.lvars[kCouatlStarted] = 1.0;
     gateway.lvars[kGsxLoaderFront] = 0.0;
     gateway.lvars[kGsxLoaderRear] = 0.0;
-    TickAircraft(aircraft, gateway);
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsOpen);
 
-    QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
-    QCOMPARE(gateway.Written(kCargoDoor2R), 0.0);
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 0);
+    QCOMPARE(gateway.WriteCount(kCargoDoor2R), 0);
 }
 
 void TfdiMd11Test::cargoDoorsAreNotCommandedBeforeTheLoaderReadingArrives()
@@ -826,6 +877,7 @@ void TfdiMd11Test::aLoaderAlreadyAtTheDoorOnTheFirstReadingIsNeverCommandedClose
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.WriteCount(kCargoDoor1R), 0);
@@ -838,6 +890,229 @@ void TfdiMd11Test::aLoaderAlreadyAtTheDoorOnTheFirstReadingIsNeverCommandedClose
     QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
 }
 
+void TfdiMd11Test::aServingLoaderOpensTheCargoDoorThatReadsClosed()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
+    gateway.lvars[kGsxLoaderFront] = 0.0;
+    gateway.lvars[kGsxLoaderRear] = 0.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 0);
+    QCOMPARE(gateway.WriteCount(kCargoDoor2R), 0);
+
+    gateway.lvars[kGsxLoaderRear] = gsx::states::kLoaderInPosition;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor2R), 1);
+    QCOMPARE(gateway.Written(kCargoDoor2R), 100.0);
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 0);
+}
+
+void TfdiMd11Test::theCargoDoorClosesWhenTheLoaderLeavesAndItReadsOpen()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderLoading;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
+
+    gateway.lvars[kCargoDoor1RState] = kDoorReadsOpen;
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderFinishing;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 2);
+    QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
+}
+
+void TfdiMd11Test::aCargoDoorWaitsForItsOwnReadingBeforeAnyWrite()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderWaitingForDoor;
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 0);
+
+    gateway.lvars[kCargoDoor1RState] = kDoorReadsClosed;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 1);
+    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
+
+    gateway.lvars.erase(kCargoDoor1RState);
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderFinishing;
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 1);
+
+    gateway.lvars[kCargoDoor1RState] = kDoorReadsOpen;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 2);
+    QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
+}
+
+void TfdiMd11Test::aCargoDoorAlreadyOpenWhenTheLoaderArrivesIsNotCommanded()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsOpen);
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderWaitingForDoor;
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 0);
+
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderFinishing;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 1);
+    QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
+}
+
+void TfdiMd11Test::aCargoDoorTheAircraftClosedItselfIsNotClosedAgainWhenTheLoaderLeaves()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderWaitingForDoor;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 1);
+
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderFinishing;
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 1);
+    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
+}
+
+void TfdiMd11Test::aCargoDoorTheAircraftClosedWhileTheLoaderIsLoadingIsNotReopened()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderWaitingForDoor;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 1);
+
+    gateway.lvars[kCargoDoor1RState] = kDoorReadsOpen;
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderLoading;
+    TickAircraft(aircraft, gateway);
+
+    gateway.lvars[kCargoDoor1RState] = kDoorReadsClosed;
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 1);
+    QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
+}
+
+void TfdiMd11Test::theCargoDoorTargetsSurviveAResume()
+{
+    const MemoryBag memory = MemoryOfAnOpenCargoDoor();
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderLoading;
+
+    aircraft.OnTurnaroundResumed(ResumedAt(TurnaroundPhase::Loading), memory);
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 0);
+    QCOMPARE(gateway.WriteCount(kCargoDoor2R), 0);
+}
+
+void TfdiMd11Test::aRestoredOpenCargoDoorClosesOnceTheLoaderIsGone()
+{
+    const MemoryBag memory = MemoryOfAnOpenCargoDoor();
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsOpen);
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderFinishing;
+
+    aircraft.OnTurnaroundResumed(ResumedAt(TurnaroundPhase::Loading), memory);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 1);
+    QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
+    QCOMPARE(gateway.WriteCount(kCargoDoor2R), 0);
+}
+
+void TfdiMd11Test::aRestoredOpenCargoDoorClosesWhenAGsxRestartDistrustsTheLoader()
+{
+    const MemoryBag memory = MemoryOfAnOpenCargoDoor();
+
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsOpen);
+    gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderInPosition;
+
+    TurnaroundFacts facts = ResumedAt(TurnaroundPhase::Loading);
+    facts.gsxRestartedSinceSave = true;
+    aircraft.OnTurnaroundResumed(facts, memory);
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kCargoDoor1R), 1);
+    QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
+}
+
 void TfdiMd11Test::cargoDoorsOpenPerLoaderAndCloseWhenDone()
 {
     FakeVariableGateway gateway;
@@ -845,17 +1120,21 @@ void TfdiMd11Test::cargoDoorsOpenPerLoaderAndCloseWhenDone()
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
     gateway.lvars[kGsxLoaderFront] = 6.0;
     gateway.lvars[kGsxLoaderRear] = 0.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
-    QCOMPARE(gateway.Written(kCargoDoor2R), 0.0);
+    QCOMPARE(gateway.WriteCount(kCargoDoor2R), 0);
 
     gateway.lvars[kGsxLoaderRear] = 8.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kCargoDoor2R), 100.0);
+
+    gateway.lvars[kCargoDoor1RState] = kDoorReadsOpen;
+    gateway.lvars[kCargoDoor2RState] = kDoorReadsOpen;
 
     const int callsAfterOpen = gateway.setLVarCalls;
     gateway.lvars[kGsxLoaderFront] = 9.0;
@@ -877,11 +1156,13 @@ void TfdiMd11Test::cargoDoorCommandGoesToClosedOnceTheLoaderStartsFinishing()
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
     gateway.lvars[kGsxLoaderFront] = 9.0;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
 
+    gateway.lvars[kCargoDoor1RState] = kDoorReadsOpen;
     gateway.lvars[kGsxLoaderFront] = 10.0;
     TickAircraft(aircraft, gateway);
 
@@ -905,6 +1186,7 @@ void TfdiMd11Test::mainCargoDoorOpensOnlyOnFreighter()
     TfdiMd11 freighter(&freighterGateway, &freighterStatus, true);
 
     freighterGateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(freighterGateway, kDoorReadsClosed);
     freighterGateway.lvars[kGsxLoaderMain] = 6.0;
     TickAircraft(freighter, freighterGateway);
 
@@ -935,11 +1217,13 @@ void TfdiMd11Test::cargoDoorFollowsALoaderStateOnlyOnceItChangesAfterACouatlRest
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
     gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderLoading;
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
 
+    gateway.lvars[kCargoDoor1RState] = kDoorReadsOpen;
     gateway.lvars[kCouatlStarted] = 0.0;
     TickAircraft(aircraft, gateway);
     gateway.lvars[kCouatlStarted] = 1.0;
@@ -951,6 +1235,7 @@ void TfdiMd11Test::cargoDoorFollowsALoaderStateOnlyOnceItChangesAfterACouatlRest
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 0.0);
 
+    gateway.lvars[kCargoDoor1RState] = kDoorReadsClosed;
     gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderWaitingForDoor;
     TickAircraft(aircraft, gateway);
 
@@ -964,6 +1249,7 @@ void TfdiMd11Test::paxDoorsOpenPerStairsAndCloseWhenGone()
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryPassengerDoorAReading(gateway, kDoorReadsClosed);
 
     gateway.lvars[kStairsFront] = 3.0;
     TickAircraft(aircraft, gateway);
@@ -979,6 +1265,7 @@ void TfdiMd11Test::paxDoorsOpenPerStairsAndCloseWhenGone()
     QCOMPARE(gateway.Written(kPaxDoor2L), 100.0);
     QCOMPARE(gateway.Written(kPaxDoor4L), 100.0);
 
+    gateway.lvars[kPaxDoor1LState] = kDoorReadsOpen;
     gateway.lvars[kStairsFront] = 2.0;
     TickAircraft(aircraft, gateway);
 
@@ -992,6 +1279,7 @@ void TfdiMd11Test::paxDoorsOpenOnceTheStairsAreApproaching()
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryPassengerDoorAReading(gateway, kDoorReadsClosed);
 
     gateway.lvars[kStairsFront] = 2.0;
     TickAircraft(aircraft, gateway);
@@ -1011,6 +1299,93 @@ void TfdiMd11Test::paxDoorsOpenOnceTheStairsAreApproaching()
     gateway.lvars[kStairsFront] = 3.0;
     TickAircraft(aircraft, gateway);
 
+    QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
+}
+
+void TfdiMd11Test::aPassengerDoorWaitsForItsOwnReadingBeforeAnyWrite()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kStairsFront] = 3.0;
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 0);
+
+    gateway.lvars[kPaxDoor1LState] = kDoorReadsClosed;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 1);
+    QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
+
+    gateway.lvars.erase(kPaxDoor1LState);
+    gateway.lvars[kStairsFront] = 0.0;
+
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 1);
+
+    gateway.lvars[kPaxDoor1LState] = kDoorReadsOpen;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 2);
+    QCOMPARE(gateway.Written(kPaxDoor1L), 0.0);
+}
+
+void TfdiMd11Test::aPassengerDoorAlreadyOpenWhenTheStairsArriveIsNotCommanded()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryPassengerDoorAReading(gateway, kDoorReadsOpen);
+    gateway.lvars[kStairsFront] = 3.0;
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 0);
+
+    gateway.lvars[kStairsFront] = 0.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 1);
+    QCOMPARE(gateway.Written(kPaxDoor1L), 0.0);
+}
+
+void TfdiMd11Test::aPassengerDoorTheAircraftClosedItselfIsNotClosedAgainWhenTheStairsLeave()
+{
+    FakeVariableGateway gateway;
+    AutomationStatus status;
+    TfdiMd11 aircraft(&gateway, &status, false);
+
+    gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryPassengerDoorAReading(gateway, kDoorReadsClosed);
+    gateway.lvars[kStairsFront] = 3.0;
+    TickAircraft(aircraft, gateway);
+
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 1);
+
+    gateway.lvars[kStairsFront] = 0.0;
+
+    for (int tick = 0; tick < 3; ++tick)
+    {
+        TickAircraft(aircraft, gateway);
+    }
+
+    QCOMPARE(gateway.WriteCount(kPaxDoor1L), 1);
     QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
 }
 
@@ -1088,6 +1463,7 @@ void TfdiMd11Test::evaluatingTheCargoDoorRuleWritesNoVariable()
     FakeVariableWriter writer;
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
     gateway.lvars[kGsxLoaderFront] = 6.0;
 
     AircraftRule* const rule = FindRule(aircraft, "tfdi-md11-cargo-doors-follow-loader");
@@ -1117,6 +1493,7 @@ void TfdiMd11Test::evaluatingThePaxDoorRuleWritesNoVariable()
     FakeVariableWriter writer;
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryPassengerDoorAReading(gateway, kDoorReadsClosed);
     gateway.lvars[kStairsFront] = 3.0;
 
     AircraftRule* const rule = FindRule(aircraft, "tfdi-md11-pax-doors-follow-stairs");
@@ -1372,6 +1749,7 @@ void TfdiMd11Test::restoredOpenPassengerDoorsAreNotClosedBeforeTheStairsReadings
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryPassengerDoorAReading(gateway, kDoorReadsOpen);
 
     aircraft.OnTurnaroundResumed(ResumedAt(TurnaroundPhase::Loading), memory);
 
@@ -1394,6 +1772,7 @@ void TfdiMd11Test::restoredOpenPassengerDoorsCloseOnceTheStairsReadingsArriveAnd
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryPassengerDoorAReading(gateway, kDoorReadsOpen);
 
     aircraft.OnTurnaroundResumed(ResumedAt(TurnaroundPhase::Loading), memory);
 
@@ -1417,6 +1796,7 @@ void TfdiMd11Test::aGsxRestartedSinceTheSaveDistrustsTheLoaderStatesAtTheResume(
         TfdiMd11 aircraft(&gateway, &status, false);
 
         gateway.lvars[kCouatlStarted] = 1.0;
+        GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
         gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderInPosition;
 
         TurnaroundFacts facts = ResumedAt(TurnaroundPhase::Loading);
@@ -1425,11 +1805,11 @@ void TfdiMd11Test::aGsxRestartedSinceTheSaveDistrustsTheLoaderStatesAtTheResume(
 
         TickAircraft(aircraft, gateway);
 
-        return gateway.Written(kCargoDoor1R);
+        return gateway.Written(kCargoDoor1R, kNothingWritten);
     };
 
     QCOMPARE(cargoDoorAfterResuming(false), 100.0);
-    QCOMPARE(cargoDoorAfterResuming(true), 0.0);
+    QCOMPARE(cargoDoorAfterResuming(true), kNothingWritten);
 }
 
 void TfdiMd11Test::thePassengerHoldClosesTheOpenPassengerDoorsWhileTheStairsAreStillAtThem()
@@ -1439,12 +1819,14 @@ void TfdiMd11Test::thePassengerHoldClosesTheOpenPassengerDoorsWhileTheStairsAreS
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryPassengerDoorAReading(gateway, kDoorReadsClosed);
     gateway.lvars[kStairsFront] = 3.0;
 
     TickAircraft(aircraft, gateway);
 
     QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
 
+    gateway.lvars[kPaxDoor1LState] = kDoorReadsOpen;
     aircraft.HoldPassengerDoorsClosed(true);
     TickAircraft(aircraft, gateway);
 
@@ -1466,6 +1848,8 @@ void TfdiMd11Test::thePassengerHoldLeavesTheCargoDoorsToTheirLoaders()
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryPassengerDoorAReading(gateway, kDoorReadsClosed);
+    GiveEveryCargoDoorAReading(gateway, kDoorReadsClosed);
     gateway.lvars[kStairsFront] = 3.0;
     gateway.lvars[kGsxLoaderFront] = gsx::states::kLoaderInPosition;
 
@@ -1473,6 +1857,8 @@ void TfdiMd11Test::thePassengerHoldLeavesTheCargoDoorsToTheirLoaders()
 
     QCOMPARE(gateway.Written(kCargoDoor1R), 100.0);
 
+    gateway.lvars[kPaxDoor1LState] = kDoorReadsOpen;
+    gateway.lvars[kCargoDoor1RState] = kDoorReadsOpen;
     aircraft.HoldPassengerDoorsClosed(true);
 
     for (int tick = 0; tick < 5; ++tick)
@@ -1492,6 +1878,7 @@ void TfdiMd11Test::releasingTheDepartureHoldAlsoReleasesThePassengerHold()
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryPassengerDoorAReading(gateway, kDoorReadsClosed);
     gateway.lvars[kStairsFront] = 3.0;
 
     aircraft.HoldPassengerDoorsClosed(true);
@@ -1512,6 +1899,7 @@ void TfdiMd11Test::theDepartureHoldClosesOnlyThePassengerDoorsThisProcessOpened(
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    gateway.lvars[kPaxDoor1LState] = kDoorReadsClosed;
     gateway.lvars[kStairsFront] = 3.0;
     gateway.lvars[kStairsMiddle] = 0.0;
     gateway.lvars[kPaxDoor2LState] = 100.0;
@@ -1520,6 +1908,7 @@ void TfdiMd11Test::theDepartureHoldClosesOnlyThePassengerDoorsThisProcessOpened(
 
     QCOMPARE(gateway.Written(kPaxDoor1L), 100.0);
 
+    gateway.lvars[kPaxDoor1LState] = kDoorReadsOpen;
     aircraft.HoldDoorsClosed(true);
     TickAircraft(aircraft, gateway);
 
@@ -1537,6 +1926,7 @@ void TfdiMd11Test::aRestoredOpenPassengerDoorIsClosedByTheDepartureHold()
     TfdiMd11 aircraft(&gateway, &status, false);
 
     gateway.lvars[kCouatlStarted] = 1.0;
+    GiveEveryPassengerDoorAReading(gateway, kDoorReadsOpen);
     GiveEveryStairsAReading(gateway, 3.0);
 
     aircraft.OnTurnaroundResumed(ResumedAt(TurnaroundPhase::WaitingReadyToPush), memory);

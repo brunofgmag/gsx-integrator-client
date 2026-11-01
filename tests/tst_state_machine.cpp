@@ -1107,6 +1107,8 @@ private slots:
     static void theDepartureWaitReturnsToTheEngineWaitWhileGsxStillAsksAndLeavesOnceItFinishes();
     static void aGsxRestartThatDropsThePushbackWarnsAndTheTaxiStillReachesTheArrival();
     static void publishesThatTheDeboardingWaitsForGsxUntilTheTurnaroundTurns();
+    static void publishesThatTheGroundEquipmentGaveUpUntilTheEquipmentIsRemoved();
+    static void publishesThatTheArrivalGroundEquipmentGaveUpUntilTheTurnaroundTurns();
     static void publishesCurrentTankFuelBeforeRefuel();
     static void publishesLoadingTargetsAfterFlightPlanCapture();
     static void publishesTheCrewThePlanLeftOutAfterFlightPlanCapture();
@@ -1784,6 +1786,84 @@ void TurnaroundStateMachineTest::publishesThatTheDeboardingWaitsForGsxUntilTheTu
     workflow.CompleteDeboarding();
 
     QVERIFY(!workflow.f.status.deboardingAwaitsGsx);
+}
+
+void TurnaroundStateMachineTest::publishesThatTheGroundEquipmentGaveUpUntilTheEquipmentIsRemoved()
+{
+    TurnaroundWorkflow workflow;
+
+    workflow.AttachAircraft();
+    workflow.f.settings.placeChocks = true;
+    workflow.f.aircraft.chocksStatus = ChocksStatus::Removed;
+
+    workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
+    workflow.f.gsxService.repositioning = true;
+    workflow.TickHolding(TurnaroundPhase::RepositionAircraft);
+    workflow.f.gsxService.repositioning = false;
+    workflow.TickTo(TurnaroundPhase::PlaceGroundEquipment);
+    workflow.TickHoldingFor(240, TurnaroundPhase::PlaceGroundEquipment);
+
+    QVERIFY(!workflow.f.status.groundEquipmentTimedOut);
+
+    workflow.TickTo(TurnaroundPhase::CallServices);
+
+    QVERIFY(workflow.f.status.groundEquipmentTimedOut);
+
+    workflow.CompleteGroundServiceSetup();
+    workflow.LoadFlightPlan();
+    workflow.RequestFuel();
+    workflow.StartRefueling();
+    workflow.CompleteRefueling();
+    workflow.StartBoarding();
+    workflow.CompleteBoarding();
+
+    QVERIFY(workflow.f.status.groundEquipmentTimedOut);
+
+    workflow.f.aircraft.readyToPush = true;
+    workflow.f.aircraft.parkingBrakeSet = true;
+    workflow.TickTo(TurnaroundPhase::WaitCatering);
+
+    QVERIFY(workflow.f.status.groundEquipmentTimedOut);
+
+    workflow.TickTo(TurnaroundPhase::RemoveGroundEquipment);
+
+    QVERIFY(!workflow.f.status.groundEquipmentTimedOut);
+}
+
+void TurnaroundStateMachineTest::publishesThatTheArrivalGroundEquipmentGaveUpUntilTheTurnaroundTurns()
+{
+    TurnaroundWorkflow workflow;
+
+    ReachBoarding(workflow);
+    workflow.CompleteBoarding();
+    workflow.RequestPushback();
+    workflow.StartPushback();
+    workflow.StartPushbackMovement();
+    workflow.ConfirmEngineStart();
+    workflow.Depart();
+
+    workflow.f.settings.callGpuOnArrival = true;
+    workflow.f.gsxService.gpuStatus = GroundPowerStatus::Unknown;
+    workflow.Land();
+    workflow.TickHoldingFor(239, TurnaroundPhase::PlaceArrivalGroundEquipment);
+
+    QVERIFY(!workflow.f.status.groundEquipmentTimedOut);
+
+    workflow.f.aircraft.readyToDeboard = true;
+    workflow.TickTo(TurnaroundPhase::RequestDeboarding);
+
+    QVERIFY(workflow.f.status.groundEquipmentTimedOut);
+
+    workflow.f.gsxService.deboardingState = GsxStateStatus::Callable;
+    workflow.TickHolding(TurnaroundPhase::RequestDeboarding);
+    workflow.StartDeboarding();
+
+    QVERIFY(workflow.f.status.groundEquipmentTimedOut);
+
+    workflow.CompleteDeboarding();
+
+    QCOMPARE(workflow.machine.GetPhase(), TurnaroundPhase::WaitingNewFlight);
+    QVERIFY(!workflow.f.status.groundEquipmentTimedOut);
 }
 
 void TurnaroundStateMachineTest::completesReachableWorkflowAndReturnsToStart()

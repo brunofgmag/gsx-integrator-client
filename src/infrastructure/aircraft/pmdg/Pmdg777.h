@@ -1,13 +1,14 @@
 #ifndef GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777_H
 #define GSX_INTEGRATOR_CLIENT_INFRASTRUCTURE_PMDG777_H
 
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <optional>
 #include "PmdgAircraft.h"
 #include "../../pmdg/Pmdg777DataGateway.h"
 
-enum class Pmdg777Variant { Er200, Lr200, Freighter, Er300 };
+enum class Pmdg777Variant : std::uint8_t { Er200, Lr200, Freighter, Er300 };
 
 class Pmdg777 final : public PmdgAircraft
 {
@@ -32,6 +33,7 @@ private:
     [[nodiscard]] bool HasAircraftPower() const override;
     [[nodiscard]] bool GroundPowerPresent() const override;
     [[nodiscard]] bool ChocksSet() const override;
+    [[nodiscard]] bool ChocksReadingArrived() const override;
 
     [[nodiscard]] bool HasVendorFlightPlan() const override;
 

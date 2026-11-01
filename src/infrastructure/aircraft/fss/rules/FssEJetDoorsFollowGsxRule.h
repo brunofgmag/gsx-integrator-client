@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 
 #include "../../../../domain/model/MemoryBag.h"
@@ -21,6 +22,12 @@ struct FssEJetDoorSlot
     const char* ackLVar = nullptr;
     const char* openLVar = nullptr;
     int reaffirmTicks = 0;
+};
+
+enum class FssEJetDoorOrder : std::uint8_t
+{
+    Follow,
+    Absolute,
 };
 
 class FssEJetDoorsFollowGsxRule final : public AircraftRule
@@ -42,15 +49,19 @@ private:
     {
         std::optional<bool> desired;
         std::optional<bool> commanded;
+        FssEJetDoorOrder order = FssEJetDoorOrder::Follow;
         int ticksSinceCommand = 0;
         int attempts = 0;
+        DoorTransit transit;
     };
 
-    void SetDesired(GsxDoor door, bool open);
+    void SetDesired(GsxDoor door, bool open, FssEJetDoorOrder order);
     void SetMainDeckDesired(bool closeAllPending);
     void ReconcileSlot(std::size_t index, VariableWriter& writer);
-    [[nodiscard]] bool IsConfirmed(const FssEJetDoorSlot& slot, bool wantOpen) const;
-    [[nodiscard]] bool IsOpenLVarConfirmed(const char* openLVar, bool wantOpen) const;
+    void RequestTheNewTarget(const FssEJetDoorSlot& slot, SlotState& state, VariableWriter& writer);
+    [[nodiscard]] DoorPosition PositionOf(const FssEJetDoorSlot& slot) const;
+    [[nodiscard]] DoorPosition JudgedPositionOf(const FssEJetDoorSlot& slot, const SlotState& state) const;
+    void AgeTransit(const FssEJetDoorSlot& slot, SlotState& state) const;
     static void WriteRequest(const FssEJetDoorSlot& slot, bool open, VariableWriter& writer);
     [[nodiscard]] bool IsMainLoaderWaitingForTheDeck() const;
     [[nodiscard]] bool ClaimsTheOpenMainDeck(bool closeAllPending);

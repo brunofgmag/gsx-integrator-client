@@ -204,6 +204,12 @@ ColumnLayout {
 
         Advisory {
             Layout.fillWidth: true
+            visible: root.integratorVm.groundEquipmentTimedOut
+            text: root.integratorVm.groundEquipmentTimedOutAdvisoryText
+        }
+
+        Advisory {
+            Layout.fillWidth: true
             text: root.integratorVm.resumeDecisionAdvisoryText
             actionText: root.integratorVm.resumeTurnaroundLabel
             secondActionText: root.integratorVm.restartFlowLabel

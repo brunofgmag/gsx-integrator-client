@@ -21,6 +21,7 @@ public:
 
 private:
     void ReconcileChocks();
+    void NoteTheChocksReadingIsLate();
     void ReconcileGroundPower();
     void ReconcilePassengerEntry();
     void ReleaseOwnStairs();
@@ -35,6 +36,7 @@ private:
     int groundPowerAttempts_ = 0;
     int passengerEntryAttempts_ = 0;
     int ticksSinceChocksRequest_ = 0;
+    int ticksAwaitingTheChocksReading_ = 0;
     int ticksSinceGroundPowerRequest_ = 0;
     int ticksSincePassengerEntryRequest_ = 0;
 };
