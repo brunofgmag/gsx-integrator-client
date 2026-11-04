@@ -123,6 +123,7 @@ namespace
         FakeFslabsMcdu leftMcdu;
         FslabsAoc aoc{mcdu, leftMcdu};
         bool powerIsAsked = true;
+        std::string plannedDeparture = "SBFZ";
 
         void TickTimes(const int ticks, const bool initIsAwaited = false)
         {
@@ -130,7 +131,7 @@ namespace
             {
                 mcdu.Poll();
                 leftMcdu.Poll();
-                aoc.Advance(initIsAwaited, powerIsAsked);
+                aoc.Advance(initIsAwaited, powerIsAsked, plannedDeparture);
             }
         }
 
@@ -247,6 +248,8 @@ private slots:
     static void aRunningScriptWaitsForAScreenFetchedAfterItsKey();
     static void theInitIsDoneOnlyWithTheDepartureFilled();
     static void aFlightNumberAloneOnEitherMcduIsNotTheInit();
+    static void theInitOfTheLegJustFlownIsNotTheInitOfTheNextOne();
+    static void withoutAPlannedDepartureAFilledDepartureIsTheInit();
     static void theInitIsCheckedOnlyWhileTheAdapterAsks();
     static void theRightMcduIsLeftAloneWhileTheInitIsAwaited();
     static void theInitOnTheLeftMcduIsSeenWithoutAKey();
@@ -280,6 +283,7 @@ private slots:
     static void eachRequestMemberQueuesItsOwnScriptAndIsAlwaysTaken();
     static void theFlightPlanNeedsTheOfpAndTheInit();
     static void aFlightPlanThatIsNotReadyNeverAsksForTheInit();
+    static void theInitMustDepartFromThePlannedOrigin();
     static void plannedValuesComeFromTheSimbriefStatus();
     static void passengersItBoardsComeFromTheGsxLVar();
     static void thePassengerCountIsWatchedFromTheFirstTick();
@@ -761,6 +765,38 @@ void FslabsA321neoTest::aFlightNumberAloneOnEitherMcduIsNotTheInit()
     fixture.TickTimes(60, true);
 
     QVERIFY(!fixture.aoc.IsInitDone());
+}
+
+void FslabsA321neoTest::theInitOfTheLegJustFlownIsNotTheInitOfTheNextOne()
+{
+    AocFixture fixture;
+    fixture.plannedDeparture = "BIKF";
+    fixture.mcdu.Route("aoc-menu", 112, "aoc-init-after-landing");
+    fixture.leftMcdu.Show("aoc-init-after-landing");
+    fixture.SettleTheProbe();
+
+    fixture.TickTimes(TicksForAScriptOf(kInitCheckKeys), true);
+
+    QCOMPARE(fixture.Pressed(), kInitCheckKeys);
+    QVERIFY(!fixture.aoc.IsInitDone());
+
+    fixture.mcdu.Show("aoc-init-after-landing");
+    fixture.TickTimes(60, true);
+
+    QVERIFY(!fixture.aoc.IsInitDone());
+}
+
+void FslabsA321neoTest::withoutAPlannedDepartureAFilledDepartureIsTheInit()
+{
+    AocFixture fixture;
+    fixture.plannedDeparture.clear();
+    fixture.mcdu.Route("aoc-menu", 112, "aoc-init-after-landing");
+    fixture.SettleTheProbe();
+
+    fixture.TickTimes(TicksForAScriptOf(kInitCheckKeys), true);
+
+    QCOMPARE(fixture.Pressed(), kInitCheckKeys);
+    QVERIFY(fixture.aoc.IsInitDone());
 }
 
 void FslabsA321neoTest::theInitIsCheckedOnlyWhileTheAdapterAsks()
@@ -1318,6 +1354,25 @@ void FslabsA321neoTest::theFlightPlanNeedsTheOfpAndTheInit()
 
     QVERIFY(fixture.aircraft.IsFlightPlanLoaded());
     QCOMPARE(fixture.mcdu.PressesOf(112), 1);
+}
+
+void FslabsA321neoTest::theInitMustDepartFromThePlannedOrigin()
+{
+    FslabsFixture fixture;
+    fixture.status.flightPlanStatus = FlightPlanStatus::Ready;
+    fixture.status.plannedOrigin = "BIKF";
+    fixture.mcdu.Route("aoc-menu", 112, "aoc-init-after-landing");
+
+    fixture.Tick(40);
+
+    QCOMPARE(fixture.mcdu.PressesOf(112), 1);
+    QVERIFY(!fixture.aircraft.IsFlightPlanLoaded());
+
+    fixture.status.plannedOrigin = "EGPF";
+    fixture.leftMcdu.Show("aoc-init-after-landing");
+    fixture.Tick(kTicksAScreenChangeTakes);
+
+    QVERIFY(fixture.aircraft.IsFlightPlanLoaded());
 }
 
 void FslabsA321neoTest::aFlightPlanThatIsNotReadyNeverAsksForTheInit()

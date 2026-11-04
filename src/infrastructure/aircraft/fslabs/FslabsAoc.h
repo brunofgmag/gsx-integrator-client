@@ -18,7 +18,7 @@ class FslabsAoc
 public:
     FslabsAoc(FslabsMcduGateway& rightMcdu, const FslabsMcduDisplay& leftMcdu);
 
-    void Advance(bool initIsAwaited, bool powerIsAsked);
+    void Advance(bool initIsAwaited, bool powerIsAsked, const std::string& plannedDeparture);
     [[nodiscard]] bool IsAlive() const;
     [[nodiscard]] bool IsInitDone() const;
     [[nodiscard]] bool Request(AocRequest request);
@@ -46,7 +46,7 @@ private:
     void RememberTheCompletion();
     void RememberTheStop();
     void RememberTheInitCheck();
-    void ReadTheInit();
+    void ReadTheInit(const std::string& plannedDeparture);
     void Abort(const FslabsMcduScreen& screen);
     void ReportAbort(const FslabsMcduScreen& screen);
     void LeaveTheMenu();

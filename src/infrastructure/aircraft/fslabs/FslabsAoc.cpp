@@ -134,9 +134,28 @@ namespace
         return screen.IsFilledBetween(kDepartureRow, kDepartureFirstColumn, kDepartureLastColumn);
     }
 
-    bool ShowsTheInit(const FslabsMcduDisplay& mcdu)
+    bool DepartureIs(const std::string& plannedDeparture, const FslabsMcduScreen& screen)
     {
-        return mcdu.IsAvailable() && TitleMatches(kInitReviewTitle, mcdu.Screen()) && DepartureIsFilled(mcdu.Screen());
+        if (plannedDeparture.empty())
+        {
+            return true;
+        }
+
+        const std::size_t width = kDepartureLastColumn - kDepartureFirstColumn + 1;
+
+        return screen.Row(kDepartureRow).substr(kDepartureFirstColumn, width) == plannedDeparture;
+    }
+
+    bool ShowsTheInit(const FslabsMcduDisplay& mcdu, const std::string& plannedDeparture)
+    {
+        if (!mcdu.IsAvailable())
+        {
+            return false;
+        }
+
+        const FslabsMcduScreen& screen = mcdu.Screen();
+
+        return TitleMatches(kInitReviewTitle, screen) && DepartureIsFilled(screen) && DepartureIs(plannedDeparture, screen);
     }
 
     std::string Trimmed(const std::string& text)
@@ -205,10 +224,10 @@ FslabsAoc::FslabsAoc(FslabsMcduGateway& rightMcdu, const FslabsMcduDisplay& left
 {
 }
 
-void FslabsAoc::Advance(const bool initIsAwaited, const bool powerIsAsked)
+void FslabsAoc::Advance(const bool initIsAwaited, const bool powerIsAsked, const std::string& plannedDeparture)
 {
     ++ticks_;
-    ReadTheInit();
+    ReadTheInit(plannedDeparture);
 
     if (!McduShowsAScreen())
     {
@@ -443,9 +462,9 @@ void FslabsAoc::RememberTheInitCheck()
     }
 }
 
-void FslabsAoc::ReadTheInit()
+void FslabsAoc::ReadTheInit(const std::string& plannedDeparture)
 {
-    if (ShowsTheInit(rightMcdu_) || ShowsTheInit(leftMcdu_))
+    if (ShowsTheInit(rightMcdu_, plannedDeparture) || ShowsTheInit(leftMcdu_, plannedDeparture))
     {
         initDone_ = true;
     }

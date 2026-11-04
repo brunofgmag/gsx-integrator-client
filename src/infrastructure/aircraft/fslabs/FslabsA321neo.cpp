@@ -70,7 +70,7 @@ void FslabsA321neo::Observe()
     leftMcdu_->Poll();
     ground_->Poll();
     WatchThePassengerCount();
-    aoc_.Advance(AwaitsTheInit(), PowerIsAsked());
+    aoc_.Advance(AwaitsTheInit(), PowerIsAsked(), status_->plannedOrigin);
     holds_.Advance();
     CountTheShutdownTicks();
 }
