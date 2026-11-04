@@ -1,9 +1,41 @@
 #include "TurnaroundKeyJudgement.h"
 
 #include <string>
+#include <string_view>
 
 namespace
 {
+    constexpr char kStandGroupSeparator = '|';
+
+    struct Stand
+    {
+        std::string group;
+        std::string name;
+    };
+
+    std::string Trimmed(const std::string_view text)
+    {
+        const std::size_t first = text.find_first_not_of(' ');
+        if (first == std::string_view::npos)
+        {
+            return {};
+        }
+
+        return std::string(text.substr(first, text.find_last_not_of(' ') - first + 1));
+    }
+
+    Stand StandOf(const std::string_view parkingName)
+    {
+        const std::size_t separator = parkingName.rfind(kStandGroupSeparator);
+        if (separator == std::string_view::npos)
+        {
+            return Stand{.group = {}, .name = Trimmed(parkingName)};
+        }
+
+        return Stand{.group = Trimmed(parkingName.substr(0, separator)),
+                     .name = Trimmed(parkingName.substr(separator + 1))};
+    }
+
     bool DiffersWhenBothAreKnown(const std::string& saved, const std::string& live)
     {
         return !saved.empty() && !live.empty() && saved != live;
@@ -19,7 +51,8 @@ namespace
     bool IsAnotherStand(const TurnaroundKey& saved, const TurnaroundKey& live)
     {
         return DiffersWhenBothAreKnown(saved.airportIcao, live.airportIcao)
-            || DiffersWhenBothAreKnown(saved.parkingName, live.parkingName);
+            || (!saved.parkingName.empty() && !live.parkingName.empty()
+                && !TurnaroundKeyJudgement::IsSameStand(saved.parkingName, live.parkingName));
     }
 
     bool IsStillWaitingForTheStand(const TurnaroundKey& saved, const TurnaroundKey& live)
@@ -71,4 +104,13 @@ KeyVerdict TurnaroundKeyJudgement::Judge(const TurnaroundKey& saved,
     }
 
     return saved.couatlId == live.couatlId ? KeyVerdict::Same : KeyVerdict::OnlyCouatlDiffers;
+}
+
+bool TurnaroundKeyJudgement::IsSameStand(const std::string& saved, const std::string& live)
+{
+    const Stand savedStand = StandOf(saved);
+    const Stand liveStand = StandOf(live);
+    const bool groupsAgree = savedStand.group.empty() || liveStand.group.empty() || savedStand.group == liveStand.group;
+
+    return groupsAgree && savedStand.name == liveStand.name;
 }
