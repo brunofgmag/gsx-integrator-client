@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.53.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.1...v1.53.2) (2026-11-04)
+
+
+* never count more boarded passengers than the aircraft boards ([#290](https://github.com/brunofgmag/gsx-integrator-client/issues/290)) ([f7a677b](https://github.com/brunofgmag/gsx-integrator-client/commit/f7a677b207393a6c26c43b359477bb06a24ca15d))
+
+
+### Bug Fixes
+
+* **turnaround:** never count more boarded passengers than the aircraft boards ([5f00a49](https://github.com/brunofgmag/gsx-integrator-client/commit/5f00a49cbd00203b427b583405be3a3122dd0d98)) ([f7a677b](https://github.com/brunofgmag/gsx-integrator-client/commit/f7a677b207393a6c26c43b359477bb06a24ca15d))
+
 ## [1.53.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.0...v1.53.1) (2026-10-28)
 
 
