@@ -84,6 +84,8 @@ private slots:
     static void staysSilentAboutTheCargoFlagWhileALoaderIsAtAHold();
     static void comparesTheBoardingToTheCountTheAircraftBoardsInsteadOfThePlan();
     static void keepsThePlannedCountWhenTheAircraftNamesNone();
+    static void neverCountsMorePassengersThanTheAircraftBoards();
+    static void keepsTheGsxCountWhenNoPassengerCountIsPlanned();
 };
 
 void BoardingTrackTest::holdsUntilGsxActive()
@@ -1179,6 +1181,44 @@ void BoardingTrackTest::keepsThePlannedCountWhenTheAircraftNamesNone()
     QCOMPARE(f.ctx.data.plannedPassengers, 110);
     QCOMPARE(f.menuGateway.completeBoardingCalls, 0);
     QVERIFY(f.logger.messages.empty());
+}
+
+void BoardingTrackTest::neverCountsMorePassengersThanTheAircraftBoards()
+{
+    RefueledFixture f;
+
+    f.aircraft.cargo = false;
+    f.aircraft.boardMethod = BoardBy::Self;
+    f.aircraft.emptyZfwKg = 40000.0;
+    f.aircraft.passengersItBoards = 188;
+    f.ctx.data.plannedZfwKg = 60000.0;
+    f.ctx.data.plannedPassengers = 191;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardedPassengers = 191;
+    f.gsxService.cargoPercent = 0.0;
+
+    QVERIFY(!BoardingTrack::Advance(f.ctx));
+
+    QCOMPARE(f.ctx.data.plannedPassengers, 188);
+    QCOMPARE(f.ctx.data.boardedPassengers, 188);
+}
+
+void BoardingTrackTest::keepsTheGsxCountWhenNoPassengerCountIsPlanned()
+{
+    RefueledFixture f;
+
+    f.aircraft.cargo = false;
+    f.aircraft.boardMethod = BoardBy::Self;
+    f.aircraft.emptyZfwKg = 40000.0;
+    f.ctx.data.plannedZfwKg = 60000.0;
+    f.ctx.data.plannedPassengers = 0;
+    f.gsxService.boardingState = GsxStateStatus::Active;
+    f.gsxService.boardedPassengers = 42;
+    f.gsxService.cargoPercent = 0.0;
+
+    QVERIFY(!BoardingTrack::Advance(f.ctx));
+
+    QCOMPARE(f.ctx.data.boardedPassengers, 42);
 }
 
 QTEST_APPLESS_MAIN(BoardingTrackTest)

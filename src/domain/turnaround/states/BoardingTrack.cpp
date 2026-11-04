@@ -247,6 +247,14 @@ namespace
         ctx.aircraft->HoldDoorsClosed(true);
     }
 
+    int PassengersBoardedSoFar(const TurnaroundContext& ctx)
+    {
+        const int gsxCount = ctx.gsxGateway->GetBoardedPassengers();
+        const int planned = ctx.data.plannedPassengers;
+
+        return planned > 0 ? std::min(gsxCount, planned) : gsxCount;
+    }
+
     void AdvanceBoardingBar(TurnaroundContext& ctx)
     {
         auto& data = ctx.data;
@@ -306,7 +314,7 @@ bool BoardingTrack::Advance(TurnaroundContext& ctx)
         return true;
     }
 
-    data.boardedPassengers = ctx.gsxGateway->GetBoardedPassengers();
+    data.boardedPassengers = PassengersBoardedSoFar(ctx);
 
     AdvanceBoardingBar(ctx);
     if (ctx.aircraft->GetBoardMethod() == BoardBy::Client)
