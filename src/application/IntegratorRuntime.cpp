@@ -9,6 +9,7 @@
 #include "../infrastructure/probe/ProbeWatchList.h"
 #include "sim/SessionReadiness.h"
 #include "sim/TickMode.h"
+#include "TurnaroundKeyJudgement.h"
 #include "../infrastructure/aircraft/AircraftFactory.h"
 #include "../infrastructure/aircraft/AircraftRegistry.h"
 #include "../infrastructure/logging/LogMacros.h"
@@ -466,12 +467,12 @@ void IntegratorRuntime::WatchTheStand()
         return;
     }
 
-    if (watchedParkingName_ == liveParking)
+    const bool sameStand = TurnaroundKeyJudgement::IsSameStand(watchedParkingName_, liveParking);
+    watchedParkingName_ = liveParking;
+    if (sameStand)
     {
         return;
     }
-
-    watchedParkingName_ = liveParking;
 
     if (underWay)
     {

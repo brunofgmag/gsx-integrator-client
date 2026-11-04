@@ -504,6 +504,8 @@ namespace
     constexpr auto kSavedAirport = "CDK2";
     constexpr auto kSavedStand = "Parking 2";
     constexpr auto kOtherStand = "Parking 5";
+    constexpr auto kSavedStandWithItsGroup = "Intl Pier - 27-36|Parking 2";
+    constexpr auto kSavedStandNameInAnotherGroup = "Cargo Apron|Parking 2";
     constexpr auto kSimOnGroundDatum = "SIM ON GROUND";
     constexpr auto kClientVersion = "1.0.0-test";
     constexpr auto kCheckpointFile = "turnaround.json";
@@ -958,6 +960,8 @@ private slots:
     static void aStandThatGoesEmptyAndComesBackKeepsTheMarkOfTheFinishedTurnaround();
     static void aStandChangedWithTheTurnaroundUnderWayErasesItAndRepositionsAtTheNewStand();
     static void aStandThatGoesEmptyAndComesBackKeepsTheTurnaroundUnderWay();
+    static void aStandRenamedWithItsGroupKeepsTheTurnaroundUnderWay();
+    static void theSameNameInAnotherGroupAfterTheGroupAppearedIsANewStand();
     static void aStandChangedAfterThePushbackWasAskedKeepsTheTurnaround();
     static void enteringWaitingNewFlightWritesTheKeyAndTheMarkAndARelaunchKeepsIt();
     static void anUnsupportedAircraftIsNotAnsweredOnTheGsxMenuOfAPatch();
@@ -4755,6 +4759,58 @@ void RuntimeIntegratorServiceTest::aStandThatGoesEmptyAndComesBackKeepsTheTurnar
 
     QCOMPARE(store.eraseCalls, erasesBefore);
     QCOMPARE(runtime.GetPhase(), TurnaroundPhase::WaitingReadyToPush);
+}
+
+void RuntimeIntegratorServiceTest::aStandRenamedWithItsGroupKeepsTheTurnaroundUnderWay()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::WaitingReadyToPush);
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated));
+    QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+
+    const int erasesBefore = store.eraseCalls;
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(kSavedStandWithItsGroup)));
+    QVERIFY(TickAndWait(updated));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(store.eraseCalls, erasesBefore);
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::WaitingReadyToPush);
+}
+
+void RuntimeIntegratorServiceTest::theSameNameInAnotherGroupAfterTheGroupAppearedIsANewStand()
+{
+    FakeTurnaroundCheckpointStore store;
+    store.stored = SavedAt(TurnaroundPhase::WaitingReadyToPush);
+    store.stored->repositioned = true;
+    IntegratorRuntime runtime(WithTheStore(store));
+    runtime.Setup();
+
+    QSignalSpy updated(&runtime, &IntegratorRuntime::Updated);
+
+    QVERIFY(TheKeyIsJudged(runtime, updated));
+    QVERIFY(TheSavedTurnaroundResumes(runtime, updated));
+    QVERIFY(TickAndWait(updated));
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(kSavedStandWithItsGroup)));
+    QVERIFY(TickAndWait(updated));
+    QCOMPARE(runtime.GetPhase(), TurnaroundPhase::WaitingReadyToPush);
+
+    const int erasesBefore = store.eraseCalls;
+
+    FakeGsxRemoteApi::Receive(Patch(QStringLiteral("/parking"), QJsonValue(kSavedStandNameInAnotherGroup)));
+    QVERIFY(TickAndWait(updated));
+
+    QCOMPARE(store.eraseCalls, erasesBefore + 1);
+    QVERIFY(runtime.GetPhase() < TurnaroundPhase::WaitingReadyToPush);
+    QVERIFY(TheRepositionIsAsked(runtime, updated));
 }
 
 void RuntimeIntegratorServiceTest::aStandChangedAfterThePushbackWasAskedKeepsTheTurnaround()

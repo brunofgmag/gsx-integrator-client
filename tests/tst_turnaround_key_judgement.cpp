@@ -18,6 +18,9 @@ namespace
     constexpr auto kOtherAirport = "CYEG";
     constexpr auto kParking = "Parking 2";
     constexpr auto kOtherParking = "Parking 5";
+    constexpr auto kGroupedParking = "Intl Pier - 27-36|Parking 2";
+    constexpr auto kSpacedGroupedParking = "Intl Pier - 27-36 | Parking 2";
+    constexpr auto kParkingInAnotherGroup = "Domestic Pier|Parking 2";
 
     TurnaroundKey SavedKey()
     {
@@ -52,6 +55,8 @@ private slots:
     static void anotherAircraftWinsOverTheCouatl();
     static void anotherParkingOnTheGroundIsDifferent();
     static void anotherAirportOnTheGroundIsDifferent();
+    static void theSameParkingNamedWithItsGroupIsTheSame();
+    static void theSameParkingInAnotherGroupIsDifferent();
     static void aLiveAircraftThatIsNotResolvedCannotBeJudged();
     static void aLiveTitleThatIsNotReadCannotBeJudged();
     static void anotherTitleIsDifferentWhileTheLiveAircraftIsNotResolved();
@@ -118,6 +123,30 @@ void TurnaroundKeyJudgementTest::anotherParkingOnTheGroundIsDifferent()
     live.parkingName = kOtherParking;
 
     QCOMPARE(TurnaroundKeyJudgement::Judge(SavedKey(), live, kLoading), KeyVerdict::Different);
+}
+
+void TurnaroundKeyJudgementTest::theSameParkingNamedWithItsGroupIsTheSame()
+{
+    TurnaroundKey live = LiveKey();
+    live.parkingName = kGroupedParking;
+
+    QCOMPARE(TurnaroundKeyJudgement::Judge(SavedKey(), live, kLoading), KeyVerdict::Same);
+
+    TurnaroundKey saved = SavedKey();
+    saved.parkingName = kGroupedParking;
+    live.parkingName = kSpacedGroupedParking;
+
+    QCOMPARE(TurnaroundKeyJudgement::Judge(saved, live, kLoading), KeyVerdict::Same);
+}
+
+void TurnaroundKeyJudgementTest::theSameParkingInAnotherGroupIsDifferent()
+{
+    TurnaroundKey saved = SavedKey();
+    saved.parkingName = kGroupedParking;
+    TurnaroundKey live = LiveKey();
+    live.parkingName = kParkingInAnotherGroup;
+
+    QCOMPARE(TurnaroundKeyJudgement::Judge(saved, live, kLoading), KeyVerdict::Different);
 }
 
 void TurnaroundKeyJudgementTest::anotherAirportOnTheGroundIsDifferent()
