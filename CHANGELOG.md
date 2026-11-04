@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.53.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.2...v1.53.3) (2026-11-04)
+
+
+* hold the stale FSLabs INIT and keep the turnaround when GSX renames the stand ([#292](https://github.com/brunofgmag/gsx-integrator-client/issues/292)) ([66ae027](https://github.com/brunofgmag/gsx-integrator-client/commit/66ae027ab6ae1c6f76a73af078f963e48daace0a))
+
+
+### Bug Fixes
+
+* **fslabs:** take the AOC INIT only when it departs from the planned origin ([78eda16](https://github.com/brunofgmag/gsx-integrator-client/commit/78eda16a67979a4a9a8f872d3576ea8f52c7e822)) ([66ae027](https://github.com/brunofgmag/gsx-integrator-client/commit/66ae027ab6ae1c6f76a73af078f963e48daace0a))
+* **runtime:** keep the turnaround when GSX renames the stand with its group ([6913fc2](https://github.com/brunofgmag/gsx-integrator-client/commit/6913fc2fd4b7de2fec7e5d67fe2e463a1413b004)) ([66ae027](https://github.com/brunofgmag/gsx-integrator-client/commit/66ae027ab6ae1c6f76a73af078f963e48daace0a))
+
 ## [1.53.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.1...v1.53.2) (2026-11-04)
 
 
