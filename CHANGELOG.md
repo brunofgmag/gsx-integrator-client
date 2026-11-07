@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.53.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.3...v1.53.4) (2026-11-07)
+
+
+* reopen a door the aircraft closed while its GSX vehicle still serves it ([#294](https://github.com/brunofgmag/gsx-integrator-client/issues/294)) ([beab434](https://github.com/brunofgmag/gsx-integrator-client/commit/beab434f9f40dfd1185aaa92e06c9203dd3c19f1))
+
+
+### Bug Fixes
+
+* **doors:** reopen a door the aircraft closed while its GSX vehicle still serves it ([5ec3dc5](https://github.com/brunofgmag/gsx-integrator-client/commit/5ec3dc5e32dc77968459ce6695f61f5bb8278802)) ([beab434](https://github.com/brunofgmag/gsx-integrator-client/commit/beab434f9f40dfd1185aaa92e06c9203dd3c19f1))
+
 ## [1.53.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.2...v1.53.3) (2026-11-04)
 
 
