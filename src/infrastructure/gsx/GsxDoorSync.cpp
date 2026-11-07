@@ -297,8 +297,12 @@ void GsxDoorSync::Sync(const DoorWriter& write)
         const double lastTarget = lastTargets_[index];
         inheritedTargets_[index] = inheritedTargets_[index] && !HaveVehiclesArrived(door);
 
+        const DoorPosition position = PositionOf(door);
+        targetsReached_[index] = targetsReached_[index] || position == OwnTargetPosition(door);
+
         const bool wantsOpen = IsDesiredOpen(door);
-        const bool pending = wantsOpen ? lastTarget != kDoorOpen : lastTarget == kDoorOpen;
+        const bool undone = WasUndone(door, position, wantsOpen);
+        const bool pending = wantsOpen ? lastTarget != kDoorOpen || undone : lastTarget == kDoorOpen;
         const bool waitingForItsVehicles = !wantsOpen && inheritedTargets_[index] && !IsHeldClosed(door);
         if (!pending || waitingForItsVehicles)
         {
@@ -317,8 +321,16 @@ void GsxDoorSync::Sync(const DoorWriter& write)
             continue;
         }
 
+        if (undone)
+        {
+            LOG_INFO("Door %s left the position the client set while its vehicle still serves it: commanding it once more",
+                     DoorName(door));
+            targetsReasserted_[index] = true;
+        }
+
         probe::Line(probe::Channel::Writes,
-                    QStringLiteral("write sync  %1 open=%2").arg(QLatin1String(DoorName(door))).arg(wantsOpen ? 1 : 0));
+                    QStringLiteral("write sync  %1 open=%2%3").arg(QLatin1String(DoorName(door))).arg(wantsOpen ? 1 : 0)
+                    .arg(undone ? QStringLiteral(" undone by the aircraft") : QString()));
         write(door, wantsOpen);
         RecordWrite(door, wantsOpen);
     }
@@ -337,11 +349,22 @@ void GsxDoorSync::LogHoldOnce(const GsxDoor door, const char* reason)
                 QStringLiteral("hold  sync  %1 %2").arg(QLatin1String(DoorName(door)), QLatin1String(reason)));
 }
 
-void GsxDoorSync::RecordTarget(const GsxDoor door, const bool open)
+bool GsxDoorSync::WasUndone(const GsxDoor door, const DoorPosition position, const bool wantsOpen) const
 {
     const auto index = static_cast<std::size_t>(door);
 
-    lastTargets_[index] = open ? kDoorOpen : kDoorClosed;
+    return wantsOpen && lastTargets_[index] == kDoorOpen && targetsReached_[index] && !targetsReasserted_[index]
+        && position == DoorPosition::Closed;
+}
+
+void GsxDoorSync::RecordTarget(const GsxDoor door, const bool open)
+{
+    const auto index = static_cast<std::size_t>(door);
+    const double target = open ? kDoorOpen : kDoorClosed;
+
+    targetsReasserted_[index] = targetsReasserted_[index] && lastTargets_[index] == target;
+    targetsReached_[index] = false;
+    lastTargets_[index] = target;
     holdLogged_[index] = false;
     inheritedTargets_[index] = false;
 }
@@ -391,6 +414,8 @@ void GsxDoorSync::AppendMemory(MemoryBag& memory) const
 void GsxDoorSync::RestoreMemory(const MemoryBag& memory, const bool gsxRestartedSinceSave)
 {
     transits_ = {};
+    targetsReached_ = {};
+    targetsReasserted_ = {};
 
     for (const GsxDoor door : kAllDoors)
     {
