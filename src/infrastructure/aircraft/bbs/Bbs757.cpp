@@ -726,6 +726,8 @@ namespace
         Bbs757::kName,
         {
             {MatchField::Title, MatchOp::StartsWith, "BlueBird 757-200"},
+            {MatchField::Title, MatchOp::Equals, "[BGD] Royal Nepal Airlines (9N-ACA) RR NW"},
+            {MatchField::Title, MatchOp::Equals, "[BGD] Nepal Airlines (9N-ACA) RR NW"},
         },
         &CreateBbs757, "bbs-757-200", "B752", RefuelBy::Client, SmartSwitchCue{kSmartSwitchControl, "", SmartSwitchMove::Press}, kRecommendedFuelRateKgs,
     };

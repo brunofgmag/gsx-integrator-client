@@ -109,6 +109,7 @@ private slots:
     static void detectionReportsFss727ClientRefuel();
     static void detectsBbs757FromTheBaseTitle();
     static void detectsBbs757FromLiveryTitlesWithoutTheEngineMarker();
+    static void detectsBbs757FromThirdPartyLiveryTitles();
     static void doesNotDetectBbs757ByTheGenericAtcModel();
     static void detectionReportsBbs757ClientRefuel();
     static void detectionReportsBbs757ShortCode();
@@ -734,6 +735,24 @@ void AircraftDetectionTest::detectsBbs757FromLiveryTitlesWithoutTheEngineMarker(
 {
     for (const char* title : {"BlueBird 757-200 Condor D-ABNR", "BlueBird 757-200 Aer Lingus EI-LBS",
                               "BlueBird 757-200 PW NO CABIN", "BlueBird 757-200 RR"})
+    {
+        FakeVariableGateway gateway;
+        AutomationStatus status;
+
+        gateway.aircraftName = title;
+        gateway.atcModel = "ATCCOM.AC_MODEL B752.0.text";
+
+        const AircraftDescriptor* descriptor = nullptr;
+        const std::unique_ptr<Aircraft> aircraft = DetectAircraft({.variableGateway = &gateway, .status = &status}, &descriptor);
+
+        QVERIFY2(aircraft != nullptr, title);
+        QCOMPARE(std::string(descriptor->id), std::string("bbs-757-200"));
+    }
+}
+
+void AircraftDetectionTest::detectsBbs757FromThirdPartyLiveryTitles()
+{
+    for (const char* title : {"[BGD] Royal Nepal Airlines (9N-ACA) RR NW", "[BGD] Nepal Airlines (9N-ACA) RR NW"})
     {
         FakeVariableGateway gateway;
         AutomationStatus status;
