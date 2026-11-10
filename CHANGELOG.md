@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.53.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.4...v1.53.5) (2026-11-10)
+
+
+* detect the BlueBird 757 under the BGD Aviation Nepal liveries ([#296](https://github.com/brunofgmag/gsx-integrator-client/issues/296)) ([43c6475](https://github.com/brunofgmag/gsx-integrator-client/commit/43c6475da44e212ca5535a47348cdb69e058e684))
+
+
+### Bug Fixes
+
+* **bbs:** detect the BlueBird 757 under the BGD Aviation Nepal liveries ([bcf3dde](https://github.com/brunofgmag/gsx-integrator-client/commit/bcf3ddefdc62d657e15f80520cc62f0ebf5997b4)) ([43c6475](https://github.com/brunofgmag/gsx-integrator-client/commit/43c6475da44e212ca5535a47348cdb69e058e684))
+
 ## [1.53.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.3...v1.53.4) (2026-11-07)
 
 
