@@ -1,5 +1,46 @@
 # Changelog
 
+## [1.53.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.4...v1.53.5) (2026-11-10)
+
+
+* detect the BlueBird 757 under the BGD Aviation Nepal liveries ([#296](https://github.com/brunofgmag/gsx-integrator-client/issues/296)) ([43c6475](https://github.com/brunofgmag/gsx-integrator-client/commit/43c6475da44e212ca5535a47348cdb69e058e684))
+
+
+### Bug Fixes
+
+* **bbs:** detect the BlueBird 757 under the BGD Aviation Nepal liveries ([bcf3dde](https://github.com/brunofgmag/gsx-integrator-client/commit/bcf3ddefdc62d657e15f80520cc62f0ebf5997b4)) ([43c6475](https://github.com/brunofgmag/gsx-integrator-client/commit/43c6475da44e212ca5535a47348cdb69e058e684))
+
+## [1.53.4](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.3...v1.53.4) (2026-11-07)
+
+
+* reopen a door the aircraft closed while its GSX vehicle still serves it ([#294](https://github.com/brunofgmag/gsx-integrator-client/issues/294)) ([beab434](https://github.com/brunofgmag/gsx-integrator-client/commit/beab434f9f40dfd1185aaa92e06c9203dd3c19f1))
+
+
+### Bug Fixes
+
+* **doors:** reopen a door the aircraft closed while its GSX vehicle still serves it ([5ec3dc5](https://github.com/brunofgmag/gsx-integrator-client/commit/5ec3dc5e32dc77968459ce6695f61f5bb8278802)) ([beab434](https://github.com/brunofgmag/gsx-integrator-client/commit/beab434f9f40dfd1185aaa92e06c9203dd3c19f1))
+
+## [1.53.3](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.2...v1.53.3) (2026-11-04)
+
+
+* hold the stale FSLabs INIT and keep the turnaround when GSX renames the stand ([#292](https://github.com/brunofgmag/gsx-integrator-client/issues/292)) ([66ae027](https://github.com/brunofgmag/gsx-integrator-client/commit/66ae027ab6ae1c6f76a73af078f963e48daace0a))
+
+
+### Bug Fixes
+
+* **fslabs:** take the AOC INIT only when it departs from the planned origin ([78eda16](https://github.com/brunofgmag/gsx-integrator-client/commit/78eda16a67979a4a9a8f872d3576ea8f52c7e822)) ([66ae027](https://github.com/brunofgmag/gsx-integrator-client/commit/66ae027ab6ae1c6f76a73af078f963e48daace0a))
+* **runtime:** keep the turnaround when GSX renames the stand with its group ([6913fc2](https://github.com/brunofgmag/gsx-integrator-client/commit/6913fc2fd4b7de2fec7e5d67fe2e463a1413b004)) ([66ae027](https://github.com/brunofgmag/gsx-integrator-client/commit/66ae027ab6ae1c6f76a73af078f963e48daace0a))
+
+## [1.53.2](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.1...v1.53.2) (2026-11-04)
+
+
+* never count more boarded passengers than the aircraft boards ([#290](https://github.com/brunofgmag/gsx-integrator-client/issues/290)) ([f7a677b](https://github.com/brunofgmag/gsx-integrator-client/commit/f7a677b207393a6c26c43b359477bb06a24ca15d))
+
+
+### Bug Fixes
+
+* **turnaround:** never count more boarded passengers than the aircraft boards ([5f00a49](https://github.com/brunofgmag/gsx-integrator-client/commit/5f00a49cbd00203b427b583405be3a3122dd0d98)) ([f7a677b](https://github.com/brunofgmag/gsx-integrator-client/commit/f7a677b207393a6c26c43b359477bb06a24ca15d))
+
 ## [1.53.1](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.0...v1.53.1) (2026-10-28)
 
 

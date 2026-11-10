@@ -85,6 +85,7 @@ private:
     [[nodiscard]] bool SettlesWithoutWriting(GsxDoor door, bool wantsOpen);
     [[nodiscard]] DoorPosition OwnTargetPosition(GsxDoor door) const;
     [[nodiscard]] bool IsInTransit(GsxDoor door, DoorPosition position) const;
+    [[nodiscard]] bool WasUndone(GsxDoor door, DoorPosition position, bool wantsOpen) const;
     void AgeTransit(GsxDoor door);
     void SampleExits();
     void LogHoldOnce(GsxDoor door, const char* reason);
@@ -100,6 +101,8 @@ private:
     std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> inheritedTargets_{};
     std::array<ExitWatch, static_cast<std::size_t>(GsxDoor::Count)> exits_{};
     std::array<DoorTransit, static_cast<std::size_t>(GsxDoor::Count)> transits_{};
+    std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> targetsReached_{};
+    std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> targetsReasserted_{};
     bool heldForDeparture_ = false;
     bool passengerDoorsHeld_ = false;
     bool couatlSeenStarted_ = false;
