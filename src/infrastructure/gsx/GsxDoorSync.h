@@ -58,6 +58,7 @@ public:
     explicit GsxDoorSync(VariableReader* variableGateway);
 
     void WatchExit(GsxDoor door, int exitIndex);
+    void WatchJetwayExit(GsxDoor door, int exitIndex);
     void ReadPositionsWith(PositionReader reader);
     void Observe();
     void Report() const;
@@ -84,7 +85,11 @@ private:
     [[nodiscard]] bool HaveVehiclesArrived(GsxDoor door) const;
     [[nodiscard]] bool IsTheJetwayDocked() const;
     [[nodiscard]] bool TheJetwayServes(GsxDoor door) const;
+    [[nodiscard]] bool TheDockedJetwayServes(GsxDoor door) const;
+    [[nodiscard]] bool TheJetwayOpensItsDoor(GsxDoor door) const;
     [[nodiscard]] GsxDoor DoorTheAircraftOpenedForTheJetway() const;
+    [[nodiscard]] bool WatchesTheJetwayExits() const;
+    [[nodiscard]] std::optional<GsxDoor> DoorWhoseExitTheJetwayOpened() const;
     void TrackTheJetwayDoor();
     [[nodiscard]] bool IsMoving(GsxDoor door) const;
     [[nodiscard]] bool SettlesWithoutWriting(GsxDoor door, bool wantsOpen);
@@ -109,6 +114,7 @@ private:
     std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> targetsReached_{};
     std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> targetsReasserted_{};
     std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> seenClosedBeforeDocking_{};
+    std::array<int, static_cast<std::size_t>(GsxDoor::Count)> jetwayExits_{};
     std::optional<GsxDoor> jetwayDoor_;
     bool heldForDeparture_ = false;
     bool passengerDoorsHeld_ = false;
