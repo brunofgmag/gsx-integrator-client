@@ -18,6 +18,7 @@ namespace
     constexpr double kCouatlDown = 0.0;
     constexpr double kJetwayDocked = 5.0;
     constexpr double kNoJetway = 2.0;
+    constexpr double kJetwayAvailable = 1.0;
     constexpr double kStairsParked = 1.0;
     constexpr double kStairsFinalPosition = gsx::states::kStairsFinalPosition;
     constexpr int kTransitBoundTicks = 30;
@@ -176,6 +177,12 @@ private slots:
     static void reopensTheUndoneDoorOnlyOnceWhenTheAircraftInsists();
     static void neverReopensADoorThatDidNotReachItsOpenTarget();
     static void reopensAgainAfterANewOpenOfItsOwn();
+    static void leavesTheForwardDoorShutWhenTheJetwayDocksAtADoorTheAircraftOpened();
+    static void opensTheForwardDoorWhenTheJetwayDocksWithNoOtherDoorOpening();
+    static void aDoorOpenSinceBeforeTheJetwayCameDoesNotTakeTheJetway();
+    static void aDoorTheClientOpenedDoesNotTakeTheJetway();
+    static void theJetwayReturnsToTheForwardDoorAfterItLeaves();
+    static void theJetwayDoorSurvivesTheMemory();
 };
 
 void GsxDoorSyncTest::followsVehicleStateWhileCouatlKeepsRunning()
@@ -1706,6 +1713,164 @@ void GsxDoorSyncTest::reopensAgainAfterANewOpenOfItsOwn()
 
     QCOMPARE(recorder.writes, 5);
     QVERIFY(recorder.Opened(GsxDoor::FwdPax));
+}
+
+void GsxDoorSyncTest::leavesTheForwardDoorShutWhenTheJetwayDocksAtADoorTheAircraftOpened()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kJetway] = kJetwayAvailable;
+
+    Positions positions;
+    positions.byDoor[GsxDoor::FwdPax] = DoorPosition::Closed;
+    positions.byDoor[GsxDoor::MidPax] = DoorPosition::Closed;
+    GsxDoorSync sync(&gateway);
+    sync.ReadPositionsWith(positions.Reader());
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+
+    positions.byDoor[GsxDoor::MidPax] = DoorPosition::Open;
+    Tick(sync, gateway, recorder);
+
+    gateway.lvars[kJetway] = kJetwayDocked;
+    Tick(sync, gateway, recorder);
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(!recorder.last.contains(GsxDoor::FwdPax));
+    QCOMPARE(recorder.writes, 0);
+}
+
+void GsxDoorSyncTest::opensTheForwardDoorWhenTheJetwayDocksWithNoOtherDoorOpening()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kJetway] = kJetwayAvailable;
+
+    Positions positions;
+    positions.byDoor[GsxDoor::FwdPax] = DoorPosition::Closed;
+    positions.byDoor[GsxDoor::MidPax] = DoorPosition::Closed;
+    GsxDoorSync sync(&gateway);
+    sync.ReadPositionsWith(positions.Reader());
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+
+    gateway.lvars[kJetway] = kJetwayDocked;
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(recorder.Opened(GsxDoor::FwdPax));
+}
+
+void GsxDoorSyncTest::aDoorOpenSinceBeforeTheJetwayCameDoesNotTakeTheJetway()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kJetway] = kJetwayAvailable;
+
+    Positions positions;
+    positions.byDoor[GsxDoor::FwdPax] = DoorPosition::Closed;
+    positions.byDoor[GsxDoor::MidPax] = DoorPosition::Open;
+    GsxDoorSync sync(&gateway);
+    sync.ReadPositionsWith(positions.Reader());
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+
+    gateway.lvars[kJetway] = kJetwayDocked;
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(recorder.Opened(GsxDoor::FwdPax));
+}
+
+void GsxDoorSyncTest::aDoorTheClientOpenedDoesNotTakeTheJetway()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kJetway] = kJetwayAvailable;
+
+    Positions positions;
+    positions.byDoor[GsxDoor::FwdPax] = DoorPosition::Closed;
+    positions.byDoor[GsxDoor::AftPax] = DoorPosition::Closed;
+    GsxDoorSync sync(&gateway);
+    sync.ReadPositionsWith(positions.Reader());
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+
+    gateway.lvars[kPassengerStairsRearState] = kStairsFinalPosition;
+    Tick(sync, gateway, recorder);
+    QVERIFY(recorder.Opened(GsxDoor::AftPax));
+
+    positions.byDoor[GsxDoor::AftPax] = DoorPosition::Open;
+    Tick(sync, gateway, recorder);
+
+    gateway.lvars[kJetway] = kJetwayDocked;
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(recorder.Opened(GsxDoor::FwdPax));
+}
+
+void GsxDoorSyncTest::theJetwayReturnsToTheForwardDoorAfterItLeaves()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kJetway] = kJetwayAvailable;
+
+    Positions positions;
+    positions.byDoor[GsxDoor::FwdPax] = DoorPosition::Closed;
+    positions.byDoor[GsxDoor::MidPax] = DoorPosition::Closed;
+    GsxDoorSync sync(&gateway);
+    sync.ReadPositionsWith(positions.Reader());
+    Recorder recorder;
+
+    Tick(sync, gateway, recorder);
+    positions.byDoor[GsxDoor::MidPax] = DoorPosition::Open;
+    Tick(sync, gateway, recorder);
+    gateway.lvars[kJetway] = kJetwayDocked;
+    Tick(sync, gateway, recorder);
+
+    QCOMPARE(recorder.writes, 0);
+
+    gateway.lvars[kJetway] = kJetwayAvailable;
+    positions.byDoor[GsxDoor::MidPax] = DoorPosition::Closed;
+    Tick(sync, gateway, recorder);
+    gateway.lvars[kJetway] = kJetwayDocked;
+    Tick(sync, gateway, recorder);
+
+    QVERIFY(recorder.Opened(GsxDoor::FwdPax));
+}
+
+void GsxDoorSyncTest::theJetwayDoorSurvivesTheMemory()
+{
+    FakeVariableGateway gateway;
+    gateway.lvars[kCouatlStarted] = kCouatlUp;
+    gateway.lvars[kJetway] = kJetwayAvailable;
+
+    Positions positions;
+    positions.byDoor[GsxDoor::FwdPax] = DoorPosition::Closed;
+    positions.byDoor[GsxDoor::MidPax] = DoorPosition::Closed;
+    GsxDoorSync previous(&gateway);
+    previous.ReadPositionsWith(positions.Reader());
+    Recorder recorder;
+
+    Tick(previous, gateway, recorder);
+    positions.byDoor[GsxDoor::MidPax] = DoorPosition::Open;
+    Tick(previous, gateway, recorder);
+    gateway.lvars[kJetway] = kJetwayDocked;
+    Tick(previous, gateway, recorder);
+
+    MemoryBag memory;
+    previous.AppendMemory(memory);
+
+    GsxDoorSync restored(&gateway);
+    restored.ReadPositionsWith(positions.Reader());
+    restored.RestoreMemory(memory, false);
+    Tick(restored, gateway, recorder);
+    Tick(restored, gateway, recorder);
+
+    QVERIFY(!recorder.last.contains(GsxDoor::FwdPax));
+    QCOMPARE(recorder.writes, 0);
 }
 
 QTEST_APPLESS_MAIN(GsxDoorSyncTest)
