@@ -5,6 +5,7 @@
 #include <array>
 #include <functional>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 
@@ -81,6 +82,10 @@ private:
     [[nodiscard]] bool IsDesiredOpen(GsxDoor door) const;
     [[nodiscard]] bool IsHeldClosed(GsxDoor door) const;
     [[nodiscard]] bool HaveVehiclesArrived(GsxDoor door) const;
+    [[nodiscard]] bool IsTheJetwayDocked() const;
+    [[nodiscard]] bool TheJetwayServes(GsxDoor door) const;
+    [[nodiscard]] GsxDoor DoorTheAircraftOpenedForTheJetway() const;
+    void TrackTheJetwayDoor();
     [[nodiscard]] bool IsMoving(GsxDoor door) const;
     [[nodiscard]] bool SettlesWithoutWriting(GsxDoor door, bool wantsOpen);
     [[nodiscard]] DoorPosition OwnTargetPosition(GsxDoor door) const;
@@ -103,6 +108,8 @@ private:
     std::array<DoorTransit, static_cast<std::size_t>(GsxDoor::Count)> transits_{};
     std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> targetsReached_{};
     std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> targetsReasserted_{};
+    std::array<bool, static_cast<std::size_t>(GsxDoor::Count)> seenClosedBeforeDocking_{};
+    std::optional<GsxDoor> jetwayDoor_;
     bool heldForDeparture_ = false;
     bool passengerDoorsHeld_ = false;
     bool couatlSeenStarted_ = false;
