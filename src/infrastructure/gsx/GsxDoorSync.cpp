@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
@@ -72,6 +73,7 @@ namespace
     };
 
     constexpr auto kMemoryPrefix = "doorSync.";
+    constexpr auto kJetwayDoorMemoryName = "doorSync.jetwayDoor";
     constexpr auto kOpenText = "open";
     constexpr auto kClosedText = "closed";
 
@@ -80,6 +82,10 @@ namespace
         GsxDoor::FwdCatering, GsxDoor::AftCatering,
         GsxDoor::FwdCargo, GsxDoor::AftCargo,
     };
+
+    constexpr std::array kDoorsTheJetwayMayTakeFromTheFront = {GsxDoor::MidPax, GsxDoor::AftPax};
+    constexpr std::array kPassengerDoors = {GsxDoor::FwdPax, GsxDoor::MidPax, GsxDoor::AftPax};
+    constexpr int kNoExit = -1;
 
     constexpr std::array kDoorsHeldForDeparture = {
         GsxDoor::FwdPax, GsxDoor::MidPax, GsxDoor::AftPax,
@@ -139,6 +145,20 @@ namespace
         return target == kDoorOpen ? kOpenText : kClosedText;
     }
 
+    std::optional<GsxDoor> JetwayDoorFromText(const std::string& text)
+    {
+        const auto named = std::ranges::find_if(kDoorsTheJetwayMayTakeFromTheFront, [&text](const GsxDoor door)
+        {
+            return text == DoorName(door);
+        });
+        if (named == kDoorsTheJetwayMayTakeFromTheFront.end())
+        {
+            return std::nullopt;
+        }
+
+        return *named;
+    }
+
     double TargetFromText(const std::string& text)
     {
         if (text == kOpenText)
@@ -192,11 +212,17 @@ bool DoorTransit::Age(const DoorPosition reading, const DoorPosition target)
 GsxDoorSync::GsxDoorSync(VariableReader* variableGateway) : variableGateway_(variableGateway)
 {
     lastTargets_.fill(kDoorUnknown);
+    jetwayExits_.fill(kNoExit);
 }
 
 void GsxDoorSync::WatchExit(const GsxDoor door, const int exitIndex)
 {
     exits_[static_cast<std::size_t>(door)] = ExitWatch{.index = exitIndex};
+}
+
+void GsxDoorSync::WatchJetwayExit(const GsxDoor door, const int exitIndex)
+{
+    jetwayExits_[static_cast<std::size_t>(door)] = exitIndex;
 }
 
 void GsxDoorSync::ReadPositionsWith(PositionReader reader)
@@ -397,6 +423,119 @@ void GsxDoorSync::Observe()
 
     InheritArrivedVehicles();
     couatlSeenStarted_ = true;
+    TrackTheJetwayDoor();
+}
+
+bool GsxDoorSync::IsTheJetwayDocked() const
+{
+    return IsJetwayDocked(VehicleState(gsx::lvars::kJetway, kJetwayUnavailableValue));
+}
+
+bool GsxDoorSync::TheJetwayServes(const GsxDoor door) const
+{
+    if (!jetwayDoor_.has_value())
+    {
+        return !WatchesTheJetwayExits() && door == GsxDoor::FwdPax;
+    }
+
+    return *jetwayDoor_ == door;
+}
+
+bool GsxDoorSync::TheDockedJetwayServes(const GsxDoor door) const
+{
+    return IsTheJetwayDocked() && TheJetwayServes(door);
+}
+
+bool GsxDoorSync::TheJetwayOpensItsDoor(const GsxDoor door) const
+{
+    return door != GsxDoor::FwdPax && jetwayExits_[static_cast<std::size_t>(door)] != kNoExit
+        && TheDockedJetwayServes(door);
+}
+
+bool GsxDoorSync::WatchesTheJetwayExits() const
+{
+    return std::ranges::any_of(jetwayExits_, [](const int exit) { return exit != kNoExit; });
+}
+
+std::optional<GsxDoor> GsxDoorSync::DoorWhoseExitTheJetwayOpened() const
+{
+    const bool anyUnread = std::ranges::any_of(jetwayExits_, [this](const int exit)
+    {
+        return exit != kNoExit && !variableGateway_->HasReceivedAVar(simvars::SimExitOpen(exit), simvars::kPercentUnit);
+    });
+    if (anyUnread)
+    {
+        return std::nullopt;
+    }
+
+    const auto opened = std::ranges::find_if(kPassengerDoors, [this](const GsxDoor door)
+    {
+        const int exit = jetwayExits_[static_cast<std::size_t>(door)];
+
+        return exit != kNoExit && variableGateway_->GetAVar(simvars::SimExitOpen(exit), simvars::kPercentUnit) > 0.0;
+    });
+
+    return opened == kPassengerDoors.end() ? GsxDoor::FwdPax : *opened;
+}
+
+GsxDoor GsxDoorSync::DoorTheAircraftOpenedForTheJetway() const
+{
+    const auto opened = std::ranges::find_if(kDoorsTheJetwayMayTakeFromTheFront, [this](const GsxDoor door)
+    {
+        return seenClosedBeforeDocking_[static_cast<std::size_t>(door)] && PositionOf(door) == DoorPosition::Open
+            && OwnTargetPosition(door) != DoorPosition::Open;
+    });
+
+    return opened == kDoorsTheJetwayMayTakeFromTheFront.end() ? GsxDoor::FwdPax : *opened;
+}
+
+void GsxDoorSync::TrackTheJetwayDoor()
+{
+    if (!IsTheJetwayDocked())
+    {
+        jetwayDoor_.reset();
+        for (const GsxDoor door : kDoorsTheJetwayMayTakeFromTheFront)
+        {
+            bool& seenClosed = seenClosedBeforeDocking_[static_cast<std::size_t>(door)];
+            seenClosed = seenClosed || PositionOf(door) == DoorPosition::Closed;
+        }
+
+        return;
+    }
+
+    if (jetwayDoor_.has_value())
+    {
+        return;
+    }
+
+    if (WatchesTheJetwayExits())
+    {
+        jetwayDoor_ = DoorWhoseExitTheJetwayOpened();
+        if (!jetwayDoor_.has_value())
+        {
+            return;
+        }
+
+        seenClosedBeforeDocking_ = {};
+        probe::Line(probe::Channel::Writes,
+                    QStringLiteral("sync  jetway docked at %1 by its sim exit").arg(QLatin1String(DoorName(*jetwayDoor_))));
+        LOG_INFO("The jetway docked at the %s door, read from the simulator exit it opened", DoorName(*jetwayDoor_));
+
+        return;
+    }
+
+    jetwayDoor_ = DoorTheAircraftOpenedForTheJetway();
+    seenClosedBeforeDocking_ = {};
+    if (*jetwayDoor_ == GsxDoor::FwdPax)
+    {
+        return;
+    }
+
+    probe::Line(probe::Channel::Writes,
+                QStringLiteral("skip  sync  FwdPax the jetway docked at %1, which the aircraft opened")
+                .arg(QLatin1String(DoorName(*jetwayDoor_))));
+    LOG_INFO("The jetway docked at the %s door, which the aircraft opened itself: the forward door stays as it is",
+             DoorName(*jetwayDoor_));
 }
 
 void GsxDoorSync::AppendMemory(MemoryBag& memory) const
@@ -408,6 +547,11 @@ void GsxDoorSync::AppendMemory(MemoryBag& memory) const
         {
             memory.PutText(MemoryEntryName(door), TargetText(target));
         }
+    }
+
+    if (jetwayDoor_.has_value() && *jetwayDoor_ != GsxDoor::FwdPax)
+    {
+        memory.PutText(kJetwayDoorMemoryName, DoorName(*jetwayDoor_));
     }
 }
 
@@ -424,6 +568,9 @@ void GsxDoorSync::RestoreMemory(const MemoryBag& memory, const bool gsxRestarted
         lastTargets_[index] = TargetFromText(memory.Text(MemoryEntryName(door), {}));
         inheritedTargets_[index] = lastTargets_[index] == kDoorOpen;
     }
+
+    seenClosedBeforeDocking_ = {};
+    jetwayDoor_ = JetwayDoorFromText(memory.Text(kJetwayDoorMemoryName, {}));
 
     if (gsxRestartedSinceSave)
     {
@@ -570,6 +717,14 @@ void GsxDoorSync::CloseAll(const DoorWriter& write)
 {
     for (const GsxDoor door : kAllDoors)
     {
+        if (TheDockedJetwayServes(door))
+        {
+            probe::Line(probe::Channel::Writes,
+                        QStringLiteral("skip  close %1 the docked jetway serves it").arg(QLatin1String(DoorName(door))));
+
+            continue;
+        }
+
         const DoorPosition position = PositionOf(door);
         if (position == DoorPosition::Closed && !IsInTransit(door, position))
         {
@@ -621,8 +776,18 @@ bool GsxDoorSync::IsDesiredOpen(const GsxDoor door) const
         return false;
     }
 
-    return std::ranges::any_of(DrivingVehicles(door), [this](const DoorVehicle& vehicle)
+    if (TheJetwayOpensItsDoor(door))
     {
+        return true;
+    }
+
+    return std::ranges::any_of(DrivingVehicles(door), [this, door](const DoorVehicle& vehicle)
+    {
+        if (std::string_view(vehicle.lVar) == gsx::lvars::kJetway && !TheJetwayServes(door))
+        {
+            return false;
+        }
+
         return vehicle.serves(VehicleState(vehicle.lVar, vehicle.absent));
     });
 }

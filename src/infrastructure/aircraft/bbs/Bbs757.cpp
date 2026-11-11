@@ -86,6 +86,8 @@ namespace
     constexpr auto kForwardCargoDoorSwitchLVar = "FWD_CARGO_DOOR_STATE_SWITCH";
     constexpr auto kAftCargoDoorSwitchLVar = "AFT_CARGO_DOOR_STATE_SWITCH";
     constexpr double kDoorSwitchClosed = 0.0;
+    constexpr int kL1JetwayExit = 0;
+    constexpr int kL2JetwayExit = 4;
 
     const char* DoorPositionLVar(const GsxDoor door)
     {
@@ -336,6 +338,8 @@ Bbs757::Bbs757(VariableGateway* variableGateway, const AutomationStatus* status)
 {
     smartSwitch_.Subscribe();
     doors_.ReadPositionsWith([this](const GsxDoor door) { return DoorPositionOf(door); });
+    doors_.WatchJetwayExit(GsxDoor::FwdPax, kL1JetwayExit);
+    doors_.WatchJetwayExit(GsxDoor::MidPax, kL2JetwayExit);
 
     LOG_INFO("Profile loaded: %s", kName);
 }

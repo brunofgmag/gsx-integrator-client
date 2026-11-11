@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.53.8](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.7...v1.53.8) (2026-11-11)
+
+
+* bound the apt step so a dead Ubuntu mirror cannot stall the Linux release ([#303](https://github.com/brunofgmag/gsx-integrator-client/issues/303)) ([2942b21](https://github.com/brunofgmag/gsx-integrator-client/commit/2942b21438842bb5df53c3e237f8e083b8440b32))
+
+
+### Bug Fixes
+
+* **ci:** bound the apt step so a dead Ubuntu mirror cannot stall the Linux release ([ae772a3](https://github.com/brunofgmag/gsx-integrator-client/commit/ae772a379aa3fc23e912a4f0b92978369c9d0bbc)) ([2942b21](https://github.com/brunofgmag/gsx-integrator-client/commit/2942b21438842bb5df53c3e237f8e083b8440b32))
+
+## [1.53.7](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.6...v1.53.7) (2026-11-11)
+
+
+* open the door the jetway docked at, read from the simulator exit ([#301](https://github.com/brunofgmag/gsx-integrator-client/issues/301)) ([7d29c17](https://github.com/brunofgmag/gsx-integrator-client/commit/7d29c1788a726751b85fcd666c7ab71fa8e2c46e))
+
+
+### Bug Fixes
+
+* **bbs:** open the door the jetway docked at, read from the simulator exit ([4dd3874](https://github.com/brunofgmag/gsx-integrator-client/commit/4dd3874398aa67a47ff4644142349234021dd6a7)) ([7d29c17](https://github.com/brunofgmag/gsx-integrator-client/commit/7d29c1788a726751b85fcd666c7ab71fa8e2c46e))
+
+## [1.53.6](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.5...v1.53.6) (2026-11-11)
+
+
+* leave the forward door alone when the jetway docks at a door the aircraft opened ([#299](https://github.com/brunofgmag/gsx-integrator-client/issues/299)) ([41491d4](https://github.com/brunofgmag/gsx-integrator-client/commit/41491d4368a903a7006a0d19640be4f4208aeb09))
+
+
+### Bug Fixes
+
+* **doors:** leave the forward door alone when the jetway docks at a door the aircraft opened ([f135bad](https://github.com/brunofgmag/gsx-integrator-client/commit/f135bad030b8ac85aa297b5f3408798917fbf005)) ([41491d4](https://github.com/brunofgmag/gsx-integrator-client/commit/41491d4368a903a7006a0d19640be4f4208aeb09))
+
 ## [1.53.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.4...v1.53.5) (2026-11-10)
 
 
