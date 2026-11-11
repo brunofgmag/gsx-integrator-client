@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.53.7](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.6...v1.53.7) (2026-11-11)
+
+
+* open the door the jetway docked at, read from the simulator exit ([#301](https://github.com/brunofgmag/gsx-integrator-client/issues/301)) ([7d29c17](https://github.com/brunofgmag/gsx-integrator-client/commit/7d29c1788a726751b85fcd666c7ab71fa8e2c46e))
+
+
+### Bug Fixes
+
+* **bbs:** open the door the jetway docked at, read from the simulator exit ([4dd3874](https://github.com/brunofgmag/gsx-integrator-client/commit/4dd3874398aa67a47ff4644142349234021dd6a7)) ([7d29c17](https://github.com/brunofgmag/gsx-integrator-client/commit/7d29c1788a726751b85fcd666c7ab71fa8e2c46e))
+
 ## [1.53.6](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.5...v1.53.6) (2026-11-11)
 
 
