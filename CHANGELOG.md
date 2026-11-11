@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.53.8](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.7...v1.53.8) (2026-11-11)
+
+
+* bound the apt step so a dead Ubuntu mirror cannot stall the Linux release ([#303](https://github.com/brunofgmag/gsx-integrator-client/issues/303)) ([2942b21](https://github.com/brunofgmag/gsx-integrator-client/commit/2942b21438842bb5df53c3e237f8e083b8440b32))
+
+
+### Bug Fixes
+
+* **ci:** bound the apt step so a dead Ubuntu mirror cannot stall the Linux release ([ae772a3](https://github.com/brunofgmag/gsx-integrator-client/commit/ae772a379aa3fc23e912a4f0b92978369c9d0bbc)) ([2942b21](https://github.com/brunofgmag/gsx-integrator-client/commit/2942b21438842bb5df53c3e237f8e083b8440b32))
+
 ## [1.53.7](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.6...v1.53.7) (2026-11-11)
 
 
