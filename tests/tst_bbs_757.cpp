@@ -109,6 +109,10 @@ namespace
     };
     constexpr auto kL1Switch = "L1_PAX_DOOR_STATE_SWITCH";
     constexpr auto kL2Switch = "L2_PAX_DOOR_STATE_SWITCH";
+    constexpr auto kL1JetwayExit = "EXIT OPEN:0";
+    constexpr auto kL2JetwayExit = "EXIT OPEN:4";
+    constexpr double kExitShut = 0.0;
+    constexpr double kExitOpen = 100.0;
     constexpr auto kL3Switch = "L3_PAX_DOOR_STATE_SWITCH";
     constexpr auto kR1Switch = "R1_PAX_DOOR_STATE_SWITCH";
     constexpr auto kR2Switch = "R2_PAX_DOOR_STATE_SWITCH";
@@ -198,6 +202,12 @@ namespace
 
     struct Rig
     {
+        Rig()
+        {
+            gateway.avars[kL1JetwayExit] = kExitShut;
+            gateway.avars[kL2JetwayExit] = kExitShut;
+        }
+
         FakeVariableGateway gateway;
         AutomationStatus status;
         Bbs757 aircraft{&gateway, &status};
@@ -506,6 +516,7 @@ private slots:
     static void registersTheDoorsFollowGsxRule();
     static void theJetwayDockingOpensTheForwardPassengerSwitch();
     static void theJetwayLeavingClosesTheForwardPassengerSwitch();
+    static void theJetwayAtTheSecondDoorOpensTheSecondPassengerSwitchOnly();
     static void theFrontLoaderServingOpensTheForwardCargoSwitch();
     static void everyGsxVehicleOpensItsOwnDoorSwitchAndNoOther();
     static void holdingTheDoorsClosedKeepsTheDockedJetwayFromOpeningThem();
@@ -1612,6 +1623,18 @@ void Bbs757Test::theJetwayDockingOpensTheForwardPassengerSwitch()
 
     QCOMPARE(rig.gateway.Written(kL1Switch), kSwitchOpen);
     QCOMPARE(rig.gateway.WriteCount(kL1Switch), 1);
+}
+
+void Bbs757Test::theJetwayAtTheSecondDoorOpensTheSecondPassengerSwitchOnly()
+{
+    Rig rig;
+    rig.gateway.avars[kL2JetwayExit] = kExitOpen;
+    DockTheJetway(rig.gateway);
+
+    TickAircraft(rig.aircraft, rig.gateway);
+
+    QCOMPARE(rig.gateway.Written(kL2Switch), kSwitchOpen);
+    QCOMPARE(rig.gateway.WriteCount(kL1Switch), 0);
 }
 
 void Bbs757Test::theJetwayLeavingClosesTheForwardPassengerSwitch()
