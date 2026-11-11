@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.53.6](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.5...v1.53.6) (2026-11-11)
+
+
+* leave the forward door alone when the jetway docks at a door the aircraft opened ([#299](https://github.com/brunofgmag/gsx-integrator-client/issues/299)) ([41491d4](https://github.com/brunofgmag/gsx-integrator-client/commit/41491d4368a903a7006a0d19640be4f4208aeb09))
+
+
+### Bug Fixes
+
+* **doors:** leave the forward door alone when the jetway docks at a door the aircraft opened ([f135bad](https://github.com/brunofgmag/gsx-integrator-client/commit/f135bad030b8ac85aa297b5f3408798917fbf005)) ([41491d4](https://github.com/brunofgmag/gsx-integrator-client/commit/41491d4368a903a7006a0d19640be4f4208aeb09))
+
 ## [1.53.5](https://github.com/brunofgmag/gsx-integrator-client/compare/v1.53.4...v1.53.5) (2026-11-10)
 
 
